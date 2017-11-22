@@ -326,6 +326,11 @@
     <ClCompile Include="..\src\WorkerManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\AlphaBetaAction.h" />
+    <ClInclude Include="..\src\AlphaBetaConsideringDurations.h" />
+    <ClInclude Include="..\src\AlphaBetaMove.h" />
+    <ClInclude Include="..\src\AlphaBetaPlayer.h" />
+    <ClInclude Include="..\src\AlphaBetaState.h" />
     <ClInclude Include="..\src\AttackFSMState.h" />
     <ClInclude Include="..\src\Behavior.h" />
     <ClInclude Include="..\src\BehaviorTreeBuilder.h" />

@@ -282,6 +282,21 @@
     <ClInclude Include="..\src\RangedActions.h">
       <Filter>micro\BT</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaConsideringDurations.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaState.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaPlayer.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaMove.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaAction.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="global">
@@ -313,6 +328,9 @@
     </Filter>
     <Filter Include="micro\BT">
       <UniqueIdentifier>{2f717fb1-4e0b-4a83-8bae-c37e7aa660fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="micro\ABCD">
+      <UniqueIdentifier>{839a9842-8206-4f52-b055-c84bab15eeca}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
