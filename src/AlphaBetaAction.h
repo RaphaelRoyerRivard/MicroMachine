@@ -12,5 +12,5 @@ public:
     AlphaBetaUnit target; // cible de l'action (si possible)
     sc2::Point2D position; // position du mouvement (si possible)
     AlphaBetaActionType type;
-    long time; // temps requis pour finir l'action
+    long time; // temps à laquelle l'action a été faite
 };

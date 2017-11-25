@@ -12,7 +12,6 @@ AlphaBetaValue AlphaBetaConsideringDurations::doSearch()
     AlphaBetaPlayer min, max;
     AlphaBetaValue alpha, beta;
     AlphaBetaAction * action;
-    // start timer here
     return alphaBeta(state, depth_limit, false, action, alpha, beta);
 }
 
@@ -23,7 +22,7 @@ AlphaBetaValue AlphaBetaConsideringDurations::alphaBeta(AlphaBetaState state, si
     // Sparcraft utilise un vecteur d'actions, donc plusieurs actions (ordonnées)
     // sont consiférées pendant une boucle de d'AB.
     // Ici, une seule action est considérée par boucle.
-    for (auto a : state.generateMove(!isMax)->actions->begin) {
+    for (auto a : state.generateMoves(!isMax)->begin) {
 
         AlphaBetaValue val;
 

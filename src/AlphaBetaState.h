@@ -14,6 +14,6 @@ public:
     AlphaBetaState();
     AlphaBetaState(AlphaBetaPlayer playerMin, AlphaBetaPlayer playerMax, AlphaBetaMove move, long time);
     void doMove(AlphaBetaMove move);
-    AlphaBetaMove * generateMove(bool isMax);
+    std::vector<AlphaBetaAction> generateMoves(bool isMax);
     AlphaBetaState generateChild();
 };
