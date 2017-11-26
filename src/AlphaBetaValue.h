@@ -3,8 +3,7 @@
 
 class AlphaBetaValue {
 public:
-    AlphaBetaValue(size_t, AlphaBetaAction);
-    AlphaBetaValue();
-    AlphaBetaAction action;
-    size_t score;
+    AlphaBetaValue(float value, AlphaBetaAction * action);
+    AlphaBetaAction * action;
+    float score;
 };

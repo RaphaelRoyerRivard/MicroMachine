@@ -1,8 +1,11 @@
 #include "AlphaBetaAction.h"
+#include "AlphaBetaUnit.h"
 
-AlphaBetaAction::AlphaBetaAction(AlphaBetaUnit unit, AlphaBetaUnit target, sc2::Point2D position, AlphaBetaActionType type, long time)
-    : unit(unit),
-    target(target),
-    position(position),
-    type(type),
-    time(time) { }
+AlphaBetaAction::AlphaBetaAction(AlphaBetaUnit * punit, AlphaBetaUnit * ptarget, sc2::Point2D pposition, float pdistance, AlphaBetaActionType ptype, long ptime) {
+    unit = punit;
+    target = ptarget;
+    position = pposition;
+    distance = pdistance;
+    type = ptype;
+    time = ptime;
+};

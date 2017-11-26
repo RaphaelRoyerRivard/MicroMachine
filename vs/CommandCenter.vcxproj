@@ -281,8 +281,10 @@
   <ItemGroup>
     <ClCompile Include="..\src\AlphaBetaAction.cpp" />
     <ClCompile Include="..\src\AlphaBetaConsideringDurations.cpp" />
-    <ClCompile Include="..\src\AlphaBetaMove.cpp" />
+    <ClCompile Include="..\src\AlphaBetaPlayer.cpp" />
     <ClCompile Include="..\src\AlphaBetaState.cpp" />
+    <ClCompile Include="..\src\AlphaBetaUnit.cpp" />
+    <ClCompile Include="..\src\AlphaBetaValue.cpp" />
     <ClCompile Include="..\src\AttackFSMState.cpp" />
     <ClCompile Include="..\src\CCBot.cpp" />
     <ClCompile Include="..\src\BaseLocation.cpp" />
@@ -332,7 +334,6 @@
   <ItemGroup>
     <ClInclude Include="..\src\AlphaBetaAction.h" />
     <ClInclude Include="..\src\AlphaBetaConsideringDurations.h" />
-    <ClInclude Include="..\src\AlphaBetaMove.h" />
     <ClInclude Include="..\src\AlphaBetaPlayer.h" />
     <ClInclude Include="..\src\AlphaBetaState.h" />
     <ClInclude Include="..\src\AlphaBetaUnit.h" />

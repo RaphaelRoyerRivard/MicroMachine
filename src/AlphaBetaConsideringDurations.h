@@ -2,16 +2,16 @@
 
 #include "AlphaBetaState.h"
 #include "AlphaBetaValue.h"
+#include "CCBot.h"
 
 class AlphaBetaConsideringDurations {
     size_t time_limit;
     size_t actual_time;
     size_t depth_limit;
-    AlphaBetaValue alphaBeta(AlphaBetaState state, size_t depth, bool isMax, AlphaBetaAction * action, AlphaBetaValue alpha, AlphaBetaValue beta);
-    AlphaBetaValue eval(AlphaBetaState state);
+    AlphaBetaValue alphaBeta(AlphaBetaState state, size_t depth, bool isMax, AlphaBetaValue alpha, AlphaBetaValue beta);
 
 public:
     AlphaBetaConsideringDurations(size_t time, size_t depth);
-    AlphaBetaValue doSearch(); // sc2 specific parameters will go here
+    AlphaBetaValue doSearch(std::vector<const sc2::Unit *> units, std::vector<const sc2::Unit *> targets, CCBot * bot);
 
 };

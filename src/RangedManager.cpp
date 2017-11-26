@@ -4,6 +4,7 @@
 #include "BehaviorTreeBuilder.h"
 #include "RangedActions.h"
 #include <algorithm>
+#include "AlphaBetaConsideringDurations.h"
 
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
@@ -11,8 +12,35 @@ RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 
 void RangedManager::executeMicro(const std::vector<const sc2::Unit *> & targets)
 {
+
+    const std::vector<const sc2::Unit *> & rangedUnits = getUnits();
+
+    // figure out targets
+    std::vector<const sc2::Unit *> rangedUnitTargets;
+    for (auto target : targets)
+    {
+        if (!target) { continue; }
+        if (target->unit_type == sc2::UNIT_TYPEID::ZERG_EGG) { continue; }
+        if (target->unit_type == sc2::UNIT_TYPEID::ZERG_LARVA) { continue; }
+
+        rangedUnitTargets.push_back(target);
+    }
+
+    AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(40, 4);
+    AlphaBetaValue value = alphaBeta.doSearch(rangedUnits, rangedUnitTargets, &m_bot);
+
+
+    if (value.action->type == AlphaBetaActionType::ATTACK) {
+        Micro::SmartAttackUnit(value.action->unit->actual_unit, value.action->target->actual_unit, m_bot);
+    }
+    else if (value.action->type == AlphaBetaActionType::MOVE) {
+        Micro::SmartMove(value.action->unit->actual_unit, value.action->position, m_bot);
+    }
+
     // build bt tree here
-    assignTargets(targets);
+    // assignTargets(targets);
+
+
 }
 
 void RangedManager::assignTargets(const std::vector<const sc2::Unit *> & targets)

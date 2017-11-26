@@ -136,10 +136,16 @@
     <ClCompile Include="..\src\AlphaBetaState.cpp">
       <Filter>micro\ABCD</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaMove.cpp">
+    <ClCompile Include="..\src\AlphaBetaPlayer.cpp">
+      <Filter>micro\ABCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaValue.cpp">
       <Filter>micro\ABCD</Filter>
     </ClCompile>
     <ClCompile Include="..\src\AlphaBetaAction.cpp">
+      <Filter>micro\ABCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaUnit.cpp">
       <Filter>micro\ABCD</Filter>
     </ClCompile>
   </ItemGroup>
@@ -301,9 +307,6 @@
       <Filter>micro\ABCD</Filter>
     </ClInclude>
     <ClInclude Include="..\src\AlphaBetaPlayer.h">
-      <Filter>micro\ABCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaMove.h">
       <Filter>micro\ABCD</Filter>
     </ClInclude>
     <ClInclude Include="..\src\AlphaBetaAction.h">
