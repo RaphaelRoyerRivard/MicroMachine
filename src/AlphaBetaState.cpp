@@ -45,7 +45,7 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax) {
         // TODO: Move cancelling ? Like if the unit is going somewhere, attack a unit instead
         if (unitCanAttack(unit)) {
             // add attacking closest target in range as actions
-            // TODO: Intelligent attacking (like focus fire, weakest ennemy)
+            // TODO: Intelligent attacking (like focus fire, weakest ennemy or reuse RangedManager priority)
             // TODO: don't attack dead units
             AlphaBetaUnit * closest_ennemy = nullptr;
             float closest_dist = INFINITY;
@@ -183,6 +183,7 @@ bool AlphaBetaState::unitShouldMoveBack(AlphaBetaUnit * unit, std::vector<AlphaB
     return false;
 }
 
+// TODO: Better evaluation function (something that takes into account own damage)
 AlphaBetaValue AlphaBetaState::eval(bool isMax) {
     float totalDamage = 0;
     AlphaBetaPlayer player = isMax ? this->playerMax : this->playerMin;

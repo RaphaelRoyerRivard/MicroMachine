@@ -35,6 +35,7 @@ void RangedManager::assignTargets(const std::vector<const sc2::Unit *> & targets
     }
 
     // Use alpha-beta (considering durations) for combat
+    // TODO: Split theses into Combat managers and use IOC and dependecy injection or something instead of a vulgar if
     if (m_bot.Config().AlphaBetaPruning) {
 
         std::vector<AlphaBetaUnit *> minUnits;
@@ -52,11 +53,13 @@ void RangedManager::assignTargets(const std::vector<const sc2::Unit *> & targets
         for (auto unit : rangedUnitTargets) {
             minUnits.push_back(new AlphaBetaUnit(unit, &m_bot, nullptr));
         }
-
-        AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(40, 6);
+        size_t depth = 6;
+        AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(40, depth);
         AlphaBetaValue value = alphaBeta.doSearch(maxUnits, minUnits, &m_bot);
         size_t nodes = alphaBeta.nodes_evaluated;
-        m_bot.Map().drawTextScreen(sc2::Point2D(0.005, 0.005), std::string("Nodes explored :") + std::to_string(nodes));
+        m_bot.Map().drawTextScreen(sc2::Point2D(0.005, 0.005), std::string("Nodes explored : ") + std::to_string(nodes));
+        m_bot.Map().drawTextScreen(sc2::Point2D(0.005, 0.020), std::string("Max depth : ") + std::to_string(depth));
+        m_bot.Map().drawTextScreen(sc2::Point2D(0.005, 0.035), std::string("AB value : ") + std::to_string(value.score));
         if (value.move != NULL) {
             for (auto action : value.move->actions) {
                 if (action->type == AlphaBetaActionType::ATTACK) {
@@ -71,7 +74,6 @@ void RangedManager::assignTargets(const std::vector<const sc2::Unit *> & targets
     }
     // use good-ol' BT
     else {
-
         // for each rangedUnit
         for (auto rangedUnit : rangedUnits)
         {

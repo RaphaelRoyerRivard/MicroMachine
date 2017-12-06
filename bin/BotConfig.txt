@@ -17,10 +17,10 @@
         
     "Micro" :
     {
-		"AlphaBetaPruning"			: false,
+		"AlphaBetaPruning"			: true,
         "KiteWithRangedUnits"       : true,
         "ScoutHarassEnemy"          : true,
-        "CombatUnitsForAttack"      : 20
+        "CombatUnitsForAttack"      : 1
     },
     
     "Macro" :
