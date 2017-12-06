@@ -151,11 +151,10 @@
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_SCL_SECURE_NO_WARNINGS;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
-      <DebugInformationFormat>
-      </DebugInformationFormat>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
       <Optimization>MaxSpeed</Optimization>
       <AdditionalOptions>-DNOMINMAX %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
@@ -281,6 +280,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\AlphaBetaAction.cpp" />
     <ClCompile Include="..\src\AlphaBetaConsideringDurations.cpp" />
+    <ClCompile Include="..\src\AlphaBetaMove.cpp" />
     <ClCompile Include="..\src\AlphaBetaPlayer.cpp" />
     <ClCompile Include="..\src\AlphaBetaState.cpp" />
     <ClCompile Include="..\src\AlphaBetaUnit.cpp" />
@@ -334,6 +334,7 @@
   <ItemGroup>
     <ClInclude Include="..\src\AlphaBetaAction.h" />
     <ClInclude Include="..\src\AlphaBetaConsideringDurations.h" />
+    <ClInclude Include="..\src\AlphaBetaMove.h" />
     <ClInclude Include="..\src\AlphaBetaPlayer.h" />
     <ClInclude Include="..\src\AlphaBetaState.h" />
     <ClInclude Include="..\src\AlphaBetaUnit.h" />

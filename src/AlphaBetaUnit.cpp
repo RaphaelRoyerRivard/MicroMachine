@@ -1,7 +1,9 @@
 #include "AlphaBetaUnit.h"
 #include "AlphaBetaAction.h"
 
-AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot) {
+AlphaBetaUnit::AlphaBetaUnit() { }
+
+AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot, AlphaBetaAction * pprevious_action) {
     this->actual_unit = actual_unit;
     this->hp_current = actual_unit->health;
     this->hp_max = actual_unit->health_max;
@@ -22,9 +24,10 @@ AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot) {
     dps = pdps;
     range = prange;
     cooldown_max = pcooldown;
+    actual_cooldown = actual_unit->weapon_cooldown;
     speed = unitTypeData.movement_speed;
     position = actual_unit->pos;
-    previous_action = nullptr;
+    previous_action = pprevious_action;
 }
 
 AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdps, float prange, float pcooldown_max, float pspeed, sc2::Point2D pposition, AlphaBetaAction * pprevious_action) {
@@ -33,6 +36,7 @@ AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, 
     hp_max = php_max;
     dps = pdps;
     range = prange;
+    actual_cooldown = pactual_unit->weapon_cooldown;
     cooldown_max = pcooldown_max;
     speed = pspeed;
     position = pposition;

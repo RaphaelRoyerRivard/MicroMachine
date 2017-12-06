@@ -11,7 +11,8 @@ class AlphaBetaConsideringDurations {
     AlphaBetaValue alphaBeta(AlphaBetaState state, size_t depth, bool isMax, AlphaBetaValue alpha, AlphaBetaValue beta);
 
 public:
+    size_t nodes_evaluated;
     AlphaBetaConsideringDurations(size_t time, size_t depth);
-    AlphaBetaValue doSearch(std::vector<const sc2::Unit *> units, std::vector<const sc2::Unit *> targets, CCBot * bot);
+    AlphaBetaValue doSearch(std::vector<AlphaBetaUnit *> units, std::vector<AlphaBetaUnit *> targets, CCBot * bot);
 
 };

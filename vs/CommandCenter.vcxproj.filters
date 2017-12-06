@@ -148,6 +148,9 @@
     <ClCompile Include="..\src\AlphaBetaUnit.cpp">
       <Filter>micro\ABCD</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaMove.cpp">
+      <Filter>micro\ABCD</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\BaseLocationManager.h">
@@ -316,6 +319,9 @@
       <Filter>micro\ABCD</Filter>
     </ClInclude>
     <ClInclude Include="..\src\AlphaBetaUnit.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaMove.h">
       <Filter>micro\ABCD</Filter>
     </ClInclude>
   </ItemGroup>

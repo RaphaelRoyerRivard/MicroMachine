@@ -11,12 +11,13 @@
         "BotRace"                   : "Terran",
         "EnemyDifficulty"           : 8,
         "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "DefeatRoaches.SC2Map",
+        "MapFile"                   : "DefeatZerglingsAndBanelings.SC2Map",
         "StepSize"                  : 1
     },
         
     "Micro" :
     {
+		"AlphaBetaPruning"			: false,
         "KiteWithRangedUnits"       : true,
         "ScoutHarassEnemy"          : true,
         "CombatUnitsForAttack"      : 1

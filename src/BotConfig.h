@@ -49,6 +49,7 @@ public:
     
     bool KiteWithRangedUnits;    
     bool ScoutHarassEnemy;
+    bool AlphaBetaPruning;
     int CombatUnitsForAttack;
     
     int WorkersPerRefinery;

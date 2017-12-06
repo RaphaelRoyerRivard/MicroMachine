@@ -2,9 +2,11 @@
 #include <vector>
 #include "sc2api/sc2_api.h"
 #include "AlphaBetaPlayer.h"
-#include "AlphaBetaValue.h"
-#include "AlphaBetaUnit.h"
-#include "AlphaBetaAction.h"
+
+class AlphaBetaAction;
+class AlphaBetaUnit;
+class AlphaBetaValue;
+class AlphaBetaMove;
 
 class AlphaBetaState {
     long time; //temps du jeu
@@ -13,10 +15,11 @@ class AlphaBetaState {
 
 public:
     AlphaBetaState(AlphaBetaPlayer playerMin, AlphaBetaPlayer playerMax, long time);
-    void doMove(AlphaBetaAction * move);
-    std::vector<AlphaBetaAction *> generateMoves(bool isMax);
+    void doMove(AlphaBetaMove * move);
+    std::vector<AlphaBetaMove *> generateMoves(bool isMax);
     AlphaBetaState generateChild();
     bool unitCanAttack(AlphaBetaUnit * unit);
-    bool unitCanMove(AlphaBetaUnit * unit);
+    bool unitCanMoveForward(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit *> targets);
+    bool unitShouldMoveBack(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit*> targets);
     AlphaBetaValue eval(bool isMax);
 };

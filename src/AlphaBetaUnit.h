@@ -16,12 +16,14 @@ public:
     float dps;
     float range;
     float cooldown_max;
+    float actual_cooldown;
     float speed;
     sc2::Point2D position;
     AlphaBetaAction * previous_action;
 
     // initial constructor
-    AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot);
+    AlphaBetaUnit();
+    AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot, AlphaBetaAction * previous_action);
     AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdps, float prange, float pcooldown_max, float pspeed, sc2::Point2D pposition, AlphaBetaAction * pprevious_action);
 };
 
