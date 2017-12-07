@@ -9,19 +9,19 @@ AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot, AlphaBe
     this->hp_max = actual_unit->health_max;
 
     sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(actual_unit->unit_type, *bot);
-    float pdps = 0.f;
+    float pdamage = 0.f;
     float prange = 0.f;
     float pcooldown = 0.f;
     for (sc2::Weapon & weapon : unitTypeData.weapons)
     {
-        float weaponDps = weapon.attacks * weapon.damage_ * (1 / weapon.speed);
-        pdps = std::max(weaponDps, dps);
+        float weaponDps = weapon.attacks * weapon.damage_;
+        pdamage = std::max(weaponDps, pdamage);
         float weaponRange = weapon.range;
         prange = std::max(weaponRange, range);
         float weaponCooldown = weapon.speed;
         pcooldown = std::max(weaponCooldown, pcooldown);
     }
-    dps = pdps;
+    damage = pdamage;
     range = prange;
     cooldown_max = pcooldown;
     actual_cooldown = actual_unit->weapon_cooldown;
@@ -30,11 +30,11 @@ AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot, AlphaBe
     previous_action = pprevious_action;
 }
 
-AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdps, float prange, float pcooldown_max, float pspeed, sc2::Point2D pposition, AlphaBetaAction * pprevious_action) {
+AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdamage, float prange, float pcooldown_max, float pspeed, sc2::Point2D pposition, AlphaBetaAction * pprevious_action) {
     actual_unit = pactual_unit;
     hp_current = php_current;
     hp_max = php_max;
-    dps = pdps;
+    damage = pdamage;
     range = prange;
     actual_cooldown = pactual_unit->weapon_cooldown;
     cooldown_max = pcooldown_max;

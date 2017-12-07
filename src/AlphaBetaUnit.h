@@ -13,7 +13,7 @@ public:
     const sc2::Unit * actual_unit;
     float hp_current;
     float hp_max;
-    float dps;
+    float damage;
     float range;
     float cooldown_max;
     float actual_cooldown;
@@ -24,7 +24,7 @@ public:
     // initial constructor
     AlphaBetaUnit();
     AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot, AlphaBetaAction * previous_action);
-    AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdps, float prange, float pcooldown_max, float pspeed, sc2::Point2D pposition, AlphaBetaAction * pprevious_action);
+    AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdamage, float prange, float pcooldown_max, float pspeed, sc2::Point2D pposition, AlphaBetaAction * pprevious_action);
 };
 
 #endif 

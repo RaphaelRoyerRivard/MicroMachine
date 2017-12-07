@@ -18,7 +18,7 @@ void AlphaBetaState::doMove(AlphaBetaMove * move) {
     for (auto action : move->actions) {
         if (action->type == AlphaBetaActionType::ATTACK) {
             // do attack
-            action->target->hp_current = action->unit->dps;
+            action->target->hp_current -= action->unit->damage;
             action->unit->actual_cooldown = 0;
         }
         else if (action->type == AlphaBetaActionType::MOVE) {
