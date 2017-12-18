@@ -17,6 +17,7 @@ struct GroundThreat
 };
 
 class CCBot;
+class AlphaBetaUnit;
 
 class MicroManager
 {
@@ -45,4 +46,5 @@ public:
     std::unordered_map<sc2::Tag, FocusFireFiniteStateMachine*> m_focusFireStates;
     std::unordered_map<sc2::Tag, KitingFiniteStateMachine*> m_kittingStates;
     std::unordered_map<sc2::Tag, float> m_unitHealth;
+    std::unordered_map<sc2::Tag, AlphaBetaUnit *> m_units_actions;
 };

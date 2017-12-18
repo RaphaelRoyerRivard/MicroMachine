@@ -4,6 +4,11 @@
 #include "BehaviorTreeBuilder.h"
 #include "RangedActions.h"
 #include <algorithm>
+#include <string>
+#include "AlphaBetaConsideringDurations.h"
+#include "AlphaBetaUnit.h"
+#include "AlphaBetaMove.h"
+#include "AlphaBetaAction.h"
 
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
@@ -11,7 +16,6 @@ RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 
 void RangedManager::executeMicro(const std::vector<const sc2::Unit *> & targets)
 {
-    // build bt tree here
     assignTargets(targets);
 }
 
@@ -29,48 +33,90 @@ void RangedManager::assignTargets(const std::vector<const sc2::Unit *> & targets
 
         rangedUnitTargets.push_back(target);
     }
-    // for each rangedUnit
-    for (auto rangedUnit : rangedUnits)
-    {
-        BOT_ASSERT(rangedUnit, "ranged unit is null");
-        
-        const sc2::Unit * target = nullptr;
-        const sc2::Unit * mineral = nullptr;
-        sc2::Point2D mineralPos;
 
-        ConditionAction isEnemyInSight(rangedUnitTargets.size() > 0 && (target = getTarget(rangedUnit, rangedUnitTargets)) != nullptr),
-            isMineralInSight((mineral = getClosestMineral(rangedUnit)) != nullptr),
-            isEnemyRanged(target != nullptr && isTargetRanged(target));
+    // Use alpha-beta (considering durations) for combat
+    // TODO: Split theses into Combat managers and use IOC and dependecy injection or something instead of a vulgar if
+    if (m_bot.Config().AlphaBetaPruning) {
 
-        if (mineral == nullptr) mineralPos = sc2::Point2D(0, 0);
-        else mineralPos = mineral->pos;
+        std::vector<AlphaBetaUnit *> minUnits;
+        std::vector<AlphaBetaUnit *> maxUnits;
 
-        FocusFireAction focusFireAction(rangedUnit, target, &rangedUnitTargets, m_bot, m_focusFireStates, &rangedUnits, m_unitHealth);
-        KiteAction kiteAction(rangedUnit, target, m_bot, m_kittingStates);
-        GoToMineralShardAction goToMineralShardAction(rangedUnit, mineralPos, m_bot);
-        GoToObjectiveAction goToObjectiveAction(rangedUnit, order.getPosition(), m_bot);
+        for (auto unit : rangedUnits) {
+            if (m_units_actions.find(unit->tag) != m_units_actions.end()) {
+                AlphaBetaUnit * old = m_units_actions[unit->tag];
+                maxUnits.push_back(new AlphaBetaUnit(unit, &m_bot, old->previous_action));
+            }
+            else maxUnits.push_back(new AlphaBetaUnit(unit, &m_bot, nullptr));
+        }
 
-        BehaviorTree* bt = BehaviorTreeBuilder()
-            .selector()
-            .sequence()
-            .condition(&isEnemyInSight).end()
-            .selector()
-            .sequence()
-            .condition(&isEnemyRanged).end()
-            .action(&focusFireAction).end()
-            .end()
-            .action(&kiteAction).end()
-            .end()
-            .end()
-            .sequence()
-            .condition(&isMineralInSight).end()
-            .action(&goToMineralShardAction).end()
-            .end()
-            .action(&goToObjectiveAction).end()
-            .end()
-            .end();
+        // TODO: Keep enemy unit's actions too ?
+        for (auto unit : rangedUnitTargets) {
+            minUnits.push_back(new AlphaBetaUnit(unit, &m_bot, nullptr));
+        }
+        size_t depth = 6;
+        AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(40, depth);
+        AlphaBetaValue value = alphaBeta.doSearch(maxUnits, minUnits, &m_bot);
+        size_t nodes = alphaBeta.nodes_evaluated;
+        m_bot.Map().drawTextScreen(sc2::Point2D(0.005, 0.005), std::string("Nodes explored : ") + std::to_string(nodes));
+        m_bot.Map().drawTextScreen(sc2::Point2D(0.005, 0.020), std::string("Max depth : ") + std::to_string(depth));
+        m_bot.Map().drawTextScreen(sc2::Point2D(0.005, 0.035), std::string("AB value : ") + std::to_string(value.score));
+        if (value.move != NULL) {
+            for (auto action : value.move->actions) {
+                if (action->type == AlphaBetaActionType::ATTACK) {
+                    Micro::SmartAttackUnit(action->unit->actual_unit, action->target->actual_unit, m_bot);
+                }
+                else if (action->type == AlphaBetaActionType::MOVE) {
+                    Micro::SmartMove(action->unit->actual_unit, action->position, m_bot);
+                }
+                m_units_actions.insert_or_assign(action->unit->actual_unit->tag, action->unit);
+            }
+        }
+    }
+    // use good-ol' BT
+    else {
+        // for each rangedUnit
+        for (auto rangedUnit : rangedUnits)
+        {
+            BOT_ASSERT(rangedUnit, "ranged unit is null");
 
-        bt->tick();
+            const sc2::Unit * target = nullptr;
+            const sc2::Unit * mineral = nullptr;
+            sc2::Point2D mineralPos;
+
+            ConditionAction isEnemyInSight(rangedUnitTargets.size() > 0 && (target = getTarget(rangedUnit, rangedUnitTargets)) != nullptr),
+                isMineralInSight((mineral = getClosestMineral(rangedUnit)) != nullptr),
+                isEnemyRanged(target != nullptr && isTargetRanged(target));
+
+            if (mineral == nullptr) mineralPos = sc2::Point2D(0, 0);
+            else mineralPos = mineral->pos;
+
+            FocusFireAction focusFireAction(rangedUnit, target, &rangedUnitTargets, m_bot, m_focusFireStates, &rangedUnits, m_unitHealth);
+            KiteAction kiteAction(rangedUnit, target, m_bot, m_kittingStates);
+            GoToMineralShardAction goToMineralShardAction(rangedUnit, mineralPos, m_bot);
+            GoToObjectiveAction goToObjectiveAction(rangedUnit, order.getPosition(), m_bot);
+
+            BehaviorTree* bt = BehaviorTreeBuilder()
+                .selector()
+                .sequence()
+                .condition(&isEnemyInSight).end()
+                .selector()
+                .sequence()
+                .condition(&isEnemyRanged).end()
+                .action(&focusFireAction).end()
+                .end()
+                .action(&kiteAction).end()
+                .end()
+                .end()
+                .sequence()
+                .condition(&isMineralInSight).end()
+                .action(&goToMineralShardAction).end()
+                .end()
+                .action(&goToObjectiveAction).end()
+                .end()
+                .end();
+
+            bt->tick();
+        }
     }
 }
 

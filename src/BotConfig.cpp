@@ -91,6 +91,7 @@ void BotConfig::readConfigFile()
         const rapidjson::Value & micro = doc["Micro"];
         JSONTools::ReadBool("KiteWithRangedUnits", micro, KiteWithRangedUnits);
         JSONTools::ReadBool("ScoutHarassEnemy", micro, ScoutHarassEnemy);
+        JSONTools::ReadBool("AlphaBetaPruning", micro, AlphaBetaPruning);
         JSONTools::ReadInt("CombatUnitsForAttack", micro, CombatUnitsForAttack);
     }
 

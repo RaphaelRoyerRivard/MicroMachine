@@ -11,15 +11,16 @@
         "BotRace"                   : "Terran",
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "InterloperLE.SC2Map",
+        "MapFile"                   : "DefeatZerglingsAndBanelings.SC2Map",
         "StepSize"                  : 1
     },
         
     "Micro" :
     {
+		"AlphaBetaPruning"			: true,
         "KiteWithRangedUnits"       : true,
         "ScoutHarassEnemy"          : true,
-        "CombatUnitsForAttack"      : 20
+        "CombatUnitsForAttack"      : 1
     },
     
     "Macro" :
