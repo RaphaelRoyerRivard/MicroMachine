@@ -49,6 +49,7 @@ public:
     
     bool KiteWithRangedUnits;    
     bool ScoutHarassEnemy;
+    bool AlphaBetaPruning;
     bool AutoCompleteBuildOrder;
     int CombatUnitsForAttack;
     

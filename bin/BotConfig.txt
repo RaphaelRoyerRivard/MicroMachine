@@ -17,6 +17,7 @@
         
     "Micro" :
     {
+		"AlphaBetaPruning"			: true,
         "KiteWithRangedUnits"       : true,
         "ScoutHarassEnemy"          : true,
         "CombatUnitsForAttack"      : 1
