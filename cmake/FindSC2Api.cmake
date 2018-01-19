@@ -37,6 +37,7 @@ find_path(SC2Api_Protobuf_INCLUDE_DIR
         "google/protobuf/stubs/common.h"
     PATHS
         "${SC2Api_INCLUDE_DIR}/sc2api"
+    NO_DEFAULT_PATH
 )
 
 # Put all the headers together.
@@ -49,7 +50,7 @@ set(SC2Api_INCLUDE_DIRS
 set(SC2Api_LIBRARIES "")
 
 # Search for SC2Api libraries.
-foreach(COMPONENT civetweb protobuf sc2api sc2lib sc2protocol sc2utils)
+foreach(COMPONENT sc2api sc2lib sc2utils sc2protocol civetweb protobuf)
     string(TOUPPER ${COMPONENT} UPPERCOMPONENT)
 
     find_library(SC2Api_${UPPERCOMPONENT}_LIB
@@ -58,9 +59,9 @@ foreach(COMPONENT civetweb protobuf sc2api sc2lib sc2protocol sc2utils)
         PATHS
             "/opt/local/lib"
             "/usr/local/lib"
-            "/usr/lib"
         PATH_SUFFIXES
             "sc2api"
+        NO_DEFAULT_PATH
     )
 
     if(SC2Api_${UPPERCOMPONENT}_LIB)

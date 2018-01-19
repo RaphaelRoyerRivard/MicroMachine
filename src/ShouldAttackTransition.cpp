@@ -18,7 +18,7 @@ bool ShouldAttackTransition::isValid(const sc2::Unit * target, CCBot * bot)
     float dist(Util::Dist(m_unit->pos, target->pos));
     float timeUntilAttacked = std::max(0.f, (dist - range) / unitTypeData.movement_speed);
 
-    return !(Util::IsCombatUnitType(target->unit_type, *bot) && !(timeUntilAttacked >= m_unit->weapon_cooldown));
+    return !(Unit(target, *bot).getType().isCombatUnit() && !(timeUntilAttacked >= m_unit->weapon_cooldown));
 }
 KitingFSMState* ShouldAttackTransition::getNextState()
 {

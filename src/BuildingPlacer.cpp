@@ -15,26 +15,25 @@ void BuildingPlacer::onStart()
     m_reserveMap = std::vector< std::vector<bool> >(m_bot.Map().width(), std::vector<bool>(m_bot.Map().height(), false));
 }
 
-bool BuildingPlacer::isInResourceBox(int x, int y) const
+bool BuildingPlacer::isInResourceBox(int tileX, int tileY) const
 {
-    return false;
-    return m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->isInResourceBox(x, y);
+    return m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->isInResourceBox(tileX, tileY);
 }
 
 // makes final checks to see if a building can be built at a certain location
 bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b) const
 {
-    if (isInResourceBox(by, by))
+    if (isInResourceBox(bx, by))
     {
         return false;
     }
 
     // check the reserve map
-    for (int x = bx; x < bx + Util::GetUnitTypeWidth(b.type, m_bot); x++)
+    for (int x = bx; x < bx + b.type.tileWidth(); x++)
     {
-        for (int y = by; y < by + Util::GetUnitTypeHeight(b.type, m_bot); y++)
+        for (int y = by; y < by + b.type.tileHeight(); y++)
         {
-            if (!m_bot.Map().isValid(x, y) || m_reserveMap[x][y])
+            if (!m_bot.Map().isValidTile(x, y) || m_reserveMap[x][y])
             {
                 return false;
             }
@@ -53,7 +52,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b) const
 //returns true if we can build this type of unit here with the specified amount of space.
 bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist) const
 {
-    sc2::UnitTypeID type = b.type;
+    UnitType type = b.type;
 
     //if we can't build here, we of course can't build here with space
     if (!canBuildHere(bx, by, b))
@@ -62,8 +61,8 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     }
 
     // height and width of the building
-    int width  = Util::GetUnitTypeWidth(b.type, m_bot);
-    int height = Util::GetUnitTypeHeight(b.type, m_bot);
+    int width  = b.type.tileWidth();
+    int height = b.type.tileHeight();
 
     // TODO: make sure we leave space for add-ons. These types of units can have addons:
 
@@ -86,7 +85,7 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     {
         for (int y = starty; y < endy; y++)
         {
-            if (!Util::IsRefineryType(b.type))
+            if (!b.type.isRefinery())
             {
                 if (!buildable(b, x, y) || m_reserveMap[x][y])
                 {
@@ -99,7 +98,7 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     return true;
 }
 
-sc2::Point2D BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist) const
+CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist) const
 {
     Timer t;
     t.start();
@@ -110,11 +109,11 @@ sc2::Point2D BuildingPlacer::getBuildLocationNear(const Building & b, int buildD
     double ms1 = t.getElapsedTimeInMilliSec();
 
     // iterate through the list until we've found a suitable location
-    for (size_t i(0); i < closestToBuilding.size(); ++i)
+    for (size_t i(0); i < closestToBuilding.size() && i < 1000; ++i)
     {
         auto & pos = closestToBuilding[i];
 
-        if (canBuildHereWithSpace((int)pos.x, (int)pos.y, b, buildDist))
+        if (canBuildHereWithSpace(pos.x, pos.y, b, buildDist))
         {
             double ms = t.getElapsedTimeInMilliSec();
             //printf("Building Placer Took %d iterations, lasting %lf ms @ %lf iterations/ms, %lf setup ms\n", (int)i, ms, (i / ms), ms1);
@@ -124,15 +123,15 @@ sc2::Point2D BuildingPlacer::getBuildLocationNear(const Building & b, int buildD
     }
 
     double ms = t.getElapsedTimeInMilliSec();
-    //printf("Building Placer Took %lf ms\n", ms);
+    //printf("Building Placer Failure: %s - Took %lf ms\n", b.type.getName().c_str(), ms);
 
-    return sc2::Point2D(0, 0);
+    return CCTilePosition(0, 0);
 }
 
-bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, sc2::UnitTypeID type) const
+bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
 {
     // if it's a resource depot we don't care if it overlaps
-    if (Util::IsTownHallType(type))
+    if (type.isResourceDepot())
     {
         return false;
     }
@@ -140,8 +139,8 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, sc2::UnitTypeID type
     // dimensions of the proposed location
     int tx1 = x;
     int ty1 = y;
-    int tx2 = tx1 + Util::GetUnitTypeWidth(type, m_bot);
-    int ty2 = ty1 + Util::GetUnitTypeHeight(type, m_bot);
+    int tx2 = tx1 + type.tileWidth();
+    int ty2 = ty1 + type.tileHeight();
 
     // for each base location
     for (const BaseLocation * base : m_bot.Bases().getBaseLocations())
@@ -149,8 +148,8 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, sc2::UnitTypeID type
         // dimensions of the base location
         int bx1 = (int)base->getDepotPosition().x;
         int by1 = (int)base->getDepotPosition().y;
-        int bx2 = bx1 + Util::GetUnitTypeWidth(Util::GetTownHall(m_bot.GetPlayerRace(Players::Self)), m_bot);
-        int by2 = by1 + Util::GetUnitTypeHeight(Util::GetTownHall(m_bot.GetPlayerRace(Players::Self)), m_bot);
+        int bx2 = bx1 + Util::GetTownHall(m_bot.GetPlayerRace(Players::Self), m_bot).tileWidth();
+        int by2 = by1 + Util::GetTownHall(m_bot.GetPlayerRace(Players::Self), m_bot).tileHeight();
 
         // conditions for non-overlap are easy
         bool noOverlap = (tx2 < bx1) || (tx1 > bx2) || (ty2 < by1) || (ty1 > by2);
@@ -169,7 +168,7 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, sc2::UnitTypeID type
 bool BuildingPlacer::buildable(const Building & b, int x, int y) const
 {
     // TODO: does this take units on the map into account?
-    if (!m_bot.Map().isValid(x, y) || !m_bot.Map().canBuildTypeAtPosition(x, y, b.type))
+    if (!m_bot.Map().isValidTile(x, y) || !m_bot.Map().canBuildTypeAtPosition(x, y, b.type))
     {
         return false;
     }
@@ -181,11 +180,11 @@ bool BuildingPlacer::buildable(const Building & b, int x, int y) const
 
 void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)
 {
-    size_t rwidth = m_reserveMap.size();
-    size_t rheight = m_reserveMap[0].size();
-    for (size_t x = bx; x < bx + width && x < rwidth; x++)
+    int rwidth = (int)m_reserveMap.size();
+    int rheight = (int)m_reserveMap[0].size();
+    for (int x = bx; x < bx + width && x < rwidth; x++)
     {
-        for (size_t y = by; y < by + height && y < rheight; y++)
+        for (int y = by; y < by + height && y < rheight; y++)
         {
             m_reserveMap[x][y] = true;
         }
@@ -208,12 +207,7 @@ void BuildingPlacer::drawReservedTiles()
         {
             if (m_reserveMap[x][y] || isInResourceBox(x, y))
             {
-                int x1 = x*32 + 8;
-                int y1 = y*32 + 8;
-                int x2 = (x+1)*32 - 8;
-                int y2 = (y+1)*32 - 8;
-
-                m_bot.Map().drawBox((float)x1, (float)y1, (float)x2, (float)y2, sc2::Colors::Yellow);
+                m_bot.Map().drawTile(x, y, CCColor(255, 255, 0));
             }
         }
     }
@@ -233,26 +227,26 @@ void BuildingPlacer::freeTiles(int bx, int by, int width, int height)
     }
 }
 
-sc2::Point2D BuildingPlacer::getRefineryPosition()
+CCTilePosition BuildingPlacer::getRefineryPosition()
 {
-    sc2::Point2D closestGeyser(0, 0);
+    CCPosition closestGeyser(0, 0);
     double minGeyserDistanceFromHome = std::numeric_limits<double>::max();
-    sc2::Point2D homePosition = m_bot.GetStartLocation();
+    CCPosition homePosition = m_bot.GetStartLocation();
 
-    for (auto & unit : m_bot.Observation()->GetUnits())
+    for (auto & unit : m_bot.GetUnits())
     {
-        if (!Util::IsGeyser(unit))
+        if (!unit.getType().isGeyser())
         {
             continue;
         }
 
-        sc2::Point2D geyserPos(unit->pos);
+        CCPosition geyserPos(unit.getPosition());
 
         // check to see if it's next to one of our depots
         bool nearDepot = false;
         for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
         {
-            if (Util::IsTownHall(unit) && Util::Dist(unit->pos, geyserPos) < 10)
+            if (unit.getType().isResourceDepot() && Util::Dist(unit, geyserPos) < 10)
             {
                 nearDepot = true;
             }
@@ -260,17 +254,21 @@ sc2::Point2D BuildingPlacer::getRefineryPosition()
 
         if (nearDepot)
         {
-            double homeDistance = Util::Dist(unit->pos, homePosition);
+            double homeDistance = Util::Dist(unit, homePosition);
 
             if (homeDistance < minGeyserDistanceFromHome)
             {
                 minGeyserDistanceFromHome = homeDistance;
-                closestGeyser = unit->pos;
+                closestGeyser = unit.getPosition();
             }
         }
     }
 
-    return closestGeyser;
+#ifdef SC2API
+    return CCTilePosition((int)closestGeyser.x, (int)closestGeyser.y);
+#else
+    return CCTilePosition(closestGeyser);
+#endif
 }
 
 bool BuildingPlacer::isReserved(int x, int y) const

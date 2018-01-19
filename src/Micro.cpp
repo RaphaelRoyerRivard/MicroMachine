@@ -71,25 +71,6 @@ void Micro::SmartFocusFire(const sc2::Unit * rangedUnit, const sc2::Unit * targe
     state.insert_or_assign(rangedUnit->tag, stateMachine);
 }
 
-void Micro::SmartBuild(const sc2::Unit * builder, const sc2::UnitTypeID & buildingType, sc2::Point2D pos, CCBot & bot)
-{
-    BOT_ASSERT(builder != nullptr, "Builder is null");
-    bot.Actions()->UnitCommand(builder, bot.Data(buildingType).buildAbility, pos);
-}
-
-void Micro::SmartBuildTarget(const sc2::Unit * builder, const sc2::UnitTypeID & buildingType, const sc2::Unit * target, CCBot & bot)
-{
-    BOT_ASSERT(builder != nullptr, "Builder is null");
-    BOT_ASSERT(target != nullptr, "Target is null");
-    bot.Actions()->UnitCommand(builder, bot.Data(buildingType).buildAbility, target);
-}
-
-void Micro::SmartTrain(const sc2::Unit * builder, const sc2::UnitTypeID & buildingType, CCBot & bot)
-{
-    BOT_ASSERT(builder != nullptr, "Builder is null");
-    bot.Actions()->UnitCommand(builder, bot.Data(buildingType).buildAbility);
-}
-
 void Micro::SmartAbility(const sc2::Unit * builder, const sc2::AbilityID & abilityID, CCBot & bot)
 {
     BOT_ASSERT(builder != nullptr, "Builder is null");

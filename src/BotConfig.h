@@ -1,11 +1,9 @@
 #pragma once
 
-#include "sc2api/sc2_api.h"
 #include "Common.h"
 
 class BotConfig
 {
-    sc2::Race GetRace(const std::string & raceName);
 
 public:
 
@@ -19,6 +17,11 @@ public:
     std::string Authors;
     bool PrintInfoOnStart;
     std::string BotMode;
+
+    int SetLocalSpeed;
+    int SetFrameSkip;
+    bool UserInput;
+    bool CompleteMapInformation;
     
     std::string StrategyName;
     std::string ReadDir;
@@ -42,15 +45,14 @@ public:
     bool DrawUnitTargetInfo;
     bool DrawSquadInfo;		
     
-    sc2::Color ColorLineTarget;
-    sc2::Color ColorLineMineral;
-    sc2::Color ColorUnitNearEnemy;
-    sc2::Color ColorUnitNotNearEnemy;
+    CCColor ColorLineTarget;
+    CCColor ColorLineMineral;
+    CCColor ColorUnitNearEnemy;
+    CCColor ColorUnitNotNearEnemy;
     
     bool KiteWithRangedUnits;    
     bool ScoutHarassEnemy;
     bool AutoCompleteBuildOrder;
-    int CombatUnitsForAttack;
     
     int WorkersPerRefinery;
     int BuildingSpacing;

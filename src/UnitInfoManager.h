@@ -1,24 +1,23 @@
 #pragma once
 
-#include "sc2api/sc2_api.h"
-
+#include "Common.h"
 #include "UnitData.h"
 #include "BaseLocation.h"
+#include "Unit.h"
 
 class CCBot;
 class UnitInfoManager 
 {
     CCBot &           m_bot;
 
-    std::map<int, UnitData> m_unitData;
+    std::map<CCPlayer, UnitData> m_unitData; 
+    std::map<CCPlayer, std::vector<Unit>> m_units;
 
-    std::map<int, std::vector<const sc2::Unit *>> m_units;
-
-    void                    updateUnit(const sc2::Unit * unit);
+    void                    updateUnit(const Unit & unit);
     void                    updateUnitInfo();
-    bool                    isValidUnit(const sc2::Unit * unit);
+    bool                    isValidUnit(const Unit & unit);
     
-    const UnitData &        getUnitData(int player) const;
+    const UnitData &        getUnitData(CCPlayer player) const;
 
     void drawSelectedUnitDebugInfo();
 
@@ -29,13 +28,13 @@ public:
     void                    onFrame();
     void                    onStart();
 
-    const std::vector<const sc2::Unit *> & getUnits(int player) const;
+    const std::vector<Unit> & getUnits(CCPlayer player) const;
 
-    size_t                  getUnitTypeCount(int player, sc2::UnitTypeID type, bool completed = true) const;
+    size_t                  getUnitTypeCount(CCPlayer player, UnitType type, bool completed = true) const;
 
-    void                    getNearbyForce(std::vector<UnitInfo> & unitInfo, sc2::Point2D p, int player, float radius) const;
+    void                    getNearbyForce(std::vector<UnitInfo> & unitInfo, CCPosition p, int player, float radius) const;
 
-    const std::map<const sc2::Unit *, UnitInfo> & getUnitInfoMap(int player) const;
+    const std::map<Unit, UnitInfo> & getUnitInfoMap(CCPlayer player) const;
 
     //bool                  enemyHasCloakedUnits() const;
     void                    drawUnitInformation(float x, float y) const;

@@ -1,9 +1,10 @@
 #pragma once
 
-#include "sc2api/sc2_api.h"
 #include "Common.h"
+#include "UnitType.h"
 
 class CCBot;
+class Unit;
 
 namespace Util
 {
@@ -15,36 +16,11 @@ namespace Util
         bool operator()(const sc2::Unit * unit, const sc2::ObservationInterface*);
     };
 
-    int GetPlayer(const sc2::Unit * unit);
-    bool IsCombatUnit(const sc2::Unit * unit, CCBot & bot);
-    bool IsCombatUnitType(const sc2::UnitTypeID & type, CCBot & bot);
-    bool IsSupplyProvider(const sc2::Unit * unit);
-    bool IsSupplyProviderType(const sc2::UnitTypeID & type);
-    bool IsTownHall(const sc2::Unit * unit);
-    bool IsTownHallType(const sc2::UnitTypeID & type);
-    bool IsRefinery(const sc2::Unit * unit);
-    bool IsRefineryType(const sc2::UnitTypeID & type);
-    bool IsDetector(const sc2::Unit * type);
-    bool IsDetectorType(const sc2::UnitTypeID & type);
-    bool IsGeyser(const sc2::Unit * unit);
-    bool IsMineral(const sc2::Unit * unit);
-    bool IsWorker(const sc2::Unit * unit);
-    bool IsWorkerType(const sc2::UnitTypeID & unit);
-    bool IsIdle(const sc2::Unit * unit);
-    bool IsCompleted(const sc2::Unit * unit);
-    float GetAttackRange(const sc2::UnitTypeID & type, CCBot & bot);
     float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
     float GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
     float GetAttackDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
     float GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
     
-    bool UnitCanBuildTypeNow(const sc2::Unit * unit, const sc2::UnitTypeID & type, CCBot & m_bot);
-    int GetUnitTypeWidth(const sc2::UnitTypeID type, const CCBot & bot);
-    int GetUnitTypeHeight(const sc2::UnitTypeID type, const CCBot & bot);
-    int GetUnitTypeMineralPrice(const sc2::UnitTypeID type, const CCBot & bot);
-    int GetUnitTypeGasPrice(const sc2::UnitTypeID type, const CCBot & bot);
-    sc2::UnitTypeID GetTownHall(const sc2::Race & race);
-    sc2::UnitTypeID GetSupplyProvider(const sc2::Race & race);
     std::string     GetStringFromRace(const sc2::Race & race);
     sc2::Race       GetRaceFromString(const std::string & race);
     sc2::Point2D    CalcCenter(const std::vector<const sc2::Unit *> & units);
@@ -55,11 +31,6 @@ namespace Util
 
     sc2::UnitTypeID GetUnitTypeIDFromName(const std::string & name, CCBot & bot);
     sc2::UpgradeID  GetUpgradeIDFromName(const std::string & name, CCBot & bot);
-    sc2::BuffID     GetBuffIDFromName(const std::string & name, CCBot & bot);
-    sc2::AbilityID  GetAbilityIDFromName(const std::string & name, CCBot & bot);
-
-    float Dist(const sc2::Point2D & p1, const sc2::Point2D & p2);
-    float DistSq(const sc2::Point2D & p1, const sc2::Point2D & p2);
 
     sc2::Point2D CalcLinearRegression(const std::vector<const sc2::Unit *> & units);
     sc2::Point2D CalcPerpendicularVector(const sc2::Point2D & vector);
@@ -70,4 +41,35 @@ namespace Util
     bool    Placement(const sc2::GameInfo& info, const sc2::Point2D& point);
     bool    Pathable(const sc2::GameInfo& info, const sc2::Point2D& point);
 
+
+
+
+
+
+
+
+
+    CCRace          GetRaceFromString(const std::string & str);
+    CCTilePosition  GetTilePosition(const CCPosition & pos);
+    CCPosition      GetPosition(const CCTilePosition & tile);
+    std::string     GetStringFromRace(const CCRace & race);
+    bool            UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & m_bot);
+    UnitType        GetTownHall(const CCRace & race, CCBot & bot);
+    UnitType        GetRefinery(const CCRace & race, CCBot & bot);
+    UnitType        GetSupplyProvider(const CCRace & race, CCBot & bot);
+    CCPosition      CalcCenter(const std::vector<Unit> & units);
+    bool            IsZerg(const CCRace & race);
+    bool            IsProtoss(const CCRace & race);
+    bool            IsTerran(const CCRace & race);
+    CCPositionType  TileToPosition(float tile);
+
+#ifdef SC2API
+    sc2::BuffID     GetBuffFromName(const std::string & name, CCBot & bot);
+    sc2::AbilityID  GetAbilityFromName(const std::string & name, CCBot & bot);
+#endif
+
+    float Dist(const Unit & unit, const CCPosition & p2);
+    float Dist(const Unit & unit1, const Unit & unit2);
+    float Dist(const CCPosition & p1, const CCPosition & p2);
+    CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
 };

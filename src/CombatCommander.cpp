@@ -1,7 +1,6 @@
 #include "CombatCommander.h"
 #include "Util.h"
 #include "CCBot.h"
-#include "Micro.h"
 
 const size_t IdlePriority = 0;
 const size_t AttackPriority = 1;
@@ -26,7 +25,7 @@ void CombatCommander::onStart()
     m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
     // the main attack squad that will pressure the enemy's closest base location
-    SquadOrder mainAttackOrder(SquadOrderTypes::Attack, sc2::Point2D(0.0f, 0.0f), 25, "Attack Enemy Base");
+    SquadOrder mainAttackOrder(SquadOrderTypes::Attack, CCPosition(0, 0), 25, "Attack Enemy Base");
     m_squadData.addSquad("MainAttack", Squad("MainAttack", mainAttackOrder, AttackPriority, m_bot));
 
     // the scout defense squad will handle chasing the enemy worker scout
@@ -39,7 +38,7 @@ bool CombatCommander::isSquadUpdateFrame()
     return true;
 }
 
-void CombatCommander::onFrame(const std::vector<const sc2::Unit *> & combatUnits)
+void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 {
     if (!m_attackStarted)
     {
@@ -61,9 +60,7 @@ void CombatCommander::onFrame(const std::vector<const sc2::Unit *> & combatUnits
 
 bool CombatCommander::shouldWeStartAttacking()
 {
-    // TODO: make this more clever
-    // For now: start attacking when we have more than 10 combat units
-    return m_combatUnits.size() >= m_bot.Config().CombatUnitsForAttack;
+    return m_bot.Strategy().getCurrentStrategy().m_attackCondition.eval();
 }
 
 void CombatCommander::updateIdleSquad()
@@ -90,12 +87,12 @@ void CombatCommander::updateAttackSquads()
 
     for (auto unit : m_combatUnits)
     {   
-        BOT_ASSERT(unit, "null unit in combat units");
+        BOT_ASSERT(unit.isValid(), "null unit in combat units");
 
         // get every unit of a lower priority and put it into the attack squad
-        if (!Util::IsWorker(unit) 
-            && !(unit->unit_type == sc2::UNIT_TYPEID::ZERG_OVERLORD) 
-            && !(unit->unit_type == sc2::UNIT_TYPEID::ZERG_QUEEN) 
+        if (!unit.getType().isWorker() 
+            && !(unit.getType().isOverlord()) 
+            && !(unit.getType().isQueen()) 
             && m_squadData.canAssignUnitToSquad(unit, mainAttackSquad))
         {
             m_squadData.assignUnitToSquad(unit, mainAttackSquad);
@@ -122,29 +119,29 @@ void CombatCommander::updateScoutDefenseSquad()
         return;
 
     // get all of the enemy units in this region
-    std::vector<const sc2::Unit *> enemyUnitsInRegion;
+    std::vector<Unit> enemyUnitsInRegion;
     for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
     {
-        if (myBaseLocation->containsPosition(unit->pos))
+        if (myBaseLocation->containsPosition(unit.getPosition()))
         {
             enemyUnitsInRegion.push_back(unit);
         }
     }
 
     // if there's an enemy worker in our region then assign someone to chase him
-    bool assignScoutDefender = (enemyUnitsInRegion.size() == 1) && Util::IsWorker(enemyUnitsInRegion[0]);
+    bool assignScoutDefender = (enemyUnitsInRegion.size() == 1) && enemyUnitsInRegion[0].getType().isWorker();
 
     // if our current squad is empty and we should assign a worker, do it
     if (scoutDefenseSquad.isEmpty() && assignScoutDefender)
     {
         // the enemy worker that is attacking us
-        const sc2::Unit * enemyWorkerUnit = *enemyUnitsInRegion.begin();
-        BOT_ASSERT(enemyWorkerUnit, "null enemy worker unit");
+        Unit enemyWorkerUnit = *enemyUnitsInRegion.begin();
+        BOT_ASSERT(enemyWorkerUnit.isValid(), "null enemy worker unit");
 
         // get our worker unit that is mining that is closest to it
-        const sc2::Unit * workerDefender = findClosestWorkerTo(m_combatUnits, enemyWorkerUnit->pos);
+        Unit workerDefender = findClosestWorkerTo(m_combatUnits, enemyWorkerUnit.getPosition());
 
-        if (enemyWorkerUnit && workerDefender)
+        if (enemyWorkerUnit.isValid() && workerDefender.isValid())
         {
             // grab it from the worker manager and put it in the squad
             if (m_squadData.canAssignUnitToSquad(workerDefender, scoutDefenseSquad))
@@ -159,10 +156,10 @@ void CombatCommander::updateScoutDefenseSquad()
     {
         for (auto unit : scoutDefenseSquad.getUnits())
         {
-            BOT_ASSERT(unit, "null unit in scoutDefenseSquad");
+            BOT_ASSERT(unit.isValid(), "null unit in scoutDefenseSquad");
 
-            Micro::SmartStop(unit, m_bot);
-            if (Util::IsWorker(unit))
+            unit.stop();
+            if (unit.getType().isWorker())
             {
                 m_bot.Workers().finishedWithWorker(unit);
             }
@@ -189,22 +186,22 @@ void CombatCommander::updateDefenseSquads()
             continue;
         }
 
-        sc2::Point2D basePosition = myBaseLocation->getPosition();
+        CCPosition basePosition = myBaseLocation->getPosition();
 
         // start off assuming all enemy units in region are just workers
         int numDefendersPerEnemyUnit = 2;
 
         // all of the enemy units in this region
-        std::vector<const sc2::Unit *> enemyUnitsInRegion;
+        std::vector<Unit> enemyUnitsInRegion;
         for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
         {
             // if it's an overlord, don't worry about it for defense, we don't care what they see
-            if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_OVERLORD)
+            if (unit.getType().isOverlord())
             {
                 continue;
             }
 
-            if (myBaseLocation->containsPosition(unit->pos))
+            if (myBaseLocation->containsPosition(unit.getPosition()))
             {
                 enemyUnitsInRegion.push_back(unit);
             }
@@ -213,9 +210,9 @@ void CombatCommander::updateDefenseSquads()
         // we can ignore the first enemy worker in our region since we assume it is a scout
         for (auto unit : enemyUnitsInRegion)
         {
-            BOT_ASSERT(unit, "null enemyt unit in region");
+            BOT_ASSERT(unit.isValid(), "null enemyt unit in region");
 
-            if (Util::IsWorker(unit))
+            if (unit.getType().isWorker())
             {
                 enemyUnitsInRegion.erase(std::remove(enemyUnitsInRegion.begin(), enemyUnitsInRegion.end(), unit), enemyUnitsInRegion.end());
                 break;
@@ -227,9 +224,9 @@ void CombatCommander::updateDefenseSquads()
         int numEnemyGroundInRegion = 0;
         for (auto & unit : enemyUnitsInRegion)
         {
-            BOT_ASSERT(unit, "null enemyt unit in region");
+            BOT_ASSERT(unit.isValid(), "null enemy unit in region");
 
-            if (unit->is_flying)
+            if (unit.isFlying())
             {
                 numEnemyFlyingInRegion++;
             }
@@ -297,7 +294,7 @@ void CombatCommander::updateDefenseSquads()
         bool enemyUnitInRange = false;
         for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
         {
-            if (Util::Dist(unit->pos, order.getPosition()) < order.getRadius())
+            if (Util::Dist(unit, order.getPosition()) < order.getRadius())
             {
                 enemyUnitInRange = true;
                 break;
@@ -329,9 +326,9 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
 
     while (defendersNeeded > defendersAdded)
     {
-        const sc2::Unit * defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition());
+        Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition());
 
-        if (defenderToAdd)
+        if (defenderToAdd.isValid())
         {
             m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
             defendersAdded++;
@@ -343,24 +340,24 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
     }
 }
 
-const sc2::Unit * CombatCommander::findClosestDefender(const Squad & defenseSquad, const sc2::Point2D & pos)
+Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos)
 {
-    const sc2::Unit * closestDefender = nullptr;
+    Unit closestDefender;
     float minDistance = std::numeric_limits<float>::max();
 
     // TODO: add back special case of zergling rush defense
 
     for (auto & unit : m_combatUnits)
     {
-        BOT_ASSERT(unit, "null combat unit");
+        BOT_ASSERT(unit.isValid(), "null combat unit");
 
         if (!m_squadData.canAssignUnitToSquad(unit, defenseSquad))
         {
             continue;
         }
 
-        float dist = Util::Dist(unit->pos, pos);
-        if (!closestDefender || (dist < minDistance))
+        float dist = Util::Dist(unit, pos);
+        if (!closestDefender.isValid() || (dist < minDistance))
         {
             closestDefender = unit;
             minDistance = dist;
@@ -376,14 +373,14 @@ void CombatCommander::drawSquadInformation()
     m_squadData.drawSquadInformation();
 }
 
-sc2::Point2D CombatCommander::getMainAttackLocation()
+CCPosition CombatCommander::getMainAttackLocation()
 {
     const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
 
     // First choice: Attack an enemy region if we can see units inside it
     if (enemyBaseLocation)
     {
-        sc2::Point2D enemyBasePosition = enemyBaseLocation->getPosition();
+        CCPosition enemyBasePosition = enemyBaseLocation->getPosition();
 
         // If the enemy base hasn't been seen yet, go there.
         if (!m_bot.Map().isExplored(enemyBasePosition))
@@ -395,7 +392,7 @@ sc2::Point2D CombatCommander::getMainAttackLocation()
             // if it has been explored, go there if there are any visible enemy units there
             for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
             {
-                if (Util::Dist(enemyUnit->pos, enemyBasePosition) < 25)
+                if (Util::Dist(enemyUnit, enemyBasePosition) < 25)
                 {
                     return enemyBasePosition;
                 }
@@ -417,27 +414,27 @@ sc2::Point2D CombatCommander::getMainAttackLocation()
     // Third choice: Attack visible enemy units that aren't overlords
     for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
     {
-        if (enemyUnit->unit_type != sc2::UNIT_TYPEID::ZERG_OVERLORD)
+        if (!enemyUnit.getType().isOverlord())
         {
-            return enemyUnit->pos;
+            return enemyUnit.getPosition();
         }
     }
 
     // Fourth choice: We can't see anything so explore the map attacking along the way
-    return m_bot.Map().getLeastRecentlySeenPosition();
+    return Util::GetPosition(m_bot.Map().getLeastRecentlySeenTile());
 }
 
-const sc2::Unit * CombatCommander::findClosestWorkerTo(std::vector<const sc2::Unit *> & unitsToAssign, const sc2::Point2D & target)
+Unit CombatCommander::findClosestWorkerTo(std::vector<Unit> & unitsToAssign, const CCPosition & target)
 {
-    const sc2::Unit * closestMineralWorker = nullptr;
+    Unit closestMineralWorker;
     float closestDist = std::numeric_limits<float>::max();
 
     // for each of our workers
     for (auto & unit : unitsToAssign)
     {
-        BOT_ASSERT(unit, "unit to assign was null");
+        BOT_ASSERT(unit.isValid(), "unit to assign was null");
 
-        if (!Util::IsWorker(unit))
+        if (!unit.getType().isWorker())
         {
             continue;
         }
@@ -445,7 +442,7 @@ const sc2::Unit * CombatCommander::findClosestWorkerTo(std::vector<const sc2::Un
         // if it is a move worker
         if (m_bot.Workers().isFree(unit))
         {
-            float dist = Util::Dist(unit->pos, target);
+            float dist = Util::Dist(unit, target);
 
             if (dist < closestDist)
             {

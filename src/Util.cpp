@@ -1,174 +1,120 @@
-#include "sc2api/sc2_api.h"
-#include "sc2utils/sc2_manage_process.h"
 #include "Util.h"
 #include "CCBot.h"
 #include <iostream>
 
-Util::IsUnit::IsUnit(sc2::UNIT_TYPEID type) 
-    : m_type(type) 
+std::string Util::GetStringFromRace(const CCRace & race)
 {
-}
- 
-bool Util::IsUnit::operator()(const sc2::Unit * unit, const sc2::ObservationInterface*) 
-{ 
-    return unit->unit_type == m_type; 
-};
-
-bool Util::IsTownHallType(const sc2::UnitTypeID & type)
-{
-    switch (type.ToType()) 
-    {
-        case sc2::UNIT_TYPEID::ZERG_HATCHERY                : return true;
-        case sc2::UNIT_TYPEID::ZERG_LAIR                    : return true;
-        case sc2::UNIT_TYPEID::ZERG_HIVE                    : return true;
-        case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER         : return true;
-        case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND        : return true;
-        case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING  : return true;
-        case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS     : return true;
-        case sc2::UNIT_TYPEID::PROTOSS_NEXUS                : return true;
-        default: return false;
-    }
+#ifdef SC2API
+    if      (race == sc2::Race::Terran)  { return "Terran"; }
+    else if (race == sc2::Race::Protoss) { return "Protoss"; }
+    else if (race == sc2::Race::Zerg)    { return "Zerg"; }
+    else if (race == sc2::Race::Random)  { return "Random"; }
+#else
+    if      (race == BWAPI::Races::Terran)  { return "Terran"; }
+    else if (race == BWAPI::Races::Protoss) { return "Protoss"; }
+    else if (race == BWAPI::Races::Zerg)    { return "Zerg"; }
+    else if (race == BWAPI::Races::Unknown) { return "Unknown"; }
+#endif
+    BOT_ASSERT(false, "Unknown Race");
+    return "Error";
 }
 
-bool Util::IsTownHall(const sc2::Unit * unit)
+CCRace Util::GetRaceFromString(const std::string & raceIn)
 {
-    BOT_ASSERT(unit, "Unit pointer was null");
-    return IsTownHallType(unit->unit_type);
+    std::string race(raceIn);
+    std::transform(race.begin(), race.end(), race.begin(), ::tolower);
+
+#ifdef SC2API
+    if      (race == "terran")  { return sc2::Race::Terran; }
+    else if (race == "protoss") { return sc2::Race::Protoss; }
+    else if (race == "zerg")    { return sc2::Race::Zerg; }
+    else if (race == "random")  { return sc2::Race::Random; }
+    
+    BOT_ASSERT(false, "Unknown Race: ", race.c_str());
+    return sc2::Race::Random;
+#else
+    if      (race == "terran")  { return BWAPI::Races::Terran; }
+    else if (race == "protoss") { return BWAPI::Races::Protoss; }
+    else if (race == "zerg")    { return BWAPI::Races::Zerg; }
+    else if (race == "random")  { return BWAPI::Races::Unknown; }
+
+    BOT_ASSERT(false, "Unknown Race: ", race.c_str());
+    return BWAPI::Races::Unknown;
+#endif
 }
 
-bool Util::IsRefinery(const sc2::Unit * unit)
+CCPositionType Util::TileToPosition(float tile)
 {
-    BOT_ASSERT(unit, "Unit pointer was null");
-    return IsRefineryType(unit->unit_type);
+#ifdef SC2API
+    return tile;
+#else
+    return (int)(tile * 32);
+#endif
 }
 
-bool Util::IsRefineryType(const sc2::UnitTypeID & type)
+UnitType Util::GetSupplyProvider(const CCRace & race, CCBot & bot)
 {
-    switch (type.ToType()) 
-    {
-        case sc2::UNIT_TYPEID::TERRAN_REFINERY      : return true;
-        case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR  : return true;
-        case sc2::UNIT_TYPEID::ZERG_EXTRACTOR       : return true;
-        default: return false;
-    }
-}
-
-bool Util::IsGeyser(const sc2::Unit * unit)
-{
-    BOT_ASSERT(unit, "Unit pointer was null");
-    switch (unit->unit_type.ToType()) 
-    {
-        case sc2::UNIT_TYPEID::NEUTRAL_VESPENEGEYSER        : return true;
-        case sc2::UNIT_TYPEID::NEUTRAL_PROTOSSVESPENEGEYSER : return true;
-        case sc2::UNIT_TYPEID::NEUTRAL_SPACEPLATFORMGEYSER  : return true;
-        default: return false;
-    }
-}
-
-bool Util::IsMineral(const sc2::Unit * unit)
-{
-    BOT_ASSERT(unit, "Unit pointer was null");
-    switch (unit->unit_type.ToType()) 
-    {
-        case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD         : return true;
-        case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD750      : return true;
-        case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD     : return true;
-        case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD750  : return true;
-        default: return false;
-    }
-}
-
-bool Util::IsWorker(const sc2::Unit * unit)
-{
-    BOT_ASSERT(unit, "Unit pointer was null");
-    return IsWorkerType(unit->unit_type);
-}
-
-bool Util::IsWorkerType(const sc2::UnitTypeID & unit)
-{
-    switch (unit.ToType()) 
-    {
-        case sc2::UNIT_TYPEID::TERRAN_SCV           : return true;
-        case sc2::UNIT_TYPEID::PROTOSS_PROBE        : return true;
-        case sc2::UNIT_TYPEID::ZERG_DRONE           : return true;
-        case sc2::UNIT_TYPEID::ZERG_DRONEBURROWED   : return true;
-        default: return false;
-    }
-}
-
-sc2::UnitTypeID Util::GetSupplyProvider(const sc2::Race & race)
-{
+#ifdef SC2API
     switch (race) 
     {
-        case sc2::Race::Terran: return sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT;
-        case sc2::Race::Protoss: return sc2::UNIT_TYPEID::PROTOSS_PYLON;
-        case sc2::Race::Zerg: return sc2::UNIT_TYPEID::ZERG_OVERLORD;
-        default: return 0;
+        case sc2::Race::Terran: return UnitType(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, bot);
+        case sc2::Race::Protoss: return UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, bot);
+        case sc2::Race::Zerg: return UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, bot);
+        default: return UnitType();
     }
+#else
+    return UnitType(race.getSupplyProvider(), bot);
+#endif
 }
 
-sc2::UnitTypeID Util::GetTownHall(const sc2::Race & race)
+UnitType Util::GetTownHall(const CCRace & race, CCBot & bot)
 {
+#ifdef SC2API
     switch (race) 
     {
-        case sc2::Race::Terran: return sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER;
-        case sc2::Race::Protoss: return sc2::UNIT_TYPEID::PROTOSS_NEXUS;
-        case sc2::Race::Zerg: return sc2::UNIT_TYPEID::ZERG_HATCHERY;
-        default: return 0;
+        case sc2::Race::Terran: return UnitType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, bot);
+        case sc2::Race::Protoss: return UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, bot);
+        case sc2::Race::Zerg: return UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, bot);
+        default: return UnitType();
     }
+#else
+    return UnitType(race.getResourceDepot(), bot);
+#endif
 }
 
-bool Util::IsCompleted(const sc2::Unit * unit)
+UnitType Util::GetRefinery(const CCRace & race, CCBot & bot)
 {
-    BOT_ASSERT(unit, "Unit pointer was null");
-    return unit->build_progress == 1.0f;
+#ifdef SC2API
+    switch (race) 
+    {
+        case sc2::Race::Terran: return UnitType(sc2::UNIT_TYPEID::TERRAN_REFINERY, bot);
+        case sc2::Race::Protoss: return UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, bot);
+        case sc2::Race::Zerg: return UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, bot);
+        default: return UnitType();
+    }
+#else
+    return UnitType(race.getRefinery(), bot);
+#endif
 }
 
-bool Util::IsIdle(const sc2::Unit * unit)
-{
-    BOT_ASSERT(unit, "Unit pointer was null");
-    return unit->orders.empty();
-}
-
-int Util::GetUnitTypeMineralPrice(const sc2::UnitTypeID type, const CCBot & bot)
-{
-    return bot.Observation()->GetUnitTypeData()[type].mineral_cost;
-}
-
-int Util::GetUnitTypeGasPrice(const sc2::UnitTypeID type, const CCBot & bot)
-{
-    return bot.Observation()->GetUnitTypeData()[type].vespene_cost;
-}
-
-int Util::GetUnitTypeWidth(const sc2::UnitTypeID type, const CCBot & bot)
-{
-    return (int)(2 * bot.Observation()->GetAbilityData()[bot.Data(type).buildAbility].footprint_radius);
-}
-
-int Util::GetUnitTypeHeight(const sc2::UnitTypeID type, const CCBot & bot)
-{
-    return (int)(2 * bot.Observation()->GetAbilityData()[bot.Data(type).buildAbility].footprint_radius);
-}
-
-
-sc2::Point2D Util::CalcCenter(const std::vector<const sc2::Unit *> & units)
+CCPosition Util::CalcCenter(const std::vector<Unit> & units)
 {
     if (units.empty())
     {
-        return sc2::Point2D(0.0f,0.0f);
+        return CCPosition(0, 0);
     }
 
-    float cx = 0.0f;
-    float cy = 0.0f;
+    CCPositionType cx = 0;
+    CCPositionType cy = 0;
 
-    for (auto unit : units)
+    for (auto & unit : units)
     {
-        BOT_ASSERT(unit, "Unit pointer was null");
-        cx += unit->pos.x;
-        cy += unit->pos.y;
+        BOT_ASSERT(unit.isValid(), "Unit pointer was null");
+        cx += unit.getPosition().x;
+        cy += unit.getPosition().y;
     }
 
-    return sc2::Point2D(cx / units.size(), cy / units.size());
+    return CCPosition(cx / units.size(), cy / units.size());
 }
 
 void Util::Normalize(sc2::Point2D& point)
@@ -190,31 +136,22 @@ float Util::GetDotProduct(const sc2::Point2D& v1, const sc2::Point2D& v2)
     return v1n.x * v2n.x + v1n.y * v2n.y;
 }
 
-bool Util::IsDetector(const sc2::Unit * unit)
+bool Util::IsZerg(const CCRace & race)
 {
-    BOT_ASSERT(unit, "Unit pointer was null");
-    return IsDetectorType(unit->unit_type);
+#ifdef SC2API
+    return race == sc2::Race::Zerg;
+#else
+    return race == BWAPI::Races::Zerg;
+#endif
 }
 
-float Util::GetAttackRange(const sc2::UnitTypeID & type, CCBot & bot)
+bool Util::IsProtoss(const CCRace & race)
 {
-    auto & weapons = bot.Observation()->GetUnitTypeData()[type].weapons;
-    
-    if (weapons.empty())
-    {
-        return 0.0f;
-    }
-
-    float maxRange = 0.0f;
-    for (auto & weapon : weapons)
-    {
-        if (weapon.range > maxRange)
-        {
-            maxRange = weapon.range;
-        }
-    }
-
-    return maxRange;
+#ifdef SC2API
+    return race == sc2::Race::Protoss;
+#else
+    return race == BWAPI::Races::Protoss;
+#endif
 }
 
 float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
@@ -295,89 +232,52 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
     return dps;
 }
 
-bool Util::IsDetectorType(const sc2::UnitTypeID & type)
+bool Util::IsTerran(const CCRace & race)
 {
-    switch (type.ToType())
-    {
-        case sc2::UNIT_TYPEID::PROTOSS_OBSERVER        : return true;
-        case sc2::UNIT_TYPEID::TERRAN_BANSHEE          : return true;
-        case sc2::UNIT_TYPEID::ZERG_OVERSEER           : return true;
-        case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET    : return true;
-        case sc2::UNIT_TYPEID::ZERG_SPORECRAWLER       : return true;
-        case sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON    : return true;
-        default: return false;
-    }
+#ifdef SC2API
+    return race == sc2::Race::Terran;
+#else
+    return race == BWAPI::Races::Terran;
+#endif
 }
 
-int Util::GetPlayer(const sc2::Unit * unit)
+CCTilePosition Util::GetTilePosition(const CCPosition & pos)
 {
-    BOT_ASSERT(unit, "Unit pointer was null");
-    if (unit->alliance == sc2::Unit::Alliance::Self)
-    {
-        return 0;
-    }
-
-    if (unit->alliance == sc2::Unit::Alliance::Enemy)
-    {
-        return 1;
-    }
-
-    if (unit->alliance == sc2::Unit::Alliance::Neutral)
-    {
-        return 2;
-    }
-
-    return -1;
+#ifdef SC2API
+    return CCTilePosition((int)std::floor(pos.x), (int)std::floor(pos.y));
+#else
+    return CCTilePosition(pos);
+#endif
 }
 
-bool Util::IsCombatUnitType(const sc2::UnitTypeID & type, CCBot & bot)
+CCPosition Util::GetPosition(const CCTilePosition & tile)
 {
-    if (IsWorkerType(type)) { return false; }
-    if (IsSupplyProviderType(type)) { return false; }
-    if (bot.Data(type).isBuilding) { return false; }
-
-    if (type == sc2::UNIT_TYPEID::ZERG_EGG) { return false; }
-    if (type == sc2::UNIT_TYPEID::ZERG_LARVA) { return false; }
-
-    return true;
+#ifdef SC2API
+    return CCPosition((float)tile.x, (float)tile.y);
+#else
+    return CCPosition(tile);
+#endif
 }
 
-bool Util::IsCombatUnit(const sc2::Unit * unit, CCBot & bot)
+float Util::Dist(const CCPosition & p1, const CCPosition & p2)
 {
-    BOT_ASSERT(unit, "Unit pointer was null");
-    return IsCombatUnitType(unit->unit_type, bot);
+    return sqrtf((float)Util::DistSq(p1,p2));
 }
 
-bool Util::IsSupplyProviderType(const sc2::UnitTypeID & type)
+float Util::Dist(const Unit & unit, const CCPosition & p2)
 {
-    switch (type.ToType()) 
-    {
-        case sc2::UNIT_TYPEID::ZERG_OVERLORD                : return true;
-        case sc2::UNIT_TYPEID::PROTOSS_PYLON                : return true;
-        case sc2::UNIT_TYPEID::PROTOSS_PYLONOVERCHARGED     : return true;
-        case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT           : return true;
-        case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED    : return true;
-        default: return false;
-    }
-
-    return true;
+    return Dist(unit.getPosition(), p2);
 }
 
-bool Util::IsSupplyProvider(const sc2::Unit * unit)
+float Util::Dist(const Unit & unit1, const Unit & unit2)
 {
-    BOT_ASSERT(unit, "Unit pointer was null");
-    return IsSupplyProviderType(unit->unit_type);
+    return Dist(unit1.getPosition(), unit2.getPosition());
 }
 
-float Util::Dist(const sc2::Point2D & p1, const sc2::Point2D & p2)
+CCPositionType Util::DistSq(const CCPosition & p1, const CCPosition & p2)
 {
-    return sqrtf(Util::DistSq(p1,p2));
-}
-
-float Util::DistSq(const sc2::Point2D & p1, const sc2::Point2D & p2)
-{
-    float dx = p1.x - p2.x;
-    float dy = p1.y - p2.y;
+    CCPositionType dx = p1.x - p2.x;
+    CCPositionType dy = p1.y - p2.y;
 
     return dx*dx + dy*dy;
 }
@@ -385,7 +285,7 @@ float Util::DistSq(const sc2::Point2D & p1, const sc2::Point2D & p2)
 sc2::Point2D Util::CalcLinearRegression(const std::vector<const sc2::Unit *> & units)
 {
     float sumX = 0, sumY = 0, sumXSqr = 0, sumXY = 0, avgX, avgY, numerator, denominator, slope;
-    int size = units.size();
+    size_t size = units.size();
     for (auto unit : units)
     {
         sumX += unit->pos.x;
@@ -474,43 +374,6 @@ void Util::VisualizeGrids(const sc2::ObservationInterface * obs, sc2::DebugInter
     debug->SendDebug();
 }
 
-std::string Util::GetStringFromRace(const sc2::Race & race)
-{
-    	switch ( race )
-	{
-		case sc2::Race::Protoss: return "Protoss";
-		case sc2::Race::Terran:  return "Terran";
-		case sc2::Race::Zerg:    return "Zerg";
-		default: return "Random";
-	}
-}
-
-sc2::Race Util::GetRaceFromString(const std::string & raceIn)
-{
-    std::string race(raceIn);
-    std::transform(race.begin(), race.end(), race.begin(), ::tolower);
-
-    if (race == "terran")
-    {
-        return sc2::Race::Terran;
-    }
-    else if (race == "protoss")
-    {
-        return sc2::Race::Protoss;
-    }
-    else if (race == "zerg")
-    {
-        return sc2::Race::Zerg;
-    }
-    else if (race == "random")
-    {
-        return sc2::Race::Random;
-    }
-
-    BOT_ASSERT(false, "Unknown Race: ", race.c_str());
-    return sc2::Race::Terran;
-}
-
 sc2::UnitTypeID Util::GetUnitTypeIDFromName(const std::string & name, CCBot & bot)
 {
     for (const sc2::UnitTypeData & data : bot.Observation()->GetUnitTypeData())
@@ -542,7 +405,8 @@ sc2::UpgradeID Util::GetUpgradeIDFromName(const std::string & name, CCBot & bot)
     return 0;
 }
 
-sc2::BuffID Util::GetBuffIDFromName(const std::string & name, CCBot & bot)
+#ifdef SC2API
+sc2::BuffID Util::GetBuffFromName(const std::string & name, CCBot & bot)
 {
     for (const sc2::BuffData & data : bot.Observation()->GetBuffData())
     {
@@ -555,7 +419,7 @@ sc2::BuffID Util::GetBuffIDFromName(const std::string & name, CCBot & bot)
     return 0;
 }
 
-sc2::AbilityID Util::GetAbilityIDFromName(const std::string & name, CCBot & bot)
+sc2::AbilityID Util::GetAbilityFromName(const std::string & name, CCBot & bot)
 {
     for (const sc2::AbilityData & data : bot.Observation()->GetAbilityData())
     {
@@ -567,32 +431,15 @@ sc2::AbilityID Util::GetAbilityIDFromName(const std::string & name, CCBot & bot)
 
     return 0;
 }
-
-UnitTag GetClosestEnemyUnitTo(const sc2::Unit * ourUnit, const sc2::ObservationInterface * obs)
-{
-    UnitTag closestTag = 0;
-	double closestDist = std::numeric_limits<double>::max();
-
-	for (auto & unit : obs->GetUnits())
-	{
-		double dist = Util::DistSq(unit->pos, ourUnit->pos);
-
-		if (!closestTag || (dist < closestDist))
-		{
-			closestTag = unit->tag;
-			closestDist = dist;
-		}
-	}
-
-	return closestTag;
-}
+#endif
 
 // checks where a given unit can make a given unit type now
 // this is done by iterating its legal abilities for the build command to make the unit
-bool Util::UnitCanBuildTypeNow(const sc2::Unit * unit, const sc2::UnitTypeID & type, CCBot & m_bot)
+bool Util::UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & m_bot)
 {
-    BOT_ASSERT(unit, "Unit pointer was null");
-    sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(unit);
+#ifdef SC2API
+    BOT_ASSERT(unit.isValid(), "Unit pointer was null");
+    sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(unit.getUnitPtr());
     
     // quick check if the unit can't do anything it certainly can't build the thing we want
     if (available_abilities.abilities.empty()) 
@@ -602,15 +449,17 @@ bool Util::UnitCanBuildTypeNow(const sc2::Unit * unit, const sc2::UnitTypeID & t
     else 
     {
         // check to see if one of the unit's available abilities matches the build ability type
-        sc2::AbilityID buildTypeAbility = m_bot.Data(type).buildAbility;
+        sc2::AbilityID MetaTypeAbility = m_bot.Data(type).buildAbility;
         for (const sc2::AvailableAbility & available_ability : available_abilities.abilities) 
         {
-            if (available_ability.ability_id == buildTypeAbility)
+            if (available_ability.ability_id == MetaTypeAbility)
             {
                 return true;
             }
         }
     }
+#else
 
+#endif
     return false;
 }

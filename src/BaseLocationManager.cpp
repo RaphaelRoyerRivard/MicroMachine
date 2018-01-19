@@ -17,23 +17,28 @@ void BaseLocationManager::onStart()
     
     // a BaseLocation will be anything where there are minerals to mine
     // so we will first look over all minerals and cluster them based on some distance
-    const int clusterDistance = 14;
+    const CCPositionType clusterDistance = Util::TileToPosition(12);
     
     // stores each cluster of resources based on some ground distance
-    std::vector<std::vector<const sc2::Unit *>> resourceClusters;
-    for (auto mineral : m_bot.Observation()->GetUnits(sc2::Unit::Alliance::Neutral))
+    std::vector<std::vector<Unit>> resourceClusters;
+    for (auto & mineral : m_bot.GetUnits())
     {
         // skip minerals that don't have more than 100 starting minerals
         // these are probably stupid map-blocking minerals to confuse us
-        if (!Util::IsMineral(mineral))
+        if (!mineral.getType().isMineral())
         {
             continue;
         }
 
+#ifndef SC2API
+        // for BWAPI we have to eliminate minerals that have low resource counts
+        if (mineral.getUnitPtr()->getResources() < 100) { continue; }
+#endif
+
         bool foundCluster = false;
         for (auto & cluster : resourceClusters)
         {
-            float dist = Util::Dist(mineral->pos, Util::CalcCenter(cluster));
+            float dist = Util::Dist(mineral, Util::CalcCenter(cluster));
             
             // quick initial air distance check to eliminate most resources
             if (dist < clusterDistance)
@@ -51,15 +56,15 @@ void BaseLocationManager::onStart()
 
         if (!foundCluster)
         {
-            resourceClusters.push_back(std::vector<const sc2::Unit *>());
+            resourceClusters.push_back(std::vector<Unit>());
             resourceClusters.back().push_back(mineral);
         }
     }
 
     // add geysers only to existing resource clusters
-    for (auto & geyser : m_bot.Observation()->GetUnits(sc2::Unit::Alliance::Neutral))
+    for (auto & geyser : m_bot.GetUnits())
     {
-        if (!Util::IsGeyser(geyser))
+        if (!geyser.getType().isGeyser())
         {
             continue;
         }
@@ -67,7 +72,7 @@ void BaseLocationManager::onStart()
         for (auto & cluster : resourceClusters)
         {
             //int groundDist = m_bot.Map().getGroundDistance(geyser.pos, Util::CalcCenter(cluster));
-            float groundDist = Util::Dist(geyser->pos, Util::CalcCenter(cluster));
+            float groundDist = Util::Dist(geyser, Util::CalcCenter(cluster));
 
             if (groundDist >= 0 && groundDist < clusterDistance)
             {
@@ -111,17 +116,17 @@ void BaseLocationManager::onStart()
     }
 
     // construct the map of tile positions to base locations
-    for (float x=0; x < m_bot.Map().width(); ++x)
+    for (int x=0; x < m_bot.Map().width(); ++x)
     {
         for (int y=0; y < m_bot.Map().height(); ++y)
         {
             for (auto & baseLocation : m_baseLocationData)
             {
-                sc2::Point2D pos(x + 0.5f, y + 0.5f);
+                CCPosition pos(Util::TileToPosition(x + 0.5f), Util::TileToPosition(y + 0.5f));
 
                 if (baseLocation.containsPosition(pos))
                 {
-                    m_tileBaseLocations[(int)x][(int)y] = &baseLocation;
+                    m_tileBaseLocations[x][y] = &baseLocation;
                     
                     break;
                 }
@@ -146,19 +151,19 @@ void BaseLocationManager::onFrame()
     }
 
     // for each unit on the map, update which base location it may be occupying
-    for (auto & unit : m_bot.Observation()->GetUnits(sc2::Unit::Alliance::Ally))
+    for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
         // we only care about buildings on the ground
-        if (!m_bot.Data(unit->unit_type).isBuilding || unit->is_flying)
+        if (!unit.getType().isBuilding() || unit.isFlying())
         {
             continue;
         }
 
-        BaseLocation * baseLocation = getBaseLocation(unit->pos);
+        BaseLocation * baseLocation = getBaseLocation(unit.getPosition());
 
         if (baseLocation != nullptr)
         {
-            baseLocation->setPlayerOccupying(Util::GetPlayer(unit), true);
+            baseLocation->setPlayerOccupying(unit.getPlayer(), true);
         }
     }
 
@@ -247,11 +252,15 @@ void BaseLocationManager::onFrame()
     
 }
 
-BaseLocation * BaseLocationManager::getBaseLocation(const sc2::Point2D & pos) const
+BaseLocation * BaseLocationManager::getBaseLocation(const CCPosition & pos) const
 {
-    if (!m_bot.Map().isValid(pos)) { return nullptr; }
+    if (!m_bot.Map().isValidPosition(pos)) { return nullptr; }
 
+#ifdef SC2API
     return m_tileBaseLocations[(int)pos.x][(int)pos.y];
+#else
+    return m_tileBaseLocations[pos.x / 32][pos.y / 32];
+#endif
 }
 
 void BaseLocationManager::drawBaseLocations()
@@ -267,10 +276,10 @@ void BaseLocationManager::drawBaseLocations()
     }
 
     // draw a purple sphere at the next expansion location
-    sc2::Point2D nextExpansionPosition = getNextExpansion(Players::Self);
+    CCTilePosition nextExpansionPosition = getNextExpansion(Players::Self);
 
-    m_bot.Map().drawSphere(nextExpansionPosition, 1, sc2::Colors::Purple);
-    m_bot.Map().drawText(nextExpansionPosition, "Next Expansion Location", sc2::Colors::Purple);
+    m_bot.Map().drawCircle(Util::GetPosition(nextExpansionPosition), 1, CCColor(255, 0, 255));
+    m_bot.Map().drawText(Util::GetPosition(nextExpansionPosition), "Next Expansion Location", CCColor(255, 0, 255));
 }
 
 const std::vector<const BaseLocation *> & BaseLocationManager::getBaseLocations() const
@@ -294,13 +303,16 @@ const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocat
 }
 
 
-sc2::Point2D BaseLocationManager::getNextExpansion(int player) const
+CCTilePosition BaseLocationManager::getNextExpansion(int player) const
 {
     const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
+    if(!homeBase)
+        return CCTilePosition(0, 0);
+
     const BaseLocation * closestBase = nullptr;
     int minDistance = std::numeric_limits<int>::max();
 
-    sc2::Point2D homeTile = homeBase->getPosition();
+    CCPosition homeTile = homeBase->getPosition();
     
     for (auto & base : getBaseLocations())
     {
@@ -336,5 +348,5 @@ sc2::Point2D BaseLocationManager::getNextExpansion(int player) const
         }
     }
 
-    return closestBase ? closestBase->getDepotPosition() : sc2::Point2D(0.0f, 0.0f);
+    return closestBase ? closestBase->getDepotPosition() : CCTilePosition(0, 0);
 }

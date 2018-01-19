@@ -9,25 +9,32 @@
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
 
-void RangedManager::executeMicro(const std::vector<const sc2::Unit *> & targets)
+void RangedManager::executeMicro(const std::vector<Unit> & targets)
 {
-    // build bt tree here
     assignTargets(targets);
 }
 
-void RangedManager::assignTargets(const std::vector<const sc2::Unit *> & targets)
+void RangedManager::assignTargets(const std::vector<Unit> & targets)
 {
-    const std::vector<const sc2::Unit *> & rangedUnits = getUnits();
+    const std::vector<Unit> &units = getUnits();
+
+    std::vector<const sc2::Unit *> rangedUnits;
+    for (auto unit : units)
+    {
+        const sc2::Unit * rangedUnit = unit.getUnitPtr();
+        rangedUnits.push_back(rangedUnit);
+    }
 
     // figure out targets
     std::vector<const sc2::Unit *> rangedUnitTargets;
     for (auto target : targets)
     {
-        if (!target) { continue; }
-        if (target->unit_type == sc2::UNIT_TYPEID::ZERG_EGG) { continue; }
-        if (target->unit_type == sc2::UNIT_TYPEID::ZERG_LARVA) { continue; }
+        auto targetPtr = target.getUnitPtr();
+        if (!targetPtr) { continue; }
+        if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_EGG) { continue; }
+        if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_LARVA) { continue; }
 
-        rangedUnitTargets.push_back(target);
+        rangedUnitTargets.push_back(targetPtr);
     }
     // for each rangedUnit
     for (auto rangedUnit : rangedUnits)
@@ -103,8 +110,8 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target)
 {
     BOT_ASSERT(target, "null unit in getAttackPriority");
-
-    if (Util::IsCombatUnit(target, m_bot))
+    
+    if (Unit(target, m_bot).getType().isCombatUnit())
     {
         float dps = Util::GetDpsForTarget(target, attacker, m_bot);
         if (dps == 0.f)
@@ -115,7 +122,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
         return 5 + dps * healthValue * distanceValue;
     }
 
-    if (Util::IsWorker(target))
+    if (Unit(target, m_bot).getType().isWorker())
     {
         return 2;
     }
