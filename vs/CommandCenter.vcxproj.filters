@@ -49,6 +49,13 @@
     <ClCompile Include="..\src\WorkerData.cpp" />
     <ClCompile Include="..\src\WorkerManager.cpp" />
     <ClCompile Include="..\src\UnitType.cpp" />
+    <ClCompile Include="..\src\AlphaBetaAction.cpp" />
+    <ClCompile Include="..\src\AlphaBetaConsideringDurations.cpp" />
+    <ClCompile Include="..\src\AlphaBetaMove.cpp" />
+    <ClCompile Include="..\src\AlphaBetaPlayer.cpp" />
+    <ClCompile Include="..\src\AlphaBetaState.cpp" />
+    <ClCompile Include="..\src\AlphaBetaUnit.cpp" />
+    <ClCompile Include="..\src\AlphaBetaValue.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\AttackFSMState.h" />
@@ -106,6 +113,13 @@
     <ClInclude Include="..\src\WorkerData.h" />
     <ClInclude Include="..\src\WorkerManager.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="..\src\AlphaBetaAction.h" />
+    <ClInclude Include="..\src\AlphaBetaConsideringDurations.h" />
+    <ClInclude Include="..\src\AlphaBetaMove.h" />
+    <ClInclude Include="..\src\AlphaBetaPlayer.h" />
+    <ClInclude Include="..\src\AlphaBetaState.h" />
+    <ClInclude Include="..\src\AlphaBetaUnit.h" />
+    <ClInclude Include="..\src\AlphaBetaValue.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CommandCenter.rc" />

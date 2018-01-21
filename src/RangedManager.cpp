@@ -65,9 +65,9 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
         AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(40, depth);
         AlphaBetaValue value = alphaBeta.doSearch(maxUnits, minUnits, &m_bot);
         size_t nodes = alphaBeta.nodes_evaluated;
-        m_bot.Map().drawTextScreen(sc2::Point2D(0.005, 0.005), std::string("Nodes explored : ") + std::to_string(nodes));
-        m_bot.Map().drawTextScreen(sc2::Point2D(0.005, 0.020), std::string("Max depth : ") + std::to_string(depth));
-        m_bot.Map().drawTextScreen(sc2::Point2D(0.005, 0.035), std::string("AB value : ") + std::to_string(value.score));
+        m_bot.Map().drawTextScreen(0.005, 0.005, std::string("Nodes explored : ") + std::to_string(nodes));
+        m_bot.Map().drawTextScreen(0.005, 0.020, std::string("Max depth : ") + std::to_string(depth));
+        m_bot.Map().drawTextScreen(0.005, 0.035, std::string("AB value : ") + std::to_string(value.score));
         if (value.move != NULL) {
             for (auto action : value.move->actions) {
                 if (action->type == AlphaBetaActionType::ATTACK) {

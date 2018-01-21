@@ -25,10 +25,9 @@
         
     "Micro" :
     {
-		"AlphaBetaPruning"			: true,
+		"AlphaBetaPruning"			: false,
         "KiteWithRangedUnits"       : true,
-        "ScoutHarassEnemy"          : true,
-        "AlphaBetaPruning"          : false
+        "ScoutHarassEnemy"          : true
     },
     
     "Macro" :
