@@ -6,6 +6,7 @@ cmake_install.cmake
 
 # IDEs
 .vscode/
+
 **/vs/.vs/
 **/vs/commandcenter
 **/vs/*.user
@@ -18,3 +19,16 @@ cmake_install.cmake
 **/bin/TechTree.json
 commandcenter/vs/CommandCenter/Debug
 commandcenter/vs/CommandCenter/Release
+
+vs/.vs/
+vs/commandcenter
+
+bin/CommandCenter
+bin/*.exe
+bin/*.ilk
+bin/TechTree.json
+*.tlog
+*.obj
+vs/RelWithDebInfo/CommandCenter.log
+*.log
+*.pdb

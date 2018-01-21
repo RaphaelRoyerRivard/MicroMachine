@@ -2,30 +2,33 @@
 
 #include "Common.h"
 #include "BuildOrder.h"
+#include "Condition.h"
 
-typedef std::pair<sc2::UnitTypeID, size_t>  UnitPair;
-typedef std::vector<UnitPair>               UnitPairVector;
+typedef std::pair<UnitType, size_t> UnitPair;
+typedef std::vector<UnitPair>       UnitPairVector;
 
 class CCBot;
 
 struct Strategy
 {
     std::string m_name;
-    sc2::Race   m_race;
+    CCRace      m_race;
     int         m_wins;
     int         m_losses;
     BuildOrder  m_buildOrder;
+    Condition   m_scoutCondition;
+    Condition   m_attackCondition;
 
     Strategy();
-    Strategy(const std::string & name, const sc2::Race & race, const BuildOrder & buildOrder);
+    Strategy(const std::string & name, const CCRace & race, const BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition);
 };
 
 class StrategyManager
 {
     CCBot & m_bot;
 
-    sc2::Race					    m_selfRace;
-    sc2::Race					    m_enemyRace;
+    CCRace                          m_selfRace;
+    CCRace                          m_enemyRace;
     std::map<std::string, Strategy> m_strategies;
     int                             m_totalGamesPlayed;
     const BuildOrder                m_emptyBuildOrder;
@@ -39,6 +42,9 @@ public:
 
     StrategyManager(CCBot & bot);
 
+    const Strategy & getCurrentStrategy() const;
+    bool scoutConditionIsMet() const;
+    bool attackConditionIsMet() const;
     void onStart();
     void onFrame();
     void onEnd(const bool isWinner);

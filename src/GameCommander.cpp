@@ -25,7 +25,8 @@ void GameCommander::onFrame()
 
     handleUnitAssignments();
 
-    m_productionManager.onFrame();
+    if(m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) != nullptr)
+        m_productionManager.onFrame();
     m_scoutManager.onFrame();
     m_combatCommander.onFrame(m_combatUnits);
 
@@ -60,7 +61,7 @@ void GameCommander::handleUnitAssignments()
     setCombatUnits();
 }
 
-bool GameCommander::isAssigned(const sc2::Unit * unit) const
+bool GameCommander::isAssigned(const Unit & unit) const
 {
     return     (std::find(m_combatUnits.begin(), m_combatUnits.end(), unit) != m_combatUnits.end())
         || (std::find(m_scoutUnits.begin(), m_scoutUnits.end(), unit) != m_scoutUnits.end());
@@ -85,18 +86,14 @@ void GameCommander::setScoutUnits()
         if (shouldSendInitialScout())
         {
             // grab the closest worker to the supply provider to send to scout
-            const sc2::Unit * workerScout = m_bot.Workers().getClosestMineralWorkerTo(m_bot.GetStartLocation());
+            Unit workerScout = m_bot.Workers().getClosestMineralWorkerTo(m_bot.GetStartLocation());
 
             // if we find a worker (which we should) add it to the scout units
-            if (workerScout)
+            if (workerScout.isValid())
             {
                 m_scoutManager.setWorkerScout(workerScout);
                 assignUnit(workerScout, m_scoutUnits);
                 m_initialScoutSet = true;
-            }
-            else
-            {
-                
             }
         }
     }
@@ -104,15 +101,7 @@ void GameCommander::setScoutUnits()
 
 bool GameCommander::shouldSendInitialScout()
 {
-    return true;
-
-    switch (m_bot.GetPlayerRace(Players::Self))
-    {
-        case sc2::Race::Terran:  return m_bot.UnitInfo().getUnitTypeCount(Players::Self, sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, true) > 0;
-        case sc2::Race::Protoss: return m_bot.UnitInfo().getUnitTypeCount(Players::Self, sc2::UNIT_TYPEID::PROTOSS_PYLON, true) > 0;
-        case sc2::Race::Zerg:    return m_bot.UnitInfo().getUnitTypeCount(Players::Self, sc2::UNIT_TYPEID::ZERG_SPAWNINGPOOL, true) > 0;
-        default: return false;
-    }
+    return m_bot.Strategy().scoutConditionIsMet();
 }
 
 // sets combat units to be passed to CombatCommander
@@ -120,27 +109,27 @@ void GameCommander::setCombatUnits()
 {
     for (auto & unit : m_validUnits)
     {
-        BOT_ASSERT(unit, "Have a null unit in our valid units\n");
+        BOT_ASSERT(unit.isValid(), "Have a null unit in our valid units\n");
 
-        if (!isAssigned(unit) && Util::IsCombatUnitType(unit->unit_type, m_bot))
+        if (!isAssigned(unit) && unit.getType().isCombatUnit())
         {
             assignUnit(unit, m_combatUnits);
         }
     }
 }
 
-void GameCommander::onUnitCreate(const sc2::Unit * unit)
+void GameCommander::onUnitCreate(const Unit & unit)
 {
 
 }
 
-void GameCommander::onUnitDestroy(const sc2::Unit * unit)
+void GameCommander::onUnitDestroy(const Unit & unit)
 {
     //_productionManager.onUnitDestroy(unit);
 }
 
 
-void GameCommander::assignUnit(const sc2::Unit * unit, std::vector<const sc2::Unit *> & units)
+void GameCommander::assignUnit(const Unit & unit, std::vector<Unit> & units)
 {
     if (std::find(m_scoutUnits.begin(), m_scoutUnits.end(), unit) != m_scoutUnits.end())
     {

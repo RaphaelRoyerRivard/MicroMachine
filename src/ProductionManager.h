@@ -1,5 +1,5 @@
 #pragma once
-#include "sc2api/sc2_api.h"
+
 #include "Common.h"
 #include "BuildOrder.h"
 #include "BuildingManager.h"
@@ -14,15 +14,17 @@ class ProductionManager
     BuildingManager m_buildingManager;
     BuildOrderQueue m_queue;
 
-    const sc2::Unit * getClosestUnitToPosition(const std::vector<const sc2::Unit *> & units, sc2::Point2D closestTo);
-    bool    meetsReservedResources(const BuildType & type);
-    bool    canMakeNow(const sc2::Unit * producer, const BuildType & type);
+    Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo);
+    bool    meetsReservedResources(const MetaType & type);
+    bool    canMakeNow(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
     void    setBuildOrder(const BuildOrder & buildOrder);
-    void    create(const sc2::Unit * producer, BuildOrderItem & item);
+    void    create(const Unit & producer, BuildOrderItem & item);
     void    manageBuildOrderQueue();
     int     getFreeMinerals();
     int     getFreeGas();
+
+    void    fixBuildOrderDeadlock();
 
 public:
 
@@ -30,8 +32,8 @@ public:
 
     void    onStart();
     void    onFrame();
-    void    onUnitDestroy(const sc2::Unit * unit);
+    void    onUnitDestroy(const Unit & unit);
     void    drawProductionInformation();
 
-    const sc2::Unit * getProducer(const BuildType & type, sc2::Point2D closestTo = sc2::Point2D(0, 0));
+    Unit getProducer(const MetaType & type, CCPosition closestTo = CCPosition(0, 0));
 };

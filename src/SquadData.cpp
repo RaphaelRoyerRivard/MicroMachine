@@ -23,9 +23,9 @@ void SquadData::clearSquadData()
         Squad & squad = kv.second;
         for (auto & unit : squad.getUnits())
         {
-            BOT_ASSERT(unit, "null unit");
+            BOT_ASSERT(unit.isValid(), "null unit");
 
-            if (Util::IsWorker(unit))
+            if (unit.getType().isWorker())
             {
                 m_bot.Workers().finishedWithWorker(unit);
             }
@@ -47,9 +47,9 @@ void SquadData::removeSquad(const std::string & squadName)
 
     for (auto unit : squadPtr->second.getUnits())
     {
-        BOT_ASSERT(unit, "null unit");
+        BOT_ASSERT(unit.isValid(), "null unit");
 
-        if (Util::IsWorker(unit))
+        if (unit.getType().isWorker())
         {
             m_bot.Workers().finishedWithWorker(unit);
         }
@@ -101,23 +101,23 @@ void SquadData::drawSquadInformation()
         ss << squad.getName() << " " << units.size() << " (";
         ss << (int)order.getPosition().x << ", " << (int)order.getPosition().y << ")\n";
 
-        m_bot.Map().drawSphere(order.getPosition(), 5, sc2::Colors::Red);
-        m_bot.Map().drawText(order.getPosition(), squad.getName(), sc2::Colors::Red);
+        m_bot.Map().drawCircle(order.getPosition(), 5, CCColor(255, 0, 0));
+        m_bot.Map().drawText(order.getPosition(), squad.getName(), CCColor(255, 0, 0));
 
-        for (auto unit : units)
+        for (auto & unit : units)
         {
-            BOT_ASSERT(unit, "null unit");
+            BOT_ASSERT(unit.isValid(), "null unit");
 
-            m_bot.Map().drawText(unit->pos, squad.getName(), sc2::Colors::Green);
+            m_bot.Map().drawText(unit.getPosition(), squad.getName(), CCColor(0, 255, 0));
         }
     }
 
-    m_bot.Map().drawTextScreen(sc2::Point2D(0.5f, 0.2f), ss.str(), sc2::Colors::Red);
+    m_bot.Map().drawTextScreen(0.5f, 0.2f, ss.str(), CCColor(255, 0, 0));
 }
 
 void SquadData::verifySquadUniqueMembership()
 {
-    std::vector<const sc2::Unit *> assigned;
+    std::vector<Unit> assigned;
 
     for (const auto & kv : m_squads)
     {
@@ -125,7 +125,7 @@ void SquadData::verifySquadUniqueMembership()
         {
             if (std::find(assigned.begin(), assigned.end(), unit) != assigned.end())
             {
-                std::cout << "Warning: Unit is in at least two squads: " << unit->tag << "\n";
+                std::cout << "Warning: Unit is in at least two squads: " << unit.getID() << "\n";
             }
 
             assigned.push_back(unit);
@@ -133,12 +133,12 @@ void SquadData::verifySquadUniqueMembership()
     }
 }
 
-bool SquadData::unitIsInSquad(const sc2::Unit * unit) const
+bool SquadData::unitIsInSquad(const Unit & unit) const
 {
     return getUnitSquad(unit) != nullptr;
 }
 
-const Squad * SquadData::getUnitSquad(const sc2::Unit * unit) const
+const Squad * SquadData::getUnitSquad(const Unit & unit) const
 {
     for (const auto & kv : m_squads)
     {
@@ -151,7 +151,7 @@ const Squad * SquadData::getUnitSquad(const sc2::Unit * unit) const
     return nullptr;
 }
 
-Squad * SquadData::getUnitSquad(const sc2::Unit * unit)
+Squad * SquadData::getUnitSquad(const Unit & unit)
 {
     for (auto & kv : m_squads)
     {
@@ -164,7 +164,7 @@ Squad * SquadData::getUnitSquad(const sc2::Unit * unit)
     return nullptr;
 }
 
-void SquadData::assignUnitToSquad(const sc2::Unit * unit, Squad & squad)
+void SquadData::assignUnitToSquad(const Unit & unit, Squad & squad)
 {
     BOT_ASSERT(canAssignUnitToSquad(unit, squad), "We shouldn't be re-assigning this unit!");
 
@@ -178,7 +178,7 @@ void SquadData::assignUnitToSquad(const sc2::Unit * unit, Squad & squad)
     squad.addUnit(unit);
 }
 
-bool SquadData::canAssignUnitToSquad(const sc2::Unit * unit, const Squad & squad) const
+bool SquadData::canAssignUnitToSquad(const Unit & unit, const Squad & squad) const
 {
     const Squad * unitSquad = getUnitSquad(unit);
 

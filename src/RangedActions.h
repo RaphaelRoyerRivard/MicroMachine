@@ -1,6 +1,7 @@
 #pragma once
 #include "CCBot.h"
 #include "Behavior.h"
+#include "Micro.h"
 class KiteAction : public Behavior {
 private:
     const sc2::Unit * rangedUnit;

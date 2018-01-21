@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.h"
+#include "Unit.h"
 
 class CCBot;
 
@@ -8,15 +9,15 @@ class ScoutManager
 {
     CCBot &   m_bot;
 
-    const sc2::Unit * m_scoutUnit;
+    Unit m_scoutUnit;
     std::string     m_scoutStatus;
     int             m_numScouts;
     bool            m_scoutUnderAttack;
-    float           m_previousScoutHP;
+    CCHealth        m_previousScoutHP;
 
-    bool            enemyWorkerInRadiusOf(const sc2::Point2D & pos) const;
-    sc2::Point2D    getFleePosition() const;
-    const sc2::Unit * closestEnemyWorkerTo(const sc2::Point2D & pos) const;
+    bool            enemyWorkerInRadiusOf(const CCPosition & pos) const;
+    CCPosition      getFleePosition() const;
+    Unit            closestEnemyWorkerTo(const CCPosition & pos) const;
     void            moveScouts();
     void            drawScoutInformation();
 
@@ -27,5 +28,5 @@ public:
 
     void onStart();
     void onFrame();
-    void setWorkerScout(const sc2::Unit * unit);
+    void setWorkerScout(const Unit & unit);
 };

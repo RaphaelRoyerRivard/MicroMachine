@@ -2,46 +2,35 @@
 
 #include "Common.h"
 #include "SquadOrder.h"
-#include "Micro.h"
-
-struct AirThreat
-{
-    UnitTag	unit;
-    double weight;
-};
-
-struct GroundThreat
-{
-    UnitTag	unit;
-    double weight;
-};
+#include "Unit.h"
+#include "FocusFireFiniteStateMachine.h"
+#include "KitingFiniteStateMachine.h"
 
 class CCBot;
 class AlphaBetaUnit;
 
 class MicroManager
 {
-    std::vector<const sc2::Unit *> m_units;
-    // map of each unit and their current state
+    //std::vector<const sc2::Unit *> m_unitsPtr;
+    std::vector<Unit> m_units;
 
 protected:
 
     CCBot & m_bot;
     SquadOrder order;
 
-    virtual void executeMicro(const std::vector<const sc2::Unit *> & targets) = 0;
-    void trainSubUnits(const sc2::Unit * unit) const;
-
+    virtual void executeMicro(const std::vector<Unit> & targets) = 0;
+    void trainSubUnits(const Unit & unit) const;
 
 public:
 
     MicroManager(CCBot & bot);
 
-    const std::vector<const sc2::Unit *> & getUnits() const;
+    const std::vector<Unit> & getUnits() const;
 
-    void setUnits(const std::vector<const sc2::Unit *> & u);
+    void setUnits(const std::vector<Unit> & u);
     void execute(const SquadOrder & order);
-    void regroup(const sc2::Point2D & regroupPosition) const;
+    void regroup(const CCPosition & regroupPosition) const;
 
     std::unordered_map<sc2::Tag, FocusFireFiniteStateMachine*> m_focusFireStates;
     std::unordered_map<sc2::Tag, KitingFiniteStateMachine*> m_kittingStates;

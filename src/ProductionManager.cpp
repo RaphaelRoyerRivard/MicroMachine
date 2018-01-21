@@ -1,7 +1,6 @@
 #include "ProductionManager.h"
 #include "Util.h"
 #include "CCBot.h"
-#include "Micro.h"
 
 ProductionManager::ProductionManager(CCBot & bot)
     : m_bot             (bot)
@@ -30,7 +29,7 @@ void ProductionManager::onStart()
 
 void ProductionManager::onFrame()
 {
-    // check the _queue for stuff we can build
+    fixBuildOrderDeadlock();
     manageBuildOrderQueue();
 
     // TODO: if nothing is currently building, get a new goal from the strategy manager
@@ -42,7 +41,7 @@ void ProductionManager::onFrame()
 }
 
 // on unit destroy
-void ProductionManager::onUnitDestroy(const sc2::Unit * unit)
+void ProductionManager::onUnitDestroy(const Unit & unit)
 {
     // TODO: might have to re-do build order if a vital unit died
 }
@@ -52,11 +51,12 @@ void ProductionManager::manageBuildOrderQueue()
     // if there is nothing in the queue, oh well
     if (m_queue.isEmpty())
     {
-        if (m_bot.Config().AutoCompleteBuildOrder && m_bot.GetPlayerRace(Players::Self) == sc2::Race::Terran)
+        //TODO repair this. It has been broken by the merge with upstream, because they deleted the BuildType class
+        /*if (m_bot.Config().AutoCompleteBuildOrder && m_bot.GetPlayerRace(Players::Self) == sc2::Race::Terran)
         {
             m_queue.queueItem(BuildOrderItem(BuildType("Marine", m_bot), 1, false));
         }
-        else
+        else*/
             return;
     }
 
@@ -67,7 +67,7 @@ void ProductionManager::manageBuildOrderQueue()
     while (!m_queue.isEmpty())
     {
         // this is the unit which can produce the currentItem
-        const sc2::Unit * producer = getProducer(currentItem.type);
+        Unit producer = getProducer(currentItem.type);
 
         // check to see if we can make it right now
         bool canMake = canMakeNow(producer, currentItem.type);
@@ -75,7 +75,7 @@ void ProductionManager::manageBuildOrderQueue()
         // TODO: if it's a building and we can't make it yet, predict the worker movement to the location
 
         // if we can make the current item
-        if (producer && canMake)
+        if (producer.isValid() && canMake)
         {
             // create it and remove it from the _queue
             create(producer, currentItem);
@@ -101,20 +101,76 @@ void ProductionManager::manageBuildOrderQueue()
     }
 }
 
-const sc2::Unit * ProductionManager::getProducer(const BuildType & type, sc2::Point2D closestTo)
+void ProductionManager::fixBuildOrderDeadlock()
+{
+    if (m_queue.isEmpty()) { return; }
+    BuildOrderItem & currentItem = m_queue.getHighestPriorityItem();
+
+    // check to see if we have the prerequisites for the topmost item
+    bool hasRequired = m_bot.Data(currentItem.type).requiredUnits.empty();
+    for (auto & required : m_bot.Data(currentItem.type).requiredUnits)
+    {
+        if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false) > 0 || m_buildingManager.isBeingBuilt(required))
+        {
+            hasRequired = true;
+            break;
+        }
+    }
+
+    if (!hasRequired)
+    {
+        std::cout << currentItem.type.getName() << " needs " << m_bot.Data(currentItem.type).requiredUnits[0].getName() << "\n";
+        m_queue.queueAsHighestPriority(MetaType(m_bot.Data(currentItem.type).requiredUnits[0], m_bot), true);
+        fixBuildOrderDeadlock();
+        return;
+    }
+
+    // build the producer of the unit if we don't have one
+    bool hasProducer = m_bot.Data(currentItem.type).whatBuilds.empty();
+    for (auto & producer : m_bot.Data(currentItem.type).whatBuilds)
+    {
+        if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false) > 0 || m_buildingManager.isBeingBuilt(producer))
+        {
+            hasProducer = true;
+            break;
+        }
+    }
+
+    if (!hasProducer)
+    {
+        m_queue.queueAsHighestPriority(MetaType(m_bot.Data(currentItem.type).whatBuilds[0], m_bot), true);
+        fixBuildOrderDeadlock();
+    }
+
+    // build a refinery if we don't have one and the thing costs gas
+    auto refinery = Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot);
+    if (m_bot.Data(currentItem.type).gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false) == 0)
+    {
+        m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
+    } 
+
+    // build supply if we need some
+    auto supplyProvider = Util::GetSupplyProvider(m_bot.GetPlayerRace(Players::Self), m_bot);
+    if (m_bot.Data(currentItem.type).supplyCost > (m_bot.GetMaxSupply() - m_bot.GetCurrentSupply()) && !m_buildingManager.isBeingBuilt(supplyProvider))
+    {
+        m_queue.queueAsHighestPriority(MetaType(supplyProvider, m_bot), true);
+    }
+}
+
+Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 {
     // get all the types of units that cna build this type
     auto & producerTypes = m_bot.Data(type).whatBuilds;
 
     // make a set of all candidate producers
-    std::vector<const sc2::Unit *> candidateProducers;
+    std::vector<Unit> candidateProducers;
     for (auto unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
         // reasons a unit can not train the desired type
-        if (std::find(producerTypes.begin(), producerTypes.end(), unit->unit_type) == producerTypes.end()) { continue; }
-        if (unit->build_progress < 1.0f) { continue; }
-        if (m_bot.Data(unit->unit_type).isBuilding && unit->orders.size() > 0) { continue; }
-        if (unit->is_flying) { continue; }
+        if (std::find(producerTypes.begin(), producerTypes.end(), unit.getType()) == producerTypes.end()) { continue; }
+        if (!unit.isCompleted()) { continue; }
+        if (m_bot.Data(unit).isBuilding && unit.isTraining()) { continue; }
+        if (unit.isFlying()) { continue; }
 
         // TODO: if unit is not powered continue
         // TODO: if the type is an addon, some special cases
@@ -127,11 +183,11 @@ const sc2::Unit * ProductionManager::getProducer(const BuildType & type, sc2::Po
     return getClosestUnitToPosition(candidateProducers, closestTo);
 }
 
-const sc2::Unit * ProductionManager::getClosestUnitToPosition(const std::vector<const sc2::Unit *> & units, sc2::Point2D closestTo)
+Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo)
 {
     if (units.size() == 0)
     {
-        return 0;
+        return Unit();
     }
 
     // if we don't care where the unit is return the first one we have
@@ -140,13 +196,13 @@ const sc2::Unit * ProductionManager::getClosestUnitToPosition(const std::vector<
         return units[0];
     }
 
-    const sc2::Unit * closestUnit = nullptr;
+    Unit closestUnit;
     double minDist = std::numeric_limits<double>::max();
 
     for (auto & unit : units)
     {
-        double distance = Util::Dist(unit->pos, closestTo);
-        if (!closestUnit || distance < minDist)
+        double distance = Util::Dist(unit, closestTo);
+        if (!closestUnit.isValid() || distance < minDist)
         {
             closestUnit = unit;
             minDist = distance;
@@ -157,39 +213,46 @@ const sc2::Unit * ProductionManager::getClosestUnitToPosition(const std::vector<
 }
 
 // this function will check to see if all preconditions are met and then create a unit
-void ProductionManager::create(const sc2::Unit * producer, BuildOrderItem & item)
+void ProductionManager::create(const Unit & producer, BuildOrderItem & item)
 {
-    if (!producer)
+    if (!producer.isValid())
     {
         return;
     }
 
     // if we're dealing with a building
-    // TODO: deal with morphed buildings & addons
-    if (m_bot.Data(item.type).isBuilding)
+    if (item.type.isBuilding())
     {
-        // send the building task to the building manager
-        m_buildingManager.addBuildingTask(item.type.getUnitTypeID(), m_bot.GetStartLocation());
+        if (item.type.getUnitType().isMorphedBuilding())
+        {
+            producer.morph(item.type.getUnitType());
+        }
+        else
+        {
+            m_buildingManager.addBuildingTask(item.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
+        }
     }
     // if we're dealing with a non-building unit
     else if (item.type.isUnit())
     {
-        Micro::SmartTrain(producer, item.type.getUnitTypeID(), m_bot);
+        producer.train(item.type.getUnitType());
     }
     else if (item.type.isUpgrade())
     {
-        Micro::SmartAbility(producer, m_bot.Data(item.type.getUpgradeID()).buildAbility, m_bot);
+        // TODO: UPGRADES
+        //Micro::SmartAbility(producer, m_bot.Data(item.type.getUpgradeID()).buildAbility, m_bot);
     }
 }
 
-bool ProductionManager::canMakeNow(const sc2::Unit * producer, const BuildType & type)
+bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 {
-    if (!producer || !meetsReservedResources(type))
+    if (!producer.isValid() || !meetsReservedResources(type))
     {
         return false;
     }
 
-    sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(producer);
+#ifdef SC2API
+    sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(producer.getUnitPtr());
 
     // quick check if the unit can't do anything it certainly can't build the thing we want
     if (available_abilities.abilities.empty())
@@ -199,10 +262,10 @@ bool ProductionManager::canMakeNow(const sc2::Unit * producer, const BuildType &
     else
     {
         // check to see if one of the unit's available abilities matches the build ability type
-        sc2::AbilityID buildTypeAbility = m_bot.Data(type).buildAbility;
+        sc2::AbilityID MetaTypeAbility = m_bot.Data(type).buildAbility;
         for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
         {
-            if (available_ability.ability_id == buildTypeAbility)
+            if (available_ability.ability_id == MetaTypeAbility)
             {
                 return true;
             }
@@ -210,6 +273,30 @@ bool ProductionManager::canMakeNow(const sc2::Unit * producer, const BuildType &
     }
 
     return false;
+#else
+    bool canMake = meetsReservedResources(type);
+	if (canMake)
+	{
+		if (type.isUnit())
+		{
+			canMake = BWAPI::Broodwar->canMake(type.getUnitType().getAPIUnitType(), producer.getUnitPtr());
+		}
+		else if (type.isTech())
+		{
+			canMake = BWAPI::Broodwar->canResearch(type.getTechType(), producer.getUnitPtr());
+		}
+		else if (type.isUpgrade())
+		{
+			canMake = BWAPI::Broodwar->canUpgrade(type.getUpgrade(), producer.getUnitPtr());
+		}
+		else
+		{	
+			BOT_ASSERT(false, "Unknown type");
+		}
+	}
+
+	return canMake;
+#endif
 }
 
 bool ProductionManager::detectBuildOrderDeadlock()
@@ -220,18 +307,21 @@ bool ProductionManager::detectBuildOrderDeadlock()
 
 int ProductionManager::getFreeMinerals()
 {
-    return m_bot.Observation()->GetMinerals() - m_buildingManager.getReservedMinerals();
+    return m_bot.GetMinerals() - m_buildingManager.getReservedMinerals();
 }
 
 int ProductionManager::getFreeGas()
 {
-    return m_bot.Observation()->GetVespene() - m_buildingManager.getReservedGas();
+    return m_bot.GetGas() - m_buildingManager.getReservedGas();
 }
 
 // return whether or not we meet resources, including building reserves
-bool ProductionManager::meetsReservedResources(const BuildType & type)
+bool ProductionManager::meetsReservedResources(const MetaType & type)
 {
     // return whether or not we meet the resources
+    int minerals = m_bot.Data(type).mineralCost;
+    int gas = m_bot.Data(type).gasCost;
+
     return (m_bot.Data(type).mineralCost <= getFreeMinerals()) && (m_bot.Data(type).gasCost <= getFreeGas());
 }
 
@@ -247,7 +337,7 @@ void ProductionManager::drawProductionInformation()
 
     for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
-        if (unit->build_progress < 1.0f)
+        if (unit.isBeingConstructed())
         {
             //ss << sc2::UnitTypeToName(unit.unit_type) << " " << unit.build_progress << "\n";
         }
@@ -255,5 +345,5 @@ void ProductionManager::drawProductionInformation()
 
     ss << m_queue.getQueueInformation();
 
-    m_bot.Map().drawTextScreen(sc2::Point2D(0.01f, 0.01f), ss.str(), sc2::Colors::Yellow);
+    m_bot.Map().drawTextScreen(0.01f, 0.01f, ss.str(), CCColor(255, 255, 0));
 }

@@ -10,22 +10,25 @@ class DistanceMap
 {
     int m_width;
     int m_height;
-    sc2::Point2D m_startTile;
+    CCTilePosition m_startTile;
 
+    // 2D matrix storing distances from the start tile
     std::vector<std::vector<int>> m_dist;
-    std::vector<sc2::Point2D> m_sortedTilePositions;
+
+    std::vector<CCTilePosition> m_sortedTiles;
     
 public:
     
     DistanceMap();
-    void computeDistanceMap(CCBot & m_bot, const sc2::Point2D & startTile);
+    void computeDistanceMap(CCBot & m_bot, const CCTilePosition & startTile);
 
     int getDistance(int tileX, int tileY) const;
-    int getDistance(const sc2::Point2D & pos) const;
+    int getDistance(const CCTilePosition & pos) const;
+    int getDistance(const CCPosition & pos) const;
 
     // given a position, get the position we should move to to minimize distance
-    const std::vector<sc2::Point2D> & getSortedTiles() const;
-    const sc2::Point2D & getStartTile() const;
+    const std::vector<CCTilePosition> & getSortedTiles() const;
+    const CCTilePosition & getStartTile() const;
 
     void draw(CCBot & bot) const;
 };

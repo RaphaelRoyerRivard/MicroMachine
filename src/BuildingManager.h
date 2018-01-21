@@ -1,5 +1,5 @@
 #pragma once
-#include "sc2api/sc2_api.h"
+
 #include "Common.h"
 #include "BuildingPlacer.h"
 
@@ -34,14 +34,14 @@ public:
 
     void                onStart();
     void                onFrame();
-    void                addBuildingTask(const sc2::UnitTypeID & type, const sc2::Point2D & desiredPosition);
+    void                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
     void                drawBuildingInformation();
-    sc2::Point2D        getBuildingLocation(const Building & b);
+    CCTilePosition      getBuildingLocation(const Building & b);
 
     int                 getReservedMinerals();
     int                 getReservedGas();
 
-    bool                isBeingBuilt(sc2::UnitTypeID type);
+    bool                isBeingBuilt(UnitType type);
 
-    std::vector<sc2::UnitTypeID> buildingsQueued() const;
+    std::vector<UnitType> buildingsQueued() const;
 };
