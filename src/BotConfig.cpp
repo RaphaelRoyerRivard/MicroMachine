@@ -94,6 +94,7 @@ void BotConfig::readConfigFile()
         const json & micro = j["Micro"];
         JSONTools::ReadBool("KiteWithRangedUnits", micro, KiteWithRangedUnits);
         JSONTools::ReadBool("ScoutHarassEnemy", micro, ScoutHarassEnemy);
+        JSONTools::ReadBool("AlphaBetaPruning", micro, AlphaBetaPruning);
     }
 
     // Parse the BWAPI Options
