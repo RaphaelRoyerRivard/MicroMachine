@@ -19,7 +19,7 @@
         "BotRace"                   : "Terran",
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Random",
-        "MapFile"                   : "DefeatRoaches.SC2Map",
+        "MapFile"                   : "DefeatZerglingsAndBanelings.SC2Map",
         "StepSize"                  : 1
     },
         
