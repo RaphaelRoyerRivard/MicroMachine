@@ -167,7 +167,7 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 			maxRange = weapon.range;
 	}
     //for some strange reason, units are actually able to reach targets farther than their range
-	return maxRange + 2;
+	return maxRange; 
 }
 
 float Util::GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot)

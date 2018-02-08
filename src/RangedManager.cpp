@@ -50,16 +50,10 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
         std::vector<AlphaBetaUnit *> maxUnits;
 
         for (auto unit : rangedUnits) {
-            if (m_units_actions.find(unit->tag) != m_units_actions.end()) {
-                AlphaBetaUnit * old = m_units_actions[unit->tag];
-                maxUnits.push_back(new AlphaBetaUnit(unit, &m_bot, old->previous_action));
-            }
-            else maxUnits.push_back(new AlphaBetaUnit(unit, &m_bot, nullptr));
+            maxUnits.push_back(new AlphaBetaUnit(unit, &m_bot));
         }
-
-        // TODO: Keep enemy unit's actions too ?
         for (auto unit : rangedUnitTargets) {
-            minUnits.push_back(new AlphaBetaUnit(unit, &m_bot, nullptr));
+            minUnits.push_back(new AlphaBetaUnit(unit, &m_bot));
         }
         size_t depth = 6;
         AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(40, depth);
@@ -73,10 +67,12 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
                 if (action->type == AlphaBetaActionType::ATTACK) {
                     Micro::SmartAttackUnit(action->unit->actual_unit, action->target->actual_unit, m_bot);
                 }
-                else if (action->type == AlphaBetaActionType::MOVE) {
+                else if (action->type == AlphaBetaActionType::MOVE_BACK) {
                     Micro::SmartMove(action->unit->actual_unit, action->position, m_bot);
                 }
-                m_units_actions.insert_or_assign(action->unit->actual_unit->tag, action->unit);
+                else if (action->type == AlphaBetaActionType::MOVE_FORWARD) {
+                    Micro::SmartMove(action->unit->actual_unit, action->position, m_bot);
+                }
             }
         }
     }

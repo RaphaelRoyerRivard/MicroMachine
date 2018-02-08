@@ -3,7 +3,7 @@
 
 AlphaBetaUnit::AlphaBetaUnit() { }
 
-AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot, AlphaBetaAction * pprevious_action) {
+AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot) {
     this->actual_unit = actual_unit;
     this->hp_current = actual_unit->health;
     this->hp_max = actual_unit->health_max;
@@ -24,21 +24,23 @@ AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot, AlphaBe
     damage = pdamage;
     range = prange;
     cooldown_max = pcooldown;
-    actual_cooldown = actual_unit->weapon_cooldown;
     speed = unitTypeData.movement_speed;
     position = actual_unit->pos;
-    previous_action = pprevious_action;
+    previous_action = nullptr;
+    attack_time = actual_unit->weapon_cooldown;
+    move_time = 0.f;
 }
 
-AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdamage, float prange, float pcooldown_max, float pspeed, sc2::Point2D pposition, AlphaBetaAction * pprevious_action) {
+AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdamage, float prange, float pcooldown_max, float pspeed, float pattack_time, float pmove_time, sc2::Point2D pposition, AlphaBetaAction * pprevious_action) {
     actual_unit = pactual_unit;
     hp_current = php_current;
     hp_max = php_max;
     damage = pdamage;
     range = prange;
-    actual_cooldown = pactual_unit->weapon_cooldown;
     cooldown_max = pcooldown_max;
     speed = pspeed;
     position = pposition;
     previous_action = pprevious_action;
+    attack_time = pattack_time;
+    move_time = pmove_time;
 };

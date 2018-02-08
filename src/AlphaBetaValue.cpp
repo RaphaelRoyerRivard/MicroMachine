@@ -2,7 +2,9 @@
 #include "AlphaBetaState.h"
 #include "AlphaBetaMove.h"
 
-AlphaBetaValue::AlphaBetaValue(float pvalue, AlphaBetaMove * pmove, AlphaBetaState * pstate)
-    :score(pvalue),
+AlphaBetaValue::AlphaBetaValue() { }
+
+AlphaBetaValue::AlphaBetaValue(float pValue, AlphaBetaMove * pmove, AlphaBetaState * pstate)
+    :score(pValue),
     move(pmove),
     state(pstate) { }
