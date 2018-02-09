@@ -14,5 +14,5 @@ class AlphaBetaConsideringDurations {
 public:
     size_t nodes_evaluated;
     AlphaBetaConsideringDurations(size_t time, size_t depth);
-    AlphaBetaValue doSearch(std::vector<AlphaBetaUnit *> units, std::vector<AlphaBetaUnit *> targets, CCBot * bot);
+    AlphaBetaValue doSearch(std::vector<std::shared_ptr<AlphaBetaUnit>> units, std::vector<std::shared_ptr<AlphaBetaUnit>> targets, CCBot * bot);
 };

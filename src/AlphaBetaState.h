@@ -21,7 +21,7 @@ public:
     std::vector<AlphaBetaMove *> generateMoves(bool isMax);
     AlphaBetaState generateChild();
     bool unitCanAttack(AlphaBetaUnit * unit);
-    bool unitCanMoveForward(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit *> targets);
-    bool unitShouldMoveBack(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit*> targets);
+    bool unitCanMoveForward(AlphaBetaUnit * unit, std::vector<std::shared_ptr<AlphaBetaUnit>> targets);
+    bool unitShouldMoveBack(AlphaBetaUnit * unit, std::vector<std::shared_ptr<AlphaBetaUnit>> targets);
     AlphaBetaValue eval();
 };

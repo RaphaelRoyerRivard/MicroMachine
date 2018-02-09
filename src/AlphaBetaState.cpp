@@ -77,11 +77,11 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax) {
         int nb_actions = 0;
         // if unit can do something (not cooling down or moving to somewhere)
         // TODO: Move cancelling ? Like if the unit is going somewhere, attack a unit instead
-        if (unitCanAttack(unit)) {
+        if (unitCanAttack(unit.get())) {
             // add attacking closest target in range as actions
             // TODO: Intelligent attacking (like focus fire, weakest ennemy or reuse RangedManager priority)
             // TODO: don't attack dead units
-            AlphaBetaUnit * closest_ennemy = nullptr;
+			std::shared_ptr<AlphaBetaUnit> closest_ennemy = nullptr;
             float closest_dist = INFINITY;
             for (auto baddy : ennemy.units) {
                 float dist = Util::Dist(unit->position, baddy->position);
@@ -100,7 +100,7 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax) {
 
         // Move closer to nearest unit
         // TODO: Incorporate with Attack ?
-        if (unitCanMoveForward(unit, ennemy.units)) {
+        if (unitCanMoveForward(unit.get(), ennemy.units)) {
             // add moving closer to targets
             float closest_dist = INFINITY;
             sc2::Point2D closest_point;
@@ -119,14 +119,14 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax) {
             ++nb_actions;
         }
         // Kite or escape fire
-        if (unitShouldMoveBack(unit, ennemy.units)) {
+        if (unitShouldMoveBack(unit.get(), ennemy.units)) {
             AlphaBetaUnit * closest_ennemy = nullptr;
             float closest_dist = INFINITY;
             for (auto baddy : ennemy.units) {
                 float dist = Util::Dist(unit->position, baddy->position);
                 if (dist < closest_dist) {
                     closest_dist = dist;
-                    closest_ennemy = baddy;
+                    closest_ennemy = baddy.get();
                 }
             }
             if (closest_ennemy != nullptr) {
@@ -161,16 +161,16 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax) {
 }
 
 AlphaBetaState AlphaBetaState::generateChild() {
-    std::vector<AlphaBetaUnit *> minUnits;
-    std::vector<AlphaBetaUnit *> maxUnits;
+    std::vector<std::shared_ptr<AlphaBetaUnit>> minUnits;
+    std::vector<std::shared_ptr<AlphaBetaUnit>> maxUnits;
 
     // so other branches won't influence this one
     for (auto unit : playerMin.units) {
-        AlphaBetaUnit * new_unit = new AlphaBetaUnit(*unit);
+		std::shared_ptr<AlphaBetaUnit> new_unit = std::make_shared<AlphaBetaUnit>(*unit);
         minUnits.push_back(new_unit);
     }
     for (auto unit : playerMax.units) {
-        AlphaBetaUnit * new_unit = new AlphaBetaUnit(*unit);
+		std::shared_ptr<AlphaBetaUnit> new_unit = std::make_shared<AlphaBetaUnit>(*unit);
         maxUnits.push_back(new_unit);
     }
 
@@ -187,7 +187,7 @@ bool AlphaBetaState::unitCanAttack(AlphaBetaUnit * unit) {
 }
 
 // TODO: move this into unit
-bool AlphaBetaState::unitCanMoveForward(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit *> targets) {
+bool AlphaBetaState::unitCanMoveForward(AlphaBetaUnit * unit, std::vector<std::shared_ptr<AlphaBetaUnit>> targets) {
     if (time < unit->move_time) return false;
     for (auto target : targets) {
         if (Util::Dist(target->position, unit->position) < unit->range) {
@@ -198,7 +198,7 @@ bool AlphaBetaState::unitCanMoveForward(AlphaBetaUnit * unit, std::vector<AlphaB
 }
 
 // TODO: move this into unit
-bool AlphaBetaState::unitShouldMoveBack(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit *> targets) {
+bool AlphaBetaState::unitShouldMoveBack(AlphaBetaUnit * unit, std::vector<std::shared_ptr<AlphaBetaUnit>> targets) {
     for (auto target : targets) {
         float range(target->range);
         float dist = Util::Dist(unit->position, target->position);

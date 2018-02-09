@@ -9,7 +9,7 @@ AlphaBetaConsideringDurations::AlphaBetaConsideringDurations(size_t time, size_t
 }
 
 
-AlphaBetaValue AlphaBetaConsideringDurations::doSearch(std::vector<AlphaBetaUnit *> units, std::vector<AlphaBetaUnit *> targets, CCBot * bot)
+AlphaBetaValue AlphaBetaConsideringDurations::doSearch(std::vector<std::shared_ptr<AlphaBetaUnit>> units, std::vector<std::shared_ptr<AlphaBetaUnit>> targets, CCBot * bot)
 {
     AlphaBetaPlayer min = AlphaBetaPlayer(targets, false);
 
