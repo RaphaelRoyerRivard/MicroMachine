@@ -29,6 +29,7 @@ AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot) {
     previous_action = nullptr;
     attack_time = actual_unit->weapon_cooldown;
     move_time = 0.f;
+	UpdateIsDead();
 }
 
 AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdamage, float prange, float pcooldown_max, float pspeed, float pattack_time, float pmove_time, sc2::Point2D pposition, AlphaBetaAction * pprevious_action) {
@@ -43,4 +44,15 @@ AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, 
     previous_action = pprevious_action;
     attack_time = pattack_time;
     move_time = pmove_time;
-};
+	UpdateIsDead();
+}
+void AlphaBetaUnit::InflictDamage(float damage)
+{
+	hp_current -= damage;
+	UpdateIsDead();
+}
+void AlphaBetaUnit::UpdateIsDead()
+{
+	is_dead = hp_current <= 0.f;
+}
+;
