@@ -1,9 +1,12 @@
 #pragma once
 #include "AlphaBetaConsideringDurations.h"
 
-AlphaBetaConsideringDurations::AlphaBetaConsideringDurations(size_t time, size_t depth)
+AlphaBetaConsideringDurations::AlphaBetaConsideringDurations(size_t time, size_t depth, bool pClosestEnemy, bool pWeakestEnemy, bool pHighestPriority)
     : time_limit(time),
-    depth_limit(depth)
+    depth_limit(depth),
+    closestEnemy(pClosestEnemy),
+    weakestEnemy(pWeakestEnemy),
+    highestPriority(pHighestPriority)
 {
     nodes_evaluated = 0;
 }
@@ -32,7 +35,7 @@ AlphaBetaValue AlphaBetaConsideringDurations::alphaBeta(AlphaBetaState state, si
     // MAX == true
     bool toMove = state.playerToMove();
 
-    std::vector<AlphaBetaMove *> moves = state.generateMoves(toMove);
+    std::vector<AlphaBetaMove *> moves = state.generateMoves(toMove, closestEnemy, weakestEnemy, highestPriority);
     for (auto m : moves) {
         AlphaBetaValue val;
         if (state.bothCanMove() && m0 == nullptr && depth != 1)

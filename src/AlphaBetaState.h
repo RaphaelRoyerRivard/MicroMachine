@@ -18,7 +18,7 @@ public:
     void doMove(AlphaBetaMove * move);
     bool bothCanMove();
     bool playerToMove();
-    std::vector<AlphaBetaMove *> generateMoves(bool isMax);
+    std::vector<AlphaBetaMove*> generateMoves(bool isMax, bool attackClosest, bool attackWeakest, bool attackPriority);
     AlphaBetaState generateChild();
     bool unitCanAttack(AlphaBetaUnit * unit);
     bool unitCanMoveForward(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit *> targets);

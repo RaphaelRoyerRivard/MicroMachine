@@ -26,6 +26,9 @@
     "Micro" :
     {
 		"AlphaBetaPruning"			: true,
+		"ClosestEnemy"				: false,
+		"WeakestEnemy"				: false,
+		"HighestPriority"			: true,
         "KiteWithRangedUnits"       : true,
         "ScoutHarassEnemy"          : true
     },

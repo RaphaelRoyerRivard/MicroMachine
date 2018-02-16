@@ -52,8 +52,12 @@ public:
     
     bool KiteWithRangedUnits;    
     bool ScoutHarassEnemy;
-    bool AlphaBetaPruning;
     bool AutoCompleteBuildOrder;
+
+    bool AlphaBetaPruning;
+    bool ClosestEnemy;
+    bool WeakestEnemy;
+    bool HighestPriority;
     
     int WorkersPerRefinery;
     int BuildingSpacing;

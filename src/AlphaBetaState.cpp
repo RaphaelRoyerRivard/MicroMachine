@@ -6,6 +6,8 @@
 #include "Util.h"
 #include <algorithm>
 
+float getUnitPriority(AlphaBetaUnit * unit, AlphaBetaUnit * target);
+
 AlphaBetaState::AlphaBetaState(AlphaBetaPlayer pplayerMin, AlphaBetaPlayer pplayerMax, long ptime)
     : playerMin(pplayerMin),
     playerMax(pplayerMax),
@@ -63,7 +65,7 @@ bool AlphaBetaState::playerToMove() {
     return maxTime <= minTime;
 }
 
-std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax) {
+std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool attackClosest, bool attackWeakest, bool attackPriority) {
     // should probably be references
     AlphaBetaPlayer player = isMax ? playerMax : playerMin;
     AlphaBetaPlayer ennemy = !isMax ? playerMax : playerMin;
@@ -82,17 +84,45 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax) {
             // TODO: Intelligent attacking (like focus fire, weakest ennemy or reuse RangedManager priority)
             // TODO: don't attack dead units
             AlphaBetaUnit * closest_ennemy = nullptr;
+            AlphaBetaUnit * weakest_enemy = nullptr;
+            AlphaBetaUnit * highest_priority = nullptr;
             float closest_dist = INFINITY;
+            float min_health = INFINITY;
+            float priority = 0;
             for (auto baddy : ennemy.units) {
                 float dist = Util::Dist(unit->position, baddy->position);
-                if (dist <= unit->range && dist < closest_dist) {
-                    closest_dist = dist;
-                    closest_ennemy = baddy;
+                float health = baddy->hp_current;
+                float prio = getUnitPriority(unit, baddy);
+                if (dist <= unit->range) {
+                    if (dist < closest_dist && attackClosest) {
+                        closest_dist = dist;
+                        closest_ennemy = baddy;
+                    }
+                    if (health <= min_health && attackWeakest) {
+                        min_health = health;
+                        weakest_enemy = baddy;
+                    }
+                    if (prio > priority && attackPriority) {
+                        priority = prio;
+                        highest_priority = baddy;
+                    }
                 }
             }
             if (closest_ennemy != nullptr) {
                 AlphaBetaAction * attack;
                 attack = new AlphaBetaAction(unit, closest_ennemy, unit->position, 0.f, AlphaBetaActionType::ATTACK, time + unit->cooldown_max);
+                actions.push_back(attack);
+                ++nb_actions;
+            }
+            if (weakest_enemy != nullptr) {
+                AlphaBetaAction * attack;
+                attack = new AlphaBetaAction(unit, weakest_enemy, unit->position, 0.f, AlphaBetaActionType::ATTACK, time + unit->cooldown_max);
+                actions.push_back(attack);
+                ++nb_actions;
+            }
+            if (highest_priority != nullptr) {
+                AlphaBetaAction * attack;
+                attack = new AlphaBetaAction(unit, highest_priority, unit->position, 0.f, AlphaBetaActionType::ATTACK, time + unit->cooldown_max);
                 actions.push_back(attack);
                 ++nb_actions;
             }
@@ -158,6 +188,16 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax) {
             possible_moves.push_back(new AlphaBetaMove(actions));
     }
     return possible_moves;
+}
+
+float getUnitPriority(AlphaBetaUnit * unit, AlphaBetaUnit * target) {
+    float dps = target->damage;
+    if (dps == 0.f)
+        dps = 15.f;
+    float healthValue = 1 / (target->hp_current + target->shield);
+    float distanceValue = 1 / Util::Dist(unit->position, target->position);
+    //TODO try to give different weights to each variables
+    return 5 + dps * healthValue * distanceValue;
 }
 
 AlphaBetaState AlphaBetaState::generateChild() {
