@@ -17,5 +17,6 @@ class AlphaBetaConsideringDurations {
 public:
     size_t nodes_evaluated;
     AlphaBetaConsideringDurations(size_t time, size_t depth, bool pClosestEnemy, bool pWeakestEnemy, bool pHighestPriority);
-    AlphaBetaValue doSearch(std::vector<AlphaBetaUnit *> units, std::vector<AlphaBetaUnit *> targets, CCBot * bot);
+    AlphaBetaValue doSearch(std::vector<std::shared_ptr<AlphaBetaUnit>> units, std::vector<std::shared_ptr<AlphaBetaUnit>> targets, CCBot * bot);
+
 };

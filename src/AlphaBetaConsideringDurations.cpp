@@ -12,7 +12,7 @@ AlphaBetaConsideringDurations::AlphaBetaConsideringDurations(size_t time, size_t
 }
 
 
-AlphaBetaValue AlphaBetaConsideringDurations::doSearch(std::vector<AlphaBetaUnit *> units, std::vector<AlphaBetaUnit *> targets, CCBot * bot)
+AlphaBetaValue AlphaBetaConsideringDurations::doSearch(std::vector<std::shared_ptr<AlphaBetaUnit>> units, std::vector<std::shared_ptr<AlphaBetaUnit>> targets, CCBot * bot)
 {
     AlphaBetaPlayer min = AlphaBetaPlayer(targets, false);
 
@@ -41,7 +41,9 @@ AlphaBetaValue AlphaBetaConsideringDurations::alphaBeta(AlphaBetaState state, si
         if (state.bothCanMove() && m0 == nullptr && depth != 1)
             val = alphaBeta(state, depth - 1, m, alpha, beta);
         AlphaBetaState child = state.generateChild();
-        if (m0 != nullptr) child.doMove(m0);
+        if (m0 != nullptr) {
+            child.doMove(m0);
+        }
         child.doMove(m);
 
         val = alphaBeta(child, depth - 1, nullptr, alpha, beta);

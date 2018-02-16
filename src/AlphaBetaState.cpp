@@ -6,7 +6,7 @@
 #include "Util.h"
 #include <algorithm>
 
-float getUnitPriority(AlphaBetaUnit * unit, AlphaBetaUnit * target);
+float getUnitPriority(std::shared_ptr<AlphaBetaUnit> unit, std::shared_ptr<AlphaBetaUnit> target);
 
 AlphaBetaState::AlphaBetaState(AlphaBetaPlayer pplayerMin, AlphaBetaPlayer pplayerMax, long ptime)
     : playerMin(pplayerMin),
@@ -83,9 +83,11 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool atta
             // add attacking closest target in range as actions
             // TODO: Intelligent attacking (like focus fire, weakest ennemy or reuse RangedManager priority)
             // TODO: don't attack dead units
-            AlphaBetaUnit * closest_ennemy = nullptr;
-            AlphaBetaUnit * weakest_enemy = nullptr;
-            AlphaBetaUnit * highest_priority = nullptr;
+
+            std::shared_ptr<AlphaBetaUnit> closest_ennemy = nullptr;
+            std::shared_ptr<AlphaBetaUnit> weakest_enemy = nullptr;
+            std::shared_ptr<AlphaBetaUnit> highest_priority = nullptr;
+
             float closest_dist = INFINITY;
             float min_health = INFINITY;
             float priority = 0;
@@ -156,7 +158,7 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool atta
                 float dist = Util::Dist(unit->position, baddy->position);
                 if (dist < closest_dist) {
                     closest_dist = dist;
-                    closest_ennemy = baddy;
+                    closest_ennemy = baddy.get();
                 }
             }
             if (closest_ennemy != nullptr) {
@@ -190,7 +192,7 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool atta
     return possible_moves;
 }
 
-float getUnitPriority(AlphaBetaUnit * unit, AlphaBetaUnit * target) {
+float getUnitPriority(std::shared_ptr<AlphaBetaUnit> unit, std::shared_ptr<AlphaBetaUnit> target) {
     float dps = target->damage;
     if (dps == 0.f)
         dps = 15.f;
@@ -201,16 +203,16 @@ float getUnitPriority(AlphaBetaUnit * unit, AlphaBetaUnit * target) {
 }
 
 AlphaBetaState AlphaBetaState::generateChild() {
-    std::vector<AlphaBetaUnit *> minUnits;
-    std::vector<AlphaBetaUnit *> maxUnits;
+    std::vector<std::shared_ptr<AlphaBetaUnit>> minUnits;
+    std::vector<std::shared_ptr<AlphaBetaUnit>> maxUnits;
 
     // so other branches won't influence this one
     for (auto unit : playerMin.units) {
-        AlphaBetaUnit * new_unit = new AlphaBetaUnit(*unit);
+		std::shared_ptr<AlphaBetaUnit> new_unit = std::make_shared<AlphaBetaUnit>(*unit);
         minUnits.push_back(new_unit);
     }
     for (auto unit : playerMax.units) {
-        AlphaBetaUnit * new_unit = new AlphaBetaUnit(*unit);
+		std::shared_ptr<AlphaBetaUnit> new_unit = std::make_shared<AlphaBetaUnit>(*unit);
         maxUnits.push_back(new_unit);
     }
 
@@ -222,12 +224,12 @@ AlphaBetaState AlphaBetaState::generateChild() {
 // TODO: Better decision of which action the unit can do
 
 // TODO: move this into unit
-bool AlphaBetaState::unitCanAttack(AlphaBetaUnit * unit) {
+bool AlphaBetaState::unitCanAttack(std::shared_ptr<AlphaBetaUnit> unit) {
     return unit->attack_time <= time;
 }
 
 // TODO: move this into unit
-bool AlphaBetaState::unitCanMoveForward(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit *> targets) {
+bool AlphaBetaState::unitCanMoveForward(std::shared_ptr<AlphaBetaUnit> unit, std::vector<std::shared_ptr<AlphaBetaUnit>> targets) {
     if (time < unit->move_time) return false;
     for (auto target : targets) {
         if (Util::Dist(target->position, unit->position) < unit->range) {
@@ -238,7 +240,7 @@ bool AlphaBetaState::unitCanMoveForward(AlphaBetaUnit * unit, std::vector<AlphaB
 }
 
 // TODO: move this into unit
-bool AlphaBetaState::unitShouldMoveBack(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit *> targets) {
+bool AlphaBetaState::unitShouldMoveBack(std::shared_ptr<AlphaBetaUnit> unit, std::vector<std::shared_ptr<AlphaBetaUnit>> targets) {
     for (auto target : targets) {
         float range(target->range);
         float dist = Util::Dist(unit->position, target->position);

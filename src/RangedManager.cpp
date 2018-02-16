@@ -46,14 +46,14 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
     // TODO: Split theses into Combat managers and use IOC and dependecy injection or something instead of a vulgar if
     if (m_bot.Config().AlphaBetaPruning) {
 
-        std::vector<AlphaBetaUnit *> minUnits;
-        std::vector<AlphaBetaUnit *> maxUnits;
+        std::vector<std::shared_ptr<AlphaBetaUnit>> minUnits;
+        std::vector<std::shared_ptr<AlphaBetaUnit>> maxUnits;
 
         for (auto unit : rangedUnits) {
-            maxUnits.push_back(new AlphaBetaUnit(unit, &m_bot));
+            maxUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot));
         }
         for (auto unit : rangedUnitTargets) {
-            minUnits.push_back(new AlphaBetaUnit(unit, &m_bot));
+            minUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot));
         }
         size_t depth = 6;
         AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(40, depth, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority);

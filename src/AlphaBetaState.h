@@ -20,8 +20,8 @@ public:
     bool playerToMove();
     std::vector<AlphaBetaMove*> generateMoves(bool isMax, bool attackClosest, bool attackWeakest, bool attackPriority);
     AlphaBetaState generateChild();
-    bool unitCanAttack(AlphaBetaUnit * unit);
-    bool unitCanMoveForward(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit *> targets);
-    bool unitShouldMoveBack(AlphaBetaUnit * unit, std::vector<AlphaBetaUnit*> targets);
+    bool unitCanAttack(std::shared_ptr<AlphaBetaUnit> unit);
+    bool unitCanMoveForward(std::shared_ptr<AlphaBetaUnit> unit, std::vector<std::shared_ptr<AlphaBetaUnit>> targets);
+    bool unitShouldMoveBack(std::shared_ptr<AlphaBetaUnit> unit, std::vector<std::shared_ptr<AlphaBetaUnit>> targets);
     AlphaBetaValue eval();
 };
