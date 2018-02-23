@@ -55,12 +55,12 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
         for (auto unit : rangedUnitTargets) {
             minUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot));
         }
-        size_t depth = 6;
-        AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(std::chrono::milliseconds(100), depth, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority);
+
+        AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(std::chrono::milliseconds(m_bot.Config().AlphaBetaMaxMilli), m_bot.Config().AlphaBetaDepth, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority);
         AlphaBetaValue value = alphaBeta.doSearch(maxUnits, minUnits, &m_bot);
         size_t nodes = alphaBeta.nodes_evaluated;
         m_bot.Map().drawTextScreen(0.005, 0.005, std::string("Nodes explored : ") + std::to_string(nodes));
-        m_bot.Map().drawTextScreen(0.005, 0.020, std::string("Max depth : ") + std::to_string(depth));
+        m_bot.Map().drawTextScreen(0.005, 0.020, std::string("Max depth : ") + std::to_string(m_bot.Config().AlphaBetaDepth));
         m_bot.Map().drawTextScreen(0.005, 0.035, std::string("AB value : ") + std::to_string(value.score));
         if (value.move != NULL) {
             for (auto action : value.move->actions) {

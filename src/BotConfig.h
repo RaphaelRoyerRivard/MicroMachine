@@ -55,6 +55,8 @@ public:
     bool AutoCompleteBuildOrder;
 
     bool AlphaBetaPruning;
+    int AlphaBetaDepth;
+    int AlphaBetaMaxMilli;
     bool ClosestEnemy;
     bool WeakestEnemy;
     bool HighestPriority;
