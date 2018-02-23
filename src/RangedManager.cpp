@@ -56,7 +56,7 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
             minUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot));
         }
         size_t depth = 6;
-        AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(40, depth);
+        AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(40, depth, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority);
         AlphaBetaValue value = alphaBeta.doSearch(maxUnits, minUnits, &m_bot);
         size_t nodes = alphaBeta.nodes_evaluated;
         m_bot.Map().drawTextScreen(0.005, 0.005, std::string("Nodes explored : ") + std::to_string(nodes));

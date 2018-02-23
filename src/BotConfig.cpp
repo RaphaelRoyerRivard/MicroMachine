@@ -4,50 +4,50 @@
 
 BotConfig::BotConfig()
 {
-    ConfigFileFound                     = true;
-    ConfigFileParsed                    = true;
-    ConfigFileLocation                  = "BotConfig.txt";
-    BotName                             = "UAlbertaBot";
-    Authors                             = "Dave Churchill";
-    PrintInfoOnStart                    = false;
-    StrategyName                        = "Protoss_ZealotRush";
-    ReadDir                             = "read/";
-    WriteDir                            = "write/";
-    UseEnemySpecificStrategy            = false;
-    FoundEnemySpecificStrategy          = false;
-    UsingAutoObserver                   = false;
+    ConfigFileFound = true;
+    ConfigFileParsed = true;
+    ConfigFileLocation = "BotConfig.txt";
+    BotName = "UAlbertaBot";
+    Authors = "Dave Churchill";
+    PrintInfoOnStart = false;
+    StrategyName = "Protoss_ZealotRush";
+    ReadDir = "read/";
+    WriteDir = "write/";
+    UseEnemySpecificStrategy = false;
+    FoundEnemySpecificStrategy = false;
+    UsingAutoObserver = false;
 
-    SetLocalSpeed                       = 10;
-    SetFrameSkip                        = 0;
-    UserInput                           = true;
-    CompleteMapInformation              = false;
+    SetLocalSpeed = 10;
+    SetFrameSkip = 0;
+    UserInput = true;
+    CompleteMapInformation = false;
 
-    DrawGameInfo                        = true;
-    DrawProductionInfo                  = true;
-    DrawTileInfo                        = false;
-    DrawWalkableSectors                 = false;
-    DrawScoutInfo                       = false;
-    DrawResourceInfo                    = false;
-    DrawWorkerInfo                      = false;
-    DrawModuleTimers                    = false;
-    DrawReservedBuildingTiles           = false;
-    DrawBuildingInfo                    = false;
-    DrawEnemyUnitInfo                   = false;
-    DrawLastSeenTileInfo                = false;
-    DrawUnitTargetInfo                  = false;
-    DrawSquadInfo                       = false;
+    DrawGameInfo = true;
+    DrawProductionInfo = true;
+    DrawTileInfo = false;
+    DrawWalkableSectors = false;
+    DrawScoutInfo = false;
+    DrawResourceInfo = false;
+    DrawWorkerInfo = false;
+    DrawModuleTimers = false;
+    DrawReservedBuildingTiles = false;
+    DrawBuildingInfo = false;
+    DrawEnemyUnitInfo = false;
+    DrawLastSeenTileInfo = false;
+    DrawUnitTargetInfo = false;
+    DrawSquadInfo = false;
 
-    KiteWithRangedUnits                 = true;
-    ScoutHarassEnemy                    = true;
+    KiteWithRangedUnits = true;
+    ScoutHarassEnemy = true;
 
-    ColorLineTarget                     = CCColor(255, 255, 255);
-    ColorLineMineral                    = CCColor(0, 128, 128);
-    ColorUnitNearEnemy                  = CCColor(255, 0, 0);
-    ColorUnitNotNearEnemy               = CCColor(0, 255, 0);
-    
-    WorkersPerRefinery                  = 3;
-    BuildingSpacing                     = 1;
-    PylonSpacing                        = 3;
+    ColorLineTarget = CCColor(255, 255, 255);
+    ColorLineMineral = CCColor(0, 128, 128);
+    ColorUnitNearEnemy = CCColor(255, 0, 0);
+    ColorUnitNotNearEnemy = CCColor(0, 255, 0);
+
+    WorkersPerRefinery = 3;
+    BuildingSpacing = 1;
+    PylonSpacing = 3;
 }
 
 void BotConfig::readConfigFile()
@@ -95,6 +95,9 @@ void BotConfig::readConfigFile()
         JSONTools::ReadBool("KiteWithRangedUnits", micro, KiteWithRangedUnits);
         JSONTools::ReadBool("ScoutHarassEnemy", micro, ScoutHarassEnemy);
         JSONTools::ReadBool("AlphaBetaPruning", micro, AlphaBetaPruning);
+        JSONTools::ReadBool("ClosestEnemy", micro, ClosestEnemy);
+        JSONTools::ReadBool("WeakestEnemy", micro, WeakestEnemy);
+        JSONTools::ReadBool("HighestPriority", micro, HighestPriority);
     }
 
     // Parse the BWAPI Options
@@ -120,21 +123,21 @@ void BotConfig::readConfigFile()
     if (j.count("Debug") && j["Debug"].is_object())
     {
         const json & debug = j["Debug"];
-        JSONTools::ReadBool("DrawGameInfo",             debug, DrawGameInfo);
-        JSONTools::ReadBool("DrawTileInfo",             debug, DrawTileInfo);
-        JSONTools::ReadBool("DrawBaseLocationInfo",     debug, DrawBaseLocationInfo);
-        JSONTools::ReadBool("DrawWalkableSectors",      debug, DrawWalkableSectors);
-        JSONTools::ReadBool("DrawResourceInfo",         debug, DrawResourceInfo);
-        JSONTools::ReadBool("DrawWorkerInfo",           debug, DrawWorkerInfo);
-        JSONTools::ReadBool("DrawProductionInfo",       debug, DrawProductionInfo);
-        JSONTools::ReadBool("DrawScoutInfo",            debug, DrawScoutInfo);
-        JSONTools::ReadBool("DrawSquadInfo",            debug, DrawSquadInfo);
-        JSONTools::ReadBool("DrawBuildingInfo",         debug, DrawBuildingInfo);
-        JSONTools::ReadBool("DrawModuleTimers",         debug, DrawModuleTimers);
-        JSONTools::ReadBool("DrawEnemyUnitInfo",        debug, DrawEnemyUnitInfo);
-        JSONTools::ReadBool("DrawLastSeenTileInfo",     debug, DrawLastSeenTileInfo);
-        JSONTools::ReadBool("DrawUnitTargetInfo",       debug, DrawUnitTargetInfo);
-        JSONTools::ReadBool("DrawReservedBuildingTiles",debug, DrawReservedBuildingTiles);
+        JSONTools::ReadBool("DrawGameInfo", debug, DrawGameInfo);
+        JSONTools::ReadBool("DrawTileInfo", debug, DrawTileInfo);
+        JSONTools::ReadBool("DrawBaseLocationInfo", debug, DrawBaseLocationInfo);
+        JSONTools::ReadBool("DrawWalkableSectors", debug, DrawWalkableSectors);
+        JSONTools::ReadBool("DrawResourceInfo", debug, DrawResourceInfo);
+        JSONTools::ReadBool("DrawWorkerInfo", debug, DrawWorkerInfo);
+        JSONTools::ReadBool("DrawProductionInfo", debug, DrawProductionInfo);
+        JSONTools::ReadBool("DrawScoutInfo", debug, DrawScoutInfo);
+        JSONTools::ReadBool("DrawSquadInfo", debug, DrawSquadInfo);
+        JSONTools::ReadBool("DrawBuildingInfo", debug, DrawBuildingInfo);
+        JSONTools::ReadBool("DrawModuleTimers", debug, DrawModuleTimers);
+        JSONTools::ReadBool("DrawEnemyUnitInfo", debug, DrawEnemyUnitInfo);
+        JSONTools::ReadBool("DrawLastSeenTileInfo", debug, DrawLastSeenTileInfo);
+        JSONTools::ReadBool("DrawUnitTargetInfo", debug, DrawUnitTargetInfo);
+        JSONTools::ReadBool("DrawReservedBuildingTiles", debug, DrawReservedBuildingTiles);
     }
 
     // Parse the Module Options
