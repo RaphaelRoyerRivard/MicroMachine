@@ -81,6 +81,7 @@
     <ClInclude Include="..\src\AlphaBetaMove.h" />
     <ClInclude Include="..\src\AlphaBetaPlayer.h" />
     <ClInclude Include="..\src\AlphaBetaState.h" />
+    <ClInclude Include="..\src\AlphaBetaTimeOut.h" />
     <ClInclude Include="..\src\AlphaBetaUnit.h" />
     <ClInclude Include="..\src\AlphaBetaValue.h" />
     <ClInclude Include="..\src\AttackFSMState.h" />
