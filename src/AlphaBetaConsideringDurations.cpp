@@ -1,8 +1,10 @@
 #pragma once
 #include "AlphaBetaConsideringDurations.h"
+#include "AlphaBetaTimeOut.h"
 
-AlphaBetaConsideringDurations::AlphaBetaConsideringDurations(size_t time, size_t depth)
+AlphaBetaConsideringDurations::AlphaBetaConsideringDurations(std::chrono::milliseconds time, size_t depth)
     : time_limit(time),
+    start{},
     depth_limit(depth)
 {
     nodes_evaluated = 0;
@@ -11,6 +13,8 @@ AlphaBetaConsideringDurations::AlphaBetaConsideringDurations(size_t time, size_t
 
 AlphaBetaValue AlphaBetaConsideringDurations::doSearch(std::vector<std::shared_ptr<AlphaBetaUnit>> units, std::vector<std::shared_ptr<AlphaBetaUnit>> targets, CCBot * bot)
 {
+    start = std::chrono::high_resolution_clock::now();
+
     AlphaBetaPlayer min = AlphaBetaPlayer(targets, false);
 
     AlphaBetaPlayer max = AlphaBetaPlayer(units, false);
@@ -26,7 +30,13 @@ bool isTerminal(AlphaBetaState state, size_t depth) {
 }
 
 AlphaBetaValue AlphaBetaConsideringDurations::alphaBeta(AlphaBetaState state, size_t depth, AlphaBetaMove * m0, AlphaBetaValue alpha, AlphaBetaValue beta) {
-    // TODO: Handle timeout
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    auto timeElapse = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    if (timeElapse.count() > time_limit.count())
+    {
+        throw AlphaBetaTimeOut();
+    }
     if (isTerminal(state, depth)) return state.eval();
 
     // MAX == true
