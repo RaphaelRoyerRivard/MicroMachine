@@ -81,7 +81,7 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax) {
             // add attacking closest target in range as actions
             // TODO: Intelligent attacking (like focus fire, weakest ennemy or reuse RangedManager priority)
             // TODO: don't attack dead units
-			std::shared_ptr<AlphaBetaUnit> closest_ennemy = nullptr;
+            std::shared_ptr<AlphaBetaUnit> closest_ennemy = nullptr;
             float closest_dist = INFINITY;
             for (auto baddy : ennemy.units) {
                 float dist = Util::Dist(unit->position, baddy->position);
@@ -166,11 +166,11 @@ AlphaBetaState AlphaBetaState::generateChild() {
 
     // so other branches won't influence this one
     for (auto unit : playerMin.units) {
-		std::shared_ptr<AlphaBetaUnit> new_unit = std::make_shared<AlphaBetaUnit>(*unit);
+        std::shared_ptr<AlphaBetaUnit> new_unit = std::make_shared<AlphaBetaUnit>(*unit);
         minUnits.push_back(new_unit);
     }
     for (auto unit : playerMax.units) {
-		std::shared_ptr<AlphaBetaUnit> new_unit = std::make_shared<AlphaBetaUnit>(*unit);
+        std::shared_ptr<AlphaBetaUnit> new_unit = std::make_shared<AlphaBetaUnit>(*unit);
         maxUnits.push_back(new_unit);
     }
 
@@ -204,7 +204,7 @@ bool AlphaBetaState::unitShouldMoveBack(AlphaBetaUnit * unit, std::vector<std::s
         float dist = Util::Dist(unit->position, target->position);
         float timeUntilAttacked = std::max(0.f, (dist - range) / target->speed);
         float cooldown = unit->attack_time - time;
-        if (timeUntilAttacked < cooldown) 
+        if (timeUntilAttacked < cooldown)
             return true;
     }
     return false;
@@ -214,22 +214,22 @@ bool AlphaBetaState::unitShouldMoveBack(AlphaBetaUnit * unit, std::vector<std::s
 AlphaBetaValue AlphaBetaState::eval() {
     float totalPlayerDamage = 0;
     float totalEnemyDamage = 0;
-	// We check if at least one unit is still alive. If no unit is alive, we add a huge value.
-	bool oneMinIsAlive = false;
-	bool oneMaxIsAlive = false;
+    // We check if at least one unit is still alive. If no unit is alive, we add a huge value.
+    bool oneMinIsAlive = false;
+    bool oneMaxIsAlive = false;
     for (auto unit : playerMin.units) {
-		oneMinIsAlive |= !unit->is_dead;
+        oneMinIsAlive |= !unit->is_dead;
         totalEnemyDamage += (unit->hp_max - unit->hp_current);
     }
-	if (!oneMinIsAlive)
-		totalEnemyDamage += 100000;
+    if (!oneMinIsAlive)
+        totalEnemyDamage += 100000;
 
     for (auto unit : playerMax.units) {
-		oneMaxIsAlive |= !unit->is_dead;
+        oneMaxIsAlive |= !unit->is_dead;
         totalPlayerDamage += (unit->hp_max - unit->hp_current);
     }
-	if (!oneMaxIsAlive)
-		totalPlayerDamage += 100000;
+    if (!oneMaxIsAlive)
+        totalPlayerDamage += 100000;
 
     return AlphaBetaValue(totalEnemyDamage - totalPlayerDamage, nullptr, this);
 }
