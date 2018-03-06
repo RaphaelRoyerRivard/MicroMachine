@@ -30,6 +30,9 @@ public:
     AlphaBetaUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdamage, float prange, float pcooldown_max, float pspeed, float pattack_time, float pmove_time, float pshield, sc2::Point2D pposition, AlphaBetaAction * pprevious_action);
 
     void InflictDamage(float damage);
+    bool CanAttack(float time);
+    bool CanMoveForward(float time, std::vector<std::shared_ptr<AlphaBetaUnit>> targets);
+    bool ShouldMoveBack(float time, std::vector<std::shared_ptr<AlphaBetaUnit>> targets);
 private:
     void UpdateIsDead();
 };

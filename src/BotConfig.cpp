@@ -48,6 +48,9 @@ BotConfig::BotConfig()
     WorkersPerRefinery = 3;
     BuildingSpacing = 1;
     PylonSpacing = 3;
+
+    AlphaBetaDepth = 6;
+    AlphaBetaMaxMilli = 100;
 }
 
 void BotConfig::readConfigFile()
@@ -95,6 +98,8 @@ void BotConfig::readConfigFile()
         JSONTools::ReadBool("KiteWithRangedUnits", micro, KiteWithRangedUnits);
         JSONTools::ReadBool("ScoutHarassEnemy", micro, ScoutHarassEnemy);
         JSONTools::ReadBool("AlphaBetaPruning", micro, AlphaBetaPruning);
+        JSONTools::ReadInt("AlphaBetaDepth", micro, AlphaBetaDepth);
+        JSONTools::ReadInt("AlphaBetaMaxMilli", micro, AlphaBetaMaxMilli);
         JSONTools::ReadBool("ClosestEnemy", micro, ClosestEnemy);
         JSONTools::ReadBool("WeakestEnemy", micro, WeakestEnemy);
         JSONTools::ReadBool("HighestPriority", micro, HighestPriority);

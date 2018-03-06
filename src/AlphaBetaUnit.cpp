@@ -57,4 +57,30 @@ void AlphaBetaUnit::UpdateIsDead()
 {
 	is_dead = hp_current <= 0.f;
 }
+
+bool AlphaBetaUnit::CanAttack(float time) {
+    return attack_time <= time;
+}
+
+bool AlphaBetaUnit::CanMoveForward(float time, std::vector<std::shared_ptr<AlphaBetaUnit>> targets) {
+    if (time < move_time) return false;
+    for (auto target : targets) {
+        if (Util::Dist(target->position, position) < range) {
+            return false; // don't move if you can attack an ennemy, shoot at it !
+        }
+    }
+    return true;
+}
+
+bool AlphaBetaUnit::ShouldMoveBack(float time, std::vector<std::shared_ptr<AlphaBetaUnit>> targets) {
+    for (auto target : targets) {
+        float target_range(target->range);
+        float dist = Util::Dist(position, target->position);
+        float timeUntilAttacked = std::max(0.f, (dist - target_range) / target->speed);
+        float cooldown = attack_time - time;
+        if (timeUntilAttacked < cooldown)
+            return true;
+    }
+    return false;
+}
 ;

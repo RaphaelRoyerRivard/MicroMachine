@@ -79,7 +79,7 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool atta
         int nb_actions = 0;
         // if unit can do something (not cooling down or moving to somewhere)
         // TODO: Move cancelling ? Like if the unit is going somewhere, attack a unit instead
-        if (unitCanAttack(unit)) {
+        if (unit->CanAttack(time)) {
             // add attacking closest target in range as actions
             // TODO: Intelligent attacking (like focus fire, weakest ennemy or reuse RangedManager priority)
             // TODO: don't attack dead units
@@ -134,7 +134,7 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool atta
 
         // Move closer to nearest unit
         // TODO: Incorporate with Attack ?
-        if (unitCanMoveForward(unit, ennemy.units)) {
+        if (unit->CanMoveForward(time, ennemy.units)) {
             // add moving closer to targets
             float closest_dist = INFINITY;
             sc2::Point2D closest_point;
@@ -153,7 +153,7 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool atta
             ++nb_actions;
         }
         // Kite or escape fire
-        if (unitShouldMoveBack(unit, ennemy.units)) {
+        if (unit->ShouldMoveBack(time, ennemy.units)) {
             AlphaBetaUnit * closest_ennemy = nullptr;
             float closest_dist = INFINITY;
             for (auto baddy : ennemy.units) {
@@ -224,35 +224,6 @@ AlphaBetaState AlphaBetaState::generateChild() {
 }
 
 // TODO: Better decision of which action the unit can do
-
-// TODO: move this into unit
-bool AlphaBetaState::unitCanAttack(std::shared_ptr<AlphaBetaUnit> unit) {
-    return unit->attack_time <= time;
-}
-
-// TODO: move this into unit
-bool AlphaBetaState::unitCanMoveForward(std::shared_ptr<AlphaBetaUnit> unit, std::vector<std::shared_ptr<AlphaBetaUnit>> targets) {
-    if (time < unit->move_time) return false;
-    for (auto target : targets) {
-        if (Util::Dist(target->position, unit->position) < unit->range) {
-            return false; // don't move if you can attack an ennemy, shoot at it !
-        }
-    }
-    return true;
-}
-
-// TODO: move this into unit
-bool AlphaBetaState::unitShouldMoveBack(std::shared_ptr<AlphaBetaUnit> unit, std::vector<std::shared_ptr<AlphaBetaUnit>> targets) {
-    for (auto target : targets) {
-        float range(target->range);
-        float dist = Util::Dist(unit->position, target->position);
-        float timeUntilAttacked = std::max(0.f, (dist - range) / target->speed);
-        float cooldown = unit->attack_time - time;
-        if (timeUntilAttacked < cooldown)
-            return true;
-    }
-    return false;
-}
 
 // TODO: Better evaluation function and end conditions (player dead == -100000) 
 AlphaBetaValue AlphaBetaState::eval() {

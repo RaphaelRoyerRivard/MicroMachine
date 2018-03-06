@@ -26,6 +26,8 @@
     "Micro" :
     {
 		"AlphaBetaPruning"			: true,
+		"AlphaBetaDepth"			: 6,
+		"AlphaBetaMaxMilli"			: 100,
 		"ClosestEnemy"				: false,
 		"WeakestEnemy"				: false,
 		"HighestPriority"			: true,
