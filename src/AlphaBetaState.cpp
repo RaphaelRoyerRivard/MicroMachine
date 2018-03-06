@@ -92,6 +92,8 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool atta
             float min_health = INFINITY;
             float priority = 0;
             for (auto baddy : ennemy.units) {
+                if (baddy->is_dead)
+                    continue;
                 float dist = Util::Dist(unit->position, baddy->position);
                 float health = baddy->hp_current;
                 float prio = getUnitPriority(unit, baddy);
