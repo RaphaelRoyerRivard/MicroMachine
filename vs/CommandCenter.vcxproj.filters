@@ -160,6 +160,27 @@
     <ClCompile Include="..\src\Micro.cpp">
       <Filter>micro</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\UCTCDUnit.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDAction.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDPlayer.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDMove.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDState.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDNode.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTConsideringDurations.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CCBot.h" />
@@ -345,6 +366,30 @@
     <ClInclude Include="..\src\AlphaBetaTimeOut.h">
       <Filter>micro\ABCD</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\UCTCDUnit.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDAction.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDPlayer.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDMove.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDState.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDNode.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTConsideringDurations.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDTimeOut.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CommandCenter.rc" />
@@ -370,6 +415,9 @@
     </Filter>
     <Filter Include="micro\BT + FSM">
       <UniqueIdentifier>{92529348-57a7-4d79-9afe-8a5bc5f0fb4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="micro\UCTCD">
+      <UniqueIdentifier>{1baf6e7b-a203-4ff0-81d6-cfb7c998b0fc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

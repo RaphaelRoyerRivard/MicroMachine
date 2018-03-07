@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
         sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot),
         sc2::CreateComputer(Util::GetRaceFromString(enemyRaceString), enemyDifficulty)
     });
-
+     
     // Start the game.
     coordinator.LaunchStarcraft();
     coordinator.StartGame(mapString);

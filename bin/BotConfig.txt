@@ -25,16 +25,23 @@
         
     "Micro" :
     {
-		"AlphaBetaPruning"			: true,
+		"AlphaBetaPruning"			: false,
 		"AlphaBetaDepth"			: 6,
 		"AlphaBetaMaxMilli"			: 100,
-		"ClosestEnemy"				: false,
+		"ClosestEnemy"				: true,
 		"WeakestEnemy"				: false,
 		"HighestPriority"			: true,
         "KiteWithRangedUnits"       : true,
         "ScoutHarassEnemy"          : true
     },
-    
+	"UCTConsideringDurations" :
+	{
+		"UCTCD"						: true,
+		"UCTCDMaxMilli"				: 50,
+		"UCTCDK"					: 1.5,
+		"UCTCDMaxTraversals"		: 1000,
+		"UCTCDConsiderDistance"		: false
+	},
     "Macro" :
     {
         "WorkersPerRefinery"        : 3,

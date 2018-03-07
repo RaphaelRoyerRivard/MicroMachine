@@ -67,6 +67,13 @@
     <ClCompile Include="..\src\SquadOrder.cpp" />
     <ClCompile Include="..\src\StrategyManager.cpp" />
     <ClCompile Include="..\src\TechTree.cpp" />
+    <ClCompile Include="..\src\UCTCDAction.cpp" />
+    <ClCompile Include="..\src\UCTCDMove.cpp" />
+    <ClCompile Include="..\src\UCTCDNode.cpp" />
+    <ClCompile Include="..\src\UCTCDPlayer.cpp" />
+    <ClCompile Include="..\src\UCTCDState.cpp" />
+    <ClCompile Include="..\src\UCTCDUnit.cpp" />
+    <ClCompile Include="..\src\UCTConsideringDurations.cpp" />
     <ClCompile Include="..\src\Unit.cpp" />
     <ClCompile Include="..\src\UnitData.cpp" />
     <ClCompile Include="..\src\UnitInfoManager.cpp" />
@@ -131,6 +138,14 @@
     <ClInclude Include="..\src\StrategyManager.h" />
     <ClInclude Include="..\src\TechTree.h" />
     <ClInclude Include="..\src\Timer.hpp" />
+    <ClInclude Include="..\src\UCTCDAction.h" />
+    <ClInclude Include="..\src\UCTCDMove.h" />
+    <ClInclude Include="..\src\UCTCDNode.h" />
+    <ClInclude Include="..\src\UCTCDPlayer.h" />
+    <ClInclude Include="..\src\UCTCDState.h" />
+    <ClInclude Include="..\src\UCTCDTimeOut.h" />
+    <ClInclude Include="..\src\UCTCDUnit.h" />
+    <ClInclude Include="..\src\UCTConsideringDurations.h" />
     <ClInclude Include="..\src\Unit.h" />
     <ClInclude Include="..\src\UnitData.h" />
     <ClInclude Include="..\src\UnitInfoManager.h" />
@@ -217,8 +232,8 @@
     <OutDir>$(ProjectDir)/../bin/</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(SC2API_DIR)\lib;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SC2API_DIR)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\SC2API_Binary_vs2017\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\SC2API_Binary_vs2017\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LibraryPath>C:\Libraries\BWAPI_420\lib;$(LibraryPath)</LibraryPath>

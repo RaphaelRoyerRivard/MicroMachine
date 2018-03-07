@@ -57,6 +57,13 @@ public:
     bool AlphaBetaPruning;
     int AlphaBetaDepth;
     int AlphaBetaMaxMilli;
+
+    bool UCTCD;
+    int UCTCDMaxMilli;
+    float UCTCDK;
+    int UCTCDMaxTraversals;
+    bool UCTCDConsiderDistance;
+
     bool ClosestEnemy;
     bool WeakestEnemy;
     bool HighestPriority;
