@@ -2,12 +2,14 @@
 #include "CCBot.h"
 #include "JSONTools.h"
 #include "Util.h"
+#include "LadderInterface.h"
 
 #ifdef SC2API
 
 #include "sc2utils/sc2_manage_process.h"
 #include "sc2api/sc2_api.h"
 
+#ifdef DEBUG
 int main(int argc, char* argv[]) 
 {
     sc2::Coordinator coordinator;
@@ -17,7 +19,7 @@ int main(int argc, char* argv[])
         return 1;
     }
     
-    std::string config = JSONTools::ReadFile("BotConfig.txt");
+    std::string config = JSONTools::ReadFile("Data/MicroMachine/BotConfig.txt");
     if (config.length() == 0)
     {
         std::cerr << "Config file could not be found, and is required for starting the bot\n";
@@ -25,7 +27,7 @@ int main(int argc, char* argv[])
         exit(-1);
     }
 
-    std::ifstream file("BotConfig.txt");
+    std::ifstream file("Data/MicroMachine/BotConfig.txt");
     json j;
     file >> j;
 
@@ -66,7 +68,7 @@ int main(int argc, char* argv[])
     //          Setting this = N means the bot's onFrame gets called once every N frames
     //          The bot may crash or do unexpected things if its logic is not called every frame
     coordinator.SetStepSize(stepSize);
-    coordinator.SetRealtime(false);
+    coordinator.SetRealtime(true);
 
     coordinator.SetParticipants({
         sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot),
@@ -85,6 +87,15 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+#else
+int main(int argc, char* argv[])
+{
+    CCBot bot;
+    RunBot(argc, argv, &bot, sc2::Race::Terran);
+
+    return 0;
+}
+#endif
 
 #else
 

@@ -6,7 +6,7 @@ BotConfig::BotConfig()
 {
     ConfigFileFound                     = true;
     ConfigFileParsed                    = true;
-    ConfigFileLocation                  = "BotConfig.txt";
+    ConfigFileLocation                  = "Data/MicroMachine/BotConfig.txt";
     BotName                             = "UAlbertaBot";
     Authors                             = "Dave Churchill";
     PrintInfoOnStart                    = false;

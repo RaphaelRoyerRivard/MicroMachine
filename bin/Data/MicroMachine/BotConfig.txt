@@ -1,8 +1,8 @@
 {
     "Bot Info" :
     {
-        "BotName"                   : "CommandCenter",
-        "Authors"                   : "David Churchill",
+        "BotName"                   : "MicroMachine",
+        "Authors"                   : "David Churchill, Raphael Royer-Rivard, Antoine Theberge, Benjamin Ross",
         "PrintInfoOnStart"          : false
     },
 
@@ -19,7 +19,7 @@
         "BotRace"                   : "Terran",
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Random",
-        "MapFile"                   : "DefeatRoaches.SC2Map",
+        "MapFile"                   : "Defeat_lings_and_hydralisk_multi_v2.SC2Map",
         "StepSize"                  : 1
     },
         
@@ -122,7 +122,7 @@
             "Terran_MarineRush"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SCV", "SupplyDepot", "SCV", "SCV", "Barracks", "Barracks", "Barracks", "Barracks", "SupplyDepot", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine"],
+                "OpeningBuildOrder" : ["SCV", "SCV", "SupplyDepot", "SCV", "SCV", "Barracks", "Barracks", "Barracks", "Barracks", "SupplyDepot", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">", [ 0 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 8 ] ]
             },
