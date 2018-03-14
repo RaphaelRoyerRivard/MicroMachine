@@ -65,7 +65,7 @@ bool AlphaBetaState::playerToMove() {
     return maxTime <= minTime;
 }
 
-std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool attackClosest, bool attackWeakest, bool attackPriority) {
+std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool attackClosest, bool attackWeakest, bool attackPriority, bool unitOwnAgent, size_t depth) {
     // should probably be references
     AlphaBetaPlayer player = isMax ? playerMax : playerMin;
     AlphaBetaPlayer ennemy = !isMax ? playerMax : playerMin;
@@ -172,25 +172,45 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool atta
                 ++nb_actions;
             }
         }
+
         // TODO: other moves ?   
         actions_per_unit.insert({ unit->actual_unit->tag, actions });
         max_actions = std::max(max_actions, nb_actions);
     }
 
-    // TODO: Generate better moves, now it's just random
-    for (int i = 0; i <= max_actions; ++i) {
-        std::vector<AlphaBetaAction *> actions;
+
+    if (unitOwnAgent && depth == 0)
+    {
         for (auto unit : player.units) {
+
             std::vector<AlphaBetaAction *> actions_for_this_unit = actions_per_unit.at(unit->actual_unit->tag);
-            if (actions_for_this_unit.size()) {
-                int randomIndex = rand() % actions_for_this_unit.size();
-                AlphaBetaAction * action = actions_for_this_unit.at(randomIndex);
+            if (unit->has_played)
+                continue;
+
+            for (auto action : actions_for_this_unit) {
+                std::vector<AlphaBetaAction *> actions;
                 actions.push_back(action);
+                possible_moves.push_back(new AlphaBetaMove(actions));
             }
         }
-        if (actions.size() > 0)
-            possible_moves.push_back(new AlphaBetaMove(actions));
     }
+    else {
+        // TODO: Generate better moves, now it's just random
+        for (int i = 0; i <= max_actions; ++i) {
+            std::vector<AlphaBetaAction *> actions;
+            for (auto unit : player.units) {
+                std::vector<AlphaBetaAction *> actions_for_this_unit = actions_per_unit.at(unit->actual_unit->tag);
+                if (actions_for_this_unit.size()) {
+                    int indexRandom = rand() % actions_for_this_unit.size();
+                    AlphaBetaAction * action = actions_for_this_unit.at(indexRandom);
+                    actions.push_back(action);
+                }
+            }
+            if (actions.size() > 0)
+                possible_moves.push_back(new AlphaBetaMove(actions));
+        }
+    }
+    
     return possible_moves;
 }
 

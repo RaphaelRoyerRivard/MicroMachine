@@ -57,6 +57,7 @@ public:
     bool AlphaBetaPruning;
     int AlphaBetaDepth;
     int AlphaBetaMaxMilli;
+    bool AlphaBetaUnitOwnAgent;
     bool ClosestEnemy;
     bool WeakestEnemy;
     bool HighestPriority;

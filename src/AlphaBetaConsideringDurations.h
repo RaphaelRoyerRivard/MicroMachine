@@ -11,6 +11,7 @@ class AlphaBetaConsideringDurations {
     std::chrono::high_resolution_clock::time_point start;
     size_t actual_time;
     size_t depth_limit;
+    bool unitOwnAgent;
     bool closestEnemy;
     bool weakestEnemy;
     bool highestPriority;
@@ -18,7 +19,7 @@ class AlphaBetaConsideringDurations {
 
 public:
     size_t nodes_evaluated;
-    AlphaBetaConsideringDurations(std::chrono::milliseconds time, size_t depth, bool pClosestEnemy, bool pWeakestEnemy, bool pHighestPriority);
+    AlphaBetaConsideringDurations(std::chrono::milliseconds time, size_t depth, bool pUnitOwnAgent, bool pClosestEnemy, bool pWeakestEnemy, bool pHighestPriority);
     AlphaBetaValue doSearch(std::vector<std::shared_ptr<AlphaBetaUnit>> units, std::vector<std::shared_ptr<AlphaBetaUnit>> targets, CCBot * bot);
 
 };

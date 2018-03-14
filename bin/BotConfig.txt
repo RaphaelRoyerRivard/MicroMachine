@@ -25,14 +25,19 @@
         
     "Micro" :
     {
-		"AlphaBetaPruning"			: true,
-		"AlphaBetaDepth"			: 6,
-		"AlphaBetaMaxMilli"			: 100,
-		"ClosestEnemy"				: false,
-		"WeakestEnemy"				: false,
-		"HighestPriority"			: true,
+        "ClosestEnemy"              : false,
+        "WeakestEnemy"              : false,
+        "HighestPriority"           : true,
         "KiteWithRangedUnits"       : true,
         "ScoutHarassEnemy"          : true
+    },
+    
+    "AlphaBeta" :
+    {
+        "AlphaBetaPruning"          : true,
+        "AlphaBetaDepth"            : 6,
+        "AlphaBetaMaxMilli"         : 100,
+        "AlphaBetaUnitOwnAgent"     : false
     },
     
     "Macro" :
@@ -113,7 +118,7 @@
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "ScoutHarassEnemy"          : true,
-        "AutoCompleteBuildOrder"	: true,
+        "AutoCompleteBuildOrder"    : true,
         
         "Strategies" :
         {
