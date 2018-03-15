@@ -111,6 +111,7 @@
     <ClInclude Include="..\src\JSONTools.h" />
     <ClInclude Include="..\src\KitingFiniteStateMachine.h" />
     <ClInclude Include="..\src\KitingFSM.h" />
+    <ClInclude Include="..\src\LadderInterface.h" />
     <ClInclude Include="..\src\MapTools.h" />
     <ClInclude Include="..\src\MeleeManager.h" />
     <ClInclude Include="..\src\MetaType.h" />
@@ -206,8 +207,8 @@
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LibraryPath>$(SC2API_DIR)\lib;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SC2API_DIR)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SC2API_DIR)\lib_new;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SC2API_DIR)\include_new;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LibraryPath>C:\Libraries\BWAPI_420\lib;$(LibraryPath)</LibraryPath>
@@ -216,8 +217,8 @@
     <OutDir>$(ProjectDir)/../bin/</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(SC2API_DIR)\lib;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SC2API_DIR)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SC2API_DIR)\lib_new;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SC2API_DIR)\include_new;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LibraryPath>C:\Libraries\BWAPI_420\lib;$(LibraryPath)</LibraryPath>

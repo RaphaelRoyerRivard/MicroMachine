@@ -120,6 +120,7 @@
     <ClInclude Include="..\src\AlphaBetaState.h" />
     <ClInclude Include="..\src\AlphaBetaUnit.h" />
     <ClInclude Include="..\src\AlphaBetaValue.h" />
+    <ClInclude Include="..\src\LadderInterface.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CommandCenter.rc" />
