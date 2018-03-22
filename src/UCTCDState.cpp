@@ -254,7 +254,5 @@ int UCTCDState::eval()
     if (!oneMaxIsAlive)
         totalPlayerDamage += 100000;
 
-    bool playerToMove = this->playerToMove();
-
     return totalPlayerDamage > totalEnemyDamage ? -1 : 1;
 }

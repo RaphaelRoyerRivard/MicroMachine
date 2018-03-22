@@ -10,7 +10,7 @@ enum class UCTCDNodeType { FIRST, SECOND, SOLO, ROOT };
 class UCTCDNode {
 private:
     size_t num_visits;
-    int num_wins;
+    int current_score;
     UCTCDNode * parent;
     std::vector<UCTCDNode> children;
 
@@ -24,14 +24,14 @@ public:
 
     size_t get_num_visits() { return num_visits; }
     void inc_num_visits() { ++num_visits; }
-    int get_wins() { return num_wins; }
+    int get_Score() { return current_score; }
     UCTCDNode * get_parent() { return parent; }
     std::vector<UCTCDNode> & get_children() { return children; }
 
     bool hasChildren();
     void updateTotalScore(int score);
     void addChild(UCTCDNode child);
-    UCTCDNode & getMostVisitedChild();
+    UCTCDNode * getMostVisitedChild();
 };
 
 
