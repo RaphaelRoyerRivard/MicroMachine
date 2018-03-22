@@ -35,15 +35,9 @@ UCTCDMove UCTConsideringDurations::UCTCD(UCTCDState state)
     }
     win_value = root.get_Score();
     auto child = root.getMostVisitedChild();
-    UCTCDMove move;
-    if (child == nullptr)
-    {
-        move = child->move;
-    }
-    else
-    {
-        move = UCTCDMove{};
-    }
+
+    UCTCDMove move = child != nullptr? child->move : move = UCTCDMove{};
+
     return move;
 }
 
