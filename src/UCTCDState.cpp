@@ -59,7 +59,7 @@ bool UCTCDState::bothCanMove() {
     std::tuple<float, float> times = getPlayersTime(playerMin, playerMax, time);
     float minTime = std::get<0>(times);
     float maxTime = std::get<1>(times);
-    return minTime == maxTime;
+    return std::abs(minTime - maxTime) <= std::numeric_limits<float>::epsilon();
 }
 
 bool UCTCDState::playerToMove() {

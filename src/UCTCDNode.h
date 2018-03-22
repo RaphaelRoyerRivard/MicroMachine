@@ -1,7 +1,5 @@
 #pragma once
 
-#ifndef UCTCDNODE_H
-#define UCTCDNODE_H
 #include <vector>
 #include "UCTCDMove.h"
 
@@ -33,6 +31,3 @@ public:
     void addChild(UCTCDNode child);
     UCTCDNode * getMostVisitedChild();
 };
-
-
-#endif 
