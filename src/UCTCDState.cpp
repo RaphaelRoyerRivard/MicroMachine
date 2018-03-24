@@ -126,22 +126,27 @@ std::vector<UCTCDMove> UCTCDState::generateMoves(bool isMax) {
                     }
                 }
             }
+
+            std::set<UCTCDUnit*> attackTargets;
             if (closest_ennemy != nullptr) {
                 UCTCDAction attack;
                 attack = UCTCDAction(unit, *closest_ennemy, unit.position, 0.f, UCTCDActionType::ATTACK, time + unit.cooldown_max);
                 actions.push_back(attack);
+                attackTargets.insert(closest_ennemy);
                 ++nb_actions;
             }
-            if (weakest_enemy != nullptr) {
+            if (weakest_enemy != nullptr && attackTargets.find(weakest_enemy) == attackTargets.end()) {
                 UCTCDAction attack;
                 attack = UCTCDAction(unit, *weakest_enemy, unit.position, 0.f, UCTCDActionType::ATTACK, time + unit.cooldown_max);
                 actions.push_back(attack);
+                attackTargets.insert(weakest_enemy);
                 ++nb_actions;
             }
-            if (highest_priority != nullptr) {
+            if (highest_priority != nullptr && attackTargets.find(highest_priority) == attackTargets.end()) {
                 UCTCDAction attack;
                 attack = UCTCDAction(unit, *highest_priority, unit.position, 0.f, UCTCDActionType::ATTACK, time + unit.cooldown_max);
                 actions.push_back(attack);
+                attackTargets.insert(weakest_enemy);
                 ++nb_actions;
             }
         }
