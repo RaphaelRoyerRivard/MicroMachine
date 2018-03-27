@@ -13,6 +13,16 @@ namespace JSONTools
             dest = (T)j[key];
         }
     }
+
+    template <class T>
+    void ReadFloat(const char * key, const json & j, T & dest) 
+    {
+        if (j.count(key))
+        {
+            BOT_ASSERT(j[key].is_number_float(), "%s should be an float", key);
+            dest = (T)j[key];
+        }
+    }
     
     void ReadBool(const char * key, const json & json, bool & dest);
     void ReadString(const char * key, const json & json, std::string & dest);

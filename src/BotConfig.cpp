@@ -105,6 +105,16 @@ void BotConfig::readConfigFile()
         JSONTools::ReadBool("HighestPriority", micro, HighestPriority);
     }
 
+    if (j.count("UCTConsideringDurations") && j["UCTConsideringDurations"].is_object())
+    {
+        const json & uctcd = j["UCTConsideringDurations"];
+        JSONTools::ReadBool("UCTCD", uctcd, UCTCD);
+        JSONTools::ReadInt("UCTCDMaxMilli", uctcd, UCTCDMaxMilli);
+        JSONTools::ReadFloat("UCTCDK", uctcd, UCTCDK);
+        JSONTools::ReadInt("UCTCDMaxTraversals", uctcd, UCTCDMaxTraversals);
+        JSONTools::ReadBool("UCTCDConsiderDistance", uctcd, UCTCDConsiderDistance);
+    }
+
     // Parse the BWAPI Options
     if (j.count("BWAPI") && j["BWAPI"].is_object())
     {
