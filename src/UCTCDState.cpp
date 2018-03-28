@@ -200,6 +200,12 @@ std::vector<UCTCDMove> UCTCDState::generateMoves(bool isMax) {
         max_actions = std::max(max_actions, nb_actions);
     }
 
+    // ca ajouter some what toute les actions possibles
+    // 1.1 avec toutes le autre a x.1
+    // 1.2 avec toute les autres a  x.1
+    //...
+    //1.1  avec x.2
+    // 1.2 avec x.2
     // oh my god quadrule for-loops all the way across the sky
     for (int h = 0; h < max_actions; ++h) {
         for (int i = 0; i < player.units.size(); ++i) {
