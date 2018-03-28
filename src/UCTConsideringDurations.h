@@ -29,7 +29,7 @@ public:
 
 private:
     UCTCDMove UCTCD(UCTCDState state);
-    size_t traverse(UCTCDNode & n, UCTCDState & s);
+    int traverse(UCTCDNode & n, UCTCDState & s);
     UCTCDNode & selectNode(UCTCDNode & n);
     void UpdateState(UCTCDNode & n, UCTCDState & s, bool leaf);
     void generateChildren(UCTCDState & s, UCTCDNode & n);

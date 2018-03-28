@@ -25,23 +25,23 @@
         
     "Micro" :
     {
-		"AlphaBetaPruning"			: false,
-		"AlphaBetaDepth"			: 6,
-		"AlphaBetaMaxMilli"			: 100,
-		"ClosestEnemy"				: true,
-		"WeakestEnemy"				: false,
-		"HighestPriority"			: true,
+        "AlphaBetaPruning"          : false,
+        "AlphaBetaDepth"            : 6,
+        "AlphaBetaMaxMilli"         : 100,
+        "ClosestEnemy"              : true,
+        "WeakestEnemy"              : false,
+        "HighestPriority"           : true,
         "KiteWithRangedUnits"       : true,
         "ScoutHarassEnemy"          : true
     },
-	"UCTConsideringDurations" :
-	{
-		"UCTCD"						: true,
-		"UCTCDMaxMilli"				: 50,
-		"UCTCDK"					: 1.5,
-		"UCTCDMaxTraversals"		: 1000,
-		"UCTCDConsiderDistance"		: false
-	},
+    "UCTConsideringDurations" :
+    {
+        "UCTCD"                     : true,
+        "UCTCDMaxMilli"             : 50,
+        "UCTCDK"                    : 1.5,
+        "UCTCDMaxTraversals"        : 1000,
+        "UCTCDConsiderDistance"     : false
+    },
     "Macro" :
     {
         "WorkersPerRefinery"        : 3,
@@ -120,7 +120,7 @@
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "ScoutHarassEnemy"          : true,
-        "AutoCompleteBuildOrder"	: true,
+        "AutoCompleteBuildOrder"    : true,
         
         "Strategies" :
         {

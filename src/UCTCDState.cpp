@@ -3,6 +3,9 @@
 #include "UCTCDMove.h"
 #include "UCTCDAction.h"
 #include "Util.h"
+#ifdef SC2API
+#include "sc2api/sc2_typeenums.h"
+#endif
 #include <algorithm>
 
 float getUnitPriority(UCTCDUnit unit, UCTCDUnit target);
@@ -59,7 +62,7 @@ bool UCTCDState::bothCanMove() {
     std::tuple<float, float> times = getPlayersTime(playerMin, playerMax, time);
     float minTime = std::get<0>(times);
     float maxTime = std::get<1>(times);
-    return minTime == maxTime;
+    return std::abs(minTime - maxTime) <= std::numeric_limits<float>::epsilon();
 }
 
 bool UCTCDState::playerToMove() {
@@ -126,22 +129,27 @@ std::vector<UCTCDMove> UCTCDState::generateMoves(bool isMax) {
                     }
                 }
             }
+
+            std::set<UCTCDUnit*> attackTargets;
             if (closest_ennemy != nullptr) {
                 UCTCDAction attack;
                 attack = UCTCDAction(unit, *closest_ennemy, unit.position, 0.f, UCTCDActionType::ATTACK, time + unit.cooldown_max);
                 actions.push_back(attack);
+                attackTargets.insert(closest_ennemy);
                 ++nb_actions;
             }
-            if (weakest_enemy != nullptr) {
+            if (weakest_enemy != nullptr && attackTargets.find(weakest_enemy) == attackTargets.end()) {
                 UCTCDAction attack;
                 attack = UCTCDAction(unit, *weakest_enemy, unit.position, 0.f, UCTCDActionType::ATTACK, time + unit.cooldown_max);
                 actions.push_back(attack);
+                attackTargets.insert(weakest_enemy);
                 ++nb_actions;
             }
-            if (highest_priority != nullptr) {
+            if (highest_priority != nullptr && attackTargets.find(highest_priority) == attackTargets.end()) {
                 UCTCDAction attack;
                 attack = UCTCDAction(unit, *highest_priority, unit.position, 0.f, UCTCDActionType::ATTACK, time + unit.cooldown_max);
                 actions.push_back(attack);
+                attackTargets.insert(weakest_enemy);
                 ++nb_actions;
             }
         }
@@ -230,11 +238,29 @@ std::vector<UCTCDMove> UCTCDState::generateMoves(bool isMax) {
 }
 
 float getUnitPriority(UCTCDUnit unit, UCTCDUnit target) {
+    //dps: damage per seconds = damage/cooldown
     float dps = target.damage;
-    if (dps == 0.f)
+    if (target.cooldown_max != 0)
+        dps /= target.cooldown_max;
+
+    if (dps == 0.f){
+#ifdef SC2API
+        // There is no dps for this unit, so it's hard coded
+        // see: http://liquipedia.net/starcraft2/Damage_per_second
+        switch (target.actual_unit->unit_type.ToType()) {
+        case sc2::UNIT_TYPEID::ZERG_BANELING:
+            dps = 20.f;
+            break;
+        default:
+            dps = 15.f;
+        }
+#else
         dps = 15.f;
+#endif
+    }
     float healthValue = 1 / (target.hp_current + target.shield);
-    float distanceValue = 1 / Util::Dist(unit.position, target.position);
+    float distanceValue = 1 / (Util::Dist(unit.position, target.position)/target.speed);
+
     //TODO try to give different weights to each variables
     return 5 + dps * healthValue * distanceValue;
 }
@@ -259,8 +285,6 @@ int UCTCDState::eval()
     }
     if (!oneMaxIsAlive)
         totalPlayerDamage += 100000;
-
-    bool playerToMove = this->playerToMove();
 
     return totalPlayerDamage > totalEnemyDamage ? -1 : 1;
 }

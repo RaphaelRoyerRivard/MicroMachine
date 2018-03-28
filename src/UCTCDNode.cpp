@@ -9,7 +9,7 @@ UCTCDNode::UCTCDNode()
     , children(std::vector<UCTCDNode>())
 {
     num_visits = 0;
-    num_wins = 0;
+    current_score = 0;
 }
 
 UCTCDNode::UCTCDNode(UCTCDNode * pparent, bool pis_max, UCTCDNodeType pnode_type, UCTCDMove pmove)
@@ -20,7 +20,7 @@ UCTCDNode::UCTCDNode(UCTCDNode * pparent, bool pis_max, UCTCDNodeType pnode_type
     , children(std::vector<UCTCDNode>())
 {
     num_visits = 0;
-    num_wins = 0;
+    current_score = 0;
 }
 
 bool UCTCDNode::hasChildren()
@@ -29,13 +29,13 @@ bool UCTCDNode::hasChildren()
 }
 void UCTCDNode::updateTotalScore(int pscore)
 {
-    num_wins += pscore;
+    current_score += pscore;
 }
 void UCTCDNode::addChild(UCTCDNode child)
 {
     children.push_back(child);
 }
-UCTCDNode & UCTCDNode::getMostVisitedChild()
+UCTCDNode * UCTCDNode::getMostVisitedChild()
 {
     size_t max_visits = 0;
     UCTCDNode * max_child = nullptr;
@@ -45,7 +45,7 @@ UCTCDNode & UCTCDNode::getMostVisitedChild()
             max_child = &child;
         }
     }
-    return *max_child;
+    return max_child;
 }
 ;
 
