@@ -19,7 +19,7 @@
         "BotRace"                   : "Terran",
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Random",
-        "MapFile"                   : "DefeatZerglingsAndBanelings.SC2Map",
+        "MapFile"                   : "mini_games//DefeatZerglingsAndBanelings.SC2Map",
         "StepSize"                  : 1
     },
         
