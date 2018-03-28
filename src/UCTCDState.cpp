@@ -3,6 +3,9 @@
 #include "UCTCDMove.h"
 #include "UCTCDAction.h"
 #include "Util.h"
+#ifdef SC2API
+#include "sc2api/sc2_typeenums.h"
+#endif
 #include <algorithm>
 
 float getUnitPriority(UCTCDUnit unit, UCTCDUnit target);
@@ -229,11 +232,29 @@ std::vector<UCTCDMove> UCTCDState::generateMoves(bool isMax) {
 }
 
 float getUnitPriority(UCTCDUnit unit, UCTCDUnit target) {
+    //dps: damage per seconds = damage/cooldown
     float dps = target.damage;
-    if (dps == 0.f)
+    if (target.cooldown_max != 0)
+        dps /= target.cooldown_max;
+
+    if (dps == 0.f){
+#ifdef SC2API
+        // There is no dps for this unit, so it's hard coded
+        // see: http://liquipedia.net/starcraft2/Damage_per_second
+        switch (target.actual_unit->unit_type.ToType()) {
+        case sc2::UNIT_TYPEID::ZERG_BANELING:
+            dps = 20.f;
+            break;
+        default:
+            dps = 15.f;
+        }
+#else
         dps = 15.f;
+#endif
+    }
     float healthValue = 1 / (target.hp_current + target.shield);
-    float distanceValue = 1 / Util::Dist(unit.position, target.position);
+    float distanceValue = 1 / (Util::Dist(unit.position, target.position)/target.speed);
+
     //TODO try to give different weights to each variables
     return 5 + dps * healthValue * distanceValue;
 }
