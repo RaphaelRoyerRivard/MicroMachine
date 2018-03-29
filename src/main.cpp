@@ -9,9 +9,18 @@
 #include "sc2utils/sc2_manage_process.h"
 #include "sc2api/sc2_api.h"
 
-#ifdef DEBUG
+bool LADDER_MODE = false;
+
 int main(int argc, char* argv[]) 
 {
+    if (LADDER_MODE)
+    {
+        CCBot bot;
+        RunBot(argc, argv, &bot, sc2::Race::Terran);
+
+        return 0;
+    }
+
     sc2::Coordinator coordinator;
     if (!coordinator.LoadSettings(argc, argv)) 
     {
@@ -68,7 +77,7 @@ int main(int argc, char* argv[])
     //          Setting this = N means the bot's onFrame gets called once every N frames
     //          The bot may crash or do unexpected things if its logic is not called every frame
     coordinator.SetStepSize(stepSize);
-    coordinator.SetRealtime(true);
+    coordinator.SetRealtime(false);
 
     coordinator.SetParticipants({
         sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot),
@@ -87,15 +96,6 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-#else
-int main(int argc, char* argv[])
-{
-    CCBot bot;
-    RunBot(argc, argv, &bot, sc2::Race::Terran);
-
-    return 0;
-}
-#endif
 
 #else
 

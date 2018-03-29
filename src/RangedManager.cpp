@@ -165,8 +165,11 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
             dps = 15.f;
         float healthValue = 1 / (target->health + target->shield);
         float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);
+        if (distanceValue > Util::GetAttackRangeForTarget(attacker, target, m_bot))
+            distanceValue /= 2;
         //TODO try to give different weights to each variables
-        return 5 + dps * healthValue * distanceValue;
+        //return 5 + dps * healthValue * distanceValue;
+        return dps + healthValue * 100 + distanceValue * 50;
     }
 
     if (Unit(target, m_bot).getType().isWorker())

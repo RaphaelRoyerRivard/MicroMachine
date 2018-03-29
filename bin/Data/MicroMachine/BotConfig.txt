@@ -19,7 +19,7 @@
         "BotRace"                   : "Terran",
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Random",
-        "MapFile"                   : "Defeat_lings_and_hydralisk_multi_v2.SC2Map",
+        "MapFile"                   : "InterloperLE.SC2Map",
         "StepSize"                  : 1
     },
         
