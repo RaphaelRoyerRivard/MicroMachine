@@ -33,13 +33,17 @@ UCTCDMove UCTConsideringDurations::UCTCD(UCTCDState state)
         if (time_spent.count() > time_limit)
             break;
     }
-    win_value = root.get_wins();
-    return root.getMostVisitedChild().move;
+    win_value = root.get_Score();
+    auto child = root.getMostVisitedChild();
+
+    UCTCDMove move = child != nullptr? child->move : move = UCTCDMove{};
+
+    return move;
 }
 
-size_t UCTConsideringDurations::traverse(UCTCDNode & n, UCTCDState & s)
+int UCTConsideringDurations::traverse(UCTCDNode & n, UCTCDState & s)
 {
-    size_t score;
+    int score;
     if (n.get_num_visits() == 0) {
         UpdateState(n, s, true);
         score = s.eval();
@@ -67,7 +71,7 @@ UCTCDNode & UCTConsideringDurations::selectNode(UCTCDNode & n)
     UCTCDNode * best_node = nullptr;
     for (UCTCDNode & child : n.get_children()) {
         if (child.get_num_visits() == 0) return child;
-        double score = (float)child.get_wins() / child.get_num_visits() +
+        double score = (float)child.get_Score() / child.get_num_visits() +
             k * sqrt(log(n.get_num_visits()) / child.get_num_visits());
         if (score > best_score) {
             best_score = score;

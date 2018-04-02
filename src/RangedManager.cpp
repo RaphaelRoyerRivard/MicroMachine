@@ -166,7 +166,7 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
 
     size_t nodes = uctcd.nodes_explored;
     size_t traversals = uctcd.traversals;
-    long time_spent = uctcd.time_spent.count();
+    long long time_spent = uctcd.time_spent.count();
     int win_value = uctcd.win_value;
     m_bot.Map().drawTextScreen(0.005f, 0.005f, std::string("Nodes explored : ") + std::to_string(nodes));
     m_bot.Map().drawTextScreen(0.005f, 0.020f, std::string("Root traversed : ") + std::to_string(traversals) + std::string(" times"));
