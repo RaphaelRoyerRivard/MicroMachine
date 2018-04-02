@@ -2,7 +2,7 @@
     "Bot Info" :
     {
         "BotName"                   : "MicroMachine",
-        "Authors"                   : "David Churchill, Raphael Royer-Rivard, Antoine Theberge, Benjamin Ross",
+        "Authors"                   : "David Churchill, Raphael Royer-Rivard, Antoine Theberge, Benjamin Ross, Jean-Philippe Croteau, Francois Genest",
         "PrintInfoOnStart"          : false
     },
 
@@ -25,7 +25,7 @@
         
     "Micro" :
     {
-		"AlphaBetaPruning"			: false,
+        "AlphaBetaPruning"          : false,
         "KiteWithRangedUnits"       : true,
         "ScoutHarassEnemy"          : false
     },
@@ -108,7 +108,7 @@
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "ScoutHarassEnemy"          : true,
-        "AutoCompleteBuildOrder"	: true,
+        "AutoCompleteBuildOrder"    : true,
         
         "Strategies" :
         {

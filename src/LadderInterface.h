@@ -1,5 +1,6 @@
 #include "sc2utils/sc2_arg_parser.h"
 #include <sc2api/sc2_coordinator.h>
+#include <iostream>
 
 static sc2::Difficulty GetDifficultyFromString(std::string InDifficulty)
 {
