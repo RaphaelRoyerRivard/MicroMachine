@@ -51,7 +51,7 @@ BotConfig::BotConfig()
 
     AlphaBetaDepth = 6;
     AlphaBetaMaxMilli = 100;
-    AlphaBetaUnitOwnAgent = false;
+    UnitOwnAgent = false;
 }
 
 void BotConfig::readConfigFile()
@@ -96,6 +96,7 @@ void BotConfig::readConfigFile()
     if (j.count("Micro") && j["Micro"].is_object())
     {
         const json & micro = j["Micro"];
+        JSONTools::ReadBool("UnitOwnAgent", micro, UnitOwnAgent);
         JSONTools::ReadBool("KiteWithRangedUnits", micro, KiteWithRangedUnits);
         JSONTools::ReadBool("ScoutHarassEnemy", micro, ScoutHarassEnemy);
         JSONTools::ReadBool("ClosestEnemy", micro, ClosestEnemy);
@@ -119,7 +120,6 @@ void BotConfig::readConfigFile()
         JSONTools::ReadBool("AlphaBetaPruning", abcd, AlphaBetaPruning);
         JSONTools::ReadInt("AlphaBetaDepth", abcd, AlphaBetaDepth);
         JSONTools::ReadInt("AlphaBetaMaxMilli", abcd, AlphaBetaMaxMilli);
-        JSONTools::ReadBool("AlphaBetaUnitOwnAgent", abcd, AlphaBetaUnitOwnAgent);
     }
 
     // Parse the BWAPI Options

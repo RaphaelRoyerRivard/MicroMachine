@@ -25,6 +25,7 @@
         
     "Micro" :
     {
+        "UnitOwnAgent"              : false,
         "ClosestEnemy"              : true,
         "WeakestEnemy"              : false,
         "HighestPriority"           : true,
@@ -45,8 +46,7 @@
     {
         "AlphaBetaPruning"          : false,
         "AlphaBetaDepth"            : 6,
-        "AlphaBetaMaxMilli"         : 100,
-        "AlphaBetaUnitOwnAgent"     : false
+        "AlphaBetaMaxMilli"         : 100
     },
     
     "Macro" :

@@ -179,8 +179,7 @@ std::vector<AlphaBetaMove *> AlphaBetaState::generateMoves(bool isMax, bool atta
     }
 
 
-    if (unitOwnAgent && depth == 0)
-    {
+    if (unitOwnAgent && depth == 0) {
         for (auto unit : player.units) {
 
             std::vector<AlphaBetaAction *> actions_for_this_unit = actions_per_unit.at(unit->actual_unit->tag);

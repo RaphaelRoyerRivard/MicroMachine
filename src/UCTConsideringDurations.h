@@ -19,7 +19,7 @@ public:
     bool attack_priority;
 
     UCTConsideringDurations(float pk, size_t pmax_traversals, size_t time);
-    UCTCDMove doSearch(std::vector<UCTCDUnit> max, std::vector<UCTCDUnit> min, bool pclosest, bool pweakest, bool ppriority, bool pconsiderDistance);
+    UCTCDMove doSearch(std::vector<UCTCDUnit> max, std::vector<UCTCDUnit> min, bool pclosest, bool pweakest, bool ppriority, bool pconsiderDistance, bool punitOwnAgent);
 
     // stats for nerdz
     size_t nodes_explored;

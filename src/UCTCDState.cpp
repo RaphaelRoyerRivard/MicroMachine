@@ -1,6 +1,7 @@
 #include "UCTCDState.h"
 #include "UCTCDUnit.h"
 #include "UCTCDMove.h"
+#include "UCTCDNode.h"
 #include "UCTCDAction.h"
 #include "Util.h"
 #ifdef SC2API
@@ -10,14 +11,15 @@
 
 float getUnitPriority(UCTCDUnit unit, UCTCDUnit target);
 
-UCTCDState::UCTCDState(UCTCDPlayer pplayerMin, UCTCDPlayer pplayerMax, float ptime, bool pattackClosest, bool pattackWeakest, bool pattackPriority, bool pconsiderDistance)
+UCTCDState::UCTCDState(UCTCDPlayer pplayerMin, UCTCDPlayer pplayerMax, float ptime, bool pattackClosest, bool pattackWeakest, bool pattackPriority, bool pconsiderDistance, bool punitOwnAgent)
     : playerMin(pplayerMin)
     , playerMax(pplayerMax)
     , time(ptime)
     , attackWeakest(pattackWeakest)
     , attackClosest(pattackClosest)
     , attackPriority(pattackPriority)
-    , considerDistance(pconsiderDistance) { }
+    , considerDistance(pconsiderDistance)
+    , unitOwnAgent(punitOwnAgent){ }
 
 // Here we virtually do the planned move. This involes changing the position, health, weapon cooldown and others
 // of both player's units
@@ -85,7 +87,7 @@ bool UCTCDState::isTerminal()
     return !oneMaxIsAlive || !oneMinIsAlive;
 }
 
-std::vector<UCTCDMove> UCTCDState::generateMoves(bool isMax) {
+std::vector<UCTCDMove> UCTCDState::generateMoves(bool isMax, UCTCDNode & currentNode) {
     // should probably be references
     UCTCDPlayer player = isMax ? playerMax : playerMin;
     UCTCDPlayer ennemy = !isMax ? playerMax : playerMin;
@@ -208,32 +210,51 @@ std::vector<UCTCDMove> UCTCDState::generateMoves(bool isMax) {
         max_actions = std::max(max_actions, nb_actions);
     }
 
-    // ca ajouter some what toute les actions possibles
-    // 1.1 avec toutes le autre a x.1
-    // 1.2 avec toute les autres a  x.1
-    //...
-    //1.1  avec x.2
-    // 1.2 avec x.2
-    // oh my god quadrule for-loops all the way across the sky
-    for (int h = 0; h < max_actions; ++h) {
-        for (int i = 0; i < player.units.size(); ++i) {
-            std::vector<UCTCDAction> actions_for_this_unit = actions_per_unit.at(player.units[i].actual_unit->tag);
-            for (int j = 0; j < actions_for_this_unit.size(); ++j) {
+
+
+    if (unitOwnAgent && currentNode.get_parent() == nullptr) {
+        for (auto unit : player.units) {
+
+            std::vector<UCTCDAction> actions_for_this_unit = actions_per_unit.at(unit.actual_unit->tag);
+            if (unit.has_played)
+                continue;
+
+            for (auto action : actions_for_this_unit) {
                 std::vector<UCTCDAction> actions;
-                for (int k = 0; k < player.units.size(); ++k) {
-                    std::vector<UCTCDAction> actions_for_k = actions_per_unit.at(player.units[k].actual_unit->tag);
-                    if (k == i) {
-                        actions.push_back(actions_for_k[j]);
-                    }
-                    else {
-                        actions.push_back(actions_for_k[std::min((long)h, (long)actions_for_k.size() - 1)]);
-                    }
-                }
-                if (actions.size() > 0)
-                    possible_moves.push_back(UCTCDMove(actions));
+                actions.push_back(action);
+                possible_moves.push_back(UCTCDMove(actions));
             }
         }
     }
+    else {
+        // ca ajouter some what toute les actions possibles
+        // 1.1 avec toutes le autre a x.1
+        // 1.2 avec toute les autres a  x.1
+        //...
+        //1.1  avec x.2
+        // 1.2 avec x.2
+        // oh my god quadrule for-loops all the way across the sky
+        for (int h = 0; h < max_actions; ++h) {
+            for (int i = 0; i < player.units.size(); ++i) {
+                std::vector<UCTCDAction> actions_for_this_unit = actions_per_unit.at(player.units[i].actual_unit->tag);
+                for (int j = 0; j < actions_for_this_unit.size(); ++j) {
+                    std::vector<UCTCDAction> actions;
+                    for (int k = 0; k < player.units.size(); ++k) {
+                        std::vector<UCTCDAction> actions_for_k = actions_per_unit.at(player.units[k].actual_unit->tag);
+                        if (k == i) {
+                            actions.push_back(actions_for_k[j]);
+                        }
+                        else {
+                            actions.push_back(actions_for_k[std::min((long)h, (long)actions_for_k.size() - 1)]);
+                        }
+                    }
+                    if (actions.size() > 0)
+                        possible_moves.push_back(UCTCDMove(actions));
+                }
+            }
+        }
+    }
+
     return possible_moves;
 }
 

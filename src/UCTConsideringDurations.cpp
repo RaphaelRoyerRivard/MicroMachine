@@ -13,11 +13,11 @@ UCTConsideringDurations::UCTConsideringDurations(float pk, size_t pmax_traversal
 {
 }
 
-UCTCDMove UCTConsideringDurations::doSearch(std::vector<UCTCDUnit> max_units, std::vector<UCTCDUnit> min_units, bool pclosest, bool pweakest, bool ppriority, bool pconsiderDistance)
+UCTCDMove UCTConsideringDurations::doSearch(std::vector<UCTCDUnit> max_units, std::vector<UCTCDUnit> min_units, bool pclosest, bool pweakest, bool ppriority, bool pconsiderDistance, bool punitOwnAgent)
 {
     UCTCDPlayer min = UCTCDPlayer(min_units, false);
     UCTCDPlayer max = UCTCDPlayer(max_units, true);
-    UCTCDState state = UCTCDState(min, max, 0, pclosest, pweakest, ppriority, pconsiderDistance);
+    UCTCDState state = UCTCDState(min, max, 0, pclosest, pweakest, ppriority, pconsiderDistance, punitOwnAgent);
     return UCTCD(state);
 }
 
@@ -109,7 +109,7 @@ void UCTConsideringDurations::generateChildren(UCTCDState & s, UCTCDNode & n)
         player_to_move = s.playerToMove();
         type = UCTCDNodeType::SOLO;
     }
-    moves = s.generateMoves(player_to_move);
+    moves = s.generateMoves(player_to_move, n);
     for (auto move : moves) {
         n.addChild(UCTCDNode(&n, player_to_move, type, move));
         ++nodes_explored;

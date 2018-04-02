@@ -21,13 +21,14 @@ public:
     float speed;
     float shield;
     bool is_dead;
+    bool has_played; // Handle own agent: to prevent one unit to be to only one playing
     sc2::Point2D position;
     UCTCDAction * previous_action;
 
     // initial constructor
     UCTCDUnit();
-    UCTCDUnit(const sc2::Unit * actual_unit, CCBot * bot);
-    UCTCDUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdamage, float prange, float pcooldown_max, float pspeed, float pattack_time, float pmove_time, float pshield, sc2::Point2D pposition, UCTCDAction * pprevious_action);
+    UCTCDUnit(const sc2::Unit * actual_unit, CCBot * bot, bool phas_played=false);
+    UCTCDUnit(const sc2::Unit * pactual_unit, float php_current, float php_max, float pdamage, float prange, float pcooldown_max, float pspeed, float pattack_time, float pmove_time, float pshield, sc2::Point2D pposition, UCTCDAction * pprevious_action, bool phas_played);
 
     void InflictDamage(float damage);
     bool CanAttack(float time);
