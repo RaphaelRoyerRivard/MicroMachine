@@ -106,21 +106,38 @@ void RangedManager::AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits,
     std::vector<std::shared_ptr<AlphaBetaUnit>> minUnits;
     std::vector<std::shared_ptr<AlphaBetaUnit>> maxUnits;
 
+    if (lastUnitCommand.size() >= rangedUnits.size()) {
+        lastUnitCommand.clear();
+    }
+
     for (auto unit : rangedUnits) {
-        maxUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot));
+        bool has_played = false;
+
+        if (m_bot.Config().AlphaBetaUnitOwnAgent) {
+            // Update has_played value
+            for (auto unitC : lastUnitCommand) {
+                if (unitC == unit) {
+                    has_played = true;
+                    break;
+                }
+            }
+        }
+
+        maxUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot, has_played));
     }
     for (auto unit : rangedUnitTargets) {
         minUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot));
     }
 
-    AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(std::chrono::milliseconds(m_bot.Config().AlphaBetaMaxMilli), m_bot.Config().AlphaBetaDepth, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority);
+    AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(std::chrono::milliseconds(m_bot.Config().AlphaBetaMaxMilli), m_bot.Config().AlphaBetaDepth, m_bot.Config().AlphaBetaUnitOwnAgent, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority);
     AlphaBetaValue value = alphaBeta.doSearch(maxUnits, minUnits, &m_bot);
     size_t nodes = alphaBeta.nodes_evaluated;
-    m_bot.Map().drawTextScreen(0.005f, 0.005f, std::string("Nodes explored : ") + std::to_string(nodes));
-    m_bot.Map().drawTextScreen(0.005f, 0.020f, std::string("Max depth : ") + std::to_string(m_bot.Config().AlphaBetaDepth));
-    m_bot.Map().drawTextScreen(0.005f, 0.035f, std::string("AB value : ") + std::to_string(value.score));
+    m_bot.Map().drawTextScreen(0.005, 0.005, std::string("Nodes explored : ") + std::to_string(nodes));
+    m_bot.Map().drawTextScreen(0.005, 0.020, std::string("Max depth : ") + std::to_string(m_bot.Config().AlphaBetaDepth));
+    m_bot.Map().drawTextScreen(0.005, 0.035, std::string("AB value : ") + std::to_string(value.score));
     if (value.move != NULL) {
         for (auto action : value.move->actions) {
+            lastUnitCommand.push_back(action->unit->actual_unit);
             if (action->type == AlphaBetaActionType::ATTACK) {
                 Micro::SmartAttackUnit(action->unit->actual_unit, action->target->actual_unit, m_bot);
             }

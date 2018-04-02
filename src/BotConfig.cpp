@@ -51,6 +51,7 @@ BotConfig::BotConfig()
 
     AlphaBetaDepth = 6;
     AlphaBetaMaxMilli = 100;
+    AlphaBetaUnitOwnAgent = false;
 }
 
 void BotConfig::readConfigFile()
@@ -97,9 +98,6 @@ void BotConfig::readConfigFile()
         const json & micro = j["Micro"];
         JSONTools::ReadBool("KiteWithRangedUnits", micro, KiteWithRangedUnits);
         JSONTools::ReadBool("ScoutHarassEnemy", micro, ScoutHarassEnemy);
-        JSONTools::ReadBool("AlphaBetaPruning", micro, AlphaBetaPruning);
-        JSONTools::ReadInt("AlphaBetaDepth", micro, AlphaBetaDepth);
-        JSONTools::ReadInt("AlphaBetaMaxMilli", micro, AlphaBetaMaxMilli);
         JSONTools::ReadBool("ClosestEnemy", micro, ClosestEnemy);
         JSONTools::ReadBool("WeakestEnemy", micro, WeakestEnemy);
         JSONTools::ReadBool("HighestPriority", micro, HighestPriority);
@@ -113,6 +111,15 @@ void BotConfig::readConfigFile()
         JSONTools::ReadFloat("UCTCDK", uctcd, UCTCDK);
         JSONTools::ReadInt("UCTCDMaxTraversals", uctcd, UCTCDMaxTraversals);
         JSONTools::ReadBool("UCTCDConsiderDistance", uctcd, UCTCDConsiderDistance);
+    }
+    // Parse the AlphaBeta Options
+    if (j.count("AlphaBeta") && j["AlphaBeta"].is_object())
+    {
+        const json & abcd = j["AlphaBeta"];
+        JSONTools::ReadBool("AlphaBetaPruning", abcd, AlphaBetaPruning);
+        JSONTools::ReadInt("AlphaBetaDepth", abcd, AlphaBetaDepth);
+        JSONTools::ReadInt("AlphaBetaMaxMilli", abcd, AlphaBetaMaxMilli);
+        JSONTools::ReadBool("AlphaBetaUnitOwnAgent", abcd, AlphaBetaUnitOwnAgent);
     }
 
     // Parse the BWAPI Options

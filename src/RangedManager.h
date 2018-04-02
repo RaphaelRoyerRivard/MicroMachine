@@ -18,4 +18,7 @@ public:
     const sc2::Unit * getClosestMineral(const sc2::Unit * rangedUnit);
     void UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets);
     void AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets);
+
+private:
+    std::vector<const sc2::Unit *> lastUnitCommand;
 };

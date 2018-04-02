@@ -64,6 +64,8 @@ public:
     int UCTCDMaxTraversals;
     bool UCTCDConsiderDistance;
 
+
+    bool AlphaBetaUnitOwnAgent;
     bool ClosestEnemy;
     bool WeakestEnemy;
     bool HighestPriority;
