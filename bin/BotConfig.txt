@@ -44,8 +44,8 @@
     "AlphaBeta" :
     {
         "AlphaBetaPruning"          : false,
-        "AlphaBetaDepth"            : 5,
-        "AlphaBetaMaxMilli"         : 5000,
+        "AlphaBetaDepth"            : 6,
+        "AlphaBetaMaxMilli"         : 100,
         "AlphaBetaUnitOwnAgent"     : false
     },
     
