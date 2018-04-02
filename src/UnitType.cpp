@@ -186,13 +186,23 @@ bool UnitType::isGeyser() const
 bool UnitType::isMineral() const
 {
 #ifdef SC2API
-    switch (m_type.ToType()) 
+    switch (m_type.ToType())
     {
-        case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD         : return true;
-        case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD750      : return true;
-        case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD     : return true;
-        case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD750  : return true;
-        default: return false;
+    case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD:
+    case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD750:
+    case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD:
+    case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD750:
+        //case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD:
+        //case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD750:
+        //case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD:
+        //case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD750:
+    case sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD:
+    case sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD750:
+        //case sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD:
+        //case sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD750:
+        return true;
+    default:
+        return false;
     }
 #else
     return m_type.isMineralField();

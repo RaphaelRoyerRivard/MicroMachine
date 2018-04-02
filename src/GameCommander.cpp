@@ -80,20 +80,25 @@ void GameCommander::setValidUnits()
 void GameCommander::setScoutUnits()
 {
     // if we haven't set a scout unit, do it
-    if (m_scoutUnits.empty() && !m_initialScoutSet)
+    if (m_scoutUnits.empty())
     {
-        // if it exists
-        if (shouldSendInitialScout())
+        const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+        // We need to find the enemy base to do something
+        if (!m_initialScoutSet || enemyBaseLocation == nullptr)
         {
-            // grab the closest worker to the supply provider to send to scout
-            Unit workerScout = m_bot.Workers().getClosestMineralWorkerTo(m_bot.GetStartLocation());
-
-            // if we find a worker (which we should) add it to the scout units
-            if (workerScout.isValid())
+            // if it exists
+            if (shouldSendInitialScout())
             {
-                m_scoutManager.setWorkerScout(workerScout);
-                assignUnit(workerScout, m_scoutUnits);
-                m_initialScoutSet = true;
+                // grab the closest worker to the supply provider to send to scout
+                Unit workerScout = m_bot.Workers().getClosestMineralWorkerTo(m_bot.GetStartLocation());
+
+                // if we find a worker (which we should) add it to the scout units
+                if (workerScout.isValid())
+                {
+                    m_scoutManager.setWorkerScout(workerScout);
+                    assignUnit(workerScout, m_scoutUnits);
+                    m_initialScoutSet = true;
+                }
             }
         }
     }
