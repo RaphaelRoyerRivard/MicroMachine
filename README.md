@@ -115,7 +115,7 @@ $ sudo cp build/bin/libsc2utils.a /opt/local/lib/sc2api
 
 * Build the bot
 ```bash
-$ git clone https://github.com/davechurchill/commandcenter.git && cd commandcenter
+$ git clone https://github.com/RaphaelRoyerRivard/commandcenter.git && cd commandcenter
 $ cmake .
 $ make
 ```

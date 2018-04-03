@@ -27,7 +27,8 @@ UCTCDMove UCTConsideringDurations::UCTCD(UCTCDState state)
     UCTCDNode root = UCTCDNode();
     root.type = UCTCDNodeType::ROOT;
     for (traversals; traversals < max_traversals; ++traversals) {
-        traverse(root, UCTCDState(state));
+        UCTCDState copyState = UCTCDState(state);
+        traverse(root, copyState);
         auto end = std::chrono::high_resolution_clock::now();
         time_spent = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         if (time_spent.count() > time_limit)
