@@ -51,12 +51,11 @@ void ProductionManager::manageBuildOrderQueue()
     // if there is nothing in the queue, oh well
     if (m_queue.isEmpty())
     {
-        //TODO repair this. It has been broken by the merge with upstream, because they deleted the BuildType class
-        /*if (m_bot.Config().AutoCompleteBuildOrder && m_bot.GetPlayerRace(Players::Self) == sc2::Race::Terran)
+        if (m_bot.Config().AutoCompleteBuildOrder && m_bot.GetPlayerRace(Players::Self) == sc2::Race::Terran)
         {
-            m_queue.queueItem(BuildOrderItem(BuildType("Marine", m_bot), 1, false));
+            m_queue.queueItem(BuildOrderItem(MetaType("Marine", m_bot), 1, false));
         }
-        else*/
+        else
             return;
     }
 
