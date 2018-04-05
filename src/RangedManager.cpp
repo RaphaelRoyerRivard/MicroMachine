@@ -92,7 +92,6 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
             sc2::Point2D mineralPos;
 
             ConditionAction isEnemyInSight(rangedUnitTargets.size() > 0 && (target = getTarget(rangedUnit, rangedUnitTargets)) != nullptr),
-                isMineralInSight((mineral = getClosestMineral(rangedUnit)) != nullptr),
                 isEnemyRanged(target != nullptr && isTargetRanged(target));
 
             if (mineral == nullptr) mineralPos = sc2::Point2D(0, 0);
@@ -100,7 +99,6 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
 
             FocusFireAction focusFireAction(rangedUnit, target, &rangedUnitTargets, m_bot, m_focusFireStates, &rangedUnits, m_unitHealth);
             KiteAction kiteAction(rangedUnit, target, m_bot, m_kittingStates);
-            GoToMineralShardAction goToMineralShardAction(rangedUnit, mineralPos, m_bot);
             GoToObjectiveAction goToObjectiveAction(rangedUnit, order.getPosition(), m_bot);
 
             BehaviorTree* bt = BehaviorTreeBuilder()
@@ -114,10 +112,6 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
                 .end()
                 .action(&kiteAction).end()
                 .end()
-                .end()
-                .sequence()
-                .condition(&isMineralInSight).end()
-                .action(&goToMineralShardAction).end()
                 .end()
                 .action(&goToObjectiveAction).end()
                 .end()

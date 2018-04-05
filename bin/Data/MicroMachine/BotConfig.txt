@@ -17,9 +17,9 @@
     "SC2API" :
     {
         "BotRace"                   : "Terran",
-        "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Random",
-        "MapFile"                   : "InterloperLE.SC2Map",
+        "EnemyDifficulty"           : 7,
+        "EnemyRace"                 : "Zerg",
+        "MapFile"                   : "CollectMineralShards.SC2Map",
         "StepSize"                  : 1
     },
         
@@ -107,7 +107,6 @@
         "Terran"                    : "Terran_MarineRush",
         "Zerg"                      : "Zerg_2HatchRoach",
         
-        "ScoutHarassEnemy"          : true,
         "AutoCompleteBuildOrder"    : true,
         
         "Strategies" :
