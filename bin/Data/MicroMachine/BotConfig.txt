@@ -17,9 +17,9 @@
     "SC2API" :
     {
         "BotRace"                   : "Terran",
-        "EnemyDifficulty"           : 7,
-        "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "CollectMineralShards.SC2Map",
+        "EnemyDifficulty"           : 10,
+        "EnemyRace"                 : "Random",
+        "MapFile"                   : "InterloperLE.SC2Map",
         "StepSize"                  : 1
     },
         
