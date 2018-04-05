@@ -27,7 +27,7 @@
     {
         "AlphaBetaPruning"          : false,
         "KiteWithRangedUnits"       : true,
-        "ScoutHarassEnemy"          : false
+        "ScoutHarassEnemy"          : true
     },
     
     "Macro" :
