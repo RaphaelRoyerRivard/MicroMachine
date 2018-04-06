@@ -25,7 +25,8 @@
         
     "Micro" :
     {
-        "UnitOwnAgent"              : false,
+        "UnitOwnAgent"              : true,
+        "SkipOneFrame"              : true,
         "ClosestEnemy"              : true,
         "WeakestEnemy"              : false,
         "HighestPriority"           : true,

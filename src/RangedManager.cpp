@@ -14,7 +14,6 @@
 #include "UCTCDMove.h"
 #include "UCTCDAction.h"
 
-
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
 
@@ -154,6 +153,11 @@ void RangedManager::AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits,
 void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets) {
     std::vector<UCTCDUnit> minUnits;
     std::vector<UCTCDUnit> maxUnits;
+    
+    if (m_bot.Config().SkipOneFrame && isCommandDone) {
+        isCommandDone = false;     
+        return;
+    }
 
     if (lastUnitCommand.size() >= rangedUnits.size()) {
         lastUnitCommand.clear();
@@ -162,14 +166,9 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
     for (auto unit : rangedUnits) {
         bool has_played = false;
 
-        if (m_bot.Config().UnitOwnAgent) {
+        if (m_bot.Config().UnitOwnAgent && std::find(lastUnitCommand.begin(), lastUnitCommand.end(), unit) != lastUnitCommand.end()) {
             // Update has_played value
-            for (auto unitC : lastUnitCommand) {
-                if (unitC == unit) {
-                    has_played = true;
-                    break;
-                }
-            }
+            has_played = true;
         }
 
         maxUnits.push_back(UCTCDUnit(unit, &m_bot, has_played));
@@ -177,7 +176,7 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
     for (auto unit : rangedUnitTargets) {
         minUnits.push_back(UCTCDUnit(unit, &m_bot));
     }
-    UCTConsideringDurations uctcd = UCTConsideringDurations(m_bot.Config().UCTCDK, m_bot.Config().UCTCDMaxTraversals, m_bot.Config().UCTCDMaxMilli);
+    UCTConsideringDurations uctcd = UCTConsideringDurations(m_bot.Config().UCTCDK, m_bot.Config().UCTCDMaxTraversals, m_bot.Config().UCTCDMaxMilli, command_for_unit);
     UCTCDMove move = uctcd.doSearch(maxUnits, minUnits, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority, m_bot.Config().UCTCDConsiderDistance, m_bot.Config().UnitOwnAgent);
 
     size_t nodes = uctcd.nodes_explored;
@@ -191,6 +190,7 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
 
     for (auto action : move.actions) {
         lastUnitCommand.push_back(action.unit.actual_unit);
+        command_for_unit[action.unit.actual_unit] = action;
         if (action.type == UCTCDActionType::ATTACK) {
             Micro::SmartAttackUnit(action.unit.actual_unit, action.target.actual_unit, m_bot);
         }
@@ -201,6 +201,7 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
             Micro::SmartMove(action.unit.actual_unit, action.position, m_bot);
         }
 
+        isCommandDone = true;
     }
 }
 

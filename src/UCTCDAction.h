@@ -1,6 +1,4 @@
 #pragma once
-#ifndef UCTCDACTION_H
-#define UCTCDACTION_H
 
 #include "sc2api/sc2_api.h"
 #include "UCTCDUnit.h"
@@ -19,5 +17,3 @@ public:
     UCTCDAction();
     UCTCDAction(UCTCDUnit punit, UCTCDUnit ptarget, sc2::Point2D pposition, float pdistance, UCTCDActionType ptype, float ptime);
 };
-
-#endif 

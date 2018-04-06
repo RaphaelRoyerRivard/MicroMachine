@@ -28,6 +28,6 @@ public:
     bool bothCanMove();
     bool playerToMove();
     bool isTerminal();
-    std::vector<UCTCDMove> generateMoves(bool isMax, UCTCDNode & currentNode);
+    std::vector<UCTCDMove> generateMoves(bool isMax, UCTCDNode & currentNode, std::map<const sc2::Unit *, UCTCDAction> command_for_unit);
     int eval();
 };

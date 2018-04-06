@@ -1,11 +1,9 @@
 #pragma once
-#ifndef UCTCDUNIT_H
-#define UCTCDUNIT_H
 
 #include "sc2api/sc2_api.h"
 #include "Util.h"
-#include "CCBot.h"
 
+class CCBot;
 class UCTCDAction;
 
 class UCTCDUnit {
@@ -38,5 +36,3 @@ public:
 private:
     void UpdateIsDead();
 };
-
-#endif 

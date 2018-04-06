@@ -2,6 +2,7 @@
 
 #include "Common.h"
 #include "MicroManager.h"
+#include "UCTCDAction.h"
 
 class CCBot;
 
@@ -21,4 +22,6 @@ public:
 
 private:
     std::vector<const sc2::Unit *> lastUnitCommand;
+    std::map<const sc2::Unit *, UCTCDAction> command_for_unit;
+    bool isCommandDone = false;
 };

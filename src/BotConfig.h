@@ -65,6 +65,7 @@ public:
     bool UCTCDConsiderDistance;
 
     bool UnitOwnAgent;
+    bool SkipOneFrame;
     bool ClosestEnemy;
     bool WeakestEnemy;
     bool HighestPriority;
