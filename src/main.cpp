@@ -9,6 +9,21 @@
 #include "sc2utils/sc2_manage_process.h"
 #include "sc2api/sc2_api.h"
 
+class Human : public sc2::Agent {
+public:
+    void OnGameStart() final {
+        Debug()->DebugTextOut("Human");
+        Debug()->SendDebug();
+
+    }
+
+    void OnStep()
+    {
+        Control()->GetObservation();
+    }
+
+};
+
 bool LADDER_MODE = false;
 
 int main(int argc, char* argv[]) 
@@ -52,6 +67,7 @@ int main(int argc, char* argv[])
     std::string mapString;
     int stepSize = 1;
     sc2::Difficulty enemyDifficulty = sc2::Difficulty::Easy;
+    bool PlayerOneIsHuman = true;
 
     if (j.count("SC2API") && j["SC2API"].is_object())
     {
@@ -61,6 +77,7 @@ int main(int argc, char* argv[])
         JSONTools::ReadString("MapFile", info, mapString);
         JSONTools::ReadInt("StepSize", info, stepSize);
         JSONTools::ReadInt("EnemyDifficulty", info, enemyDifficulty);
+        JSONTools::ReadBool("PlayAsHuman", info, PlayerOneIsHuman);
     }
     else
     {
@@ -72,16 +89,29 @@ int main(int argc, char* argv[])
     // Add the custom bot, it will control the players.
     CCBot bot;
 
+
+    Human human_bot;
+
+    sc2::PlayerSetup otherPlayer;
+    if (PlayerOneIsHuman) {
+        otherPlayer = CreateParticipant(Util::GetRaceFromString(enemyRaceString), &human_bot);
+    }
+    else
+    {
+        otherPlayer = sc2::CreateComputer(Util::GetRaceFromString(enemyRaceString), enemyDifficulty);
+    }
+
+
     
     // WARNING: Bot logic has not been thorougly tested on step sizes > 1
     //          Setting this = N means the bot's onFrame gets called once every N frames
     //          The bot may crash or do unexpected things if its logic is not called every frame
     coordinator.SetStepSize(stepSize);
-    coordinator.SetRealtime(false);
+    coordinator.SetRealtime(PlayerOneIsHuman);
 
     coordinator.SetParticipants({
-        sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot),
-        sc2::CreateComputer(Util::GetRaceFromString(enemyRaceString), enemyDifficulty)
+        otherPlayer,
+        sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot)
     });
 
     // Start the game.

@@ -18,6 +18,7 @@
     {
         "BotRace"                   : "Terran",
         "EnemyDifficulty"           : 10,
+        "PlayAsHuman"               : false,
         "EnemyRace"                 : "Random",
         "MapFile"                   : "InterloperLE.SC2Map",
         "StepSize"                  : 1
