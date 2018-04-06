@@ -77,33 +77,8 @@ void MicroManager::execute(const SquadOrder & inputOrder)
         // this is because their scout can run around and drag our units around the map
         else
         {
-            // if this is the an attack squad
-            std::vector<Unit> workersRemoved;
-            for (auto & enemyUnit : targetUnitTags)
-            {
-                BOT_ASSERT(enemyUnit.isValid(), "null enemy unit target");
-
-                // if its not a worker add it to the targets
-                if (!enemyUnit.getType().isWorker())
-                {
-                    workersRemoved.push_back(enemyUnit);
-                }
-                // if it is a worker
-                else
-                {
-                    for (const BaseLocation * enemyBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Enemy))
-                    {
-                        // only add it if it's in their region
-                        if (enemyBaseLocation->containsPosition(enemyUnit.getPosition()))
-                        {
-                            workersRemoved.push_back(enemyUnit);
-                        }
-                    }
-                }
-            }
-
             // Allow micromanager to handle enemies
-            executeMicro(workersRemoved);
+            executeMicro(targetUnitTags);
         }
     }
 }

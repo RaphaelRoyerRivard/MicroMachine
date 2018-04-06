@@ -18,7 +18,9 @@ bool ShouldFleeTransition::isValid(const sc2::Unit * target, CCBot * bot)
     float dist(Util::Dist(m_unit->pos, target->pos));
     float timeUntilAttacked = std::max(0.f, (dist - range) / unitTypeData.movement_speed);
 
-    return Unit(target, *bot).getType().isCombatUnit() && !(timeUntilAttacked >= m_unit->weapon_cooldown);
+    // We run away from anything in our range that have a none 0 dps
+    bool isAThreat = Unit(target, *bot).getType().isCombatUnit() || (dist < range && Util::GetDpsForTarget(target, m_unit, *bot) > 0.0f);
+    return isAThreat && !(timeUntilAttacked >= m_unit->weapon_cooldown);
 }
 KitingFSMState* ShouldFleeTransition::getNextState()
 {

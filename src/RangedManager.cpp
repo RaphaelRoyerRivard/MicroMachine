@@ -155,7 +155,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 {
     BOT_ASSERT(target, "null unit in getAttackPriority");
     
-    if (Unit(target, m_bot).getType().isCombatUnit())
+    if (Unit(target, m_bot).getType().isCombatUnit() || Unit(target, m_bot).getType().isWorker())
     {
         float dps = Util::GetDpsForTarget(target, attacker, m_bot);
         if (dps == 0.f)
