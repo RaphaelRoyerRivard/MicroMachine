@@ -83,7 +83,8 @@ bool UnitType::isCombatUnit() const
 #ifdef SC2API
     if (isWorker()) { return false; }
     if (isSupplyProvider()) { return false; }
-    if (isBuilding()) { return false; }
+    // If the building have a range, it can attack
+    if (isBuilding() && getAttackRange() <= 0.1f) { return false; }
 
     if (isEgg() || isLarva()) { return false; }
 
