@@ -90,9 +90,12 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
             const sc2::Unit * target = nullptr;
             const sc2::Unit * mineral = nullptr;
             sc2::Point2D mineralPos;
+            target = getTarget(rangedUnit, rangedUnitTargets);
+            bool isEnemyInSightCondition = rangedUnitTargets.size() > 0 &&
+                target != nullptr && Util::Dist(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance; // TODO add the 25 value in the config
 
-            ConditionAction isEnemyInSight(rangedUnitTargets.size() > 0 && (target = getTarget(rangedUnit, rangedUnitTargets)) != nullptr),
-                isEnemyRanged(target != nullptr && isTargetRanged(target));
+            ConditionAction isEnemyInSight(isEnemyInSightCondition);
+            ConditionAction isEnemyRanged(target != nullptr && isTargetRanged(target));
 
             if (mineral == nullptr) mineralPos = sc2::Point2D(0, 0);
             else mineralPos = mineral->pos;

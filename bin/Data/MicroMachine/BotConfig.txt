@@ -27,6 +27,7 @@
     {
         "AlphaBetaPruning"          : false,
         "KiteWithRangedUnits"       : true,
+        "MaxTargetDistance"         : 25,
         "ScoutHarassEnemy"          : true
     },
     

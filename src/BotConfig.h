@@ -50,7 +50,8 @@ public:
     CCColor ColorUnitNearEnemy;
     CCColor ColorUnitNotNearEnemy;
     
-    bool KiteWithRangedUnits;    
+    bool KiteWithRangedUnits;   
+    float MaxTargetDistance;
     bool ScoutHarassEnemy;
     bool AlphaBetaPruning;
     bool AutoCompleteBuildOrder;
