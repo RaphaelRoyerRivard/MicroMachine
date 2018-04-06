@@ -93,11 +93,14 @@ int main(int argc, char* argv[])
     Human human_bot;
 
     sc2::PlayerSetup otherPlayer;
+    sc2::PlayerSetup spectatingPlayer;
     if (PlayerOneIsHuman) {
-        otherPlayer = CreateParticipant(Util::GetRaceFromString(enemyRaceString), &human_bot);
+        spectatingPlayer = CreateParticipant(Util::GetRaceFromString(enemyRaceString), &human_bot);
+        otherPlayer = sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot);
     }
     else
     {
+        spectatingPlayer = sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot);
         otherPlayer = sc2::CreateComputer(Util::GetRaceFromString(enemyRaceString), enemyDifficulty);
     }
 
@@ -110,8 +113,8 @@ int main(int argc, char* argv[])
     coordinator.SetRealtime(PlayerOneIsHuman);
 
     coordinator.SetParticipants({
-        otherPlayer,
-        sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot)
+        spectatingPlayer,
+        otherPlayer
     });
 
     // Start the game.
