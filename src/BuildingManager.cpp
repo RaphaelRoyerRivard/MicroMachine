@@ -100,7 +100,9 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 
         // grab a worker unit from WorkerManager which is closest to this final position
         CCTilePosition testLocation = getBuildingLocation(b);
-        if (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0))
+
+        // Don't test the location if the building is already started
+        if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
         {
             continue;
         }
@@ -115,8 +117,11 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
             continue;
         }
 
-        // reserve this building's space
-        m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y, b.type.tileWidth(), b.type.tileHeight());
+        if (!b.underConstruction)
+        {
+            // reserve this building's space
+            m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y, b.type.tileWidth(), b.type.tileHeight());
+        }
 
         b.status = BuildingStatus::Assigned;
     }
@@ -167,6 +172,11 @@ void BuildingManager::constructAssignedBuildings()
             {
                 // TODO: in here is where we would check to see if the builder died on the way
                 //       or if things are taking too long, or the build location is no longer valid
+                // If the building has been started and no more worker are on it.
+                if (b.underConstruction && b.buildingUnit.isBeingConstructed())
+                {
+                    b.builderUnit.rightClick(b.buildingUnit);
+                }
             }
             else
             {
@@ -271,7 +281,18 @@ void BuildingManager::checkForStartedConstruction()
 }
 
 // STEP 5: IF WE ARE TERRAN, THIS MATTERS, SO: LOL
-void BuildingManager::checkForDeadTerranBuilders() {}
+void BuildingManager::checkForDeadTerranBuilders() 
+{
+    // for each of our buildings under construction
+    for (auto & b : m_buildings)
+    {
+        if (b.status == BuildingStatus::UnderConstruction && !b.builderUnit.isAlive())
+        {
+            b.status = BuildingStatus::Unassigned;
+            b.builderUnit = Unit();
+        }
+    }
+}
 
 // STEP 6: CHECK FOR COMPLETED BUILDINGS
 void BuildingManager::checkForCompletedBuildings()

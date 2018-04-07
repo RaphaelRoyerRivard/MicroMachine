@@ -72,7 +72,8 @@ void WorkerManager::handleIdleWorkers()
 
         bool isIdle = worker.isIdle();
         if (worker.isIdle() && 
-			(m_workerData.getWorkerJob(worker) != WorkerJobs::Build) && 
+            // We need to consider building worker because of builder finishing the job of another worker is not consider idle.
+			//(m_workerData.getWorkerJob(worker) != WorkerJobs::Build) && 
 			(m_workerData.getWorkerJob(worker) != WorkerJobs::Move) &&
 			(m_workerData.getWorkerJob(worker) != WorkerJobs::Scout)) 
 		{
