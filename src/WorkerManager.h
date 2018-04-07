@@ -44,5 +44,6 @@ public:
     Unit getClosestDepot(Unit worker) const;
     Unit getGasWorker(Unit refinery) const;
     Unit getClosestMineralWorkerTo(const CCPosition & pos) const;
+    Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore) const;
 };
 

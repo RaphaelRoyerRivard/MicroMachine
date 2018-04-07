@@ -184,6 +184,7 @@ Unit WorkerData::getMineralToMine(const Unit & unit) const
     Unit bestMineral;
     double bestDist = 100000;
 
+    // TODO trouver le mineral le plus proche de nous qui fait partie de nos base(pour eviter de long range mining)
     for (auto & mineral : m_bot.GetUnits())
     {
         if (!mineral.getType().isMineral()) continue;
@@ -303,7 +304,8 @@ const std::set<Unit> & WorkerData::getWorkerRepairingThatTargetC(const Unit & un
     }
     else
     {
-        return {};
+        auto emptySet = std::set<Unit>();
+        return emptySet;
     }
 }
 
@@ -318,7 +320,8 @@ std::set<Unit> & WorkerData::getWorkerRepairingThatTarget(const Unit & unit)
     }
     else
     {
-        return std::set<Unit>();
+        auto emptySet = std::set<Unit>();
+        return emptySet;
     }
 }
 

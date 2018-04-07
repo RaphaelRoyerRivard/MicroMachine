@@ -37,7 +37,7 @@ void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)
 void WorkerManager::stopRepairing(Unit worker)
 {
     m_workerData.WorkerStoppedRepairing(worker);
-    m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
+    finishedWithWorker(worker);
 }
 
 void WorkerManager::handleGasWorkers()
@@ -133,7 +133,7 @@ void WorkerManager::handleRepairWorkers()
             const std::set<Unit> & repairedBy = m_workerData.getWorkerRepairingThatTargetC(worker);
             if (repairedBy.empty())
             {
-                auto repairGuy = getClosestMineralWorkerTo(worker.getPosition());
+                auto repairGuy = getClosestMineralWorkerTo(worker.getPosition(), worker.getID());
                 if (repairGuy.isValid())
                 {
                     setRepairWorker(repairGuy, worker);
@@ -146,8 +146,7 @@ void WorkerManager::handleRepairWorkers()
         }
     }
 }
-
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore) const
 {
     Unit closestMineralWorker;
     double closestDist = std::numeric_limits<double>::max();
@@ -155,7 +154,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos) const
     // for each of our workers
     for (auto & worker : m_workerData.getWorkers())
     {
-        if (!worker.isValid()) { continue; }
+        if (!worker.isValid() || worker.getID() == workerToIgnore) { continue; }
 
         // if it is a mineral worker
         if (m_workerData.getWorkerJob(worker) == WorkerJobs::Minerals)
@@ -171,6 +170,11 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos) const
     }
 
     return closestMineralWorker;
+}
+
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos) const
+{
+    return getClosestMineralWorkerTo(pos, CCUnitID{});
 }
 
 
