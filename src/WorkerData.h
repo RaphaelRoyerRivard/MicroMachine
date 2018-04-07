@@ -21,8 +21,11 @@ class WorkerData
     std::map<Unit, int>     m_depotWorkerCount;
     std::map<Unit, Unit>    m_workerRefineryMap;
     std::map<Unit, Unit>    m_workerDepotMap;
+    std::map<Unit, std::set<Unit>>    m_workerRepairing;
+    std::map<Unit, Unit>    m_workerRepairTarget;
 
     void clearPreviousJob(const Unit & unit);
+    std::set<Unit> & getWorkerRepairingThatTarget(const Unit & unit);
 
 public:
 
@@ -41,4 +44,7 @@ public:
     Unit    getWorkerDepot(const Unit & unit) const;
     const char * getJobCode(const Unit & unit);
     const std::set<Unit> & getWorkers() const;
+    Unit getWorkerRepairTarget(const Unit & unit) const; 
+    const std::set<Unit> & getWorkerRepairingThatTargetC(const Unit & unit) const;
+    void WorkerStoppedRepairing(const Unit & unit);
 };

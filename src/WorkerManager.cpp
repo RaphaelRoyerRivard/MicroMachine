@@ -36,6 +36,7 @@ void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)
 
 void WorkerManager::stopRepairing(Unit worker)
 {
+    m_workerData.WorkerStoppedRepairing(worker);
     m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 }
 
@@ -74,7 +75,8 @@ void WorkerManager::handleIdleWorkers()
         if (worker.isIdle() && 
             // We need to consider building worker because of builder finishing the job of another worker is not consider idle.
 			//(m_workerData.getWorkerJob(worker) != WorkerJobs::Build) && 
-			(m_workerData.getWorkerJob(worker) != WorkerJobs::Move) &&
+            (m_workerData.getWorkerJob(worker) != WorkerJobs::Move) &&
+            (m_workerData.getWorkerJob(worker) != WorkerJobs::Repair) &&
 			(m_workerData.getWorkerJob(worker) != WorkerJobs::Scout)) 
 		{
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
@@ -83,14 +85,66 @@ void WorkerManager::handleIdleWorkers()
         // if it is idle
         if (m_workerData.getWorkerJob(worker) == WorkerJobs::Idle)
         {
-            setMineralWorker(worker);
+            if (!worker.isAlive())
+            {
+                worker.stop();
+            }
+            else
+            {
+                setMineralWorker(worker);
+            }
         }
     }
 }
 
 void WorkerManager::handleRepairWorkers()
 {
-    // TODO
+    // Only terran worker can repair
+    if (!Util::IsTerran(m_bot.GetPlayerRace(Players::Self)))
+        return;
+
+    for (auto & worker : m_workerData.getWorkers())
+    {
+        if (!worker.isValid()) { continue; }
+
+        if (m_workerData.getWorkerJob(worker) == WorkerJobs::Repair)
+        {
+            Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
+            if (!worker.isAlive())
+            {
+                // We inform the manager that we are no longer repairing
+                stopRepairing(worker);
+            }
+            // We do not try to repair dead units
+            else if (!repairedUnit.isAlive() || repairedUnit.getHitPoints() + std::numeric_limits<float>::epsilon() >= repairedUnit.getUnitPtr()->health_max)
+            {
+                stopRepairing(worker);
+            }
+            else if (worker.isIdle())
+            {
+                // Get back to repairing...
+                worker.repair(repairedUnit);
+            }
+        }
+
+        // TODO voir pour mettre un max range
+        if (worker.isAlive() && worker.getHitPoints() < worker.getUnitPtr()->health_max)
+        {
+            const std::set<Unit> & repairedBy = m_workerData.getWorkerRepairingThatTargetC(worker);
+            if (repairedBy.empty())
+            {
+                auto repairGuy = getClosestMineralWorkerTo(worker.getPosition());
+                if (repairGuy.isValid())
+                {
+                    setRepairWorker(repairGuy, worker);
+                }
+            }
+            else if (!(*repairedBy.begin()).isAlive())
+            {
+                std::cout << "We got a dead guy repairing..." << std::endl;
+            }
+        }
+    }
 }
 
 Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos) const

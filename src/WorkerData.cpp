@@ -111,7 +111,9 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit)
     }
     else if (job == WorkerJobs::Repair)
     {
-        unit.rightClick(jobUnit);
+        unit.repair(jobUnit);
+        m_workerRepairing[jobUnit].insert(unit);
+        m_workerRepairTarget[unit] = jobUnit;
     }
     else if (job == WorkerJobs::Scout)
     {
@@ -272,4 +274,60 @@ void WorkerData::drawDepotDebugInfo()
 const std::set<Unit> & WorkerData::getWorkers() const
 {
     return m_workers;
+}
+
+Unit WorkerData::getWorkerRepairTarget(const Unit & unit) const
+{
+           
+    auto it = m_workerRepairTarget.find(unit);
+
+    // if there is an entry, return it
+    if (it != m_workerRepairTarget.end())
+    {
+        return it->second;
+    }
+    else
+    {
+        return {};
+    }
+}
+
+const std::set<Unit> & WorkerData::getWorkerRepairingThatTargetC(const Unit & unit) const
+{
+    auto it = m_workerRepairing.find(unit);
+
+    // if there is an entry, return it
+    if (it != m_workerRepairing.end())
+    {
+        return it->second;
+    }
+    else
+    {
+        return {};
+    }
+}
+
+std::set<Unit> & WorkerData::getWorkerRepairingThatTarget(const Unit & unit)
+{
+    auto it = m_workerRepairing.find(unit);
+
+    // if there is an entry, return it
+    if (it != m_workerRepairing.end())
+    {
+        return it->second;
+    }
+    else
+    {
+        return std::set<Unit>();
+    }
+}
+
+void WorkerData::WorkerStoppedRepairing(const Unit & unit)
+{
+    auto target = getWorkerRepairTarget(unit);
+    if (target.isValid())
+    {
+        getWorkerRepairingThatTarget(target).erase(unit);
+        m_workerRepairTarget.erase(unit);
+    }
 }

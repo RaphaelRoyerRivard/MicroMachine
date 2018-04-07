@@ -324,7 +324,12 @@ void Unit::rightClick(const Unit & target) const
 
 void Unit::repair(const Unit & target) const
 {
+    BOT_ASSERT(isValid(), "Unit is not valid");
+#ifdef SC2API
+    m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::EFFECT_REPAIR, target.getUnitPtr());
+#else
     rightClick(target);
+#endif
 }
 
 void Unit::build(const UnitType & buildingType, CCTilePosition pos) const

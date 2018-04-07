@@ -283,6 +283,9 @@ void BuildingManager::checkForStartedConstruction()
 // STEP 5: IF WE ARE TERRAN, THIS MATTERS, SO: LOL
 void BuildingManager::checkForDeadTerranBuilders() 
 {
+    if (!Util::IsTerran(m_bot.GetPlayerRace(Players::Self)))
+        return;
+
     // for each of our buildings under construction
     for (auto & b : m_buildings)
     {
