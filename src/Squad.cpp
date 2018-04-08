@@ -148,7 +148,10 @@ void Squad::addUnitsToMicroManagers()
 // TODO: calculates whether or not to regroup
 bool Squad::needsToRegroup() const
 {
-    return false;
+    if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Regroup)
+        return m_units.size() < 4;
+    else
+        return false;
 }
 
 void Squad::setSquadOrder(const SquadOrder & so)
