@@ -189,7 +189,7 @@ void CombatCommander::updateDefenseSquads()
         CCPosition basePosition = myBaseLocation->getPosition();
 
         // start off assuming all enemy units in region are just workers
-        int numDefendersPerEnemyUnit = 2;
+        int numDefendersPerEnemyUnit = 2; // 2 might be too much if we consider them workers...
 
         // all of the enemy units in this region
         std::vector<Unit> enemyUnitsInRegion;
@@ -208,16 +208,18 @@ void CombatCommander::updateDefenseSquads()
         }
 
         // we can ignore the first enemy worker in our region since we assume it is a scout
-        for (auto unit : enemyUnitsInRegion)
-        {
-            BOT_ASSERT(unit.isValid(), "null enemyt unit in region");
+        // no... we want to kill it, there is no real reason to let the enemy scout us
+        // and it could be a cacnon rush...
+        //for (auto unit : enemyUnitsInRegion)
+        //{
+        //    BOT_ASSERT(unit.isValid(), "null enemyt unit in region");
 
-            if (unit.getType().isWorker())
-            {
-                enemyUnitsInRegion.erase(std::remove(enemyUnitsInRegion.begin(), enemyUnitsInRegion.end(), unit), enemyUnitsInRegion.end());
-                break;
-            }
-        }
+        //    if (unit.getType().isWorker())
+        //    {
+        //        enemyUnitsInRegion.erase(std::remove(enemyUnitsInRegion.begin(), enemyUnitsInRegion.end(), unit), enemyUnitsInRegion.end());
+        //        break;
+        //    }
+        //}
 
         // calculate how many units are flying / ground units
         int numEnemyFlyingInRegion = 0;
