@@ -52,6 +52,7 @@ public:
     
     bool KiteWithRangedUnits;   
     float MaxTargetDistance;
+    float MaxWorkerRepairDistance;
     bool ScoutHarassEnemy;
     bool AlphaBetaPruning;
     bool AutoCompleteBuildOrder;

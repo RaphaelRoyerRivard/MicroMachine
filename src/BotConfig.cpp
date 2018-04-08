@@ -40,6 +40,7 @@ BotConfig::BotConfig()
     KiteWithRangedUnits                 = true;
     ScoutHarassEnemy                    = true;
     MaxTargetDistance                   = 25.0f;
+    MaxWorkerRepairDistance             = 20.0f;
 
     ColorLineTarget                     = CCColor(255, 255, 255);
     ColorLineMineral                    = CCColor(0, 128, 128);
@@ -95,6 +96,7 @@ void BotConfig::readConfigFile()
         const json & micro = j["Micro"];
         JSONTools::ReadBool("KiteWithRangedUnits", micro, KiteWithRangedUnits);
         JSONTools::ReadInt("MaxTargetDistance", micro, MaxTargetDistance);
+        JSONTools::ReadInt("MaxWorkerRepairDistance", micro, MaxWorkerRepairDistance);
         JSONTools::ReadBool("ScoutHarassEnemy", micro, ScoutHarassEnemy);
         JSONTools::ReadBool("AlphaBetaPruning", micro, AlphaBetaPruning);
     }

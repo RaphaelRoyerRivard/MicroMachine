@@ -134,7 +134,8 @@ void WorkerManager::handleRepairWorkers()
             if (repairedBy.empty())
             {
                 auto repairGuy = getClosestMineralWorkerTo(worker.getPosition(), worker.getID());
-                if (repairGuy.isValid())
+                 
+                if (repairGuy.isValid() && Util::Dist(worker.getPosition(), repairGuy.getPosition()) <= m_bot.Config().MaxWorkerRepairDistance)
                 {
                     setRepairWorker(repairGuy, worker);
                 }
