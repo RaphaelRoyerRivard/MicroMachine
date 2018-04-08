@@ -137,6 +137,13 @@ void ProductionManager::fixBuildOrderDeadlock()
 
     if (!hasProducer)
     {
+        // si on veut faire un worker et qu'on n'a plus de worker et qu'on n'a plus de main building, GG
+        bool noMoreWorker = m_bot.Workers().getNumWorkers() == 0;
+        if (currentItem.type.getUnitType().isWorker() && noMoreWorker)
+        {
+            // We no longer have worker and no longer have buildings to do more, so we are rip...
+            return;
+        }
         m_queue.queueAsHighestPriority(MetaType(m_bot.Data(currentItem.type).whatBuilds[0], m_bot), true);
         fixBuildOrderDeadlock();
     }

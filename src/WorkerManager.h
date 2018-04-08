@@ -36,6 +36,7 @@ public:
 
     int  getNumMineralWorkers();
     int  getNumGasWorkers();
+    int  getNumWorkers();
     bool isWorkerScout(Unit worker) const;
     bool isFree(Unit worker) const;
     bool isBuilder(Unit worker) const;

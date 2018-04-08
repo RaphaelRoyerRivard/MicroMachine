@@ -329,3 +329,16 @@ int WorkerManager::getNumGasWorkers()
     return m_workerData.getWorkerJobCount(WorkerJobs::Gas);
 
 }
+
+int WorkerManager::getNumWorkers()
+{
+    int count = 0;
+    for (auto worker : m_workerData.getWorkers())
+    {
+        if (worker.isValid() && worker.isAlive())
+        {
+            ++count;
+        }
+    }
+    return count;
+}
