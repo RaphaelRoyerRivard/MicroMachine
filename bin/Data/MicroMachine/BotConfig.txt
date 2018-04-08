@@ -17,8 +17,8 @@
     "SC2API" :
     {
         "BotRace"                   : "Terran",
-        "EnemyDifficulty"           : 10,
         "PlayAsHuman"               : false,
+        "EnemyDifficulty"           : 8,
         "EnemyRace"                 : "Random",
         "MapFile"                   : "InterloperLE.SC2Map",
         "StepSize"                  : 1
@@ -124,7 +124,7 @@
             "Terran_MarineRush"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SCV", "SupplyDepot", "SCV", "SCV", "Barracks", "Barracks", "Barracks", "Barracks", "SupplyDepot", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine"],
+                "OpeningBuildOrder" : ["SCV", "SCV", "SupplyDepot", "SCV", "SCV", "Barracks", "Barracks", "Barracks", "Barracks", "Marine", "Marine", "Marine", "Marine", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">", [ 0 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 8 ] ]
             },
