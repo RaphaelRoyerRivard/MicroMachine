@@ -26,6 +26,7 @@ class WorkerData
 
     void clearPreviousJob(const Unit & unit);
     std::set<Unit> & getWorkerRepairingThatTarget(const Unit & unit);
+    void GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & worker, Unit & bestMineral, double & bestDist) const;
 
 public:
 

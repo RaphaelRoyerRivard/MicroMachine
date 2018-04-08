@@ -182,14 +182,31 @@ int WorkerData::getWorkerJob(const Unit & unit) const
 Unit WorkerData::getMineralToMine(const Unit & unit) const
 {
     Unit bestMineral;
-    double bestDist = 100000;
+    const double maxDistance = 100000;
+    double bestDist = maxDistance;
 
-    // TODO trouver le mineral le plus proche de nous qui fait partie de nos base(pour eviter de long range mining)
-    for (auto & mineral : m_bot.GetUnits())
+    // We search only in our bases minerals (we do not want to long range mine)
+    for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+    {
+        GetBestMineralInList(base->getMinerals(), unit, bestMineral, bestDist);
+    }
+    // If we did not found minerals, we fall back to all minerals
+    if (bestDist == maxDistance)
+    {
+        GetBestMineralInList(m_bot.GetUnits(), unit, bestMineral, bestDist);
+    }
+
+    return bestMineral;
+}
+
+
+void WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & worker, Unit & bestMineral, double & bestDist) const
+{
+    for (auto & mineral : unitsToTest)
     {
         if (!mineral.getType().isMineral()) continue;
 
-        double dist = Util::Dist(mineral, unit);
+        double dist = Util::Dist(mineral, worker);
 
         if (dist < bestDist)
         {
@@ -197,8 +214,6 @@ Unit WorkerData::getMineralToMine(const Unit & unit) const
             bestDist = dist;
         }
     }
-
-    return bestMineral;
 }
 
 Unit WorkerData::getWorkerDepot(const Unit & unit) const

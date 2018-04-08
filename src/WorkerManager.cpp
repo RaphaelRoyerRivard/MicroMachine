@@ -139,10 +139,6 @@ void WorkerManager::handleRepairWorkers()
                     setRepairWorker(repairGuy, worker);
                 }
             }
-            else if (!(*repairedBy.begin()).isAlive())
-            {
-                std::cout << "We got a dead guy repairing..." << std::endl;
-            }
         }
     }
 }
