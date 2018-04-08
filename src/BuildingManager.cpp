@@ -168,15 +168,13 @@ void BuildingManager::constructAssignedBuildings()
             }
             // if this is not the first time we've sent this guy to build this
             // it must be the case that something was in the way of building
-            else if (b.buildCommandGiven)
+            else if (b.buildCommandGiven && b.underConstruction && b.buildingUnit.isBeingConstructed())
             {
                 // TODO: in here is where we would check to see if the builder died on the way
                 //       or if things are taking too long, or the build location is no longer valid
                 // If the building has been started and no more worker are on it.
-                if (b.underConstruction && b.buildingUnit.isBeingConstructed())
-                {
-                    b.builderUnit.rightClick(b.buildingUnit);
-                }
+
+                b.builderUnit.rightClick(b.buildingUnit);
             }
             else
             {
