@@ -127,7 +127,6 @@ void WorkerManager::handleRepairWorkers()
             }
         }
 
-        // TODO voir pour mettre un max range
         if (worker.isAlive() && worker.getHitPoints() < worker.getUnitPtr()->health_max)
         {
             const std::set<Unit> & repairedBy = m_workerData.getWorkerRepairingThatTargetC(worker);
