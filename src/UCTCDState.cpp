@@ -100,9 +100,9 @@ void getFirstMove(const UCTCDPlayer player, const std::unordered_map<sc2::Tag, s
         // Let the unit finish his move
         bool isSameAction = false;
         for (auto action : actions_for_this_unit) {
-            if ((action.type == UCTCDActionType::MOVE_BACK || action.type == UCTCDActionType::MOVE_FORWARD) &&
-                command_for_unit[unit.actual_unit].type == action.type &&
-                command_for_unit[unit.actual_unit].target.position == action.target.position) {
+            if (command_for_unit[unit.actual_unit].type == action.type &&
+                (action.type == UCTCDActionType::MOVE_BACK || action.type == UCTCDActionType::MOVE_FORWARD && command_for_unit[unit.actual_unit].position == action.position) ||
+                (action.type == UCTCDActionType::ATTACK && command_for_unit[unit.actual_unit].target.actual_unit == action.target.actual_unit && command_for_unit[unit.actual_unit].target.position == action.target.position)) {
                 isSameAction = true;
                 break;
             }
@@ -250,7 +250,18 @@ std::vector<UCTCDMove> UCTCDState::generateMoves(bool isMax, UCTCDNode & current
             // Try to find a move with units that have already played
             getFirstMove(player, actions_per_unit, command_for_unit, possible_moves, false);
         }
-        //TODO: if no move possible: check if we need to stop our move
+
+        if (possible_moves.empty()) {
+            // Last try to find an action
+            for (auto unit : player.units) {
+                std::vector<UCTCDAction> actions_for_this_unit = actions_per_unit.at(unit.actual_unit->tag);
+                for (auto action : actions_for_this_unit) {
+                    std::vector<UCTCDAction> actions;
+                    actions.push_back(action);
+                    possible_moves.push_back(UCTCDMove(actions));
+                }
+            }
+        }
     }
     else {
         // ca ajouter some what toute les actions possibles

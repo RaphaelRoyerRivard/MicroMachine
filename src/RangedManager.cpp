@@ -131,9 +131,9 @@ void RangedManager::AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits,
     AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(std::chrono::milliseconds(m_bot.Config().AlphaBetaMaxMilli), m_bot.Config().AlphaBetaDepth, m_bot.Config().UnitOwnAgent, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority);
     AlphaBetaValue value = alphaBeta.doSearch(maxUnits, minUnits, &m_bot);
     size_t nodes = alphaBeta.nodes_evaluated;
-    m_bot.Map().drawTextScreen(0.005, 0.005, std::string("Nodes explored : ") + std::to_string(nodes));
-    m_bot.Map().drawTextScreen(0.005, 0.020, std::string("Max depth : ") + std::to_string(m_bot.Config().AlphaBetaDepth));
-    m_bot.Map().drawTextScreen(0.005, 0.035, std::string("AB value : ") + std::to_string(value.score));
+    m_bot.Map().drawTextScreen(0.005f, 0.005f, std::string("Nodes explored : ") + std::to_string(nodes));
+    m_bot.Map().drawTextScreen(0.005f, 0.020f, std::string("Max depth : ") + std::to_string(m_bot.Config().AlphaBetaDepth));
+    m_bot.Map().drawTextScreen(0.005f, 0.035f, std::string("AB value : ") + std::to_string(value.score));
     if (value.move != NULL) {
         for (auto action : value.move->actions) {
             lastUnitCommand.push_back(action->unit->actual_unit);
@@ -155,7 +155,7 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
     std::vector<UCTCDUnit> maxUnits;
     
     if (m_bot.Config().SkipOneFrame && isCommandDone) {
-        isCommandDone = false;     
+        isCommandDone = false;
         return;
     }
 
@@ -189,8 +189,13 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
     m_bot.Map().drawTextScreen(0.005f, 0.050f, std::string("Most value : ") + std::to_string(win_value));
 
     for (auto action : move.actions) {
+        if (action.unit.has_played) {
+            // reset priority
+            lastUnitCommand.clear();
+        }
         lastUnitCommand.push_back(action.unit.actual_unit);
         command_for_unit[action.unit.actual_unit] = action;
+
         if (action.type == UCTCDActionType::ATTACK) {
             Micro::SmartAttackUnit(action.unit.actual_unit, action.target.actual_unit, m_bot);
         }
