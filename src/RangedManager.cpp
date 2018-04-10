@@ -14,6 +14,7 @@
 #include "UCTCDMove.h"
 #include "UCTCDAction.h"
 
+
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
 
@@ -156,6 +157,7 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
     
     if (m_bot.Config().SkipOneFrame && isCommandDone) {
         isCommandDone = false;
+
         return;
     }
 
@@ -195,6 +197,11 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
         }
         lastUnitCommand.push_back(action.unit.actual_unit);
         command_for_unit[action.unit.actual_unit] = action;
+
+        // Select unit (visual info only)
+        const sc2::ObservationInterface* obs = m_bot.Observation();
+        sc2::Point2DI target = Util::ConvertWorldToCamera(obs->GetGameInfo(), obs->GetCameraPos(), action.unit.actual_unit->pos);
+        m_bot.ActionsFeatureLayer()->Select(target, sc2::PointSelectionType::PtSelect);
 
         if (action.type == UCTCDActionType::ATTACK) {
             Micro::SmartAttackUnit(action.unit.actual_unit, action.target.actual_unit, m_bot);

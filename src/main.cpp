@@ -72,17 +72,37 @@ int main(int argc, char* argv[])
         sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot),
         sc2::CreateComputer(Util::GetRaceFromString(enemyRaceString), enemyDifficulty)
     });
-     
-    // Start the game.
-    coordinator.LaunchStarcraft();
-    coordinator.StartGame(mapString);
 
-    // Step forward the game simulation.
-    while (true) 
-    {
-        coordinator.Update();
+    // To enbale select actions
+    coordinator.SetFeatureLayers(sc2::FeatureLayerSettings());
+
+    bot.Config().readConfigFile();
+    if (bot.Config().BatchReplayMode) {
+        for (int i = 0; i < bot.Config().NbBatchReplay; ++i) {
+            // Start the game.
+            coordinator.LaunchStarcraft();
+            coordinator.StartGame(mapString);
+
+            // Step forward the game simulation.
+            while (coordinator.AllGamesEnded() == false) {
+                coordinator.Update();
+            }
+        }
+        // Make sure to save the last replay
+        coordinator.StartGame(mapString);
     }
+    else {
+        // Start the game.
+        coordinator.LaunchStarcraft();
+        coordinator.StartGame(mapString);
 
+        // Step forward the game simulation.
+        while (true)
+        {
+            coordinator.Update();
+        }
+    }
+  
     return 0;
 }
 

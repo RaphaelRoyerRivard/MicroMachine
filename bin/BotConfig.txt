@@ -20,7 +20,9 @@
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Random",
         "MapFile"                   : "mini_games//DefeatZerglingsAndBanelings.SC2Map",
-        "StepSize"                  : 1
+        "StepSize"                  : 1,
+        "BatchReplayMode"           : false,
+        "NbBatchReplay"             : 50
     },
         
     "Micro" :

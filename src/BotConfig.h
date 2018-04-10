@@ -22,6 +22,9 @@ public:
     int SetFrameSkip;
     bool UserInput;
     bool CompleteMapInformation;
+
+    bool BatchReplayMode;
+    int NbBatchReplay;
     
     std::string StrategyName;
     std::string ReadDir;

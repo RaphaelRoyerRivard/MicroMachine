@@ -67,6 +67,7 @@ namespace Util
 #ifdef SC2API
     sc2::BuffID     GetBuffFromName(const std::string & name, CCBot & bot);
     sc2::AbilityID  GetAbilityFromName(const std::string & name, CCBot & bot);
+    sc2::Point2DI   ConvertWorldToCamera(const sc2::GameInfo& game_info, const sc2::Point2D camera_world, const sc2::Point2D& world);
 #endif
 
     float Dist(const Unit & unit, const CCPosition & p2);

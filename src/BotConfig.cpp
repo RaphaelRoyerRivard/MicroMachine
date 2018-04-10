@@ -22,6 +22,9 @@ BotConfig::BotConfig()
     UserInput = true;
     CompleteMapInformation = false;
 
+    BatchReplayMode = false;
+    NbBatchReplay = 1;
+
     DrawGameInfo = true;
     DrawProductionInfo = true;
     DrawTileInfo = false;
@@ -131,6 +134,14 @@ void BotConfig::readConfigFile()
         JSONTools::ReadInt("SetFrameSkip", bwapi, SetFrameSkip);
         JSONTools::ReadBool("UserInput", bwapi, UserInput);
         JSONTools::ReadBool("CompleteMapInformation", bwapi, CompleteMapInformation);
+    }
+
+    // Parse the SC2 Options
+    if (j.count("SC2API") && j["SC2API"].is_object())
+    {
+        const json & sc2api = j["SC2API"];
+        JSONTools::ReadBool("BatchReplayMode", sc2api, BatchReplayMode);
+        JSONTools::ReadInt("NbBatchReplay", sc2api, NbBatchReplay);
     }
 
     // Parse the Macro Options
