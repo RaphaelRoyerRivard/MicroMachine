@@ -159,7 +159,12 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
     {
         float dps = Util::GetDpsForTarget(target, attacker, m_bot);
         if (dps == 0.f)
-            dps = 15.f;
+        {
+            if (target->unit_type == sc2::UNIT_TYPEID::ZERG_BANELING || target->unit_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
+            {
+                dps = 15.f;
+            }
+        }
         float healthValue = 1 / (target->health + target->shield);
         float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);
         if (distanceValue > Util::GetAttackRangeForTarget(attacker, target, m_bot))
