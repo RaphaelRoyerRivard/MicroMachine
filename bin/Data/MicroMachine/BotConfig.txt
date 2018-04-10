@@ -17,11 +17,14 @@
     "SC2API" :
     {
         "BotRace"                   : "Terran",
-        "PlayAsHuman"               : false,
-        "EnemyDifficulty"           : 8,
+        "PlayAsHuman"               : false,,
+        "PlayVsItSelf"              : false,
+        "EnemyDifficulty"           : 7,
         "EnemyRace"                 : "Random",
         "MapFile"                   : "InterloperLE.SC2Map",
-        "StepSize"                  : 1
+        "StepSize"                  : 1,
+        "BatchReplayMode"           : false,
+        "NbBatchReplay"             : 20
     },
         
     "Micro" :

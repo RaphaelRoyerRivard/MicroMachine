@@ -67,7 +67,10 @@ int main(int argc, char* argv[])
     std::string mapString;
     int stepSize = 1;
     sc2::Difficulty enemyDifficulty = sc2::Difficulty::Easy;
-    bool PlayerOneIsHuman = true;
+    bool PlayerOneIsHuman = false;
+    bool PlayVsItSelf = false;
+    bool batchReplayMode = true;
+    int nbBatchReplay = 1;
 
     if (j.count("SC2API") && j["SC2API"].is_object())
     {
@@ -78,6 +81,9 @@ int main(int argc, char* argv[])
         JSONTools::ReadInt("StepSize", info, stepSize);
         JSONTools::ReadInt("EnemyDifficulty", info, enemyDifficulty);
         JSONTools::ReadBool("PlayAsHuman", info, PlayerOneIsHuman);
+        JSONTools::ReadBool("PlayVsItSelf", info, PlayVsItSelf);
+        JSONTools::ReadBool("BatchReplayMode", info, batchReplayMode);
+        JSONTools::ReadInt("NbBatchReplay", info, nbBatchReplay);
     }
     else
     {
@@ -88,7 +94,7 @@ int main(int argc, char* argv[])
 
     // Add the custom bot, it will control the players.
     CCBot bot;
-
+    CCBot bot2;
 
     Human human_bot;
 
@@ -97,6 +103,11 @@ int main(int argc, char* argv[])
     if (PlayerOneIsHuman) {
         spectatingPlayer = CreateParticipant(Util::GetRaceFromString(enemyRaceString), &human_bot);
         otherPlayer = sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot);
+    }
+    else if (PlayVsItSelf)
+    {
+        spectatingPlayer = sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot);
+        otherPlayer = sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot2);
     }
     else
     {
@@ -117,14 +128,30 @@ int main(int argc, char* argv[])
         otherPlayer
     });
 
-    // Start the game.
-    coordinator.LaunchStarcraft();
-    coordinator.StartGame(mapString);
+    if (batchReplayMode) {
+        for (int i = 0; i < nbBatchReplay; ++i) {
+            // Start the game.
+            coordinator.LaunchStarcraft();
+            coordinator.StartGame(mapString);
 
-    // Step forward the game simulation.
-    while (true) 
-    {
-        coordinator.Update();
+            // Step forward the game simulation.
+            while (coordinator.AllGamesEnded() == false) {
+                coordinator.Update();
+            }
+        }
+        // Make sure to save the last replay
+        coordinator.StartGame(mapString);
+    }
+    else {
+        // Start the game.
+        coordinator.LaunchStarcraft();
+        coordinator.StartGame(mapString);
+
+        // Step forward the game simulation.
+        while (true)
+        {
+            coordinator.Update();
+        }
     }
 
     return 0;
