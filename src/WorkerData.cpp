@@ -204,7 +204,7 @@ void WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, con
 {
     for (auto & mineral : unitsToTest)
     {
-        if (!mineral.getType().isMineral()) continue;
+        if (!mineral.getType().isMineral() || !mineral.isAlive()) continue;
 
         double dist = Util::Dist(mineral, worker);
 
