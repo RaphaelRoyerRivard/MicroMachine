@@ -407,7 +407,7 @@ CCPosition CombatCommander::getMainAttackLocation()
     {
         const UnitInfo & ui = kv.second;
 
-        if (m_bot.Data(ui.type).isBuilding && !(ui.lastPosition.x == 0.0f && ui.lastPosition.y == 0.0f))
+        if (m_bot.Data(ui.type).isBuilding && ui.lastHealth > 0.0f && ui.unit.isAlive() && !(ui.lastPosition.x == 0.0f && ui.lastPosition.y == 0.0f))
         {
             return ui.lastPosition;
         }
