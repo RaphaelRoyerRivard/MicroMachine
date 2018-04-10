@@ -105,11 +105,6 @@ void CombatCommander::updateAttackSquads()
 
 void CombatCommander::updateScoutDefenseSquad()
 {
-    if (m_combatUnits.empty())
-    {
-        return;
-    }
-
     // if the current squad has units in it then we can ignore this
     Squad & scoutDefenseSquad = m_squadData.getSquad("ScoutDefense");
 
@@ -122,14 +117,14 @@ void CombatCommander::updateScoutDefenseSquad()
     std::vector<Unit> enemyUnitsInRegion;
     for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
     {
-        if (myBaseLocation->containsPosition(unit.getPosition()))
+        if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
         {
             enemyUnitsInRegion.push_back(unit);
         }
     }
 
     // if there's an enemy worker in our region then assign someone to chase him
-    bool assignScoutDefender = (enemyUnitsInRegion.size() == 1) && enemyUnitsInRegion[0].getType().isWorker();
+    bool assignScoutDefender = enemyUnitsInRegion.size() >= 1;
 
     // if our current squad is empty and we should assign a worker, do it
     if (scoutDefenseSquad.isEmpty() && assignScoutDefender)
@@ -138,15 +133,11 @@ void CombatCommander::updateScoutDefenseSquad()
         Unit enemyWorkerUnit = *enemyUnitsInRegion.begin();
         BOT_ASSERT(enemyWorkerUnit.isValid(), "null enemy worker unit");
 
-        // get our worker unit that is mining that is closest to it
-        Unit workerDefender = findClosestWorkerTo(m_combatUnits, enemyWorkerUnit.getPosition());
-
-        if (enemyWorkerUnit.isValid() && workerDefender.isValid())
+        if (enemyWorkerUnit.isValid())
         {
-            // grab it from the worker manager and put it in the squad
-            if (m_squadData.canAssignUnitToSquad(workerDefender, scoutDefenseSquad))
+            Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition());
+            if (workerDefender.isValid())
             {
-                m_bot.Workers().setCombatWorker(workerDefender);
                 m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
             }
         }
@@ -171,11 +162,6 @@ void CombatCommander::updateScoutDefenseSquad()
 
 void CombatCommander::updateDefenseSquads()
 {
-    if (m_combatUnits.empty())
-    {
-        return;
-    }
-
     // for each of our occupied regions
     const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
     for (const BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
@@ -190,6 +176,7 @@ void CombatCommander::updateDefenseSquads()
 
         // start off assuming all enemy units in region are just workers
         int numDefendersPerEnemyUnit = 2; // 2 might be too much if we consider them workers...
+        int numDefendersPerEnemyCanon = 4; // This is a minimum
 
         // all of the enemy units in this region
         std::vector<Unit> enemyUnitsInRegion;
@@ -207,23 +194,22 @@ void CombatCommander::updateDefenseSquads()
             }
         }
 
-        // we can ignore the first enemy worker in our region since we assume it is a scout
-        // no... we want to kill it, there is no real reason to let the enemy scout us
-        // and it could be a cacnon rush...
-        //for (auto unit : enemyUnitsInRegion)
-        //{
-        //    BOT_ASSERT(unit.isValid(), "null enemyt unit in region");
+         //we can ignore the first enemy worker in our region since we assume it is a scout (handle by scout defence)
+        for (auto unit : enemyUnitsInRegion)
+        {
+            BOT_ASSERT(unit.isValid(), "null enemyt unit in region");
 
-        //    if (unit.getType().isWorker())
-        //    {
-        //        enemyUnitsInRegion.erase(std::remove(enemyUnitsInRegion.begin(), enemyUnitsInRegion.end(), unit), enemyUnitsInRegion.end());
-        //        break;
-        //    }
-        //}
+            if (unit.getType().isWorker())
+            {
+                enemyUnitsInRegion.erase(std::remove(enemyUnitsInRegion.begin(), enemyUnitsInRegion.end(), unit), enemyUnitsInRegion.end());
+                break;
+            }
+        }
 
         // calculate how many units are flying / ground units
         int numEnemyFlyingInRegion = 0;
         int numEnemyGroundInRegion = 0;
+        int numForCanonRush = 0;
         for (auto & unit : enemyUnitsInRegion)
         {
             BOT_ASSERT(unit.isValid(), "null enemy unit in region");
@@ -234,7 +220,15 @@ void CombatCommander::updateDefenseSquads()
             }
             else
             {
-                numEnemyGroundInRegion++;
+                // Canon rush are dangerous
+                if (unit.getType().isAttackingBuilding())
+                {
+                    numForCanonRush++;
+                }
+                else
+                {
+                    numEnemyGroundInRegion++;
+                }
             }
         }
 
@@ -271,7 +265,7 @@ void CombatCommander::updateDefenseSquads()
 
             // figure out how many units we need on defense
             int flyingDefendersNeeded = numDefendersPerEnemyUnit * numEnemyFlyingInRegion;
-            int groundDefensersNeeded = numDefendersPerEnemyUnit * numEnemyGroundInRegion;
+            int groundDefensersNeeded = numDefendersPerEnemyUnit * numEnemyGroundInRegion + numForCanonRush * numDefendersPerEnemyCanon;
 
             updateDefenseSquadUnits(defenseSquad, flyingDefendersNeeded, groundDefensersNeeded);
         }
@@ -324,6 +318,13 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
     }
 
     size_t defendersNeeded = flyingDefendersNeeded + groundDefendersNeeded;
+    for (auto unit : squadUnits)
+    {
+        if (unit.isAlive())
+        {
+            defendersNeeded--;
+        }
+    }
     size_t defendersAdded = 0;
 
     while (defendersNeeded > defendersAdded)
@@ -366,9 +367,36 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
         }
     }
 
+    if (!closestDefender.isValid())
+    {
+        // we search for worker to defend.
+        closestDefender = findWorkerToAssignToSquad(defenseSquad, pos);
+
+    }
+
     return closestDefender;
 }
 
+Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos)
+{
+
+    // get our worker unit that is mining that is closest to it
+    Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(pos);
+
+    if (workerDefender.isValid())
+    {
+        // grab it from the worker manager and put it in the squad
+        if (m_squadData.canAssignUnitToSquad(workerDefender, defenseSquad))
+        {
+            m_bot.Workers().setCombatWorker(workerDefender);
+        }
+        else
+        {
+            workerDefender = {};
+        }
+    }
+    return workerDefender;
+}
 
 void CombatCommander::drawSquadInformation()
 {
@@ -424,35 +452,4 @@ CCPosition CombatCommander::getMainAttackLocation()
 
     // Fourth choice: We can't see anything so explore the map attacking along the way
     return Util::GetPosition(m_bot.Map().getLeastRecentlySeenTile());
-}
-
-Unit CombatCommander::findClosestWorkerTo(std::vector<Unit> & unitsToAssign, const CCPosition & target)
-{
-    Unit closestMineralWorker;
-    float closestDist = std::numeric_limits<float>::max();
-
-    // for each of our workers
-    for (auto & unit : unitsToAssign)
-    {
-        BOT_ASSERT(unit.isValid(), "unit to assign was null");
-
-        if (!unit.getType().isWorker())
-        {
-            continue;
-        }
-
-        // if it is a move worker
-        if (m_bot.Workers().isFree(unit))
-        {
-            float dist = Util::Dist(unit, target);
-
-            if (dist < closestDist)
-            {
-                closestMineralWorker = unit;
-                dist = closestDist;
-            }
-        }
-    }
-
-    return closestMineralWorker;
 }

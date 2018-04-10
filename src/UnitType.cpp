@@ -82,9 +82,9 @@ bool UnitType::isCombatUnit() const
 {
 #ifdef SC2API
     if (isWorker()) { return false; }
-    if (isSupplyProvider()) { return false; }
+    if (isSupplyProvider() && !isAttackingBuilding()) { return false; }
     // If the building have a range, it can attack
-    if (isBuilding() && getAttackRange() <= 0.1f) { return false; }
+    if (isBuilding() && !isAttackingBuilding()) { return false; }
 
     if (isEgg() || isLarva()) { return false; }
 
@@ -410,4 +410,9 @@ bool UnitType::isMorphedBuilding() const
             m_type == BWAPI::UnitTypes::Zerg_Hive ||
             m_type == BWAPI::UnitTypes::Zerg_Greater_Spire;
 #endif
+}
+
+bool UnitType::isAttackingBuilding() const
+{
+    return (isBuilding() && getAttackRange() > 0.0f) || m_type.ToType() == sc2::UNIT_TYPEID::TERRAN_BUNKER;
 }
