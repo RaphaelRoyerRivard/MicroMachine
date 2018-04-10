@@ -22,9 +22,7 @@
         "EnemyDifficulty"           : 7,
         "EnemyRace"                 : "Random",
         "MapFile"                   : "InterloperLE.SC2Map",
-        "StepSize"                  : 1,
-        "BatchReplayMode"           : false,
-        "NbBatchReplay"             : 20
+        "StepSize"                  : 1
     },
         
     "Micro" :
