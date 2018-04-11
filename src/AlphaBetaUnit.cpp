@@ -3,7 +3,7 @@
 
 AlphaBetaUnit::AlphaBetaUnit() { }
 
-AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot) {
+AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot, bool has_played/*=false*/) {
     this->actual_unit = actual_unit;
     this->hp_current = actual_unit->health;
     this->hp_max = actual_unit->health_max;
@@ -30,6 +30,7 @@ AlphaBetaUnit::AlphaBetaUnit(const sc2::Unit * actual_unit, CCBot * bot) {
     attack_time = actual_unit->weapon_cooldown;
     move_time = 0.f;
     shield = actual_unit->shield;
+    this->has_played = has_played;
     UpdateIsDead();
 }
 

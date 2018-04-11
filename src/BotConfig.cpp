@@ -22,6 +22,9 @@ BotConfig::BotConfig()
     UserInput = true;
     CompleteMapInformation = false;
 
+    BatchReplayMode = false;
+    NbBatchReplay = 1;
+
     DrawGameInfo = true;
     DrawProductionInfo = true;
     DrawTileInfo = false;
@@ -51,6 +54,7 @@ BotConfig::BotConfig()
 
     AlphaBetaDepth = 6;
     AlphaBetaMaxMilli = 100;
+    UnitOwnAgent = false;
 }
 
 void BotConfig::readConfigFile()
@@ -95,11 +99,10 @@ void BotConfig::readConfigFile()
     if (j.count("Micro") && j["Micro"].is_object())
     {
         const json & micro = j["Micro"];
+        JSONTools::ReadBool("UnitOwnAgent", micro, UnitOwnAgent);
+        JSONTools::ReadBool("SkipOneFrame", micro, SkipOneFrame);
         JSONTools::ReadBool("KiteWithRangedUnits", micro, KiteWithRangedUnits);
         JSONTools::ReadBool("ScoutHarassEnemy", micro, ScoutHarassEnemy);
-        JSONTools::ReadBool("AlphaBetaPruning", micro, AlphaBetaPruning);
-        JSONTools::ReadInt("AlphaBetaDepth", micro, AlphaBetaDepth);
-        JSONTools::ReadInt("AlphaBetaMaxMilli", micro, AlphaBetaMaxMilli);
         JSONTools::ReadBool("ClosestEnemy", micro, ClosestEnemy);
         JSONTools::ReadBool("WeakestEnemy", micro, WeakestEnemy);
         JSONTools::ReadBool("HighestPriority", micro, HighestPriority);
@@ -114,6 +117,14 @@ void BotConfig::readConfigFile()
         JSONTools::ReadInt("UCTCDMaxTraversals", uctcd, UCTCDMaxTraversals);
         JSONTools::ReadBool("UCTCDConsiderDistance", uctcd, UCTCDConsiderDistance);
     }
+    // Parse the AlphaBeta Options
+    if (j.count("AlphaBeta") && j["AlphaBeta"].is_object())
+    {
+        const json & abcd = j["AlphaBeta"];
+        JSONTools::ReadBool("AlphaBetaPruning", abcd, AlphaBetaPruning);
+        JSONTools::ReadInt("AlphaBetaDepth", abcd, AlphaBetaDepth);
+        JSONTools::ReadInt("AlphaBetaMaxMilli", abcd, AlphaBetaMaxMilli);
+    }
 
     // Parse the BWAPI Options
     if (j.count("BWAPI") && j["BWAPI"].is_object())
@@ -123,6 +134,14 @@ void BotConfig::readConfigFile()
         JSONTools::ReadInt("SetFrameSkip", bwapi, SetFrameSkip);
         JSONTools::ReadBool("UserInput", bwapi, UserInput);
         JSONTools::ReadBool("CompleteMapInformation", bwapi, CompleteMapInformation);
+    }
+
+    // Parse the SC2 Options
+    if (j.count("SC2API") && j["SC2API"].is_object())
+    {
+        const json & sc2api = j["SC2API"];
+        JSONTools::ReadBool("BatchReplayMode", sc2api, BatchReplayMode);
+        JSONTools::ReadInt("NbBatchReplay", sc2api, NbBatchReplay);
     }
 
     // Parse the Macro Options

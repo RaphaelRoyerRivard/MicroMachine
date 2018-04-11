@@ -16,6 +16,7 @@ public:
     AlphaBetaActionType type;
     float time; // temps à laquelle l'action sera terminée
 
+    AlphaBetaAction();
     AlphaBetaAction(std::shared_ptr<AlphaBetaUnit> punit, std::shared_ptr<AlphaBetaUnit> ptarget, sc2::Point2D pposition, float pdistance, AlphaBetaActionType ptype, float ptime);
 };
 

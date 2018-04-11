@@ -2,10 +2,11 @@
 #include "AlphaBetaConsideringDurations.h"
 #include "AlphaBetaTimeOut.h"
 
-AlphaBetaConsideringDurations::AlphaBetaConsideringDurations(std::chrono::milliseconds time, size_t depth, bool pClosestEnemy, bool pWeakestEnemy, bool pHighestPriority)
+AlphaBetaConsideringDurations::AlphaBetaConsideringDurations(std::chrono::milliseconds time, size_t depth, bool pUnitOwnAgent, bool pClosestEnemy, bool pWeakestEnemy, bool pHighestPriority)
     : time_limit(time),
     start{},
     depth_limit(depth),
+    unitOwnAgent(pUnitOwnAgent),
     closestEnemy(pClosestEnemy),
     weakestEnemy(pWeakestEnemy),
     highestPriority(pHighestPriority)
@@ -45,7 +46,7 @@ AlphaBetaValue AlphaBetaConsideringDurations::alphaBeta(AlphaBetaState state, si
     // MAX == true
     bool toMove = state.playerToMove();
 
-    std::vector<AlphaBetaMove *> moves = state.generateMoves(toMove, closestEnemy, weakestEnemy, highestPriority);
+    std::vector<AlphaBetaMove *> moves = state.generateMoves(toMove, closestEnemy, weakestEnemy, highestPriority, unitOwnAgent,  depth_limit - depth);
     for (auto m : moves) {
         AlphaBetaValue val;
         if (state.bothCanMove() && m0 == nullptr && depth != 1)

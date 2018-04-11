@@ -22,6 +22,9 @@ public:
     int SetFrameSkip;
     bool UserInput;
     bool CompleteMapInformation;
+
+    bool BatchReplayMode;
+    int NbBatchReplay;
     
     std::string StrategyName;
     std::string ReadDir;
@@ -64,6 +67,8 @@ public:
     int UCTCDMaxTraversals;
     bool UCTCDConsiderDistance;
 
+    bool UnitOwnAgent;
+    bool SkipOneFrame;
     bool ClosestEnemy;
     bool WeakestEnemy;
     bool HighestPriority;

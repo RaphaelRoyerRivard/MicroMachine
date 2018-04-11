@@ -4,20 +4,21 @@
 #include "UCTCDNode.h"
 #include "UCTCDTimeOut.h"
 
-UCTConsideringDurations::UCTConsideringDurations(float pk, size_t pmax_traversals, size_t time)
+UCTConsideringDurations::UCTConsideringDurations(float pk, size_t pmax_traversals, size_t time, std::map<const sc2::Unit *, UCTCDAction> pcommand_for_unit)
     : k(pk)
     , max_traversals(pmax_traversals)
     , time_limit(time)
     , nodes_explored(1)
     , traversals(0)
+    , command_for_unit(pcommand_for_unit)
 {
 }
 
-UCTCDMove UCTConsideringDurations::doSearch(std::vector<UCTCDUnit> max_units, std::vector<UCTCDUnit> min_units, bool pclosest, bool pweakest, bool ppriority, bool pconsiderDistance)
+UCTCDMove UCTConsideringDurations::doSearch(std::vector<UCTCDUnit> max_units, std::vector<UCTCDUnit> min_units, bool pclosest, bool pweakest, bool ppriority, bool pconsiderDistance, bool punitOwnAgent)
 {
     UCTCDPlayer min = UCTCDPlayer(min_units, false);
     UCTCDPlayer max = UCTCDPlayer(max_units, true);
-    UCTCDState state = UCTCDState(min, max, 0, pclosest, pweakest, ppriority, pconsiderDistance);
+    UCTCDState state = UCTCDState(min, max, 0, pclosest, pweakest, ppriority, pconsiderDistance, punitOwnAgent);
     return UCTCD(state);
 }
 
@@ -37,13 +38,18 @@ UCTCDMove UCTConsideringDurations::UCTCD(UCTCDState state)
     win_value = root.get_Score();
     auto child = root.getMostVisitedChild();
 
-    UCTCDMove move = child != nullptr? child->move : move = UCTCDMove{};
+    UCTCDMove move = child != nullptr ? child->move : UCTCDMove{};
 
     return move;
 }
 
 int UCTConsideringDurations::traverse(UCTCDNode & n, UCTCDState & s)
-{
+{   
+    if (&n == NULL) {
+        // not a valid node
+        return -1;
+    }
+    
     int score;
     if (n.get_num_visits() == 0) {
         UpdateState(n, s, true);
@@ -110,7 +116,7 @@ void UCTConsideringDurations::generateChildren(UCTCDState & s, UCTCDNode & n)
         player_to_move = s.playerToMove();
         type = UCTCDNodeType::SOLO;
     }
-    moves = s.generateMoves(player_to_move);
+    moves = s.generateMoves(player_to_move, n, command_for_unit);
     for (auto move : moves) {
         n.addChild(UCTCDNode(&n, player_to_move, type, move));
         ++nodes_explored;

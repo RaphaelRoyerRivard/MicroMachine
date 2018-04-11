@@ -106,14 +106,30 @@ void RangedManager::AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits,
     std::vector<std::shared_ptr<AlphaBetaUnit>> minUnits;
     std::vector<std::shared_ptr<AlphaBetaUnit>> maxUnits;
 
+    if (lastUnitCommand.size() >= rangedUnits.size()) {
+        lastUnitCommand.clear();
+    }
+
     for (auto unit : rangedUnits) {
-        maxUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot));
+        bool has_played = false;
+
+        if (m_bot.Config().UnitOwnAgent) {
+            // Update has_played value
+            for (auto unitC : lastUnitCommand) {
+                if (unitC == unit) {
+                    has_played = true;
+                    break;
+                }
+            }
+        }
+
+        maxUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot, has_played));
     }
     for (auto unit : rangedUnitTargets) {
         minUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot));
     }
 
-    AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(std::chrono::milliseconds(m_bot.Config().AlphaBetaMaxMilli), m_bot.Config().AlphaBetaDepth, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority);
+    AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(std::chrono::milliseconds(m_bot.Config().AlphaBetaMaxMilli), m_bot.Config().AlphaBetaDepth, m_bot.Config().UnitOwnAgent, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority);
     AlphaBetaValue value = alphaBeta.doSearch(maxUnits, minUnits, &m_bot);
     size_t nodes = alphaBeta.nodes_evaluated;
     m_bot.Map().drawTextScreen(0.005f, 0.005f, std::string("Nodes explored : ") + std::to_string(nodes));
@@ -121,6 +137,7 @@ void RangedManager::AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits,
     m_bot.Map().drawTextScreen(0.005f, 0.035f, std::string("AB value : ") + std::to_string(value.score));
     if (value.move != NULL) {
         for (auto action : value.move->actions) {
+            lastUnitCommand.push_back(action->unit->actual_unit);
             if (action->type == AlphaBetaActionType::ATTACK) {
                 Micro::SmartAttackUnit(action->unit->actual_unit, action->target->actual_unit, m_bot);
             }
@@ -137,15 +154,32 @@ void RangedManager::AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits,
 void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets) {
     std::vector<UCTCDUnit> minUnits;
     std::vector<UCTCDUnit> maxUnits;
+    
+    if (m_bot.Config().SkipOneFrame && isCommandDone) {
+        isCommandDone = false;
+
+        return;
+    }
+
+    if (lastUnitCommand.size() >= rangedUnits.size()) {
+        lastUnitCommand.clear();
+    }
 
     for (auto unit : rangedUnits) {
-        maxUnits.push_back(UCTCDUnit(unit, &m_bot));
+        bool has_played = false;
+
+        if (m_bot.Config().UnitOwnAgent && std::find(lastUnitCommand.begin(), lastUnitCommand.end(), unit) != lastUnitCommand.end()) {
+            // Update has_played value
+            has_played = true;
+        }
+
+        maxUnits.push_back(UCTCDUnit(unit, &m_bot, has_played));
     }
     for (auto unit : rangedUnitTargets) {
         minUnits.push_back(UCTCDUnit(unit, &m_bot));
     }
-    UCTConsideringDurations uctcd = UCTConsideringDurations(m_bot.Config().UCTCDK, m_bot.Config().UCTCDMaxTraversals, m_bot.Config().UCTCDMaxMilli);
-    UCTCDMove move = uctcd.doSearch(maxUnits, minUnits, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority, m_bot.Config().UCTCDConsiderDistance);
+    UCTConsideringDurations uctcd = UCTConsideringDurations(m_bot.Config().UCTCDK, m_bot.Config().UCTCDMaxTraversals, m_bot.Config().UCTCDMaxMilli, command_for_unit);
+    UCTCDMove move = uctcd.doSearch(maxUnits, minUnits, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority, m_bot.Config().UCTCDConsiderDistance, m_bot.Config().UnitOwnAgent);
 
     size_t nodes = uctcd.nodes_explored;
     size_t traversals = uctcd.traversals;
@@ -157,6 +191,18 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
     m_bot.Map().drawTextScreen(0.005f, 0.050f, std::string("Most value : ") + std::to_string(win_value));
 
     for (auto action : move.actions) {
+        if (action.unit.has_played) {
+            // reset priority
+            lastUnitCommand.clear();
+        }
+        lastUnitCommand.push_back(action.unit.actual_unit);
+        command_for_unit[action.unit.actual_unit] = action;
+
+        // Select unit (visual info only)
+        const sc2::ObservationInterface* obs = m_bot.Observation();
+        sc2::Point2DI target = Util::ConvertWorldToCamera(obs->GetGameInfo(), obs->GetCameraPos(), action.unit.actual_unit->pos);
+        m_bot.ActionsFeatureLayer()->Select(target, sc2::PointSelectionType::PtSelect);
+
         if (action.type == UCTCDActionType::ATTACK) {
             Micro::SmartAttackUnit(action.unit.actual_unit, action.target.actual_unit, m_bot);
         }
@@ -167,6 +213,7 @@ void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vecto
             Micro::SmartMove(action.unit.actual_unit, action.position, m_bot);
         }
 
+        isCommandDone = true;
     }
 }
 

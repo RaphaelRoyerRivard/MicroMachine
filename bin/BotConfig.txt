@@ -20,20 +20,22 @@
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Random",
         "MapFile"                   : "mini_games//DefeatZerglingsAndBanelings.SC2Map",
-        "StepSize"                  : 1
+        "StepSize"                  : 1,
+        "BatchReplayMode"           : false,
+        "NbBatchReplay"             : 50
     },
         
     "Micro" :
     {
-        "AlphaBetaPruning"          : false,
-        "AlphaBetaDepth"            : 6,
-        "AlphaBetaMaxMilli"         : 100,
+        "UnitOwnAgent"              : true,
+        "SkipOneFrame"              : true,
         "ClosestEnemy"              : true,
         "WeakestEnemy"              : false,
         "HighestPriority"           : true,
         "KiteWithRangedUnits"       : true,
         "ScoutHarassEnemy"          : true
     },
+    
     "UCTConsideringDurations" :
     {
         "UCTCD"                     : true,
@@ -42,6 +44,14 @@
         "UCTCDMaxTraversals"        : 1000,
         "UCTCDConsiderDistance"     : false
     },
+    
+    "AlphaBeta" :
+    {
+        "AlphaBetaPruning"          : false,
+        "AlphaBetaDepth"            : 6,
+        "AlphaBetaMaxMilli"         : 100
+    },
+    
     "Macro" :
     {
         "WorkersPerRefinery"        : 3,
