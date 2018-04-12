@@ -45,7 +45,7 @@ If the bot crashes or does other nasty things, please bear with me while I make 
 
 * Download and install [Visual Studio 2017](https://www.visualstudio.com/downloads/)
 * To play BW, you must download and install StarCraft BW v1.16.1 as well as [BWAPI](https://github.com/bwapi/bwapi)
-* To play SC2, you must download and install the [StarCraft II AI API](https://github.com/Blizzard/s2client-api). The easiest way to do this is to download the [Precompiled Libraries](https://github.com/Blizzard/s2client-api#precompiled-libs) at the bottom of the page, and simply extract them to a folder on your PC. If you are getting the SC2API via cloning the Blizzard github repo and compiling it from scratch, you may need to point VS to different directories for include and lib than the ones described below.
+* To play SC2, you must download and install the [StarCraft II AI API](https://github.com/Blizzard/s2client-api). The easiest way to do this is to download the [Precompiled Libraries](https://github.com/Blizzard/s2client-api#precompiled-libs) at the bottom of the page, and simply extract them to a folder on your PC (make sure they are up to date). If you are getting the SC2API via cloning the Blizzard github repo and compiling it from scratch, you may need to point VS to different directories for include and lib than the ones described below.
 * Clone this git repository to a folder on your PC
 * Open "CommandCenter/vs/CommandCenter.sln" in VS2017
 * If you compile the CommandCenter project with the x64 Platform, it will compile the SC2 bot
