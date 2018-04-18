@@ -40,10 +40,10 @@ bool CombatCommander::isSquadUpdateFrame()
 
 void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 {
-    if (!m_attackStarted)
-    {
-        m_attackStarted = shouldWeStartAttacking();
-    }
+    //if (!m_attackStarted)
+    //{
+    m_attackStarted = shouldWeStartAttacking();
+    //}
 
     m_combatUnits = combatUnits;
 
