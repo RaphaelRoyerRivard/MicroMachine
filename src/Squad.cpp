@@ -6,6 +6,7 @@ Squad::Squad(CCBot & bot)
     : m_bot(bot)
     , m_lastRetreatSwitch(0)
     , m_lastRetreatSwitchVal(false)
+    , m_maxDistanceFromCenter(0)
     , m_priority(0)
     , m_name("Default")
     , m_meleeManager(bot)
@@ -20,6 +21,20 @@ Squad::Squad(const std::string & name, const SquadOrder & order, size_t priority
     , m_order(order)
     , m_lastRetreatSwitch(0)
     , m_lastRetreatSwitchVal(false)
+    , m_maxDistanceFromCenter(0)
+    , m_priority(priority)
+    , m_meleeManager(bot)
+    , m_rangedManager(bot)
+{
+}
+
+Squad::Squad(const std::string & name, const SquadOrder & order, float maxDistanceFromCenter, size_t priority, CCBot & bot)
+    : m_bot(bot)
+    , m_name(name)
+    , m_order(order)
+    , m_lastRetreatSwitch(0)
+    , m_lastRetreatSwitchVal(false)
+    , m_maxDistanceFromCenter(maxDistanceFromCenter)
     , m_priority(priority)
     , m_meleeManager(bot)
     , m_rangedManager(bot)
@@ -31,15 +46,20 @@ void Squad::onFrame()
     // update all necessary unit information within this squad
     updateUnits();
 
-    // determine whether or not we should regroup
-    bool needToRegroup = needsToRegroup();
-    
-    // if we do need to regroup, do it
-    if (needToRegroup)
+    if (m_order.getType() == SquadOrderTypes::Retreat)
     {
-        CCPosition regroupPosition = calcRegroupPosition();
+        CCPosition retreatPosition = calcRetreatPosition();
 
-        m_bot.Map().drawCircle(regroupPosition, 3, CCColor(255, 0, 255));
+        m_bot.Map().drawCircle(retreatPosition, 3, CCColor(255, 0, 255));
+
+        m_meleeManager.regroup(retreatPosition);
+        m_rangedManager.regroup(retreatPosition);
+    }
+    else if (m_order.getType() == SquadOrderTypes::Regroup)
+    {
+        CCPosition regroupPosition = calcCenter();
+
+        m_bot.Map().drawCircle(regroupPosition, 3, CCColor(0, 0, 255));
 
         m_meleeManager.regroup(regroupPosition);
         m_rangedManager.regroup(regroupPosition);
@@ -57,6 +77,16 @@ void Squad::onFrame()
 bool Squad::isEmpty() const
 {
     return m_units.empty();
+}
+
+float Squad::getMaxDistanceFromCenter() const
+{
+    return m_maxDistanceFromCenter;
+}
+
+void Squad::setMaxDistanceFromCenter(const float &maxDistanceFromCenter)
+{
+    m_maxDistanceFromCenter = maxDistanceFromCenter;
 }
 
 size_t Squad::getPriority() const
@@ -80,7 +110,7 @@ void Squad::setAllUnits()
 {
     // clean up the _units vector just in case one of them died
     std::set<Unit> goodUnits;
-    for (auto unit : m_units)
+    for (auto & unit : m_units)
     {
         if (!unit.isValid()) { continue; }
         if (unit.isBeingConstructed()) { continue; }
@@ -96,7 +126,7 @@ void Squad::setAllUnits()
 void Squad::setNearEnemyUnits()
 {
     m_nearEnemy.clear();
-    for (auto unit : m_units)
+    for (auto & unit : m_units)
     {
         m_nearEnemy[unit] = isUnitNearEnemy(unit);
 
@@ -114,7 +144,7 @@ void Squad::addUnitsToMicroManagers()
     std::vector<Unit> tankUnits;
 
     // add _units to micro managers
-    for (auto unit : m_units)
+    for (auto & unit : m_units)
     {
         BOT_ASSERT(unit.isValid(), "null unit in addUnitsToMicroManagers()");
 
@@ -145,13 +175,40 @@ void Squad::addUnitsToMicroManagers()
     //m_tankManager.setUnits(tankUnits);
 }
 
-// TODO: calculates whether or not to regroup
+bool Squad::needsToRetreat() const
+{
+    //Only the main attack can retreat
+    if (m_name != "MainAttack")
+        return false;
+
+    float meleePower = m_meleeManager.getSquadPower();
+    float rangedPower = m_rangedManager.getSquadPower();
+    float targetsPower = m_rangedManager.getTargetsPower();
+    return meleePower + rangedPower < targetsPower;
+}
+
 bool Squad::needsToRegroup() const
 {
-    if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Regroup)
-        return m_units.size() < 4;
-    else
+    //Only the main attack can regroup
+    if (m_name != "MainAttack")
         return false;
+
+    //Can regroup only after retreat or when it is already regrouping (to prevent stopping prematurely)
+    if (m_order.getType() != SquadOrderTypes::Retreat && m_order.getType() != SquadOrderTypes::Regroup)
+        return false;
+
+    CCPosition squadCenter = calcCenter();
+    float averageDistance = 0;
+    for (auto & unit : m_units)
+    {
+        averageDistance += Util::Dist(unit.getPosition(), squadCenter);
+    }
+    averageDistance /= m_units.size();
+
+    if(m_order.getType() == SquadOrderTypes::Regroup)
+        return averageDistance > m_maxDistanceFromCenter * 0.2f;
+    else
+        return averageDistance > m_maxDistanceFromCenter * 0.5f;
 }
 
 void Squad::setSquadOrder(const SquadOrder & so)
@@ -166,7 +223,7 @@ bool Squad::containsUnit(const Unit & unit) const
 
 void Squad::clear()
 {
-    for (auto unit : getUnits())
+    for (auto & unit : getUnits())
     {
         BOT_ASSERT(unit.isValid(), "null unit in squad clear");
 
@@ -202,7 +259,7 @@ CCPosition Squad::calcCenter() const
     }
 
     CCPosition sum(0, 0);
-    for (auto unit: m_units)
+    for (auto & unit: m_units)
     {
         BOT_ASSERT(unit.isValid(), "null unit in squad calcCenter");
         sum += unit.getPosition();
@@ -211,13 +268,14 @@ CCPosition Squad::calcCenter() const
     return CCPosition(sum.x / m_units.size(), sum.y / m_units.size());
 }
 
-CCPosition Squad::calcRegroupPosition() const
+CCPosition Squad::calcRetreatPosition() const
 {
-    CCPosition regroup(0, 0);
+    return m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getPosition();
+    /*CCPosition regroup(0, 0);
 
     float minDist = std::numeric_limits<float>::max();
 
-    for (auto unit : m_units)
+    for (auto & unit : m_units)
     {
         if (!m_nearEnemy.at(unit))
         {
@@ -237,7 +295,7 @@ CCPosition Squad::calcRegroupPosition() const
     else
     {
         return regroup;
-    }
+    }*/
 }
 
 Unit Squad::unitClosestToEnemy() const
@@ -266,7 +324,7 @@ int Squad::squadUnitsNear(const CCPosition & p) const
 {
     int numUnits = 0;
 
-    for (auto unit : m_units)
+    for (auto & unit : m_units)
     {
         BOT_ASSERT(unit.isValid(), "null unit");
 
@@ -297,6 +355,19 @@ void Squad::addUnit(const Unit & unit)
 void Squad::removeUnit(const Unit & unit)
 {
     m_units.erase(unit);
+}
+
+void Squad::giveBackWorkers()
+{
+    for (auto & unit : m_units)
+    {
+        BOT_ASSERT(unit.isValid(), "null unit");
+
+        if (unit.getType().isWorker())
+        {
+            m_bot.Workers().finishedWithWorker(unit);
+        }
+    }
 }
 
 const std::string & Squad::getName() const

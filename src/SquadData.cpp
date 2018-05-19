@@ -21,15 +21,7 @@ void SquadData::clearSquadData()
     for (auto & kv : m_squads)
     {
         Squad & squad = kv.second;
-        for (auto & unit : squad.getUnits())
-        {
-            BOT_ASSERT(unit.isValid(), "null unit");
-
-            if (unit.getType().isWorker())
-            {
-                m_bot.Workers().finishedWithWorker(unit);
-            }
-        }
+        squad.giveBackWorkers();
     }
 
     m_squads.clear();
@@ -43,16 +35,6 @@ void SquadData::removeSquad(const std::string & squadName)
     if (squadPtr == m_squads.end())
     {
         return;
-    }
-
-    for (auto unit : squadPtr->second.getUnits())
-    {
-        BOT_ASSERT(unit.isValid(), "null unit");
-
-        if (unit.getType().isWorker())
-        {
-            m_bot.Workers().finishedWithWorker(unit);
-        }
     }
 
     m_squads.erase(squadName);
@@ -101,6 +83,9 @@ void SquadData::drawSquadInformation()
         ss << squad.getName() << " " << units.size() << " (";
         ss << (int)order.getPosition().x << ", " << (int)order.getPosition().y << ")\n";
 
+        CCPosition squadCenter = squad.calcCenter();
+        float terrainHeight = m_bot.Map().terrainHeight(squadCenter.x, squadCenter.y);
+        m_bot.Debug()->DebugSphereOut(sc2::Point3D(squadCenter.x, squadCenter.y, terrainHeight), squad.getMaxDistanceFromCenter(), CCColor(0, 255, 0));
         m_bot.Map().drawCircle(order.getPosition(), 5, CCColor(255, 0, 0));
         m_bot.Map().drawText(order.getPosition(), squad.getName(), CCColor(255, 0, 0));
 
@@ -183,7 +168,17 @@ bool SquadData::canAssignUnitToSquad(const Unit & unit, const Squad & squad) con
     const Squad * unitSquad = getUnitSquad(unit);
 
     // make sure strictly less than so we don't reassign to the same squad etc
-    return !unitSquad || (unitSquad->getPriority() < squad.getPriority());
+    bool canAssign = !unitSquad || (unitSquad->getPriority() < squad.getPriority());
+    if (!canAssign)
+        return false;
+
+    if (squad.getMaxDistanceFromCenter() > 0 && !squad.isEmpty())
+    {
+        float distance = Util::Dist(unit.getPosition(), squad.calcCenter());
+        bool closeEnough = distance < squad.getMaxDistanceFromCenter();
+        return closeEnough;
+    }
+    return true;
 }
 
 Squad & SquadData::getSquad(const std::string & squadName)

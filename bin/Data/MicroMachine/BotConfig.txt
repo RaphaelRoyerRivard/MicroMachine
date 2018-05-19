@@ -19,9 +19,9 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 7,
-        "EnemyRace"                 : "Random",
-        "MapFile"                   : "InterloperLE.SC2Map",
+        "EnemyDifficulty"           : 9,
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "AscensiontoAiurLE.SC2Map",
         "StepSize"                  : 1
     },
         
@@ -53,7 +53,7 @@
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : true,
         "DrawLastSeenTileInfo"      : false,
-        "DrawSquadInfo"             : false,
+        "DrawSquadInfo"             : true,
         "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false
@@ -125,7 +125,7 @@
             "Terran_MarineRush"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SCV", "SupplyDepot", "SCV", "SCV", "Barracks", "Barracks", "Barracks", "Barracks", "Marine", "Marine", "Marine", "Marine", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine", "Marine"],
+                "OpeningBuildOrder" : ["SCV", "SCV", "SupplyDepot", "SCV", "SCV", "Barracks", "Barracks", "Barracks", "Barracks", "Marine", "Marine", "Marine", "Marine", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "SupplyDepot", "Marine"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">", [ 0 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 8 ] ]
             },

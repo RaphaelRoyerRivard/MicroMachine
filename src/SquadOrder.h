@@ -5,7 +5,7 @@
 
 namespace SquadOrderTypes
 {
-    enum { None, Idle, Attack, Defend, Regroup, Drop, SquadOrderTypes };
+    enum { None, Idle, Attack, Defend, Retreat, Regroup, Drop, SquadOrderTypes };
 }
 
 class SquadOrder

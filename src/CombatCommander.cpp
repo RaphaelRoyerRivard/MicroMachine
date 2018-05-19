@@ -3,10 +3,15 @@
 #include "CCBot.h"
 
 const size_t IdlePriority = 0;
-const size_t AttackPriority = 1;
-const size_t BaseDefensePriority = 2;
-const size_t ScoutDefensePriority = 3;
+const size_t BackupPriority = 1;
+const size_t AttackPriority = 2;
+const size_t BaseDefensePriority = 3;
+const size_t ScoutDefensePriority = 4;
 const size_t DropPriority = 4;
+
+const float DefaultOrderRadius = 25;
+const float MainAttackOrderRadius = 15;
+const float MainAttackMaxDistance = 7;
 
 CombatCommander::CombatCommander(CCBot & bot)
     : m_bot(bot)
@@ -21,15 +26,21 @@ void CombatCommander::onStart()
 {
     m_squadData.clearSquadData();
 
-    SquadOrder idleOrder(SquadOrderTypes::Idle, m_bot.GetStartLocation(), 5, "Chill Out");
+    //SquadOrder idleOrder(SquadOrderTypes::Idle, m_bot.GetStartLocation(), 5, "Chill Out");
+    CCTilePosition nextExpansionPosition = m_bot.Bases().getNextExpansion(Players::Self);
+    SquadOrder idleOrder(SquadOrderTypes::Attack, CCPosition(nextExpansionPosition.x, nextExpansionPosition.y), DefaultOrderRadius, "Prepare for battle");
     m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
     // the main attack squad that will pressure the enemy's closest base location
-    SquadOrder mainAttackOrder(SquadOrderTypes::Attack, CCPosition(0, 0), 25, "Attack Enemy Base");
-    m_squadData.addSquad("MainAttack", Squad("MainAttack", mainAttackOrder, AttackPriority, m_bot));
+    SquadOrder mainAttackOrder(SquadOrderTypes::Attack, CCPosition(0, 0), MainAttackOrderRadius, "Attack Enemy Base");
+    m_squadData.addSquad("MainAttack", Squad("MainAttack", mainAttackOrder, MainAttackMaxDistance, AttackPriority, m_bot));
+
+    // the backup squad that will send reinforcements to the main attack squad
+    SquadOrder backupSquadOrder(SquadOrderTypes::Attack, CCPosition(0, 0), DefaultOrderRadius, "Send backups to the main attack squad");
+    m_squadData.addSquad("Backup1", Squad("Backup1", backupSquadOrder, BackupPriority, m_bot));
 
     // the scout defense squad will handle chasing the enemy worker scout
-    SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, m_bot.GetStartLocation(), 25, "Get the scout");
+    SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, m_bot.GetStartLocation(), DefaultOrderRadius, "Get the scout");
     m_squadData.addSquad("ScoutDefense", Squad("ScoutDefense", enemyScoutDefense, ScoutDefensePriority, m_bot));
 }
 
@@ -40,10 +51,10 @@ bool CombatCommander::isSquadUpdateFrame()
 
 void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 {
-    //if (!m_attackStarted)
-    //{
-    m_attackStarted = shouldWeStartAttacking();
-    //}
+    if (!m_attackStarted)
+    {
+        m_attackStarted = shouldWeStartAttacking();
+    }
 
     m_combatUnits = combatUnits;
 
@@ -53,6 +64,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
         updateScoutDefenseSquad();
         updateDefenseSquads();
         updateAttackSquads();
+        updateBackupSquads();
     }
 
     m_squadData.onFrame();
@@ -76,6 +88,44 @@ void CombatCommander::updateIdleSquad()
     }
 }
 
+void CombatCommander::updateBackupSquads()
+{
+    if (!m_attackStarted)
+    {
+        return;
+    }
+
+    Squad & mainAttackSquad = m_squadData.getSquad("MainAttack");
+
+    int backupNo = 1;
+    while (m_squadData.squadExists("Backup" + std::to_string(backupNo)))
+    {
+        Squad & backupSquad = m_squadData.getSquad("Backup" + std::to_string(backupNo));
+
+        for (auto & unit : m_combatUnits)
+        {
+            BOT_ASSERT(unit.isValid(), "null unit in combat units");
+
+            // get every unit of a lower priority and put it into the attack squad
+            if (!unit.getType().isWorker()
+                && !(unit.getType().isOverlord())
+                && !(unit.getType().isQueen())
+                && m_squadData.canAssignUnitToSquad(unit, backupSquad))
+                //TODO validate that the unit is near enough the backup squad, otherwise create another one
+            {
+                m_squadData.assignUnitToSquad(unit, backupSquad);
+            }
+        }
+
+        //TODO send backups towards the main squad if the backups are closer to the enemy base
+        //SquadOrder sendBackupsOrder(SquadOrderTypes::Attack, mainAttackSquad.getSquadOrder().getPosition(), 25, "Send backups to main attack squad");
+        SquadOrder sendBackupsOrder(SquadOrderTypes::Attack, mainAttackSquad.calcCenter(), 25, "Send backups to main attack squad");
+        backupSquad.setSquadOrder(sendBackupsOrder);
+
+        ++backupNo;
+    }
+}
+
 void CombatCommander::updateAttackSquads()
 {
     if (!m_attackStarted)
@@ -85,12 +135,12 @@ void CombatCommander::updateAttackSquads()
 
     Squad & mainAttackSquad = m_squadData.getSquad("MainAttack");
 
-    for (auto unit : m_combatUnits)
+    for (auto & unit : m_combatUnits)
     {   
         BOT_ASSERT(unit.isValid(), "null unit in combat units");
 
         // get every unit of a lower priority and put it into the attack squad
-        if (!unit.getType().isWorker() 
+        if (!unit.getType().isWorker()
             && !(unit.getType().isOverlord()) 
             && !(unit.getType().isQueen()) 
             && m_squadData.canAssignUnitToSquad(unit, mainAttackSquad))
@@ -99,8 +149,22 @@ void CombatCommander::updateAttackSquads()
         }
     }
 
-    SquadOrder mainAttackOrder(SquadOrderTypes::Attack, getMainAttackLocation(), 25, "Attack Enemy Base");
-    mainAttackSquad.setSquadOrder(mainAttackOrder);
+    if (mainAttackSquad.needsToRetreat())
+    {
+        SquadOrder retreatOrder(SquadOrderTypes::Retreat, getMainAttackLocation(), DefaultOrderRadius, "Retreat!!");
+        mainAttackSquad.setSquadOrder(retreatOrder);
+    }
+    //regroup only after retreat
+    else if (mainAttackSquad.needsToRegroup())
+    {
+        SquadOrder regroupOrder(SquadOrderTypes::Regroup, getMainAttackLocation(), DefaultOrderRadius, "Regroup before attacking");
+        mainAttackSquad.setSquadOrder(regroupOrder);
+    }
+    else
+    {
+        SquadOrder mainAttackOrder(SquadOrderTypes::Attack, getMainAttackLocation(), MainAttackOrderRadius, "Attack Enemy Base");
+        mainAttackSquad.setSquadOrder(mainAttackOrder);
+    }
 }
 
 void CombatCommander::updateScoutDefenseSquad()
@@ -145,7 +209,7 @@ void CombatCommander::updateScoutDefenseSquad()
     // if our squad is not empty and we shouldn't have a worker chasing then take him out of the squad
     else if (!scoutDefenseSquad.isEmpty() && !assignScoutDefender)
     {
-        for (auto unit : scoutDefenseSquad.getUnits())
+        for (auto & unit : scoutDefenseSquad.getUnits())
         {
             BOT_ASSERT(unit.isValid(), "null unit in scoutDefenseSquad");
 
@@ -180,6 +244,7 @@ void CombatCommander::updateDefenseSquads()
 
         // all of the enemy units in this region
         std::vector<Unit> enemyUnitsInRegion;
+        bool firstWorker = true;
         for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
         {
             // if it's an overlord, don't worry about it for defense, we don't care what they see
@@ -190,19 +255,14 @@ void CombatCommander::updateDefenseSquads()
 
             if (myBaseLocation->containsPosition(unit.getPosition()))
             {
+                //we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
+                if (unit.getType().isWorker() && firstWorker)
+                {
+                    firstWorker = false;
+                    continue;
+                }
+
                 enemyUnitsInRegion.push_back(unit);
-            }
-        }
-
-         //we can ignore the first enemy worker in our region since we assume it is a scout (handle by scout defence)
-        for (auto unit : enemyUnitsInRegion)
-        {
-            BOT_ASSERT(unit.isValid(), "null enemyt unit in region");
-
-            if (unit.getType().isWorker())
-            {
-                enemyUnitsInRegion.erase(std::remove(enemyUnitsInRegion.begin(), enemyUnitsInRegion.end(), unit), enemyUnitsInRegion.end());
-                break;
             }
         }
 
@@ -253,7 +313,7 @@ void CombatCommander::updateDefenseSquads()
             // if we don't have a squad assigned to this region already, create one
             if (!m_squadData.squadExists(squadName.str()))
             {
-                SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, 30, "Defend Region!");
+                SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
                 m_squadData.addSquad(squadName.str(), Squad(squadName.str(), defendRegion, BaseDefensePriority, m_bot));
             }
         }
@@ -275,7 +335,7 @@ void CombatCommander::updateDefenseSquads()
         }
     }
 
-    // for each of our defense squads, if there aren't any enemy units near the position, remove the squad
+    // for each of our defense squads, if there aren't any enemy units near the position, clear the squad
     std::set<std::string> uselessDefenseSquads;
     for (const auto & kv : m_squadData.getSquads())
     {
@@ -318,7 +378,7 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
     }
 
     size_t defendersNeeded = flyingDefendersNeeded + groundDefendersNeeded;
-    for (auto unit : squadUnits)
+    for (auto & unit : squadUnits)
     {
         if (unit.isAlive())
         {
@@ -360,6 +420,13 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
         }
 
         float dist = Util::Dist(unit, pos);
+        Squad *unitSquad = m_squadData.getUnitSquad(unit);
+        if (unitSquad && unitSquad->getName() == "MainAttack" && Util::Dist(unit.getPosition(), unitSquad->getSquadOrder().getPosition()) < dist)
+        {
+            //We do not want to bring back the main attackers when they are closer to their objective than our base
+            continue;
+        }
+
         if (!closestDefender.isValid() || (dist < minDistance))
         {
             closestDefender = unit;

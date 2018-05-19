@@ -19,6 +19,8 @@ namespace Util
     float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
     float GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
     float GetAttackDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
+    float GetArmor(const sc2::Unit * unit, CCBot & bot);
+    float GetDps(const sc2::Unit * unit, CCBot & bot);
     float GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
     
     std::string     GetStringFromRace(const sc2::Race & race);

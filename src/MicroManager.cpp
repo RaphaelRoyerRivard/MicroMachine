@@ -12,6 +12,11 @@ void MicroManager::setUnits(const std::vector<Unit> & u)
     m_units = u;
 }
 
+void MicroManager::setTargets(const std::vector<Unit> & t)
+{
+    m_targets = t;
+}
+
 void MicroManager::execute(const SquadOrder & inputOrder)
 {
     // Nothing to do if we have no units
@@ -47,7 +52,7 @@ void MicroManager::execute(const SquadOrder & inputOrder)
             }
         }
 
-        for (auto unit : m_units)
+        for (auto & unit : m_units)
         {
             BOT_ASSERT(unit.isValid(), "null unit in attack");
 
@@ -63,6 +68,7 @@ void MicroManager::execute(const SquadOrder & inputOrder)
 
     std::vector<Unit> targetUnitTags;
     std::copy(nearbyEnemies.begin(), nearbyEnemies.end(), std::back_inserter(targetUnitTags));
+    m_targets = targetUnitTags;
 
     // the following block of code attacks all units on the way to the order position
     // we want to do this if the order is attack, defend, or harass
@@ -90,31 +96,71 @@ const std::vector<Unit> & MicroManager::getUnits() const
 
 void MicroManager::regroup(const CCPosition & regroupPosition) const
 {
-    CCPosition ourBasePosition = m_bot.GetStartLocation();
-    int regroupDistanceFromBase = m_bot.Map().getGroundDistance(regroupPosition, ourBasePosition);
+    //CCPosition ourBasePosition = m_bot.GetStartLocation();
+    //int regroupDistanceFromBase = m_bot.Map().getGroundDistance(regroupPosition, ourBasePosition);
 
     // for each of the units we have
-    for (auto unit : m_units)
+    for (auto & unit : m_units)
     {
         BOT_ASSERT(unit.isValid(), "null unit in MicroManager regroup");
 
-        int unitDistanceFromBase = m_bot.Map().getGroundDistance(unit.getPosition(), ourBasePosition);
+        /*int unitDistanceFromBase = m_bot.Map().getGroundDistance(unit.getPosition(), ourBasePosition);
 
         // if the unit is outside the regroup area
         if (unitDistanceFromBase > regroupDistanceFromBase)
         {
             unit.move(ourBasePosition);
         }
-        else if (Util::Dist(unit, regroupPosition) > 4)
+        else*/ if (Util::Dist(unit, regroupPosition) > 4)
         {
             // regroup it
             unit.move(regroupPosition);
         }
         else
         {
-            unit.attackMove(unit.getPosition());
+            unit.attackMove(regroupPosition);
         }
     }
+}
+
+float MicroManager::getSquadPower() const
+{
+    float squadPower = 0;
+
+    for (auto & unit : m_units)
+    {
+        squadPower += getUnitPower(unit);
+    }
+
+    return squadPower;
+}
+
+float MicroManager::getTargetsPower() const
+{
+    float enemyPower = 0;
+
+    for (auto & target : m_targets)
+    {
+        enemyPower += getUnitPower(target);
+    }
+
+    return enemyPower;
+}
+
+float MicroManager::getUnitPower(const Unit &unit) const
+{
+    float unitPower = sqrt(unit.getHitPoints() + unit.getShields());
+    unitPower *= Util::GetDps(unit.getUnitPtr(), m_bot);
+
+    if (unit.getType().getAttackRange() >= 1.5f)
+        unitPower *= 2; //ranged bonus
+
+    unitPower *= 1 + Util::GetArmor(unit.getUnitPtr(), m_bot) * 0.1f;
+
+    //TODO bonus for splash damage
+    //TODO bonus for terrain
+
+    return unitPower;
 }
 
 void MicroManager::trainSubUnits(const Unit & unit) const

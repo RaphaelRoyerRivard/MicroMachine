@@ -207,6 +207,26 @@ float Util::GetAttackDamageForTarget(const sc2::Unit * unit, const sc2::Unit * t
     return damage;
 }
 
+float Util::GetArmor(const sc2::Unit * unit, CCBot & bot)
+{
+    sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+    return unitTypeData.armor;
+}
+
+float Util::GetDps(const sc2::Unit * unit, CCBot & bot)
+{
+    sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+    float dps = 0.f;
+    for (auto weapon : unitTypeData.weapons)
+    {
+        float weaponDps = weapon.damage_;
+        weaponDps *= weapon.attacks / weapon.speed;
+        if (weaponDps > dps)
+            dps = weaponDps;
+    }
+    return dps;
+}
+
 float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
     sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);

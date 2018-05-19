@@ -24,7 +24,7 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
     const std::vector<Unit> &units = getUnits();
 
     std::vector<const sc2::Unit *> rangedUnits;
-    for (auto unit : units)
+    for (auto & unit : units)
     {
         const sc2::Unit * rangedUnit = unit.getUnitPtr();
         rangedUnits.push_back(rangedUnit);
@@ -49,7 +49,7 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
         std::vector<AlphaBetaUnit *> minUnits;
         std::vector<AlphaBetaUnit *> maxUnits;
 
-        for (auto unit : rangedUnits) {
+        for (auto & unit : rangedUnits) {
             if (m_units_actions.find(unit->tag) != m_units_actions.end()) {
                 AlphaBetaUnit * old = m_units_actions[unit->tag];
                 maxUnits.push_back(new AlphaBetaUnit(unit, &m_bot, old->previous_action));
@@ -58,7 +58,7 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
         }
 
         // TODO: Keep enemy unit's actions too ?
-        for (auto unit : rangedUnitTargets) {
+        for (auto & unit : rangedUnitTargets) {
             minUnits.push_back(new AlphaBetaUnit(unit, &m_bot, nullptr));
         }
         size_t depth = 6;
@@ -92,7 +92,7 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
             sc2::Point2D mineralPos;
             target = getTarget(rangedUnit, rangedUnitTargets);
             bool isEnemyInSightCondition = rangedUnitTargets.size() > 0 &&
-                target != nullptr && Util::Dist(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance; // TODO add the 25 value in the config
+                target != nullptr && Util::Dist(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance;
 
             ConditionAction isEnemyInSight(isEnemyInSightCondition);
             ConditionAction isEnemyRanged(target != nullptr && isTargetRanged(target));
