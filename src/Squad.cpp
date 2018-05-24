@@ -242,15 +242,15 @@ bool Squad::needsToRegroup() const
     /*if (m_order.getType() != SquadOrderTypes::Retreat && m_order.getType() != SquadOrderTypes::Regroup)
         return false;*/
 
-    /*int currentFrame = m_bot.GetCurrentFrame();
+    int currentFrame = m_bot.GetCurrentFrame();
 
     //Is last regroup too recent?
     if (m_order.getType() != SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame < m_regroupCooldown)
         return false;
     
-    //Is last regroup too recent?
+    //Is regroup taking too long?
     if (m_order.getType() == SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame > m_maxRegroupDuration)
-        return false;*/
+        return false;
 
     CCPosition squadCenter = calcCenter();
 
@@ -271,9 +271,9 @@ bool Squad::needsToRegroup() const
 
     bool shouldRegroup = false;
     if(m_order.getType() == SquadOrderTypes::Regroup)
-        shouldRegroup = averageDistance > m_units.size() * 0.11f;
+        shouldRegroup = averageDistance > sqrt(m_units.size()) * 0.3f;
     else
-        shouldRegroup = averageDistance > m_units.size() * 0.15f;
+        shouldRegroup = averageDistance > sqrt(m_units.size()) * 0.5f;
     return shouldRegroup;
 }
 
