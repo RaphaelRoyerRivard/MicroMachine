@@ -19,8 +19,8 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 9,
-        "EnemyRace"                 : "Protoss",
+        "EnemyDifficulty"           : 8,
+        "EnemyRace"                 : "Terran",
         "MapFile"                   : "AscensiontoAiurLE.SC2Map",
         "StepSize"                  : 1
     },
@@ -125,8 +125,8 @@
             "Terran_MarineRush"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SCV", "SupplyDepot", "SCV", "SCV", "Barracks", "Barracks", "Barracks", "Barracks", "Marine", "Marine", "Marine", "Marine", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "SupplyDepot", "Marine"],
-                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">", [ 0 ] ],
+                "OpeningBuildOrder" : ["SCV", "SCV", "SupplyDepot", "SCV", "Barracks", "Barracks", "Barracks", "Barracks", "Marine", "Marine", "Marine", "Marine", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "SupplyDepot"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], "<", [ 0 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 8 ] ]
             },
             "Zerg_ZerglingRush"     : 

@@ -75,6 +75,7 @@ public:
     bool    isConnected(const CCPosition & from, const CCPosition & to) const;
     bool    isWalkable(int tileX, int tileY) const;
     bool    isWalkable(const CCTilePosition & tile) const;
+    bool    isWalkable(const CCPosition & pos) const;
     
     bool    isBuildable(int tileX, int tileY) const;
     bool    isBuildable(const CCTilePosition & tile) const;

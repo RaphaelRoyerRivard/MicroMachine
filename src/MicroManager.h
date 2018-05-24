@@ -11,16 +11,14 @@ class AlphaBetaUnit;
 
 class MicroManager
 {
-    //std::vector<const sc2::Unit *> m_unitsPtr;
-    std::vector<Unit> m_units;
-    std::vector<Unit> m_targets;
-
 protected:
 
     CCBot & m_bot;
-    SquadOrder order;
+    SquadOrder m_order;
+    std::vector<Unit> m_units;
+    std::vector<Unit> m_targets;
 
-    virtual void executeMicro(const std::vector<Unit> & targets) = 0;
+    virtual void executeMicro() = 0;
     void trainSubUnits(const Unit & unit) const;
 
 public:
@@ -29,12 +27,12 @@ public:
 
     const std::vector<Unit> & getUnits() const;
     void setUnits(const std::vector<Unit> & u);
-    void setTargets(const std::vector<Unit> & t);
-    void execute(const SquadOrder & order);
+    virtual void setTargets(const std::vector<Unit> & targets) = 0;
+    inline void setOrder(SquadOrder order) { m_order = order; }
     void regroup(const CCPosition & regroupPosition) const;
     float getSquadPower() const;
-    float getTargetsPower() const;
-    float getUnitPower(const Unit & unit) const;
+    float getTargetsPower(float averageSquadHeight) const;
+    float getUnitPower(const Unit & unit, float averageSquadHeight = -1) const;
 
     std::unordered_map<sc2::Tag, FocusFireFiniteStateMachine*> m_focusFireStates;
     std::unordered_map<sc2::Tag, KitingFiniteStateMachine*> m_kittingStates;

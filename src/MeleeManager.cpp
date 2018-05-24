@@ -8,18 +8,10 @@ MeleeManager::MeleeManager(CCBot & bot)
 
 }
 
-void MeleeManager::executeMicro(const std::vector<Unit> & targets)
+void MeleeManager::setTargets(const std::vector<Unit> & targets)
 {
-    assignTargets(targets);
-}
-
-void MeleeManager::assignTargets(const std::vector<Unit> & targets)
-{
-    const std::vector<Unit> & meleeUnits = getUnits();
-
-    // figure out targets
     std::vector<Unit> meleeUnitTargets;
-    for (auto target : targets)
+    for (auto & target : targets)
     {
         if (!target.isValid()) { continue; }
         if (target.isFlying()) { continue; }
@@ -28,6 +20,12 @@ void MeleeManager::assignTargets(const std::vector<Unit> & targets)
 
         meleeUnitTargets.push_back(target);
     }
+    m_targets = meleeUnitTargets;
+}
+
+void MeleeManager::executeMicro()
+{
+    const std::vector<Unit> & meleeUnits = getUnits();
 
     // for each meleeUnit
     for (auto & meleeUnit : meleeUnits)
@@ -35,20 +33,20 @@ void MeleeManager::assignTargets(const std::vector<Unit> & targets)
         BOT_ASSERT(meleeUnit.isValid(), "melee unit is null");
 
         // if the order is to attack or defend
-        if (order.getType() == SquadOrderTypes::Attack || order.getType() == SquadOrderTypes::Defend)
+        if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend)
         {
             // run away if we meet the retreat critereon
-            if (meleeUnitShouldRetreat(meleeUnit, targets))
+            if (meleeUnitShouldRetreat(meleeUnit, m_targets))
             {
                 CCPosition fleeTo(m_bot.GetStartLocation());
 
                 meleeUnit.move(fleeTo);
             }
             // if there are targets
-            else if (!meleeUnitTargets.empty())
+            else if (!m_targets.empty())
             {
                 // find the best target for this meleeUnit
-                Unit target = getTarget(meleeUnit, meleeUnitTargets);
+                Unit target = getTarget(meleeUnit, m_targets);
 
                 // attack it
                 meleeUnit.attackUnit(target);
@@ -57,10 +55,10 @@ void MeleeManager::assignTargets(const std::vector<Unit> & targets)
             else
             {
                 // if we're not near the order position
-                if (Util::Dist(meleeUnit, order.getPosition()) > 4)
+                if (Util::Dist(meleeUnit, m_order.getPosition()) > 4)
                 {
                     // move to it
-                    meleeUnit.move(order.getPosition());
+                    meleeUnit.move(m_order.getPosition());
                 }
             }
         }

@@ -4,8 +4,9 @@
 
 Squad::Squad(CCBot & bot)
     : m_bot(bot)
-    , m_lastRetreatSwitch(0)
-    , m_lastRetreatSwitchVal(false)
+    , m_regroupStartFrame(0)
+    , m_maxRegroupDuration(0)
+    , m_regroupCooldown(0)
     , m_maxDistanceFromCenter(0)
     , m_priority(0)
     , m_name("Default")
@@ -19,8 +20,9 @@ Squad::Squad(const std::string & name, const SquadOrder & order, size_t priority
     : m_bot(bot)
     , m_name(name)
     , m_order(order)
-    , m_lastRetreatSwitch(0)
-    , m_lastRetreatSwitchVal(false)
+    , m_regroupStartFrame(0)
+    , m_maxRegroupDuration(0)
+    , m_regroupCooldown(0)
     , m_maxDistanceFromCenter(0)
     , m_priority(priority)
     , m_meleeManager(bot)
@@ -28,12 +30,13 @@ Squad::Squad(const std::string & name, const SquadOrder & order, size_t priority
 {
 }
 
-Squad::Squad(const std::string & name, const SquadOrder & order, float maxDistanceFromCenter, size_t priority, CCBot & bot)
+Squad::Squad(const std::string & name, const SquadOrder & order, int maxRegroupDuration, int regroupCooldown, float maxDistanceFromCenter, size_t priority, CCBot & bot)
     : m_bot(bot)
     , m_name(name)
     , m_order(order)
-    , m_lastRetreatSwitch(0)
-    , m_lastRetreatSwitchVal(false)
+    , m_regroupStartFrame(0)
+    , m_maxRegroupDuration(maxRegroupDuration)
+    , m_regroupCooldown(regroupCooldown)
     , m_maxDistanceFromCenter(maxDistanceFromCenter)
     , m_priority(priority)
     , m_meleeManager(bot)
@@ -66,12 +69,54 @@ void Squad::onFrame()
     }
     else // otherwise, execute micro
     {
-        m_meleeManager.execute(m_order);
-        m_rangedManager.execute(m_order);
+        // Nothing to do if we have no units
+        if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend))
+        {
+            std::vector<Unit> targets = calcTargets();
 
-        //_detectorManager.setUnitClosestToEnemy(unitClosestToEnemy());
-        //_detectorManager.execute(_order);
+            m_meleeManager.setTargets(targets);
+            m_rangedManager.setTargets(targets);
+
+            //TODO remove the order dependancy
+            m_meleeManager.setOrder(m_order);
+            m_rangedManager.setOrder(m_order);
+
+            m_meleeManager.executeMicro();
+            m_rangedManager.executeMicro();
+        }
     }
+}
+
+std::vector<Unit> Squad::calcTargets() const
+{
+    // Discover enemies within region of interest
+    std::vector<Unit> nearbyEnemies;
+
+    // if the order is to defend, we only care about units in the radius of the defense
+    if (m_order.getType() == SquadOrderTypes::Defend)
+    {
+        for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
+        {
+            if (Util::Dist(enemyUnit, m_order.getPosition()) < m_order.getRadius())
+            {
+                nearbyEnemies.push_back(enemyUnit);
+            }
+        }
+
+    } // otherwise we want to see everything on the way as well
+    else if (m_order.getType() == SquadOrderTypes::Attack)
+    {
+        CCPosition center = calcCenter();
+        for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
+        {
+            if (Util::Dist(enemyUnit, center) < m_order.getRadius())
+            {
+                nearbyEnemies.push_back(enemyUnit);
+            }
+        }
+    }
+    
+    return nearbyEnemies;
 }
 
 bool Squad::isEmpty() const
@@ -102,14 +147,14 @@ void Squad::setPriority(const size_t & priority)
 void Squad::updateUnits()
 {
     setAllUnits();
-    setNearEnemyUnits();
+    //setNearEnemyUnits();
     addUnitsToMicroManagers();
 }
 
 void Squad::setAllUnits()
 {
     // clean up the _units vector just in case one of them died
-    std::set<Unit> goodUnits;
+    std::vector<Unit> goodUnits;
     for (auto & unit : m_units)
     {
         if (!unit.isValid()) { continue; }
@@ -117,7 +162,7 @@ void Squad::setAllUnits()
         if (unit.getHitPoints() <= 0) { continue; }
         if (!unit.isAlive()) { continue; }
         
-        goodUnits.insert(unit);
+        goodUnits.push_back(unit);
     }
 
     m_units = goodUnits;
@@ -171,7 +216,6 @@ void Squad::addUnitsToMicroManagers()
 
     m_meleeManager.setUnits(meleeUnits);
     m_rangedManager.setUnits(rangedUnits);
-    //m_detectorManager.setUnits(detectorUnits);
     //m_tankManager.setUnits(tankUnits);
 }
 
@@ -183,7 +227,8 @@ bool Squad::needsToRetreat() const
 
     float meleePower = m_meleeManager.getSquadPower();
     float rangedPower = m_rangedManager.getSquadPower();
-    float targetsPower = m_rangedManager.getTargetsPower();
+    float averageHeight = calcAverageHeight();
+    float targetsPower = m_rangedManager.getTargetsPower(averageHeight);
     return meleePower + rangedPower < targetsPower;
 }
 
@@ -194,10 +239,29 @@ bool Squad::needsToRegroup() const
         return false;
 
     //Can regroup only after retreat or when it is already regrouping (to prevent stopping prematurely)
-    if (m_order.getType() != SquadOrderTypes::Retreat && m_order.getType() != SquadOrderTypes::Regroup)
+    /*if (m_order.getType() != SquadOrderTypes::Retreat && m_order.getType() != SquadOrderTypes::Regroup)
+        return false;*/
+
+    /*int currentFrame = m_bot.GetCurrentFrame();
+
+    //Is last regroup too recent?
+    if (m_order.getType() != SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame < m_regroupCooldown)
         return false;
+    
+    //Is last regroup too recent?
+    if (m_order.getType() == SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame > m_maxRegroupDuration)
+        return false;*/
 
     CCPosition squadCenter = calcCenter();
+
+    //TODO do not regroup is targets are nearby
+    if (!calcTargets().empty())
+        return false;
+
+    //Regroup only if center is walkable
+    if (!m_bot.Map().isWalkable(squadCenter))
+        return false;
+
     float averageDistance = 0;
     for (auto & unit : m_units)
     {
@@ -205,14 +269,18 @@ bool Squad::needsToRegroup() const
     }
     averageDistance /= m_units.size();
 
+    bool shouldRegroup = false;
     if(m_order.getType() == SquadOrderTypes::Regroup)
-        return averageDistance > m_maxDistanceFromCenter * 0.2f;
+        shouldRegroup = averageDistance > m_units.size() * 0.11f;
     else
-        return averageDistance > m_maxDistanceFromCenter * 0.5f;
+        shouldRegroup = averageDistance > m_units.size() * 0.15f;
+    return shouldRegroup;
 }
 
 void Squad::setSquadOrder(const SquadOrder & so)
 {
+    if (so.getType() == SquadOrderTypes::Regroup && m_order.getType() != SquadOrderTypes::Regroup)
+        m_regroupStartFrame = m_bot.GetCurrentFrame();
     m_order = so;
 }
 
@@ -268,9 +336,21 @@ CCPosition Squad::calcCenter() const
     return CCPosition(sum.x / m_units.size(), sum.y / m_units.size());
 }
 
+float Squad::calcAverageHeight() const
+{
+    float averageHeight = 0;
+    for (auto & unit : m_units)
+    {
+        averageHeight += m_bot.Map().terrainHeight(unit.getTilePosition().x, unit.getTilePosition().y);
+    }
+    averageHeight /= m_units.size();
+    return averageHeight;
+}
+
 CCPosition Squad::calcRetreatPosition() const
 {
     return m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getPosition();
+
     /*CCPosition regroup(0, 0);
 
     float minDist = std::numeric_limits<float>::max();
@@ -337,7 +417,7 @@ int Squad::squadUnitsNear(const CCPosition & p) const
     return numUnits;
 }
 
-const std::set<Unit> & Squad::getUnits() const
+const std::vector<Unit> & Squad::getUnits() const
 {
     return m_units;
 }
@@ -349,12 +429,20 @@ const SquadOrder & Squad::getSquadOrder()	const
 
 void Squad::addUnit(const Unit & unit)
 {
-    m_units.insert(unit);
+    m_units.push_back(unit);
 }
 
 void Squad::removeUnit(const Unit & unit)
 {
-    m_units.erase(unit);
+    // this is O(n) but whatever
+    for (size_t i = 0; i < m_units.size(); ++i)
+    {
+        if (unit == m_units[i])
+        {
+            m_units.erase(m_units.begin() + i);
+            break;
+        }
+    }
 }
 
 void Squad::giveBackWorkers()

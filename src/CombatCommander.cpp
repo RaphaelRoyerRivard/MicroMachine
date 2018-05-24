@@ -9,9 +9,11 @@ const size_t BaseDefensePriority = 3;
 const size_t ScoutDefensePriority = 4;
 const size_t DropPriority = 4;
 
-const float DefaultOrderRadius = 25;
+const float DefaultOrderRadius = 25;    //Order radius is the threat awareness range of units in the squad
 const float MainAttackOrderRadius = 15;
-const float MainAttackMaxDistance = 7;
+const float MainAttackMaxDistance = 7;  //Distance from the center of the Main Attack Squad for a unit to be considered in it
+const float MainAttackMaxRegroupDuration = 3;
+const float MainAttackRegroupCooldown = 10;
 
 CombatCommander::CombatCommander(CCBot & bot)
     : m_bot(bot)
@@ -26,14 +28,14 @@ void CombatCommander::onStart()
 {
     m_squadData.clearSquadData();
 
-    //SquadOrder idleOrder(SquadOrderTypes::Idle, m_bot.GetStartLocation(), 5, "Chill Out");
+    // the squad that consists of units waiting for the squad to be big enough to begin the main attack
     CCTilePosition nextExpansionPosition = m_bot.Bases().getNextExpansion(Players::Self);
     SquadOrder idleOrder(SquadOrderTypes::Attack, CCPosition(nextExpansionPosition.x, nextExpansionPosition.y), DefaultOrderRadius, "Prepare for battle");
     m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
     // the main attack squad that will pressure the enemy's closest base location
     SquadOrder mainAttackOrder(SquadOrderTypes::Attack, CCPosition(0, 0), MainAttackOrderRadius, "Attack Enemy Base");
-    m_squadData.addSquad("MainAttack", Squad("MainAttack", mainAttackOrder, MainAttackMaxDistance, AttackPriority, m_bot));
+    m_squadData.addSquad("MainAttack", Squad("MainAttack", mainAttackOrder, MainAttackMaxRegroupDuration, MainAttackRegroupCooldown, MainAttackMaxDistance, AttackPriority, m_bot));
 
     // the backup squad that will send reinforcements to the main attack squad
     SquadOrder backupSquadOrder(SquadOrderTypes::Attack, CCPosition(0, 0), DefaultOrderRadius, "Send backups to the main attack squad");
@@ -58,6 +60,8 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 
     m_combatUnits = combatUnits;
 
+    m_squadData.onFrame();
+
     if (isSquadUpdateFrame())
     {
         updateIdleSquad();
@@ -66,8 +70,6 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
         updateAttackSquads();
         updateBackupSquads();
     }
-
-    m_squadData.onFrame();
 }
 
 bool CombatCommander::shouldWeStartAttacking()

@@ -334,7 +334,7 @@ void Unit::repair(const Unit & target) const
 
 void Unit::build(const UnitType & buildingType, CCTilePosition pos) const
 {
-    BOT_ASSERT(m_bot->Map().isConnected(getTilePosition(), pos), ("Error: Build Position is not connected to worker (build pos:[" + std::to_string(pos.x) + ", " + std::to_string(pos.y) + "], unit pos:[" + std::to_string(getTilePosition().x) + ", " + std::to_string(getTilePosition().y) + "])").c_str());
+    BOT_ASSERT(m_bot->Map().isConnected(getTilePosition(), pos), ("Error: Build Position is not connected to worker (build pos:[" + std::to_string(pos.x) + ", " + std::to_string(pos.y) + "], unit pos:[" + std::to_string(getTilePosition().x) + ", " + std::to_string(getTilePosition().y) + "], building type:" + buildingType.getName() + ")").c_str());
     BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API
     m_bot->Actions()->UnitCommand(m_unit, m_bot->Data(buildingType).buildAbility, Util::GetPosition(pos));

@@ -4,6 +4,7 @@
 #include "MeleeManager.h"
 #include "RangedManager.h"
 #include "SquadOrder.h"
+#include <ctime>
 
 class CCBot;
 
@@ -12,10 +13,11 @@ class Squad
     CCBot &             m_bot;
 
     std::string         m_name;
-    std::set<Unit>      m_units;
-    std::string         m_regroupStatus;
-    int                 m_lastRetreatSwitch;
-    bool                m_lastRetreatSwitchVal;
+    std::vector<Unit>   m_units;
+    std::vector<Unit>   m_targets;
+    int                 m_regroupStartFrame;
+    int                 m_maxRegroupDuration;
+    int                 m_regroupCooldown;
     float               m_maxDistanceFromCenter;
     size_t              m_priority;
 
@@ -38,7 +40,7 @@ class Squad
 public:
 
     Squad(const std::string & name, const SquadOrder & order, size_t priority, CCBot & bot);
-    Squad(const std::string & name, const SquadOrder & order, float maxDistanceFromCenter, size_t priority, CCBot & bot);
+    Squad(const std::string & name, const SquadOrder & order, int maxRegroupDuration, int regroupCooldown, float maxDistanceFromCenter, size_t priority, CCBot & bot);
     Squad(CCBot & bot);
 
     void onFrame();
@@ -59,8 +61,10 @@ public:
     const std::string & getName() const;
 
     CCPosition calcCenter() const;
+    float calcAverageHeight() const;
     CCPosition calcRetreatPosition() const;
+    std::vector<Unit> calcTargets() const;
 
-    const std::set<Unit> & getUnits() const;
+    const std::vector<Unit> & getUnits() const;
     const SquadOrder & getSquadOrder() const;
 };

@@ -504,6 +504,11 @@ bool MapTools::isWalkable(const CCTilePosition & tile) const
     return isWalkable(tile.x, tile.y);
 }
 
+bool MapTools::isWalkable(const CCPosition & pos) const
+{
+    return isWalkable(Util::GetTilePosition(pos));
+}
+
 int MapTools::width() const
 {
     return m_width;

@@ -14,12 +14,22 @@
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
 
-void RangedManager::executeMicro(const std::vector<Unit> & targets)
+void RangedManager::setTargets(const std::vector<Unit> & targets)
 {
-    assignTargets(targets);
+    std::vector<Unit> rangedUnitTargets;
+    for (auto & target : targets)
+    {
+        auto targetPtr = target.getUnitPtr();
+        if (!targetPtr) { continue; }
+        if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_EGG) { continue; }
+        if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_LARVA) { continue; }
+
+        rangedUnitTargets.push_back(target);
+    }
+    m_targets = rangedUnitTargets;
 }
 
-void RangedManager::assignTargets(const std::vector<Unit> & targets)
+void RangedManager::executeMicro()
 {
     const std::vector<Unit> &units = getUnits();
 
@@ -30,16 +40,10 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
         rangedUnits.push_back(rangedUnit);
     }
 
-    // figure out targets
     std::vector<const sc2::Unit *> rangedUnitTargets;
-    for (auto target : targets)
+    for (auto target : m_targets)
     {
-        auto targetPtr = target.getUnitPtr();
-        if (!targetPtr) { continue; }
-        if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_EGG) { continue; }
-        if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_LARVA) { continue; }
-
-        rangedUnitTargets.push_back(targetPtr);
+        rangedUnitTargets.push_back(target.getUnitPtr());
     }
 
     // Use alpha-beta (considering durations) for combat
@@ -102,7 +106,7 @@ void RangedManager::assignTargets(const std::vector<Unit> & targets)
 
             FocusFireAction focusFireAction(rangedUnit, target, &rangedUnitTargets, m_bot, m_focusFireStates, &rangedUnits, m_unitHealth);
             KiteAction kiteAction(rangedUnit, target, m_bot, m_kittingStates);
-            GoToObjectiveAction goToObjectiveAction(rangedUnit, order.getPosition(), m_bot);
+            GoToObjectiveAction goToObjectiveAction(rangedUnit, m_order.getPosition(), m_bot);
 
             BehaviorTree* bt = BehaviorTreeBuilder()
                 .selector()
