@@ -27,12 +27,13 @@ public:
 
     const std::vector<Unit> & getUnits() const;
     void setUnits(const std::vector<Unit> & u);
+    inline std::vector <Unit> getTargets() const { return m_targets; }
     virtual void setTargets(const std::vector<Unit> & targets) = 0;
     inline void setOrder(SquadOrder order) { m_order = order; }
     void regroup(const CCPosition & regroupPosition) const;
     float getSquadPower() const;
-    float getTargetsPower(float averageSquadHeight) const;
-    float getUnitPower(const Unit & unit, float averageSquadHeight = -1) const;
+    float getTargetsPower(float averageSquadHeight, Unit & closestUnit) const;
+    float getUnitPower(const Unit & unit, float averageSquadHeight = -1, Unit* closestUnit = nullptr) const;
 
     std::unordered_map<sc2::Tag, FocusFireFiniteStateMachine*> m_focusFireStates;
     std::unordered_map<sc2::Tag, KitingFiniteStateMachine*> m_kittingStates;

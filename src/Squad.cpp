@@ -228,8 +228,27 @@ bool Squad::needsToRetreat() const
     float meleePower = m_meleeManager.getSquadPower();
     float rangedPower = m_rangedManager.getSquadPower();
     float averageHeight = calcAverageHeight();
-    float targetsPower = m_rangedManager.getTargetsPower(averageHeight);
+    Unit closestUnit = calcClosestAllyFromTargets(m_rangedManager.getTargets());
+    float targetsPower = m_rangedManager.getTargetsPower(averageHeight, closestUnit);
     return meleePower + rangedPower < targetsPower;
+}
+
+Unit Squad::calcClosestAllyFromTargets(std::vector<Unit>& targets) const
+{
+    CCPosition targetsCenter = Util::CalcCenter(targets);
+    float distance;
+    float minDistance = 0;
+    Unit closestUnit;
+    for (auto & unit : m_units)
+    {
+        distance = Util::Dist(unit.getPosition(), targetsCenter);
+        if (minDistance == 0 || distance < minDistance)
+        {
+            minDistance = distance;
+            closestUnit = unit;
+        }
+    }
+    return closestUnit;
 }
 
 bool Squad::needsToRegroup() const
@@ -238,27 +257,23 @@ bool Squad::needsToRegroup() const
     if (m_name != "MainAttack")
         return false;
 
-    //Can regroup only after retreat or when it is already regrouping (to prevent stopping prematurely)
-    /*if (m_order.getType() != SquadOrderTypes::Retreat && m_order.getType() != SquadOrderTypes::Regroup)
-        return false;*/
-
     int currentFrame = m_bot.GetCurrentFrame();
 
     //Is last regroup too recent?
     if (m_order.getType() != SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame < m_regroupCooldown)
         return false;
     
-    //Is regroup taking too long?
+    //Is current regroup taking too long?
     if (m_order.getType() == SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame > m_maxRegroupDuration)
         return false;
 
-    CCPosition squadCenter = calcCenter();
-
-    //TODO do not regroup is targets are nearby
-    if (!calcTargets().empty())
+    //do not regroup if targets are nearby (nor fleeing, since the targets are updated only whan having an Attack order)
+    std::vector<Unit>& targets = calcTargets();
+    if (!targets.empty())
         return false;
 
     //Regroup only if center is walkable
+    CCPosition squadCenter = calcCenter();
     if (!m_bot.Map().isWalkable(squadCenter))
         return false;
 
@@ -321,19 +336,8 @@ bool Squad::isUnitNearEnemy(const Unit & unit) const
 
 CCPosition Squad::calcCenter() const
 {
-    if (m_units.empty())
-    {
-        return CCPosition(0, 0);
-    }
-
-    CCPosition sum(0, 0);
-    for (auto & unit: m_units)
-    {
-        BOT_ASSERT(unit.isValid(), "null unit in squad calcCenter");
-        sum += unit.getPosition();
-    }
-
-    return CCPosition(sum.x / m_units.size(), sum.y / m_units.size());
+    //TODO keep a reference to calc only once per frame
+    return Util::CalcCenter(m_units);
 }
 
 float Squad::calcAverageHeight() const

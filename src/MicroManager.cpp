@@ -49,30 +49,40 @@ float MicroManager::getSquadPower() const
     return squadPower;
 }
 
-float MicroManager::getTargetsPower(float averageSquadHeight) const
+float MicroManager::getTargetsPower(float averageSquadHeight, Unit& closestUnit) const
 {
     float enemyPower = 0;
 
     for (auto & target : m_targets)
     {
-        enemyPower += getUnitPower(target, averageSquadHeight);
+        enemyPower += getUnitPower(target, averageSquadHeight, &closestUnit);
     }
 
     return enemyPower;
 }
 
-float MicroManager::getUnitPower(const Unit &unit, float averageSquadHeight) const
+float MicroManager::getUnitPower(const Unit &unit, float averageSquadHeight, Unit* closestUnit) const
 {
     float unitPower = sqrt(unit.getHitPoints() + unit.getShields());
     unitPower *= Util::GetDps(unit.getUnitPtr(), m_bot);
 
+    const float unitRange = unit.getType().getAttackRange();
     if (unit.getType().getAttackRange() >= 1.5f)
         unitPower *= 3; //ranged bonus (+200%)
 
     unitPower *= 1 + Util::GetArmor(unit.getUnitPtr(), m_bot) * 0.1f;   //armor bonus (+10% per armor)
 
     //TODO bonus for splash damage
-    //TODO penalty for distance
+
+    if (closestUnit != nullptr)
+    {
+        float distance = Util::Dist(unit.getPosition(), closestUnit->getPosition());
+        if (unitRange < distance)
+        {
+            //TODO finetune
+            unitPower *= 0.5f;  //penalty for distance (-50%)
+        }
+    }
 
     /*if (averageSquadHeight > 0)
     {
