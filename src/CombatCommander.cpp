@@ -151,6 +151,9 @@ void CombatCommander::updateAttackSquads()
         }
     }
 
+    if (mainAttackSquad.getUnits().empty())
+        return;
+
     if (mainAttackSquad.needsToRetreat())
     {
         SquadOrder retreatOrder(SquadOrderTypes::Retreat, getMainAttackLocation(), DefaultOrderRadius, "Retreat!!");
