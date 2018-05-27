@@ -5,7 +5,7 @@
 
 class AlphaBetaPlayer {
 public:
-    AlphaBetaPlayer(std::vector<AlphaBetaUnit *> units, bool isMax);
-    std::vector<AlphaBetaUnit *> units;
+	AlphaBetaPlayer(std::vector<std::shared_ptr<AlphaBetaUnit>> units, bool isMax);
+    std::vector<std::shared_ptr<AlphaBetaUnit>> units;
     bool isMax;
 };

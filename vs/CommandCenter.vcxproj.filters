@@ -1,128 +1,423 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\src\AttackFSMState.cpp" />
-    <ClCompile Include="..\src\BaseLocation.cpp" />
-    <ClCompile Include="..\src\BaseLocationManager.cpp" />
-    <ClCompile Include="..\src\BotAssert.cpp" />
-    <ClCompile Include="..\src\BotConfig.cpp" />
-    <ClCompile Include="..\src\Building.cpp" />
-    <ClCompile Include="..\src\BuildingData.cpp" />
-    <ClCompile Include="..\src\BuildingManager.cpp" />
-    <ClCompile Include="..\src\BuildingPlacer.cpp" />
-    <ClCompile Include="..\src\BuildOrder.cpp" />
-    <ClCompile Include="..\src\BuildOrderQueue.cpp" />
     <ClCompile Include="..\src\CCBot.cpp" />
-    <ClCompile Include="..\src\CombatCommander.cpp" />
-    <ClCompile Include="..\src\Condition.cpp" />
-    <ClCompile Include="..\src\DistanceMap.cpp" />
-    <ClCompile Include="..\src\DonePullBackTransition.cpp" />
-    <ClCompile Include="..\src\FiniteStateMachine.cpp" />
-    <ClCompile Include="..\src\FireClosestFSMState.cpp" />
-    <ClCompile Include="..\src\FleeFSMState.cpp" />
-    <ClCompile Include="..\src\FocusFireFiniteStateMachine.cpp" />
     <ClCompile Include="..\src\GameCommander.cpp" />
-    <ClCompile Include="..\src\JSONTools.cpp" />
-    <ClCompile Include="..\src\KitingFiniteStateMachine.cpp" />
     <ClCompile Include="..\src\main.cpp" />
-    <ClCompile Include="..\src\MapTools.cpp" />
-    <ClCompile Include="..\src\MeleeManager.cpp" />
-    <ClCompile Include="..\src\MetaType.cpp" />
-    <ClCompile Include="..\src\Micro.cpp" />
-    <ClCompile Include="..\src\MicroManager.cpp" />
-    <ClCompile Include="..\src\ProductionManager.cpp" />
-    <ClCompile Include="..\src\PullBackFSMState.cpp" />
-    <ClCompile Include="..\src\RangedManager.cpp" />
-    <ClCompile Include="..\src\ScoutManager.cpp" />
-    <ClCompile Include="..\src\ShouldAttackTransition.cpp" />
-    <ClCompile Include="..\src\ShouldFleeTransition.cpp" />
-    <ClCompile Include="..\src\ShouldPullBackTransition.cpp" />
-    <ClCompile Include="..\src\Squad.cpp" />
-    <ClCompile Include="..\src\SquadData.cpp" />
-    <ClCompile Include="..\src\SquadOrder.cpp" />
-    <ClCompile Include="..\src\StrategyManager.cpp" />
-    <ClCompile Include="..\src\TechTree.cpp" />
-    <ClCompile Include="..\src\Unit.cpp" />
-    <ClCompile Include="..\src\UnitData.cpp" />
-    <ClCompile Include="..\src\UnitInfoManager.cpp" />
-    <ClCompile Include="..\src\Util.cpp" />
-    <ClCompile Include="..\src\WorkerData.cpp" />
-    <ClCompile Include="..\src\WorkerManager.cpp" />
-    <ClCompile Include="..\src\UnitType.cpp" />
-    <ClCompile Include="..\src\AlphaBetaAction.cpp" />
-    <ClCompile Include="..\src\AlphaBetaConsideringDurations.cpp" />
-    <ClCompile Include="..\src\AlphaBetaMove.cpp" />
-    <ClCompile Include="..\src\AlphaBetaPlayer.cpp" />
-    <ClCompile Include="..\src\AlphaBetaState.cpp" />
-    <ClCompile Include="..\src\AlphaBetaUnit.cpp" />
-    <ClCompile Include="..\src\AlphaBetaValue.cpp" />
+    <ClCompile Include="..\src\BotAssert.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BaseLocationManager.cpp">
+      <Filter>global</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BotConfig.cpp">
+      <Filter>global</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MapTools.cpp">
+      <Filter>global</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\StrategyManager.cpp">
+      <Filter>global</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UnitInfoManager.cpp">
+      <Filter>global</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\WorkerManager.cpp">
+      <Filter>global</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BaseLocation.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Building.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BuildingData.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BuildingManager.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BuildingPlacer.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BuildOrder.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BuildOrderQueue.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MetaType.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ProductionManager.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\WorkerData.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MeleeManager.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MicroManager.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RangedManager.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ScoutManager.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Squad.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SquadData.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SquadOrder.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaAction.cpp">
+      <Filter>micro\ABCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaConsideringDurations.cpp">
+      <Filter>micro\ABCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaMove.cpp">
+      <Filter>micro\ABCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaPlayer.cpp">
+      <Filter>micro\ABCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaState.cpp">
+      <Filter>micro\ABCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaUnit.cpp">
+      <Filter>micro\ABCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaValue.cpp">
+      <Filter>micro\ABCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AttackFSMState.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\DonePullBackTransition.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FiniteStateMachine.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FireClosestFSMState.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FleeFSMState.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FocusFireFiniteStateMachine.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\KitingFiniteStateMachine.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PullBackFSMState.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ShouldAttackTransition.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ShouldFleeTransition.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ShouldPullBackTransition.cpp">
+      <Filter>micro\BT + FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CombatCommander.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Condition.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\DistanceMap.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\JSONTools.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\TechTree.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Unit.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UnitData.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UnitType.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Util.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Micro.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDUnit.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDAction.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDPlayer.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDMove.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDState.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDNode.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTConsideringDurations.cpp">
+      <Filter>micro\UCTCD</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\AttackFSMState.h" />
-    <ClInclude Include="..\src\Behavior.h" />
-    <ClInclude Include="..\src\BehaviorTreeBuilder.h" />
-    <ClInclude Include="..\src\BaseLocation.h" />
-    <ClInclude Include="..\src\BaseLocationManager.h" />
-    <ClInclude Include="..\src\BotAssert.h" />
-    <ClInclude Include="..\src\BotConfig.h" />
-    <ClInclude Include="..\src\Building.h" />
-    <ClInclude Include="..\src\BuildingData.h" />
-    <ClInclude Include="..\src\BuildingManager.h" />
-    <ClInclude Include="..\src\BuildingPlacer.h" />
-    <ClInclude Include="..\src\BuildOrder.h" />
-    <ClInclude Include="..\src\BuildOrderQueue.h" />
     <ClInclude Include="..\src\CCBot.h" />
-    <ClInclude Include="..\src\CombatCommander.h" />
-    <ClInclude Include="..\src\Common.h" />
-    <ClInclude Include="..\src\Condition.h" />
-    <ClInclude Include="..\src\DistanceMap.h" />
-    <ClInclude Include="..\src\DonePullBackTransition.h" />
-    <ClInclude Include="..\src\FiniteStateMachine.h" />
-    <ClInclude Include="..\src\FireClosestFSMState.h" />
-    <ClInclude Include="..\src\FleeFSMState.h" />
-    <ClInclude Include="..\src\FocusFireFiniteStateMachine.h" />
-    <ClInclude Include="..\src\FocusFireFSM.h" />
     <ClInclude Include="..\src\GameCommander.h" />
-    <ClInclude Include="..\src\JSONTools.h" />
-    <ClInclude Include="..\src\KitingFiniteStateMachine.h" />
-    <ClInclude Include="..\src\KitingFSM.h" />
-    <ClInclude Include="..\src\MapTools.h" />
-    <ClInclude Include="..\src\MeleeManager.h" />
-    <ClInclude Include="..\src\MetaType.h" />
-    <ClInclude Include="..\src\Micro.h" />
-    <ClInclude Include="..\src\MicroManager.h" />
-    <ClInclude Include="..\src\ProductionManager.h" />
-    <ClInclude Include="..\src\PullBackFSMState.h" />
-    <ClInclude Include="..\src\RangedActions.h" />
-    <ClInclude Include="..\src\RangedManager.h" />
-    <ClInclude Include="..\src\ScoutManager.h" />
-    <ClInclude Include="..\src\ShouldAttackTransition.h" />
-    <ClInclude Include="..\src\ShouldFleeTransition.h" />
-    <ClInclude Include="..\src\ShouldPullBackTransition.h" />
-    <ClInclude Include="..\src\Squad.h" />
-    <ClInclude Include="..\src\SquadData.h" />
-    <ClInclude Include="..\src\SquadOrder.h" />
-    <ClInclude Include="..\src\StrategyManager.h" />
-    <ClInclude Include="..\src\TechTree.h" />
-    <ClInclude Include="..\src\Timer.hpp" />
-    <ClInclude Include="..\src\Unit.h" />
-    <ClInclude Include="..\src\UnitData.h" />
-    <ClInclude Include="..\src\UnitInfoManager.h" />
-    <ClInclude Include="..\src\UnitType.h" />
-    <ClInclude Include="..\src\Util.h" />
-    <ClInclude Include="..\src\WorkerData.h" />
-    <ClInclude Include="..\src\WorkerManager.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="..\src\AlphaBetaAction.h" />
-    <ClInclude Include="..\src\AlphaBetaConsideringDurations.h" />
-    <ClInclude Include="..\src\AlphaBetaMove.h" />
-    <ClInclude Include="..\src\AlphaBetaPlayer.h" />
-    <ClInclude Include="..\src\AlphaBetaState.h" />
-    <ClInclude Include="..\src\AlphaBetaUnit.h" />
-    <ClInclude Include="..\src\AlphaBetaValue.h" />
-    <ClInclude Include="..\src\LadderInterface.h" />
+    <ClInclude Include="..\src\BotAssert.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Common.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BaseLocationManager.h">
+      <Filter>global</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BotConfig.h">
+      <Filter>global</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MapTools.h">
+      <Filter>global</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\StrategyManager.h">
+      <Filter>global</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UnitInfoManager.h">
+      <Filter>global</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\WorkerManager.h">
+      <Filter>global</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BaseLocation.h">
+      <Filter>macro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Building.h">
+      <Filter>macro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BuildingData.h">
+      <Filter>macro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BuildingManager.h">
+      <Filter>macro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BuildingPlacer.h">
+      <Filter>macro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BuildOrder.h">
+      <Filter>macro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BuildOrderQueue.h">
+      <Filter>macro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MetaType.h">
+      <Filter>macro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ProductionManager.h">
+      <Filter>macro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\WorkerData.h">
+      <Filter>macro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CombatCommander.h">
+      <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MeleeManager.h">
+      <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MicroManager.h">
+      <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\RangedManager.h">
+      <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ScoutManager.h">
+      <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Squad.h">
+      <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SquadData.h">
+      <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\SquadOrder.h">
+      <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaAction.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaConsideringDurations.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaMove.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaPlayer.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaState.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaUnit.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaValue.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AttackFSMState.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\DonePullBackTransition.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FiniteStateMachine.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FireClosestFSMState.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FleeFSMState.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FocusFireFiniteStateMachine.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FocusFireFSM.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\KitingFiniteStateMachine.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\KitingFSM.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\PullBackFSMState.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ShouldAttackTransition.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ShouldFleeTransition.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ShouldPullBackTransition.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Condition.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\DistanceMap.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\JSONTools.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\TechTree.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Timer.hpp">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Unit.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UnitData.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UnitType.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Util.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\RangedActions.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BehaviorTreeBuilder.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Behavior.h">
+      <Filter>micro\BT + FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Micro.h">
+      <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaTimeOut.h">
+      <Filter>micro\ABCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDUnit.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDAction.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDPlayer.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDMove.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDState.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDNode.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTConsideringDurations.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDTimeOut.h">
+      <Filter>micro\UCTCD</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CommandCenter.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{682e3d17-33c6-470c-9897-1a16160f8cac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="global">
+      <UniqueIdentifier>{0f296e61-e2f4-461f-acd4-8ada75feafd4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="macro">
+      <UniqueIdentifier>{2f30e235-2054-4713-a46b-496788e1e865}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="micro">
+      <UniqueIdentifier>{bb028065-b2d8-40a2-81df-55cfdc801e54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="micro\ABCD">
+      <UniqueIdentifier>{661075e6-4dda-4a43-b45b-ff17bfc0acf8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{db91aa47-c051-43b3-a492-87f9619e4100}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="micro\BT + FSM">
+      <UniqueIdentifier>{92529348-57a7-4d79-9afe-8a5bc5f0fb4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="micro\UCTCD">
+      <UniqueIdentifier>{1baf6e7b-a203-4ff0-81d6-cfb7c998b0fc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

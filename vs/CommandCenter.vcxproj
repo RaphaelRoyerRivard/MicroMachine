@@ -67,6 +67,13 @@
     <ClCompile Include="..\src\SquadOrder.cpp" />
     <ClCompile Include="..\src\StrategyManager.cpp" />
     <ClCompile Include="..\src\TechTree.cpp" />
+    <ClCompile Include="..\src\UCTCDAction.cpp" />
+    <ClCompile Include="..\src\UCTCDMove.cpp" />
+    <ClCompile Include="..\src\UCTCDNode.cpp" />
+    <ClCompile Include="..\src\UCTCDPlayer.cpp" />
+    <ClCompile Include="..\src\UCTCDState.cpp" />
+    <ClCompile Include="..\src\UCTCDUnit.cpp" />
+    <ClCompile Include="..\src\UCTConsideringDurations.cpp" />
     <ClCompile Include="..\src\Unit.cpp" />
     <ClCompile Include="..\src\UnitData.cpp" />
     <ClCompile Include="..\src\UnitInfoManager.cpp" />
@@ -81,6 +88,7 @@
     <ClInclude Include="..\src\AlphaBetaMove.h" />
     <ClInclude Include="..\src\AlphaBetaPlayer.h" />
     <ClInclude Include="..\src\AlphaBetaState.h" />
+    <ClInclude Include="..\src\AlphaBetaTimeOut.h" />
     <ClInclude Include="..\src\AlphaBetaUnit.h" />
     <ClInclude Include="..\src\AlphaBetaValue.h" />
     <ClInclude Include="..\src\AttackFSMState.h" />
@@ -111,7 +119,6 @@
     <ClInclude Include="..\src\JSONTools.h" />
     <ClInclude Include="..\src\KitingFiniteStateMachine.h" />
     <ClInclude Include="..\src\KitingFSM.h" />
-    <ClInclude Include="..\src\LadderInterface.h" />
     <ClInclude Include="..\src\MapTools.h" />
     <ClInclude Include="..\src\MeleeManager.h" />
     <ClInclude Include="..\src\MetaType.h" />
@@ -131,6 +138,14 @@
     <ClInclude Include="..\src\StrategyManager.h" />
     <ClInclude Include="..\src\TechTree.h" />
     <ClInclude Include="..\src\Timer.hpp" />
+    <ClInclude Include="..\src\UCTCDAction.h" />
+    <ClInclude Include="..\src\UCTCDMove.h" />
+    <ClInclude Include="..\src\UCTCDNode.h" />
+    <ClInclude Include="..\src\UCTCDPlayer.h" />
+    <ClInclude Include="..\src\UCTCDState.h" />
+    <ClInclude Include="..\src\UCTCDTimeOut.h" />
+    <ClInclude Include="..\src\UCTCDUnit.h" />
+    <ClInclude Include="..\src\UCTConsideringDurations.h" />
     <ClInclude Include="..\src\Unit.h" />
     <ClInclude Include="..\src\UnitData.h" />
     <ClInclude Include="..\src\UnitInfoManager.h" />
@@ -228,7 +243,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SC2API_DIR)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>Debug/</AssemblerListingLocation>
       <CompileAs>CompileAsCpp</CompileAs>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>

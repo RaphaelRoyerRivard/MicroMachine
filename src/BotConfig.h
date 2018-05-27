@@ -22,6 +22,9 @@ public:
     int SetFrameSkip;
     bool UserInput;
     bool CompleteMapInformation;
+
+    bool BatchReplayMode;
+    int NbBatchReplay;
     
     std::string StrategyName;
     std::string ReadDir;
@@ -54,8 +57,23 @@ public:
     float MaxTargetDistance;
     float MaxWorkerRepairDistance;
     bool ScoutHarassEnemy;
-    bool AlphaBetaPruning;
     bool AutoCompleteBuildOrder;
+
+    bool AlphaBetaPruning;
+    int AlphaBetaDepth;
+    int AlphaBetaMaxMilli;
+
+    bool UCTCD;
+    int UCTCDMaxMilli;
+    float UCTCDK;
+    int UCTCDMaxTraversals;
+    bool UCTCDConsiderDistance;
+
+    bool UnitOwnAgent;
+    bool SkipOneFrame;
+    bool ClosestEnemy;
+    bool WeakestEnemy;
+    bool HighestPriority;
     
     int WorkersPerRefinery;
     int BuildingSpacing;

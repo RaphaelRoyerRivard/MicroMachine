@@ -9,6 +9,10 @@
 #include "AlphaBetaUnit.h"
 #include "AlphaBetaMove.h"
 #include "AlphaBetaAction.h"
+#include "UCTConsideringDurations.h"
+#include "UCTCDUnit.h"
+#include "UCTCDMove.h"
+#include "UCTCDAction.h"
 
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
@@ -46,43 +50,13 @@ void RangedManager::executeMicro()
         rangedUnitTargets.push_back(target.getUnitPtr());
     }
 
+    // Use UCTCD
+    if (m_bot.Config().UCTCD) {
+        UCTCD(rangedUnits, rangedUnitTargets);
+    }
     // Use alpha-beta (considering durations) for combat
-    // TODO: Split theses into Combat managers and use IOC and dependecy injection or something instead of a vulgar if
-    if (m_bot.Config().AlphaBetaPruning) {
-
-        std::vector<AlphaBetaUnit *> minUnits;
-        std::vector<AlphaBetaUnit *> maxUnits;
-
-        for (auto & unit : rangedUnits) {
-            if (m_units_actions.find(unit->tag) != m_units_actions.end()) {
-                AlphaBetaUnit * old = m_units_actions[unit->tag];
-                maxUnits.push_back(new AlphaBetaUnit(unit, &m_bot, old->previous_action));
-            }
-            else maxUnits.push_back(new AlphaBetaUnit(unit, &m_bot, nullptr));
-        }
-
-        // TODO: Keep enemy unit's actions too ?
-        for (auto & unit : rangedUnitTargets) {
-            minUnits.push_back(new AlphaBetaUnit(unit, &m_bot, nullptr));
-        }
-        size_t depth = 6;
-        AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(40, depth);
-        AlphaBetaValue value = alphaBeta.doSearch(maxUnits, minUnits, &m_bot);
-        size_t nodes = alphaBeta.nodes_evaluated;
-        m_bot.Map().drawTextScreen(0.005, 0.005, std::string("Nodes explored : ") + std::to_string(nodes));
-        m_bot.Map().drawTextScreen(0.005, 0.020, std::string("Max depth : ") + std::to_string(depth));
-        m_bot.Map().drawTextScreen(0.005, 0.035, std::string("AB value : ") + std::to_string(value.score));
-        if (value.move != NULL) {
-            for (auto action : value.move->actions) {
-                if (action->type == AlphaBetaActionType::ATTACK) {
-                    Micro::SmartAttackUnit(action->unit->actual_unit, action->target->actual_unit, m_bot);
-                }
-                else if (action->type == AlphaBetaActionType::MOVE) {
-                    Micro::SmartMove(action->unit->actual_unit, action->position, m_bot);
-                }
-                m_units_actions.insert_or_assign(action->unit->actual_unit->tag, action->unit);
-            }
-        }
+    else if (m_bot.Config().AlphaBetaPruning) {
+        AlphaBetaPruning(rangedUnits, rangedUnitTargets);
     }
     // use good-ol' BT
     else {
@@ -126,6 +100,121 @@ void RangedManager::executeMicro()
 
             bt->tick();
         }
+    }
+}
+
+void RangedManager::AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets) {
+    std::vector<std::shared_ptr<AlphaBetaUnit>> minUnits;
+    std::vector<std::shared_ptr<AlphaBetaUnit>> maxUnits;
+
+    if (lastUnitCommand.size() >= rangedUnits.size()) {
+        lastUnitCommand.clear();
+    }
+
+    for (auto unit : rangedUnits) {
+        bool has_played = false;
+
+        if (m_bot.Config().UnitOwnAgent) {
+            // Update has_played value
+            for (auto unitC : lastUnitCommand) {
+                if (unitC == unit) {
+                    has_played = true;
+                    break;
+                }
+            }
+        }
+
+        maxUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot, has_played));
+    }
+    for (auto unit : rangedUnitTargets) {
+        minUnits.push_back(std::make_shared<AlphaBetaUnit>(unit, &m_bot));
+    }
+
+    AlphaBetaConsideringDurations alphaBeta = AlphaBetaConsideringDurations(std::chrono::milliseconds(m_bot.Config().AlphaBetaMaxMilli), m_bot.Config().AlphaBetaDepth, m_bot.Config().UnitOwnAgent, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority);
+    AlphaBetaValue value = alphaBeta.doSearch(maxUnits, minUnits, &m_bot);
+    size_t nodes = alphaBeta.nodes_evaluated;
+    m_bot.Map().drawTextScreen(0.005f, 0.005f, std::string("Nodes explored : ") + std::to_string(nodes));
+    m_bot.Map().drawTextScreen(0.005f, 0.020f, std::string("Max depth : ") + std::to_string(m_bot.Config().AlphaBetaDepth));
+    m_bot.Map().drawTextScreen(0.005f, 0.035f, std::string("AB value : ") + std::to_string(value.score));
+    if (value.move != NULL) {
+        for (auto action : value.move->actions) {
+            lastUnitCommand.push_back(action->unit->actual_unit);
+            if (action->type == AlphaBetaActionType::ATTACK) {
+                Micro::SmartAttackUnit(action->unit->actual_unit, action->target->actual_unit, m_bot);
+            }
+            else if (action->type == AlphaBetaActionType::MOVE_BACK) {
+                Micro::SmartMove(action->unit->actual_unit, action->position, m_bot);
+            }
+            else if (action->type == AlphaBetaActionType::MOVE_FORWARD) {
+                Micro::SmartMove(action->unit->actual_unit, action->position, m_bot);
+            }
+        }
+    }
+}
+
+void RangedManager::UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets) {
+    std::vector<UCTCDUnit> minUnits;
+    std::vector<UCTCDUnit> maxUnits;
+    
+    if (m_bot.Config().SkipOneFrame && isCommandDone) {
+        isCommandDone = false;
+
+        return;
+    }
+
+    if (lastUnitCommand.size() >= rangedUnits.size()) {
+        lastUnitCommand.clear();
+    }
+
+    for (auto unit : rangedUnits) {
+        bool has_played = false;
+
+        if (m_bot.Config().UnitOwnAgent && std::find(lastUnitCommand.begin(), lastUnitCommand.end(), unit) != lastUnitCommand.end()) {
+            // Update has_played value
+            has_played = true;
+        }
+
+        maxUnits.push_back(UCTCDUnit(unit, &m_bot, has_played));
+    }
+    for (auto unit : rangedUnitTargets) {
+        minUnits.push_back(UCTCDUnit(unit, &m_bot));
+    }
+    UCTConsideringDurations uctcd = UCTConsideringDurations(m_bot.Config().UCTCDK, m_bot.Config().UCTCDMaxTraversals, m_bot.Config().UCTCDMaxMilli, command_for_unit);
+    UCTCDMove move = uctcd.doSearch(maxUnits, minUnits, m_bot.Config().ClosestEnemy, m_bot.Config().WeakestEnemy, m_bot.Config().HighestPriority, m_bot.Config().UCTCDConsiderDistance, m_bot.Config().UnitOwnAgent);
+
+    size_t nodes = uctcd.nodes_explored;
+    size_t traversals = uctcd.traversals;
+    long long time_spent = uctcd.time_spent.count();
+    int win_value = uctcd.win_value;
+    m_bot.Map().drawTextScreen(0.005f, 0.005f, std::string("Nodes explored : ") + std::to_string(nodes));
+    m_bot.Map().drawTextScreen(0.005f, 0.020f, std::string("Root traversed : ") + std::to_string(traversals) + std::string(" times"));
+    m_bot.Map().drawTextScreen(0.005f, 0.035f, std::string("Time spent : ") + std::to_string(time_spent));
+    m_bot.Map().drawTextScreen(0.005f, 0.050f, std::string("Most value : ") + std::to_string(win_value));
+
+    for (auto action : move.actions) {
+        if (action.unit.has_played) {
+            // reset priority
+            lastUnitCommand.clear();
+        }
+        lastUnitCommand.push_back(action.unit.actual_unit);
+        command_for_unit[action.unit.actual_unit] = action;
+
+        // Select unit (visual info only)
+        const sc2::ObservationInterface* obs = m_bot.Observation();
+        sc2::Point2DI target = Util::ConvertWorldToCamera(obs->GetGameInfo(), obs->GetCameraPos(), action.unit.actual_unit->pos);
+        m_bot.ActionsFeatureLayer()->Select(target, sc2::PointSelectionType::PtSelect);
+
+        if (action.type == UCTCDActionType::ATTACK) {
+            Micro::SmartAttackUnit(action.unit.actual_unit, action.target.actual_unit, m_bot);
+        }
+        else if (action.type == UCTCDActionType::MOVE_BACK) {
+            Micro::SmartMove(action.unit.actual_unit, action.position, m_bot);
+        }
+        else if (action.type == UCTCDActionType::MOVE_FORWARD) {
+            Micro::SmartMove(action.unit.actual_unit, action.position, m_bot);
+        }
+
+        isCommandDone = true;
     }
 }
 

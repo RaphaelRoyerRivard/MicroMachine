@@ -22,16 +22,40 @@
         "EnemyDifficulty"           : 8,
         "EnemyRace"                 : "Terran",
         "MapFile"                   : "AscensiontoAiurLE.SC2Map",
-        "StepSize"                  : 1
+        "StepSize"                  : 1,
+        "BatchReplayMode"           : false,
+        "NbBatchReplay"             : 50
     },
         
     "Micro" :
     {
         "AlphaBetaPruning"          : false,
+        "UnitOwnAgent"              : true,
+        "SkipOneFrame"              : true,
+        "ClosestEnemy"              : true,
+        "WeakestEnemy"              : false,
+        "HighestPriority"           : true,
+
         "KiteWithRangedUnits"       : true,
         "MaxTargetDistance"         : 20,
         "MaxWorkerRepairDistance"   : 20,
         "ScoutHarassEnemy"          : true
+    },
+    
+    "UCTConsideringDurations" :
+    {
+        "UCTCD"                     : false,
+        "UCTCDMaxMilli"             : 50,
+        "UCTCDK"                    : 1.5,
+        "UCTCDMaxTraversals"        : 1000,
+        "UCTCDConsiderDistance"     : false
+    },
+    
+    "AlphaBeta" :
+    {
+        "AlphaBetaPruning"          : false,
+        "AlphaBetaDepth"            : 6,
+        "AlphaBetaMaxMilli"         : 100
     },
     
     "Macro" :

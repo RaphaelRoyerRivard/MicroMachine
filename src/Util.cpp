@@ -167,7 +167,7 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 			maxRange = weapon.range;
 	}
     //for some strange reason, units are actually able to reach targets farther than their range
-	return maxRange + 2;
+	return maxRange; 
 }
 
 float Util::GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot)
@@ -450,6 +450,31 @@ sc2::AbilityID Util::GetAbilityFromName(const std::string & name, CCBot & bot)
     }
 
     return 0;
+}
+
+// To select unit: From https://github.com/Blizzard/s2client-api/blob/master/tests/feature_layers_shared.cc
+sc2::Point2DI Util::ConvertWorldToCamera(const sc2::GameInfo& game_info, const sc2::Point2D camera_world, const sc2::Point2D& world) {
+    float camera_size = game_info.options.feature_layer.camera_width;
+    int image_width = game_info.options.feature_layer.map_resolution_x;
+    int image_height = game_info.options.feature_layer.map_resolution_y;
+
+    // Pixels always cover a square amount of world space. The scale is determined
+    // by making the shortest axis of the camera match the requested camera_size.
+    float pixel_size = camera_size / std::min(image_width, image_height);
+    float image_width_world = pixel_size * image_width;
+    float image_height_world = pixel_size * image_height;
+
+    // Origin of world space is bottom left. Origin of image space is top left.
+    // The feature layer is centered around the camera target position.
+    float image_origin_x = camera_world.x - image_width_world / 2.0f;
+    float image_origin_y = camera_world.y + image_height_world / 2.0f;
+    float image_relative_x = world.x - image_origin_x;
+    float image_relative_y = image_origin_y - world.y;
+
+    int image_x = static_cast<int>(image_relative_x / pixel_size);
+    int image_y = static_cast<int>(image_relative_y / pixel_size);
+
+    return sc2::Point2DI(image_x, image_y);
 }
 #endif
 
