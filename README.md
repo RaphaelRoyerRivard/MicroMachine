@@ -1,3 +1,7 @@
+# MicroMachine: AI Bot for StarCraft II
+
+This bot is built on top of CommandCenter, a popular C++ bot that is great for beginners. The main improvements over CommandCenter is the micro management of units in combat, notably the focus fire, dancing and kiting. The current strategy is to rush with Marines with the Terran race and hope that the great micro management will be enough to overcome the defenses of the enemy early in the game.
+
 # CommandCenter: AI Bot for Broodwar and Starcraft II
 
 CommandCenter is a StarCraft AI bot that can play both StarCraft: Broodwar and StarCraft 2.
