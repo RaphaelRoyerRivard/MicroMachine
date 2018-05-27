@@ -174,7 +174,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
         if (distanceValue > Util::GetAttackRangeForTarget(attacker, target, m_bot))
             distanceValue /= 2;
 
-        return dps + healthValue * 500 + distanceValue * 50;
+        return dps + healthValue * 100 + distanceValue * 50;
     }
 
     return 1;
