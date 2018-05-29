@@ -71,7 +71,7 @@ float MicroManager::getUnitPower(const Unit &unit, float averageSquadHeight, Uni
 
     ///////// RANGE
     const float unitRange = unit.getType().getAttackRange();
-    if (unit.getType().getAttackRange() >= 1.5f)
+    if (unitRange >= 1.5f)
         unitPower *= 3; //ranged bonus (+200%)
 
     ///////// ARMOR
@@ -84,10 +84,11 @@ float MicroManager::getUnitPower(const Unit &unit, float averageSquadHeight, Uni
     if (closestUnit != nullptr)
     {
         float distance = Util::Dist(unit.getPosition(), closestUnit->getPosition());
-        if (unitRange + 1 < distance)
+        if (unitRange + 1 < distance)   //if the unit can't reach the closest unit (with a small buffer)
         {
             distance -= unitRange + 1;
-            unitPower -= fmax(0, unitPower * distance * 0.1f);  //penalty for distance (-10% per meter)
+            float distancePenalty = unit.getType().isBuilding() ? 0.2f : 0.1f;
+            unitPower -= fmax(0, unitPower * distance * distancePenalty);  //penalty for distance (-10% per meter)
         }
     }
 
@@ -104,7 +105,7 @@ float MicroManager::getUnitPower(const Unit &unit, float averageSquadHeight, Uni
             unitPower *= 0.75f; //height penalty (-25%)
         }
     }*/
-
+    
     return unitPower;
 }
 
