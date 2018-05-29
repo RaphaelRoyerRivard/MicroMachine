@@ -166,6 +166,10 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 		if ((weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType))
 			maxRange = weapon.range;
 	}
+
+    if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+        maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
+
     //for some strange reason, units are actually able to reach targets farther than their range
 	return maxRange; 
 }
@@ -179,6 +183,28 @@ float Util::GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vecto
         if (range > maxRange)
             maxRange = range;
     }
+    return maxRange;
+}
+
+float Util::GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot)
+{
+    sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unitType]);
+    return GetMaxAttackRange(unitTypeData);
+}
+
+float Util::GetMaxAttackRange(sc2::UnitTypeData unitTypeData)
+{
+    float maxRange = 0.0f;
+    for (auto & weapon : unitTypeData.weapons)
+    {
+        // can attack target with a weapon
+        if (weapon.range > maxRange)
+            maxRange = weapon.range;
+    }
+
+    if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+        maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
+
     return maxRange;
 }
 
@@ -224,6 +250,22 @@ float Util::GetDps(const sc2::Unit * unit, CCBot & bot)
         if (weaponDps > dps)
             dps = weaponDps;
     }
+
+    if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELING || unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
+    {
+        dps = 15.f;
+    }
+    else if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+    {
+        dps = 0.f;
+    }
+    else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+    {
+        //A special case must be done for bunkers since they have no weapon and the cargo space is not available (bug?)
+        //2 marines and a marauder is 30, 4 marines is 40, so 35 would be a tradeoff
+        dps = 35.f;
+    }
+
     return dps;
 }
 
@@ -249,6 +291,23 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
                 dps = weaponDps;
         }
     }
+
+    if (target->unit_type == sc2::UNIT_TYPEID::ZERG_BANELING || target->unit_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
+    {
+        dps = 15.f;
+    }
+    else if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+    {
+        dps = 0.f;
+    }
+    else if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+    {
+        //A special case must be done for bunkers since they have no weapon and the cargo space is not available (bug?)
+        //2 marines and a marauder is 30, 4 marines is 40, so 35 would be a tradeoff
+        //but we would rather target the SCVs that are repairing it and marines that stand unprotected
+        dps = 10.f;
+    }
+
     return dps;
 }
 

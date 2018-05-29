@@ -229,7 +229,8 @@ bool UnitType::isWorker() const
 CCPositionType UnitType::getAttackRange() const
 {
 #ifdef SC2API
-    auto & weapons = m_bot->Observation()->GetUnitTypeData()[m_type].weapons;
+    return Util::GetMaxAttackRange(m_bot->Observation()->GetUnitTypeData()[m_type]);
+    /*auto & weapons = m_bot->Observation()->GetUnitTypeData()[m_type].weapons;
     
     if (weapons.empty())
     {
@@ -245,7 +246,7 @@ CCPositionType UnitType::getAttackRange() const
         }
     }
 
-    return maxRange;
+    return maxRange;*/
 #else
     // TODO: this is ground weapon range right now
     return m_type.groundWeapon().maxRange();

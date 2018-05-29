@@ -248,7 +248,8 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 {
     BOT_ASSERT(target, "null unit in getAttackPriority");
     
-    if (Unit(target, m_bot).getType().isCombatUnit() || Unit(target, m_bot).getType().isWorker())
+    Unit targetUnit(target, m_bot);
+    if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
     {
         float dps = Util::GetDpsForTarget(target, attacker, m_bot);
         if (dps == 0.f)
@@ -257,13 +258,21 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
             {
                 dps = 15.f;
             }
+            else if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+            {
+                //A special case must be done for bunkers since they have no weapon and the cargo space is not available (bug?)
+                //2 marines and a marauder is 30, 4 marines is 40, so 35 would be a tradeoff
+                //but we would rather target the SCVs that are repairing it and marines that stand unprotected
+                dps = 10.f;
+            }
         }
-        float healthValue = 1 / (target->health + target->shield);
-        float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);
+        float workerBonus = targetUnit.getType().isWorker() ? 2.f : 1.f;   //workers are around twice as important
+        float healthValue = 1 / pow(target->health + target->shield, 2);  //the more health a unit has, the less it is prioritized
+        float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);   //the more far a unit is, the less it is prioritized
         if (distanceValue > Util::GetAttackRangeForTarget(attacker, target, m_bot))
             distanceValue /= 2;
 
-        return dps + healthValue * 100 + distanceValue * 50;
+        return (dps + healthValue * 200 + distanceValue * 50) * workerBonus;
     }
 
     return 1;
@@ -274,11 +283,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 bool RangedManager::isTargetRanged(const sc2::Unit * target)
 {
     BOT_ASSERT(target, "target is null");
-    sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(target->unit_type, m_bot);
-    float maxRange = 0.f;
-
-    for (sc2::Weapon & weapon : unitTypeData.weapons)
-        maxRange = std::max(maxRange, weapon.range);
+    float maxRange = Util::GetMaxAttackRange(target->unit_type, m_bot);
     return maxRange > 1.f;
 }
 
