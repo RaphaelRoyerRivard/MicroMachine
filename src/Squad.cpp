@@ -166,6 +166,10 @@ void Squad::setAllUnits()
     }
 
     m_units = goodUnits;
+
+    CCPosition center = calcCenter();
+    for (auto & unit : m_units)
+        m_bot.Map().drawLine(unit.getPosition(), center);
 }
 
 void Squad::setNearEnemyUnits()

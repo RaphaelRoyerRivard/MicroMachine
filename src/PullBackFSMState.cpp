@@ -38,6 +38,7 @@ void PullBackFSMState::onEnter(const std::vector<const sc2::Unit*> * targets, CC
     this->transitions = { donePull };
 
     bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::MOVE, m_position);
+    bot->Map().drawLine(CCPosition(m_unit->pos), CCPosition(m_position), CCColor(0, 0, 255));
 }
 
 void PullBackFSMState::onExit() {}

@@ -88,7 +88,7 @@ float MicroManager::getUnitPower(const Unit &unit, float averageSquadHeight, Uni
         {
             distance -= unitRange + 1;
             float distancePenalty = unit.getType().isBuilding() ? 0.2f : 0.1f;
-            unitPower -= fmax(0, unitPower * distance * distancePenalty);  //penalty for distance (-10% per meter)
+            unitPower = fmax(0, unitPower - (unitPower * distance * distancePenalty));  //penalty for distance (-10% per meter)
         }
     }
 
@@ -105,6 +105,8 @@ float MicroManager::getUnitPower(const Unit &unit, float averageSquadHeight, Uni
             unitPower *= 0.75f; //height penalty (-25%)
         }
     }*/
+
+    m_bot.Map().drawText(unit.getPosition(), "Power: " + std::to_string(unitPower));
     
     return unitPower;
 }
