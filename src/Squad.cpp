@@ -357,7 +357,10 @@ float Squad::calcAverageHeight() const
 
 CCPosition Squad::calcRetreatPosition() const
 {
-    return m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getPosition();
+    CCPosition retreatPosition(0, 0);
+    if(auto startingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))
+        retreatPosition = startingBase->getPosition();
+    return retreatPosition;
 
     /*CCPosition regroup(0, 0);
 

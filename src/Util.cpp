@@ -242,14 +242,55 @@ float Util::GetArmor(const sc2::Unit * unit, CCBot & bot)
 float Util::GetDps(const sc2::Unit * unit, CCBot & bot)
 {
     sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-    float dps = 0.f;
-    for (auto weapon : unitTypeData.weapons)
+    float dps = GetSpecialCaseDps(unit, bot);
+
+    if (dps == 0.f)
     {
-        float weaponDps = weapon.damage_;
-        weaponDps *= weapon.attacks / weapon.speed;
-        if (weaponDps > dps)
-            dps = weaponDps;
+        for (auto weapon : unitTypeData.weapons)
+        {
+            float weaponDps = weapon.damage_;
+            weaponDps *= weapon.attacks / weapon.speed;
+            if (weaponDps > dps)
+                dps = weaponDps;
+        }
     }
+
+    return dps;
+}
+
+float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
+{
+    sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+    sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
+    sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
+    float dps = GetSpecialCaseDps(target, bot);
+
+    if (dps == 0.f)
+    {
+        for (auto weapon : unitTypeData.weapons)
+        {
+            if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
+            {
+                float weaponDps = weapon.damage_;
+                for (auto damageBonus : weapon.damage_bonus)
+                {
+                    if (std::find(targetTypeData.attributes.begin(), targetTypeData.attributes.end(), damageBonus.attribute) != targetTypeData.attributes.end())
+                        weaponDps += damageBonus.bonus;
+                }
+                weaponDps -= targetTypeData.armor;
+                weaponDps *= weapon.attacks / weapon.speed;
+                if (weaponDps > dps)
+                    dps = weaponDps;
+            }
+        }
+    }
+
+    return dps;
+}
+
+float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
+{
+    float dps = 0.f;
 
     if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELING || unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
     {
@@ -263,52 +304,9 @@ float Util::GetDps(const sc2::Unit * unit, CCBot & bot)
     {
         //A special case must be done for bunkers since they have no weapon and the cargo space is not available (bug?)
         //2 marines and a marauder is 30, 4 marines is 40, so 35 would be a tradeoff
-        dps = 35.f;
-    }
-
-    return dps;
-}
-
-float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
-{
-    sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-    sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
-    sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
-    float dps = 0.f;
-    for (auto weapon : unitTypeData.weapons)
-    {
-        if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
-        {
-            float weaponDps = weapon.damage_;
-            for (auto damageBonus : weapon.damage_bonus)
-            {
-                if (std::find(targetTypeData.attributes.begin(), targetTypeData.attributes.end(), damageBonus.attribute) != targetTypeData.attributes.end())
-                    weaponDps += damageBonus.bonus;
-            }
-            weaponDps -= targetTypeData.armor;
-            weaponDps *= weapon.attacks / weapon.speed;
-            if (weaponDps > dps)
-                dps = weaponDps;
-        }
-    }
-
-    if (target->unit_type == sc2::UNIT_TYPEID::ZERG_BANELING || target->unit_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
-    {
-        dps = 15.f;
-    }
-    else if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
-    {
-        dps = 0.f;
-    }
-    else if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-    {
-        //A special case must be done for bunkers since they have no weapon and the cargo space is not available (bug?)
-        //2 marines and a marauder is 30, 4 marines is 40, so 35 would be a tradeoff
         //but we would rather target the SCVs that are repairing it and marines that stand unprotected
-        dps = 10.f;
+        dps = 20.f;
     }
-
-    return dps;
 }
 
 bool Util::IsTerran(const CCRace & race)
