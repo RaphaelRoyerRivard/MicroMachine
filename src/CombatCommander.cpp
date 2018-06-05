@@ -12,8 +12,8 @@ const size_t DropPriority = 4;
 const float DefaultOrderRadius = 25;    //Order radius is the threat awareness range of units in the squad
 const float MainAttackOrderRadius = 15;
 const float MainAttackMaxDistance = 7;  //Distance from the center of the Main Attack Squad for a unit to be considered in it
-const float MainAttackMaxRegroupDuration = 50;  //Max number of frames allowed for a regroup order
-const float MainAttackRegroupCooldown = 100;    //Min number of frames required to wait between regroup orders
+const float MainAttackMaxRegroupDuration = 100;  //Max number of frames allowed for a regroup order
+const float MainAttackRegroupCooldown = 200;    //Min number of frames required to wait between regroup orders
 
 CombatCommander::CombatCommander(CCBot & bot)
     : m_bot(bot)
