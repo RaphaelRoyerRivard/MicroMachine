@@ -16,9 +16,10 @@ bool ShouldAttackTransition::isValid(const sc2::Unit * target, CCBot * bot)
     // use the correct weapon range regardless of target type
     float range(Util::GetAttackRangeForTarget(m_unit, target, *bot));
     float dist(Util::Dist(m_unit->pos, target->pos));
-    float timeUntilAttacked = std::max(0.f, (dist - range) / unitTypeData.movement_speed);
+    float timeToReachTargetWithRange = std::max(0.f, (dist - range) / unitTypeData.movement_speed);
 
-    return !(Unit(target, *bot).getType().isCombatUnit() && !(timeUntilAttacked >= m_unit->weapon_cooldown));
+    //return !(Unit(target, *bot).getType().isCombatUnit() && !(timeToReachTargetWithRange >= m_unit->weapon_cooldown));
+    return timeToReachTargetWithRange >= m_unit->weapon_cooldown;
 }
 KitingFSMState* ShouldAttackTransition::getNextState()
 {
