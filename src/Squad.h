@@ -29,7 +29,6 @@ class Squad
 
     Unit unitClosestToEnemy() const;
 
-    Unit calcClosestAllyFromTargets(std::vector<Unit>& targets) const;
     void updateUnits();
     void addUnitsToMicroManagers();
     void setNearEnemyUnits();

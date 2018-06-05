@@ -117,6 +117,23 @@ CCPosition Util::CalcCenter(const std::vector<Unit> & units)
     return CCPosition(cx / units.size(), cy / units.size());
 }
 
+Unit & Util::CalcClosestUnit(const Unit & unit, const std::vector<Unit> & targets)
+{
+    float distance;
+    float minDistance = 0;
+    Unit closestUnit;
+    for (auto & target : targets)
+    {
+        distance = Dist(target.getPosition(), unit.getPosition());
+        if (minDistance == 0 || distance < minDistance)
+        {
+            minDistance = distance;
+            closestUnit = target;
+        }
+    }
+    return closestUnit;
+}
+
 void Util::Normalize(sc2::Point2D& point)
 {
     float norm = sqrt(pow(point.x, 2) + pow(point.y, 2));
@@ -302,11 +319,13 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
     }
     else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
     {
-        //A special case must be done for bunkers since they have no weapon and the cargo space is not available (bug?)
-        //2 marines and a marauder is 30, 4 marines is 40, so 35 would be a tradeoff
-        //but we would rather target the SCVs that are repairing it and marines that stand unprotected
+        //A special case must be done for bunkers since they have no weapon and the cargo space is not available
+        //2 marines and a marauder is 30 dps, 4 marines is 40, so 35 would be a tradeoff
+        //but for some reason, enough marines are afraid of it when dps is over 20
         dps = 20.f;
     }
+
+    return dps;
 }
 
 bool Util::IsTerran(const CCRace & race)

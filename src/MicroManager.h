@@ -32,8 +32,8 @@ public:
     inline void setOrder(SquadOrder order) { m_order = order; }
     void regroup(const CCPosition & regroupPosition) const;
     float getSquadPower() const;
-    float getTargetsPower(float averageSquadHeight, Unit & closestUnit) const;
-    float getUnitPower(const Unit & unit, float averageSquadHeight = -1, Unit* closestUnit = nullptr) const;
+    float getTargetsPower(const std::vector<Unit>& units) const;
+    float getUnitPower(const Unit & unit, Unit& closestUnit) const;
 
     std::unordered_map<sc2::Tag, FocusFireFiniteStateMachine*> m_focusFireStates;
     std::unordered_map<sc2::Tag, KitingFiniteStateMachine*> m_kittingStates;

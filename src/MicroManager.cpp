@@ -43,25 +43,27 @@ float MicroManager::getSquadPower() const
 
     for (auto & unit : m_units)
     {
-        squadPower += getUnitPower(unit);
+        Unit& closestTarget = Util::CalcClosestUnit(unit, m_targets);
+        squadPower += getUnitPower(unit, closestTarget);
     }
 
     return squadPower;
 }
 
-float MicroManager::getTargetsPower(float averageSquadHeight, Unit& closestUnit) const
+float MicroManager::getTargetsPower(const std::vector<Unit>& units) const
 {
     float enemyPower = 0;
 
     for (auto & target : m_targets)
     {
-        enemyPower += getUnitPower(target, averageSquadHeight, &closestUnit);
+        Unit& closestUnit = Util::CalcClosestUnit(target, units);
+        enemyPower += getUnitPower(target, closestUnit);
     }
 
     return enemyPower;
 }
 
-float MicroManager::getUnitPower(const Unit &unit, float averageSquadHeight, Unit* closestUnit) const
+float MicroManager::getUnitPower(const Unit &unit, Unit& closestUnit) const
 {
     ///////// HEALTH
     float unitPower = sqrt(unit.getHitPoints() + unit.getShields());
@@ -81,9 +83,9 @@ float MicroManager::getUnitPower(const Unit &unit, float averageSquadHeight, Uni
     //TODO bonus for splash damage
 
     ///////// DISTANCE
-    if (closestUnit != nullptr)
+    if (closestUnit.isValid())
     {
-        float distance = Util::Dist(unit.getPosition(), closestUnit->getPosition());
+        float distance = Util::Dist(unit.getPosition(), closestUnit.getPosition());
         if (unitRange + 1 < distance)   //if the unit can't reach the closest unit (with a small buffer)
         {
             distance -= unitRange + 1;

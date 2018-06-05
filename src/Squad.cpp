@@ -168,6 +168,7 @@ void Squad::setAllUnits()
     m_units = goodUnits;
 
     CCPosition center = calcCenter();
+    m_bot.Map().drawCircle(center, 1.f);
     for (auto & unit : m_units)
         m_bot.Map().drawLine(unit.getPosition(), center);
 }
@@ -231,28 +232,9 @@ bool Squad::needsToRetreat() const
 
     float meleePower = m_meleeManager.getSquadPower();
     float rangedPower = m_rangedManager.getSquadPower();
-    float averageHeight = calcAverageHeight();
-    Unit closestUnit = calcClosestAllyFromTargets(m_rangedManager.getTargets());
-    float targetsPower = m_rangedManager.getTargetsPower(averageHeight, closestUnit);
-    return meleePower + rangedPower < targetsPower;
-}
-
-Unit Squad::calcClosestAllyFromTargets(std::vector<Unit>& targets) const
-{
-    CCPosition targetsCenter = Util::CalcCenter(targets);
-    float distance;
-    float minDistance = 0;
-    Unit closestUnit;
-    for (auto & unit : m_units)
-    {
-        distance = Util::Dist(unit.getPosition(), targetsCenter);
-        if (minDistance == 0 || distance < minDistance)
-        {
-            minDistance = distance;
-            closestUnit = unit;
-        }
-    }
-    return closestUnit;
+    //float averageHeight = calcAverageHeight();
+    float targetsPower = m_rangedManager.getTargetsPower(m_units);
+    return meleePower + rangedPower < targetsPower * 0.90f; //We believe we can beat a slightly more powerful army with our good micro
 }
 
 bool Squad::needsToRegroup() const

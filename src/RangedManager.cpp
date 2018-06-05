@@ -252,21 +252,14 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
     if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
     {
         float dps = Util::GetDpsForTarget(target, attacker, m_bot);
-        if (dps == 0.f)
+        if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
         {
-            if (target->unit_type == sc2::UNIT_TYPEID::ZERG_BANELING || target->unit_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
-            {
-                dps = 15.f;
-            }
-            else if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-            {
-                //A special case must be done for bunkers since they have no weapon and the cargo space is not available (bug?)
-                //2 marines and a marauder is 30, 4 marines is 40, so 35 would be a tradeoff
-                //but we would rather target the SCVs that are repairing it and marines that stand unprotected
-                dps = 10.f;
-            }
+            //A special case must be done for bunkers since they have no weapon and the cargo space is not available (bug?)
+            //2 marines and a marauder is 30, 4 marines is 40, so 35 would be a tradeoff
+            //but we would rather target the SCVs that are repairing it and marines that stand unprotected
+            dps = 5.f;
         }
-        float workerBonus = targetUnit.getType().isWorker() ? 2.f : 1.f;   //workers are around twice as important
+        float workerBonus = targetUnit.getType().isWorker() ? 1.5f : 1.f;   //workers are around twice as important
         float healthValue = 1 / pow(target->health + target->shield, 2);  //the more health a unit has, the less it is prioritized
         float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);   //the more far a unit is, the less it is prioritized
         if (distanceValue > Util::GetAttackRangeForTarget(attacker, target, m_bot))
