@@ -20,6 +20,7 @@ CombatCommander::CombatCommander(CCBot & bot)
     , m_squadData(bot)
     , m_initialized(false)
     , m_attackStarted(false)
+	, m_currentBaseExplorationIndex(0)
 {
 
 }
@@ -494,7 +495,7 @@ CCPosition CombatCommander::getMainAttackLocation()
             // if it has been explored, go there if there are any visible enemy units there
             for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
             {
-                if (Util::Dist(enemyUnit, enemyBasePosition) < 25)
+                if (Util::Dist(enemyUnit, enemyBasePosition) < 15)
                 {
                     return enemyBasePosition;
                 }
@@ -509,7 +510,9 @@ CCPosition CombatCommander::getMainAttackLocation()
 
         if (m_bot.Data(ui.type).isBuilding && ui.lastHealth > 0.0f && ui.unit.isAlive() && !(ui.lastPosition.x == 0.0f && ui.lastPosition.y == 0.0f))
         {
-            return ui.lastPosition;
+			CCPosition mainAttackSquadCenter = m_squadData.getSquad("MainAttack").calcCenter();
+			if(Util::Dist(mainAttackSquadCenter, ui.lastPosition) > 3)
+				return ui.lastPosition;
         }
     }
 
@@ -523,5 +526,17 @@ CCPosition CombatCommander::getMainAttackLocation()
     }
 
     // Fourth choice: We can't see anything so explore the map attacking along the way
-    return Util::GetPosition(m_bot.Map().getLeastRecentlySeenTile());
+	return exploreMap();
+}
+
+CCPosition CombatCommander::exploreMap()
+{
+	CCPosition mainAttackSquadCenter = m_squadData.getSquad("MainAttack").calcCenter();
+	CCPosition basePosition = Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
+	if (Util::Dist(mainAttackSquadCenter, basePosition) < 3.f)
+	{
+		m_currentBaseExplorationIndex = m_currentBaseExplorationIndex + 1 % m_bot.Bases().getBaseLocations().size();
+		return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
+	}
+	return basePosition;
 }

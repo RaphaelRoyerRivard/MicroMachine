@@ -14,6 +14,7 @@ class CombatCommander
     std::vector<Unit>  m_combatUnits;
     bool            m_initialized;
     bool            m_attackStarted;
+	int				m_currentBaseExplorationIndex;
 
     void            updateScoutDefenseSquad();
     void            updateDefenseSquads();
@@ -26,6 +27,7 @@ class CombatCommander
     Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos);
 
     CCPosition      getMainAttackLocation();
+	CCPosition		exploreMap();
 
     void            updateDefenseSquadUnits(Squad & defenseSquad, const size_t & flyingDefendersNeeded, const size_t & groundDefendersNeeded);
     bool            shouldWeStartAttacking();

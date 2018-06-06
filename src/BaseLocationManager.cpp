@@ -115,6 +115,44 @@ void BaseLocationManager::onStart()
         }
     }
 
+	//Sorting base locations from closest to opponent's starting base to farthest
+	struct SortClosestToOpponentStartingLocation
+	{
+		const std::vector<const BaseLocation *> & startingBaseLocations;
+
+		SortClosestToOpponentStartingLocation(const std::vector<const BaseLocation *> & bases) : startingBaseLocations(bases) { }
+
+		inline bool operator() (const BaseLocation * baseLocationPtr1, const BaseLocation * baseLocationPtr2)
+		{
+			float dist1 = 0.f, dist2 = 0.f;
+
+			for (const BaseLocation* startingBaseLocation : startingBaseLocations)
+			{
+				//TODO not sure why first starting base location in the vector is not a player base (should be opponent's but is set to false)
+				if (!startingBaseLocation->isPlayerStartLocation(Players::Self))
+				{
+					// get the tile position of the bases
+					auto tile1 = baseLocationPtr1->getPosition();
+					auto tile2 = baseLocationPtr2->getPosition();
+
+					// the base's distance from opponent starting base
+					int dist1 = startingBaseLocation->getGroundDistance(tile1);
+					int dist2 = startingBaseLocation->getGroundDistance(tile2);
+
+					if (dist1 < 0)
+						dist1 = INT_MAX;
+					if (dist2 < 0)
+						dist2 = INT_MAX;
+
+					break;
+				}
+			}
+
+			return dist1 < dist2;
+		}
+	};
+    sort(m_baseLocationPtrs.begin(), m_baseLocationPtrs.end(), SortClosestToOpponentStartingLocation(m_startingBaseLocations));
+
     // construct the map of tile positions to base locations
     for (int x=0; x < m_bot.Map().width(); ++x)
     {
@@ -302,51 +340,61 @@ const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocat
     return m_occupiedBaseLocations.at(player);
 }
 
-
 CCTilePosition BaseLocationManager::getNextExpansion(int player) const
 {
-    const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
-    if(!homeBase)
-        return CCTilePosition(0, 0);
+	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
+	if (!homeBase)
+		return CCTilePosition(0, 0);
 
-    const BaseLocation * closestBase = nullptr;
-    int minDistance = std::numeric_limits<int>::max();
+	const BaseLocation * closestBase = nullptr;
+	int minDistance = std::numeric_limits<int>::max();
 
-    CCPosition homeTile = homeBase->getPosition();
-    
-    for (auto & base : getBaseLocations())
-    {
-        // skip mineral only and starting locations (TODO: fix this)
-        if (base->isMineralOnly() || base->isStartLocation())
-        {
-            continue;
-        }
+	CCPosition homeTile = homeBase->getPosition();
 
-        // get the tile position of the base
-        auto tile = base->getDepotPosition();
-        
-        bool buildingInTheWay = false; // TODO: check if there are any units on the tile
+	for (auto & base : getBaseLocations())
+	{
+		// skip mineral only and starting locations (TODO: fix this)
+		if (base->isMineralOnly() || base->isStartLocation())
+		{
+			continue;
+		}
 
-        if (buildingInTheWay)
-        {
-            continue;
-        }
+		// get the tile position of the base
+		auto tile = base->getDepotPosition();
 
-        // the base's distance from our main nexus
-        int distanceFromHome = homeBase->getGroundDistance(tile);
+		bool buildingInTheWay = false; // TODO: check if there are any units on the tile
 
-        // if it is not connected, continue
-        if (distanceFromHome < 0)
-        {
-            continue;
-        }
+		if (buildingInTheWay)
+		{
+			continue;
+		}
 
-        if (!closestBase || distanceFromHome < minDistance)
-        {
-            closestBase = base;
-            minDistance = distanceFromHome;
-        }
-    }
+		// the base's distance from our main nexus
+		int distanceFromHome = homeBase->getGroundDistance(tile);
 
-    return closestBase ? closestBase->getDepotPosition() : CCTilePosition(0, 0);
+		// if it is not connected, continue
+		if (distanceFromHome < 0)
+		{
+			continue;
+		}
+
+		if (!closestBase || distanceFromHome < minDistance)
+		{
+			closestBase = base;
+			minDistance = distanceFromHome;
+		}
+	}
+
+	return closestBase ? closestBase->getDepotPosition() : CCTilePosition(0, 0);
+}
+
+CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
+{
+	if(index < 0 || index >= m_baseLocationPtrs.size())
+		return CCTilePosition(0, 0);
+
+	if (player == Players::Self)
+		index = m_baseLocationPtrs.size() - index - 1;
+
+	return m_baseLocationPtrs[index]->getDepotPosition();
 }
