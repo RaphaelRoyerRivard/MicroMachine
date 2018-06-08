@@ -25,6 +25,7 @@ namespace Util
     float GetDps(const sc2::Unit * unit, CCBot & bot);
     float GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
     float GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot);
+	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
     
     std::string     GetStringFromRace(const sc2::Race & race);
     sc2::Race       GetRaceFromString(const std::string & race);

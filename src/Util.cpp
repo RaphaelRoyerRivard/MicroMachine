@@ -328,6 +328,21 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
     return dps;
 }
 
+float Util::getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot)
+{
+	if (units.empty())
+		return 0.f;
+
+	float squadSpeed = 0;
+
+	for (auto & unit : units)
+	{
+		squadSpeed += Util::GetUnitTypeDataFromUnitTypeId(unit.getAPIUnitType(), bot).movement_speed;
+	}
+
+	return squadSpeed / (float)units.size();
+}
+
 bool Util::IsTerran(const CCRace & race)
 {
 #ifdef SC2API

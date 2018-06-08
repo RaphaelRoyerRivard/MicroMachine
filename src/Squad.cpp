@@ -230,6 +230,12 @@ bool Squad::needsToRetreat() const
     if (m_name != "MainAttack")
         return false;
 
+	float averageSpeed = (m_meleeManager.getAverageSquadSpeed() + m_rangedManager.getAverageSquadSpeed()) / 2.f;
+	float averageTargetsSpeed = m_rangedManager.getAverageTargetsSpeed();
+	//TODO also consider the range (if targets are not in range, we should still back)
+	if (averageSpeed < averageTargetsSpeed * 0.90f)	//Even though the enemy units are a little bit faster, maybe we should still back
+		return false;
+
     float meleePower = m_meleeManager.getSquadPower();
     float rangedPower = m_rangedManager.getSquadPower();
     //float averageHeight = calcAverageHeight();

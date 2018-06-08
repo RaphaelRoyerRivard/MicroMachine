@@ -37,6 +37,16 @@ void MicroManager::regroup(const CCPosition & regroupPosition) const
     }
 }
 
+float MicroManager::getAverageSquadSpeed() const
+{
+	return Util::getAverageSpeedOfUnits(m_units, m_bot);
+}
+
+float MicroManager::getAverageTargetsSpeed() const
+{
+	return Util::getAverageSpeedOfUnits(m_targets, m_bot);
+}
+
 float MicroManager::getSquadPower() const
 {
     float squadPower = 0;

@@ -31,6 +31,8 @@ public:
     virtual void setTargets(const std::vector<Unit> & targets) = 0;
     inline void setOrder(SquadOrder order) { m_order = order; }
     void regroup(const CCPosition & regroupPosition) const;
+	float getAverageSquadSpeed() const;
+	float getAverageTargetsSpeed() const;
     float getSquadPower() const;
     float getTargetsPower(const std::vector<Unit>& units) const;
     float getUnitPower(const Unit & unit, Unit& closestUnit) const;
