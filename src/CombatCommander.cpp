@@ -89,6 +89,27 @@ void CombatCommander::updateIdleSquad()
             idleSquad.addUnit(unit);
         }
     }
+
+	if (idleSquad.getUnits().empty())
+		return;
+
+	if (idleSquad.needsToRetreat())
+	{
+		SquadOrder retreatOrder(SquadOrderTypes::Retreat, getMainAttackLocation(), DefaultOrderRadius, "Retreat!!");
+		idleSquad.setSquadOrder(retreatOrder);
+	}
+	//regroup only after retreat
+	else if (idleSquad.needsToRegroup())
+	{
+		SquadOrder regroupOrder(SquadOrderTypes::Regroup, getMainAttackLocation(), DefaultOrderRadius, "Regroup before attacking");
+		idleSquad.setSquadOrder(regroupOrder);
+	}
+	else
+	{
+		CCTilePosition nextExpansionPosition = m_bot.Bases().getNextExpansion(Players::Self);
+		SquadOrder idleOrder(SquadOrderTypes::Attack, CCPosition(nextExpansionPosition.x, nextExpansionPosition.y), DefaultOrderRadius, "Prepare for battle");
+		m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
+	}
 }
 
 void CombatCommander::updateBackupSquads()
