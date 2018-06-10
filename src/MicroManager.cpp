@@ -76,7 +76,8 @@ float MicroManager::getTargetsPower(const std::vector<Unit>& units) const
 float MicroManager::getUnitPower(const Unit &unit, Unit& closestUnit) const
 {
     ///////// HEALTH
-    float unitPower = sqrt(unit.getHitPoints() + unit.getShields());
+	//even though a unit is low life, it is still worth more than close to nothing.
+	float unitPower = std::max(5.f, sqrt(unit.getHitPoints() + unit.getShields()));
 
     ///////// DPS
     unitPower *= Util::GetDps(unit.getUnitPtr(), m_bot);
