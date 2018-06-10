@@ -80,7 +80,10 @@ float MicroManager::getUnitPower(const Unit &unit, Unit& closestUnit) const
 	float unitPower = std::max(5.f, sqrt(unit.getHitPoints() + unit.getShields()));
 
     ///////// DPS
-    unitPower *= Util::GetDps(unit.getUnitPtr(), m_bot);
+	if(closestUnit.isValid())
+		unitPower *= Util::GetDpsForTarget(unit.getUnitPtr(), closestUnit.getUnitPtr(), m_bot);
+	else
+		unitPower *= Util::GetDps(unit.getUnitPtr(), m_bot);
 
     ///////// RANGE
     const float unitRange = unit.getType().getAttackRange();
