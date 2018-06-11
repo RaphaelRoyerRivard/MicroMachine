@@ -21,6 +21,7 @@ class ProductionManager
     void    setBuildOrder(const BuildOrder & buildOrder);
     void    create(const Unit & producer, BuildOrderItem & item);
     void    manageBuildOrderQueue();
+	BuildOrderItem getMoreImportantBuildOrderItem();
     int     getFreeMinerals();
     int     getFreeGas();
 

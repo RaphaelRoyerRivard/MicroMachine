@@ -67,6 +67,17 @@ UnitType Util::GetSupplyProvider(const CCRace & race, CCBot & bot)
 #endif
 }
 
+UnitType Util::GetWorkerType(const CCRace & race, CCBot & bot)
+{
+	switch (race)
+	{
+		case sc2::Race::Terran: return UnitType(sc2::UNIT_TYPEID::TERRAN_SCV, bot);
+		case sc2::Race::Protoss: return UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, bot);
+		case sc2::Race::Zerg: return UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, bot);
+		default: return UnitType();
+	}
+}
+
 UnitType Util::GetTownHall(const CCRace & race, CCBot & bot)
 {
 #ifdef SC2API

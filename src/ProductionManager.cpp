@@ -51,9 +51,10 @@ void ProductionManager::manageBuildOrderQueue()
     // if there is nothing in the queue, oh well
     if (m_queue.isEmpty())
     {
-        if (m_bot.Config().AutoCompleteBuildOrder && m_bot.GetPlayerRace(Players::Self) == sc2::Race::Terran)
+		BuildOrderItem nextItem = getMoreImportantBuildOrderItem();
+		if(nextItem.type.getMetaType() != MetaTypes::None)
         {
-            m_queue.queueItem(BuildOrderItem(MetaType("Marine", m_bot), 1, false));
+            m_queue.queueItem(nextItem);
         }
         else
             return;
@@ -98,6 +99,21 @@ void ProductionManager::manageBuildOrderQueue()
             break;
         }
     }
+}
+
+BuildOrderItem ProductionManager::getMoreImportantBuildOrderItem()
+{
+	if (m_bot.GetPlayerRace(Players::Self) == sc2::Race::Terran)
+	{
+		auto workerType = Util::GetWorkerType(m_bot.GetPlayerRace(Players::Self), m_bot);
+		if (m_bot.Workers().getNumWorkers() < 16 && !m_buildingManager.isBeingBuilt(workerType))
+			return BuildOrderItem(MetaType(workerType, m_bot), 1, false);
+		else
+			return BuildOrderItem(MetaType("Marine", m_bot), 1, false);
+	}
+	else
+		//None
+		return BuildOrderItem(MetaType(), 1, false);
 }
 
 void ProductionManager::fixBuildOrderDeadlock()
@@ -153,7 +169,14 @@ void ProductionManager::fixBuildOrderDeadlock()
     if (m_bot.Data(currentItem.type).gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false) == 0)
     {
         m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
-    } 
+    }
+
+	// build worker if we are not maxed
+	/*auto workerType = Util::GetWorkerType(m_bot.GetPlayerRace(Players::Self), m_bot);
+	if (m_bot.Workers().getNumWorkers() < 16 && !m_buildingManager.isBeingBuilt(workerType))
+	{
+		m_queue.queueAsHighestPriority(MetaType(workerType, m_bot), true);
+	}*/
 
     // build supply if we need some
     auto supplyProvider = Util::GetSupplyProvider(m_bot.GetPlayerRace(Players::Self), m_bot);

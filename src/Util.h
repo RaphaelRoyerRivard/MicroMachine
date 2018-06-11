@@ -64,7 +64,8 @@ namespace Util
     bool            UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & m_bot);
     UnitType        GetTownHall(const CCRace & race, CCBot & bot);
     UnitType        GetRefinery(const CCRace & race, CCBot & bot);
-    UnitType        GetSupplyProvider(const CCRace & race, CCBot & bot);
+	UnitType        GetSupplyProvider(const CCRace & race, CCBot & bot);
+	UnitType        GetWorkerType(const CCRace & race, CCBot & bot);
     CCPosition      CalcCenter(const std::vector<Unit> & units);
     bool            IsZerg(const CCRace & race);
     bool            IsProtoss(const CCRace & race);
