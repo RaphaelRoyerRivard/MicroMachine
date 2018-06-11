@@ -57,13 +57,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 	if(m_initialBuildOrderFinished)
     {
-		BuildOrderItem nextItem = getMostImportantBuildOrderItem();
-		if(nextItem.type.getMetaType() != MetaTypes::None)
-        {
-            m_queue.queueItem(nextItem);
-        }
-        else
-            return;
+		putImportantBuildOrderItemsInQueue();
     }
 
     // the current item to be used
@@ -107,33 +101,25 @@ void ProductionManager::manageBuildOrderQueue()
     }
 }
 
-BuildOrderItem ProductionManager::getMostImportantBuildOrderItem()
+void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
 	//TODO 16 per commandcenter and get the right producer (Command Center) for each
-	bool missingWorkers = m_bot.Workers().getNumWorkers() < 16;
-	if (missingWorkers)
+	if (m_bot.Workers().getNumWorkers() < 16)
 	{
 		auto workerType = Util::GetWorkerType(m_bot.GetPlayerRace(Players::Self), m_bot);
-		auto metaTypeWorker = MetaType(workerType, m_bot);
-		//Unit workerProducer = getProducer(metaTypeWorker);
-		//TODO maybe add it only if m_queue does not already have it
-		//if (workerProducer.isValid() && !workerProducer.isConstructing(workerType) && workerType.mineralPrice() <= m_bot.GetMinerals())
+		const auto metaTypeWorker = MetaType(workerType, m_bot);
 		if (!m_queue.contains(metaTypeWorker))
 		{
-			return BuildOrderItem(metaTypeWorker, 1, false);
+			m_queue.queueItem(BuildOrderItem(metaTypeWorker, 1, false));
 		}
 	}
 
 	if (m_bot.GetPlayerRace(Players::Self) == sc2::Race::Terran)
 	{
-		auto metaTypeMarine = MetaType("Marine", m_bot);
+		const auto metaTypeMarine = MetaType("Marine", m_bot);
 		if (!m_queue.contains(metaTypeMarine))
-		//if(metaTypeWorker.getUnitType().mineralPrice() <= m_bot.GetMinerals())
-			return BuildOrderItem(metaTypeMarine, 1, false);
+			m_queue.queueItem(BuildOrderItem(metaTypeMarine, 1, false));
 	}
-
-	//None
-	return BuildOrderItem(MetaType(), 1, false);
 }
 
 void ProductionManager::fixBuildOrderDeadlock()
@@ -190,13 +176,6 @@ void ProductionManager::fixBuildOrderDeadlock()
     {
         m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
     }
-
-	// build worker if we are not maxed
-	/*auto workerType = Util::GetWorkerType(m_bot.GetPlayerRace(Players::Self), m_bot);
-	if (m_bot.Workers().getNumWorkers() < 16 && !m_buildingManager.isBeingBuilt(workerType))
-	{
-		m_queue.queueAsHighestPriority(MetaType(workerType, m_bot), true);
-	}*/
 
     // build supply if we need some
     auto supplyProvider = Util::GetSupplyProvider(m_bot.GetPlayerRace(Players::Self), m_bot);

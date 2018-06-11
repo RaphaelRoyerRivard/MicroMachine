@@ -167,7 +167,15 @@ std::string BuildOrderQueue::getQueueInformation() const
 
 bool BuildOrderQueue::contains(const MetaType & type)
 {
-	return std::find(m_queue.begin(), m_queue.end(), type) != m_queue.end();
+	auto it = m_queue.begin();
+	while (it != m_queue.end())
+	{
+		//if (const_cast<const MetaType &>((*it).type) == type)
+		if(type.getUnitType().getAPIUnitType() == (*it++).type.getUnitType().getAPIUnitType())
+			return true;
+	}
+	return false;
+	//return std::find(m_queue.begin(), m_queue.end(), type) != m_queue.end();
 }
 
 
