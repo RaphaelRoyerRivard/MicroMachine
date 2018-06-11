@@ -13,6 +13,7 @@ class ProductionManager
 
     BuildingManager m_buildingManager;
     BuildOrderQueue m_queue;
+	bool m_initialBuildOrderFinished;
 
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo);
     bool    meetsReservedResources(const MetaType & type);
@@ -21,7 +22,7 @@ class ProductionManager
     void    setBuildOrder(const BuildOrder & buildOrder);
     void    create(const Unit & producer, BuildOrderItem & item);
     void    manageBuildOrderQueue();
-	BuildOrderItem getMoreImportantBuildOrderItem();
+	BuildOrderItem getMostImportantBuildOrderItem();
     int     getFreeMinerals();
     int     getFreeGas();
 

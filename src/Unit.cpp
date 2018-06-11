@@ -376,6 +376,8 @@ void Unit::morph(const UnitType & type) const
 bool Unit::isConstructing(const UnitType & type) const
 {
 #ifdef SC2API
+	BOT_ASSERT(isValid(), "Cannot check if unit is constructing because unit ptr is null");
+
     sc2::AbilityID buildAbility = m_bot->Data(type).buildAbility;
     return (getUnitPtr()->orders.size() > 0) && (getUnitPtr()->orders[0].ability_id == buildAbility);
 #else

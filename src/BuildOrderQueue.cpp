@@ -165,6 +165,11 @@ std::string BuildOrderQueue::getQueueInformation() const
     return ss.str();
 }
 
+bool BuildOrderQueue::contains(const MetaType & type)
+{
+	return std::find(m_queue.begin(), m_queue.end(), type) != m_queue.end();
+}
+
 
 BuildOrderItem::BuildOrderItem(const MetaType & t, int p, bool b)
     : type(t)
@@ -175,5 +180,10 @@ BuildOrderItem::BuildOrderItem(const MetaType & t, int p, bool b)
 
 bool BuildOrderItem::operator < (const BuildOrderItem & x) const
 {
-    return priority < x.priority;
+	return priority < x.priority;
+}
+
+bool BuildOrderItem::operator == (const BuildOrderItem & x) const
+{
+	return type.getUnitType().getAPIUnitType() == x.type.getUnitType().getAPIUnitType() && priority == x.priority;
 }

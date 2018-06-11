@@ -6,6 +6,7 @@ ProductionManager::ProductionManager(CCBot & bot)
     : m_bot             (bot)
     , m_buildingManager (bot)
     , m_queue           (bot)
+	, m_initialBuildOrderFinished(false)
 {
 
 }
@@ -49,9 +50,14 @@ void ProductionManager::onUnitDestroy(const Unit & unit)
 void ProductionManager::manageBuildOrderQueue()
 {
     // if there is nothing in the queue, oh well
-    if (m_queue.isEmpty())
+	if (!m_initialBuildOrderFinished && m_queue.isEmpty())
+	{
+		m_initialBuildOrderFinished = true;
+	}
+
+	if(m_initialBuildOrderFinished)
     {
-		BuildOrderItem nextItem = getMoreImportantBuildOrderItem();
+		BuildOrderItem nextItem = getMostImportantBuildOrderItem();
 		if(nextItem.type.getMetaType() != MetaTypes::None)
         {
             m_queue.queueItem(nextItem);
@@ -101,19 +107,33 @@ void ProductionManager::manageBuildOrderQueue()
     }
 }
 
-BuildOrderItem ProductionManager::getMoreImportantBuildOrderItem()
+BuildOrderItem ProductionManager::getMostImportantBuildOrderItem()
 {
-	if (m_bot.GetPlayerRace(Players::Self) == sc2::Race::Terran)
+	//TODO 16 per commandcenter and get the right producer (Command Center) for each
+	bool missingWorkers = m_bot.Workers().getNumWorkers() < 16;
+	if (missingWorkers)
 	{
 		auto workerType = Util::GetWorkerType(m_bot.GetPlayerRace(Players::Self), m_bot);
-		if (m_bot.Workers().getNumWorkers() < 16 && !m_buildingManager.isBeingBuilt(workerType))
-			return BuildOrderItem(MetaType(workerType, m_bot), 1, false);
-		else
-			return BuildOrderItem(MetaType("Marine", m_bot), 1, false);
+		auto metaTypeWorker = MetaType(workerType, m_bot);
+		//Unit workerProducer = getProducer(metaTypeWorker);
+		//TODO maybe add it only if m_queue does not already have it
+		//if (workerProducer.isValid() && !workerProducer.isConstructing(workerType) && workerType.mineralPrice() <= m_bot.GetMinerals())
+		if (!m_queue.contains(metaTypeWorker))
+		{
+			return BuildOrderItem(metaTypeWorker, 1, false);
+		}
 	}
-	else
-		//None
-		return BuildOrderItem(MetaType(), 1, false);
+
+	if (m_bot.GetPlayerRace(Players::Self) == sc2::Race::Terran)
+	{
+		auto metaTypeMarine = MetaType("Marine", m_bot);
+		if (!m_queue.contains(metaTypeMarine))
+		//if(metaTypeWorker.getUnitType().mineralPrice() <= m_bot.GetMinerals())
+			return BuildOrderItem(metaTypeMarine, 1, false);
+	}
+
+	//None
+	return BuildOrderItem(MetaType(), 1, false);
 }
 
 void ProductionManager::fixBuildOrderDeadlock()

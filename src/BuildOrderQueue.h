@@ -12,7 +12,8 @@ struct BuildOrderItem
     bool            blocking;	// whether or not we block further items
 
     BuildOrderItem(const MetaType & t, int p, bool b);
-    bool operator<(const BuildOrderItem & x) const;
+	bool operator<(const BuildOrderItem & x) const;
+	bool operator==(const BuildOrderItem & x) const;
 };
 
 class BuildOrderQueue
@@ -45,6 +46,7 @@ public:
 
     bool canSkipItem();
     std::string getQueueInformation() const;
+	bool contains(const MetaType & type);
 
     // overload the bracket operator for ease of use
     BuildOrderItem operator [] (int i);
