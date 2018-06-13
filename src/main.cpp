@@ -24,19 +24,8 @@ public:
 
 };
 
-bool LADDER_MODE = false;
-
 int main(int argc, char* argv[]) 
-{
-    if (LADDER_MODE)
-    {
-        CCBot bot;
-        RunBot(argc, argv, &bot, sc2::Race::Terran);
-
-        return 0;
-    }
-
-    sc2::Coordinator coordinator;
+{sc2::Coordinator coordinator;
     if (!coordinator.LoadSettings(argc, argv)) 
     {
         std::cout << "Unable to find or parse settings." << std::endl;
@@ -62,6 +51,7 @@ int main(int argc, char* argv[])
         exit(-1);
     }*/
 
+	bool connectToLadder = false;
     std::string botRaceString;
     std::string enemyRaceString;
     std::string mapString;
@@ -73,6 +63,7 @@ int main(int argc, char* argv[])
     if (j.count("SC2API") && j["SC2API"].is_object())
     {
         const json & info = j["SC2API"];
+		JSONTools::ReadBool("ConnectToLadder", info, connectToLadder);
         JSONTools::ReadString("BotRace", info, botRaceString);
         JSONTools::ReadString("EnemyRace", info, enemyRaceString);
         JSONTools::ReadString("MapFile", info, mapString);
@@ -87,6 +78,14 @@ int main(int argc, char* argv[])
         std::cerr << "Please read the instructions and try again\n";
         exit(-1);
     }
+
+	if (connectToLadder)
+	{
+		CCBot bot;
+		RunBot(argc, argv, &bot, sc2::Race::Terran);
+
+		return 0;
+	}
 
     // Add the custom bot, it will control the players.
     CCBot bot;
@@ -118,6 +117,7 @@ int main(int argc, char* argv[])
     //          The bot may crash or do unexpected things if its logic is not called every frame
     coordinator.SetStepSize(stepSize);
     coordinator.SetRealtime(PlayerOneIsHuman);
+    //coordinator.SetRealtime(true);
 
     coordinator.SetParticipants({
         spectatingPlayer,
