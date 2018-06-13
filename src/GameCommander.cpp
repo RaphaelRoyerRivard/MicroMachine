@@ -25,8 +25,7 @@ void GameCommander::onFrame()
 
     handleUnitAssignments();
 
-    if(m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) != nullptr)
-        m_productionManager.onFrame();
+    m_productionManager.onFrame();
     m_scoutManager.onFrame();
     m_combatCommander.onFrame(m_combatUnits);
 

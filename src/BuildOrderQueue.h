@@ -41,8 +41,8 @@ public:
     size_t size();													// returns the size of the queue
 
     bool isEmpty();
-    BuildOrderItem & getHighestPriorityItem();	// returns the highest priority item
-    BuildOrderItem & getNextHighestPriorityItem();	// returns the highest priority item
+    BuildOrderItem getHighestPriorityItem();	// returns the highest priority item
+    BuildOrderItem getNextHighestPriorityItem();	// returns the highest priority item
 
     bool canSkipItem();
     std::string getQueueInformation() const;

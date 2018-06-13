@@ -21,17 +21,6 @@ void BuildingManager::onStart()
 // gets called every frame from GameCommander
 void BuildingManager::onFrame()
 {
-    for (auto unit : m_bot.UnitInfo().getUnits(Players::Self))
-    {
-        // filter out units which aren't buildings under construction
-        if (m_bot.Data(unit).isBuilding)
-        {
-            std::stringstream ss;
-            ss << unit.getID();
-            m_bot.Map().drawText(unit.getPosition(), ss.str());
-        }
-    }
-
     validateWorkersAndBuildings();          // check to see if assigned workers have died en route or while constructing
     assignWorkersToUnassignedBuildings();   // assign workers to the unassigned buildings and label them 'planned'    
     constructAssignedBuildings();           // for each planned building, if the worker isn't constructing, send the command    

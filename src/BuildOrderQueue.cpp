@@ -21,7 +21,7 @@ void BuildOrderQueue::clearAll()
     m_lowestPriority = 0;
 }
 
-BuildOrderItem & BuildOrderQueue::getHighestPriorityItem()
+BuildOrderItem BuildOrderQueue::getHighestPriorityItem()
 {
     // reset the number of skipped items to zero
     m_numSkippedItems = 0;
@@ -30,7 +30,7 @@ BuildOrderItem & BuildOrderQueue::getHighestPriorityItem()
     return m_queue.back();
 }
 
-BuildOrderItem & BuildOrderQueue::getNextHighestPriorityItem()
+BuildOrderItem BuildOrderQueue::getNextHighestPriorityItem()
 {
     assert(m_queue.size() - 1 - m_numSkippedItems >= 0);
 
@@ -170,12 +170,10 @@ bool BuildOrderQueue::contains(const MetaType & type)
 	auto it = m_queue.begin();
 	while (it != m_queue.end())
 	{
-		//if (const_cast<const MetaType &>((*it).type) == type)
 		if(type.getUnitType().getAPIUnitType() == (*it++).type.getUnitType().getAPIUnitType())
 			return true;
 	}
 	return false;
-	//return std::find(m_queue.begin(), m_queue.end(), type) != m_queue.end();
 }
 
 

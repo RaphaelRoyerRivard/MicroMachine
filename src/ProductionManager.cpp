@@ -30,6 +30,9 @@ void ProductionManager::onStart()
 
 void ProductionManager::onFrame()
 {
+	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
+		return;
+
     fixBuildOrderDeadlock();
     manageBuildOrderQueue();
 
@@ -61,7 +64,7 @@ void ProductionManager::manageBuildOrderQueue()
     }
 
     // the current item to be used
-    BuildOrderItem & currentItem = m_queue.getHighestPriorityItem();
+    BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
 
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
@@ -103,10 +106,21 @@ void ProductionManager::manageBuildOrderQueue()
 
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
+	CCRace playerRace = m_bot.GetPlayerRace(Players::Self);
+	// build supply if we need some
+	auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
+	auto metaTypeSupplyProvider = MetaType(supplyProvider, m_bot);
+	if (!m_queue.contains(metaTypeSupplyProvider) && 
+		m_bot.GetCurrentSupply() > (m_bot.GetMaxSupply() - 2 * getUnitTrainingBuildings(playerRace).size()) && 
+		!m_buildingManager.isBeingBuilt(supplyProvider))
+	{
+		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
+	}
+
 	//TODO 16 per commandcenter and get the right producer (Command Center) for each
 	if (m_bot.Workers().getNumWorkers() < 16)
 	{
-		auto workerType = Util::GetWorkerType(m_bot.GetPlayerRace(Players::Self), m_bot);
+		auto workerType = Util::GetWorkerType(playerRace, m_bot);
 		const auto metaTypeWorker = MetaType(workerType, m_bot);
 		if (!m_queue.contains(metaTypeWorker))
 		{
@@ -114,11 +128,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		}
 	}
 
-	if (m_bot.GetPlayerRace(Players::Self) == sc2::Race::Terran)
+	//Continiously build marines
+	if (playerRace == sc2::Race::Terran)
 	{
 		const auto metaTypeMarine = MetaType("Marine", m_bot);
 		if (!m_queue.contains(metaTypeMarine))
-			m_queue.queueItem(BuildOrderItem(metaTypeMarine, 1, false));
+		{
+			m_queue.queueAsLowestPriority(metaTypeMarine, false);
+		}
 	}
 }
 
@@ -209,6 +226,40 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
     }
 
     return getClosestUnitToPosition(candidateProducers, closestTo);
+}
+
+std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
+{
+	std::set<sc2::UnitTypeID> unitTrainingBuildingTypes;
+	switch (race)
+	{
+	case CCRace::Terran:
+		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_STARPORT);
+		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_FACTORY);
+		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_GHOSTACADEMY);
+		break;
+	case CCRace::Protoss:
+		break;
+	case CCRace::Zerg:
+		break;
+	}
+
+	std::vector<Unit> trainers;
+	for (auto unit : m_bot.UnitInfo().getUnits(Players::Self))
+	{
+		// reasons a unit can not train the desired type
+		if (unitTrainingBuildingTypes.find(unit.getType().getAPIUnitType()) == unitTrainingBuildingTypes.end()) { continue; }
+		if (!unit.isCompleted()) { continue; }
+		if (unit.isFlying()) { continue; }
+
+		// TODO: if unit is not powered continue
+
+		// if we haven't cut it, add it to the set of trainers
+		trainers.push_back(unit);
+	}
+
+	return trainers;
 }
 
 Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo)
