@@ -76,7 +76,7 @@ float MicroManager::getUnitPower(const Unit &unit, Unit& closestUnit) const
 {
     ///////// HEALTH
 	//even though a unit is low life, it is still worth more than close to nothing.
-	float unitPower = std::max(5.f, sqrt(unit.getHitPoints() + unit.getShields()));
+	float unitPower = std::max(0.5f, pow(unit.getHitPoints() + unit.getShields(), 0.1f));
 
     ///////// DPS
 	if(closestUnit.isValid())

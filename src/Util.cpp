@@ -291,7 +291,7 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
     sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
     sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
     sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
-    float dps = GetSpecialCaseDps(target, bot);
+    float dps = GetSpecialCaseDps(unit, bot);
 
     if (dps == 0.f)
     {
