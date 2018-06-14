@@ -15,9 +15,14 @@ class Squad
     std::string         m_name;
     std::vector<Unit>   m_units;
     std::vector<Unit>   m_targets;
+
     int                 m_regroupStartFrame;
     int                 m_maxRegroupDuration;
     int                 m_regroupCooldown;
+
+	int                 m_retreatStartFrame;
+	int					m_minRetreatDuration;
+
     float               m_maxDistanceFromCenter;
     size_t              m_priority;
 
@@ -40,7 +45,7 @@ class Squad
 public:
 
     Squad(const std::string & name, const SquadOrder & order, size_t priority, CCBot & bot);
-    Squad(const std::string & name, const SquadOrder & order, int maxRegroupDuration, int regroupCooldown, float maxDistanceFromCenter, size_t priority, CCBot & bot);
+    Squad(const std::string & name, const SquadOrder & order, int maxRegroupDuration, int regroupCooldown, int minRetreatDuration, float maxDistanceFromCenter, size_t priority, CCBot & bot);
     Squad(CCBot & bot);
 
     void onFrame();

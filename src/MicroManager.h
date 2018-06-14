@@ -5,6 +5,7 @@
 #include "Unit.h"
 #include "FocusFireFiniteStateMachine.h"
 #include "KitingFiniteStateMachine.h"
+#include "Micro.h"
 
 class CCBot;
 class AlphaBetaUnit;

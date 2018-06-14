@@ -1,6 +1,5 @@
 #include "MicroManager.h"
 #include "CCBot.h"
-#include "Util.h"
 
 MicroManager::MicroManager(CCBot & bot)
     : m_bot(bot)
@@ -27,12 +26,12 @@ void MicroManager::regroup(const CCPosition & regroupPosition) const
         if (Util::Dist(unit, regroupPosition) > 4)
         {
             // regroup it
-            unit.move(regroupPosition);
+			Micro::SmartMove(unit.getUnitPtr(), regroupPosition, m_bot);
         }
         else
         {
             //defend itself near the regroupPosition
-            unit.attackMove(regroupPosition);
+			Micro::SmartAttackMove(unit.getUnitPtr(), regroupPosition, m_bot);
         }
     }
 }

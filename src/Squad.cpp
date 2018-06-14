@@ -23,6 +23,8 @@ Squad::Squad(const std::string & name, const SquadOrder & order, size_t priority
     , m_regroupStartFrame(0)
     , m_maxRegroupDuration(0)
     , m_regroupCooldown(0)
+	, m_retreatStartFrame(0)
+	, m_minRetreatDuration(0)
     , m_maxDistanceFromCenter(0)
     , m_priority(priority)
     , m_meleeManager(bot)
@@ -30,13 +32,15 @@ Squad::Squad(const std::string & name, const SquadOrder & order, size_t priority
 {
 }
 
-Squad::Squad(const std::string & name, const SquadOrder & order, int maxRegroupDuration, int regroupCooldown, float maxDistanceFromCenter, size_t priority, CCBot & bot)
+Squad::Squad(const std::string & name, const SquadOrder & order, int maxRegroupDuration, int regroupCooldown, int minRetreatDuration, float maxDistanceFromCenter, size_t priority, CCBot & bot)
     : m_bot(bot)
     , m_name(name)
     , m_order(order)
     , m_regroupStartFrame(0)
     , m_maxRegroupDuration(maxRegroupDuration)
     , m_regroupCooldown(regroupCooldown)
+	, m_retreatStartFrame(0)
+	, m_minRetreatDuration(minRetreatDuration)
     , m_maxDistanceFromCenter(maxDistanceFromCenter)
     , m_priority(priority)
     , m_meleeManager(bot)
@@ -230,6 +234,12 @@ bool Squad::needsToRetreat() const
     if (m_name != "MainAttack")
         return false;
 
+	int currentFrame = m_bot.GetCurrentFrame();
+
+	//Is current retreat still recent?
+	if (m_order.getType() == SquadOrderTypes::Retreat && currentFrame - m_retreatStartFrame < m_minRetreatDuration)
+		return true;
+
 	float averageSpeed = (m_meleeManager.getAverageSquadSpeed() + m_rangedManager.getAverageSquadSpeed()) / 2.f;
 	float averageTargetsSpeed = m_rangedManager.getAverageTargetsSpeed();
 	//TODO also consider the range (if targets are not in range, we should still back)
@@ -251,13 +261,16 @@ bool Squad::needsToRegroup() const
 
     int currentFrame = m_bot.GetCurrentFrame();
 
-    //Is last regroup too recent?
-    if (m_order.getType() != SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame < m_regroupCooldown)
-        return false;
-    
-    //Is current regroup taking too long?
-    if (m_order.getType() == SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame > m_maxRegroupDuration)
-        return false;
+	if (m_order.getType() != SquadOrderTypes::Regroup)
+	{
+		//Is last regroup too recent?
+		if (m_order.getType() != SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame < m_regroupCooldown)
+			return false;
+
+		//Is current regroup taking too long?
+		if (m_order.getType() == SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame > m_maxRegroupDuration)
+			return false;
+	}
 
     //do not regroup if targets are nearby (nor fleeing, since the targets are updated only whan having an Attack order)
     std::vector<Unit>& targets = calcTargets();
@@ -286,8 +299,10 @@ bool Squad::needsToRegroup() const
 
 void Squad::setSquadOrder(const SquadOrder & so)
 {
-    if (so.getType() == SquadOrderTypes::Regroup && m_order.getType() != SquadOrderTypes::Regroup)
-        m_regroupStartFrame = m_bot.GetCurrentFrame();
+	if (so.getType() == SquadOrderTypes::Regroup && m_order.getType() != SquadOrderTypes::Regroup)
+		m_regroupStartFrame = m_bot.GetCurrentFrame();
+	else if (so.getType() == SquadOrderTypes::Retreat && m_order.getType() != SquadOrderTypes::Retreat)
+		m_retreatStartFrame = m_bot.GetCurrentFrame();
     m_order = so;
 }
 
