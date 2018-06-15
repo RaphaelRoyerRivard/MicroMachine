@@ -74,9 +74,11 @@ float MicroManager::getTargetsPower(const std::vector<Unit>& units) const
 
 float MicroManager::getUnitPower(const Unit &unit, Unit& closestUnit) const
 {
+	float unitRange = unit.getType().getAttackRange();
+	bool isRanged = unitRange >= 1.5f;
+
     ///////// HEALTH
-	//even though a unit is low life, it is still worth more than close to nothing.
-	float unitPower = std::max(0.5f, pow(unit.getHitPoints() + unit.getShields(), 0.1f));
+	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.15f);
 
     ///////// DPS
 	if(closestUnit.isValid())
@@ -85,8 +87,7 @@ float MicroManager::getUnitPower(const Unit &unit, Unit& closestUnit) const
 		unitPower *= Util::GetDps(unit.getUnitPtr(), m_bot);
 
     ///////// RANGE
-    const float unitRange = unit.getType().getAttackRange();
-    if (unitRange >= 1.5f)
+    if (isRanged)
         unitPower *= 3; //ranged bonus (+200%)
 
     ///////// ARMOR
@@ -102,8 +103,9 @@ float MicroManager::getUnitPower(const Unit &unit, Unit& closestUnit) const
         if (unitRange + 1 < distance)   //if the unit can't reach the closest unit (with a small buffer)
         {
             distance -= unitRange + 1;
-            float distancePenalty = unit.getType().isBuilding() ? 0.2f : 0.1f;
-            unitPower = fmax(0, unitPower - (unitPower * distance * distancePenalty));  //penalty for distance (-10% per meter)
+            float distancePenalty = unit.getType().isBuilding() ? 0.5f : 0.95f;
+			distancePenalty = pow(distancePenalty, distance);
+			unitPower *= distancePenalty;	//penalty for distance (very fast for building but slow for units)
         }
     }
 

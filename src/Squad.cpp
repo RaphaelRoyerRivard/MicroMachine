@@ -250,7 +250,8 @@ bool Squad::needsToRetreat() const
     float rangedPower = m_rangedManager.getSquadPower();
     //float averageHeight = calcAverageHeight();
     float targetsPower = m_rangedManager.getTargetsPower(m_units);
-    return meleePower + rangedPower < targetsPower * 0.90f; //We believe we can beat a slightly more powerful army with our good micro
+	bool shouldBack = meleePower + rangedPower < targetsPower * 0.90f; //We believe we can beat a slightly more powerful army with our good micro
+	return shouldBack;
 }
 
 bool Squad::needsToRegroup() const
@@ -270,6 +271,12 @@ bool Squad::needsToRegroup() const
 		//Is current regroup taking too long?
 		if (m_order.getType() == SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame > m_maxRegroupDuration)
 			return false;
+	}
+
+	//Regroup automatically after a retreat
+	if (m_order.getType() == SquadOrderTypes::Retreat)
+	{
+		return true;
 	}
 
     //do not regroup if targets are nearby (nor fleeing, since the targets are updated only whan having an Attack order)
