@@ -249,6 +249,12 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
     BOT_ASSERT(target, "null unit in getAttackPriority");
     
     Unit targetUnit(target, m_bot);
+
+	float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized
+	float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);   //the more far a unit is, the less it is prioritized
+	if (distanceValue > Util::GetAttackRangeForTarget(attacker, target, m_bot))
+		distanceValue /= 2;
+
     if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
     {
 		float unitDps = Util::GetDpsForTarget(attacker, target, m_bot);
@@ -261,15 +267,11 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 			targetDps = 5.f;
         }
         float workerBonus = targetUnit.getType().isWorker() ? 1.5f : 1.f;   //workers are important to kill
-        float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized
-        float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);   //the more far a unit is, the less it is prioritized
-        if (distanceValue > Util::GetAttackRangeForTarget(attacker, target, m_bot))
-            distanceValue /= 2;
 
         return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus;
     }
 
-    return 1;
+	return (healthValue + distanceValue * 50) / 100.f;		//we do not want non combat buildings to have a higher priority than other units
 }
 
 // according to http://wiki.teamliquid.net/starcraft2/Range
