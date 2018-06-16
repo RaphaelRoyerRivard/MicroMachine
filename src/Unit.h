@@ -54,6 +54,7 @@ public:
     bool isIdle() const;
     bool isBurrowed() const;
     bool isValid() const;
+	bool isVisible() const;
     bool isTraining() const;
     bool isConstructing(const UnitType & type) const;
 

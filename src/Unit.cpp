@@ -261,6 +261,11 @@ bool Unit::isValid() const
     return m_unit != nullptr;
 }
 
+bool Unit::isVisible() const
+{
+	return m_unit->display_type == sc2::Unit::DisplayType::Visible;
+}
+
 void Unit::stop() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");

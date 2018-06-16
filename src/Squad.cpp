@@ -91,7 +91,12 @@ void Squad::onFrame()
     }
 }
 
-std::vector<Unit> Squad::calcTargets() const
+std::vector<Unit> Squad::calcVisibleTargets() const
+{
+	return calcTargets(true);
+}
+
+std::vector<Unit> Squad::calcTargets(bool visibilityFilter) const
 {
     // Discover enemies within region of interest
     std::vector<Unit> nearbyEnemies;
@@ -103,6 +108,9 @@ std::vector<Unit> Squad::calcTargets() const
         {
             if (Util::Dist(enemyUnit, m_order.getPosition()) < m_order.getRadius())
             {
+				if (visibilityFilter && !enemyUnit.isVisible())
+					continue;
+
                 nearbyEnemies.push_back(enemyUnit);
             }
         }
@@ -240,7 +248,9 @@ bool Squad::needsToRetreat() const
 	if (m_order.getType() == SquadOrderTypes::Retreat && currentFrame - m_retreatStartFrame < m_minRetreatDuration)
 		return true;
 
-	float averageSpeed = (m_meleeManager.getAverageSquadSpeed() + m_rangedManager.getAverageSquadSpeed()) / 2.f;
+	float meleeSpeed = m_meleeManager.getAverageSquadSpeed() * m_meleeManager.getUnits().size();
+	float rangedSpeed = m_rangedManager.getAverageSquadSpeed() * m_rangedManager.getUnits().size();
+	float averageSpeed = (meleeSpeed + rangedSpeed) / m_units.size();
 	float averageTargetsSpeed = m_rangedManager.getAverageTargetsSpeed();
 	//TODO also consider the range (if targets are not in range, we should still back)
 	if (averageSpeed < averageTargetsSpeed * 0.90f)	//Even though the enemy units are a little bit faster, maybe we should still back
@@ -280,7 +290,7 @@ bool Squad::needsToRegroup() const
 	}
 
     //do not regroup if targets are nearby (nor fleeing, since the targets are updated only whan having an Attack order)
-    std::vector<Unit>& targets = calcTargets();
+    std::vector<Unit>& targets = calcVisibleTargets();
     if (!targets.empty())
         return false;
 

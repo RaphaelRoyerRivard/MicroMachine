@@ -68,7 +68,8 @@ public:
     CCPosition calcCenter() const;
     float calcAverageHeight() const;
     CCPosition calcRetreatPosition() const;
-    std::vector<Unit> calcTargets() const;
+	std::vector<Unit> calcVisibleTargets() const;
+    std::vector<Unit> calcTargets(bool visibilityFilter = false) const;
 
     const std::vector<Unit> & getUnits() const;
     const SquadOrder & getSquadOrder() const;
