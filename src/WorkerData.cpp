@@ -308,7 +308,7 @@ Unit WorkerData::getWorkerRepairTarget(const Unit & unit) const
     }
 }
 
-const std::set<Unit> & WorkerData::getWorkerRepairingThatTargetC(const Unit & unit) const
+const std::set<Unit> WorkerData::getWorkerRepairingThatTargetC(const Unit & unit) const
 {
     auto it = m_workerRepairing.find(unit);
 
@@ -324,7 +324,7 @@ const std::set<Unit> & WorkerData::getWorkerRepairingThatTargetC(const Unit & un
     }
 }
 
-std::set<Unit> & WorkerData::getWorkerRepairingThatTarget(const Unit & unit)
+std::set<Unit> WorkerData::getWorkerRepairingThatTarget(const Unit & unit)
 {
     auto it = m_workerRepairing.find(unit);
 

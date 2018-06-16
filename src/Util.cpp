@@ -128,7 +128,7 @@ CCPosition Util::CalcCenter(const std::vector<Unit> & units)
     return CCPosition(cx / units.size(), cy / units.size());
 }
 
-Unit & Util::CalcClosestUnit(const Unit & unit, const std::vector<Unit> & targets)
+Unit Util::CalcClosestUnit(const Unit & unit, const std::vector<Unit> & targets)
 {
     float distance;
     float minDistance = 0;

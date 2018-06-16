@@ -30,7 +30,7 @@ namespace Util
     std::string     GetStringFromRace(const sc2::Race & race);
     sc2::Race       GetRaceFromString(const std::string & race);
     sc2::Point2D    CalcCenter(const std::vector<const sc2::Unit *> & units);
-    Unit &          CalcClosestUnit(const Unit & unit, const std::vector<Unit> & targets);
+    Unit            CalcClosestUnit(const Unit & unit, const std::vector<Unit> & targets);
     float           GetNorm(sc2::Point2D vector);
     void            Normalize(sc2::Point2D& point);
     sc2::Point2D    Normalized(const sc2::Point2D& point);
