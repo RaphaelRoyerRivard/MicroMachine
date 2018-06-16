@@ -331,9 +331,7 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
     else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
     {
         //A special case must be done for bunkers since they have no weapon and the cargo space is not available
-        //2 marines and a marauder is 30 dps, 4 marines is 40, so 35 would be a tradeoff
-        //but for some reason, enough marines are afraid of it when dps is over 20
-        dps = 20.f;
+        dps = 30.f;
     }
 
     return dps;

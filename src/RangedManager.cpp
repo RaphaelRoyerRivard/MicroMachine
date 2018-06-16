@@ -260,7 +260,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
             //but we would rather target the SCVs that are repairing it and marines that stand unprotected
 			targetDps = 5.f;
         }
-        float workerBonus = targetUnit.getType().isWorker() ? 1.5f : 1.f;   //workers are around twice as important
+        float workerBonus = targetUnit.getType().isWorker() ? 1.5f : 1.f;   //workers are important to kill
         float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized
         float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);   //the more far a unit is, the less it is prioritized
         if (distanceValue > Util::GetAttackRangeForTarget(attacker, target, m_bot))
