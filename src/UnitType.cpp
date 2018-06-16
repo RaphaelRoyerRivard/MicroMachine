@@ -172,11 +172,19 @@ bool UnitType::isDetector() const
 bool UnitType::isGeyser() const
 {
 #ifdef SC2API
+	sc2::UnitTypeData unitTypeData(m_bot->Observation()->GetUnitTypeData()[m_type]);
+	if (unitTypeData.has_vespene)
+		return true;
     switch (m_type.ToType()) 
     {
-        case sc2::UNIT_TYPEID::NEUTRAL_VESPENEGEYSER        : return true;
-        case sc2::UNIT_TYPEID::NEUTRAL_PROTOSSVESPENEGEYSER : return true;
-        case sc2::UNIT_TYPEID::NEUTRAL_SPACEPLATFORMGEYSER  : return true;
+        case sc2::UNIT_TYPEID::NEUTRAL_VESPENEGEYSER:
+        case sc2::UNIT_TYPEID::NEUTRAL_PROTOSSVESPENEGEYSER:
+        case sc2::UNIT_TYPEID::NEUTRAL_SPACEPLATFORMGEYSER:
+		case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERVESPENEGEYSER:
+		case sc2::UNIT_TYPEID::NEUTRAL_SHAKURASVESPENEGEYSER:
+		case sc2::UNIT_TYPEID::NEUTRAL_RICHVESPENEGEYSER:
+			std::cout << "Unit type " << m_type << " has no vespene gas but is a vespene geyser" << std::endl;
+			return true;
         default: return false;
     }
 #else
@@ -187,6 +195,9 @@ bool UnitType::isGeyser() const
 bool UnitType::isMineral() const
 {
 #ifdef SC2API
+	sc2::UnitTypeData unitTypeData(m_bot->Observation()->GetUnitTypeData()[m_type]);
+	if (unitTypeData.has_minerals)
+		return true;
     switch (m_type.ToType())
     {
     case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD:
@@ -201,6 +212,7 @@ bool UnitType::isMineral() const
     case sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD750:
     case sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD:
     case sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD750:
+		std::cout << "Unit type " << m_type << " has no mineral but is a mineral field" << std::endl;
         return true;
     default:
         return false;

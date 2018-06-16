@@ -89,6 +89,11 @@ void Squad::onFrame()
             m_rangedManager.executeMicro();
         }
     }
+
+	CCPosition center = calcCenter();
+	m_bot.Map().drawCircle(center, 1.f);
+	for (auto & unit : m_units)
+		m_bot.Map().drawLine(unit.getPosition(), center);
 }
 
 std::vector<Unit> Squad::calcVisibleTargets() const
@@ -178,11 +183,6 @@ void Squad::setAllUnits()
     }
 
     m_units = goodUnits;
-
-    CCPosition center = calcCenter();
-    m_bot.Map().drawCircle(center, 1.f);
-    for (auto & unit : m_units)
-        m_bot.Map().drawLine(unit.getPosition(), center);
 }
 
 void Squad::setNearEnemyUnits()
@@ -260,7 +260,11 @@ bool Squad::needsToRetreat() const
     float rangedPower = m_rangedManager.getSquadPower();
     //float averageHeight = calcAverageHeight();
     float targetsPower = m_rangedManager.getTargetsPower(m_units);
-	bool shouldBack = meleePower + rangedPower < targetsPower * 0.90f; //We believe we can beat a slightly more powerful army with our good micro
+
+	//We believe we can beat a slightly more powerful army with our good micro, but if we are backing, make sure to have a bigger army
+	//than what was previously seen
+	float targetsModifier = m_order.getType() == SquadOrderTypes::Retreat ? 1.1f : 0.9f;
+	bool shouldBack = meleePower + rangedPower < targetsPower * 0.90f;
 	return shouldBack;
 }
 
@@ -283,12 +287,6 @@ bool Squad::needsToRegroup() const
 			return false;
 	}
 
-	//Regroup automatically after a retreat
-	if (m_order.getType() == SquadOrderTypes::Retreat)
-	{
-		return true;
-	}
-
     //do not regroup if targets are nearby (nor fleeing, since the targets are updated only whan having an Attack order)
     std::vector<Unit>& targets = calcVisibleTargets();
     if (!targets.empty())
@@ -298,6 +296,12 @@ bool Squad::needsToRegroup() const
     CCPosition squadCenter = calcCenter();
     if (!m_bot.Map().isWalkable(squadCenter))
         return false;
+
+	//Regroup automatically after a retreat
+	if (m_order.getType() == SquadOrderTypes::Retreat)
+	{
+		return true;
+	}
 
     float averageDistance = 0;
     for (auto & unit : m_units)
@@ -320,6 +324,10 @@ void Squad::setSquadOrder(const SquadOrder & so)
 		m_regroupStartFrame = m_bot.GetCurrentFrame();
 	else if (so.getType() == SquadOrderTypes::Retreat && m_order.getType() != SquadOrderTypes::Retreat)
 		m_retreatStartFrame = m_bot.GetCurrentFrame();
+	if (so.getType() != SquadOrderTypes::Regroup)
+		m_regroupStartFrame = 0;
+	if (so.getType() != SquadOrderTypes::Retreat)
+		m_retreatStartFrame = 0;
     m_order = so;
 }
 

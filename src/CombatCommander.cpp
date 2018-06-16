@@ -36,15 +36,15 @@ void CombatCommander::onStart()
     m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
     // the main attack squad that will pressure the enemy's closest base location
-    SquadOrder mainAttackOrder(SquadOrderTypes::Attack, CCPosition(0, 0), MainAttackOrderRadius, "Attack Enemy Base");
+    SquadOrder mainAttackOrder(SquadOrderTypes::Attack, CCPosition(0, 0), MainAttackOrderRadius, "Attack");
     m_squadData.addSquad("MainAttack", Squad("MainAttack", mainAttackOrder, MainAttackMaxRegroupDuration, MainAttackRegroupCooldown, MainAttackMinRetreatDuration, MainAttackMaxDistance, AttackPriority, m_bot));
 
     // the backup squad that will send reinforcements to the main attack squad
-    SquadOrder backupSquadOrder(SquadOrderTypes::Attack, CCPosition(0, 0), DefaultOrderRadius, "Send backups to the main attack squad");
+    SquadOrder backupSquadOrder(SquadOrderTypes::Attack, CCPosition(0, 0), DefaultOrderRadius, "Send backups");
     m_squadData.addSquad("Backup1", Squad("Backup1", backupSquadOrder, BackupPriority, m_bot));
 
     // the scout defense squad will handle chasing the enemy worker scout
-    SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, m_bot.GetStartLocation(), DefaultOrderRadius, "Get the scout");
+    SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, m_bot.GetStartLocation(), DefaultOrderRadius, "Chase scout");
     m_squadData.addSquad("ScoutDefense", Squad("ScoutDefense", enemyScoutDefense, ScoutDefensePriority, m_bot));
 }
 
@@ -102,7 +102,7 @@ void CombatCommander::updateIdleSquad()
 	//regroup only after retreat
 	else if (idleSquad.needsToRegroup())
 	{
-		SquadOrder regroupOrder(SquadOrderTypes::Regroup, getMainAttackLocation(), DefaultOrderRadius, "Regroup before attacking");
+		SquadOrder regroupOrder(SquadOrderTypes::Regroup, getMainAttackLocation(), DefaultOrderRadius, "Regroup");
 		idleSquad.setSquadOrder(regroupOrder);
 	}
 	else
@@ -144,7 +144,7 @@ void CombatCommander::updateBackupSquads()
 
         //TODO send backups towards the main squad if the backups are closer to the enemy base
         //SquadOrder sendBackupsOrder(SquadOrderTypes::Attack, mainAttackSquad.getSquadOrder().getPosition(), 25, "Send backups to main attack squad");
-        SquadOrder sendBackupsOrder(SquadOrderTypes::Attack, mainAttackSquad.calcCenter(), 25, "Send backups to main attack squad");
+        SquadOrder sendBackupsOrder(SquadOrderTypes::Attack, mainAttackSquad.calcCenter(), 25, "Send backups");
         backupSquad.setSquadOrder(sendBackupsOrder);
 
         ++backupNo;
@@ -185,12 +185,12 @@ void CombatCommander::updateAttackSquads()
     //regroup only after retreat
     else if (mainAttackSquad.needsToRegroup())
     {
-        SquadOrder regroupOrder(SquadOrderTypes::Regroup, getMainAttackLocation(), DefaultOrderRadius, "Regroup before attacking");
+        SquadOrder regroupOrder(SquadOrderTypes::Regroup, getMainAttackLocation(), DefaultOrderRadius, "Regroup");
         mainAttackSquad.setSquadOrder(regroupOrder);
     }
     else
     {
-        SquadOrder mainAttackOrder(SquadOrderTypes::Attack, getMainAttackLocation(), MainAttackOrderRadius, "Attack Enemy Base");
+        SquadOrder mainAttackOrder(SquadOrderTypes::Attack, getMainAttackLocation(), MainAttackOrderRadius, "Attack");
         mainAttackSquad.setSquadOrder(mainAttackOrder);
     }
 }

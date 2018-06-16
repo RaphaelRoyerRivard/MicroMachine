@@ -20,9 +20,9 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 8,
-        "EnemyRace"                 : "Terran",
-        "MapFile"                   : "DefeatSpineCrawlers.SC2Map",
+        "EnemyDifficulty"           : 10,
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "DarknessSanctuaryLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -150,8 +150,8 @@
             "Terran_MarineRush"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SCV", "SupplyDepot", "SCV", "Barracks", "Barracks", "Barracks", "Barracks", "Marine", "Marine", "Marine", "Marine", "SupplyDepot", "Marine", "Marine", "Marine", "Marine", "SupplyDepot"],
-                "ScoutCondition"    : [ ["Self", "SupplyDepot"], "<", [ 0 ] ],
+                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "SCV", "Barracks", "SCV", "Barracks", "SCV", "Barracks", "SCV", "Barracks"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 8 ] ]
             },
             "Zerg_ZerglingRush"     : 

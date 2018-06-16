@@ -261,9 +261,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
         float targetDps = Util::GetDpsForTarget(target, attacker, m_bot);
         if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
         {
-            //A special case must be done for bunkers since they have no weapon and the cargo space is not available
-            //2 marines and a marauder is 30, 4 marines is 40, so 35 would be a tradeoff
-            //but we would rather target the SCVs that are repairing it and marines that stand unprotected
+            //We manually reduce the dps of the bunker because it only serve as a shield, units will spawn out of it when destroyed
 			targetDps = 5.f;
         }
         float workerBonus = targetUnit.getType().isWorker() ? 1.5f : 1.f;   //workers are important to kill

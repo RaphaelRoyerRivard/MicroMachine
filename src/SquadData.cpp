@@ -80,8 +80,8 @@ void SquadData::drawSquadInformation()
         auto & units = squad.getUnits();
         const SquadOrder & order = squad.getSquadOrder();
 
-        ss << squad.getName() << " " << units.size() << " (";
-        ss << (int)order.getPosition().x << ", " << (int)order.getPosition().y << ")\n";
+		if(units.size() > 0)
+			ss << squad.getName() << ": [units: " << units.size() << ", status: " << order.getStatus() << "]\n";
 
         CCPosition squadCenter = squad.calcCenter();
         float terrainHeight = m_bot.Map().terrainHeight(squadCenter.x, squadCenter.y);
