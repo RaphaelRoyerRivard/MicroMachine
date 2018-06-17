@@ -55,9 +55,6 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
         m_bottom = std::min(m_bottom, resource.getPosition().y - resHeight);
     }
 
-    // calculate the center of the resources
-    size_t numResources = m_minerals.size() + m_geysers.size();
-
     m_centerOfResources = CCPosition(m_left + (m_right-m_left)/2, m_top + (m_bottom-m_top)/2);
 
     // compute this BaseLocation's DistanceMap, which will compute the ground distance
@@ -160,7 +157,7 @@ bool BaseLocation::containsPosition(const CCPosition & pos) const
         return false;
     }
 
-    return getGroundDistance(pos) < NearBaseLocationTileDistance;
+    return getGroundDistance(pos) > 0 && getGroundDistance(pos) < NearBaseLocationTileDistance;
 }
 
 const std::vector<Unit> & BaseLocation::getGeysers() const
