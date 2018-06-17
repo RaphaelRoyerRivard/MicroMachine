@@ -58,7 +58,7 @@ void ProductionManager::manageBuildOrderQueue()
 		m_initialBuildOrderFinished = true;
 	}
 
-	if(m_initialBuildOrderFinished)
+	if(m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder)
     {
 		putImportantBuildOrderItemsInQueue();
     }

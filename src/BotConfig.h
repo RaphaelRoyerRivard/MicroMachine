@@ -57,7 +57,8 @@ public:
     float MaxTargetDistance;
     float MaxWorkerRepairDistance;
     bool ScoutHarassEnemy;
-    bool AutoCompleteBuildOrder;
+	bool AutoCompleteBuildOrder;
+	bool NoScoutOn2PlayersMap;
 
     bool AlphaBetaPruning;
     int AlphaBetaDepth;

@@ -82,6 +82,10 @@ void GameCommander::setScoutUnits()
     if (m_scoutUnits.empty())
     {
         const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+
+		if (m_bot.Config().NoScoutOn2PlayersMap && enemyBaseLocation != nullptr)
+			return;
+
         // We need to find the enemy base to do something
         if (!m_initialScoutSet || enemyBaseLocation == nullptr)
         {

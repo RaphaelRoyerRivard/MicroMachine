@@ -120,7 +120,8 @@ void StrategyManager::readStrategyFile(const std::string & filename)
 
         // read in the various strategic elements
         JSONTools::ReadBool("ScoutHarassEnemy", strategy, m_bot.Config().ScoutHarassEnemy);
-        JSONTools::ReadBool("AutoCompleteBuildOrder", strategy, m_bot.Config().AutoCompleteBuildOrder);
+		JSONTools::ReadBool("AutoCompleteBuildOrder", strategy, m_bot.Config().AutoCompleteBuildOrder);
+		JSONTools::ReadBool("NoScoutOn2PlayersMap", strategy, m_bot.Config().NoScoutOn2PlayersMap);
         JSONTools::ReadString("ReadDirectory", strategy, m_bot.Config().ReadDir);
         JSONTools::ReadString("WriteDirectory", strategy, m_bot.Config().WriteDir);
 

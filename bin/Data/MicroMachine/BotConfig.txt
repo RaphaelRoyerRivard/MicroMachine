@@ -22,7 +22,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "DarknessSanctuaryLE.SC2Map",
+        "MapFile"                   : "16-BitLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -137,6 +137,7 @@
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "AutoCompleteBuildOrder"    : true,
+        "NoScoutOn2PlayersMap"		: true,
         
         "Strategies" :
         {
