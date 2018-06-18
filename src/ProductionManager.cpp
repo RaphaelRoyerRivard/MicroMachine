@@ -128,13 +128,20 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		}
 	}
 
-	//Continiously build marines
 	if (playerRace == sc2::Race::Terran)
 	{
+		//Continiously build marines
 		const auto metaTypeMarine = MetaType("Marine", m_bot);
 		if (!m_queue.contains(metaTypeMarine))
 		{
 			m_queue.queueAsLowestPriority(metaTypeMarine, false);
+		}
+
+		//Build additionnal barracks
+		const auto metaTypeBarrack = MetaType("Barracks", m_bot);
+		if (!m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice() * 2)
+		{
+			m_queue.queueAsLowestPriority(metaTypeBarrack, false);
 		}
 	}
 }
