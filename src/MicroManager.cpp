@@ -103,7 +103,7 @@ float MicroManager::getUnitPower(const Unit &unit, Unit& closestUnit) const
         if (unitRange + 1 < distance)   //if the unit can't reach the closest unit (with a small buffer)
         {
             distance -= unitRange + 1;
-            float distancePenalty = unit.getType().isBuilding() ? 0.5f : 0.95f;
+			float distancePenalty = unit.getType().isBuilding() ? 0.9f : 0.95f;
 			distancePenalty = pow(distancePenalty, distance);
 			unitPower *= distancePenalty;	//penalty for distance (very fast for building but slow for units)
         }

@@ -8,6 +8,7 @@ Squad::Squad(CCBot & bot)
     , m_maxRegroupDuration(0)
     , m_regroupCooldown(0)
     , m_maxDistanceFromCenter(0)
+	, m_isSuiciding(false)
     , m_priority(0)
     , m_name("Default")
     , m_meleeManager(bot)
@@ -26,6 +27,7 @@ Squad::Squad(const std::string & name, const SquadOrder & order, size_t priority
 	, m_retreatStartFrame(0)
 	, m_minRetreatDuration(0)
     , m_maxDistanceFromCenter(0)
+	, m_isSuiciding(false)
     , m_priority(priority)
     , m_meleeManager(bot)
     , m_rangedManager(bot)
@@ -42,6 +44,7 @@ Squad::Squad(const std::string & name, const SquadOrder & order, int maxRegroupD
 	, m_retreatStartFrame(0)
 	, m_minRetreatDuration(minRetreatDuration)
     , m_maxDistanceFromCenter(maxDistanceFromCenter)
+	, m_isSuiciding(false)
     , m_priority(priority)
     , m_meleeManager(bot)
     , m_rangedManager(bot)
@@ -236,7 +239,7 @@ void Squad::addUnitsToMicroManagers()
     //m_tankManager.setUnits(tankUnits);
 }
 
-bool Squad::needsToRetreat() const
+bool Squad::needsToRetreat()
 {
     //Only the main attack can retreat
     if (m_name != "MainAttack")
@@ -248,14 +251,6 @@ bool Squad::needsToRetreat() const
 	if (m_order.getType() == SquadOrderTypes::Retreat && currentFrame - m_retreatStartFrame < m_minRetreatDuration)
 		return true;
 
-	float meleeSpeed = m_meleeManager.getAverageSquadSpeed() * m_meleeManager.getUnits().size();
-	float rangedSpeed = m_rangedManager.getAverageSquadSpeed() * m_rangedManager.getUnits().size();
-	float averageSpeed = (meleeSpeed + rangedSpeed) / m_units.size();
-	float averageTargetsSpeed = m_rangedManager.getAverageTargetsSpeed();
-	//TODO also consider the range (if targets are not in range, we should still back)
-	if (averageSpeed < averageTargetsSpeed * 0.90f)	//Even though the enemy units are a little bit faster, maybe we should still back
-		return false;
-
     float meleePower = m_meleeManager.getSquadPower();
     float rangedPower = m_rangedManager.getSquadPower();
     //float averageHeight = calcAverageHeight();
@@ -263,9 +258,30 @@ bool Squad::needsToRetreat() const
 
 	//We believe we can beat a slightly more powerful army with our good micro, but if we are backing, make sure to have a bigger army
 	//than what was previously seen
-	float targetsModifier = m_order.getType() == SquadOrderTypes::Retreat ? 1.1f : 0.9f;
-	bool shouldBack = meleePower + rangedPower < targetsPower * 0.90f;
+	float targetsModifier = m_order.getType() == SquadOrderTypes::Retreat ? 1.2f : 0.9f;
+	bool shouldBack = meleePower + rangedPower < targetsPower * targetsModifier;
+
+	float meleeSpeed = m_meleeManager.getAverageSquadSpeed() * m_meleeManager.getUnits().size();
+	float rangedSpeed = m_rangedManager.getAverageSquadSpeed() * m_rangedManager.getUnits().size();
+	float averageSpeed = (meleeSpeed + rangedSpeed) / m_units.size();
+	std::vector<Unit>& visibleTargets = calcVisibleTargets();
+	float averageTargetsSpeed = Util::getAverageSpeedOfUnits(visibleTargets, m_bot);
+	//TODO also consider the range (if targets are not in range, we should still back)
+	if (averageSpeed < averageTargetsSpeed * 0.90f)	//Even though the enemy units are a little bit faster, maybe we should still back
+	{
+		//If we should back but aren't because enemy army is too fast, we suicide (will prevent backups from coming)
+		if(shouldBack)
+			m_isSuiciding = true;
+		return false;
+	}
+	m_isSuiciding = false;
+
 	return shouldBack;
+}
+
+bool Squad::isSuiciding() const
+{
+	return m_isSuiciding;
 }
 
 bool Squad::needsToRegroup() const

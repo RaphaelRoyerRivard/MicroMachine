@@ -22,7 +22,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "16-BitLE.SC2Map",
+        "MapFile"                   : "DefeatSpineCrawlers.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -151,7 +151,7 @@
             "Terran_MarineRush"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "SCV", "Barracks", "SCV", "Barracks", "SCV", "Barracks", "SCV", "Barracks"],
+                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "SCV", "SCV", "Barracks", "SCV", "Barracks", "SCV", "Barracks", "SCV", "Barracks"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 8 ] ]
             },

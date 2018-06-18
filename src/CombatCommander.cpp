@@ -142,10 +142,16 @@ void CombatCommander::updateBackupSquads()
             }
         }
 
-        //TODO send backups towards the main squad if the backups are closer to the enemy base
-        //SquadOrder sendBackupsOrder(SquadOrderTypes::Attack, mainAttackSquad.getSquadOrder().getPosition(), 25, "Send backups to main attack squad");
-        SquadOrder sendBackupsOrder(SquadOrderTypes::Attack, mainAttackSquad.calcCenter(), 25, "Send backups");
-        backupSquad.setSquadOrder(sendBackupsOrder);
+		if (mainAttackSquad.isSuiciding())
+		{
+			SquadOrder retreatOrder(SquadOrderTypes::Retreat, CCPosition(0, 0), 25, "Retreat");
+			backupSquad.setSquadOrder(retreatOrder);
+		}
+		else
+		{
+			SquadOrder sendBackupsOrder(SquadOrderTypes::Attack, mainAttackSquad.calcCenter(), 25, "Send backups");
+			backupSquad.setSquadOrder(sendBackupsOrder);
+		}
 
         ++backupNo;
     }

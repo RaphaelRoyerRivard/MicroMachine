@@ -24,6 +24,9 @@ class Squad
 	int					m_minRetreatDuration;
 
     float               m_maxDistanceFromCenter;
+
+	bool				m_isSuiciding;				//used by the main attack squad when not retreating from a bad fight
+
     size_t              m_priority;
 
     SquadOrder          m_order;
@@ -53,7 +56,8 @@ public:
     void addUnit(const Unit & unit);
     void removeUnit(const Unit & unit);
     void giveBackWorkers();
-    bool needsToRetreat() const;
+    bool needsToRetreat();
+	bool isSuiciding() const;
     bool needsToRegroup() const;
     void clear();
 
