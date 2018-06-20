@@ -87,30 +87,40 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 
         if (m_debugMode) { printf("Assigning Worker To: %s", b.type.getName().c_str()); }
 
-        // grab a worker unit from WorkerManager which is closest to this final position
-        CCTilePosition testLocation = getBuildingLocation(b);
+		if (b.type.isAddon())
+		{
+			MetaType addonType = MetaType(b.type, m_bot);
+			Unit producer = m_bot.Commander().Production().getProducer(addonType);
+			b.builderUnit = producer;
+			b.finalPosition = Util::GetTilePosition(producer.getPosition());
+		}
+		else
+		{
+			// grab a worker unit from WorkerManager which is closest to this final position
+			CCTilePosition testLocation = getBuildingLocation(b);
 
-        // Don't test the location if the building is already started
-        if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
-        {
-            continue;
-        }
+			// Don't test the location if the building is already started
+			if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
+			{
+				continue;
+			}
 
-        b.finalPosition = testLocation;
+			b.finalPosition = testLocation;
 
-        // grab the worker unit from WorkerManager which is closest to this final position
-        Unit builderUnit = m_bot.Workers().getBuilder(b);
-        b.builderUnit = builderUnit;
-        if (!b.builderUnit.isValid())
-        {
-            continue;
-        }
+			// grab the worker unit from WorkerManager which is closest to this final position
+			Unit builderUnit = m_bot.Workers().getBuilder(b);
+			b.builderUnit = builderUnit;
+			if (!b.builderUnit.isValid())
+			{
+				continue;
+			}
 
-        if (!b.underConstruction)
-        {
-            // reserve this building's space
-            m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y, b.type.tileWidth(), b.type.tileHeight());
-        }
+			if (!b.underConstruction)
+			{
+				// reserve this building's space
+				m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y, b.type.tileWidth(), b.type.tileHeight());
+			}
+		}
 
         b.status = BuildingStatus::Assigned;
     }

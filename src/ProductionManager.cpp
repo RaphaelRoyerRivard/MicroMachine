@@ -107,6 +107,7 @@ void ProductionManager::manageBuildOrderQueue()
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
 	CCRace playerRace = m_bot.GetPlayerRace(Players::Self);
+
 	// build supply if we need some
 	auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
 	auto metaTypeSupplyProvider = MetaType(supplyProvider, m_bot);
@@ -117,8 +118,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
 	}
 
-	//TODO 16 per commandcenter and get the right producer (Command Center) for each
-	if (m_bot.Workers().getNumWorkers() < 16)
+	if (m_bot.Workers().getNumWorkers() * m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() < 20)
 	{
 		auto workerType = Util::GetWorkerType(playerRace, m_bot);
 		const auto metaTypeWorker = MetaType(workerType, m_bot);
@@ -135,6 +135,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		if (!m_queue.contains(metaTypeMarine))
 		{
 			m_queue.queueAsLowestPriority(metaTypeMarine, false);
+		}
+
+		const auto metaTypeMarauder = MetaType("Marauder", m_bot);
+		if (!m_queue.contains(metaTypeMarauder))
+		{
+			m_queue.queueAsLowestPriority(metaTypeMarauder, false);
 		}
 
 		//Build additionnal barracks
@@ -209,7 +215,7 @@ void ProductionManager::fixBuildOrderDeadlock()
     }
 }
 
-Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
+Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo) const
 {
     // get all the types of units that cna build this type
     auto & producerTypes = m_bot.Data(type).whatBuilds;
@@ -247,8 +253,10 @@ std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
 		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_GHOSTACADEMY);
 		break;
 	case CCRace::Protoss:
+		//TODO complete
 		break;
 	case CCRace::Zerg:
+		//TODO complete
 		break;
 	}
 
@@ -269,7 +277,7 @@ std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
 	return trainers;
 }
 
-Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo)
+Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const
 {
     if (units.size() == 0)
     {
@@ -325,8 +333,7 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item)
     }
     else if (item.type.isUpgrade())
     {
-        // TODO: UPGRADES
-        //Micro::SmartAbility(producer, m_bot.Data(item.type.getUpgradeID()).buildAbility, m_bot);
+		Micro::SmartAbility(producer.getUnitPtr(), m_bot.Data(item.type.getUpgrade()).buildAbility, m_bot);
     }
 }
 

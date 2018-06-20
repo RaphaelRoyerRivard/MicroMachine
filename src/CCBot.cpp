@@ -135,6 +135,11 @@ const BaseLocationManager & CCBot::Bases() const
     return m_bases;
 }
 
+const GameCommander & CCBot::Commander() const
+{
+	return m_gameCommander;
+}
+
 const UnitInfoManager & CCBot::UnitInfo() const
 {
     return m_unitInfo;

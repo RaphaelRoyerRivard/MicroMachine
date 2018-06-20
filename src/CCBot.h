@@ -54,6 +54,7 @@ public:
           BotConfig & Config();
           WorkerManager & Workers();
     const BaseLocationManager & Bases() const;
+	const GameCommander & CCBot::Commander() const;
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;
     const StrategyManager & Strategy() const;

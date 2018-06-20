@@ -16,7 +16,7 @@ class MetaType
     std::string     m_name;
     CCRace          m_race;
     UnitType        m_unitType;
-    CCUpgrade       m_upgrade;
+	CCUpgrade       m_upgrade;
 
 #ifndef SC2API
     BWAPI::TechType m_tech;
@@ -27,7 +27,7 @@ public:
     MetaType();
     MetaType(const std::string & name, CCBot & bot);
     MetaType(const UnitType & unitType, CCBot & bot);
-    MetaType(const CCUpgrade & upgradeType, CCBot & bot);
+	MetaType(const CCUpgrade & upgradeType, CCBot & bot);
 
     bool    isUnit()        const;
     bool    isUpgrade()     const;

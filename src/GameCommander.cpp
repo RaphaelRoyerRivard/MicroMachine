@@ -46,6 +46,11 @@ void GameCommander::drawGameInformation(int x, int y)
     ss << "Time: " << "\n";
 }
 
+const ProductionManager & GameCommander::Production() const
+{
+	return m_productionManager;
+}
+
 // assigns units to various managers
 void GameCommander::handleUnitAssignments()
 {

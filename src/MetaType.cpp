@@ -113,16 +113,16 @@ MetaType::MetaType(const UnitType & unitType, CCBot & bot)
 
 MetaType::MetaType(const CCUpgrade & upgradeType, CCBot & bot)
 {
-    m_bot           = &bot;
-    m_type          = MetaTypes::Upgrade;
-    m_upgrade       = upgradeType;
+	m_bot = &bot;
+	m_type = MetaTypes::Upgrade;
+	m_upgrade = upgradeType;
 
 #ifdef SC2API
-    m_race          = m_bot->GetPlayerRace(Players::Self);
-    m_name          = sc2::UpgradeIDToName(upgradeType);
+	m_race = m_bot->GetPlayerRace(Players::Self);
+	m_name = sc2::UpgradeIDToName(upgradeType);
 #else
-    m_race          = upgradeType.getRace();
-    m_name          = upgradeType.getName();
+	m_race = upgradeType.getRace();
+	m_name = upgradeType.getName();
 #endif
 }
 
