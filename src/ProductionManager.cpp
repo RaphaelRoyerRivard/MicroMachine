@@ -227,12 +227,40 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
         // reasons a unit can not train the desired type
         if (std::find(producerTypes.begin(), producerTypes.end(), unit.getType()) == producerTypes.end()) { continue; }
         if (!unit.isCompleted()) { continue; }
+		if (unit.isFlying()) { continue; }
         if (m_bot.Data(unit).isBuilding && unit.isTraining()) { continue; }
-        if (unit.isFlying()) { continue; }
 
         // TODO: if unit is not powered continue
         // TODO: if the type is an addon, some special cases
         // TODO: if the type requires an addon and the producer doesn't have one
+
+		// if the type we want to produce has required units, we make sure the unit is one of those unit types
+		if (m_bot.Data(type).requiredUnits.size() > 0)
+		{
+			bool hasRequiredUnit = false;
+			for (UnitType requiredUnit : m_bot.Data(type).requiredUnits)
+			{
+				if (!requiredUnit.isAddon())
+				{
+					// maybe we don't hve what is needed, but it seems to already work for non addon units
+					hasRequiredUnit = true;
+					break;
+				}
+				else	// addon
+				{
+					if (unit.getUnitPtr()->add_on_tag != 0)
+					{
+						Unit addon = m_bot.GetUnit(unit.getUnitPtr()->add_on_tag);
+						if (requiredUnit.getAPIUnitType() == addon.getAPIUnitType())
+						{
+							hasRequiredUnit = true;
+							break;
+						}
+					}
+				}
+			}
+			if (!hasRequiredUnit) { continue; }
+		}
 
         // if we haven't cut it, add it to the set of candidates
         candidateProducers.push_back(unit);
