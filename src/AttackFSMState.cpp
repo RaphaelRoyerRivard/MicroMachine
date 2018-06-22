@@ -7,6 +7,7 @@ AttackFSMState::AttackFSMState(const sc2::Unit * unit, const sc2::Unit * target)
 {
     m_unit = unit;
     m_target = target;
+	actionSent = false;
 }
 
 void AttackFSMState::onEnter()
@@ -15,14 +16,29 @@ void AttackFSMState::onEnter()
     KitingFSMTransition* shouldFlee = new ShouldFleeTransition(m_unit, m_target, flee);
     transitions = { shouldFlee };
 }
-void AttackFSMState::onExit() {}
+
+void AttackFSMState::onExit() {
+	actionSent = false;
+}
+
 std::vector<KitingFSMTransition*> AttackFSMState::getTransitions()
 {
     return transitions;
 }
+
 void AttackFSMState::onUpdate(const sc2::Unit * target, CCBot* bot)
 {
-    m_target = target;
-    bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::ATTACK, target);
     bot->Map().drawLine(CCPosition(m_unit->pos), CCPosition(target->pos), CCColor(255, 0, 0));
+	
+	Unit unit(m_unit, *bot);
+	//Use stimpack buff
+	if (unit.useAbility(sc2::ABILITY_ID::EFFECT_STIM))
+		return;
+
+	if (!actionSent)
+	{
+		m_target = target;
+		bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::ATTACK_ATTACK, target);
+		actionSent = true;
+	}
 }

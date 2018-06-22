@@ -4,6 +4,8 @@
 class KitingFSMTransition;
 class KitingFSMState : public FSMState
 {
+protected:
+	bool actionSent;
 public:
     virtual void onUpdate(const sc2::Unit * m_target, CCBot*) { };
     virtual std::vector<KitingFSMTransition*> getTransitions() { return std::vector<KitingFSMTransition*>(); };

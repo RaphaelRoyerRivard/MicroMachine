@@ -378,6 +378,37 @@ void Unit::morph(const UnitType & type) const
 #endif
 }
 
+bool Unit::useAbility(const sc2::ABILITY_ID abilityId) const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+	//TODO move that to TechTree
+	if (abilityId == sc2::ABILITY_ID::EFFECT_STIM)
+	{
+		sc2::BUFF_ID stimpack = m_unitType.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MARINE ? sc2::BUFF_ID::STIMPACK : sc2::BUFF_ID::STIMPACKMARAUDER;
+		//if it does not find
+		if(std::find(m_unit->buffs.begin(), m_unit->buffs.end(), stimpack) == m_unit->buffs.end())
+		{
+			auto query = m_bot->Query();
+			auto abilities = m_bot->Observation()->GetAbilityData();
+			sc2::AvailableAbilities available_abilities = query->GetAbilitiesForUnit(m_unit);
+			for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
+			{
+				if (available_ability.ability_id >= abilities.size()) { continue; }
+				const sc2::AbilityData & ability = abilities[available_ability.ability_id];
+				if (ability.ability_id == sc2::ABILITY_ID::EFFECT_STIM) {
+					m_bot->Actions()->UnitCommand(m_unit, ability.ability_id);
+					return true;
+				}
+			}
+		}
+	}
+	else
+	{
+		std::cout << "Cannot use ability " << (int) abilityId << std::endl;
+	}
+	return false;
+}
+
 bool Unit::isConstructing(const UnitType & type) const
 {
 #ifdef SC2API
