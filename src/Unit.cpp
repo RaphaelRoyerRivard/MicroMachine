@@ -385,7 +385,7 @@ bool Unit::useAbility(const sc2::ABILITY_ID abilityId) const
 	if (abilityId == sc2::ABILITY_ID::EFFECT_STIM)
 	{
 		sc2::BUFF_ID stimpack = m_unitType.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MARINE ? sc2::BUFF_ID::STIMPACK : sc2::BUFF_ID::STIMPACKMARAUDER;
-		//if it does not find
+		//if it does not find the stimpack buff in the list of buffs the unit has
 		if(std::find(m_unit->buffs.begin(), m_unit->buffs.end(), stimpack) == m_unit->buffs.end())
 		{
 			auto query = m_bot->Query();

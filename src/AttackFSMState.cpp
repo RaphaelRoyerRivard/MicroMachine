@@ -30,10 +30,15 @@ void AttackFSMState::onUpdate(const sc2::Unit * target, CCBot* bot)
 {
     bot->Map().drawLine(CCPosition(m_unit->pos), CCPosition(target->pos), CCColor(255, 0, 0));
 	
-	Unit unit(m_unit, *bot);
-	//Use stimpack buff
-	if (unit.useAbility(sc2::ABILITY_ID::EFFECT_STIM))
-		return;
+	UnitType targetType(target->unit_type, *bot);
+	//We want to trigger stimpack uses only against combat units
+	if (targetType.isCombatUnit())
+	{
+		Unit unit(m_unit, *bot);
+		//Use stimpack buff
+		if (unit.useAbility(sc2::ABILITY_ID::EFFECT_STIM))
+			return;
+	}
 
 	if (!actionSent)
 	{
