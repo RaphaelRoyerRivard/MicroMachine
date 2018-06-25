@@ -235,7 +235,8 @@ void BuildingManager::checkForStartedConstruction()
             }
 
             // check if the positions match
-            int dx = b.finalPosition.x - buildingStarted.getTilePosition().x;
+			int addonOffset = b.type.isAddon() ? 3 : 0;
+            int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
             int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
 
             if (dx*dx + dy*dy < Util::TileToPosition(1.0f))

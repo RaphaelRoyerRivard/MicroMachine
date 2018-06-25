@@ -67,7 +67,6 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     // TODO: make sure we leave space for add-ons. These types of units can have addons:
 
     // define the rectangle of the building spot
-	buildDist = abs(buildDist);
     int startx = bx - buildDist;
     int starty = by - buildDist;
     int endx   = bx + width + buildDist;
@@ -76,7 +75,7 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     // TODO: recalculate start and end positions for addons
 
     // if this rectangle doesn't fit on the map we can't build here
-    if (startx < 0 || starty < 0 || endx > m_bot.Map().width() || endy > m_bot.Map().height())
+    if (startx < 0 || starty < 0 || endx > m_bot.Map().width() || endx < bx + width || endy > m_bot.Map().height())
     {
         return false;
     }
@@ -243,26 +242,20 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 
         CCPosition geyserPos(unit.getPosition());
 
-        // check to see if it's next to one of our depots
-        bool nearDepot = false;
-        for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
-        {
-            if (unit.getType().isResourceDepot() && Util::Dist(unit, geyserPos) < 10)
-            {
-                nearDepot = true;
-            }
-        }
-
-        if (nearDepot)
-        {
-            double homeDistance = Util::Dist(unit, homePosition);
-
-            if (homeDistance < minGeyserDistanceFromHome)
-            {
-                minGeyserDistanceFromHome = homeDistance;
-                closestGeyser = unit.getPosition();
-            }
-        }
+		for (auto & ourUnit : m_bot.UnitInfo().getUnits(Players::Self))
+		{
+			// check to see if it's next to one of our depots
+			if (ourUnit.getType().isResourceDepot() && Util::Dist(ourUnit, geyserPos) < 10)
+			{
+				double homeDistance = Util::Dist(unit, homePosition);
+				if (homeDistance < minGeyserDistanceFromHome)
+				{
+					minGeyserDistanceFromHome = homeDistance;
+					closestGeyser = unit.getPosition();
+				}
+				break;
+			}
+		}
     }
 
 #ifdef SC2API
