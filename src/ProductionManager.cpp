@@ -118,7 +118,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
 	}
 
-	if (m_bot.Workers().getNumWorkers() * m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() < 20)
+	if (m_bot.Workers().getNumWorkers() * m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() < 23)
 	{
 		auto workerType = Util::GetWorkerType(playerRace, m_bot);
 		const auto metaTypeWorker = MetaType(workerType, m_bot);
@@ -131,7 +131,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	if (playerRace == sc2::Race::Terran)
 	{
 		//Continiously build marines
-		const auto metaTypeMarine = MetaType("Marine", m_bot);
+		/*const auto metaTypeMarine = MetaType("Marine", m_bot);
 		if (!m_queue.contains(metaTypeMarine))
 		{
 			m_queue.queueAsLowestPriority(metaTypeMarine, false);
@@ -141,13 +141,19 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		if (!m_queue.contains(metaTypeMarauder))
 		{
 			m_queue.queueAsLowestPriority(metaTypeMarauder, false);
-		}
+		}*/
 
 		//Build additionnal barracks
 		const auto metaTypeBarrack = MetaType("Barracks", m_bot);
-		if (!m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice() * 2)
+		if (!m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
 		{
 			m_queue.queueAsLowestPriority(metaTypeBarrack, false);
+		}
+
+		const auto metaTypeReaper = MetaType("Reaper", m_bot);
+		if (!m_queue.contains(metaTypeReaper))
+		{
+			m_queue.queueAsLowestPriority(metaTypeReaper, false);
 		}
 	}
 }

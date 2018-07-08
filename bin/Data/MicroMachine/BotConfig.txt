@@ -20,9 +20,9 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 10,
+        "EnemyDifficulty"           : 9,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "DefeatSpineCrawlers.SC2Map",
+        "MapFile"                   : "BloodBoilLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -133,7 +133,7 @@
     "SC2API Strategy" :
     {
         "Protoss"                   : "Protoss_ZealotRush",
-        "Terran"                    : "Terran_MarineRush",
+        "Terran"                    : "Terran_ReaperHarass",
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "AutoCompleteBuildOrder"    : true,
@@ -151,9 +151,23 @@
             "Terran_MarineRush"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "SCV", "SCV", "Barracks", "SCV", "Barracks", "SCV", "Barracks", "SCV", "Barracks"],
+                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "SCV", "Barracks", "SCV", "Refinery", "SCV", "Barracks", "SCV", "SCV", "Barracks", "BarracksTechLab", "SCV", "Barracks", "Stimpack"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 8 ] ]
+            },
+            "Terran_ReaperHarass"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "Refinery"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Reaper"], ">=", [ 1 ] ]
+            },
+            "Terran_ReaperHarass2"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "Refinery", "SCV", "SCV", "Barracks", "SCV", "SCV", "Barracks"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Reaper"], ">=", [ 1 ] ]
             },
             "Zerg_ZerglingRush"     : 
             { 
