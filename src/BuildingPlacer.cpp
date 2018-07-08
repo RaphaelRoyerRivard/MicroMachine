@@ -245,13 +245,13 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 		for (auto & ourUnit : m_bot.UnitInfo().getUnits(Players::Self))
 		{
 			// check to see if it's next to one of our depots
-			if (ourUnit.getType().isResourceDepot() && Util::Dist(ourUnit, geyserPos) < 10)
+			if (ourUnit.getType().isResourceDepot() && Util::Dist(ourUnit, geyserPos) < 10 && m_bot.Query()->Placement(sc2::ABILITY_ID::BUILD_REFINERY, geyserPos))
 			{
 				double homeDistance = Util::Dist(unit, homePosition);
 				if (homeDistance < minGeyserDistanceFromHome)
 				{
 					minGeyserDistanceFromHome = homeDistance;
-					closestGeyser = unit.getPosition();
+					closestGeyser = geyserPos;
 				}
 				break;
 			}
