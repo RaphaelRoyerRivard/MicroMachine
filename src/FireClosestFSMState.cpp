@@ -22,7 +22,8 @@ std::vector<FocusFireFSMTransition*> FireClosestFSMState::getTransitions()
 }
 void FireClosestFSMState::onUpdate(const sc2::Unit * target, CCBot* bot) 
 {
-	bot->Map().drawLine(CCPosition(m_unit->pos), CCPosition(target->pos), CCColor(255, 0, 0));
+	if(bot->Config().DrawFSMStateInfo)
+		bot->Map().drawLine(CCPosition(m_unit->pos), CCPosition(target->pos), CCColor(255, 0, 0));
 
     //it seems that submitting an attack command as soon as the weapon cooldown is finished increases the dps dealth
     //we submit an attack command on a new target even though the cooldown is not finished because it may also move our unit

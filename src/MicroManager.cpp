@@ -123,7 +123,8 @@ float MicroManager::getUnitPower(const Unit &unit, Unit& closestUnit) const
         }
     }*/
 
-    m_bot.Map().drawText(unit.getPosition(), "Power: " + std::to_string(unitPower));
+	if(m_bot.Config().DrawUnitPowerInfo)
+		m_bot.Map().drawText(unit.getPosition(), "Power: " + std::to_string(unitPower));
     
     return unitPower;
 }

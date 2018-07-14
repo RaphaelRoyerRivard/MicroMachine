@@ -20,9 +20,9 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 10,
+        "EnemyDifficulty"           : 7,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "DefeatSpineCrawlers.SC2Map",
+        "MapFile"                   : "InterloperLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -68,20 +68,22 @@
 
     "Debug" :
     {
-        "DrawGameInfo"              : true, 
-        "DrawProductionInfo"        : true, 
-        "DrawBaseLocationInfo"      : true,
+        "DrawGameInfo"              : false, 
+        "DrawProductionInfo"        : false, 
+        "DrawBaseLocationInfo"      : false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
         "DrawScoutInfo"             : false,
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
-        "DrawUnitTargetInfo"        : true,
+        "DrawUnitTargetInfo"        : false,
         "DrawLastSeenTileInfo"      : false,
-        "DrawSquadInfo"             : true,
+        "DrawSquadInfo"             : false,
         "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : false
+        "DrawReservedBuildingTiles" : false,
+        "DrawUnitPowerInfo"         : false,
+        "DrawFSMStateInfo"          : false
     },
     
     "Modules" :
