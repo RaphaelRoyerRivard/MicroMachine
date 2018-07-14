@@ -28,7 +28,6 @@ void Micro::SmartMove(const sc2::Unit * attacker, const sc2::Point2D & targetPos
 {
     BOT_ASSERT(attacker != nullptr, "Attacker is null");
     bot.Actions()->UnitCommand(attacker, sc2::ABILITY_ID::MOVE, targetPosition);
-    bot.Map().drawLine(CCPosition(attacker->pos), targetPosition, CCColor(0, 0, 255));
 }
 
 void Micro::SmartRightClick(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)

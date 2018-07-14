@@ -82,7 +82,8 @@
         "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
-        "DrawUnitPowerInfo"         : false
+        "DrawUnitPowerInfo"         : false,
+        "DrawFSMStateInfo"          : false
     },
     
     "Modules" :

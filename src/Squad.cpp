@@ -60,7 +60,8 @@ void Squad::onFrame()
     {
         CCPosition retreatPosition = calcRetreatPosition();
 
-        m_bot.Map().drawCircle(retreatPosition, 3, CCColor(255, 0, 255));
+		if(m_bot.Config().DrawSquadInfo)
+			m_bot.Map().drawCircle(retreatPosition, 3, CCColor(255, 0, 255));
 
         m_meleeManager.regroup(retreatPosition);
         m_rangedManager.regroup(retreatPosition);
@@ -69,7 +70,8 @@ void Squad::onFrame()
     {
         CCPosition regroupPosition = calcCenter();
 
-        m_bot.Map().drawCircle(regroupPosition, 3, CCColor(0, 0, 255));
+		if (m_bot.Config().DrawSquadInfo)
+			m_bot.Map().drawCircle(regroupPosition, 3, CCColor(0, 0, 255));
 
         m_meleeManager.regroup(regroupPosition);
         m_rangedManager.regroup(regroupPosition);
@@ -93,10 +95,13 @@ void Squad::onFrame()
         }
     }
 
-	CCPosition center = calcCenter();
-	m_bot.Map().drawCircle(center, 1.f);
-	for (auto & unit : m_units)
-		m_bot.Map().drawLine(unit.getPosition(), center);
+	if (m_bot.Config().DrawSquadInfo)
+	{
+		CCPosition center = calcCenter();
+		m_bot.Map().drawCircle(center, 1.f);
+		for (auto & unit : m_units)
+			m_bot.Map().drawLine(unit.getPosition(), center);
+	}
 }
 
 std::vector<Unit> Squad::calcVisibleTargets() const
@@ -194,9 +199,6 @@ void Squad::setNearEnemyUnits()
     for (auto & unit : m_units)
     {
         m_nearEnemy[unit] = isUnitNearEnemy(unit);
-
-        CCColor color = m_nearEnemy[unit] ? m_bot.Config().ColorUnitNearEnemy : m_bot.Config().ColorUnitNotNearEnemy;
-        //m_bot.Map().drawCircleAroundUnit(unitTag, color);
     }
 }
 

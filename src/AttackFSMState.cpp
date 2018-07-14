@@ -28,7 +28,8 @@ std::vector<KitingFSMTransition*> AttackFSMState::getTransitions()
 
 void AttackFSMState::onUpdate(const sc2::Unit * target, CCBot* bot)
 {
-    bot->Map().drawLine(CCPosition(m_unit->pos), CCPosition(target->pos), CCColor(255, 0, 0));
+	if (bot->Config().DrawFSMStateInfo)
+		bot->Map().drawLine(CCPosition(m_unit->pos), CCPosition(target->pos), CCColor(255, 0, 0));
 	
 	UnitType targetType(target->unit_type, *bot);
 	//We want to trigger stimpack uses only against combat units
