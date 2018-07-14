@@ -32,3 +32,5 @@ bin/TechTree.json
 vs/RelWithDebInfo/CommandCenter.log
 *.log
 *.pdb
+vs/CommandCenter.vcxproj
+vs/CommandCenter.VC.db
