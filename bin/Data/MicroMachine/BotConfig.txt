@@ -68,20 +68,21 @@
 
     "Debug" :
     {
-        "DrawGameInfo"              : true, 
-        "DrawProductionInfo"        : true, 
-        "DrawBaseLocationInfo"      : true,
+        "DrawGameInfo"              : false, 
+        "DrawProductionInfo"        : false, 
+        "DrawBaseLocationInfo"      : false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
         "DrawScoutInfo"             : false,
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
-        "DrawUnitTargetInfo"        : true,
+        "DrawUnitTargetInfo"        : false,
         "DrawLastSeenTileInfo"      : false,
-        "DrawSquadInfo"             : true,
+        "DrawSquadInfo"             : false,
         "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : false
+        "DrawReservedBuildingTiles" : false,
+        "DrawUnitPowerInfo"         : false
     },
     
     "Modules" :
