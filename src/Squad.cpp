@@ -14,7 +14,6 @@ Squad::Squad(CCBot & bot)
     , m_meleeManager(bot)
     , m_rangedManager(bot)
 {
-
 }
 
 Squad::Squad(const std::string & name, const SquadOrder & order, size_t priority, CCBot & bot)
@@ -78,8 +77,9 @@ void Squad::onFrame()
     }
     else // otherwise, execute micro
     {
+		m_rangedManager.setHarassMode(m_order.getType() == SquadOrderTypes::Harass);
         // Nothing to do if we have no units
-        if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend))
+        if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend || m_order.getType() == SquadOrderTypes::Harass))
         {
             std::vector<Unit> targets = calcTargets();
 
@@ -140,6 +140,22 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter) const
             }
         }
     }
+	else if (m_order.getType() == SquadOrderTypes::Harass)
+	{
+		for (auto & unit : m_units)
+		{
+			for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
+			{
+				if (Util::Dist(enemyUnit, unit) < m_order.getRadius() && std::find(nearbyEnemies.begin(), nearbyEnemies.end(), enemyUnit) == nearbyEnemies.end())
+				{
+					if (visibilityFilter && !enemyUnit.isVisible())
+						continue;
+
+					nearbyEnemies.push_back(enemyUnit);
+				}
+			}
+		}
+	}
     
     return nearbyEnemies;
 }

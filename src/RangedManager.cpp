@@ -27,6 +27,7 @@ void RangedManager::setTargets(const std::vector<Unit> & targets)
         if (!targetPtr) { continue; }
         if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_EGG) { continue; }
         if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_LARVA) { continue; }
+		if (m_harassMode && target.getType().isBuilding() && !target.getType().isCombatUnit()) { continue; }
 
         rangedUnitTargets.push_back(target);
     }
@@ -51,32 +52,34 @@ void RangedManager::executeMicro()
     }
 
     // Use UCTCD
-    if (m_bot.Config().UCTCD) {
+    if (m_bot.Config().UCTCD)
+	{
         UCTCD(rangedUnits, rangedUnitTargets);
     }
     // Use alpha-beta (considering durations) for combat
-    else if (m_bot.Config().AlphaBetaPruning) {
+    else if (m_bot.Config().AlphaBetaPruning)
+	{
         AlphaBetaPruning(rangedUnits, rangedUnitTargets);
     }
+	else if (m_harassMode)
+	{
+		HarassLogic(rangedUnits, rangedUnitTargets);
+	}
     // use good-ol' BT
-    else {
+    else 
+	{
         // for each rangedUnit
         for (auto rangedUnit : rangedUnits)
         {
             BOT_ASSERT(rangedUnit, "ranged unit is null");
 
             const sc2::Unit * target = nullptr;
-            const sc2::Unit * mineral = nullptr;
-            sc2::Point2D mineralPos;
             target = getTarget(rangedUnit, rangedUnitTargets);
             bool isEnemyInSightCondition = rangedUnitTargets.size() > 0 &&
                 target != nullptr && Util::Dist(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance;
 
             ConditionAction isEnemyInSight(isEnemyInSightCondition);
             ConditionAction isEnemyRanged(target != nullptr && isTargetRanged(target));
-
-            if (mineral == nullptr) mineralPos = sc2::Point2D(0, 0);
-            else mineralPos = mineral->pos;
 
             FocusFireAction focusFireAction(rangedUnit, target, &rangedUnitTargets, m_bot, m_focusFireStates, &rangedUnits, m_unitHealth);
             KiteAction kiteAction(rangedUnit, target, m_bot, m_kittingStates);
@@ -101,6 +104,99 @@ void RangedManager::executeMicro()
             bt->tick();
         }
     }
+}
+
+void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
+{
+	// for each rangedUnit
+	for (auto rangedUnit : rangedUnits)
+	{
+		long frame = lastCommandFrameForUnit.find(rangedUnit) != lastCommandFrameForUnit.end() ? lastCommandFrameForUnit[rangedUnit] : 0;
+		if (frame + 2 > m_bot.Observation()->GetGameLoop())
+			continue;
+
+		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
+		const std::vector<const sc2::Unit *> threats = getThreats(rangedUnit, rangedUnitTargets);
+
+		// if there is no potential target or threat, move to objective
+		if (target == nullptr && threats.empty())
+		{
+			Micro::SmartMove(rangedUnit, m_order.getPosition(), m_bot);
+			lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+			continue;
+		}
+
+		float dirX = 0.f, dirY = 0.f, dirLen = 0.f;
+
+		if (target != nullptr)
+		{
+			bool targetInRange = Util::Dist(rangedUnit->pos, target->pos) <= Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+
+			// if target is in range and weapon is ready, attack target
+			if (targetInRange && rangedUnit->weapon_cooldown <= 0.f) {
+				Micro::SmartAttackUnit(rangedUnit, target, m_bot);
+				lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+				continue;
+			}
+
+			// TODO retreat if faster ranged unit is near
+
+			// if not in range of target, add normalized vector towards target
+			if (!targetInRange)
+			{
+				dirX = target->pos.x - rangedUnit->pos.x;
+				dirY = target->pos.y - rangedUnit->pos.y;
+			}
+			else
+			{
+				dirX = rangedUnit->pos.x - target->pos.x;
+				dirY = rangedUnit->pos.y - target->pos.y;
+			}
+			dirLen = abs(dirX) + abs(dirY);
+			dirX /= dirLen;
+			dirY /= dirLen;
+		}
+		else
+		{
+			// add normalized vector towards objective
+			dirX = m_order.getPosition().x - rangedUnit->pos.x;
+			dirY = m_order.getPosition().y - rangedUnit->pos.y;
+			dirLen = abs(dirX) + abs(dirY);
+			dirX /= dirLen;
+			dirY /= dirLen;
+		}
+
+		// add normalied * 1.5 vector of potential threats (inside their range + 2)
+		for (auto threat : threats)
+		{
+			float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
+			if (Util::Dist(rangedUnit->pos, threat->pos) < threatRange + 2)
+			{
+				m_bot.Map().drawCircle(threat->pos, threatRange + 2, CCColor(255, 0, 0));
+				float fleeDirX = 0.f, fleeDirY = 0.f, fleeDirLen = 0.f;
+				fleeDirX = rangedUnit->pos.x - threat->pos.x;
+				fleeDirY = rangedUnit->pos.y - threat->pos.y;
+				fleeDirLen = abs(fleeDirX) + abs(fleeDirY);
+				fleeDirX /= fleeDirLen;
+				fleeDirY /= fleeDirLen;
+				//TODO reduce the multiplier the farther we are from it
+				dirX += fleeDirX * 1.5f;
+				dirY += fleeDirY * 1.5f;
+			}
+		}
+
+		dirLen = abs(dirX) + abs(dirY);
+		dirX /= dirLen;
+		dirY /= dirLen;
+
+		// move towards direction if pathable
+		CCPosition moveTo(rangedUnit->pos.x + dirX * 5, rangedUnit->pos.y + dirY * 5);
+		//TODO find another place to go if not pathable
+		Micro::SmartMove(rangedUnit, moveTo, m_bot);
+		lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+
+		// TODO implement path finding that dodges threats
+	}
 }
 
 void RangedManager::AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets) {
@@ -226,7 +322,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     float highestPriority = 0.f;
     const sc2::Unit * bestTarget = nullptr;
 
-    // for each target possiblity
+    // for each possible target
     for (auto targetUnit : targets)
     {
         BOT_ASSERT(targetUnit, "null target unit in getTarget");
@@ -234,7 +330,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
         float priority = getAttackPriority(rangedUnit, targetUnit);
 
         // if it's a higher priority, set it
-        if (!bestTarget || priority > highestPriority)
+        if (priority > highestPriority)
         {
             highestPriority = priority;
             bestTarget = targetUnit;
@@ -244,11 +340,38 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     return bestTarget;
 }
 
+// get threats to our harass unit
+const std::vector<const sc2::Unit *> RangedManager::getThreats(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets)
+{
+	BOT_ASSERT(rangedUnit, "null ranged unit in getThreats");
+
+	std::vector<const sc2::Unit *> threats;
+
+	// for each possible threat
+	for (auto targetUnit : targets)
+	{
+		BOT_ASSERT(targetUnit, "null target unit in getThreats");
+
+		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < Util::GetAttackRangeForTarget(targetUnit, rangedUnit, m_bot) + 2)
+			threats.push_back(targetUnit);
+	}
+
+	return threats;
+}
+
 float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target)
 {
     BOT_ASSERT(target, "null unit in getAttackPriority");
     
     Unit targetUnit(target, m_bot);
+
+	if (m_harassMode)
+	{
+		float unitSpeed = Util::GetUnitTypeDataFromUnitTypeId(attacker->unit_type, m_bot).movement_speed;
+		float targetSpeed = Util::GetUnitTypeDataFromUnitTypeId(target->unit_type, m_bot).movement_speed;
+		if (unitSpeed > targetSpeed * 1.2f && isTargetRanged(target))
+			return -1.f;
+	}
 
 	float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized
 	float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);   //the more far a unit is, the less it is prioritized

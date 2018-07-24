@@ -118,7 +118,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
 	}
 
-	if (m_bot.Workers().getNumWorkers() * m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() < 23)
+	if (m_bot.Workers().getNumWorkers() < m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() * 23)
 	{
 		auto workerType = Util::GetWorkerType(playerRace, m_bot);
 		const auto metaTypeWorker = MetaType(workerType, m_bot);

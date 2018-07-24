@@ -4,6 +4,7 @@
 
 const size_t IdlePriority = 0;
 const size_t BackupPriority = 1;
+const size_t HarassPriority = 2;
 const size_t AttackPriority = 2;
 const size_t BaseDefensePriority = 3;
 const size_t ScoutDefensePriority = 4;
@@ -34,6 +35,10 @@ void CombatCommander::onStart()
     CCTilePosition nextExpansionPosition = m_bot.Bases().getNextExpansion(Players::Self);
     SquadOrder idleOrder(SquadOrderTypes::Attack, CCPosition(nextExpansionPosition.x, nextExpansionPosition.y), DefaultOrderRadius, "Prepare for battle");
     m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
+
+	// the harass attack squad that will pressure the enemy's main base workers
+	SquadOrder harassOrder(SquadOrderTypes::Harass, CCPosition(0, 0), MainAttackOrderRadius, "Harass");
+	m_squadData.addSquad("Harass", Squad("Harass", harassOrder, HarassPriority, m_bot));
 
     // the main attack squad that will pressure the enemy's closest base location
     SquadOrder mainAttackOrder(SquadOrderTypes::Attack, CCPosition(0, 0), MainAttackOrderRadius, "Attack");
@@ -69,7 +74,8 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
         updateIdleSquad();
         updateScoutDefenseSquad();
         updateDefenseSquads();
-        updateAttackSquads();
+        updateHarassSquads();
+		updateAttackSquads();
         updateBackupSquads();
     }
 }
@@ -155,6 +161,28 @@ void CombatCommander::updateBackupSquads()
 
         ++backupNo;
     }
+}
+
+void CombatCommander::updateHarassSquads()
+{
+	Squad & harassSquad = m_squadData.getSquad("Harass");
+
+	for (auto & unit : m_combatUnits)
+	{
+		BOT_ASSERT(unit.isValid(), "null unit in combat units");
+
+		// get every Reaper of a lower priority and put it into the harass squad
+		if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER && m_squadData.canAssignUnitToSquad(unit, harassSquad))
+		{
+			m_squadData.assignUnitToSquad(unit, harassSquad);
+		}
+	}
+
+	if (harassSquad.getUnits().empty())
+		return;
+
+	SquadOrder harassOrder(SquadOrderTypes::Harass, getMainAttackLocation(), MainAttackOrderRadius, "Harass");
+	harassSquad.setSquadOrder(harassOrder);
 }
 
 void CombatCommander::updateAttackSquads()
