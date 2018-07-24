@@ -278,6 +278,9 @@ const char * WorkerData::getJobCode(const Unit & unit)
 
 void WorkerData::drawDepotDebugInfo()
 {
+	if (!m_bot.Config().DrawWorkerInfo)
+		return;
+
     for (auto depot: m_depots)
     {
         std::stringstream ss;
