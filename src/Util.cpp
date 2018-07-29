@@ -352,6 +352,11 @@ float Util::getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot)
 	return squadSpeed / (float)units.size();
 }
 
+float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
+{
+	return Util::GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed;
+}
+
 bool Util::IsTerran(const CCRace & race)
 {
 #ifdef SC2API

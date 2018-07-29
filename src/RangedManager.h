@@ -18,6 +18,7 @@ public:
     void setTargets(const std::vector<Unit> & targets);
     void executeMicro();
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
+	CCTilePosition FindSafestPathWithInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats);
     float getAttackPriority(const sc2::Unit * rangedUnit, const sc2::Unit * target);
     const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);
 	const std::vector<const sc2::Unit *> getThreats(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);
@@ -29,7 +30,7 @@ public:
 private:
     std::vector<const sc2::Unit *> lastUnitCommand;
     std::map<const sc2::Unit *, UCTCDAction> command_for_unit;
-	std::map<const sc2::Unit *, long> lastCommandFrameForUnit;
+	std::map<const sc2::Unit *, uint32_t> lastCommandFrameForUnit;
     bool isCommandDone = false;
 	bool m_harassMode = false;
 };
