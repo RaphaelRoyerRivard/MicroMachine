@@ -26,11 +26,11 @@ public:
 
 int main(int argc, char* argv[]) 
 {sc2::Coordinator coordinator;
-    if (!coordinator.LoadSettings(argc, argv)) 
+    /*if (!coordinator.LoadSettings(argc, argv)) 
     {
         std::cout << "Unable to find or parse settings." << std::endl;
         return 1;
-    }
+    }*/
     
     std::string config = JSONTools::ReadFile("Data/MicroMachine/BotConfig.txt");
     if (config.length() == 0)
