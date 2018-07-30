@@ -21,7 +21,7 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
-        "EnemyRace"                 : "Protoss",
+        "EnemyRace"                 : "Terran",
         "MapFile"                   : "BloodBoilLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
@@ -160,7 +160,7 @@
             "Terran_ReaperHarass"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "Refinery"],
+                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "SCV", "Barracks", "SCV", "Refinery"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Reaper"], ">=", [ 1 ] ]
             },
