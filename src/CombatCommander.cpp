@@ -483,7 +483,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
 
         float dist = Util::Dist(unit, pos);
         Squad *unitSquad = m_squadData.getUnitSquad(unit);
-        if (unitSquad && unitSquad->getName() == "MainAttack" && Util::Dist(unit.getPosition(), unitSquad->getSquadOrder().getPosition()) < dist)
+        if (unitSquad && (unitSquad->getName() == "MainAttack" || unitSquad->getName() == "Harass") && Util::Dist(unit.getPosition(), unitSquad->getSquadOrder().getPosition()) < dist)
         {
             //We do not want to bring back the main attackers when they are closer to their objective than our base
             continue;
