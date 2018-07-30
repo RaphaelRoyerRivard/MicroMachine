@@ -25,12 +25,8 @@ public:
 };
 
 int main(int argc, char* argv[]) 
-{sc2::Coordinator coordinator;
-    /*if (!coordinator.LoadSettings(argc, argv)) 
-    {
-        std::cout << "Unable to find or parse settings." << std::endl;
-        return 1;
-    }*/
+{
+	sc2::Coordinator coordinator;
     
     std::string config = JSONTools::ReadFile("Data/MicroMachine/BotConfig.txt");
     if (config.length() == 0)
@@ -85,6 +81,13 @@ int main(int argc, char* argv[])
 		RunBot(argc, argv, &bot, sc2::Race::Terran);
 
 		return 0;
+	}
+	
+	// We need to load settings only when running in local
+	if (!coordinator.LoadSettings(argc, argv))
+	{
+		std::cout << "Unable to find or parse settings." << std::endl;
+		return 1;
 	}
 
     // Add the custom bot, it will control the players.
