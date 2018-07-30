@@ -177,12 +177,16 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		}
 
 		bool isInDanger = false;
+		float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
 		// add normalied * 1.5 vector of potential threats (inside their range + 2)
 		for (auto threat : threats)
 		{
 			float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
+			float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
-			if (dist < threatRange + 2)
+			bool tooClose = dist < threatRange + threatSpeed;
+			bool faster = threatSpeed > rangedUnitSpeed;
+			if (tooClose || faster)
 			{
 				if (dist < threatRange + 0.5f)
 					isInDanger = true;
@@ -207,12 +211,13 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		int moveDistance = 5;
 		int minMoveDistance = 2;
 		CCPosition moveTo(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
-		while (!obs->IsPathable(moveTo) && moveDistance >= minMoveDistance)
+		/*while (!obs->IsPathable(moveTo) && moveDistance >= minMoveDistance)
 		{
 			--moveDistance;
 			moveTo = CCPosition(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
 		}
-		if (moveDistance < minMoveDistance || isInDanger)
+		if (moveDistance < minMoveDistance || isInDanger)*/
+		if (isInDanger)
 		{
 			moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
 		}
@@ -320,10 +325,11 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 		Node* current = getLowestCostNode(costs);
 		if (map[current->position.x][current->position.y] == 0)
 		{
-			CCTilePosition pos = current->position;
+			CCPosition currentPos = Util::GetPosition(current->position) - Util::GetPosition(centerPos);
 			while (current->parent != nullptr)
 			{
-				m_bot.Map().drawLine(Util::GetPosition(current->position), Util::GetPosition(current->parent->position), CCColor(0, 255, 255));
+				CCPosition parentPos = Util::GetPosition(current->parent->position) - Util::GetPosition(centerPos);
+				m_bot.Map().drawLine(currentPos + rangedUnit->pos, parentPos + rangedUnit->pos, CCColor(0, 255, 255));
 				current = current->parent;
 			}
 			for (Node* node : openSet)
@@ -334,15 +340,15 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 			{
 				delete(node);
 			}
-			return pos;
+			return Util::GetTilePosition(rangedUnit->pos + currentPos);
 		}
 		float currentCost = costs[current];
 		openSet.erase(current);
 		costs.erase(current);
 		closedSet.insert(current);
-		for (int x = -1; x <= 1; x += 2)
+		for (int x = -1; x <= 1; ++x)
 		{
-			for (int y = -1; y <= 1; y += 2)
+			for (int y = -1; y <= 1; ++y)
 			{
 				CCTilePosition neighborPosition(current->position.x + x, current->position.y + y);
 				if (neighborPosition.x < 0 || neighborPosition.y < 0 || neighborPosition.x >= mapWidth || neighborPosition.y >= mapHeight)
@@ -519,7 +525,7 @@ const std::vector<const sc2::Unit *> RangedManager::getThreats(const sc2::Unit *
 	{
 		BOT_ASSERT(targetUnit, "null target unit in getThreats");
 
-		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < Util::GetAttackRangeForTarget(targetUnit, rangedUnit, m_bot) + 2)
+		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < Util::GetAttackRangeForTarget(targetUnit, rangedUnit, m_bot) + Util::getSpeedOfUnit(targetUnit, m_bot))
 			threats.push_back(targetUnit);
 	}
 
