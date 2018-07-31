@@ -65,45 +65,50 @@ void RangedManager::executeMicro()
 	{
 		HarassLogic(rangedUnits, rangedUnitTargets);
 	}
-    // use good-ol' BT
     else 
 	{
-        // for each rangedUnit
-        for (auto rangedUnit : rangedUnits)
-        {
-            BOT_ASSERT(rangedUnit, "ranged unit is null");
-
-            const sc2::Unit * target = nullptr;
-            target = getTarget(rangedUnit, rangedUnitTargets);
-            bool isEnemyInSightCondition = rangedUnitTargets.size() > 0 &&
-                target != nullptr && Util::Dist(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance;
-
-            ConditionAction isEnemyInSight(isEnemyInSightCondition);
-            ConditionAction isEnemyRanged(target != nullptr && isTargetRanged(target));
-
-            FocusFireAction focusFireAction(rangedUnit, target, &rangedUnitTargets, m_bot, m_focusFireStates, &rangedUnits, m_unitHealth);
-            KiteAction kiteAction(rangedUnit, target, m_bot, m_kittingStates);
-            GoToObjectiveAction goToObjectiveAction(rangedUnit, m_order.getPosition(), m_bot);
-
-            BehaviorTree* bt = BehaviorTreeBuilder()
-                .selector()
-                .sequence()
-                .condition(&isEnemyInSight).end()
-                .selector()
-                .sequence()
-                .condition(&isEnemyRanged).end()
-                .action(&focusFireAction).end()
-                .end()
-                .action(&kiteAction).end()
-                .end()
-                .end()
-                .action(&goToObjectiveAction).end()
-                .end()
-                .end();
-
-            bt->tick();
-        }
+		// use good-ol' BT
+		RunBehaviorTree(rangedUnits, rangedUnitTargets);
     }
+}
+
+void RangedManager::RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
+{
+	// for each rangedUnit
+	for (auto rangedUnit : rangedUnits)
+	{
+		BOT_ASSERT(rangedUnit, "ranged unit is null");
+
+		const sc2::Unit * target = nullptr;
+		target = getTarget(rangedUnit, rangedUnitTargets);
+		bool isEnemyInSightCondition = rangedUnitTargets.size() > 0 &&
+			target != nullptr && Util::Dist(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance;
+
+		ConditionAction isEnemyInSight(isEnemyInSightCondition);
+		ConditionAction isEnemyRanged(target != nullptr && isTargetRanged(target));
+
+		FocusFireAction focusFireAction(rangedUnit, target, &rangedUnitTargets, m_bot, m_focusFireStates, &rangedUnits, m_unitHealth);
+		KiteAction kiteAction(rangedUnit, target, m_bot, m_kittingStates);
+		GoToObjectiveAction goToObjectiveAction(rangedUnit, m_order.getPosition(), m_bot);
+
+		BehaviorTree* bt = BehaviorTreeBuilder()
+			.selector()
+			.sequence()
+			.condition(&isEnemyInSight).end()
+			.selector()
+			.sequence()
+			.condition(&isEnemyRanged).end()
+			.action(&focusFireAction).end()
+			.end()
+			.action(&kiteAction).end()
+			.end()
+			.end()
+			.action(&goToObjectiveAction).end()
+			.end()
+			.end();
+
+		bt->tick();
+	}
 }
 
 void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
@@ -111,19 +116,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	// for each rangedUnit
 	for (auto rangedUnit : rangedUnits)
 	{
-		const sc2::ObservationInterface* obs = m_bot.Observation();
-		CCPosition top(rangedUnit->pos.x, rangedUnit->pos.y + 1);
-		CCPosition right(rangedUnit->pos.x + 1, rangedUnit->pos.y);
-		CCPosition bottom(rangedUnit->pos.x, rangedUnit->pos.y - 1);
-		CCPosition left(rangedUnit->pos.x - 1, rangedUnit->pos.y);
-		m_bot.Map().drawLine(rangedUnit->pos, top, obs->IsPathable(top) ? CCColor(0, 255, 0) : CCColor(255, 0, 0));
-		m_bot.Map().drawLine(rangedUnit->pos, right, obs->IsPathable(right) ? CCColor(0, 255, 0) : CCColor(255, 0, 0));
-		m_bot.Map().drawLine(rangedUnit->pos, bottom, obs->IsPathable(bottom) ? CCColor(0, 255, 0) : CCColor(255, 0, 0));
-		m_bot.Map().drawLine(rangedUnit->pos, left, obs->IsPathable(left) ? CCColor(0, 255, 0) : CCColor(255, 0, 0));
-
+		// We want to give an action only every 3 frames to allow double attack and cliff jumps
 		uint32_t frame = lastCommandFrameForUnit.find(rangedUnit) != lastCommandFrameForUnit.end() ? lastCommandFrameForUnit[rangedUnit] : 0;
 		if (frame + 2 > m_bot.Observation()->GetGameLoop())
-			continue;	//we want to give an action only every 3 frames to allow double attack and cliff jumps
+			continue;
 
 		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
 		const std::vector<const sc2::Unit *> threats = getThreats(rangedUnit, rangedUnitTargets);
@@ -326,10 +322,14 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 		if (map[current->position.x][current->position.y] == 0)
 		{
 			CCPosition currentPos = Util::GetPosition(current->position) - Util::GetPosition(centerPos);
+			CCPosition returnPos = currentPos;
 			while (current->parent != nullptr)
 			{
 				CCPosition parentPos = Util::GetPosition(current->parent->position) - Util::GetPosition(centerPos);
-				m_bot.Map().drawLine(currentPos + rangedUnit->pos, parentPos + rangedUnit->pos, CCColor(0, 255, 255));
+				m_bot.Map().drawCircle(currentPos + rangedUnit->pos, 1.f, CCColor(0, 255, 255));
+				//we want to retun a node close to the current position
+				if (Util::Dist(parentPos, currentPos) <= 2.f && returnPos == currentPos)
+					returnPos = parentPos;
 				current = current->parent;
 			}
 			for (Node* node : openSet)
@@ -340,7 +340,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 			{
 				delete(node);
 			}
-			return Util::GetTilePosition(rangedUnit->pos + currentPos);
+			return Util::GetTilePosition(rangedUnit->pos + returnPos);
 		}
 		float currentCost = costs[current];
 		openSet.erase(current);

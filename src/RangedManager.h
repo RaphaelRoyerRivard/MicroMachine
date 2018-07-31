@@ -17,6 +17,7 @@ public:
 	}
     void setTargets(const std::vector<Unit> & targets);
     void executeMicro();
+	void RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	CCTilePosition FindSafestPathWithInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats);
     float getAttackPriority(const sc2::Unit * rangedUnit, const sc2::Unit * target);
