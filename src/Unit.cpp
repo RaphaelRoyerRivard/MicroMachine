@@ -379,6 +379,11 @@ void Unit::morph(const UnitType & type) const
 #endif
 }
 
+sc2::AvailableAbilities Unit::getAbilities() const
+{
+	return m_bot->Query()->GetAbilitiesForUnit(m_unit);
+}
+
 bool Unit::useAbility(const sc2::ABILITY_ID abilityId) const
 {
 	BOT_ASSERT(isValid(), "Unit is not valid");

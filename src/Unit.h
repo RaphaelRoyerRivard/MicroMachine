@@ -70,4 +70,5 @@ public:
     void train          (const UnitType & buildingType) const;
     void morph          (const UnitType & type) const;
 	bool useAbility(const sc2::ABILITY_ID abilityId) const;
+	sc2::AvailableAbilities getAbilities() const;
 };

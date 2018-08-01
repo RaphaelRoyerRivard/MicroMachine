@@ -24,5 +24,6 @@ namespace Micro
         const std::vector<const sc2::Unit *> * units,
         std::unordered_map<sc2::Tag, float> &unitHealth
     );
-    void SmartAbility       (const sc2::Unit * builder,   const sc2::AbilityID & abilityID, CCBot & bot);
+	void SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot);
+	void SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCPosition position, CCBot & bot);
 };

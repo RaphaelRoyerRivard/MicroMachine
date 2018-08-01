@@ -116,9 +116,9 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	// for each rangedUnit
 	for (auto rangedUnit : rangedUnits)
 	{
-		// We want to give an action only every 3 frames to allow double attack and cliff jumps
+		// We want to give an action only every 5 frames to allow double attack and cliff jumps
 		uint32_t frame = lastCommandFrameForUnit.find(rangedUnit) != lastCommandFrameForUnit.end() ? lastCommandFrameForUnit[rangedUnit] : 0;
-		if (frame + 2 > m_bot.Observation()->GetGameLoop())
+		if (frame + 4 > m_bot.Observation()->GetGameLoop())
 			continue;
 
 		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
@@ -132,11 +132,24 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			continue;
 		}
 
+		// Check if unit can use KD8Charge
+		Unit harassUnit(rangedUnit, m_bot);
+		sc2::AvailableAbilities abilities = harassUnit.getAbilities();
+		bool canUseKD8Charge = false;
+		for (const auto & ability : abilities.abilities)
+		{
+			if (ability.ability_id == sc2::ABILITY_ID::EFFECT_KD8CHARGE)
+			{
+				canUseKD8Charge = true;
+				break;
+			}
+		}
+
 		float dirX = 0.f, dirY = 0.f, dirLen = 0.f;
 
 		if (target != nullptr)
 		{
-			bool targetInRange = Util::Dist(rangedUnit->pos, target->pos) <= Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+			bool targetInAttackRange = Util::Dist(rangedUnit->pos, target->pos) <= Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 			bool inRangeOfThreat = false;
 			for (auto & threat : threats)
 			{
@@ -146,17 +159,27 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 					break;
 				}
 			}
+
 			// if our unit is not in range of threat and target is in range and weapon is ready, attack target
-			if (!inRangeOfThreat && targetInRange && rangedUnit->weapon_cooldown <= 0.f) {
+			if (!inRangeOfThreat && targetInAttackRange && rangedUnit->weapon_cooldown <= 0.f) {
 				Micro::SmartAttackUnit(rangedUnit, target, m_bot);
 				lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
 				continue;
 			}
 
+			// Check if we have enough reach to throw a mine at our target
+			/*if (canUseKD8Charge && targetInAttackRange)
+			{
+				//TODO find a group of targets
+				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, target->pos, m_bot);
+				lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+				continue;
+			}*/
+
 			// TODO retreat if faster ranged unit is near
 
 			// if not in range of target, add normalized vector towards target
-			if (!targetInRange)
+			if (!targetInAttackRange)
 			{
 				dirX = target->pos.x - rangedUnit->pos.x;
 				dirY = target->pos.y - rangedUnit->pos.y;
@@ -182,30 +205,44 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 		bool isInDanger = false;
 		float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
+		bool madeAction = false;
 		// add normalied * 1.5 vector of potential threats (inside their range + 2)
 		for (auto threat : threats)
 		{
+			float rangedUnitRange = Util::GetAttackRangeForTarget(rangedUnit, threat, m_bot);
 			float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
 			float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+			float fleeDirX = 0.f, fleeDirY = 0.f, fleeDirLen = 0.f;
+			fleeDirX = rangedUnit->pos.x - threat->pos.x;
+			fleeDirY = rangedUnit->pos.y - threat->pos.y;
+			fleeDirLen = abs(fleeDirX) + abs(fleeDirY);
+			fleeDirX /= fleeDirLen;
+			fleeDirY /= fleeDirLen;
+			CCPosition expectedThreatPosition(threat->pos.x + fleeDirX * threatSpeed * 0.5f, threat->pos.y + fleeDirY * threatSpeed * 0.5f);
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
 			bool tooClose = dist < threatRange + threatSpeed;
 			bool faster = threatSpeed > rangedUnitSpeed;
 			if (tooClose || faster)
 			{
+				// Check if we have enough reach to throw at the threat
+				if (canUseKD8Charge && Util::Dist(rangedUnit->pos, expectedThreatPosition) <= rangedUnitRange)
+				{
+					//TODO find a group of threat
+					Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, m_bot);
+					lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+					madeAction = true;
+					break;
+				}
 				if (dist < threatRange + 0.5f)
 					isInDanger = true;
 				m_bot.Map().drawCircle(threat->pos, threatRange + 2, CCColor(255, 0, 0));
-				float fleeDirX = 0.f, fleeDirY = 0.f, fleeDirLen = 0.f;
-				fleeDirX = rangedUnit->pos.x - threat->pos.x;
-				fleeDirY = rangedUnit->pos.y - threat->pos.y;
-				fleeDirLen = abs(fleeDirX) + abs(fleeDirY);
-				fleeDirX /= fleeDirLen;
-				fleeDirY /= fleeDirLen;
 				//TODO reduce the multiplier the farther we are from it
 				dirX += fleeDirX * 1.5f;
 				dirY += fleeDirY * 1.5f;
 			}
 		}
+		if (madeAction)
+			continue;
 
 		dirLen = abs(dirX) + abs(dirY);
 		dirX /= dirLen;
