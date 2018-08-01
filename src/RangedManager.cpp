@@ -137,9 +137,17 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		if (target != nullptr)
 		{
 			bool targetInRange = Util::Dist(rangedUnit->pos, target->pos) <= Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
-
-			// if target is in range and weapon is ready, attack target
-			if (targetInRange && rangedUnit->weapon_cooldown <= 0.f) {
+			bool inRangeOfThreat = false;
+			for (auto & threat : threats)
+			{
+				if (Util::Dist(rangedUnit->pos, threat->pos) <= Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot))
+				{
+					inRangeOfThreat = true;
+					break;
+				}
+			}
+			// if our unit is not in range of threat and target is in range and weapon is ready, attack target
+			if (!inRangeOfThreat && targetInRange && rangedUnit->weapon_cooldown <= 0.f) {
 				Micro::SmartAttackUnit(rangedUnit, target, m_bot);
 				lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
 				continue;
@@ -206,17 +214,21 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		// move towards direction if pathable
 		int moveDistance = 5;
 		int minMoveDistance = 2;
+		
 		CCPosition moveTo(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
-		/*while (!obs->IsPathable(moveTo) && moveDistance >= minMoveDistance)
+		// We check if we are moving towards and close to an unpathable position
+		while (!m_bot.Observation()->IsPathable(moveTo) && moveDistance >= minMoveDistance)
 		{
 			--moveDistance;
 			moveTo = CCPosition(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
 		}
-		if (moveDistance < minMoveDistance || isInDanger)*/
-		if (isInDanger)
+		// If close to an unpathable position or in danger
+		if (moveDistance < minMoveDistance || isInDanger)
 		{
+			// Use influence map to find safest path
 			moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
 		}
+
 		Micro::SmartMove(rangedUnit, moveTo, m_bot);
 		lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
 	}
