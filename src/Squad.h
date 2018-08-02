@@ -35,6 +35,8 @@ class Squad
 
     std::map<Unit, bool> m_nearEnemy;
 
+	std::map<const sc2::Unit *, uint32_t> m_lastSeenStep;
+
     Unit unitClosestToEnemy() const;
 
     void updateUnits();
@@ -58,7 +60,7 @@ public:
     void giveBackWorkers();
     bool needsToRetreat();
 	bool isSuiciding() const;
-    bool needsToRegroup() const;
+    bool needsToRegroup();
     void clear();
 
     bool containsUnit(const Unit & unit) const;
@@ -72,8 +74,8 @@ public:
     CCPosition calcCenter() const;
     float calcAverageHeight() const;
     CCPosition calcRetreatPosition() const;
-	std::vector<Unit> calcVisibleTargets() const;
-    std::vector<Unit> calcTargets(bool visibilityFilter = false) const;
+	std::vector<Unit> calcVisibleTargets();
+    std::vector<Unit> calcTargets(bool visibilityFilter = false);
 
     const std::vector<Unit> & getUnits() const;
     const SquadOrder & getSquadOrder() const;

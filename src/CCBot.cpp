@@ -10,7 +10,8 @@ CCBot::CCBot()
     , m_strategy(*this)
     , m_techTree(*this)
 {
-    
+	m_allyUnits = std::map<sc2::Tag, Unit>();
+	m_enemyUnits = std::map<sc2::Tag, Unit>();
 }
 
 void CCBot::OnGameStart() 
@@ -77,9 +78,18 @@ void CCBot::setUnits()
     m_allUnits.clear();
 #ifdef SC2API
     Control()->GetObservation();
-    for (auto & unit : Observation()->GetUnits())
+    for (auto unitptr : Observation()->GetUnits())
     {
-        m_allUnits.push_back(Unit(unit, *this));    
+		Unit unit(unitptr, *this);
+		if (!unit.isValid())
+			continue;
+		if (!unit.isAlive())
+			continue;
+		if (unitptr->alliance == sc2::Unit::Self || unitptr->alliance == sc2::Unit::Ally)
+			m_allyUnits.insert_or_assign(unitptr->tag, unit);
+		else if(unitptr->alliance == sc2::Unit::Enemy)
+			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+        m_allUnits.push_back(Unit(unitptr, *this));
     }
 #else
     for (auto & unit : BWAPI::Broodwar->getAllUnits())
@@ -224,9 +234,19 @@ Unit CCBot::GetUnit(const CCUnitID & tag) const
 #endif
 }
 
+std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()
+{
+	return m_allyUnits;
+}
+
+std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits()
+{
+	return m_enemyUnits;
+}
+
 const std::vector<Unit> & CCBot::GetUnits() const
 {
-    return m_allUnits;
+	return m_allUnits;
 }
 
 CCPosition CCBot::GetStartLocation() const

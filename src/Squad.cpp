@@ -104,60 +104,82 @@ void Squad::onFrame()
 	}
 }
 
-std::vector<Unit> Squad::calcVisibleTargets() const
+std::vector<Unit> Squad::calcVisibleTargets()
 {
 	return calcTargets(true);
 }
 
-std::vector<Unit> Squad::calcTargets(bool visibilityFilter) const
+std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 {
     // Discover enemies within region of interest
-    std::vector<Unit> nearbyEnemies;
+    std::map<sc2::Tag, Unit> nearbyEnemies;
 
-    // if the order is to defend, we only care about units in the radius of the defense
-    if (m_order.getType() == SquadOrderTypes::Defend)
-    {
-        for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
-        {
-            if (Util::Dist(enemyUnit, m_order.getPosition()) < m_order.getRadius())
-            {
-				if (visibilityFilter && !enemyUnit.isVisible())
-					continue;
-
-                nearbyEnemies.push_back(enemyUnit);
-            }
-        }
-
-    } // otherwise we want to see everything on the way as well
-    else if (m_order.getType() == SquadOrderTypes::Attack)
-    {
-        CCPosition center = calcCenter();
-        for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
-        {
-            if (Util::Dist(enemyUnit, center) < m_order.getRadius())
-            {
-                nearbyEnemies.push_back(enemyUnit);
-            }
-        }
-    }
-	else if (m_order.getType() == SquadOrderTypes::Harass)
+	for (auto & mapEnemyUnit : m_bot.GetEnemyUnits())
 	{
-		for (auto & unit : m_units)
-		{
-			for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
-			{
-				if (Util::Dist(enemyUnit, unit) < m_order.getRadius() && std::find(nearbyEnemies.begin(), nearbyEnemies.end(), enemyUnit) == nearbyEnemies.end())
-				{
-					if (visibilityFilter && !enemyUnit.isVisible())
-						continue;
+		auto & enemyUnit = mapEnemyUnit.second;
 
-					nearbyEnemies.push_back(enemyUnit);
+		if (!enemyUnit.isValid())
+			continue;
+		if (!enemyUnit.isCompleted())
+			continue;
+		if (!enemyUnit.isAlive())
+			continue;
+		if (visibilityFilter && !enemyUnit.isVisible())
+			continue;
+
+		const sc2::Unit* enemyUnitPtr = enemyUnit.getUnitPtr();
+		sc2::Unit::DisplayType displayType = enemyUnitPtr->display_type;
+		// Update last time seen
+		if (displayType == sc2::Unit::DisplayType::Visible || displayType == sc2::Unit::DisplayType::Snapshot)
+		{
+			m_lastSeenStep[enemyUnitPtr] = m_bot.Observation()->GetGameLoop();
+		}
+		else
+		{
+			// If the unit is not were we last saw it, ignore it
+			if (m_bot.Map().isVisible(enemyUnit.getPosition()))
+				continue;
+			// If mobile unit is not seen for too long (around 3s), ignore it
+			if (!enemyUnit.getType().isBuilding() && m_lastSeenStep[enemyUnitPtr] + 40 < m_bot.Observation()->GetGameLoop())
+				continue;
+		}
+
+		m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.4f, CCColor(127, 127, 127));
+
+		bool addUnit = false;
+
+		// if the order is to defend, we only care about units in the radius of the defense
+		if (m_order.getType() == SquadOrderTypes::Defend)
+		{
+			addUnit = Util::Dist(enemyUnit, m_order.getPosition()) < m_order.getRadius();
+		} // if the order is to attack, we care about units around the center of the squad
+		else if (m_order.getType() == SquadOrderTypes::Attack)
+		{
+			addUnit = Util::Dist(enemyUnit, calcCenter()) < m_order.getRadius();
+		} // if the order is to harass, we care about every unit around each of our units
+		else if (m_order.getType() == SquadOrderTypes::Harass)
+		{
+			for (auto & unit : m_units)
+			{
+				if (Util::Dist(enemyUnit, unit) < m_order.getRadius())
+				{
+					addUnit = true;
+					break;
 				}
 			}
 		}
+
+		if (addUnit)
+		{
+			nearbyEnemies.insert_or_assign(mapEnemyUnit.first, enemyUnit);
+			m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.5f);
+		}
 	}
     
-    return nearbyEnemies;
+	std::vector<Unit> targets;
+	for (auto & nearbyEnemy : nearbyEnemies)
+		targets.push_back(nearbyEnemy.second);
+    return targets;
 }
 
 bool Squad::isEmpty() const
@@ -302,7 +324,7 @@ bool Squad::isSuiciding() const
 	return m_isSuiciding;
 }
 
-bool Squad::needsToRegroup() const
+bool Squad::needsToRegroup()
 {
     //Only the main attack can regroup
     if (m_name != "MainAttack")

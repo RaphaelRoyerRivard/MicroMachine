@@ -218,7 +218,11 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			fleeDirLen = abs(fleeDirX) + abs(fleeDirY);
 			fleeDirX /= fleeDirLen;
 			fleeDirY /= fleeDirLen;
+			// The expected threat position will be used to decide where to throw the mine
+			// (between the unit and the enemy or on the enemy if it is a worker)
 			CCPosition expectedThreatPosition(threat->pos.x + fleeDirX * threatSpeed * 0.5f, threat->pos.y + fleeDirY * threatSpeed * 0.5f);
+			if (Unit(threat, m_bot).getType().isWorker())
+				expectedThreatPosition = threat->pos;
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
 			bool tooClose = dist < threatRange + threatSpeed;
 			bool faster = threatSpeed > rangedUnitSpeed;

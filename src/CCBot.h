@@ -28,7 +28,8 @@ class CCBot
     BotConfig               m_config;
     TechTree                m_techTree;
     GameCommander           m_gameCommander;
-
+	std::map<sc2::Tag, Unit> m_allyUnits;
+	std::map<sc2::Tag, Unit> m_enemyUnits;
     std::vector<Unit>       m_allUnits;
     std::vector<CCPosition> m_baseLocations;
 
@@ -72,5 +73,7 @@ public:
     int GetGas() const;
     Unit GetUnit(const CCUnitID & tag) const;
     const std::vector<Unit> & GetUnits() const;
+	std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits();
+	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();
     const std::vector<CCPosition> & GetStartLocations() const;
 };
