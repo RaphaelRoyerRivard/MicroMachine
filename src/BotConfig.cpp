@@ -6,7 +6,7 @@ BotConfig::BotConfig()
 {
     ConfigFileFound = true;
     ConfigFileParsed = true;
-    ConfigFileLocation = "Data/MicroMachine/BotConfig.txt";
+    ConfigFileLocation = "BotConfig.txt";
     BotName = "MicroMachine";
     Authors = "David Churchill, Raphael Royer-Rivard, Antoine Theberge, Benjamin Ross, Jean-Philippe Croteau, Francois Genest";
     PrintInfoOnStart = false;
