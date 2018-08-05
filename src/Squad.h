@@ -35,8 +35,6 @@ class Squad
 
     std::map<Unit, bool> m_nearEnemy;
 
-	std::map<const sc2::Unit *, uint32_t> m_lastSeenStep;
-
     Unit unitClosestToEnemy() const;
 
     void updateUnits();

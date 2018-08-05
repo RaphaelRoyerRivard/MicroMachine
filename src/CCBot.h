@@ -30,6 +30,7 @@ class CCBot
     GameCommander           m_gameCommander;
 	std::map<sc2::Tag, Unit> m_allyUnits;
 	std::map<sc2::Tag, Unit> m_enemyUnits;
+	std::map<sc2::Tag, uint32_t> m_lastSeenUnits;
     std::vector<Unit>       m_allUnits;
     std::vector<CCPosition> m_baseLocations;
 
@@ -75,5 +76,6 @@ public:
     const std::vector<Unit> & GetUnits() const;
 	std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits();
 	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();
+	uint32_t GetLastStepSeenUnit(sc2::Tag tag);
     const std::vector<CCPosition> & GetStartLocations() const;
 };

@@ -113,7 +113,7 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 {
     // Discover enemies within region of interest
     std::map<sc2::Tag, Unit> nearbyEnemies;
-
+	uint32_t currentStep = m_bot.Observation()->GetGameLoop();
 	for (auto & mapEnemyUnit : m_bot.GetEnemyUnits())
 	{
 		auto & enemyUnit = mapEnemyUnit.second;
@@ -127,22 +127,13 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (visibilityFilter && !enemyUnit.isVisible())
 			continue;
 
-		const sc2::Unit* enemyUnitPtr = enemyUnit.getUnitPtr();
-		sc2::Unit::DisplayType displayType = enemyUnitPtr->display_type;
-		// Update last time seen
-		if (displayType == sc2::Unit::DisplayType::Visible || displayType == sc2::Unit::DisplayType::Snapshot)
-		{
-			m_lastSeenStep[enemyUnitPtr] = m_bot.Observation()->GetGameLoop();
-		}
-		else
-		{
-			// If the unit is not were we last saw it, ignore it
-			if (m_bot.Map().isVisible(enemyUnit.getPosition()))
-				continue;
-			// If mobile unit is not seen for too long (around 3s), ignore it
-			if (!enemyUnit.getType().isBuilding() && m_lastSeenStep[enemyUnitPtr] + 40 < m_bot.Observation()->GetGameLoop())
-				continue;
-		}
+		uint32_t lastStepSeen = m_bot.GetLastStepSeenUnit(enemyUnit.getUnitPtr()->tag);
+		// If the unit is not were we last saw it, ignore it
+		if (currentStep != lastStepSeen && m_bot.Map().isVisible(enemyUnit.getPosition()))
+			continue;
+		// If mobile unit is not seen for too long (around 3s), ignore it
+		if (!enemyUnit.getType().isBuilding() && lastStepSeen + 40 < m_bot.Observation()->GetGameLoop())
+			continue;
 
 		m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.4f, CCColor(127, 127, 127));
 
