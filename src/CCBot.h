@@ -44,8 +44,18 @@ public:
     CCBot();
 
 #ifdef SC2API
+	void OnGameFullStart() override;
     void OnGameStart() override;
+	void OnGameEnd() override;
     void OnStep() override;
+	void OnUnitDestroyed(const sc2::Unit*) override;
+	void OnUnitCreated(const sc2::Unit*) override;
+	void OnUnitIdle(const sc2::Unit*) override;
+	void OnUpgradeCompleted(sc2::UpgradeID) override;
+	void OnBuildingConstructionComplete(const sc2::Unit*) override;
+	void OnNydusDetected() override;
+	void OnUnitEnterVision(const sc2::Unit*) override;
+	void OnNuclearLaunchDetected() override;
 #else
     void OnGameStart();
     void OnStep();
@@ -54,7 +64,7 @@ public:
           BotConfig & Config();
           WorkerManager & Workers();
     const BaseLocationManager & Bases() const;
-	const GameCommander & CCBot::Commander() const;
+	const GameCommander & Commander() const;
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;
     const StrategyManager & Strategy() const;

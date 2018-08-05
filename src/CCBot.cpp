@@ -13,7 +13,18 @@ CCBot::CCBot()
     
 }
 
-void CCBot::OnGameStart() 
+void CCBot::OnGameFullStart() {}//end?
+void CCBot::OnGameEnd() {}//Start
+void CCBot::OnUnitDestroyed(const sc2::Unit*) {}
+void CCBot::OnUnitCreated(const sc2::Unit*) {}
+void CCBot::OnUnitIdle(const sc2::Unit*) {}
+void CCBot::OnUpgradeCompleted(sc2::UpgradeID) {}
+void CCBot::OnBuildingConstructionComplete(const sc2::Unit*) {}
+void CCBot::OnNydusDetected() {}
+void CCBot::OnUnitEnterVision(const sc2::Unit*) {}
+void CCBot::OnNuclearLaunchDetected() {}
+
+void CCBot::OnGameStart() //full start
 {
     m_config.readConfigFile();
 

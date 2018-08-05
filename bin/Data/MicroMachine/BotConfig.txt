@@ -22,7 +22,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "BloodBoilLE.SC2Map",
+        "MapFile"                   : "CatalystLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
