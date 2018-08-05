@@ -252,19 +252,25 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		dirX /= dirLen;
 		dirY /= dirLen;
 
-		// move towards direction if pathable
-		int moveDistance = 5;
-		int minMoveDistance = 2;
+		// move towards pathable tile not too close of the unit
+		int moveDistance = 9;	//Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
 		
 		CCPosition moveTo(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
 		// We check if we are moving towards and close to an unpathable position
-		while (!m_bot.Observation()->IsPathable(moveTo) && moveDistance >= minMoveDistance)
+		while (!m_bot.Observation()->IsPathable(moveTo))
 		{
-			--moveDistance;
+			++moveDistance;
 			moveTo = CCPosition(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
+			// If moveTo is out of the map, stop checking farther and switch to influence map navigation
+			if (m_bot.Map().width() < moveTo.x || moveTo.x < 0 || m_bot.Map().height() < moveTo.y || moveTo.y < 0)
+			{
+				isInDanger = true;
+				break;
+			}
 		}
+
 		// If close to an unpathable position or in danger
-		if (moveDistance < minMoveDistance || isInDanger)
+		if (isInDanger)
 		{
 			// Use influence map to find safest path
 			moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
@@ -288,18 +294,6 @@ struct Node {
 	}
 	CCTilePosition position;
 	Node* parent;
-	/*bool operator == (const Node & other) const
-	{
-		return position.x == other.position.x && position.y == other.position.y;
-	}
-	bool operator < (const Node & other) const
-	{
-		if (position.x < other.position.x)
-			return true;
-		else if (position.x == other.position.x && position.y < other.position.y)
-			return true;
-		return false;
-	}*/
 };
 
 bool isPositionInNodeSet(CCTilePosition& position, std::set<Node*> & set)
