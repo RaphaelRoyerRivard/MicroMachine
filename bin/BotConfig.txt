@@ -16,12 +16,13 @@
     
     "SC2API" :
     {
-    	"ConnectToLadder"			: false,
+        "ConnectToLadder"           : false,
+        "LoadSettings"              : false,
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
-        "EnemyRace"                 : "Protoss",
+        "EnemyRace"                 : "Zerg",
         "MapFile"                   : "BloodBoilLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,

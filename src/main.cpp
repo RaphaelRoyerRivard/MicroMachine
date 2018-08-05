@@ -99,8 +99,10 @@ int main(int argc, char* argv[])
 
 	if (connectToLadder)
 	{
+		bool loadSettings = false;
+		JSONTools::ReadBool("LoadSettings", j["SC2API"], loadSettings);
 		CCBot bot;
-		RunBot(argc, argv, &bot, sc2::Race::Terran);
+		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings);
 
 		return 0;
 	}
