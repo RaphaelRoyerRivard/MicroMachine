@@ -232,27 +232,24 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				expectedThreatPosition = threat->pos;
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
 			float totalRange = getThreatRange(rangedUnit, threat);
-			bool tooClose = dist < totalRange;
-			bool faster = threatSpeed > rangedUnitSpeed;
-			if (tooClose || faster)
+			float distToExpectedPosition = Util::Dist(rangedUnit->pos, expectedThreatPosition);
+			float minChargeDistance = totalRange - HARASS_THREAT_RANGE_BUFFER;
+			// Check if we have enough reach to throw at the threat
+			if (canUseKD8Charge && distToExpectedPosition <= rangedUnitRange && distToExpectedPosition >= minChargeDistance)
 			{
-				// Check if we have enough reach to throw at the threat
-				if (canUseKD8Charge && Util::Dist(rangedUnit->pos, expectedThreatPosition) <= rangedUnitRange)
-				{
-					//TODO find a group of threat
-					Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, m_bot);
-					lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
-					madeAction = true;
-					break;
-				}
-				if (dist < threatRange + 0.5f)
-					useInfluenceMap = true;
-				m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), CCColor(255, 0, 0));
-				m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
-				//TODO reduce the multiplier the farther we are from it
-				dirX += fleeDirX * 1.5f;
-				dirY += fleeDirY * 1.5f;
+				//TODO find a group of threat
+				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, m_bot);
+				lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+				madeAction = true;
+				break;
 			}
+			if (dist < threatRange + 0.5f)
+				useInfluenceMap = true;
+			m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), CCColor(255, 0, 0));
+			m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
+			//TODO reduce the multiplier the farther we are from it
+			dirX += fleeDirX * 1.5f;
+			dirY += fleeDirY * 1.5f;
 		}
 		if (madeAction)
 			continue;
