@@ -14,6 +14,8 @@
 #include "UCTCDMove.h"
 #include "UCTCDAction.h"
 
+const float HARASS_THREAT_RANGE_BUFFER = 1.f;
+const float HARASS_THREAT_MIN_RANGE = 4.f;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
@@ -153,7 +155,9 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			bool inRangeOfThreat = false;
 			for (auto & threat : threats)
 			{
-				if (Util::Dist(rangedUnit->pos, threat->pos) <= Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot))
+				float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
+				float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+				if (Util::Dist(rangedUnit->pos, threat->pos) <= threatRange + threatSpeed)
 				{
 					inRangeOfThreat = true;
 					break;
@@ -203,10 +207,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			dirY /= dirLen;
 		}
 
-		bool isInDanger = false;
+		bool useInfluenceMap = false;
 		float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
 		bool madeAction = false;
-		// add normalied * 1.5 vector of potential threats (inside their range + 2)
+		// add normalied * 1.5 vector of potential threats
 		for (auto threat : threats)
 		{
 			float rangedUnitRange = Util::GetAttackRangeForTarget(rangedUnit, threat, m_bot);
@@ -224,7 +228,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if (Unit(threat, m_bot).getType().isWorker())
 				expectedThreatPosition = threat->pos;
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
-			bool tooClose = dist < threatRange + threatSpeed;
+			float totalRange = threatRange + threatSpeed + HARASS_THREAT_RANGE_BUFFER;
+			bool tooClose = dist < totalRange;
 			bool faster = threatSpeed > rangedUnitSpeed;
 			if (tooClose || faster)
 			{
@@ -238,8 +243,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 					break;
 				}
 				if (dist < threatRange + 0.5f)
-					isInDanger = true;
-				m_bot.Map().drawCircle(threat->pos, threatRange + 2, CCColor(255, 0, 0));
+					useInfluenceMap = true;
+				m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(255, 0, 0));
 				//TODO reduce the multiplier the farther we are from it
 				dirX += fleeDirX * 1.5f;
 				dirY += fleeDirY * 1.5f;
@@ -252,25 +257,30 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		dirX /= dirLen;
 		dirY /= dirLen;
 
-		// move towards pathable tile not too close of the unit
-		int moveDistance = 9;	//Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
-		
+		// Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
+		const int initialMoveDistance = 9;
+		int moveDistance = initialMoveDistance;
 		CCPosition moveTo(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
-		// We check if we are moving towards and close to an unpathable position
-		while (!m_bot.Observation()->IsPathable(moveTo))
+
+		// If not using influence maps, check if we can move in the direction of the vector
+		if (!useInfluenceMap)
 		{
-			++moveDistance;
-			moveTo = CCPosition(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
-			// If moveTo is out of the map, stop checking farther and switch to influence map navigation
-			if (m_bot.Map().width() < moveTo.x || moveTo.x < 0 || m_bot.Map().height() < moveTo.y || moveTo.y < 0)
+			// We check if we are moving towards and close to an unpathable position
+			while (!m_bot.Observation()->IsPathable(moveTo))
 			{
-				isInDanger = true;
-				break;
+				++moveDistance;
+				moveTo = CCPosition(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
+				// If moveTo is out of the map, stop checking farther and switch to influence map navigation
+				if (m_bot.Map().width() < moveTo.x || moveTo.x < 0 || m_bot.Map().height() < moveTo.y || moveTo.y < 0)
+				{
+					useInfluenceMap = true;
+					break;
+				}
 			}
 		}
 
 		// If close to an unpathable position or in danger
-		if (isInDanger)
+		if (useInfluenceMap)
 		{
 			// Use influence map to find safest path
 			moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
@@ -338,8 +348,8 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 		if ((int)threatRelativePosition.x < 0 || (int)threatRelativePosition.y < 0 || (int)threatRelativePosition.x >= mapWidth || (int)threatRelativePosition.y >= mapHeight)
 			continue;
 
-		//calculate radius (range + speed) and intensity (dps)
-		float radius = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot) + Util::getSpeedOfUnit(threat, m_bot);
+		//calculate radius max(min range, range + speed + small buffer) and intensity (dps)
+		float radius = std::max(HARASS_THREAT_MIN_RANGE, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + HARASS_THREAT_RANGE_BUFFER);
 		float intensity = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
 		int minX = std::max(0, (int)floor(threatRelativePosition.x - radius));
 		int maxX = std::min((int)sizeof(map) - 1, (int)ceil(threatRelativePosition.x + radius));
@@ -571,8 +581,11 @@ const std::vector<const sc2::Unit *> RangedManager::getThreats(const sc2::Unit *
 	for (auto targetUnit : targets)
 	{
 		BOT_ASSERT(targetUnit, "null target unit in getThreats");
-
-		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < Util::GetAttackRangeForTarget(targetUnit, rangedUnit, m_bot) + Util::getSpeedOfUnit(targetUnit, m_bot))
+		if (Util::GetDpsForTarget(targetUnit, rangedUnit, m_bot) == 0.f)
+			continue;
+		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
+		//But this is not working so well for melee units, we keep every units in a radius of min threat range
+		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < std::max(HARASS_THREAT_MIN_RANGE, Util::GetAttackRangeForTarget(targetUnit, rangedUnit, m_bot) + Util::getSpeedOfUnit(targetUnit, m_bot) + HARASS_THREAT_RANGE_BUFFER))
 			threats.push_back(targetUnit);
 	}
 
