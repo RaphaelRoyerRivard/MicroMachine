@@ -14,8 +14,11 @@
 #include "UCTCDMove.h"
 #include "UCTCDAction.h"
 
-const float HARASS_THREAT_RANGE_BUFFER = 1.f;
+const float HARASS_THREAT_RANGE_BUFFER = 2.f;
+const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 2.f;
+const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 const float HARASS_THREAT_MIN_RANGE = 4.f;
+const float HARASS_UNIT_MIN_MOVE_DISTANCE = 1.5f;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
@@ -228,7 +231,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if (Unit(threat, m_bot).getType().isWorker())
 				expectedThreatPosition = threat->pos;
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
-			float totalRange = threatRange + threatSpeed + HARASS_THREAT_RANGE_BUFFER;
+			float totalRange = getThreatRange(rangedUnit, threat);
 			bool tooClose = dist < totalRange;
 			bool faster = threatSpeed > rangedUnitSpeed;
 			if (tooClose || faster)
@@ -244,7 +247,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				}
 				if (dist < threatRange + 0.5f)
 					useInfluenceMap = true;
-				m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(255, 0, 0));
+				m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), CCColor(255, 0, 0));
+				m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
 				//TODO reduce the multiplier the farther we are from it
 				dirX += fleeDirX * 1.5f;
 				dirY += fleeDirY * 1.5f;
@@ -348,8 +352,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 		if ((int)threatRelativePosition.x < 0 || (int)threatRelativePosition.y < 0 || (int)threatRelativePosition.x >= mapWidth || (int)threatRelativePosition.y >= mapHeight)
 			continue;
 
-		//calculate radius max(min range, range + speed + small buffer) and intensity (dps)
-		float radius = std::max(HARASS_THREAT_MIN_RANGE, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + HARASS_THREAT_RANGE_BUFFER);
+		float radius = getThreatRange(rangedUnit, threat);
 		float intensity = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
 		int minX = std::max(0, (int)floor(threatRelativePosition.x - radius));
 		int maxX = std::min((int)sizeof(map) - 1, (int)ceil(threatRelativePosition.x + radius));
@@ -376,6 +379,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 	while (!openSet.empty())
 	{
 		Node* current = getLowestCostNode(costs);
+		//Return condition: No threat influence on this tile
 		if (map[current->position.x][current->position.y] == 0)
 		{
 			CCPosition currentPos = Util::GetPosition(current->position) - Util::GetPosition(centerPos);
@@ -385,7 +389,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 				CCPosition parentPos = Util::GetPosition(current->parent->position) - Util::GetPosition(centerPos);
 				m_bot.Map().drawCircle(currentPos + rangedUnit->pos, 1.f, CCColor(0, 255, 255));
 				//we want to retun a node close to the current position
-				if (Util::Dist(parentPos, currentPos) <= 2.f && returnPos == currentPos)
+				if (Util::Dist(parentPos, currentPos) <= 3.f && returnPos == currentPos)
 					returnPos = parentPos;
 				current = current->parent;
 			}
@@ -396,6 +400,14 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 			for (Node* node : closedSet)
 			{
 				delete(node);
+			}
+			// Move to at least 1.5f distance, otherwise the unit might stop when reaching it's move command position
+			float dist = Util::Dist(rangedUnit->pos, rangedUnit->pos + returnPos);
+			if (dist < HARASS_UNIT_MIN_MOVE_DISTANCE)
+			{
+				float x = HARASS_UNIT_MIN_MOVE_DISTANCE / dist * returnPos.x;
+				float y = HARASS_UNIT_MIN_MOVE_DISTANCE / dist * returnPos.y;
+				returnPos = CCPosition(x, y);
 			}
 			return Util::GetTilePosition(rangedUnit->pos + returnPos);
 		}
@@ -585,11 +597,21 @@ const std::vector<const sc2::Unit *> RangedManager::getThreats(const sc2::Unit *
 			continue;
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
 		//But this is not working so well for melee units, we keep every units in a radius of min threat range
-		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < std::max(HARASS_THREAT_MIN_RANGE, Util::GetAttackRangeForTarget(targetUnit, rangedUnit, m_bot) + Util::getSpeedOfUnit(targetUnit, m_bot) + HARASS_THREAT_RANGE_BUFFER))
+		float threatRange = getThreatRange(rangedUnit, targetUnit);
+		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < std::max(HARASS_THREAT_MIN_RANGE, threatRange))
 			threats.push_back(targetUnit);
 	}
 
 	return threats;
+}
+
+//calculate radius max(min range, range + speed + height bonus + small buffer)
+float RangedManager::getThreatRange(const sc2::Unit * rangedUnit, const sc2::Unit * threat)
+{
+	sc2::GameInfo gameInfo = m_bot.Observation()->GetGameInfo();
+	float heightBonus = Util::TerainHeight(gameInfo, threat->pos) > Util::TerainHeight(gameInfo, rangedUnit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
+	float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + HARASS_THREAT_RANGE_BUFFER;
+	return threatRange;
 }
 
 float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target)
@@ -636,19 +658,3 @@ bool RangedManager::isTargetRanged(const sc2::Unit * target)
     float maxRange = Util::GetMaxAttackRange(target->unit_type, m_bot);
     return maxRange > 1.f;
 }
-
-const sc2::Unit * RangedManager::getClosestMineral(const sc2::Unit * unit) {
-    const sc2::Unit * closestShard = nullptr;
-    auto potentialMinerals = m_bot.Observation()->GetUnits(sc2::Unit::Alliance::Neutral);
-    for (auto mineral : potentialMinerals)
-    {
-        if (closestShard == nullptr && mineral->is_on_screen) {
-            closestShard = mineral;
-        }
-        else if (mineral->unit_type == 1680 && Util::Dist(mineral->pos, unit->pos) < Util::Dist(closestShard->pos, unit->pos) && mineral->is_on_screen) {
-            closestShard = mineral;
-        }
-    }
-    return closestShard;
-}
-
