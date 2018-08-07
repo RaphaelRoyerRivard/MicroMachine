@@ -195,8 +195,11 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 			maxRange = weapon.range;
 	}
 
-    if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-        maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
+	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+		maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
+
+	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+		maxRange = 3.f;
 
 	if (maxRange > 0.f)
 		maxRange += unit->radius + target->radius;
@@ -334,6 +337,10 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
         //A special case must be done for bunkers since they have no weapon and the cargo space is not available
         dps = 30.f;
     }
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+	{
+		dps = 5.0f;
+	}
 
     return dps;
 }

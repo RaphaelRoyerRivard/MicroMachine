@@ -88,6 +88,8 @@ void CCBot::setUnits()
 			m_allyUnits.insert_or_assign(unitptr->tag, unit);
 		else if(unitptr->alliance == sc2::Unit::Enemy)
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+		if(unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
         m_allUnits.push_back(Unit(unitptr, *this));
 		m_lastSeenUnits.insert_or_assign(unitptr->tag, step);
     }
