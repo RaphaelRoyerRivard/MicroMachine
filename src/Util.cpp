@@ -198,7 +198,8 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
     if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
         maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
 
-    //for some strange reason, units are actually able to reach targets farther than their range
+	if (maxRange > 0.f)
+		maxRange += unit->radius + target->radius;
 	return maxRange; 
 }
 

@@ -14,7 +14,7 @@
 #include "UCTCDMove.h"
 #include "UCTCDAction.h"
 
-const float HARASS_THREAT_RANGE_BUFFER = 2.f;
+const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 2.f;
 const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 const float HARASS_THREAT_MIN_RANGE = 4.f;
