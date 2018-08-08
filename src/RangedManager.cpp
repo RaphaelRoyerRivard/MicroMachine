@@ -14,11 +14,12 @@
 #include "UCTCDMove.h"
 #include "UCTCDAction.h"
 
-const float HARASS_THREAT_RANGE_BUFFER = 1.f;
-const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 2.f;
+const float HARASS_UNIT_MIN_MOVE_DISTANCE = 1.5f;
 const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 const float HARASS_THREAT_MIN_RANGE = 4.f;
-const float HARASS_UNIT_MIN_MOVE_DISTANCE = 1.5f;
+const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
+const float HARASS_THREAT_RANGE_BUFFER = 1.f;
+const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 3.f;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
@@ -247,9 +248,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				useInfluenceMap = true;
 			m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), CCColor(255, 0, 0));
 			m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
-			//TODO reduce the multiplier the farther we are from it
-			dirX += fleeDirX * 1.5f;
-			dirY += fleeDirY * 1.5f;
+			//value is linear interpolation in the buffer zone
+			float intensity = HARASS_THREAT_MAX_REPULSION_INTENSITY * std::max(0.f, std::min(1.f, (totalRange - dist) / (totalRange - threatRange)));
+			dirX += fleeDirX * intensity;
+			dirY += fleeDirY * intensity;
 		}
 		if (madeAction)
 			continue;
@@ -595,7 +597,8 @@ const std::vector<const sc2::Unit *> RangedManager::getThreats(const sc2::Unit *
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
 		//But this is not working so well for melee units, we keep every units in a radius of min threat range
 		float threatRange = getThreatRange(rangedUnit, targetUnit);
-		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < std::max(HARASS_THREAT_MIN_RANGE, threatRange))
+		float minRange = Unit(targetUnit, m_bot).getType().isWorker() ? 0.f : HARASS_THREAT_MIN_RANGE;
+		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < std::max(minRange, threatRange))
 			threats.push_back(targetUnit);
 	}
 
