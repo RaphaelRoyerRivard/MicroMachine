@@ -14,6 +14,8 @@
 #include "UCTCDMove.h"
 #include "UCTCDAction.h"
 
+const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
+const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
 const float HARASS_UNIT_MIN_MOVE_DISTANCE = 1.5f;
 const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 const float HARASS_THREAT_MIN_RANGE = 4.f;
@@ -255,6 +257,36 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		}
 		if (madeAction)
 			continue;
+
+		// Check if there is a friendly harass unit close to this one
+		float distToClosestFriendlyUnit = HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
+		CCPosition closestFriendlyUnitPosition;
+		for(auto friendlyRangedUnit : rangedUnits)
+		{
+			if(friendlyRangedUnit->tag != rangedUnit->tag)
+			{
+				float dist = Util::Dist(rangedUnit->pos, friendlyRangedUnit->pos);
+				if(dist < distToClosestFriendlyUnit)
+				{
+					distToClosestFriendlyUnit = dist;
+					closestFriendlyUnitPosition = friendlyRangedUnit->pos;
+				}
+			}
+		}
+		// Add repulsion vector if there is a friendly harass unit close enough
+		if(distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
+		{
+			float fleeDirX = 0.f, fleeDirY = 0.f, fleeDirLen = 0.f;
+			fleeDirX = rangedUnit->pos.x - closestFriendlyUnitPosition.x;
+			fleeDirY = rangedUnit->pos.y - closestFriendlyUnitPosition.y;
+			fleeDirLen = abs(fleeDirX) + abs(fleeDirY);
+			fleeDirX /= fleeDirLen;
+			fleeDirY /= fleeDirLen;
+			// The repulsion intensity is linearly interpolated
+			float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - distToClosestFriendlyUnit) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
+			dirX += fleeDirX * intensity;
+			dirY += fleeDirY * intensity;
+		}
 
 		dirLen = abs(dirX) + abs(dirY);
 		dirX /= dirLen;
