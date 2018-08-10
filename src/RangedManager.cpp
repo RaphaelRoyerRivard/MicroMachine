@@ -312,6 +312,20 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 					break;
 				}
 			}
+			if(useInfluenceMap)
+			{
+				moveDistance = initialMoveDistance;
+				while(moveDistance > 2)
+				{
+					--moveDistance;
+					moveTo = CCPosition(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
+					if(m_bot.Observation()->IsPathable(moveTo))
+					{
+						useInfluenceMap = false;
+						break;
+					}
+				}
+			}
 		}
 
 		// If close to an unpathable position or in danger
@@ -385,10 +399,10 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 
 		float radius = getThreatRange(rangedUnit, threat);
 		float intensity = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
-		int minX = std::max(0, (int)floor(threatRelativePosition.x - radius));
-		int maxX = std::min((int)sizeof(map) - 1, (int)ceil(threatRelativePosition.x + radius));
-		int minY = std::max(0, (int)floor(threatRelativePosition.y - radius));
-		int maxY = std::min((int)sizeof(map[0]) - 1, (int)ceil(threatRelativePosition.y + radius));
+		const int minX = std::max(0, (int)floor(threatRelativePosition.x - radius));
+		const int maxX = std::min((int)sizeof(map) - 1, (int)ceil(threatRelativePosition.x + radius));
+		const int minY = std::max(0, (int)floor(threatRelativePosition.y - radius));
+		const int maxY = std::min((int)sizeof(map[0]) - 1, (int)ceil(threatRelativePosition.y + radius));
 		//loop for a square of size equal to the diameter of the influence circle
 		for (int x = minX; x < maxX; ++x)
 		{
