@@ -200,8 +200,11 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				dirY = rangedUnit->pos.y - target->pos.y;
 			}
 			dirLen = abs(dirX) + abs(dirY);
-			dirX /= dirLen;
-			dirY /= dirLen;
+			if(dirLen > 0.f)
+			{
+				dirX /= dirLen;
+				dirY /= dirLen;
+			}
 		}
 		else
 		{
@@ -209,25 +212,33 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			dirX = m_order.getPosition().x - rangedUnit->pos.x;
 			dirY = m_order.getPosition().y - rangedUnit->pos.y;
 			dirLen = abs(dirX) + abs(dirY);
-			dirX /= dirLen;
-			dirY /= dirLen;
+			if (dirLen > 0.f)
+			{
+				dirX /= dirLen;
+				dirY /= dirLen;
+			}
 		}
 
 		bool useInfluenceMap = false;
 		float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
 		bool madeAction = false;
+		float sumedFleeDirX = 0.f, sumedFleeDirY = 0.f;
 		// add normalied * 1.5 vector of potential threats
 		for (auto threat : threats)
 		{
 			float rangedUnitRange = Util::GetAttackRangeForTarget(rangedUnit, threat, m_bot);
 			float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
 			float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+			float threatDps = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
 			float fleeDirX = 0.f, fleeDirY = 0.f, fleeDirLen = 0.f;
 			fleeDirX = rangedUnit->pos.x - threat->pos.x;
 			fleeDirY = rangedUnit->pos.y - threat->pos.y;
 			fleeDirLen = abs(fleeDirX) + abs(fleeDirY);
-			fleeDirX /= fleeDirLen;
-			fleeDirY /= fleeDirLen;
+			if (fleeDirLen > 0.f)
+			{
+				fleeDirX /= fleeDirLen;
+				fleeDirY /= fleeDirLen;
+			}
 			// The expected threat position will be used to decide where to throw the mine
 			// (between the unit and the enemy or on the enemy if it is a worker)
 			CCPosition expectedThreatPosition(threat->pos.x + fleeDirX * threatSpeed * 0.5f, threat->pos.y + fleeDirY * threatSpeed * 0.5f);
@@ -251,92 +262,118 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), CCColor(255, 0, 0));
 			m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
 			//value is linear interpolation in the buffer zone
-			float intensity = HARASS_THREAT_MAX_REPULSION_INTENSITY * std::max(0.f, std::min(1.f, (totalRange - dist) / (totalRange - threatRange)));
-			dirX += fleeDirX * intensity;
-			dirY += fleeDirY * intensity;
+			float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - dist) / (totalRange - threatRange)));
+			sumedFleeDirX += fleeDirX * intensity;
+			sumedFleeDirY += fleeDirY * intensity;
 		}
 		if (madeAction)
 			continue;
 
-		// Check if there is a friendly harass unit close to this one
-		float distToClosestFriendlyUnit = HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
-		CCPosition closestFriendlyUnitPosition;
-		for(auto friendlyRangedUnit : rangedUnits)
+		if(!useInfluenceMap)
 		{
-			if(friendlyRangedUnit->tag != rangedUnit->tag)
+			if (threats.size() > 0)
 			{
-				float dist = Util::Dist(rangedUnit->pos, friendlyRangedUnit->pos);
-				if(dist < distToClosestFriendlyUnit)
+				sumedFleeDirX /= threats.size();
+				sumedFleeDirY /= threats.size();
+				float sumedFleeDirLen = abs(sumedFleeDirX) + abs(sumedFleeDirY);
+				if (sumedFleeDirLen > 0.f)
 				{
-					distToClosestFriendlyUnit = dist;
-					closestFriendlyUnitPosition = friendlyRangedUnit->pos;
+					sumedFleeDirX /= sumedFleeDirLen;
+					sumedFleeDirY /= sumedFleeDirLen;
 				}
 			}
-		}
-		// Add repulsion vector if there is a friendly harass unit close enough
-		if(distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
-		{
-			float fleeDirX = 0.f, fleeDirY = 0.f, fleeDirLen = 0.f;
-			fleeDirX = rangedUnit->pos.x - closestFriendlyUnitPosition.x;
-			fleeDirY = rangedUnit->pos.y - closestFriendlyUnitPosition.y;
-			fleeDirLen = abs(fleeDirX) + abs(fleeDirY);
-			fleeDirX /= fleeDirLen;
-			fleeDirY /= fleeDirLen;
-			// The repulsion intensity is linearly interpolated
-			float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - distToClosestFriendlyUnit) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
-			dirX += fleeDirX * intensity;
-			dirY += fleeDirY * intensity;
-		}
+			dirX += sumedFleeDirX * HARASS_THREAT_MAX_REPULSION_INTENSITY;
+			dirY += sumedFleeDirY * HARASS_THREAT_MAX_REPULSION_INTENSITY;
 
-		dirLen = abs(dirX) + abs(dirY);
-		dirX /= dirLen;
-		dirY /= dirLen;
+			// Check if there is a friendly harass unit close to this one
+			float distToClosestFriendlyUnit = HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
+			CCPosition closestFriendlyUnitPosition;
+			for (auto friendlyRangedUnit : rangedUnits)
+			{
+				if (friendlyRangedUnit->tag != rangedUnit->tag)
+				{
+					float dist = Util::Dist(rangedUnit->pos, friendlyRangedUnit->pos);
+					if (dist < distToClosestFriendlyUnit)
+					{
+						distToClosestFriendlyUnit = dist;
+						closestFriendlyUnitPosition = friendlyRangedUnit->pos;
+					}
+				}
+			}
+			// Add repulsion vector if there is a friendly harass unit close enough
+			if (distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
+			{
+				float fleeDirX = 0.f, fleeDirY = 0.f, fleeDirLen = 0.f;
+				fleeDirX = rangedUnit->pos.x - closestFriendlyUnitPosition.x;
+				fleeDirY = rangedUnit->pos.y - closestFriendlyUnitPosition.y;
+				fleeDirLen = abs(fleeDirX) + abs(fleeDirY);
+				if (fleeDirLen > 0.f)
+				{
+					fleeDirX /= fleeDirLen;
+					fleeDirY /= fleeDirLen;
+				}
+				// The repulsion intensity is linearly interpolated
+				float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - distToClosestFriendlyUnit) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
+				dirX += fleeDirX * intensity;
+				dirY += fleeDirY * intensity;
+			}
 
-		// Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
-		const int initialMoveDistance = 9;
-		int moveDistance = initialMoveDistance;
-		CCPosition moveTo(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
+			dirLen = abs(dirX) + abs(dirY);
+			if (dirLen > 0.f)
+			{
+				dirX /= dirLen;
+				dirY /= dirLen;
+			}
 
-		// If not using influence maps, check if we can move in the direction of the vector
-		if (!useInfluenceMap)
-		{
+			// Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
+			const int initialMoveDistance = 9;
+			int moveDistance = initialMoveDistance;
+			CCPosition moveTo(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
+			const int mapWidth = m_bot.Map().width();
+			const int mapHeight = m_bot.Map().height();
+
+			// Check if we can move in the direction of the vector
 			// We check if we are moving towards and close to an unpathable position
 			while (!m_bot.Observation()->IsPathable(moveTo))
 			{
 				++moveDistance;
 				moveTo = CCPosition(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
 				// If moveTo is out of the map, stop checking farther and switch to influence map navigation
-				if (m_bot.Map().width() < moveTo.x || moveTo.x < 0 || m_bot.Map().height() < moveTo.y || moveTo.y < 0)
+				if (mapWidth < moveTo.x || moveTo.x < 0 || mapHeight < moveTo.y || moveTo.y < 0)
 				{
 					useInfluenceMap = true;
 					break;
 				}
 			}
-			if(useInfluenceMap)
+			if (useInfluenceMap)
 			{
 				moveDistance = initialMoveDistance;
-				while(moveDistance > 2)
+				while (moveDistance > 2)
 				{
 					--moveDistance;
 					moveTo = CCPosition(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
-					if(m_bot.Observation()->IsPathable(moveTo))
+					if (m_bot.Observation()->IsPathable(moveTo))
 					{
 						useInfluenceMap = false;
 						break;
 					}
 				}
 			}
+			if(!useInfluenceMap)
+			{
+				Micro::SmartMove(rangedUnit, moveTo, m_bot);
+				lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+			}
 		}
-
 		// If close to an unpathable position or in danger
-		if (useInfluenceMap)
+		else
 		{
 			// Use influence map to find safest path
-			moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
+			CCPosition moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
+			Micro::SmartMove(rangedUnit, moveTo, m_bot);
+			lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
 		}
 
-		Micro::SmartMove(rangedUnit, moveTo, m_bot);
-		lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
 	}
 }
 
@@ -382,6 +419,8 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 	CCTilePosition centerPos(25, 25);
 	const int mapWidth = 50;
 	const int mapHeight = 50;
+	/*std::vector<std::vector<float>> map;
+	map.*/
 	float map[mapWidth][mapHeight];
 	for (int x = 0; x < mapWidth; ++x)
 	{
@@ -399,10 +438,16 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 
 		float radius = getThreatRange(rangedUnit, threat);
 		float intensity = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
-		const int minX = std::max(0, (int)floor(threatRelativePosition.x - radius));
-		const int maxX = std::min((int)sizeof(map) - 1, (int)ceil(threatRelativePosition.x + radius));
-		const int minY = std::max(0, (int)floor(threatRelativePosition.y - radius));
-		const int maxY = std::min((int)sizeof(map[0]) - 1, (int)ceil(threatRelativePosition.y + radius));
+		float fminX = floor(threatRelativePosition.x - radius);
+		float fmaxX = ceil(threatRelativePosition.x + radius);
+		float fminY = floor(threatRelativePosition.y - radius);
+		float fmaxY = ceil(threatRelativePosition.y + radius);
+		float maxMapX = mapWidth - 1;
+		float maxMapY = mapHeight - 1;
+		const int minX = std::max(0.f, fminX);
+		const int maxX = std::min(maxMapX, fmaxX);
+		const int minY = std::max(0.f, fminY);
+		const int maxY = std::min(maxMapY, fmaxY);
 		//loop for a square of size equal to the diameter of the influence circle
 		for (int x = minX; x < maxX; ++x)
 		{
