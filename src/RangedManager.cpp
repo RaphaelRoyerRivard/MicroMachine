@@ -153,7 +153,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			}
 		}
 
-		float dirX = 0.f, dirY = 0.f, dirLen = 0.f;
+		CCPosition dirVec;
 
 		if (target != nullptr)
 		{
@@ -191,38 +191,29 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			// if not in range of target, add normalized vector towards target
 			if (!targetInAttackRange)
 			{
-				dirX = target->pos.x - rangedUnit->pos.x;
-				dirY = target->pos.y - rangedUnit->pos.y;
+				dirVec.x = target->pos.x - rangedUnit->pos.x;
+				dirVec.y = target->pos.y - rangedUnit->pos.y;
+				
 			}
 			else
 			{
-				dirX = rangedUnit->pos.x - target->pos.x;
-				dirY = rangedUnit->pos.y - target->pos.y;
+				dirVec.x = rangedUnit->pos.x - target->pos.x;
+				dirVec.y = rangedUnit->pos.y - target->pos.y;
 			}
-			dirLen = abs(dirX) + abs(dirY);
-			if(dirLen > 0.f)
-			{
-				dirX /= dirLen;
-				dirY /= dirLen;
-			}
+			sc2::Normalize2D(dirVec);
 		}
 		else
 		{
 			// add normalized vector towards objective
-			dirX = m_order.getPosition().x - rangedUnit->pos.x;
-			dirY = m_order.getPosition().y - rangedUnit->pos.y;
-			dirLen = abs(dirX) + abs(dirY);
-			if (dirLen > 0.f)
-			{
-				dirX /= dirLen;
-				dirY /= dirLen;
-			}
+			dirVec.x = m_order.getPosition().x - rangedUnit->pos.x;
+			dirVec.y = m_order.getPosition().y - rangedUnit->pos.y;
+			sc2::Normalize2D(dirVec);
 		}
 
 		bool useInfluenceMap = false;
 		float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
 		bool madeAction = false;
-		float sumedFleeDirX = 0.f, sumedFleeDirY = 0.f;
+		CCPosition sumedFleeVec(0, 0);
 		// add normalied * 1.5 vector of potential threats
 		for (auto threat : threats)
 		{
@@ -230,18 +221,13 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
 			float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
 			float threatDps = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
-			float fleeDirX = 0.f, fleeDirY = 0.f, fleeDirLen = 0.f;
-			fleeDirX = rangedUnit->pos.x - threat->pos.x;
-			fleeDirY = rangedUnit->pos.y - threat->pos.y;
-			fleeDirLen = abs(fleeDirX) + abs(fleeDirY);
-			if (fleeDirLen > 0.f)
-			{
-				fleeDirX /= fleeDirLen;
-				fleeDirY /= fleeDirLen;
-			}
+			float fleeDirX = rangedUnit->pos.x - threat->pos.x;
+			float fleeDirY = rangedUnit->pos.y - threat->pos.y;
+			CCPosition fleeVec(fleeDirX, fleeDirY);
+			sc2::Normalize2D(fleeVec);
 			// The expected threat position will be used to decide where to throw the mine
 			// (between the unit and the enemy or on the enemy if it is a worker)
-			CCPosition expectedThreatPosition(threat->pos.x + fleeDirX * threatSpeed * 0.5f, threat->pos.y + fleeDirY * threatSpeed * 0.5f);
+			CCPosition expectedThreatPosition(threat->pos.x + fleeVec.x * threatSpeed * 0.5f, threat->pos.y + fleeVec.y * threatSpeed * 0.5f);
 			if (Unit(threat, m_bot).getType().isWorker())
 				expectedThreatPosition = threat->pos;
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
@@ -263,27 +249,19 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
 			//value is linear interpolation in the buffer zone
 			float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - dist) / (totalRange - threatRange)));
-			sumedFleeDirX += fleeDirX * intensity;
-			sumedFleeDirY += fleeDirY * intensity;
+			sumedFleeVec += fleeVec * intensity;
 		}
 		if (madeAction)
 			continue;
 
 		if(!useInfluenceMap)
 		{
-			if (threats.size() > 0)
+			if (!threats.empty())
 			{
-				sumedFleeDirX /= threats.size();
-				sumedFleeDirY /= threats.size();
-				float sumedFleeDirLen = abs(sumedFleeDirX) + abs(sumedFleeDirY);
-				if (sumedFleeDirLen > 0.f)
-				{
-					sumedFleeDirX /= sumedFleeDirLen;
-					sumedFleeDirY /= sumedFleeDirLen;
-				}
+				sumedFleeVec /= threats.size();
+				sc2::Normalize2D(sumedFleeVec);
 			}
-			dirX += sumedFleeDirX * HARASS_THREAT_MAX_REPULSION_INTENSITY;
-			dirY += sumedFleeDirY * HARASS_THREAT_MAX_REPULSION_INTENSITY;
+			dirVec += sumedFleeVec * HARASS_THREAT_MAX_REPULSION_INTENSITY;
 
 			// Check if there is a friendly harass unit close to this one
 			float distToClosestFriendlyUnit = HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
@@ -303,32 +281,19 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			// Add repulsion vector if there is a friendly harass unit close enough
 			if (distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
 			{
-				float fleeDirX = 0.f, fleeDirY = 0.f, fleeDirLen = 0.f;
-				fleeDirX = rangedUnit->pos.x - closestFriendlyUnitPosition.x;
-				fleeDirY = rangedUnit->pos.y - closestFriendlyUnitPosition.y;
-				fleeDirLen = abs(fleeDirX) + abs(fleeDirY);
-				if (fleeDirLen > 0.f)
-				{
-					fleeDirX /= fleeDirLen;
-					fleeDirY /= fleeDirLen;
-				}
+				CCPosition fleeVec = rangedUnit->pos - closestFriendlyUnitPosition;
+				sc2::Normalize2D(fleeVec);
 				// The repulsion intensity is linearly interpolated
 				float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - distToClosestFriendlyUnit) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
-				dirX += fleeDirX * intensity;
-				dirY += fleeDirY * intensity;
+				dirVec += fleeVec * intensity;
 			}
 
-			dirLen = abs(dirX) + abs(dirY);
-			if (dirLen > 0.f)
-			{
-				dirX /= dirLen;
-				dirY /= dirLen;
-			}
+			sc2::Normalize2D(dirVec);
 
 			// Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
 			const int initialMoveDistance = 9;
 			int moveDistance = initialMoveDistance;
-			CCPosition moveTo(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
+			CCPosition moveTo = rangedUnit->pos + dirVec * moveDistance;
 			const int mapWidth = m_bot.Map().width();
 			const int mapHeight = m_bot.Map().height();
 
@@ -337,7 +302,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			while (!m_bot.Observation()->IsPathable(moveTo))
 			{
 				++moveDistance;
-				moveTo = CCPosition(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
+				moveTo = rangedUnit->pos + dirVec * moveDistance;
 				// If moveTo is out of the map, stop checking farther and switch to influence map navigation
 				if (mapWidth < moveTo.x || moveTo.x < 0 || mapHeight < moveTo.y || moveTo.y < 0)
 				{
@@ -351,7 +316,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				while (moveDistance > 2)
 				{
 					--moveDistance;
-					moveTo = CCPosition(rangedUnit->pos.x + dirX * moveDistance, rangedUnit->pos.y + dirY * moveDistance);
+					moveTo = rangedUnit->pos + dirVec * moveDistance;
 					if (m_bot.Observation()->IsPathable(moveTo))
 					{
 						useInfluenceMap = false;
@@ -373,7 +338,6 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			Micro::SmartMove(rangedUnit, moveTo, m_bot);
 			lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
 		}
-
 	}
 }
 
@@ -419,8 +383,6 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 	CCTilePosition centerPos(25, 25);
 	const int mapWidth = 50;
 	const int mapHeight = 50;
-	/*std::vector<std::vector<float>> map;
-	map.*/
 	float map[mapWidth][mapHeight];
 	for (int x = 0; x < mapWidth; ++x)
 	{
