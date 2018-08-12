@@ -14,9 +14,9 @@
 #include "UCTCDMove.h"
 #include "UCTCDAction.h"
 
+const float HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE = 1.5f;
 const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
 const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
-const float HARASS_UNIT_MIN_MOVE_DISTANCE = 1.5f;
 const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 const float HARASS_THREAT_MIN_RANGE = 4.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
@@ -233,9 +233,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
 			float totalRange = getThreatRange(rangedUnit, threat);
 			float distToExpectedPosition = Util::Dist(rangedUnit->pos, expectedThreatPosition);
-			float minChargeDistance = totalRange - HARASS_THREAT_RANGE_BUFFER;
 			// Check if we have enough reach to throw at the threat
-			if (canUseKD8Charge && distToExpectedPosition <= rangedUnitRange && distToExpectedPosition >= minChargeDistance)
+			if (canUseKD8Charge && distToExpectedPosition <= rangedUnitRange)
 			{
 				//TODO find a group of threat
 				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, m_bot);
@@ -459,10 +458,10 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 			}
 			// Move to at least 1.5f distance, otherwise the unit might stop when reaching it's move command position
 			float dist = Util::Dist(rangedUnit->pos, rangedUnit->pos + returnPos);
-			if (dist < HARASS_UNIT_MIN_MOVE_DISTANCE)
+			if (dist < HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE)
 			{
-				float x = HARASS_UNIT_MIN_MOVE_DISTANCE / dist * returnPos.x;
-				float y = HARASS_UNIT_MIN_MOVE_DISTANCE / dist * returnPos.y;
+				float x = HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE / dist * returnPos.x;
+				float y = HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE / dist * returnPos.y;
 				returnPos = CCPosition(x, y);
 			}
 			return Util::GetTilePosition(rangedUnit->pos + returnPos);
