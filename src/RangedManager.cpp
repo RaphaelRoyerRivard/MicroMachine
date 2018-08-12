@@ -247,7 +247,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				useInfluenceMap = true;
 			m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), CCColor(255, 0, 0));
 			m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
-			//value is linear interpolation in the buffer zone
+			// The intensity is linearly interpolated in the buffer zone (between 0 and 1) * dps
 			float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - dist) / (totalRange - threatRange)));
 			sumedFleeVec += fleeVec * intensity;
 		}
@@ -258,10 +258,14 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		{
 			if (!threats.empty())
 			{
-				sumedFleeVec /= threats.size();
-				sc2::Normalize2D(sumedFleeVec);
+				float vecLen = std::sqrt(std::pow(sumedFleeVec.x, 2) + std::pow(sumedFleeVec.y, 2));
+				if(vecLen > HARASS_THREAT_MAX_REPULSION_INTENSITY)
+				{
+					sc2::Normalize2D(sumedFleeVec);
+					sumedFleeVec *= HARASS_THREAT_MAX_REPULSION_INTENSITY;
+				}
+				dirVec += sumedFleeVec;
 			}
-			dirVec += sumedFleeVec * HARASS_THREAT_MAX_REPULSION_INTENSITY;
 
 			// Check if there is a friendly harass unit close to this one
 			float distToClosestFriendlyUnit = HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
