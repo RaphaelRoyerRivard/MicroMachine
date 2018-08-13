@@ -22,7 +22,7 @@ const float HARASS_THREAT_MIN_RANGE = 4.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 3.f;
-const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 1.75f;
+const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.f;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
@@ -182,20 +182,20 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if (!targetInAttackRange)
 			{
 				dirVec = target->pos - rangedUnit->pos;
+				m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
 			}
 			else
 			{
 				dirVec = rangedUnit->pos - target->pos;
+				m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Yellow);
 			}
-			sc2::Normalize2D(dirVec);
 		}
 		else
 		{
 			// add normalized vector towards objective
-			dirVec.x = m_order.getPosition().x - rangedUnit->pos.x;
-			dirVec.y = m_order.getPosition().y - rangedUnit->pos.y;
-			sc2::Normalize2D(dirVec);
+			dirVec = m_order.getPosition() - rangedUnit->pos;
 		}
+		sc2::Normalize2D(dirVec);
 
 		bool useInfluenceMap = false;
 		float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
@@ -233,6 +233,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				useInfluenceMap = true;
 			m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), CCColor(255, 0, 0));
 			m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
+			m_bot.Map().drawLine(rangedUnit->pos, threat->pos, sc2::Colors::Red);
 			// The intensity is linearly interpolated in the buffer zone (between 0 and 1) * dps
 			float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - dist) / (totalRange - threatRange)));
 			sumedFleeVec += fleeVec * intensity;
@@ -244,6 +245,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		{
 			if (!threats.empty())
 			{
+				// We normalize the threats vector only of if is higher than the max repulsion intensity
 				float vecLen = std::sqrt(std::pow(sumedFleeVec.x, 2) + std::pow(sumedFleeVec.y, 2));
 				if(vecLen > HARASS_THREAT_MAX_REPULSION_INTENSITY)
 				{
@@ -272,6 +274,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if (distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
 			{
 				CCPosition fleeVec = rangedUnit->pos - closestFriendlyUnitPosition;
+				m_bot.Map().drawLine(rangedUnit->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
 				sc2::Normalize2D(fleeVec);
 				// The repulsion intensity is linearly interpolated
 				float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - distToClosestFriendlyUnit) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
@@ -300,6 +303,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 					break;
 				}
 			}
+			// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
 			if (useInfluenceMap)
 			{
 				moveDistance = initialMoveDistance;
@@ -314,6 +318,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 					}
 				}
 			}
+			// If a closer pathable tile was found, move there
 			if(!useInfluenceMap)
 			{
 				Micro::SmartMove(rangedUnit, moveTo, m_bot);
@@ -425,13 +430,14 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 		if (map[current->position.x][current->position.y] == 0)
 		{
 			CCPosition currentPos = Util::GetPosition(current->position) - Util::GetPosition(centerPos);
+			m_bot.Map().drawCircle(rangedUnit->pos + currentPos, 1.f, sc2::Colors::Teal);
 			CCPosition returnPos = currentPos;
 			while (current->parent != nullptr)
 			{
 				CCPosition parentPos = Util::GetPosition(current->parent->position) - Util::GetPosition(centerPos);
-				m_bot.Map().drawCircle(currentPos + rangedUnit->pos, 1.f, CCColor(0, 255, 255));
+				m_bot.Map().drawCircle(rangedUnit->pos + parentPos, 1.f, sc2::Colors::Teal);
 				//we want to retun a node close to the current position
-				if (Util::Dist(parentPos, currentPos) <= 3.f && returnPos == currentPos)
+				if (Util::Dist(parentPos, Util::GetPosition(centerPos)) <= 3.f && returnPos == currentPos)
 					returnPos = parentPos;
 				current = current->parent;
 			}
@@ -447,9 +453,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 			float dist = Util::Dist(rangedUnit->pos, rangedUnit->pos + returnPos);
 			if (dist < HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE)
 			{
-				float x = HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE / dist * returnPos.x;
-				float y = HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE / dist * returnPos.y;
-				returnPos = CCPosition(x, y);
+				returnPos *= HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE / dist;
 			}
 			return Util::GetTilePosition(rangedUnit->pos + returnPos);
 		}
@@ -480,6 +484,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 	{
 		delete(node);
 	}
+	// No safe tile has been found (should never happen)
 	return Util::GetTilePosition(m_order.getPosition());
 }
 
@@ -660,13 +665,16 @@ float RangedManager::getThreatRange(const sc2::Unit * rangedUnit, const sc2::Uni
 float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target)
 {
     BOT_ASSERT(target, "null unit in getAttackPriority");
+
+	if (attacker->unit_type == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT)
+		return 0.f;
     
     Unit targetUnit(target, m_bot);
 
 	if (m_harassMode)
 	{
 		if (isTargetRanged(target))
-			return -1.f;
+			return 0.f;
 	}
 
 	float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized

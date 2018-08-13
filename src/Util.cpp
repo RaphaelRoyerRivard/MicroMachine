@@ -341,6 +341,10 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
 	{
 		dps = 5.0f;
 	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT)
+	{
+		dps = 13.7f;
+	}
 
     return dps;
 }
