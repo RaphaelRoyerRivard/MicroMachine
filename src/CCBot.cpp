@@ -6,6 +6,7 @@ CCBot::CCBot()
     , m_bases(*this)
     , m_unitInfo(*this)
     , m_workers(*this)
+	, m_buildings(*this)
     , m_gameCommander(*this)
     , m_strategy(*this)
     , m_techTree(*this)
@@ -63,6 +64,7 @@ void CCBot::OnGameStart() //full start
     m_unitInfo.onStart();
     m_bases.onStart();
     m_workers.onStart();
+	m_buildings.onStart();
 
     m_gameCommander.onStart();
 }
@@ -74,6 +76,7 @@ void CCBot::OnStep()
     m_unitInfo.onFrame();
     m_bases.onFrame();
     m_workers.onFrame();
+	m_buildings.onFrame();
     m_strategy.onFrame();
 
     m_gameCommander.onFrame();
@@ -188,6 +191,11 @@ const TypeData & CCBot::Data(const MetaType & type) const
 WorkerManager & CCBot::Workers()
 {
     return m_workers;
+}
+
+BuildingManager & CCBot::Buildings()
+{
+	return m_buildings;
 }
 
 int CCBot::GetCurrentSupply() const

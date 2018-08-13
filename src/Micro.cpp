@@ -1,6 +1,7 @@
 #include "Micro.h"
 #include "Util.h"
 #include "CCBot.h"
+#include "sc2api/sc2_api.h"
 
 const float dotRadius = 0.1f;
 
@@ -72,8 +73,14 @@ void Micro::SmartFocusFire(const sc2::Unit * rangedUnit, const sc2::Unit * targe
     state.insert_or_assign(rangedUnit->tag, stateMachine);
 }
 
-void Micro::SmartAbility(const sc2::Unit * builder, const sc2::AbilityID & abilityID, CCBot & bot)
+void Micro::SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot)
 {
-    BOT_ASSERT(builder != nullptr, "Builder is null");
-    bot.Actions()->UnitCommand(builder, abilityID);
+    BOT_ASSERT(unit != nullptr, "Unit is null");
+    bot.Actions()->UnitCommand(unit, abilityID);
+}
+
+void Micro::SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot, const sc2::Point2D& point)
+{
+	BOT_ASSERT(unit != nullptr, "Unit is null");
+	bot.Actions()->UnitCommand(unit, abilityID, point);
 }

@@ -228,6 +228,7 @@ bool UnitType::isWorker() const
     switch (m_type.ToType()) 
     {
         case sc2::UNIT_TYPEID::TERRAN_SCV           : return true;
+		case sc2::UNIT_TYPEID::TERRAN_MULE			: return true;
         case sc2::UNIT_TYPEID::PROTOSS_PROBE        : return true;
         case sc2::UNIT_TYPEID::ZERG_DRONE           : return true;
         case sc2::UNIT_TYPEID::ZERG_DRONEBURROWED   : return true;

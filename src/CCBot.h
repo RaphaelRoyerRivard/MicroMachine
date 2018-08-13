@@ -6,6 +6,7 @@
 #include "BaseLocationManager.h"
 #include "UnitInfoManager.h"
 #include "WorkerManager.h"
+#include "BuildingManager.h"
 #include "BotConfig.h"
 #include "GameCommander.h"
 #include "BuildingManager.h"
@@ -24,6 +25,7 @@ class CCBot
     BaseLocationManager     m_bases;
     UnitInfoManager         m_unitInfo;
     WorkerManager           m_workers;
+	BuildingManager			m_buildings;
     StrategyManager         m_strategy;
     BotConfig               m_config;
     TechTree                m_techTree;
@@ -63,6 +65,7 @@ public:
 
           BotConfig & Config();
           WorkerManager & Workers();
+		  BuildingManager & Buildings();
     const BaseLocationManager & Bases() const;
 	const GameCommander & Commander() const;
     const MapTools & Map() const;

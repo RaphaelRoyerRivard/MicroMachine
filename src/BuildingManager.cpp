@@ -21,12 +21,14 @@ void BuildingManager::onStart()
 // gets called every frame from GameCommander
 void BuildingManager::onFrame()
 {
+	updateBaseBuildings();
     validateWorkersAndBuildings();          // check to see if assigned workers have died en route or while constructing
     assignWorkersToUnassignedBuildings();   // assign workers to the unassigned buildings and label them 'planned'    
     constructAssignedBuildings();           // for each planned building, if the worker isn't constructing, send the command    
     checkForStartedConstruction();          // check to see if any buildings have started construction and update data structures    
     checkForDeadTerranBuilders();           // if we are terran and a building is under construction without a worker, assign a new one    
     checkForCompletedBuildings();           // check to see if any buildings have completed and update data structures
+	castBuildingsAbilities();
 
     drawBuildingInformation();
 }
@@ -450,7 +452,6 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 }
 
 void BuildingManager::removeBuildings(const std::vector<Building> & toRemove)
-
 {
     for (auto & b : toRemove)
     {
@@ -461,4 +462,53 @@ void BuildingManager::removeBuildings(const std::vector<Building> & toRemove)
             m_buildings.erase(it);
         }
     }
+}
+
+void BuildingManager::updateBaseBuildings()
+{
+	m_baseBuildings.clear();
+	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))
+	{
+		// filter out units which aren't buildings under construction
+		if (!building.getType().isBuilding() && !building.isBeingConstructed())
+		{
+			continue;
+		}
+		m_baseBuildings.push_back(building);
+	}
+}
+
+const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) {
+	//Copied from RangedManager
+
+	const sc2::Unit * closestShard = nullptr;
+	auto potentialMinerals = m_bot.Observation()->GetUnits(sc2::Unit::Alliance::Neutral);
+	for (auto mineral : potentialMinerals)
+	{
+		if (closestShard == nullptr && mineral->is_on_screen) {
+			closestShard = mineral;
+		}
+		else if (mineral->unit_type == 1680 && Util::Dist(mineral->pos, unit->pos) < Util::Dist(closestShard->pos, unit->pos) && mineral->is_on_screen) {
+			closestShard = mineral;
+		}
+	}
+	return closestShard;
+}
+
+
+void BuildingManager::castBuildingsAbilities()
+{//unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER
+	for (const auto & b : m_baseBuildings)
+	{
+		auto id = b.getType().getAPIUnitType();
+		if (b.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND)
+		{
+			if (b.getEnergy() >= 50)
+			{
+				auto point = this->BuildingManager::getClosestMineral(b.getUnitPtr())->pos;
+				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, m_bot, point);
+				//b.useAbility(sc2::ABILITY_ID::EFFECT_CALLDOWNMULE);
+			}
+		}
+	}
 }

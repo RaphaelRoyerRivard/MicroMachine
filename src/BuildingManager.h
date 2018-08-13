@@ -10,7 +10,8 @@ class BuildingManager
     CCBot &   m_bot;
 
     BuildingPlacer  m_buildingPlacer;
-    std::vector<Building> m_buildings;
+    std::vector<Building> m_buildings; //under construction
+	std::vector<Unit> m_baseBuildings;
 
     bool            m_debugMode;
     int             m_reservedMinerals;				// minerals reserved for planned buildings
@@ -18,6 +19,9 @@ class BuildingManager
 
     bool            isBuildingPositionExplored(const Building & b) const;
     void            removeBuildings(const std::vector<Building> & toRemove);
+	const sc2::Unit * getClosestMineral(const sc2::Unit * unit);
+	void			castBuildingsAbilities();
+	void			updateBaseBuildings();
 
     void            validateWorkersAndBuildings();		    // STEP 1
     void            assignWorkersToUnassignedBuildings();	// STEP 2
