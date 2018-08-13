@@ -22,6 +22,7 @@ const float HARASS_THREAT_MIN_RANGE = 4.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 3.f;
+const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 1.75f;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
@@ -177,28 +178,14 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				continue;
 			}
 
-			// Check if we have enough reach to throw a mine at our target
-			/*if (canUseKD8Charge && targetInAttackRange)
-			{
-				//TODO find a group of targets
-				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, target->pos, m_bot);
-				lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
-				continue;
-			}*/
-
-			// TODO retreat if faster ranged unit is near
-
 			// if not in range of target, add normalized vector towards target
 			if (!targetInAttackRange)
 			{
-				dirVec.x = target->pos.x - rangedUnit->pos.x;
-				dirVec.y = target->pos.y - rangedUnit->pos.y;
-				
+				dirVec = target->pos - rangedUnit->pos;
 			}
 			else
 			{
-				dirVec.x = rangedUnit->pos.x - target->pos.x;
-				dirVec.y = rangedUnit->pos.y - target->pos.y;
+				dirVec = rangedUnit->pos - target->pos;
 			}
 			sc2::Normalize2D(dirVec);
 		}
@@ -227,7 +214,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			sc2::Normalize2D(fleeVec);
 			// The expected threat position will be used to decide where to throw the mine
 			// (between the unit and the enemy or on the enemy if it is a worker)
-			CCPosition expectedThreatPosition(threat->pos.x + fleeVec.x * threatSpeed * 0.5f, threat->pos.y + fleeVec.y * threatSpeed * 0.5f);
+			CCPosition expectedThreatPosition = threat->pos + fleeVec * threatSpeed * HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE;
 			if (Unit(threat, m_bot).getType().isWorker())
 				expectedThreatPosition = threat->pos;
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
@@ -678,9 +665,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 
 	if (m_harassMode)
 	{
-		float unitSpeed = Util::GetUnitTypeDataFromUnitTypeId(attacker->unit_type, m_bot).movement_speed;
-		float targetSpeed = Util::GetUnitTypeDataFromUnitTypeId(target->unit_type, m_bot).movement_speed;
-		if (unitSpeed > targetSpeed * 1.2f && isTargetRanged(target))
+		if (isTargetRanged(target))
 			return -1.f;
 	}
 
@@ -698,7 +683,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
             //We manually reduce the dps of the bunker because it only serve as a shield, units will spawn out of it when destroyed
 			targetDps = 5.f;
         }
-        float workerBonus = targetUnit.getType().isWorker() ? 1.5f : 1.f;   //workers are important to kill
+        float workerBonus = targetUnit.getType().isWorker() ? m_harassMode ? 5.f : 1.5f : 1.f;   //workers are important to kill
 
         return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus;
     }
