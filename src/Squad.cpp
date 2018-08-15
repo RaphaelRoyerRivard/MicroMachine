@@ -523,7 +523,7 @@ void Squad::removeUnit(const Unit & unit)
     // this is O(n) but whatever
     for (size_t i = 0; i < m_units.size(); ++i)
     {
-        if (unit == m_units[i])
+        if (unit.getUnitPtr()->tag == m_units[i].getUnitPtr()->tag)
         {
             m_units.erase(m_units.begin() + i);
             break;

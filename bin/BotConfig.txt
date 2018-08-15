@@ -22,7 +22,7 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
-        "EnemyRace"                 : "Zerg",
+        "EnemyRace"                 : "Terran",
         "MapFile"                   : "BloodBoilLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
@@ -163,7 +163,7 @@
                 "Race"              : "Terran",  
                 "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "SCV", "Barracks", "SCV", "Refinery"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
-                "AttackCondition"   : [ ["Self", "Reaper"], ">=", [ 1 ] ]
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
             "Terran_ReaperHarass2"     : 
             { 
