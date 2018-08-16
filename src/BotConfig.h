@@ -49,6 +49,8 @@ public:
     bool DrawSquadInfo;		
 	bool DrawUnitPowerInfo;
 	bool DrawFSMStateInfo;
+	bool DrawHarassInfo;
+	bool DrawMemoryInfo;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;

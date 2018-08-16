@@ -84,7 +84,9 @@
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
-        "DrawFSMStateInfo"          : false
+        "DrawFSMStateInfo"          : false,
+        "DrawHarassInfo"            : false,
+        "DrawMemoryInfo"            : false
     },
     
     "Modules" :

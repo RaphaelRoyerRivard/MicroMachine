@@ -138,7 +138,8 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (!enemyUnit.getType().isBuilding() && lastStepSeen + 100 < m_bot.Observation()->GetGameLoop())
 			continue;
 
-		m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.4f, CCColor(127, 127, 127));
+		if(m_bot.Config().DrawMemoryInfo)
+			m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.4f, sc2::Colors::Gray);
 
 		bool addUnit = false;
 
@@ -166,7 +167,8 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (addUnit)
 		{
 			nearbyEnemies.insert_or_assign(mapEnemyUnit.first, enemyUnit);
-			m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.5f);
+			if(m_bot.Config().DrawMemoryInfo)
+				m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.5f, sc2::Colors::Blue);
 		}
 	}
     

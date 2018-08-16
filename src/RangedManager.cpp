@@ -178,12 +178,14 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				continue;
 			}
 
-			m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
+			if(m_bot.Config().DrawHarassInfo)
+				m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
 			// if not in range of target, add normalized vector towards target
 			if (!targetInAttackRange)
 			{
 				dirVec = target->pos - rangedUnit->pos;
-				m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
+				if (m_bot.Config().DrawHarassInfo)
+					m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
 			}
 		}
 		else
@@ -228,9 +230,12 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			}
 			if (dist < threatRange + 0.5f)
 				useInfluenceMap = true;
-			m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), CCColor(255, 0, 0));
-			m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
-			m_bot.Map().drawLine(rangedUnit->pos, threat->pos, sc2::Colors::Red);
+			if (m_bot.Config().DrawHarassInfo)
+			{
+				m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), CCColor(255, 0, 0));
+				m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
+				m_bot.Map().drawLine(rangedUnit->pos, threat->pos, sc2::Colors::Red);
+			}
 			// The intensity is linearly interpolated in the buffer zone (between 0 and 1) * dps
 			float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - dist) / (totalRange - threatRange)));
 			sumedFleeVec += fleeVec * intensity;
@@ -271,7 +276,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if (distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
 			{
 				CCPosition fleeVec = rangedUnit->pos - closestFriendlyUnitPosition;
-				m_bot.Map().drawLine(rangedUnit->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
+				if(m_bot.Config().DrawHarassInfo)
+					m_bot.Map().drawLine(rangedUnit->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
 				sc2::Normalize2D(fleeVec);
 				// The repulsion intensity is linearly interpolated
 				float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - distToClosestFriendlyUnit) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
@@ -376,7 +382,8 @@ Node* getLowestCostNode(std::map<Node*, float> & costs)
 
 CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats)
 {
-	m_bot.Map().drawText(rangedUnit->pos, "FLEE!", CCColor(255, 0, 0));
+	if(m_bot.Config().DrawHarassInfo)
+		m_bot.Map().drawText(rangedUnit->pos, "FLEE!", CCColor(255, 0, 0));
 	CCTilePosition centerPos(25, 25);
 	const int mapWidth = 50;
 	const int mapHeight = 50;
@@ -432,12 +439,14 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 		if (map[current->position.x][current->position.y] == 0)
 		{
 			CCPosition currentPos = Util::GetPosition(current->position) - Util::GetPosition(centerPos);
-			m_bot.Map().drawCircle(rangedUnit->pos + currentPos, 1.f, sc2::Colors::Teal);
+			if (m_bot.Config().DrawHarassInfo)
+				m_bot.Map().drawCircle(rangedUnit->pos + currentPos, 1.f, sc2::Colors::Teal);
 			CCPosition returnPos = currentPos;
 			while (current->parent != nullptr)
 			{
 				CCPosition parentPos = Util::GetPosition(current->parent->position) - Util::GetPosition(centerPos);
-				m_bot.Map().drawCircle(rangedUnit->pos + parentPos, 1.f, sc2::Colors::Teal);
+				if (m_bot.Config().DrawHarassInfo)
+					m_bot.Map().drawCircle(rangedUnit->pos + parentPos, 1.f, sc2::Colors::Teal);
 				//we want to retun a node close to the current position
 				if (Util::Dist(parentPos, Util::GetPosition(centerPos)) <= 3.f && returnPos == currentPos)
 					returnPos = parentPos;
