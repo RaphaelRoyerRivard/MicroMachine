@@ -21,8 +21,8 @@ const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 const float HARASS_THREAT_MIN_RANGE = 4.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
-const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 3.f;
-const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.f;
+const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
+const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
@@ -154,7 +154,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			}
 		}
 
-		CCPosition dirVec;
+		CCPosition dirVec(0, 0);
 
 		if (target != nullptr)
 		{
@@ -178,16 +178,12 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				continue;
 			}
 
+			m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
 			// if not in range of target, add normalized vector towards target
 			if (!targetInAttackRange)
 			{
 				dirVec = target->pos - rangedUnit->pos;
 				m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
-			}
-			else
-			{
-				dirVec = rangedUnit->pos - target->pos;
-				m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Yellow);
 			}
 		}
 		else
@@ -195,7 +191,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			// add normalized vector towards objective
 			dirVec = m_order.getPosition() - rangedUnit->pos;
 		}
-		sc2::Normalize2D(dirVec);
+		if(dirVec.x != 0.f || dirVec.y != 0.f)
+			sc2::Normalize2D(dirVec);
 
 		bool useInfluenceMap = false;
 		float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
@@ -280,6 +277,11 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - distToClosestFriendlyUnit) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
 				dirVec += fleeVec * intensity;
 			}
+
+			// We move only if the vector is long enough
+			const float vecLen = std::sqrt(std::pow(dirVec.x, 2) + std::pow(dirVec.y, 2));
+			if (vecLen < 0.5f)
+				return;
 
 			sc2::Normalize2D(dirVec);
 

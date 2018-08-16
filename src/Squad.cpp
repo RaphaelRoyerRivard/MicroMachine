@@ -4,7 +4,8 @@
 
 Squad::Squad(CCBot & bot)
     : m_bot(bot)
-    , m_regroupStartFrame(0)
+	, m_regroupStartFrame(0)
+	, m_lastRegroupFrame(0)
     , m_maxRegroupDuration(0)
     , m_regroupCooldown(0)
     , m_maxDistanceFromCenter(0)
@@ -21,6 +22,7 @@ Squad::Squad(const std::string & name, const SquadOrder & order, size_t priority
     , m_name(name)
     , m_order(order)
     , m_regroupStartFrame(0)
+	, m_lastRegroupFrame(0)
     , m_maxRegroupDuration(0)
     , m_regroupCooldown(0)
 	, m_retreatStartFrame(0)
@@ -38,6 +40,7 @@ Squad::Squad(const std::string & name, const SquadOrder & order, int maxRegroupD
     , m_name(name)
     , m_order(order)
     , m_regroupStartFrame(0)
+	, m_lastRegroupFrame(0)
     , m_maxRegroupDuration(maxRegroupDuration)
     , m_regroupCooldown(regroupCooldown)
 	, m_retreatStartFrame(0)
@@ -131,8 +134,8 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		// If the unit is not were we last saw it, ignore it
 		if (currentStep != lastStepSeen && m_bot.Map().isVisible(enemyUnit.getPosition()))
 			continue;
-		// If mobile unit is not seen for too long (around 3s), ignore it
-		if (!enemyUnit.getType().isBuilding() && lastStepSeen + 40 < m_bot.Observation()->GetGameLoop())
+		// If mobile unit is not seen for too long (around 5s), ignore it
+		if (!enemyUnit.getType().isBuilding() && lastStepSeen + 100 < m_bot.Observation()->GetGameLoop())
 			continue;
 
 		m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.4f, CCColor(127, 127, 127));
@@ -326,11 +329,13 @@ bool Squad::needsToRegroup()
 	if (m_order.getType() != SquadOrderTypes::Regroup)
 	{
 		//Is last regroup too recent?
-		if (m_order.getType() != SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame < m_regroupCooldown)
+		if (currentFrame - m_lastRegroupFrame < m_regroupCooldown)
 			return false;
-
+	}
+	else
+	{
 		//Is current regroup taking too long?
-		if (m_order.getType() == SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame > m_maxRegroupDuration)
+		if(currentFrame - m_regroupStartFrame > m_maxRegroupDuration)
 			return false;
 	}
 
@@ -371,8 +376,8 @@ void Squad::setSquadOrder(const SquadOrder & so)
 		m_regroupStartFrame = m_bot.GetCurrentFrame();
 	else if (so.getType() == SquadOrderTypes::Retreat && m_order.getType() != SquadOrderTypes::Retreat)
 		m_retreatStartFrame = m_bot.GetCurrentFrame();
-	if (so.getType() != SquadOrderTypes::Regroup)
-		m_regroupStartFrame = 0;
+	if (so.getType() != SquadOrderTypes::Regroup && m_order.getType() == SquadOrderTypes::Regroup)
+		m_lastRegroupFrame = m_bot.GetCurrentFrame();
 	if (so.getType() != SquadOrderTypes::Retreat)
 		m_retreatStartFrame = 0;
     m_order = so;

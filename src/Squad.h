@@ -16,6 +16,7 @@ class Squad
     std::vector<Unit>   m_units;
     std::vector<Unit>   m_targets;
 
+	int					m_lastRegroupFrame;
     int                 m_regroupStartFrame;
     int                 m_maxRegroupDuration;
     int                 m_regroupCooldown;
