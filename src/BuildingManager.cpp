@@ -497,7 +497,7 @@ const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) {
 
 
 void BuildingManager::castBuildingsAbilities()
-{//unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER
+{
 	for (const auto & b : m_baseBuildings)
 	{
 		auto id = b.getType().getAPIUnitType();
@@ -507,7 +507,6 @@ void BuildingManager::castBuildingsAbilities()
 			{
 				auto point = this->BuildingManager::getClosestMineral(b.getUnitPtr())->pos;
 				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, m_bot, point);
-				//b.useAbility(sc2::ABILITY_ID::EFFECT_CALLDOWNMULE);
 			}
 		}
 	}
