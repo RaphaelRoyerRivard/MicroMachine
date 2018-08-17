@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "WorkerManager.h"
 #include "CCBot.h"
 #include "Util.h"
@@ -72,7 +73,7 @@ void WorkerManager::handleIdleWorkers()
         if (!worker.isValid()) { continue; }
 
         bool isIdle = worker.isIdle();
-        if (worker.isIdle() && 
+        if (isIdle && 
             // We need to consider building worker because of builder finishing the job of another worker is not consider idle.
 			//(m_workerData.getWorkerJob(worker) != WorkerJobs::Build) && 
             (m_workerData.getWorkerJob(worker) != WorkerJobs::Move) &&
@@ -82,18 +83,17 @@ void WorkerManager::handleIdleWorkers()
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 		}
 
-        // if it is idle
-        if (m_workerData.getWorkerJob(worker) == WorkerJobs::Idle)
-        {
-            if (!worker.isAlive())
-            {
-                worker.stop();
-            }
-            else
-            {
-                setMineralWorker(worker);
-            }
-        }
+		if (m_workerData.getWorkerJob(worker) == WorkerJobs::Idle)
+		{
+			if (!worker.isAlive())
+			{
+				worker.stop();
+			}
+			else
+			{
+				setMineralWorker(worker);
+			}
+		}
     }
 }
 
@@ -142,6 +142,7 @@ void WorkerManager::handleRepairWorkers()
         }
     }
 }
+
 Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore) const
 {
     Unit closestMineralWorker;
@@ -155,17 +156,28 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID w
         // if it is a mineral worker
         if (m_workerData.getWorkerJob(worker) == WorkerJobs::Minerals)
         {
-            double dist = Util::DistSq(worker.getPosition(), pos);
-
-            if (!closestMineralWorker.isValid() || dist < closestDist)
-            {
-                closestMineralWorker = worker;
-                dist = closestDist;
-            }
+			bool canReturnCargo = false;
+			sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(worker.getUnitPtr());
+			for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
+			{
+				if (available_ability.ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
+				{
+					canReturnCargo = true;
+					break;
+				}
+			}
+			if (!canReturnCargo)
+			{
+				double dist = Util::DistSq(worker.getPosition(), pos);
+				if (!closestMineralWorker.isValid() || dist < closestDist)
+				{
+					closestMineralWorker = worker;
+					closestDist = dist;
+				}
+			}
         }
     }
-
-    return closestMineralWorker;
+	return closestMineralWorker;
 }
 
 Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos) const
@@ -227,7 +239,7 @@ Unit WorkerManager::getGasWorker(Unit refinery) const
 }
 
 void WorkerManager::setBuildingWorker(Unit worker, Building & b)
-{
+{//unused
     m_workerData.setWorkerJob(worker, WorkerJobs::Build, b.buildingUnit);
 }
 

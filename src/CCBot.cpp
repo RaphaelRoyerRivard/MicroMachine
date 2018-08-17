@@ -6,13 +6,25 @@ CCBot::CCBot()
     , m_bases(*this)
     , m_unitInfo(*this)
     , m_workers(*this)
+	, m_buildings(*this)
     , m_gameCommander(*this)
     , m_strategy(*this)
     , m_techTree(*this)
 {
 }
 
-void CCBot::OnGameStart() 
+void CCBot::OnGameFullStart() {}//end?
+void CCBot::OnGameEnd() {}//Start
+void CCBot::OnUnitDestroyed(const sc2::Unit*) {}
+void CCBot::OnUnitCreated(const sc2::Unit*) {}
+void CCBot::OnUnitIdle(const sc2::Unit*) {}
+void CCBot::OnUpgradeCompleted(sc2::UpgradeID) {}
+void CCBot::OnBuildingConstructionComplete(const sc2::Unit*) {}
+void CCBot::OnNydusDetected() {}
+void CCBot::OnUnitEnterVision(const sc2::Unit*) {}
+void CCBot::OnNuclearLaunchDetected() {}
+
+void CCBot::OnGameStart() //full start
 {
     m_config.readConfigFile();
 
@@ -51,6 +63,7 @@ void CCBot::OnGameStart()
     m_unitInfo.onStart();
     m_bases.onStart();
     m_workers.onStart();
+	m_buildings.onStart();
 
     m_gameCommander.onStart();
 }
@@ -62,6 +75,7 @@ void CCBot::OnStep()
     m_unitInfo.onFrame();
     m_bases.onFrame();
     m_workers.onFrame();
+	m_buildings.onFrame();
     m_strategy.onFrame();
 
     m_gameCommander.onFrame();
@@ -189,6 +203,11 @@ const TypeData & CCBot::Data(const MetaType & type) const
 WorkerManager & CCBot::Workers()
 {
     return m_workers;
+}
+
+BuildingManager & CCBot::Buildings()
+{
+	return m_buildings;
 }
 
 int CCBot::GetCurrentSupply() const

@@ -6,6 +6,7 @@
 #include "BaseLocationManager.h"
 #include "UnitInfoManager.h"
 #include "WorkerManager.h"
+#include "BuildingManager.h"
 #include "BotConfig.h"
 #include "GameCommander.h"
 #include "BuildingManager.h"
@@ -24,6 +25,7 @@ class CCBot
     BaseLocationManager     m_bases;
     UnitInfoManager         m_unitInfo;
     WorkerManager           m_workers;
+	BuildingManager			m_buildings;
     StrategyManager         m_strategy;
     BotConfig               m_config;
     TechTree                m_techTree;
@@ -46,8 +48,18 @@ public:
     CCBot();
 
 #ifdef SC2API
+	void OnGameFullStart() override;
     void OnGameStart() override;
+	void OnGameEnd() override;
     void OnStep() override;
+	void OnUnitDestroyed(const sc2::Unit*) override;
+	void OnUnitCreated(const sc2::Unit*) override;
+	void OnUnitIdle(const sc2::Unit*) override;
+	void OnUpgradeCompleted(sc2::UpgradeID) override;
+	void OnBuildingConstructionComplete(const sc2::Unit*) override;
+	void OnNydusDetected() override;
+	void OnUnitEnterVision(const sc2::Unit*) override;
+	void OnNuclearLaunchDetected() override;
 #else
     void OnGameStart();
     void OnStep();
@@ -55,8 +67,9 @@ public:
 
           BotConfig & Config();
           WorkerManager & Workers();
+		  BuildingManager & Buildings();
     const BaseLocationManager & Bases() const;
-	const GameCommander & CCBot::Commander() const;
+	const GameCommander & Commander() const;
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;
     const StrategyManager & Strategy() const;

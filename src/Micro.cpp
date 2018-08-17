@@ -1,6 +1,7 @@
 #include "Micro.h"
 #include "Util.h"
 #include "CCBot.h"
+#include "sc2api/sc2_api.h"
 
 const float dotRadius = 0.1f;
 

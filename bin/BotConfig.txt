@@ -138,7 +138,7 @@
     "SC2API Strategy" :
     {
         "Protoss"                   : "Protoss_ZealotRush",
-        "Terran"                    : "Terran_ReaperHarass",
+        "Terran"                    : "Terran_ReaperHarass3",
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "AutoCompleteBuildOrder"    : true,
@@ -173,6 +173,35 @@
                 "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "Refinery", "SCV", "SCV", "Barracks", "SCV", "SCV", "Barracks"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Reaper"], ">=", [ 1 ] ]
+            },
+            "Terran_ReaperHarass3"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV", 
+										"SupplyDepot", 
+										"SCV", 
+										"SCV", 
+										"Barracks",
+										"SCV",
+										"Refinery", 
+										"SCV", 
+										"Barracks", 
+										"SCV", 
+										"SCV", 
+										"Barracks", 
+										"SCV", 
+										"Refinery", 
+										"SupplyDepot", 
+										"SCV",
+										"Reaper",
+										"Reaper", 
+										"SCV", 
+										"Reaper",
+										"SCV", 
+										"Reaper",
+										"OrbitalCommand"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
             "Zerg_ZerglingRush"     : 
             { 
