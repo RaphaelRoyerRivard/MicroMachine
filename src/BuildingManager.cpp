@@ -469,8 +469,8 @@ void BuildingManager::updateBaseBuildings()
 	m_baseBuildings.clear();
 	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))
 	{
-		// filter out units which aren't buildings under construction
-		if (!building.getType().isBuilding() && !building.isBeingConstructed())
+		// filter out non building or building under construction
+		if (!building.getType().isBuilding() || building.isBeingConstructed())
 		{
 			continue;
 		}
@@ -479,20 +479,25 @@ void BuildingManager::updateBaseBuildings()
 }
 
 const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) {
-	//Copied from RangedManager
-
-	const sc2::Unit * closestShard = nullptr;
 	auto potentialMinerals = m_bot.Observation()->GetUnits(sc2::Unit::Alliance::Neutral);
+	const sc2::Unit * mineralField = nullptr;
+	float minDist;
 	for (auto mineral : potentialMinerals)
 	{
-		if (closestShard == nullptr && mineral->is_on_screen) {
-			closestShard = mineral;
+		if (mineral->mineral_contents <= 0)
+		{//Not mineral
+			continue;
 		}
-		else if (mineral->unit_type == 1680 && Util::Dist(mineral->pos, unit->pos) < Util::Dist(closestShard->pos, unit->pos) && mineral->is_on_screen) {
-			closestShard = mineral;
+
+		if (mineralField == nullptr) {
+			mineralField = mineral;
+			minDist = Util::Dist(mineral->pos, unit->pos);
+		}
+		else if (Util::Dist(mineral->pos, unit->pos) < minDist) {
+			mineralField = mineral;
 		}
 	}
-	return closestShard;
+	return mineralField;
 }
 
 
