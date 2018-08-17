@@ -235,6 +235,11 @@ bool MapTools::isExplored(int tileX, int tileY) const
 #endif
 }
 
+bool MapTools::isVisible(CCPosition pos) const
+{
+	return isVisible((int)pos.x, (int)pos.y);
+}
+
 bool MapTools::isVisible(int tileX, int tileY) const
 {
     if (!isValidTile(tileX, tileY)) { return false; }

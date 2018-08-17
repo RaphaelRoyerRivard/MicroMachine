@@ -12,9 +12,10 @@ const size_t DropPriority = 4;
 
 const float DefaultOrderRadius = 25;			//Order radius is the threat awareness range of units in the squad
 const float MainAttackOrderRadius = 15;
-const float MainAttackMaxDistance = 7;			//Distance from the center of the Main Attack Squad for a unit to be considered in it
+const float HarassOrderRadius = 15;
+const float MainAttackMaxDistance = 20;			//Distance from the center of the Main Attack Squad for a unit to be considered in it
 const float MainAttackMaxRegroupDuration = 100; //Max number of frames allowed for a regroup order
-const float MainAttackRegroupCooldown = 200;    //Min number of frames required to wait between regroup orders
+const float MainAttackRegroupCooldown = 200;	//Min number of frames required to wait between regroup orders
 const float MainAttackMinRetreatDuration = 50;	//Max number of frames allowed for a regroup order
 
 CombatCommander::CombatCommander(CCBot & bot)
@@ -37,7 +38,7 @@ void CombatCommander::onStart()
     m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
 	// the harass attack squad that will pressure the enemy's main base workers
-	SquadOrder harassOrder(SquadOrderTypes::Harass, CCPosition(0, 0), MainAttackOrderRadius, "Harass");
+	SquadOrder harassOrder(SquadOrderTypes::Harass, CCPosition(0, 0), HarassOrderRadius, "Harass");
 	m_squadData.addSquad("Harass", Squad("Harass", harassOrder, HarassPriority, m_bot));
 
     // the main attack squad that will pressure the enemy's closest base location
@@ -74,7 +75,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
         updateIdleSquad();
         updateScoutDefenseSquad();
         updateDefenseSquads();
-        updateHarassSquads();
+		updateHarassSquads();
 		updateAttackSquads();
         updateBackupSquads();
     }
@@ -172,7 +173,8 @@ void CombatCommander::updateHarassSquads()
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
 
 		// get every Reaper of a lower priority and put it into the harass squad
-		if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER && m_squadData.canAssignUnitToSquad(unit, harassSquad))
+		if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER 
+			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
 		{
 			m_squadData.assignUnitToSquad(unit, harassSquad);
 		}
@@ -181,7 +183,7 @@ void CombatCommander::updateHarassSquads()
 	if (harassSquad.getUnits().empty())
 		return;
 
-	SquadOrder harassOrder(SquadOrderTypes::Harass, getMainAttackLocation(), MainAttackOrderRadius, "Harass");
+	SquadOrder harassOrder(SquadOrderTypes::Harass, getMainAttackLocation(), HarassOrderRadius, "Harass");
 	harassSquad.setSquadOrder(harassOrder);
 }
 
@@ -483,7 +485,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
 
         float dist = Util::Dist(unit, pos);
         Squad *unitSquad = m_squadData.getUnitSquad(unit);
-        if (unitSquad && unitSquad->getName() == "MainAttack" && Util::Dist(unit.getPosition(), unitSquad->getSquadOrder().getPosition()) < dist)
+        if (unitSquad && (unitSquad->getName() == "MainAttack" || unitSquad->getName() == "Harass") && Util::Dist(unit.getPosition(), unitSquad->getSquadOrder().getPosition()) < dist)
         {
             //We do not want to bring back the main attackers when they are closer to their objective than our base
             continue;

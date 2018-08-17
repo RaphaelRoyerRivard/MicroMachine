@@ -75,12 +75,12 @@ void Micro::SmartFocusFire(const sc2::Unit * rangedUnit, const sc2::Unit * targe
 
 void Micro::SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot)
 {
-    BOT_ASSERT(unit != nullptr, "Unit is null");
-    bot.Actions()->UnitCommand(unit, abilityID);
+	BOT_ASSERT(unit != nullptr, "Unit using smart ability is null");
+	bot.Actions()->UnitCommand(unit, abilityID);
 }
 
-void Micro::SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot, const sc2::Point2D& point)
+void Micro::SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCPosition position, CCBot & bot)
 {
-	BOT_ASSERT(unit != nullptr, "Unit is null");
-	bot.Actions()->UnitCommand(unit, abilityID, point);
+	BOT_ASSERT(unit != nullptr, "Unit using smart ability is null");
+	bot.Actions()->UnitCommand(unit, abilityID, position);
 }

@@ -163,19 +163,22 @@ void SquadData::assignUnitToSquad(const Unit & unit, Squad & squad)
     squad.addUnit(unit);
 }
 
-bool SquadData::canAssignUnitToSquad(const Unit & unit, const Squad & squad) const
+bool SquadData::canAssignUnitToSquad(const Unit & unit, const Squad & newSquad) const
 {
-    const Squad * unitSquad = getUnitSquad(unit);
+    const Squad * currentSquad = getUnitSquad(unit);
 
-    // make sure strictly less than so we don't reassign to the same squad etc
-    bool canAssign = !unitSquad || (unitSquad->getPriority() < squad.getPriority());
+	if (currentSquad && currentSquad->getName() == newSquad.getName())
+		return false;
+
+    // make sure strictly less than so we don't reassign to the same newSquad etc
+    bool canAssign = !currentSquad || currentSquad->getPriority() < newSquad.getPriority() || (currentSquad->getPriority() == newSquad.getPriority() && !newSquad.isEmpty());
     if (!canAssign)
         return false;
 
-    if (squad.getMaxDistanceFromCenter() > 0 && !squad.isEmpty())
+    if (newSquad.getMaxDistanceFromCenter() > 0.f && !newSquad.isEmpty())
     {
-        float distance = Util::Dist(unit.getPosition(), squad.calcCenter());
-        bool closeEnough = distance < squad.getMaxDistanceFromCenter();
+        float distance = Util::Dist(unit.getPosition(), newSquad.calcCenter());
+        bool closeEnough = distance < newSquad.getMaxDistanceFromCenter();
         return closeEnough;
     }
     return true;

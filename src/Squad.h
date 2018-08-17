@@ -16,6 +16,7 @@ class Squad
     std::vector<Unit>   m_units;
     std::vector<Unit>   m_targets;
 
+	int					m_lastRegroupFrame;
     int                 m_regroupStartFrame;
     int                 m_maxRegroupDuration;
     int                 m_regroupCooldown;
@@ -58,7 +59,7 @@ public:
     void giveBackWorkers();
     bool needsToRetreat();
 	bool isSuiciding() const;
-    bool needsToRegroup() const;
+    bool needsToRegroup();
     void clear();
 
     bool containsUnit(const Unit & unit) const;
@@ -72,8 +73,8 @@ public:
     CCPosition calcCenter() const;
     float calcAverageHeight() const;
     CCPosition calcRetreatPosition() const;
-	std::vector<Unit> calcVisibleTargets() const;
-    std::vector<Unit> calcTargets(bool visibilityFilter = false) const;
+	std::vector<Unit> calcVisibleTargets();
+    std::vector<Unit> calcTargets(bool visibilityFilter = false);
 
     const std::vector<Unit> & getUnits() const;
     const SquadOrder & getSquadOrder() const;

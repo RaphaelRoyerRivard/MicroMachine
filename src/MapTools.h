@@ -64,6 +64,7 @@ public:
     bool    isExplored(int tileX, int tileY) const;
     bool    isExplored(const CCPosition & pos) const;
     bool    isExplored(const CCTilePosition & pos) const;
+	bool	isVisible(CCPosition pos) const;
     bool    isVisible(int tileX, int tileY) const;
     bool    canBuildTypeAtPosition(int tileX, int tileY, const UnitType & type) const;
 

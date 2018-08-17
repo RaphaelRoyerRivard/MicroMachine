@@ -8,6 +8,13 @@
 
 #include "sc2utils/sc2_manage_process.h"
 #include "sc2api/sc2_api.h"
+#include <string>
+#ifdef _WIN32
+	#include <direct.h>
+	#define getcwd _getcwd // stupid MSFT "deprecation" warning
+#elif
+	#include <unistd.h>
+#endif
 
 class Human : public sc2::Agent {
 public:
@@ -24,15 +31,26 @@ public:
 
 };
 
+std::string getexepath()
+{
+	char buffer[255];
+	char *answer = getcwd(buffer, sizeof(buffer));
+	std::string s_cwd;
+	if (answer)
+	{
+		s_cwd = answer;
+	}
+	return s_cwd;
+}
+
 int main(int argc, char* argv[]) 
-{sc2::Coordinator coordinator;
-    if (!coordinator.LoadSettings(argc, argv)) 
-    {
-        std::cout << "Unable to find or parse settings." << std::endl;
-        return 1;
-    }
+{
+	sc2::Coordinator coordinator;
     
-    std::string config = JSONTools::ReadFile("Data/MicroMachine/BotConfig.txt");
+	std::cout << "Current working directory: " << getexepath() << std::endl;
+
+	std::string configPath = BotConfig().ConfigFileLocation;
+    std::string config = JSONTools::ReadFile(configPath);
     if (config.length() == 0)
     {
         std::cerr << "Config file could not be found, and is required for starting the bot\n";
@@ -40,7 +58,7 @@ int main(int argc, char* argv[])
         exit(-1);
     }
 
-    std::ifstream file("Data/MicroMachine/BotConfig.txt");
+    std::ifstream file(configPath);
     json j;
     file >> j;
 
@@ -81,10 +99,19 @@ int main(int argc, char* argv[])
 
 	if (connectToLadder)
 	{
+		bool loadSettings = false;
+		JSONTools::ReadBool("LoadSettings", j["SC2API"], loadSettings);
 		CCBot bot;
-		RunBot(argc, argv, &bot, sc2::Race::Terran);
+		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings);
 
 		return 0;
+	}
+	
+	// We need to load settings only when running in local
+	if (!coordinator.LoadSettings(argc, argv))
+	{
+		std::cout << "Unable to find or parse settings." << std::endl;
+		return 1;
 	}
 
     // Add the custom bot, it will control the players.

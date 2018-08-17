@@ -11,7 +11,6 @@ CCBot::CCBot()
     , m_strategy(*this)
     , m_techTree(*this)
 {
-    
 }
 
 void CCBot::OnGameFullStart() {}//end?
@@ -91,9 +90,22 @@ void CCBot::setUnits()
     m_allUnits.clear();
 #ifdef SC2API
     Control()->GetObservation();
-    for (auto & unit : Observation()->GetUnits())
+	uint32_t step = Observation()->GetGameLoop();
+    for (auto unitptr : Observation()->GetUnits())
     {
-        m_allUnits.push_back(Unit(unit, *this));    
+		Unit unit(unitptr, *this);
+		if (!unit.isValid())
+			continue;
+		if (!unit.isAlive())
+			continue;
+		if (unitptr->alliance == sc2::Unit::Self || unitptr->alliance == sc2::Unit::Ally)
+			m_allyUnits.insert_or_assign(unitptr->tag, unit);
+		else if(unitptr->alliance == sc2::Unit::Enemy)
+			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+		if(unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+        m_allUnits.push_back(Unit(unitptr, *this));
+		m_lastSeenUnits.insert_or_assign(unitptr->tag, step);
     }
 #else
     for (auto & unit : BWAPI::Broodwar->getAllUnits())
@@ -243,9 +255,24 @@ Unit CCBot::GetUnit(const CCUnitID & tag) const
 #endif
 }
 
+std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()
+{
+	return m_allyUnits;
+}
+
+std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits()
+{
+	return m_enemyUnits;
+}
+
+uint32_t CCBot::GetLastStepSeenUnit(sc2::Tag tag)
+{
+	return m_lastSeenUnits[tag];
+}
+
 const std::vector<Unit> & CCBot::GetUnits() const
 {
-    return m_allUnits;
+	return m_allUnits;
 }
 
 CCPosition CCBot::GetStartLocation() const

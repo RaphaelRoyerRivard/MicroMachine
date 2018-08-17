@@ -131,13 +131,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	if (playerRace == sc2::Race::Terran)
 	{
 		//Continiously build marines
-		/*const auto metaTypeMarine = MetaType("Marine", m_bot);
-		if (!m_queue.contains(metaTypeMarine))
+		const auto metaTypeMarine = MetaType("Marine", m_bot);
+		if (!m_queue.contains(metaTypeMarine) && getFreeMinerals() > metaTypeMarine.getUnitType().mineralPrice() * 2)
 		{
 			m_queue.queueAsLowestPriority(metaTypeMarine, false);
 		}
 
-		const auto metaTypeMarauder = MetaType("Marauder", m_bot);
+		/*const auto metaTypeMarauder = MetaType("Marauder", m_bot);
 		if (!m_queue.contains(metaTypeMarauder))
 		{
 			m_queue.queueAsLowestPriority(metaTypeMarauder, false);

@@ -10,6 +10,7 @@ cmake_install.cmake
 **/vs/.vs/
 **/vs/commandcenter
 **/vs/*.user
+**/vs/CommandCenter.vcxproj
 **/Debug # **/ not working ?
 **/Release
 

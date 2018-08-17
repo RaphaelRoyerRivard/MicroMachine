@@ -4,7 +4,8 @@
 
 Squad::Squad(CCBot & bot)
     : m_bot(bot)
-    , m_regroupStartFrame(0)
+	, m_regroupStartFrame(0)
+	, m_lastRegroupFrame(0)
     , m_maxRegroupDuration(0)
     , m_regroupCooldown(0)
     , m_maxDistanceFromCenter(0)
@@ -21,6 +22,7 @@ Squad::Squad(const std::string & name, const SquadOrder & order, size_t priority
     , m_name(name)
     , m_order(order)
     , m_regroupStartFrame(0)
+	, m_lastRegroupFrame(0)
     , m_maxRegroupDuration(0)
     , m_regroupCooldown(0)
 	, m_retreatStartFrame(0)
@@ -38,6 +40,7 @@ Squad::Squad(const std::string & name, const SquadOrder & order, int maxRegroupD
     , m_name(name)
     , m_order(order)
     , m_regroupStartFrame(0)
+	, m_lastRegroupFrame(0)
     , m_maxRegroupDuration(maxRegroupDuration)
     , m_regroupCooldown(regroupCooldown)
 	, m_retreatStartFrame(0)
@@ -104,60 +107,75 @@ void Squad::onFrame()
 	}
 }
 
-std::vector<Unit> Squad::calcVisibleTargets() const
+std::vector<Unit> Squad::calcVisibleTargets()
 {
 	return calcTargets(true);
 }
 
-std::vector<Unit> Squad::calcTargets(bool visibilityFilter) const
+std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 {
     // Discover enemies within region of interest
-    std::vector<Unit> nearbyEnemies;
-
-    // if the order is to defend, we only care about units in the radius of the defense
-    if (m_order.getType() == SquadOrderTypes::Defend)
-    {
-        for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
-        {
-            if (Util::Dist(enemyUnit, m_order.getPosition()) < m_order.getRadius())
-            {
-				if (visibilityFilter && !enemyUnit.isVisible())
-					continue;
-
-                nearbyEnemies.push_back(enemyUnit);
-            }
-        }
-
-    } // otherwise we want to see everything on the way as well
-    else if (m_order.getType() == SquadOrderTypes::Attack)
-    {
-        CCPosition center = calcCenter();
-        for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
-        {
-            if (Util::Dist(enemyUnit, center) < m_order.getRadius())
-            {
-                nearbyEnemies.push_back(enemyUnit);
-            }
-        }
-    }
-	else if (m_order.getType() == SquadOrderTypes::Harass)
+    std::map<sc2::Tag, Unit> nearbyEnemies;
+	uint32_t currentStep = m_bot.Observation()->GetGameLoop();
+	for (auto & mapEnemyUnit : m_bot.GetEnemyUnits())
 	{
-		for (auto & unit : m_units)
-		{
-			for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
-			{
-				if (Util::Dist(enemyUnit, unit) < m_order.getRadius() && std::find(nearbyEnemies.begin(), nearbyEnemies.end(), enemyUnit) == nearbyEnemies.end())
-				{
-					if (visibilityFilter && !enemyUnit.isVisible())
-						continue;
+		auto & enemyUnit = mapEnemyUnit.second;
 
-					nearbyEnemies.push_back(enemyUnit);
+		if (!enemyUnit.isValid())
+			continue;
+		if (!enemyUnit.isCompleted())
+			continue;
+		if (!enemyUnit.isAlive())
+			continue;
+		if (visibilityFilter && !enemyUnit.isVisible())
+			continue;
+
+		uint32_t lastStepSeen = m_bot.GetLastStepSeenUnit(enemyUnit.getUnitPtr()->tag);
+		// If the unit is not were we last saw it, ignore it
+		if (currentStep != lastStepSeen && m_bot.Map().isVisible(enemyUnit.getPosition()))
+			continue;
+		// If mobile unit is not seen for too long (around 5s), ignore it
+		if (!enemyUnit.getType().isBuilding() && lastStepSeen + 100 < m_bot.Observation()->GetGameLoop())
+			continue;
+
+		if(m_bot.Config().DrawMemoryInfo)
+			m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.4f, sc2::Colors::Gray);
+
+		bool addUnit = false;
+
+		// if the order is to defend, we only care about units in the radius of the defense
+		if (m_order.getType() == SquadOrderTypes::Defend)
+		{
+			addUnit = Util::Dist(enemyUnit, m_order.getPosition()) < m_order.getRadius();
+		} // if the order is to attack, we care about units around the center of the squad
+		else if (m_order.getType() == SquadOrderTypes::Attack)
+		{
+			addUnit = Util::Dist(enemyUnit, calcCenter()) < m_order.getRadius();
+		} // if the order is to harass, we care about every unit around each of our units
+		else if (m_order.getType() == SquadOrderTypes::Harass)
+		{
+			for (auto & unit : m_units)
+			{
+				if (Util::Dist(enemyUnit, unit) < m_order.getRadius())
+				{
+					addUnit = true;
+					break;
 				}
 			}
 		}
+
+		if (addUnit)
+		{
+			nearbyEnemies.insert_or_assign(mapEnemyUnit.first, enemyUnit);
+			if(m_bot.Config().DrawMemoryInfo)
+				m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.5f, sc2::Colors::Blue);
+		}
 	}
     
-    return nearbyEnemies;
+	std::vector<Unit> targets;
+	for (auto & nearbyEnemy : nearbyEnemies)
+		targets.push_back(nearbyEnemy.second);
+    return targets;
 }
 
 bool Squad::isEmpty() const
@@ -302,7 +320,7 @@ bool Squad::isSuiciding() const
 	return m_isSuiciding;
 }
 
-bool Squad::needsToRegroup() const
+bool Squad::needsToRegroup()
 {
     //Only the main attack can regroup
     if (m_name != "MainAttack")
@@ -313,11 +331,13 @@ bool Squad::needsToRegroup() const
 	if (m_order.getType() != SquadOrderTypes::Regroup)
 	{
 		//Is last regroup too recent?
-		if (m_order.getType() != SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame < m_regroupCooldown)
+		if (currentFrame - m_lastRegroupFrame < m_regroupCooldown)
 			return false;
-
+	}
+	else
+	{
 		//Is current regroup taking too long?
-		if (m_order.getType() == SquadOrderTypes::Regroup && currentFrame - m_regroupStartFrame > m_maxRegroupDuration)
+		if(currentFrame - m_regroupStartFrame > m_maxRegroupDuration)
 			return false;
 	}
 
@@ -358,8 +378,8 @@ void Squad::setSquadOrder(const SquadOrder & so)
 		m_regroupStartFrame = m_bot.GetCurrentFrame();
 	else if (so.getType() == SquadOrderTypes::Retreat && m_order.getType() != SquadOrderTypes::Retreat)
 		m_retreatStartFrame = m_bot.GetCurrentFrame();
-	if (so.getType() != SquadOrderTypes::Regroup)
-		m_regroupStartFrame = 0;
+	if (so.getType() != SquadOrderTypes::Regroup && m_order.getType() == SquadOrderTypes::Regroup)
+		m_lastRegroupFrame = m_bot.GetCurrentFrame();
 	if (so.getType() != SquadOrderTypes::Retreat)
 		m_retreatStartFrame = 0;
     m_order = so;
@@ -510,7 +530,7 @@ void Squad::removeUnit(const Unit & unit)
     // this is O(n) but whatever
     for (size_t i = 0; i < m_units.size(); ++i)
     {
-        if (unit == m_units[i])
+        if (unit.getUnitPtr()->tag == m_units[i].getUnitPtr()->tag)
         {
             m_units.erase(m_units.begin() + i);
             break;

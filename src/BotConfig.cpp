@@ -6,7 +6,7 @@ BotConfig::BotConfig()
 {
     ConfigFileFound = true;
     ConfigFileParsed = true;
-    ConfigFileLocation = "Data/MicroMachine/BotConfig.txt";
+    ConfigFileLocation = "BotConfig.txt";
     BotName = "MicroMachine";
     Authors = "David Churchill, Raphael Royer-Rivard, Antoine Theberge, Benjamin Ross, Jean-Philippe Croteau, Francois Genest";
     PrintInfoOnStart = false;
@@ -41,6 +41,8 @@ BotConfig::BotConfig()
 	DrawSquadInfo = false;
 	DrawUnitPowerInfo = false;
 	DrawFSMStateInfo = false;
+	DrawHarassInfo = false;
+	DrawMemoryInfo = false;
 
     KiteWithRangedUnits = true;
     ScoutHarassEnemy = true;
@@ -180,6 +182,8 @@ void BotConfig::readConfigFile()
 		JSONTools::ReadBool("DrawUnitPowerInfo", debug, DrawUnitPowerInfo);
 		JSONTools::ReadBool("DrawFSMStateInfo", debug, DrawFSMStateInfo);
         JSONTools::ReadBool("DrawReservedBuildingTiles", debug, DrawReservedBuildingTiles);
+		JSONTools::ReadBool("DrawHarassInfo", debug, DrawHarassInfo);
+		JSONTools::ReadBool("DrawMemoryInfo", debug, DrawMemoryInfo);
     }
 
     // Parse the Module Options

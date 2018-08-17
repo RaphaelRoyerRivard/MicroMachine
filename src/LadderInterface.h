@@ -126,13 +126,13 @@ static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_op
     }
 }
 
-static void RunBot(int argc, char *argv[], sc2::Agent *Agent, sc2::Race race)
+static void RunBot(int argc, char *argv[], sc2::Agent *Agent, sc2::Race race, bool loadSettings)
 {
     ConnectionOptions Options;
     ParseArguments(argc, argv, Options);
 
     sc2::Coordinator coordinator;
-    if (!coordinator.LoadSettings(argc, argv)) {
+    if (loadSettings && !coordinator.LoadSettings(argc, argv)) {
         return;
     }
 

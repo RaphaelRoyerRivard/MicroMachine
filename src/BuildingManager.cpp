@@ -506,7 +506,7 @@ void BuildingManager::castBuildingsAbilities()
 			if (b.getEnergy() >= 50)
 			{
 				auto point = this->BuildingManager::getClosestMineral(b.getUnitPtr())->pos;
-				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, m_bot, point);
+				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 			}
 		}
 	}

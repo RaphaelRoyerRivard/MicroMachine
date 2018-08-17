@@ -195,10 +195,14 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 			maxRange = weapon.range;
 	}
 
-    if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-        maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
+	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+		maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
 
-    //for some strange reason, units are actually able to reach targets farther than their range
+	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+		maxRange = 3.f;
+
+	if (maxRange > 0.f)
+		maxRange += unit->radius + target->radius;
 	return maxRange; 
 }
 
@@ -333,6 +337,14 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
         //A special case must be done for bunkers since they have no weapon and the cargo space is not available
         dps = 30.f;
     }
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+	{
+		dps = 5.0f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT)
+	{
+		dps = 13.7f;
+	}
 
     return dps;
 }
@@ -350,6 +362,11 @@ float Util::getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot)
 	}
 
 	return squadSpeed / (float)units.size();
+}
+
+float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
+{
+	return Util::GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed;
 }
 
 bool Util::IsTerran(const CCRace & race)

@@ -16,13 +16,14 @@
     
     "SC2API" :
     {
-    	"ConnectToLadder"			: false,
+        "ConnectToLadder"           : false,
+        "LoadSettings"              : false,
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
-        "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "CatalystLE.SC2Map",
+        "EnemyRace"                 : "Terran",
+        "MapFile"                   : "BloodBoilLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -69,7 +70,7 @@
     "Debug" :
     {
         "DrawGameInfo"              : false, 
-        "DrawProductionInfo"        : false, 
+        "DrawProductionInfo"        : true, 
         "DrawBaseLocationInfo"      : false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
@@ -83,7 +84,9 @@
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
-        "DrawFSMStateInfo"          : false
+        "DrawFSMStateInfo"          : false,
+        "DrawHarassInfo"            : false,
+        "DrawMemoryInfo"            : false
     },
     
     "Modules" :
@@ -160,9 +163,9 @@
             "Terran_ReaperHarass"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "Refinery"],
+                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "SCV", "Barracks", "SCV", "Refinery"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
-                "AttackCondition"   : [ ["Self", "Reaper"], ">=", [ 1 ] ]
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
             "Terran_ReaperHarass2"     : 
             { 
@@ -198,7 +201,7 @@
 										"Reaper",
 										"OrbitalCommand"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
-                "AttackCondition"   : [ ["Self", "Reaper"], ">=", [ 1 ] ]
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
             "Zerg_ZerglingRush"     : 
             { 
