@@ -86,7 +86,7 @@ void WorkerManager::handleIdleWorkers()
 		if (m_workerData.getWorkerJob(worker) == WorkerJobs::Idle)
 		{
 			if (!worker.isAlive())
-			{//Seems useless
+			{
 				worker.stop();
 			}
 			else
