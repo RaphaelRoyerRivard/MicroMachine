@@ -220,7 +220,6 @@ void Squad::setAllUnits()
         if (unit.isBeingConstructed()) { continue; }
         if (unit.getHitPoints() <= 0) { continue; }
         if (!unit.isAlive()) { continue; }
-        
         goodUnits.push_back(unit);
     }
 

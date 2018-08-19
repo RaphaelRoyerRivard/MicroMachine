@@ -31,7 +31,7 @@ private:
 	float getThreatRange(const sc2::Unit * rangedUnit, const sc2::Unit * threat);
     std::vector<const sc2::Unit *> lastUnitCommand;
     std::map<const sc2::Unit *, UCTCDAction> command_for_unit;
-	std::map<const sc2::Unit *, uint32_t> lastCommandFrameForUnit;
+	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
     bool isCommandDone = false;
 	bool m_harassMode = false;
 };

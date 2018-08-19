@@ -131,11 +131,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	if (playerRace == sc2::Race::Terran)
 	{
 		//Continiously build marines
-		const auto metaTypeMarine = MetaType("Marine", m_bot);
+		/*const auto metaTypeMarine = MetaType("Marine", m_bot);
 		if (!m_queue.contains(metaTypeMarine) && getFreeMinerals() > metaTypeMarine.getUnitType().mineralPrice() * 2)
 		{
 			m_queue.queueAsLowestPriority(metaTypeMarine, false);
-		}
+		}*/
 
 		/*const auto metaTypeMarauder = MetaType("Marauder", m_bot);
 		if (!m_queue.contains(metaTypeMarauder))
@@ -154,6 +154,18 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		if (!m_queue.contains(metaTypeReaper))
 		{
 			m_queue.queueAsLowestPriority(metaTypeReaper, false);
+		}
+
+		const auto metaTypeFactory = MetaType("Factory", m_bot);
+		if (!m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
+		{
+			m_queue.queueAsLowestPriority(metaTypeFactory, false);
+		}
+
+		const auto metaTypeHellion = MetaType("Hellion", m_bot);
+		if (!m_queue.contains(metaTypeHellion))
+		{
+			m_queue.queueAsLowestPriority(metaTypeHellion, false);
 		}
 	}
 }

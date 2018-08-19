@@ -22,7 +22,7 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
-        "EnemyRace"                 : "Terran",
+        "EnemyRace"                 : "Zerg",
         "MapFile"                   : "BloodBoilLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
@@ -85,8 +85,8 @@
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
-        "DrawHarassInfo"            : false,
-        "DrawMemoryInfo"            : false
+        "DrawHarassInfo"            : true,
+        "DrawMemoryInfo"            : true
     },
     
     "Modules" :
@@ -167,10 +167,10 @@
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
-            "Terran_ReaperHarass2"     : 
+            "Terran_Hellion"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "Refinery", "SCV", "SCV", "Barracks", "SCV", "SCV", "Barracks"],
+                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "Barracks", "SCV", "SupplyDepot", "SCV", "SCV", "SCV", "Factory"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Reaper"], ">=", [ 1 ] ]
             },
@@ -190,8 +190,8 @@
 										"SCV", 
 										"Barracks", 
 										"SCV", 
+                                        "SupplyDepot", 
 										"Refinery", 
-										"SupplyDepot", 
 										"SCV",
 										"Reaper",
 										"Reaper", 

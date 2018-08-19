@@ -17,8 +17,9 @@
 const float HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE = 1.5f;
 const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
 const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
+const int HARASS_ATTACK_FRAME_COUNT = 2;
+const int HARASS_REAPER_MOVE_FRAME_COUNT = 3;
 const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
-const float HARASS_THREAT_MIN_RANGE = 4.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
@@ -46,6 +47,8 @@ void RangedManager::setTargets(const std::vector<Unit> & targets)
 void RangedManager::executeMicro()
 {
     const std::vector<Unit> &units = getUnits();
+	if (units.empty())
+		return;
 
     std::vector<const sc2::Unit *> rangedUnits;
     for (auto & unit : units)
@@ -125,9 +128,9 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	// for each rangedUnit
 	for (auto rangedUnit : rangedUnits)
 	{
-		// We want to give an action only every 5 frames to allow double attack and cliff jumps
-		uint32_t frame = lastCommandFrameForUnit.find(rangedUnit) != lastCommandFrameForUnit.end() ? lastCommandFrameForUnit[rangedUnit] : 0;
-		if (frame + 4 > m_bot.Observation()->GetGameLoop())
+		// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
+		uint32_t availableFrame = nextCommandFrameForUnit.find(rangedUnit) != nextCommandFrameForUnit.end() ? nextCommandFrameForUnit[rangedUnit] : 0;
+		if (m_bot.Observation()->GetGameLoop() < availableFrame)
 			continue;
 
 		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
@@ -137,7 +140,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		if ((target == nullptr || Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()) && threats.empty())
 		{
 			Micro::SmartMove(rangedUnit, m_order.getPosition(), m_bot);
-			lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+			if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+			{
+				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_REAPER_MOVE_FRAME_COUNT;
+			}
 			continue;
 		}
 
@@ -164,7 +170,9 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			{
 				float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
 				float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
-				if (Util::Dist(rangedUnit->pos, threat->pos) <= threatRange + threatSpeed)
+				float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
+				float speedDiff = threatSpeed - rangedUnitSpeed;
+				if (Util::Dist(rangedUnit->pos, threat->pos) <= threatRange + std::max(HARASS_THREAT_RANGE_BUFFER, speedDiff))
 				{
 					inRangeOfThreat = true;
 					break;
@@ -174,7 +182,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			// if our unit is not in range of threat and target is in range and weapon is ready, attack target
 			if (!inRangeOfThreat && targetInAttackRange && rangedUnit->weapon_cooldown <= 0.f) {
 				Micro::SmartAttackUnit(rangedUnit, target, m_bot);
-				lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_ATTACK_FRAME_COUNT;
 				continue;
 			}
 
@@ -211,28 +219,33 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			float fleeDirY = rangedUnit->pos.y - threat->pos.y;
 			CCPosition fleeVec(fleeDirX, fleeDirY);
 			sc2::Normalize2D(fleeVec);
+
 			// The expected threat position will be used to decide where to throw the mine
 			// (between the unit and the enemy or on the enemy if it is a worker)
-			CCPosition expectedThreatPosition = threat->pos + fleeVec * threatSpeed * HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE;
-			if (Unit(threat, m_bot).getType().isWorker())
-				expectedThreatPosition = threat->pos;
+			if (canUseKD8Charge)
+			{
+				CCPosition expectedThreatPosition = threat->pos + fleeVec * threatSpeed * HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE;
+				if (Unit(threat, m_bot).getType().isWorker())
+					expectedThreatPosition = threat->pos;
+				float distToExpectedPosition = Util::Dist(rangedUnit->pos, expectedThreatPosition);
+				// Check if we have enough reach to throw at the threat
+				if (distToExpectedPosition <= rangedUnitRange)
+				{
+					//TODO find a group of threat
+					Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, m_bot);
+					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_ATTACK_FRAME_COUNT;
+					madeAction = true;
+					break;
+				}
+			}
+
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
 			float totalRange = getThreatRange(rangedUnit, threat);
-			float distToExpectedPosition = Util::Dist(rangedUnit->pos, expectedThreatPosition);
-			// Check if we have enough reach to throw at the threat
-			if (canUseKD8Charge && distToExpectedPosition <= rangedUnitRange)
-			{
-				//TODO find a group of threat
-				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, m_bot);
-				lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
-				madeAction = true;
-				break;
-			}
 			if (dist < threatRange + 0.5f)
 				useInfluenceMap = true;
 			if (m_bot.Config().DrawHarassInfo)
 			{
-				m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), CCColor(255, 0, 0));
+				m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), sc2::Colors::Red);
 				m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
 				m_bot.Map().drawLine(rangedUnit->pos, threat->pos, sc2::Colors::Red);
 			}
@@ -287,7 +300,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			// We move only if the vector is long enough
 			const float vecLen = std::sqrt(std::pow(dirVec.x, 2) + std::pow(dirVec.y, 2));
 			if (vecLen < 0.5f)
-				return;
+				continue;
 
 			sc2::Normalize2D(dirVec);
 
@@ -330,16 +343,21 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if(!useInfluenceMap)
 			{
 				Micro::SmartMove(rangedUnit, moveTo, m_bot);
-				lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+				{
+					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_REAPER_MOVE_FRAME_COUNT;
+				}
+				continue;
 			}
 		}
+
 		// If close to an unpathable position or in danger
-		else
+		// Use influence map to find safest path
+		CCPosition moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
+		Micro::SmartMove(rangedUnit, moveTo, m_bot);
+		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
 		{
-			// Use influence map to find safest path
-			CCPosition moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
-			Micro::SmartMove(rangedUnit, moveTo, m_bot);
-			lastCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop();
+			nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_REAPER_MOVE_FRAME_COUNT;
 		}
 	}
 }
@@ -656,8 +674,7 @@ const std::vector<const sc2::Unit *> RangedManager::getThreats(const sc2::Unit *
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
 		//But this is not working so well for melee units, we keep every units in a radius of min threat range
 		float threatRange = getThreatRange(rangedUnit, targetUnit);
-		float minRange = Unit(targetUnit, m_bot).getType().isWorker() ? 0.f : HARASS_THREAT_MIN_RANGE;
-		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < std::max(minRange, threatRange))
+		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < threatRange)
 			threats.push_back(targetUnit);
 	}
 
@@ -702,7 +719,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
             //We manually reduce the dps of the bunker because it only serve as a shield, units will spawn out of it when destroyed
 			targetDps = 5.f;
         }
-        float workerBonus = targetUnit.getType().isWorker() ? m_harassMode ? 5.f : 1.5f : 1.f;   //workers are important to kill
+        float workerBonus = targetUnit.getType().isWorker() ? m_harassMode ? 2.f : 1.5f : 1.f;   //workers are important to kill
 
         return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus;
     }
@@ -716,5 +733,5 @@ bool RangedManager::isTargetRanged(const sc2::Unit * target)
 {
     BOT_ASSERT(target, "target is null");
     float maxRange = Util::GetMaxAttackRange(target->unit_type, m_bot);
-    return maxRange > 1.f;
+    return maxRange > 1.5f;
 }
