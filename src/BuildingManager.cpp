@@ -247,7 +247,7 @@ void BuildingManager::checkForStartedConstruction()
                 {
                     std::cout << "Building mis-match somehow\n";
                 }
-
+				//TODO
                 // the resources should now be spent, so unreserve them
                 m_reservedMinerals -= buildingStarted.getType().mineralPrice();
                 m_reservedGas      -= buildingStarted.getType().gasPrice();

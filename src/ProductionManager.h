@@ -17,7 +17,10 @@ class ProductionManager
 
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
     bool    meetsReservedResources(const MetaType & type);
+	bool    meetsReservedResourcesWithExtra(const MetaType & type);
     bool    canMakeNow(const Unit & producer, const MetaType & type);
+	bool    canMakeSoon(const Unit & producer, const MetaType & type);
+	bool	canMake(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
     void    setBuildOrder(const BuildOrder & buildOrder);
     void    create(const Unit & producer, BuildOrderItem & item);
@@ -25,6 +28,8 @@ class ProductionManager
 	void	putImportantBuildOrderItemsInQueue();
     int     getFreeMinerals();
     int     getFreeGas();
+	int     getExtraMinerals();
+	int     getExtraGas();
 
     void    fixBuildOrderDeadlock();
 

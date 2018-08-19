@@ -72,13 +72,10 @@ void ProductionManager::manageBuildOrderQueue()
         // this is the unit which can produce the currentItem
         Unit producer = getProducer(currentItem.type);
 
-        // check to see if we can make it right now
-        bool canMake = canMakeNow(producer, currentItem.type);
-
         // TODO: if it's a building and we can't make it yet, predict the worker movement to the location
 
         // if we can make the current item
-        if (producer.isValid() && canMake)
+        if (producer.isValid() && canMakeNow(producer, currentItem.type))
         {
             // create it and remove it from the _queue
             create(producer, currentItem);
@@ -87,6 +84,20 @@ void ProductionManager::manageBuildOrderQueue()
             // don't actually loop around in here
             break;
         }
+		else if (producer.isValid() && m_bot.Data(currentItem.type).isBuilding && !currentItem.type.getUnitType().isMorphedBuilding() && canMakeSoon(producer, currentItem.type))
+		{//is a building (doesn't include addons) and we can make it soon
+			Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));			
+			CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
+			Unit worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition{ static_cast<float>(targetLocation.x), static_cast<float>(targetLocation.y) });
+			worker.move(targetLocation);
+
+			// create it and remove it from the _queue
+			create(producer, currentItem);
+			m_queue.removeCurrentHighestPriorityItem();
+
+			// don't actually loop around in here
+			break;
+		}
         // otherwise, if we can skip the current item
         else if (m_queue.canSkipItem())
         {
@@ -379,29 +390,29 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
     }
 
 #ifdef SC2API
-    sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(producer.getUnitPtr());
+	sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(producer.getUnitPtr());
 
-    // quick check if the unit can't do anything it certainly can't build the thing we want
-    if (available_abilities.abilities.empty())
-    {
-        return false;
-    }
-    else
-    {
-        // check to see if one of the unit's available abilities matches the build ability type
-        sc2::AbilityID MetaTypeAbility = m_bot.Data(type).buildAbility;
-        for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
-        {
-            if (available_ability.ability_id == MetaTypeAbility)
-            {
-                return true;
-            }
-        }
-    }
+	// quick check if the unit can't do anything it certainly can't build the thing we want
+	if (available_abilities.abilities.empty())
+	{
+		return false;
+	}
+	else
+	{
+		// check to see if one of the unit's available abilities matches the build ability type
+		sc2::AbilityID MetaTypeAbility = m_bot.Data(type).buildAbility;
+		for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
+		{
+			if (available_ability.ability_id == MetaTypeAbility)
+			{
+				return true;
+			}
+		}
+	}
 
-    return false;
+	return false;
 #else
-    bool canMake = meetsReservedResources(type);
+	bool canMake = meetsReservedResources(type);
 	if (canMake)
 	{
 		if (type.isUnit())
@@ -417,13 +428,23 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 			canMake = BWAPI::Broodwar->canUpgrade(type.getUpgrade(), producer.getUnitPtr());
 		}
 		else
-		{	
+		{
 			BOT_ASSERT(false, "Unknown type");
 		}
 	}
 
 	return canMake;
 #endif
+}
+
+bool ProductionManager::canMakeSoon(const Unit & producer, const MetaType & type)
+{
+	if (!producer.isValid() || !meetsReservedResourcesWithExtra(type))
+	{
+		return false;
+	}
+
+	return true;//Do not check the builder abilities, it won't contain the building we want.
 }
 
 bool ProductionManager::detectBuildOrderDeadlock()
@@ -442,14 +463,42 @@ int ProductionManager::getFreeGas()
     return m_bot.GetGas() - m_buildingManager.getReservedGas();
 }
 
+int ProductionManager::getExtraMinerals()
+{
+	int extraMinerals = 0;
+	std::set<Unit> workers = m_bot.Workers().getWorkers();
+	for (auto w : workers) {
+		if (m_bot.Workers().getWorkerData().getWorkerJob(w) == WorkerJobs::Minerals && m_bot.Workers().isReturningCargo(w))
+		{
+			extraMinerals += 5;
+		}
+	}
+	return extraMinerals;
+}
+
+int ProductionManager::getExtraGas()
+{
+	int extraGas = 0;
+	std::set<Unit> workers = m_bot.Workers().getWorkers();
+	for (auto w : workers) {
+		if (m_bot.Workers().getWorkerData().getWorkerJob(w) == WorkerJobs::Gas && m_bot.Workers().isReturningCargo(w))
+		{
+			extraGas += 4;
+		}
+	}
+	return extraGas;
+}
+
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResources(const MetaType & type)
 {
-    // return whether or not we meet the resources
-    int minerals = m_bot.Data(type).mineralCost;
-    int gas = m_bot.Data(type).gasCost;
-
     return (m_bot.Data(type).mineralCost <= getFreeMinerals()) && (m_bot.Data(type).gasCost <= getFreeGas());
+}
+
+// return whether or not we meet resources, including building reserves
+bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type)
+{
+	return (m_bot.Data(type).mineralCost <= getFreeMinerals() + getExtraMinerals()) && (m_bot.Data(type).gasCost <= getFreeGas() + getExtraGas());
 }
 
 void ProductionManager::drawProductionInformation()

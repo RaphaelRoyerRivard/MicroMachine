@@ -153,20 +153,10 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID w
     {
         if (!worker.isValid() || worker.getID() == workerToIgnore) { continue; }
 
-        // if it is a mineral worker
-        if (m_workerData.getWorkerJob(worker) == WorkerJobs::Minerals)
+        // if it is a mineral worker, Idle or None
+        if(isFree(worker))
         {
-			bool canReturnCargo = false;
-			sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(worker.getUnitPtr());
-			for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
-			{
-				if (available_ability.ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
-				{
-					canReturnCargo = true;
-					break;
-				}
-			}
-			if (!canReturnCargo)
+			if (!isReturningCargo(worker))
 			{
 				double dist = Util::DistSq(worker.getPosition(), pos);
 				if (!closestMineralWorker.isValid() || dist < closestDist)
@@ -318,7 +308,8 @@ void WorkerManager::drawWorkerInformation()
 
 bool WorkerManager::isFree(Unit worker) const
 {
-    return m_workerData.getWorkerJob(worker) == WorkerJobs::Minerals || m_workerData.getWorkerJob(worker) == WorkerJobs::Idle;
+	int job = m_workerData.getWorkerJob(worker);
+    return job == WorkerJobs::Minerals || job == WorkerJobs::Idle || job == WorkerJobs::None;
 }
 
 bool WorkerManager::isWorkerScout(Unit worker) const
@@ -329,6 +320,20 @@ bool WorkerManager::isWorkerScout(Unit worker) const
 bool WorkerManager::isBuilder(Unit worker) const
 {
     return (m_workerData.getWorkerJob(worker) == WorkerJobs::Build);
+}
+
+bool WorkerManager::isReturningCargo(Unit worker) const
+{
+	sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(worker.getUnitPtr());
+	for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
+	{
+		if (available_ability.ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
+		{
+			return true;
+			break;
+		}
+	}
+	return false;
 }
 
 int WorkerManager::getNumMineralWorkers()
@@ -353,4 +358,14 @@ int WorkerManager::getNumWorkers()
         }
     }
     return count;
+}
+
+std::set<Unit> WorkerManager::getWorkers() const
+{
+	return m_workerData.getWorkers();
+}
+
+WorkerData WorkerManager::getWorkerData() const
+{
+	return m_workerData;
 }

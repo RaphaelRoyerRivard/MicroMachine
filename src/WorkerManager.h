@@ -37,9 +37,12 @@ public:
     int  getNumMineralWorkers();
     int  getNumGasWorkers();
     int  getNumWorkers();
+	std::set<Unit> WorkerManager::getWorkers() const;
+	WorkerData WorkerManager::getWorkerData() const;
     bool isWorkerScout(Unit worker) const;
     bool isFree(Unit worker) const;
     bool isBuilder(Unit worker) const;
+	bool WorkerManager::isReturningCargo(Unit worker) const;
 
     Unit getBuilder(Building & b,bool setJobAsBuilder = true) const;
     Unit getClosestDepot(Unit worker) const;
