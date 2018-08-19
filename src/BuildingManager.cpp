@@ -478,22 +478,22 @@ void BuildingManager::updateBaseBuildings()
 	}
 }
 
-const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) {
-	auto potentialMinerals = m_bot.Observation()->GetUnits(sc2::Unit::Alliance::Neutral);
-	const sc2::Unit * mineralField = nullptr;
+Unit BuildingManager::getClosestMineral(const sc2::Unit * unit) {
+	auto potentialMinerals = m_bot.UnitInfo().getUnits(Players::Neutral);
+	Unit mineralField;
 	float minDist;
 	for (auto mineral : potentialMinerals)
 	{
-		if (mineral->mineral_contents <= 0)
+		if (!mineral.getType().isMineral())
 		{//Not mineral
 			continue;
 		}
 
-		if (mineralField == nullptr) {
+		if (!mineralField.isValid()) {
 			mineralField = mineral;
-			minDist = Util::Dist(mineral->pos, unit->pos);
+			minDist = Util::Dist(mineral.getPosition(), unit->pos);
 		}
-		else if (Util::Dist(mineral->pos, unit->pos) < minDist) {
+		else if (Util::Dist(mineral.getPosition(), unit->pos) < minDist) {
 			mineralField = mineral;
 		}
 	}
@@ -510,7 +510,7 @@ void BuildingManager::castBuildingsAbilities()
 		{
 			if (b.getEnergy() >= 50)
 			{
-				auto point = this->BuildingManager::getClosestMineral(b.getUnitPtr())->pos;
+				auto point = this->BuildingManager::getClosestMineral(b.getUnitPtr()).getPosition();
 				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 			}
 		}

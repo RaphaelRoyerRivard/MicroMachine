@@ -72,13 +72,15 @@ void WorkerManager::handleIdleWorkers()
     {
         if (!worker.isValid()) { continue; }
 
+		int workerJob = m_workerData.getWorkerJob(worker);
         bool isIdle = worker.isIdle();
         if (isIdle && 
             // We need to consider building worker because of builder finishing the job of another worker is not consider idle.
 			//(m_workerData.getWorkerJob(worker) != WorkerJobs::Build) && 
-            (m_workerData.getWorkerJob(worker) != WorkerJobs::Move) &&
-            (m_workerData.getWorkerJob(worker) != WorkerJobs::Repair) &&
-			(m_workerData.getWorkerJob(worker) != WorkerJobs::Scout)) 
+            (workerJob != WorkerJobs::Move) &&
+            (workerJob != WorkerJobs::Repair) &&
+			(workerJob != WorkerJobs::Scout) &&
+			(workerJob != WorkerJobs::Build))//Prevent premoved builder from going Idle if they lack the ressources, also prevents raffinery builder from going Idle
 		{
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 		}
@@ -213,7 +215,6 @@ Unit WorkerManager::getClosestDepot(Unit worker) const
     return closestDepot;
 }
 
-
 // other managers that need workers call this when they're done with a unit
 void WorkerManager::finishedWithWorker(const Unit & unit)
 {
@@ -228,8 +229,13 @@ Unit WorkerManager::getGasWorker(Unit refinery) const
     return getClosestMineralWorkerTo(refinery.getPosition());
 }
 
+void WorkerManager::setBuildingWorker(Unit worker)
+{
+	m_workerData.setWorkerJob(worker, WorkerJobs::Build);
+}
+
 void WorkerManager::setBuildingWorker(Unit worker, Building & b)
-{//unused
+{
     m_workerData.setWorkerJob(worker, WorkerJobs::Build, b.buildingUnit);
 }
 

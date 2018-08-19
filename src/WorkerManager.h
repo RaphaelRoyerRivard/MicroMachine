@@ -30,6 +30,7 @@ public:
     void drawWorkerInformation();
     void setScoutWorker(Unit worker);
     void setCombatWorker(Unit worker);
+	void setBuildingWorker(Unit worker);
     void setBuildingWorker(Unit worker, Building & b);
     void setRepairWorker(Unit worker,const Unit & unitToRepair);
     void stopRepairing(Unit worker);
