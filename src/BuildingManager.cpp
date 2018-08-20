@@ -489,12 +489,14 @@ const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) {
 			continue;
 		}
 
+		float dist = Util::Dist(mineral->pos, unit->pos);
 		if (mineralField == nullptr) {
 			mineralField = mineral;
-			minDist = Util::Dist(mineral->pos, unit->pos);
+			minDist = dist;
 		}
-		else if (Util::Dist(mineral->pos, unit->pos) < minDist) {
+		else if (dist < minDist) {
 			mineralField = mineral;
+			minDist = dist;
 		}
 	}
 	return mineralField;

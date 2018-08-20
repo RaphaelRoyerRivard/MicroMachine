@@ -139,7 +139,11 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		// if there is no potential target or threat, move to objective
 		if ((target == nullptr || Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()) && threats.empty())
 		{
-			Micro::SmartMove(rangedUnit, m_order.getPosition(), m_bot);
+			if(Util::Dist(rangedUnit->pos, m_order.getPosition()) > 10.f)
+				Micro::SmartMove(rangedUnit, m_order.getPosition(), m_bot);
+			else
+				Micro::SmartAttackMove(rangedUnit, m_order.getPosition(), m_bot);
+
 			if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
 			{
 				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_REAPER_MOVE_FRAME_COUNT;

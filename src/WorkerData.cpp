@@ -91,7 +91,7 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit)
 
         // find the mineral to mine and mine it
         Unit mineralToMine = getMineralToMine(unit);
-        
+
         unit.rightClick(mineralToMine);
     }
     else if (job == WorkerJobs::Gas)
@@ -204,7 +204,7 @@ void WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, con
 {
     for (auto & mineral : unitsToTest)
     {
-        if (!mineral.getType().isMineral() || !mineral.isAlive()) continue;
+        if (!mineral.getType().isMineral() || !mineral.isAlive() || mineral.getUnitPtr()->display_type != sc2::Unit::DisplayType::Visible) continue;
 
         double dist = Util::Dist(mineral, worker);
 

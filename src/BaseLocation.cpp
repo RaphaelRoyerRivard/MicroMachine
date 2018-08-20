@@ -126,6 +126,52 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
     {
         m_isPlayerStartLocation[player] = true;
     }
+
+	if(occupying && player == Players::Self)
+	{
+		bool refreshResources = m_minerals.empty();
+		if(!refreshResources)
+		{
+			for(auto & mineral : m_minerals)
+			{
+				if(!mineral.isVisible())
+				{
+					refreshResources = true;
+					break;
+				}
+			}
+		}
+		if (refreshResources)
+		{
+			std::vector<Unit> minerals;
+			std::vector<Unit> geysers;
+			for (auto & unit : m_bot.GetUnits())
+			{
+				// skip minerals that don't have more than 100 starting minerals
+				// these are probably stupid map-blocking minerals to confuse us
+				if (!unit.getType().isMineral() && !unit.getType().isGeyser())
+				{
+					continue;
+				}
+
+				if (!unit.isVisible())
+					continue;
+
+				if (Util::Dist(m_centerOfResources, unit.getPosition()) < 10)
+				{
+					if (unit.getType().isMineral())
+						minerals.push_back(unit);
+					else
+						geysers.push_back(unit);
+				}
+			}
+			if (minerals.size() == 8 && geysers.size() == 2)
+			{
+				m_minerals = minerals;
+				m_geysers = geysers;
+			}
+		}
+	}
 }
 
 bool BaseLocation::isInResourceBox(int tileX, int tileY) const

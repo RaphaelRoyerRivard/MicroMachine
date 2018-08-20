@@ -185,7 +185,7 @@ void BaseLocationManager::onFrame()
     for (auto & baseLocation : m_baseLocationData)
     {
         baseLocation.setPlayerOccupying(Players::Self, false);
-        baseLocation.setPlayerOccupying(Players::Self, false);
+        baseLocation.setPlayerOccupying(Players::Enemy, false);
     }
 
     // for each unit on the map, update which base location it may be occupying
