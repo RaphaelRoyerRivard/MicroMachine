@@ -247,7 +247,7 @@ void BuildingManager::checkForStartedConstruction()
                 {
                     std::cout << "Building mis-match somehow\n";
                 }
-
+				//TODO
                 // the resources should now be spent, so unreserve them
                 m_reservedMinerals -= buildingStarted.getType().mineralPrice();
                 m_reservedGas      -= buildingStarted.getType().gasPrice();
@@ -478,24 +478,25 @@ void BuildingManager::updateBaseBuildings()
 	}
 }
 
-const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) {
-	auto potentialMinerals = m_bot.Observation()->GetUnits(sc2::Unit::Alliance::Neutral);
+const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) const
+{
+	auto potentialMinerals = m_bot.UnitInfo().getUnits(Players::Neutral);
 	const sc2::Unit * mineralField = nullptr;
 	float minDist;
 	for (auto mineral : potentialMinerals)
 	{
-		if (mineral->mineral_contents <= 0)
+		if (!mineral.getType().isMineral())
 		{//Not mineral
 			continue;
 		}
 
-		float dist = Util::Dist(mineral->pos, unit->pos);
+		const float dist = Util::Dist(mineral.getUnitPtr()->pos, unit->pos);
 		if (mineralField == nullptr) {
-			mineralField = mineral;
+			mineralField = mineral.getUnitPtr();
 			minDist = dist;
 		}
 		else if (dist < minDist) {
-			mineralField = mineral;
+			mineralField = mineral.getUnitPtr();
 			minDist = dist;
 		}
 	}
@@ -512,7 +513,7 @@ void BuildingManager::castBuildingsAbilities()
 		{
 			if (b.getEnergy() >= 50)
 			{
-				auto point = this->BuildingManager::getClosestMineral(b.getUnitPtr())->pos;
+				auto point = getClosestMineral(b.getUnitPtr())->pos;
 				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 			}
 		}

@@ -19,7 +19,7 @@ class BuildingManager
 
     bool            isBuildingPositionExplored(const Building & b) const;
     void            removeBuildings(const std::vector<Building> & toRemove);
-	const sc2::Unit * getClosestMineral(const sc2::Unit * unit);
+	const sc2::Unit * getClosestMineral(const sc2::Unit * unit) const;
 	void			castBuildingsAbilities();
 	void			updateBaseBuildings();
 

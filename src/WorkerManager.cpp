@@ -72,14 +72,14 @@ void WorkerManager::handleIdleWorkers()
     {
         if (!worker.isValid()) { continue; }
 
-        bool isIdle = worker.isIdle();
 		int workerJob = m_workerData.getWorkerJob(worker);
-        if (isIdle && 
+        if (worker.isIdle() &&
             // We need to consider building worker because of builder finishing the job of another worker is not consider idle.
 			//(m_workerData.getWorkerJob(worker) != WorkerJobs::Build) && 
             (workerJob != WorkerJobs::Move) &&
             (workerJob != WorkerJobs::Repair) &&
-			(workerJob != WorkerJobs::Scout))
+			(workerJob != WorkerJobs::Scout) &&
+			(workerJob != WorkerJobs::Build))//Prevent premoved builder from going Idle if they lack the ressources, also prevents refinery builder from going Idle
 		{
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 			workerJob = WorkerJobs::Idle;
@@ -155,20 +155,10 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID w
     {
         if (!worker.isValid() || worker.getID() == workerToIgnore) { continue; }
 
-        // if it is a mineral worker
-        if (m_workerData.getWorkerJob(worker) == WorkerJobs::Minerals)
+        // if it is a mineral worker, Idle or None
+        if(isFree(worker))
         {
-			bool canReturnCargo = false;
-			sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(worker.getUnitPtr());
-			for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
-			{
-				if (available_ability.ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
-				{
-					canReturnCargo = true;
-					break;
-				}
-			}
-			if (!canReturnCargo)
+			if (!isReturningCargo(worker))
 			{
 				double dist = Util::DistSq(worker.getPosition(), pos);
 				if (!closestMineralWorker.isValid() || dist < closestDist)
@@ -225,7 +215,6 @@ Unit WorkerManager::getClosestDepot(Unit worker) const
     return closestDepot;
 }
 
-
 // other managers that need workers call this when they're done with a unit
 void WorkerManager::finishedWithWorker(const Unit & unit)
 {
@@ -240,8 +229,13 @@ Unit WorkerManager::getGasWorker(Unit refinery) const
     return getClosestMineralWorkerTo(refinery.getPosition());
 }
 
+void WorkerManager::setBuildingWorker(Unit worker)
+{
+	m_workerData.setWorkerJob(worker, WorkerJobs::Build);
+}
+
 void WorkerManager::setBuildingWorker(Unit worker, Building & b)
-{//unused
+{
     m_workerData.setWorkerJob(worker, WorkerJobs::Build, b.buildingUnit);
 }
 
@@ -320,7 +314,8 @@ void WorkerManager::drawWorkerInformation()
 
 bool WorkerManager::isFree(Unit worker) const
 {
-    return m_workerData.getWorkerJob(worker) == WorkerJobs::Minerals || m_workerData.getWorkerJob(worker) == WorkerJobs::Idle;
+	int job = m_workerData.getWorkerJob(worker);
+    return job == WorkerJobs::Minerals || job == WorkerJobs::Idle || job == WorkerJobs::None;
 }
 
 bool WorkerManager::isWorkerScout(Unit worker) const
@@ -331,6 +326,20 @@ bool WorkerManager::isWorkerScout(Unit worker) const
 bool WorkerManager::isBuilder(Unit worker) const
 {
     return (m_workerData.getWorkerJob(worker) == WorkerJobs::Build);
+}
+
+bool WorkerManager::isReturningCargo(Unit worker) const
+{
+	sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(worker.getUnitPtr());
+	for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
+	{
+		if (available_ability.ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
+		{
+			return true;
+			break;
+		}
+	}
+	return false;
 }
 
 int WorkerManager::getNumMineralWorkers()
@@ -355,4 +364,14 @@ int WorkerManager::getNumWorkers()
         }
     }
     return count;
+}
+
+std::set<Unit> WorkerManager::getWorkers() const
+{
+	return m_workerData.getWorkers();
+}
+
+WorkerData WorkerManager::getWorkerData() const
+{
+	return m_workerData;
 }
