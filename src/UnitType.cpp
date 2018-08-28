@@ -125,6 +125,7 @@ bool UnitType::isResourceDepot() const
         case sc2::UNIT_TYPEID::ZERG_LAIR                    : return true;
         case sc2::UNIT_TYPEID::ZERG_HIVE                    : return true;
         case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER         : return true;
+		case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING	: return true;
         case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND        : return true;
         case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING  : return true;
         case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS     : return true;

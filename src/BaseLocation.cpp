@@ -195,6 +195,32 @@ const std::vector<CCTilePosition> & BaseLocation::getClosestTiles() const
     return m_distanceMap.getSortedTiles();
 }
 
+void BaseLocation::updateBaseMineral()
+{
+	auto potentialMinerals = m_bot.UnitInfo().getUnits(Players::Neutral);
+	Unit mineralField;
+	float minDist;
+	for (auto mineral : potentialMinerals)
+	{
+		for (auto snapshot : m_minerals)
+		{
+			if (!mineral.getType().isMineral())
+			{//Not mineral
+				continue;
+			}
+
+			if (mineralField.isValid() && mineral.getPosition() == snapshot.getPosition())
+			{
+				ptrdiff_t pos = find(m_minerals.begin(), m_minerals.end(), snapshot) - m_minerals.begin();
+				if (pos >= m_minerals.size()) {
+					continue;
+				}
+				m_minerals[pos] = mineral;
+			}
+		}
+	}
+}
+
 void BaseLocation::draw()
 {
     CCPositionType radius = Util::TileToPosition(1.0f);

@@ -41,7 +41,7 @@ public:
     int     getWorkerJobCount(int job) const;
     int     getNumAssignedWorkers(const Unit & unit);
     int     getWorkerJob(const Unit & unit) const;
-    Unit    getMineralToMine(const Unit & unit) const;
+    Unit    getMineralToMine(const Unit & unit);
     Unit    getWorkerDepot(const Unit & unit) const;
     const char * getJobCode(const Unit & unit);
     const std::set<Unit> & getWorkers() const;

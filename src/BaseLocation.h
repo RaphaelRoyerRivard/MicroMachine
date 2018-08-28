@@ -52,6 +52,7 @@ public:
     void setPlayerOccupying(CCPlayer player, bool occupying);
 
     const std::vector<CCTilePosition> & getClosestTiles() const;
+	void updateBaseMineral();
 
     void draw();
 };

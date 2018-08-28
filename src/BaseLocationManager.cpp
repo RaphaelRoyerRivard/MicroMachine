@@ -173,8 +173,8 @@ void BaseLocationManager::onStart()
     }
 
     // construct the sets of occupied base locations
-    m_occupiedBaseLocations[Players::Self] = std::set<const BaseLocation *>();
-    m_occupiedBaseLocations[Players::Enemy] = std::set<const BaseLocation *>();
+    m_occupiedBaseLocations[Players::Self] = std::set<BaseLocation>();
+    m_occupiedBaseLocations[Players::Enemy] = std::set<BaseLocation>();
 }
 
 void BaseLocationManager::onFrame()
@@ -271,18 +271,18 @@ void BaseLocationManager::onFrame()
     }
 
     // update the occupied base locations for each player
-    m_occupiedBaseLocations[Players::Self] = std::set<const BaseLocation *>();
-    m_occupiedBaseLocations[Players::Enemy] = std::set<const BaseLocation *>();
+    m_occupiedBaseLocations[Players::Self] = std::set<BaseLocation>();
+    m_occupiedBaseLocations[Players::Enemy] = std::set<BaseLocation>();
     for (auto & baseLocation : m_baseLocationData)
     {
         if (baseLocation.isOccupiedByPlayer(Players::Self))
         {
-            m_occupiedBaseLocations[Players::Self].insert(&baseLocation);
+			m_occupiedBaseLocations[Players::Self].insert(baseLocation);//TODO
         }
 
         if (baseLocation.isOccupiedByPlayer(Players::Enemy))
         {
-            m_occupiedBaseLocations[Players::Enemy].insert(&baseLocation);
+			m_occupiedBaseLocations[Players::Enemy].insert(baseLocation);//TODO
         }
     }
 
@@ -335,9 +335,9 @@ const BaseLocation * BaseLocationManager::getPlayerStartingBaseLocation(int play
     return m_playerStartingBaseLocations.at(player);
 }
 
-const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocations(int player) const
+std::set<BaseLocation> BaseLocationManager::getOccupiedBaseLocations(int player) const
 {
-    return m_occupiedBaseLocations.at(player);
+	return m_occupiedBaseLocations.at(player);
 }
 
 CCTilePosition BaseLocationManager::getNextExpansion(int player) const

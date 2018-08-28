@@ -92,6 +92,7 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit)
         // find the mineral to mine and mine it
         Unit mineralToMine = getMineralToMine(unit);
         
+		//unit.move(mineralToMine.getPosition());
         unit.rightClick(mineralToMine);
     }
     else if (job == WorkerJobs::Gas)
@@ -179,7 +180,7 @@ int WorkerData::getWorkerJob(const Unit & unit) const
     return WorkerJobs::None;
 }
 
-Unit WorkerData::getMineralToMine(const Unit & unit) const
+Unit WorkerData::getMineralToMine(const Unit & unit)
 {
     Unit bestMineral;
     const double maxDistance = 100000;
@@ -188,7 +189,8 @@ Unit WorkerData::getMineralToMine(const Unit & unit) const
     // We search only in our bases minerals (we do not want to long range mine)
     for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
     {
-        GetBestMineralInList(base->getMinerals(), unit, bestMineral, bestDist);
+		base.updateBaseMineral();
+        GetBestMineralInList(base.getMinerals(), unit, bestMineral, bestDist);
     }
     // If we did not found minerals, we fall back to all minerals
     if (bestDist == maxDistance)
