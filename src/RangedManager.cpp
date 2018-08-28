@@ -15,10 +15,12 @@
 #include "UCTCDAction.h"
 
 const float HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE = 1.5f;
+const float HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE = 7.f;
 const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
 const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
 const int HARASS_ATTACK_FRAME_COUNT = 2;
 const int HARASS_REAPER_MOVE_FRAME_COUNT = 3;
+const float HARASS_THREAT_MIN_DISTANCE_TO_TARGET = 3.f;
 const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
@@ -213,7 +215,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			sc2::Units closeUnits;
 			for(auto unit : rangedUnits)
 			{
-				if (Util::Dist(unit->pos, rangedUnit->pos) < 7.f)
+				if (Util::Dist(unit->pos, rangedUnit->pos) < HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE)
 					closeUnits.push_back(unit);
 			}
 			float unitsPower = Util::GetUnitsPower(closeUnits, threats, m_bot);
@@ -674,17 +676,36 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     const sc2::Unit * bestTarget = nullptr;
 
     // for each possible target
-    for (auto targetUnit : targets)
+    for (auto target : targets)
     {
-        BOT_ASSERT(targetUnit, "null target unit in getTarget");
+        BOT_ASSERT(target, "null target unit in getTarget");
 
-        float priority = getAttackPriority(rangedUnit, targetUnit);
+		// We do not want to target melee units surrounded by ranged units with our harass units 
+		if(m_harassMode && !isTargetRanged(target))
+		{
+			bool threatTooClose = false;
+			for (auto otherTarget : targets)
+			{
+				if(otherTarget != target 
+					&& isTargetRanged(otherTarget)
+					&& Util::Dist(otherTarget->pos, target->pos) < HARASS_THREAT_MIN_DISTANCE_TO_TARGET
+					&& Util::GetDpsForTarget(otherTarget, rangedUnit, m_bot) > 0.f)
+				{
+					threatTooClose = true;
+					break;
+				}
+			}
+			if (threatTooClose)
+				continue;
+		}
+
+        float priority = getAttackPriority(rangedUnit, target);
 
         // if it's a higher priority, set it
         if (priority > highestPriority)
         {
             highestPriority = priority;
-            bestTarget = targetUnit;
+            bestTarget = target;
         }
     }
 
