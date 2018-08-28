@@ -22,8 +22,8 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
-        "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "BloodBoilLE.SC2Map",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "InterloperLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
