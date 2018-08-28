@@ -134,7 +134,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			continue;
 
 		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
-		const std::vector<const sc2::Unit *> threats = getThreats(rangedUnit, rangedUnitTargets);
+		sc2::Units threats = getThreats(rangedUnit, rangedUnitTargets);
 
 		// if there is no potential target or threat, move to objective
 		if ((target == nullptr || Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()) && threats.empty())
@@ -207,6 +207,35 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		}
 		if(dirVec.x != 0.f || dirVec.y != 0.f)
 			sc2::Normalize2D(dirVec);
+
+		if (!threats.empty())
+		{
+			sc2::Units closeUnits;
+			for(auto unit : rangedUnits)
+			{
+				if (Util::Dist(unit->pos, rangedUnit->pos) < 7.f)
+					closeUnits.push_back(unit);
+			}
+			float unitsPower = Util::GetUnitsPower(closeUnits, threats, m_bot);
+			float targetsPower = Util::GetUnitsPower(threats, closeUnits, m_bot);
+			if (unitsPower > targetsPower)
+			{
+				sc2::Units units;
+				units.push_back(rangedUnit);
+				// The harass mode deactivation is a hack to not ignore range targets
+				m_harassMode = false;
+				target = getTarget(rangedUnit, rangedUnitTargets);
+				// Use behavior tree only against ranged units
+				if(target && isTargetRanged(target))
+				{
+					RunBehaviorTree(units, threats);
+					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_ATTACK_FRAME_COUNT;
+					m_harassMode = true;
+					continue;
+				}
+				m_harassMode = true;
+			}
+		}
 
 		bool useInfluenceMap = false;
 		float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
@@ -709,6 +738,13 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 			return 0.f;
 	}
 
+	float unitDps = Util::GetDpsForTarget(attacker, target, m_bot);
+	if (unitDps == 0.f)	//Do not attack targets on which we would do no damage
+		return 0.f;
+
+	if (target->health_max == 1.f)	//Otherwise we will try to attack KD8Charges
+		return 0.f;
+
 	float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized
 	float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);   //the more far a unit is, the less it is prioritized
 	if (distanceValue > Util::GetAttackRangeForTarget(attacker, target, m_bot))
@@ -716,7 +752,6 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 
     if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
     {
-		float unitDps = Util::GetDpsForTarget(attacker, target, m_bot);
         float targetDps = Util::GetDpsForTarget(target, attacker, m_bot);
         if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
         {

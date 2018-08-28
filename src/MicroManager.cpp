@@ -48,85 +48,12 @@ float MicroManager::getAverageTargetsSpeed() const
 
 float MicroManager::getSquadPower() const
 {
-    float squadPower = 0;
-
-    for (auto & unit : m_units)
-    {
-        Unit& closestTarget = Util::CalcClosestUnit(unit, m_targets);
-        squadPower += getUnitPower(unit, closestTarget);
-    }
-
-    return squadPower;
+	return Util::GetUnitsPower(m_units, m_targets, m_bot);
 }
 
 float MicroManager::getTargetsPower(const std::vector<Unit>& units) const
 {
-    float enemyPower = 0;
-
-    for (auto & target : m_targets)
-    {
-        Unit& closestUnit = Util::CalcClosestUnit(target, units);
-        enemyPower += getUnitPower(target, closestUnit);
-    }
-
-    return enemyPower;
-}
-
-float MicroManager::getUnitPower(const Unit &unit, Unit& closestUnit) const
-{
-	float unitRange = unit.getType().getAttackRange();
-	bool isRanged = unitRange >= 1.5f;
-
-    ///////// HEALTH
-	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.15f);
-
-    ///////// DPS
-	if(closestUnit.isValid())
-		unitPower *= Util::GetDpsForTarget(unit.getUnitPtr(), closestUnit.getUnitPtr(), m_bot);
-	else
-		unitPower *= Util::GetDps(unit.getUnitPtr(), m_bot);
-
-    ///////// RANGE
-    if (isRanged)
-        unitPower *= 3; //ranged bonus (+200%)
-
-    ///////// ARMOR
-    unitPower *= 1 + Util::GetArmor(unit.getUnitPtr(), m_bot) * 0.1f;   //armor bonus (+10% per armor)
-
-    ///////// SPLASH DAMAGE
-    //TODO bonus for splash damage
-
-    ///////// DISTANCE
-    if (closestUnit.isValid())
-    {
-        float distance = Util::Dist(unit.getPosition(), closestUnit.getPosition());
-        if (unitRange + 1 < distance)   //if the unit can't reach the closest unit (with a small buffer)
-        {
-            distance -= unitRange + 1;
-			float distancePenalty = unit.getType().isBuilding() ? 0.9f : 0.95f;
-			distancePenalty = pow(distancePenalty, distance);
-			unitPower *= distancePenalty;	//penalty for distance (very fast for building but slow for units)
-        }
-    }
-
-    ///////// TERRAIN
-    /*if (averageSquadHeight > 0)
-    {
-        float unitHeight = m_bot.Map().terrainHeight(unit.getTilePosition().x, unit.getTilePosition().y);
-        if (unitHeight > averageSquadHeight + 1)
-        {
-            unitPower *= 1.25f;  //height bonus (+25%)
-        }
-        else if (unitHeight < averageSquadHeight + 1)
-        {
-            unitPower *= 0.75f; //height penalty (-25%)
-        }
-    }*/
-
-	if(m_bot.Config().DrawUnitPowerInfo)
-		m_bot.Map().drawText(unit.getPosition(), "Power: " + std::to_string(unitPower));
-    
-    return unitPower;
+	return Util::GetUnitsPower(m_targets, units, m_bot);
 }
 
 void MicroManager::trainSubUnits(const Unit & unit) const
