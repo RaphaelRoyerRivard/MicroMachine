@@ -192,6 +192,18 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		{
 			m_queue.queueItem(BuildOrderItem(metaTypeWorker, 1, false));
 		}
+
+		const auto metaTypeFactory = MetaType("Factory", m_bot);
+		if (!m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
+		{
+			m_queue.queueAsLowestPriority(metaTypeFactory, false);
+		}
+
+		const auto metaTypeHellion = MetaType("Hellion", m_bot);
+		if (!m_queue.contains(metaTypeHellion))
+		{
+			m_queue.queueAsLowestPriority(metaTypeHellion, false);
+		}
 	}
 }
 

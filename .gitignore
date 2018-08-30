@@ -35,3 +35,4 @@ vs/RelWithDebInfo/CommandCenter.log
 *.pdb
 vs/CommandCenter.vcxproj
 vs/CommandCenter.VC.db
+src/*.TMP

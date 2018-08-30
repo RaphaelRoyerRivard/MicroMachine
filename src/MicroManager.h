@@ -36,7 +36,6 @@ public:
 	float getAverageTargetsSpeed() const;
     float getSquadPower() const;
     float getTargetsPower(const std::vector<Unit>& units) const;
-    float getUnitPower(const Unit & unit, Unit& closestUnit) const;
 
     std::unordered_map<sc2::Tag, FocusFireFiniteStateMachine*> m_focusFireStates;
     std::unordered_map<sc2::Tag, KitingFiniteStateMachine*> m_kittingStates;

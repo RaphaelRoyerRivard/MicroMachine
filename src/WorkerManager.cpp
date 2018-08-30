@@ -73,19 +73,19 @@ void WorkerManager::handleIdleWorkers()
         if (!worker.isValid()) { continue; }
 
 		int workerJob = m_workerData.getWorkerJob(worker);
-        bool isIdle = worker.isIdle();
-        if (isIdle && 
+        if (worker.isIdle() &&
             // We need to consider building worker because of builder finishing the job of another worker is not consider idle.
 			//(m_workerData.getWorkerJob(worker) != WorkerJobs::Build) && 
             (workerJob != WorkerJobs::Move) &&
             (workerJob != WorkerJobs::Repair) &&
 			(workerJob != WorkerJobs::Scout) &&
-			(workerJob != WorkerJobs::Build))//Prevent premoved builder from going Idle if they lack the ressources, also prevents raffinery builder from going Idle
+			(workerJob != WorkerJobs::Build))//Prevent premoved builder from going Idle if they lack the ressources, also prevents refinery builder from going Idle
 		{
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
+			workerJob = WorkerJobs::Idle;
 		}
 
-		if (m_workerData.getWorkerJob(worker) == WorkerJobs::Idle)
+		if (workerJob == WorkerJobs::Idle)
 		{
 			if (!worker.isAlive())
 			{

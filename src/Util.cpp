@@ -128,21 +128,126 @@ CCPosition Util::CalcCenter(const std::vector<Unit> & units)
     return CCPosition(cx / units.size(), cy / units.size());
 }
 
-Unit Util::CalcClosestUnit(const Unit & unit, const std::vector<Unit> & targets)
+void Util::CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits)
 {
-    float distance;
-    float minDistance = 0;
-    Unit closestUnit;
-    for (auto & target : targets)
-    {
-        distance = Dist(target.getPosition(), unit.getPosition());
-        if (minDistance == 0 || distance < minDistance)
-        {
-            minDistance = distance;
-            closestUnit = target;
-        }
-    }
-    return closestUnit;
+	for (auto unit : units)
+	{
+		outUnits.push_back(unit.getUnitPtr());
+	}
+}
+
+void Util::Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot)
+{
+	for (auto unit : units)
+	{
+		outUnits.push_back(Unit(unit, bot));
+	}
+}
+
+const sc2::Unit* Util::CalcClosestUnit(const sc2::Unit* unit, const sc2::Units & targets)
+{
+	float minDistance = 0;
+	const sc2::Unit* closestUnit = nullptr;
+	for (auto target : targets)
+	{
+		const float distance = Dist(target->pos, unit->pos);
+		if (minDistance == 0 || distance < minDistance)
+		{
+			minDistance = distance;
+			closestUnit = target;
+		}
+	}
+	return closestUnit;
+}
+
+float Util::GetUnitsPower(const sc2::Units & units, const sc2::Units & targets, CCBot& bot)
+{
+	float unitsPower = 0;
+
+	for (auto unit : units)
+	{
+		const sc2::Unit* closestTarget = CalcClosestUnit(unit, targets);
+		unitsPower += GetUnitPower(unit, closestTarget, bot);
+	}
+
+	return unitsPower;
+}
+
+float Util::GetUnitsPower(const std::vector<Unit> & units, const std::vector<Unit> & targets, CCBot& bot)
+{
+	float unitsPower = 0;
+	sc2::Units sc2Targets;
+	CCUnitsToSc2Units(targets, sc2Targets);
+
+	for (auto & unit : units)
+	{
+		const sc2::Unit* closestTarget = CalcClosestUnit(unit.getUnitPtr(), sc2Targets);
+		unitsPower += GetUnitPower(unit, Unit(closestTarget, bot), bot);
+	}
+
+	return unitsPower;
+}
+
+float Util::GetUnitPower(const sc2::Unit* unit, const sc2::Unit* closestUnit, CCBot& bot)
+{
+	return GetUnitPower(Unit(unit, bot), Unit(closestUnit, bot), bot);
+}
+
+float Util::GetUnitPower(const Unit &unit, const Unit& closestUnit, CCBot& bot)
+{
+	float unitRange = unit.getType().getAttackRange();
+	bool isRanged = unitRange >= 1.5f;
+
+	///////// HEALTH
+	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.15f);
+
+	///////// DPS
+	if (closestUnit.isValid())
+		unitPower *= Util::GetDpsForTarget(unit.getUnitPtr(), closestUnit.getUnitPtr(), bot);
+	else
+		unitPower *= Util::GetDps(unit.getUnitPtr(), bot);
+
+	///////// RANGE
+	if (isRanged)
+		unitPower *= 3; //ranged bonus (+200%)
+
+	///////// ARMOR
+	unitPower *= 1 + Util::GetArmor(unit.getUnitPtr(), bot) * 0.1f;   //armor bonus (+10% per armor)
+
+	///////// SPLASH DAMAGE
+	//TODO bonus for splash damage
+
+	///////// DISTANCE
+	if (closestUnit.isValid())
+	{
+		float distance = Util::Dist(unit.getPosition(), closestUnit.getPosition());
+		if (unitRange + 1 < distance)   //if the unit can't reach the closest unit (with a small buffer)
+		{
+			distance -= unitRange + 1;
+			float distancePenalty = unit.getType().isBuilding() ? 0.9f : 0.95f;
+			distancePenalty = pow(distancePenalty, distance);
+			unitPower *= distancePenalty;	//penalty for distance (very fast for building but slow for units)
+		}
+	}
+
+	///////// TERRAIN
+	/*if (averageSquadHeight > 0)
+	{
+	float unitHeight = m_bot.Map().terrainHeight(unit.getTilePosition().x, unit.getTilePosition().y);
+	if (unitHeight > averageSquadHeight + 1)
+	{
+	unitPower *= 1.25f;  //height bonus (+25%)
+	}
+	else if (unitHeight < averageSquadHeight + 1)
+	{
+	unitPower *= 0.75f; //height penalty (-25%)
+	}
+	}*/
+
+	if (bot.Config().DrawUnitPowerInfo)
+		bot.Map().drawText(unit.getPosition(), "Power: " + std::to_string(unitPower));
+
+	return unitPower;
 }
 
 void Util::Normalize(sc2::Point2D& point)

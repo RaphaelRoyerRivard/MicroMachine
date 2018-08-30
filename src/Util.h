@@ -16,6 +16,9 @@ namespace Util
         bool operator()(const sc2::Unit * unit, const sc2::ObservationInterface*);
     };
 
+	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
+	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);
+
     float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
     float GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
     float GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot);
@@ -31,7 +34,11 @@ namespace Util
     std::string     GetStringFromRace(const sc2::Race & race);
     sc2::Race       GetRaceFromString(const std::string & race);
     sc2::Point2D    CalcCenter(const std::vector<const sc2::Unit *> & units);
-    Unit            CalcClosestUnit(const Unit & unit, const std::vector<Unit> & targets);
+	const sc2::Unit* CalcClosestUnit(const sc2::Unit* unit, const sc2::Units & targets);
+	float           GetUnitsPower(const std::vector<Unit> & units, const std::vector<Unit> & targets, CCBot& bot);
+	float GetUnitsPower(const sc2::Units & units, const sc2::Units & targets, CCBot& bot);
+	float GetUnitPower(const sc2::Unit* unit, const sc2::Unit* closestUnit, CCBot& bot);
+	float			GetUnitPower(const Unit &unit, const Unit& closestUnit, CCBot& m_bot);
     float           GetNorm(sc2::Point2D vector);
     void            Normalize(sc2::Point2D& point);
     sc2::Point2D    Normalized(const sc2::Point2D& point);

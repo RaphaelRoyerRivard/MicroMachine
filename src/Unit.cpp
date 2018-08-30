@@ -319,11 +319,11 @@ void Unit::move(const CCTilePosition & targetPosition) const
 
 void Unit::rightClick(const Unit & target) const
 {
-    BOT_ASSERT(isValid(), "Unit is not valid");
+	BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API
-    m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::SMART, target.getUnitPtr());
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::SMART, target.getUnitPtr());
 #else
-    m_unit->rightClick(target.getUnitPtr());
+	m_unit->rightClick(target.getUnitPtr());
 #endif
 }
 

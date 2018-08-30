@@ -22,8 +22,8 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
-        "EnemyRace"                 : "Terran",
-        "MapFile"                   : "CatalystLE.SC2Map",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "InterloperLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -37,7 +37,6 @@
         "ClosestEnemy"              : true,
         "WeakestEnemy"              : false,
         "HighestPriority"           : true,
-
         "KiteWithRangedUnits"       : true,
         "MaxTargetDistance"         : 20,
         "MaxWorkerRepairDistance"   : 20,
@@ -85,8 +84,8 @@
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
-        "DrawHarassInfo"            : false,
-        "DrawMemoryInfo"            : false
+        "DrawHarassInfo"            : true,
+        "DrawMemoryInfo"            : true
     },
     
     "Modules" :
@@ -167,10 +166,10 @@
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
-            "Terran_ReaperHarass2"     : 
+            "Terran_Hellion"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "Refinery", "SCV", "SCV", "Barracks", "SCV", "SCV", "Barracks"],
+                "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "Barracks", "SCV", "SupplyDepot", "SCV", "SCV", "SCV", "Factory"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Reaper"], ">=", [ 1 ] ]
             },
@@ -191,6 +190,7 @@
 										"SupplyDepot", 
 										"Reaper",
 										"SCV", 
+                                        "SupplyDepot", 
 										"Refinery", 
 										"SCV",
 										"Reaper",
