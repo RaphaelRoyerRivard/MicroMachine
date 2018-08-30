@@ -70,7 +70,7 @@
     "Debug" :
     {
         "DrawGameInfo"              : false, 
-        "DrawProductionInfo"        : true, 
+        "DrawProductionInfo"        : false, 
         "DrawBaseLocationInfo"      : false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
@@ -80,7 +80,7 @@
         "DrawUnitTargetInfo"        : false,
         "DrawLastSeenTileInfo"      : false,
         "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : true,
+        "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,

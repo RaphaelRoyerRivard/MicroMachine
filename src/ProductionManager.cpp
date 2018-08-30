@@ -129,24 +129,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
 	}
 
-	if (m_bot.Workers().getNumWorkers() < m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() * 23)
-	{
-		auto workerType = Util::GetWorkerType(playerRace, m_bot);
-		const auto metaTypeWorker = MetaType(workerType, m_bot);
-		if (!m_queue.contains(metaTypeWorker))
-		{
-			m_queue.queueItem(BuildOrderItem(metaTypeWorker, 1, false));
-		}
-	}
-
 	if (playerRace == sc2::Race::Terran)
 	{
 		//Continiously build marines
-		const auto metaTypeMarine = MetaType("Marine", m_bot);
+		/*const auto metaTypeMarine = MetaType("Marine", m_bot);
 		if (!m_queue.contains(metaTypeMarine) && getFreeMinerals() > metaTypeMarine.getUnitType().mineralPrice() * 2)
 		{
 			m_queue.queueAsLowestPriority(metaTypeMarine, false);
-		}
+		}*/
 
 		/*const auto metaTypeMarauder = MetaType("Marauder", m_bot);
 		if (!m_queue.contains(metaTypeMarauder))
@@ -154,9 +144,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			m_queue.queueAsLowestPriority(metaTypeMarauder, false);
 		}*/
 
+		const auto metaTypeOrbitalCommand = MetaType("OrbitalCommand", m_bot);
+		std::vector<Unit> commandcenters = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
+		if(!commandcenters.empty() && !m_queue.contains(metaTypeOrbitalCommand))
+		{
+			m_queue.queueAsHighestPriority(metaTypeOrbitalCommand, false);
+		}
+
 		//Build additionnal barracks
 		const auto metaTypeBarrack = MetaType("Barracks", m_bot);
-		if (!m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
+		std::vector<Unit> barracks = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+		if (barracks.size() < (6 * commandcenters.size()) && !m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
 		{
 			m_queue.queueAsLowestPriority(metaTypeBarrack, false);
 		}
@@ -165,6 +163,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		if (!m_queue.contains(metaTypeReaper))
 		{
 			m_queue.queueAsLowestPriority(metaTypeReaper, false);
+		}
+	}
+
+	//has to stay below the Orbital Command upgrade
+	if (m_bot.Workers().getNumWorkers() < m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() * 23)
+	{
+		auto workerType = Util::GetWorkerType(playerRace, m_bot);
+		const auto metaTypeWorker = MetaType(workerType, m_bot);
+		if (!m_queue.contains(metaTypeWorker))
+		{
+			m_queue.queueItem(BuildOrderItem(metaTypeWorker, 1, false));
 		}
 	}
 }
