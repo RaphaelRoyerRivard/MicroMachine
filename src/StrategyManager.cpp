@@ -47,6 +47,12 @@ const Strategy & StrategyManager::getCurrentStrategy() const
     return (*strategy).second;
 }
 
+const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
+{
+	//TODO Add all IF to check which strategy we want to use.
+	return StrategyPostBuildOrder::TERRAN_REAPER;
+}
+
 const BuildOrder & StrategyManager::getOpeningBookBuildOrder() const
 {
     return getCurrentStrategy().m_buildOrder;
