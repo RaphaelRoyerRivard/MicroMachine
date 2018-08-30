@@ -292,15 +292,15 @@ void CombatCommander::updateDefenseSquads()
 {
     // for each of our occupied regions
     const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-    for (BaseLocation myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+    for (const BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
     {
         // don't defend inside the enemy region, this will end badly when we are stealing gas or cannon rushing
-        if (&myBaseLocation == enemyBaseLocation)
+        if (myBaseLocation == enemyBaseLocation)
         {
             continue;
         }
 
-        CCPosition basePosition = myBaseLocation.getPosition();
+        CCPosition basePosition = myBaseLocation->getPosition();
 
         // start off assuming all enemy units in region are just workers
         int numDefendersPerEnemyUnit = 2; // 2 might be too much if we consider them workers...
@@ -317,7 +317,7 @@ void CombatCommander::updateDefenseSquads()
                 continue;
             }
 
-            if (myBaseLocation.containsPosition(unit.getPosition()))
+            if (myBaseLocation->containsPosition(unit.getPosition()))
             {
                 //we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
                 if (unit.getType().isWorker() && firstWorker)

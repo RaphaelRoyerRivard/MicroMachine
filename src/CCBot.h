@@ -68,7 +68,7 @@ public:
           BotConfig & Config();
           WorkerManager & Workers();
 		  BuildingManager & Buildings();
-		  BaseLocationManager Bases() const;
+    const BaseLocationManager & Bases() const;
 	const GameCommander & Commander() const;
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;

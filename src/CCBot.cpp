@@ -156,7 +156,7 @@ const StrategyManager & CCBot::Strategy() const
     return m_strategy;
 }
 
-BaseLocationManager CCBot::Bases() const
+const BaseLocationManager & CCBot::Bases() const
 {
     return m_bases;
 }
