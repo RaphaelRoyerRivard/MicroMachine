@@ -20,7 +20,6 @@ class ProductionManager
 	bool    meetsReservedResourcesWithExtra(const MetaType & type);
     bool    canMakeNow(const Unit & producer, const MetaType & type);
 	bool    canMakeSoon(const Unit & producer, const MetaType & type);
-	bool	canMake(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
     void    setBuildOrder(const BuildOrder & buildOrder);
     void    create(const Unit & producer, BuildOrderItem & item);

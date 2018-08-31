@@ -129,6 +129,92 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
 	}
 
+	if (playerRace == sc2::Race::Terran)
+	{
+		const auto metaTypeOrbitalCommand = MetaType("OrbitalCommand", m_bot);
+		std::vector<Unit> commandcenters = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
+		if(!commandcenters.empty() && !m_queue.contains(metaTypeOrbitalCommand))
+		{
+			m_queue.queueAsHighestPriority(metaTypeOrbitalCommand, false);
+		}
+
+		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
+		const int maxProductionABaseCanSupport = 6;
+		std::vector<Unit> orbitalcommands = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND);
+		std::vector<Unit> barracks = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+		std::vector<Unit> factories = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_FACTORY);
+		std::vector<Unit> starports = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_STARPORT);
+		int productionBuildings = barracks.size() + factories.size() + starports.size();
+		switch (currentStrategy)
+		{
+			case StrategyPostBuildOrder::TERRAN_REAPER :
+			{
+				const auto metaTypeBarrack = MetaType("Barracks", m_bot);
+				if (productionBuildings < (maxProductionABaseCanSupport * (commandcenters.size() + orbitalcommands.size())) && !m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
+				{
+					m_queue.queueAsLowestPriority(metaTypeBarrack, false);
+				}
+
+				const auto metaTypeReaper = MetaType("Reaper", m_bot);
+				if (!m_queue.contains(metaTypeReaper))
+				{
+					m_queue.queueAsLowestPriority(metaTypeReaper, false);
+				}
+
+				const auto metaTypeFactory = MetaType("Factory", m_bot);
+				if (factories.size() < 2 && !m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
+				{
+					m_queue.queueAsLowestPriority(metaTypeFactory, false);
+				}
+
+				const auto metaTypeHellion = MetaType("Hellion", m_bot);
+				if (!m_queue.contains(metaTypeHellion))
+				{
+					m_queue.queueAsLowestPriority(metaTypeHellion, false);
+				}
+				break;
+			}
+			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
+			{
+				const auto metaTypeFactory = MetaType("Factory", m_bot);
+				if (productionBuildings < (maxProductionABaseCanSupport * (commandcenters.size() + orbitalcommands.size())) && !m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
+				{
+					m_queue.queueAsLowestPriority(metaTypeFactory, false);
+				}
+
+				const auto metaTypeHellion = MetaType("Hellion", m_bot);
+				if (!m_queue.contains(metaTypeHellion))
+				{
+					m_queue.queueAsLowestPriority(metaTypeHellion, false);
+				}
+
+				const auto metaTypeReaper = MetaType("Reaper", m_bot);
+				if (!m_queue.contains(metaTypeReaper))
+				{
+					m_queue.queueAsLowestPriority(metaTypeReaper, false);
+				}
+				break;
+			}
+			case StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER :
+			{
+				//Continiously build marines
+				/*const auto metaTypeMarine = MetaType("Marine", m_bot);
+				if (!m_queue.contains(metaTypeMarine) && getFreeMinerals() > metaTypeMarine.getUnitType().mineralPrice() * 2)
+				{
+				m_queue.queueAsLowestPriority(metaTypeMarine, false);
+				}*/
+
+				/*const auto metaTypeMarauder = MetaType("Marauder", m_bot);
+				if (!m_queue.contains(metaTypeMarauder))
+				{
+				m_queue.queueAsLowestPriority(metaTypeMarauder, false);
+				}*/
+				break;
+			}
+		}
+	}
+
+	//has to stay below the Orbital Command upgrade
 	if (m_bot.Workers().getNumWorkers() < m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() * 23)
 	{
 		auto workerType = Util::GetWorkerType(playerRace, m_bot);
@@ -136,47 +222,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		if (!m_queue.contains(metaTypeWorker))
 		{
 			m_queue.queueItem(BuildOrderItem(metaTypeWorker, 1, false));
-		}
-	}
-
-	if (playerRace == sc2::Race::Terran)
-	{
-		//Continiously build marines
-		/*const auto metaTypeMarine = MetaType("Marine", m_bot);
-		if (!m_queue.contains(metaTypeMarine) && getFreeMinerals() > metaTypeMarine.getUnitType().mineralPrice() * 2)
-		{
-			m_queue.queueAsLowestPriority(metaTypeMarine, false);
-		}*/
-
-		/*const auto metaTypeMarauder = MetaType("Marauder", m_bot);
-		if (!m_queue.contains(metaTypeMarauder))
-		{
-			m_queue.queueAsLowestPriority(metaTypeMarauder, false);
-		}*/
-
-		//Build additionnal barracks
-		/*const auto metaTypeBarrack = MetaType("Barracks", m_bot);
-		if (!m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
-		{
-			m_queue.queueAsLowestPriority(metaTypeBarrack, false);
-		}*/
-
-		const auto metaTypeReaper = MetaType("Reaper", m_bot);
-		if (!m_queue.contains(metaTypeReaper))
-		{
-			m_queue.queueAsLowestPriority(metaTypeReaper, false);
-		}
-
-		const auto metaTypeFactory = MetaType("Factory", m_bot);
-		if (!m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
-		{
-			m_queue.queueAsLowestPriority(metaTypeFactory, false);
-		}
-
-		const auto metaTypeHellion = MetaType("Hellion", m_bot);
-		if (!m_queue.contains(metaTypeHellion))
-		{
-			m_queue.queueAsLowestPriority(metaTypeHellion, false);
 		}
 	}
 }

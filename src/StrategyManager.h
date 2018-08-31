@@ -23,6 +23,12 @@ struct Strategy
     Strategy(const std::string & name, const CCRace & race, const BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition);
 };
 
+struct StrategyPostBuildOrder {
+	const static int TERRAN_REAPER = 0;
+	const static int TERRAN_ANTI_SPEEDLING = 1;//Also plans towards mutalisk
+	const static int TERRAN_MARINE_MARAUDER = 2;
+};
+
 class StrategyManager
 {
     CCBot & m_bot;
@@ -43,6 +49,7 @@ public:
     StrategyManager(CCBot & bot);
 
     const Strategy & getCurrentStrategy() const;
+	const int & getCurrentStrategyPostBuildOrder() const;
     bool scoutConditionIsMet() const;
     bool attackConditionIsMet() const;
     void onStart();
