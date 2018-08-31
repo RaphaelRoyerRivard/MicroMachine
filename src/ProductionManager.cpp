@@ -118,6 +118,7 @@ void ProductionManager::manageBuildOrderQueue()
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
 	CCRace playerRace = m_bot.GetPlayerRace(Players::Self);
+	int bases = 0;
 
 	// build supply if we need some
 	auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
@@ -133,6 +134,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	{
 		const auto metaTypeOrbitalCommand = MetaType("OrbitalCommand", m_bot);
 		std::vector<Unit> commandcenters = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
+		std::vector<Unit> orbitalcommands = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND);
+		std::vector<Unit> barracks = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+		std::vector<Unit> factories = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_FACTORY);
+		std::vector<Unit> starports = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_STARPORT);
+		bases = commandcenters.size() + orbitalcommands.size();
+		int productionBuildings = barracks.size() + factories.size() + starports.size();
 		if(!commandcenters.empty() && !m_queue.contains(metaTypeOrbitalCommand))
 		{
 			m_queue.queueAsHighestPriority(metaTypeOrbitalCommand, false);
@@ -140,17 +147,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 		const int maxProductionABaseCanSupport = 6;
-		std::vector<Unit> orbitalcommands = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND);
-		std::vector<Unit> barracks = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
-		std::vector<Unit> factories = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_FACTORY);
-		std::vector<Unit> starports = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_STARPORT);
-		int productionBuildings = barracks.size() + factories.size() + starports.size();
 		switch (currentStrategy)
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
 			{
 				const auto metaTypeBarrack = MetaType("Barracks", m_bot);
-				if (productionBuildings < (maxProductionABaseCanSupport * (commandcenters.size() + orbitalcommands.size())) && !m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
+				if (productionBuildings < maxProductionABaseCanSupport * bases && !m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
 				{
 					m_queue.queueAsLowestPriority(metaTypeBarrack, false);
 				}
@@ -177,7 +179,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
 			{
 				const auto metaTypeFactory = MetaType("Factory", m_bot);
-				if (productionBuildings < (maxProductionABaseCanSupport * (commandcenters.size() + orbitalcommands.size())) && !m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
+				if (productionBuildings < maxProductionABaseCanSupport * bases && !m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
 				{
 					m_queue.queueAsLowestPriority(metaTypeFactory, false);
 				}
@@ -215,7 +217,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	}
 
 	//has to stay below the Orbital Command upgrade
-	if (m_bot.Workers().getNumWorkers() < m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() * 23)
+	if (m_bot.Workers().getNumWorkers() < bases * 23)
 	{
 		auto workerType = Util::GetWorkerType(playerRace, m_bot);
 		const auto metaTypeWorker = MetaType(workerType, m_bot);
