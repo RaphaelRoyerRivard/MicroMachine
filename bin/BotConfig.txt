@@ -23,7 +23,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "InterloperLE.SC2Map",
+        "MapFile"                   : "CatalystLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -69,7 +69,7 @@
     "Debug" :
     {
         "DrawGameInfo"              : false, 
-        "DrawProductionInfo"        : false, 
+        "DrawProductionInfo"        : true, 
         "DrawBaseLocationInfo"      : false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
@@ -79,13 +79,13 @@
         "DrawUnitTargetInfo"        : false,
         "DrawLastSeenTileInfo"      : false,
         "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : false,
+        "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
-        "DrawHarassInfo"            : true,
-        "DrawMemoryInfo"            : true
+        "DrawHarassInfo"            : false,
+        "DrawMemoryInfo"            : false
     },
     
     "Modules" :

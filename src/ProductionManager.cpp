@@ -118,6 +118,7 @@ void ProductionManager::manageBuildOrderQueue()
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
 	CCRace playerRace = m_bot.GetPlayerRace(Players::Self);
+	const auto metaTypeOrbitalCommand = MetaType("OrbitalCommand", m_bot);
 
 	// build supply if we need some
 	auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
@@ -131,11 +132,18 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	if (playerRace == sc2::Race::Terran)
 	{
-		const auto metaTypeOrbitalCommand = MetaType("OrbitalCommand", m_bot);
+		const auto metaTypeRefinery = MetaType("Refinery", m_bot);
 		std::vector<Unit> commandcenters = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
 		if(!commandcenters.empty() && !m_queue.contains(metaTypeOrbitalCommand))
 		{
 			m_queue.queueAsHighestPriority(metaTypeOrbitalCommand, false);
+			orbitalCommandInQueue = true;
+		}
+		if (orbitalCommandInQueue && !m_queue.contains(metaTypeOrbitalCommand))
+		{
+			m_queue.queueAsHighestPriority(metaTypeRefinery, false);
+			m_queue.queueAsHighestPriority(metaTypeRefinery, false);
+			orbitalCommandInQueue = false;
 		}
 
 		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
@@ -144,13 +152,20 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case StrategyPostBuildOrder::TERRAN_REAPER :
 			{
 				const auto metaTypeBarrack = MetaType("Barracks", m_bot);
-				const int maxProductionABaseCanSupport = 6;
+				const auto metaTypeCommandCenter = MetaType("CommandCenter", m_bot);
+				const int maxProductionABaseCanSupport = 5;
 
-				std::vector<Unit> orbitalcommands = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND);
 				std::vector<Unit> barracks = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
-				if (barracks.size() < (maxProductionABaseCanSupport * (commandcenters.size() + orbitalcommands.size())) && !m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
+				if (barracks.size() < maxProductionABaseCanSupport * m_bot.Bases().getBaseCount())
 				{
-					m_queue.queueAsLowestPriority(metaTypeBarrack, false);
+					if (!m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
+					{
+						m_queue.queueAsLowestPriority(metaTypeBarrack, false);
+					}
+				}
+				else if(!m_queue.contains(metaTypeCommandCenter))
+				{
+					m_queue.queueAsLowestPriority(metaTypeCommandCenter, false);
 				}
 
 				const auto metaTypeReaper = MetaType("Reaper", m_bot);
@@ -162,7 +177,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
 			{
+				const auto metaTypeFactory = MetaType("Factory", m_bot);
+				if (!m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
+				{
+					m_queue.queueAsLowestPriority(metaTypeFactory, false);
+				}
 
+				const auto metaTypeHellion = MetaType("Hellion", m_bot);
+				if (!m_queue.contains(metaTypeHellion))
+				{
+					m_queue.queueAsLowestPriority(metaTypeHellion, false);
+				}
 			}
 			case StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER :
 			{
@@ -184,25 +209,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	}
 
 	//has to stay below the Orbital Command upgrade
-	if (m_bot.Workers().getNumWorkers() < m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() * 23)
+	if (m_bot.Workers().getNumWorkers() < m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() * 23 
+		&& (playerRace != sc2::Race::Terran || !m_queue.contains(metaTypeOrbitalCommand)))
 	{
 		auto workerType = Util::GetWorkerType(playerRace, m_bot);
 		const auto metaTypeWorker = MetaType(workerType, m_bot);
 		if (!m_queue.contains(metaTypeWorker))
 		{
 			m_queue.queueItem(BuildOrderItem(metaTypeWorker, 1, false));
-		}
-
-		const auto metaTypeFactory = MetaType("Factory", m_bot);
-		if (!m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
-		{
-			m_queue.queueAsLowestPriority(metaTypeFactory, false);
-		}
-
-		const auto metaTypeHellion = MetaType("Hellion", m_bot);
-		if (!m_queue.contains(metaTypeHellion))
-		{
-			m_queue.queueAsLowestPriority(metaTypeHellion, false);
 		}
 	}
 }
@@ -216,10 +230,10 @@ void ProductionManager::fixBuildOrderDeadlock()
     bool hasRequired = m_bot.Data(currentItem.type).requiredUnits.empty();
     for (auto & required : m_bot.Data(currentItem.type).requiredUnits)
     {
-        if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false) > 0 || m_buildingManager.isBeingBuilt(required))
+		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false) > 0 || m_buildingManager.isBeingBuilt(required))
         {
             hasRequired = true;
-            break;
+			break;
         }
     }
 
@@ -235,7 +249,15 @@ void ProductionManager::fixBuildOrderDeadlock()
     bool hasProducer = m_bot.Data(currentItem.type).whatBuilds.empty();
     for (auto & producer : m_bot.Data(currentItem.type).whatBuilds)
     {
-        if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false) > 0 || m_buildingManager.isBeingBuilt(producer))
+		if (currentItem.type.getUnitType().isWorker())
+		{
+			if (m_bot.Bases().getBaseCount() > 0)
+			{
+				hasProducer = true;
+				break;
+			}
+		}
+        else if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false) > 0 || m_buildingManager.isBeingBuilt(producer))
         {
             hasProducer = true;
             break;
@@ -549,13 +571,13 @@ void ProductionManager::drawProductionInformation()
     std::stringstream ss;
     ss << "Production Information\n\n";
 
-    for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
+    /*for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
         if (unit.isBeingConstructed())
         {
-            //ss << sc2::UnitTypeToName(unit.unit_type) << " " << unit.build_progress << "\n";
+            ss << sc2::UnitTypeToName(unit.unit_type) << " " << unit.build_progress << "\n";
         }
-    }
+    }*/
 
     ss << m_queue.getQueueInformation();
 

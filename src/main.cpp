@@ -55,6 +55,7 @@ int main(int argc, char* argv[])
     {
         std::cerr << "Config file could not be found, and is required for starting the bot\n";
         std::cerr << "Please read the instructions and try again\n";
+		std::cin.ignore();
         exit(-1);
     }
 
@@ -94,6 +95,7 @@ int main(int argc, char* argv[])
     {
         std::cerr << "Config file has no 'Game Info' object, required for starting the bot\n";
         std::cerr << "Please read the instructions and try again\n";
+		std::cin.ignore();
         exit(-1);
     }
 
@@ -111,6 +113,7 @@ int main(int argc, char* argv[])
 	if (!coordinator.LoadSettings(argc, argv))
 	{
 		std::cout << "Unable to find or parse settings." << std::endl;
+		std::cin.ignore();
 		return 1;
 	}
 
@@ -160,7 +163,6 @@ int main(int argc, char* argv[])
     {
         coordinator.Update();
     }
-
     return 0;
 }
 

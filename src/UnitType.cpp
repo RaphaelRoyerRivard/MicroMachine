@@ -240,6 +240,11 @@ bool UnitType::isWorker() const
 #endif
 }
 
+bool UnitType::isMule() const
+{
+	return m_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MULE;
+}
+
 CCPositionType UnitType::getAttackRange() const
 {
 #ifdef SC2API

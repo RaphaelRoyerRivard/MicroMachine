@@ -30,6 +30,7 @@ public:
     const std::vector<const BaseLocation *> & getStartingBaseLocations() const;
     const std::set<const BaseLocation *> & getOccupiedBaseLocations(int player) const;
     const BaseLocation * getPlayerStartingBaseLocation(int player) const;
+	const int BaseLocationManager::getBaseCount() const;
 
 	CCTilePosition getNextExpansion(int player) const;
 	CCTilePosition getBasePosition(int player, int index) const;

@@ -21,6 +21,7 @@ class ProductionManager
     bool    canMakeNow(const Unit & producer, const MetaType & type);
 	bool    canMakeSoon(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
+	bool	orbitalCommandInQueue = true;
     void    setBuildOrder(const BuildOrder & buildOrder);
     void    create(const Unit & producer, BuildOrderItem & item);
     void    manageBuildOrderQueue();

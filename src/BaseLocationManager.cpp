@@ -340,6 +340,33 @@ const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocat
     return m_occupiedBaseLocations.at(player);
 }
 
+const int BaseLocationManager::getBaseCount() const
+{
+	int baseCount = 0;
+	switch (m_bot.GetPlayerRace(Players::Self))
+	{
+		case CCRace::Terran:
+		{
+			baseCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER).size();
+			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND).size();
+			break;
+		}
+		case CCRace::Protoss:
+		{
+			baseCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::PROTOSS_NEXUS).size();
+			break;
+		}
+		case CCRace::Zerg:
+		{
+			baseCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::ZERG_HATCHERY).size();
+			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::ZERG_LAIR).size();
+			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::ZERG_HIVE).size();
+			break;
+		}
+	}
+	return baseCount;
+}
+
 CCTilePosition BaseLocationManager::getNextExpansion(int player) const
 {
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
