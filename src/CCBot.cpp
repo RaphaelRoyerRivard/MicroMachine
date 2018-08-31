@@ -91,6 +91,7 @@ void CCBot::setUnits()
 #ifdef SC2API
     Control()->GetObservation();
 	uint32_t step = Observation()->GetGameLoop();
+	bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
     for (auto unitptr : Observation()->GetUnits())
     {
 		Unit unit(unitptr, *this);
@@ -100,8 +101,24 @@ void CCBot::setUnits()
 			continue;
 		if (unitptr->alliance == sc2::Unit::Self || unitptr->alliance == sc2::Unit::Ally)
 			m_allyUnits.insert_or_assign(unitptr->tag, unit);
-		else if(unitptr->alliance == sc2::Unit::Enemy)
+		else if (unitptr->alliance == sc2::Unit::Enemy)
+		{
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+			// If the enemy zergling was seen last frame
+			if (zergEnemy && !m_enemyHasMetabolicBoost && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
+				&& m_lastSeenUnits.find(unitptr->tag) != m_lastSeenUnits.end() && m_lastSeenUnits[unitptr->tag] == step - 1)
+			{
+				float dist = Util::Dist(unitptr->pos, m_lastSeenPosUnits[unitptr->tag]);
+				float speed = Util::getSpeedOfUnit(unitptr, *this);
+				float realSpeed = dist * 16.f;	// Magic number calculated from real values
+				if(realSpeed > speed + 1.f)
+				{
+					// This is a Wingling!!!
+					m_enemyHasMetabolicBoost = true;
+				}
+			}
+			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, unitptr->pos);
+		}
 		if(unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
         m_allUnits.push_back(Unit(unitptr, *this));
@@ -118,12 +135,13 @@ void CCBot::setUnits()
 CCRace CCBot::GetPlayerRace(int player) const
 {
 #ifdef SC2API
-    auto playerID = Observation()->GetPlayerID();
+	bool isSelf = player == Players::Self;
+    auto ourID = Observation()->GetPlayerID();
     for (auto & playerInfo : Observation()->GetGameInfo().player_info)
     {
-        if (playerInfo.player_id == playerID)
+        if ((isSelf && playerInfo.player_id == ourID) || (!isSelf && playerInfo.player_id != ourID))
         {
-            return playerInfo.race_actual;
+            return playerInfo.race_requested;
         }
     }
 

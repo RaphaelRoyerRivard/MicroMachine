@@ -18,8 +18,9 @@ const float HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE = 1.5f;
 const float HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE = 7.f;
 const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
 const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
-const int HARASS_ATTACK_FRAME_COUNT = 2;
-const int HARASS_REAPER_MOVE_FRAME_COUNT = 3;
+const int REAPER_ATTACK_FRAME_COUNT = 2;
+const int HELLION_ATTACK_FRAME_COUNT = 9;
+const int REAPER_MOVE_FRAME_COUNT = 3;
 const float HARASS_THREAT_MIN_DISTANCE_TO_TARGET = 2.f;
 const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
@@ -130,6 +131,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	// for each rangedUnit
 	for (auto rangedUnit : rangedUnits)
 	{
+		if (m_bot.Config().DrawHarassInfo)
+			m_bot.Map().drawText(rangedUnit->pos, std::to_string(rangedUnit->tag));
 		// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 		uint32_t availableFrame = nextCommandFrameForUnit.find(rangedUnit) != nextCommandFrameForUnit.end() ? nextCommandFrameForUnit[rangedUnit] : 0;
 		if (m_bot.Observation()->GetGameLoop() < availableFrame)
@@ -148,21 +151,24 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 			if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
 			{
-				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_REAPER_MOVE_FRAME_COUNT;
+				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 			}
 			continue;
 		}
 
 		// Check if unit can use KD8Charge
-		Unit harassUnit(rangedUnit, m_bot);
-		sc2::AvailableAbilities abilities = harassUnit.getAbilities();
 		bool canUseKD8Charge = false;
-		for (const auto & ability : abilities.abilities)
+		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
 		{
-			if (ability.ability_id == sc2::ABILITY_ID::EFFECT_KD8CHARGE)
+			Unit harassUnit(rangedUnit, m_bot);
+			sc2::AvailableAbilities abilities = harassUnit.getAbilities();
+			for (const auto & ability : abilities.abilities)
 			{
-				canUseKD8Charge = true;
-				break;
+				if (ability.ability_id == sc2::ABILITY_ID::EFFECT_KD8CHARGE)
+				{
+					canUseKD8Charge = true;
+					break;
+				}
 			}
 		}
 
@@ -172,6 +178,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		{
 			bool targetInAttackRange = Util::Dist(rangedUnit->pos, target->pos) <= Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 			bool inRangeOfThreat = false;
+			bool isCloseThreatFaster = false;
 			for (auto & threat : threats)
 			{
 				float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
@@ -181,14 +188,23 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				if (Util::Dist(rangedUnit->pos, threat->pos) <= threatRange + std::max(HARASS_THREAT_RANGE_BUFFER, speedDiff))
 				{
 					inRangeOfThreat = true;
-					break;
+					if (threatSpeed > rangedUnitSpeed)
+					{
+						isCloseThreatFaster = true;
+						break;
+					}
 				}
 			}
 
-			// if our unit is not in range of threat and target is in range and weapon is ready, attack target
-			if (!inRangeOfThreat && targetInAttackRange && rangedUnit->weapon_cooldown <= 0.f) {
+			// if our unit is not in range of threat (unless it is faster) and target is in range and weapon is ready, attack target
+			if ((!inRangeOfThreat || isCloseThreatFaster) && targetInAttackRange && rangedUnit->weapon_cooldown <= 0.f) {
 				Micro::SmartAttackUnit(rangedUnit, target, m_bot);
-				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_ATTACK_FRAME_COUNT;
+				int attackFrameCount = 1;
+				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+					attackFrameCount = REAPER_ATTACK_FRAME_COUNT;
+				else if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
+					attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
+				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + attackFrameCount;
 				continue;
 			}
 
@@ -231,8 +247,13 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				if(target && isTargetRanged(target))
 				{
 					RunBehaviorTree(units, threats);
-					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_ATTACK_FRAME_COUNT;
 					m_harassMode = true;
+					int attackFrameCount = 1;
+					if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+						attackFrameCount = REAPER_ATTACK_FRAME_COUNT;
+					else if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
+						attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
+					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + attackFrameCount;
 					continue;
 				}
 				m_harassMode = true;
@@ -240,7 +261,6 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		}
 
 		bool useInfluenceMap = false;
-		float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
 		bool madeAction = false;
 		CCPosition sumedFleeVec(0, 0);
 		// add normalied * 1.5 vector of potential threats
@@ -268,7 +288,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				{
 					//TODO find a group of threat
 					Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, m_bot);
-					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_ATTACK_FRAME_COUNT;
+					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_ATTACK_FRAME_COUNT;
 					madeAction = true;
 					break;
 				}
@@ -380,7 +400,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				Micro::SmartMove(rangedUnit, moveTo, m_bot);
 				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
 				{
-					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_REAPER_MOVE_FRAME_COUNT;
+					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 				}
 				continue;
 			}
@@ -392,7 +412,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		Micro::SmartMove(rangedUnit, moveTo, m_bot);
 		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
 		{
-			nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + HARASS_REAPER_MOVE_FRAME_COUNT;
+			nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 		}
 	}
 }

@@ -286,10 +286,11 @@ bool Squad::needsToRetreat()
 	if (m_order.getType() == SquadOrderTypes::Retreat && currentFrame - m_retreatStartFrame < m_minRetreatDuration)
 		return true;
 
+	float targetsPower = m_rangedManager.getTargetsPower(m_units);
+	if (targetsPower <= 0.f)
+		return false;
     float meleePower = m_meleeManager.getSquadPower();
     float rangedPower = m_rangedManager.getSquadPower();
-    //float averageHeight = calcAverageHeight();
-    float targetsPower = m_rangedManager.getTargetsPower(m_units);
 
 	//We believe we can beat a slightly more powerful army with our good micro, but if we are backing, make sure to have a bigger army
 	//than what was previously seen

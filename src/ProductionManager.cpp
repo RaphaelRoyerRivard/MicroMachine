@@ -155,11 +155,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		}*/
 
 		//Build additionnal barracks
-		const auto metaTypeBarrack = MetaType("Barracks", m_bot);
+		/*const auto metaTypeBarrack = MetaType("Barracks", m_bot);
 		if (!m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
 		{
 			m_queue.queueAsLowestPriority(metaTypeBarrack, false);
-		}
+		}*/
 
 		const auto metaTypeReaper = MetaType("Reaper", m_bot);
 		if (!m_queue.contains(metaTypeReaper))

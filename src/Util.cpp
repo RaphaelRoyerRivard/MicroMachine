@@ -463,7 +463,7 @@ float Util::getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot)
 
 	for (auto & unit : units)
 	{
-		squadSpeed += Util::GetUnitTypeDataFromUnitTypeId(unit.getAPIUnitType(), bot).movement_speed;
+		squadSpeed += getSpeedOfUnit(unit.getUnitPtr(), bot);
 	}
 
 	return squadSpeed / (float)units.size();
@@ -471,7 +471,28 @@ float Util::getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot)
 
 float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 {
-	return Util::GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed;
+	float zergBonus = 1.f;
+	if(Unit(unit, bot).getType().getRace() == CCRace::Zerg && !unit->is_burrowed && !unit->is_flying)
+	{
+		/* From https://liquipedia.net/starcraft2/Creep
+		 * All Zerg ground units move faster when traveling on Creep, with the exception of burrowed units, Drones, Broodlings, and Changelings not disguised as Zerglings. 
+		 * The increase is 30% for most units. Queens move 166.67% faster on creep, Hydralisks move 50% faster, and Spine Crawlers and Spore Crawlers move 150% faster. */
+		if(bot.Observation()->HasCreep(unit->pos))
+		{
+			if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_QUEEN)
+				zergBonus = 2.6667f;
+			else if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_HYDRALISK)
+				zergBonus = 1.5f;
+			else if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_SPINECRAWLERUPROOTED || unit->unit_type == sc2::UNIT_TYPEID::ZERG_SPORECRAWLERUPROOTED)
+				zergBonus = 2.5f;
+			else if (unit->unit_type != sc2::UNIT_TYPEID::ZERG_DRONE && unit->unit_type != sc2::UNIT_TYPEID::ZERG_BROODLING && unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELING
+				&& unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELINGMARINE && unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELINGMARINESHIELD && unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELINGZEALOT)
+				zergBonus = 1.3f;
+		}
+		if (bot.EnemyHasMetabolicBoost() && unit->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
+			zergBonus *= 1.6f;
+	}
+	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * zergBonus;
 }
 
 bool Util::IsTerran(const CCRace & race)
