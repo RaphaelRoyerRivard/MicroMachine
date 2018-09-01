@@ -134,6 +134,9 @@ void GameCommander::setCombatUnits()
 
         if (!isAssigned(unit) && unit.getType().isCombatUnit())
         {
+			if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+				continue;
+
             assignUnit(unit, m_combatUnits);
         }
     }

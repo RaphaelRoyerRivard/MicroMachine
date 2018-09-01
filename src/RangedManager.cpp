@@ -16,6 +16,8 @@
 
 const float HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE = 1.5f;
 const float HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE = 7.f;
+const float HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE = 10.f;
+const float HARASS_FRIENDLY_ATTRACTION_INTENSITY = 1.5f;
 const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
 const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
 const int REAPER_ATTACK_FRAME_COUNT = 2;
@@ -131,6 +133,9 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	// for each rangedUnit
 	for (auto rangedUnit : rangedUnits)
 	{
+		bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
+		bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
+
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawText(rangedUnit->pos, std::to_string(rangedUnit->tag));
 		// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
@@ -149,7 +154,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			else
 				Micro::SmartAttackMove(rangedUnit, m_order.getPosition(), m_bot);
 
-			if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+			if (isReaper)
 			{
 				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 			}
@@ -158,7 +163,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 		// Check if unit can use KD8Charge
 		bool canUseKD8Charge = false;
-		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+		if (isReaper)
 		{
 			Unit harassUnit(rangedUnit, m_bot);
 			sc2::AvailableAbilities abilities = harassUnit.getAbilities();
@@ -200,9 +205,9 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if ((!inRangeOfThreat || isCloseThreatFaster) && targetInAttackRange && rangedUnit->weapon_cooldown <= 0.f) {
 				Micro::SmartAttackUnit(rangedUnit, target, m_bot);
 				int attackFrameCount = 1;
-				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+				if (isReaper)
 					attackFrameCount = REAPER_ATTACK_FRAME_COUNT;
-				else if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
+				else if (isHellion)
 					attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
 				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + attackFrameCount;
 				continue;
@@ -226,6 +231,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		if(dirVec.x != 0.f || dirVec.y != 0.f)
 			sc2::Normalize2D(dirVec);
 
+		// Check if our units are powerful enough to exchange fire with the enemies
 		if (!threats.empty())
 		{
 			sc2::Units closeUnits;
@@ -249,9 +255,9 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 					RunBehaviorTree(units, threats);
 					m_harassMode = true;
 					int attackFrameCount = 1;
-					if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+					if (isReaper)
 						attackFrameCount = REAPER_ATTACK_FRAME_COUNT;
-					else if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
+					else if (isHellion)
 						attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
 					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + attackFrameCount;
 					continue;
@@ -313,6 +319,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 		if(!useInfluenceMap)
 		{
+			// Sum up the threats vector with the direction vector
 			if (!threats.empty())
 			{
 				// We normalize the threats vector only of if is higher than the max repulsion intensity
@@ -325,31 +332,65 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				dirVec += sumedFleeVec;
 			}
 
-			// Check if there is a friendly harass unit close to this one
-			float distToClosestFriendlyUnit = HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
-			CCPosition closestFriendlyUnitPosition;
-			for (auto friendlyRangedUnit : rangedUnits)
+			// We repulse the Reaper from our closest harass unit
+			if (isReaper)
 			{
-				if (friendlyRangedUnit->tag != rangedUnit->tag)
+				// Check if there is a friendly harass unit close to this one
+				float distToClosestFriendlyUnit = HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
+				CCPosition closestFriendlyUnitPosition;
+				for (auto friendlyRangedUnit : rangedUnits)
 				{
-					float dist = Util::Dist(rangedUnit->pos, friendlyRangedUnit->pos);
-					if (dist < distToClosestFriendlyUnit)
+					if (friendlyRangedUnit->tag != rangedUnit->tag)
 					{
-						distToClosestFriendlyUnit = dist;
-						closestFriendlyUnitPosition = friendlyRangedUnit->pos;
+						float dist = Util::Dist(rangedUnit->pos, friendlyRangedUnit->pos);
+						if (dist < distToClosestFriendlyUnit)
+						{
+							distToClosestFriendlyUnit = dist;
+							closestFriendlyUnitPosition = friendlyRangedUnit->pos;
+						}
 					}
 				}
+				// Add repulsion vector if there is a friendly harass unit close enough
+				if (distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
+				{
+					CCPosition fleeVec = rangedUnit->pos - closestFriendlyUnitPosition;
+					if (m_bot.Config().DrawHarassInfo)
+						m_bot.Map().drawLine(rangedUnit->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
+					sc2::Normalize2D(fleeVec);
+					// The repulsion intensity is linearly interpolated
+					float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - distToClosestFriendlyUnit) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
+					dirVec += fleeVec * intensity;
+				}
 			}
-			// Add repulsion vector if there is a friendly harass unit close enough
-			if (distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
+			// We attract the Hellion towards our closest other Hellion
+			else if(isHellion)
 			{
-				CCPosition fleeVec = rangedUnit->pos - closestFriendlyUnitPosition;
-				if(m_bot.Config().DrawHarassInfo)
-					m_bot.Map().drawLine(rangedUnit->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
-				sc2::Normalize2D(fleeVec);
-				// The repulsion intensity is linearly interpolated
-				float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - distToClosestFriendlyUnit) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
-				dirVec += fleeVec * intensity;
+				// Check if there is a friendly harass unit close to this one
+				float distToClosestFriendlyHellion = HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
+				CCPosition closestFriendlyHellionPosition;
+				for (auto friendlyRangedUnit : rangedUnits)
+				{
+					if (friendlyRangedUnit->tag != rangedUnit->tag && friendlyRangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
+					{
+						float dist = Util::Dist(rangedUnit->pos, friendlyRangedUnit->pos);
+						if (dist < distToClosestFriendlyHellion)
+						{
+							distToClosestFriendlyHellion = dist;
+							closestFriendlyHellionPosition = friendlyRangedUnit->pos;
+						}
+					}
+				}
+				// Add attraction vector if there is a friendly harass unit close enough
+				if (distToClosestFriendlyHellion != HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE)
+				{
+					CCPosition attractionVector = closestFriendlyHellionPosition - rangedUnit->pos;
+					if (m_bot.Config().DrawHarassInfo)
+						m_bot.Map().drawLine(rangedUnit->pos, closestFriendlyHellionPosition, sc2::Colors::Green);
+					sc2::Normalize2D(attractionVector);
+					// The repulsion intensity is linearly interpolated (stronger the farthest to lower the closest)
+					float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToClosestFriendlyHellion / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
+					dirVec += attractionVector * intensity;
+				}
 			}
 
 			// We move only if the vector is long enough
@@ -398,7 +439,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if(!useInfluenceMap)
 			{
 				Micro::SmartMove(rangedUnit, moveTo, m_bot);
-				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+				if (isReaper)
 				{
 					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 				}
@@ -410,7 +451,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		// Use influence map to find safest path
 		CCPosition moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
 		Micro::SmartMove(rangedUnit, moveTo, m_bot);
-		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+		if (isReaper)
 		{
 			nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 		}
@@ -783,7 +824,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 	if (unitDps == 0.f)	//Do not attack targets on which we would do no damage
 		return 0.f;
 
-	if (target->health_max == 1.f)	//Otherwise we will try to attack KD8Charges
+	if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 		return 0.f;
 
 	float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized

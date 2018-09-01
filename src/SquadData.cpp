@@ -171,7 +171,7 @@ bool SquadData::canAssignUnitToSquad(const Unit & unit, const Squad & newSquad) 
 		return false;
 
     // make sure strictly less than so we don't reassign to the same newSquad etc
-    bool canAssign = !currentSquad || currentSquad->getPriority() < newSquad.getPriority() || (currentSquad->getPriority() == newSquad.getPriority() && !newSquad.isEmpty());
+    bool canAssign = !currentSquad || currentSquad->getPriority() < newSquad.getPriority();
     if (!canAssign)
         return false;
 
