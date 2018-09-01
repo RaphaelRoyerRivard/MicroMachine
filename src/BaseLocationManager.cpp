@@ -192,7 +192,7 @@ void BaseLocationManager::onFrame()
     for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
         // we only care about buildings on the ground
-        if (!unit.getType().isBuilding() || unit.isFlying())
+        if (!unit.getType().isBuilding() || unit.isFlying() || !unit.getType().isResourceDepot())
         {
             continue;
         }
@@ -338,6 +338,33 @@ const BaseLocation * BaseLocationManager::getPlayerStartingBaseLocation(int play
 const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocations(int player) const
 {
     return m_occupiedBaseLocations.at(player);
+}
+
+int BaseLocationManager::getBaseCount(int player) const
+{
+	int baseCount = 0;
+	switch (m_bot.GetPlayerRace(Players::Self))
+	{
+		case CCRace::Terran:
+		{
+			baseCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, true).size();
+			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, true).size();
+			break;
+		}
+		case CCRace::Protoss:
+		{
+			baseCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, true).size();
+			break;
+		}
+		case CCRace::Zerg:
+		{
+			baseCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::ZERG_HATCHERY, true).size();
+			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::ZERG_LAIR, true).size();
+			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::ZERG_HIVE, true).size();
+			break;
+		}
+	}
+	return baseCount;
 }
 
 CCTilePosition BaseLocationManager::getNextExpansion(int player) const

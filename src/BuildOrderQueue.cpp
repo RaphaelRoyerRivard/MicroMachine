@@ -38,6 +38,21 @@ BuildOrderItem BuildOrderQueue::getNextHighestPriorityItem()
     return m_queue[m_queue.size() - 1 - m_numSkippedItems];
 }
 
+int BuildOrderQueue::getCountOfType(const MetaType & type)
+{
+	int count = 0;
+	for (auto item : m_queue)
+	{
+		auto a = item.type.getName();
+		auto b = type.getName();
+		if (item.type.getUnitType() == type.getUnitType())
+		{
+			count++;
+		}
+	}
+	return count;
+}
+
 void BuildOrderQueue::skipItem()
 {
     // make sure we can skip

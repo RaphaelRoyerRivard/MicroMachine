@@ -41,7 +41,7 @@ public:
     void                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
     void                drawBuildingInformation();
     CCTilePosition      getBuildingLocation(const Building & b);
-	std::vector<Unit>	BuildingManager::getAllBuildingOfType(const sc2::UNIT_TYPEID & b);
+	std::vector<Unit>	BuildingManager::getAllBuildingOfType(const sc2::UNIT_TYPEID & b, bool includeUnderConstruction);
 
     int                 getReservedMinerals();
     int                 getReservedGas();

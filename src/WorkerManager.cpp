@@ -315,6 +315,10 @@ void WorkerManager::drawWorkerInformation()
 bool WorkerManager::isFree(Unit worker) const
 {
 	int job = m_workerData.getWorkerJob(worker);
+	if (worker.getType().isMule())
+	{
+		return false;
+	}
     return job == WorkerJobs::Minerals || job == WorkerJobs::Idle || job == WorkerJobs::None;
 }
 

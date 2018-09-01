@@ -14,6 +14,7 @@ class ProductionManager
     BuildingManager m_buildingManager;
     BuildOrderQueue m_queue;
 	bool m_initialBuildOrderFinished;
+	bool m_ccShouldBeInQueue = false;
 
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
     bool    meetsReservedResources(const MetaType & type);
