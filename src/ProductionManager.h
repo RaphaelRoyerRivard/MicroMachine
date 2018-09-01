@@ -43,5 +43,6 @@ public:
     void    drawProductionInformation();
 
     Unit getProducer(const MetaType & type, CCPosition closestTo = CCPosition(0, 0)) const;
+	int getProductionBuildingsCount() const;
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
 };

@@ -118,7 +118,7 @@ void ProductionManager::manageBuildOrderQueue()
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
 	CCRace playerRace = m_bot.GetPlayerRace(Players::Self);
-	const auto productionBuildingCount = getUnitTrainingBuildings(playerRace).size();
+	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self);
 
 	const auto metaTypeOrbitalCommand = MetaType("OrbitalCommand", m_bot);
@@ -137,9 +137,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	{
 		const auto metaTypeCommandCenter = MetaType("CommandCenter", m_bot);
 
-		std::vector<Unit> barracks = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS, true);
-		std::vector<Unit> factories = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_FACTORY, true);
-
+		// Logic for building Orbital Commands and Refineries
 		int ccsInQueue = m_queue.getCountOfType(metaTypeCommandCenter);
 		if(m_ccShouldBeInQueue && ccsInQueue == 0 && !m_bot.Buildings().isBeingBuilt(metaTypeCommandCenter.getUnitType()) && !m_queue.contains(metaTypeOrbitalCommand))
 		{
@@ -151,12 +149,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			m_ccShouldBeInQueue = false;
 		}
 
+		// Logic for building Command Centers
 		if (!m_ccShouldBeInQueue && !m_queue.contains(metaTypeCommandCenter) && !m_queue.contains(metaTypeOrbitalCommand))
 		{
 			m_queue.queueAsLowestPriority(metaTypeCommandCenter, false);
 			m_ccShouldBeInQueue = true;
 		}
 
+		// Strategy base logic
 		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 		const int maxProductionABaseCanSupport = 5;
 		switch (currentStrategy)
@@ -171,8 +171,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueAsLowestPriority(metaTypeBarrack, false);
 					}
 
+					std::vector<Unit> factories = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_FACTORY, true);
+					std::vector<Unit> flyingFactories = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING, false);
 					const auto metaTypeFactory = MetaType("Factory", m_bot);
-					if (factories.size() < 2 && !m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
+					if (factories.size() + flyingFactories.size() < 2 * baseCount && !m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
 					{
 						m_queue.queueAsLowestPriority(metaTypeFactory, false);
 					}
@@ -371,6 +373,36 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
     }
 
     return getClosestUnitToPosition(candidateProducers, closestTo);
+}
+
+int ProductionManager::getProductionBuildingsCount() const
+{
+	int productionBuildingCount = 0;
+	switch (m_bot.GetPlayerRace(Players::Self))
+	{
+		case CCRace::Terran:
+		{
+			productionBuildingCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS, true).size();
+			productionBuildingCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, false).size();
+			productionBuildingCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_FACTORY, true).size();
+			productionBuildingCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING, false).size();
+			productionBuildingCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_STARPORT, true).size();
+			productionBuildingCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING, false).size();
+			productionBuildingCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_GHOSTACADEMY, true).size();
+			break;
+		}
+		case CCRace::Protoss:
+		{
+			//TODO
+			break;
+		}
+		case CCRace::Zerg:
+		{
+			//TODO
+			break;
+		}
+	}
+	return productionBuildingCount;
 }
 
 std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)

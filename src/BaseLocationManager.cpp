@@ -349,6 +349,7 @@ int BaseLocationManager::getBaseCount(int player) const
 		{
 			baseCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, true).size();
 			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, true).size();
+			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS, true).size();
 			break;
 		}
 		case CCRace::Protoss:
