@@ -118,6 +118,7 @@ void ProductionManager::manageBuildOrderQueue()
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
 	CCRace playerRace = m_bot.GetPlayerRace(Players::Self);
+	const auto metaTypeCommandCenter = MetaType("CommandCenter", m_bot);
 	const auto metaTypeOrbitalCommand = MetaType("OrbitalCommand", m_bot);
 
 	// build supply if we need some
@@ -132,18 +133,15 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	if (playerRace == sc2::Race::Terran)
 	{
-		const auto metaTypeRefinery = MetaType("Refinery", m_bot);
-		std::vector<Unit> commandcenters = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
-		if(!commandcenters.empty() && !m_queue.contains(metaTypeOrbitalCommand))
+		int ccsInQueue = m_queue.getCountOfType(metaTypeCommandCenter);
+		if(ccShouldBeInQueue && ccsInQueue == 0 && !m_bot.Buildings().isBeingBuilt(metaTypeCommandCenter.getUnitType()) && !m_queue.contains(metaTypeOrbitalCommand))
 		{
 			m_queue.queueAsHighestPriority(metaTypeOrbitalCommand, false);
-			orbitalCommandInQueue = true;
-		}
-		if (orbitalCommandInQueue && !m_queue.contains(metaTypeOrbitalCommand))
-		{
-			m_queue.queueAsHighestPriority(metaTypeRefinery, false);
-			m_queue.queueAsHighestPriority(metaTypeRefinery, false);
-			orbitalCommandInQueue = false;
+
+			const auto metaTypeRefinery = MetaType("Refinery", m_bot);
+			m_queue.queueAsLowestPriority(metaTypeRefinery, false);
+			m_queue.queueAsLowestPriority(metaTypeRefinery, false);
+			ccShouldBeInQueue = false;
 		}
 
 		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
@@ -152,20 +150,22 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case StrategyPostBuildOrder::TERRAN_REAPER :
 			{
 				const auto metaTypeBarrack = MetaType("Barracks", m_bot);
-				const auto metaTypeCommandCenter = MetaType("CommandCenter", m_bot);
-				const int maxProductionABaseCanSupport = 5;
+				const int maxProductionABaseCanSupport = 3;
 
-				std::vector<Unit> barracks = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
-				if (barracks.size() < maxProductionABaseCanSupport * m_bot.Bases().getBaseCount())
+				std::vector<Unit> barracks = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS, true);
+				auto basecount = m_bot.Bases().getBaseCount(Players::Self);
+				auto barrackcount = barracks.size();
+				if (barracks.size() < maxProductionABaseCanSupport * m_bot.Bases().getBaseCount(Players::Self))
 				{
 					if (!m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
 					{
 						m_queue.queueAsLowestPriority(metaTypeBarrack, false);
 					}
 				}
-				else if(!m_queue.contains(metaTypeCommandCenter))
+				else if(!ccShouldBeInQueue && !m_queue.contains(metaTypeCommandCenter) && !m_queue.contains(metaTypeOrbitalCommand))
 				{
 					m_queue.queueAsLowestPriority(metaTypeCommandCenter, false);
+					ccShouldBeInQueue = true;
 				}
 
 				const auto metaTypeReaper = MetaType("Reaper", m_bot);
@@ -251,7 +251,7 @@ void ProductionManager::fixBuildOrderDeadlock()
     {
 		if (currentItem.type.getUnitType().isWorker())
 		{
-			if (m_bot.Bases().getBaseCount() > 0)
+			if (m_bot.Bases().getBaseCount(Players::Self) > 0)
 			{
 				hasProducer = true;
 				break;

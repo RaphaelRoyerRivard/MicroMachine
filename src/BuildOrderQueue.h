@@ -43,6 +43,7 @@ public:
     bool isEmpty();
     BuildOrderItem getHighestPriorityItem();	// returns the highest priority item
     BuildOrderItem getNextHighestPriorityItem();	// returns the highest priority item
+	int BuildOrderQueue::getCountOfType(const MetaType & type);	// returns the number of items of a type in the queue
 
     bool canSkipItem();
     std::string getQueueInformation() const;

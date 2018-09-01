@@ -192,7 +192,7 @@ void BaseLocationManager::onFrame()
     for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
         // we only care about buildings on the ground
-        if (!unit.getType().isBuilding() || unit.isFlying())
+        if (!unit.getType().isBuilding() || unit.isFlying() || !unit.getType().isResourceDepot())
         {
             continue;
         }
@@ -340,9 +340,9 @@ const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocat
     return m_occupiedBaseLocations.at(player);
 }
 
-const int BaseLocationManager::getBaseCount() const
+const int BaseLocationManager::getBaseCount(int player) const
 {
-	int baseCount = 0;
+	/*int baseCount = 0;
 	switch (m_bot.GetPlayerRace(Players::Self))
 	{
 		case CCRace::Terran:
@@ -364,7 +364,8 @@ const int BaseLocationManager::getBaseCount() const
 			break;
 		}
 	}
-	return baseCount;
+	return baseCount;*/
+	return getOccupiedBaseLocations(player).size();
 }
 
 CCTilePosition BaseLocationManager::getNextExpansion(int player) const
