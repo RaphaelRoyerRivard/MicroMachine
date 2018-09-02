@@ -451,9 +451,9 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
     return m_buildingPlacer.getBuildLocationNear(b, m_bot.Config().BuildingSpacing);
 }
 
-std::vector<Unit> BuildingManager::getAllBuildingOfType(const sc2::UNIT_TYPEID & b, bool includeUnderConstruction)
+int BuildingManager::getBuildingCountOfType(const sc2::UNIT_TYPEID & b) const
 {
-	std::vector<Unit> buildings;
+	/*std::vector<Unit> buildings;
 	for (auto building : m_baseBuildings)
 	{
 		if (building.getAPIUnitType() == b)
@@ -470,8 +470,16 @@ std::vector<Unit> BuildingManager::getAllBuildingOfType(const sc2::UNIT_TYPEID &
 				buildings.push_back(building.buildingUnit);
 			}
 		}
+	}*/
+	int count = 0;
+	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))
+	{
+		if (building.getAPIUnitType() == b)
+		{
+			count++;
+		}
 	}
-	return buildings;
+	return count;
 }
 
 void BuildingManager::removeBuildings(const std::vector<Building> & toRemove)

@@ -347,21 +347,21 @@ int BaseLocationManager::getBaseCount(int player) const
 	{
 		case CCRace::Terran:
 		{
-			baseCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, true).size();
-			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, true).size();
-			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS, true).size();
+			baseCount = m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
+			baseCount += m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND);
+			baseCount += m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS);
 			break;
 		}
 		case CCRace::Protoss:
 		{
-			baseCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, true).size();
+			baseCount = m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::PROTOSS_NEXUS);
 			break;
 		}
 		case CCRace::Zerg:
 		{
-			baseCount = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::ZERG_HATCHERY, true).size();
-			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::ZERG_LAIR, true).size();
-			baseCount += m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::ZERG_HIVE, true).size();
+			baseCount = m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::ZERG_HATCHERY);
+			baseCount += m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::ZERG_LAIR);
+			baseCount += m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::ZERG_HIVE);
 			break;
 		}
 	}
