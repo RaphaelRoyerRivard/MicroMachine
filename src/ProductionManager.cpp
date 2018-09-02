@@ -4,7 +4,6 @@
 
 ProductionManager::ProductionManager(CCBot & bot)
     : m_bot             (bot)
-    , m_buildingManager (bot)
     , m_queue           (bot)
 	, m_initialBuildOrderFinished(false)
 {
@@ -24,7 +23,6 @@ void ProductionManager::setBuildOrder(const BuildOrder & buildOrder)
 
 void ProductionManager::onStart()
 {
-    m_buildingManager.onStart();
     setBuildOrder(m_bot.Strategy().getOpeningBookBuildOrder());
 }
 
@@ -40,7 +38,6 @@ void ProductionManager::onFrame()
     // TODO: detect if there's a build order deadlock once per second
     // TODO: triggers for game things like cloaked units etc
 
-    m_buildingManager.onFrame();
     drawProductionInformation();
 }
 
@@ -84,8 +81,10 @@ void ProductionManager::manageBuildOrderQueue()
             // don't actually loop around in here
             break;
         }
-		else if (producer.isValid() && m_bot.Data(currentItem.type).isBuilding && !currentItem.type.getUnitType().isMorphedBuilding() && canMakeSoon(producer, currentItem.type))
-		{//is a building (doesn't include addons) and we can make it soon
+
+		// is a building (doesn't include addons) and we can make it soon
+    	if (producer.isValid() && m_bot.Data(currentItem.type).isBuilding && !currentItem.type.getUnitType().isMorphedBuilding() && canMakeSoon(producer, currentItem.type))
+		{
 			Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));			
 			CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
 			Unit worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition{ static_cast<float>(targetLocation.x), static_cast<float>(targetLocation.y) });
@@ -98,8 +97,9 @@ void ProductionManager::manageBuildOrderQueue()
 			// don't actually loop around in here
 			break;
 		}
-        // otherwise, if we can skip the current item
-        else if (m_queue.canSkipItem())
+        
+    	// otherwise, if we can skip the current item
+    	if (m_queue.canSkipItem())
         {
             // skip it
             m_queue.skipItem();
@@ -128,7 +128,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	auto metaTypeSupplyProvider = MetaType(supplyProvider, m_bot);
 	if (!m_queue.contains(metaTypeSupplyProvider) && 
 		m_bot.GetCurrentSupply() > (m_bot.GetMaxSupply() - 2 * getUnitTrainingBuildings(playerRace).size()) && 
-		!m_buildingManager.isBeingBuilt(supplyProvider))
+		!m_bot.Buildings().isBeingBuilt(supplyProvider))
 	{
 		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
 	}
@@ -259,7 +259,7 @@ void ProductionManager::fixBuildOrderDeadlock()
     bool hasRequired = m_bot.Data(currentItem.type).requiredUnits.empty();
     for (auto & required : m_bot.Data(currentItem.type).requiredUnits)
     {
-		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false) > 0 || m_buildingManager.isBeingBuilt(required))
+		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false) > 0 || m_bot.Buildings().isBeingBuilt(required))
         {
             hasRequired = true;
 			break;
@@ -286,7 +286,7 @@ void ProductionManager::fixBuildOrderDeadlock()
 				break;
 			}
 		}
-        else if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false) > 0 || m_buildingManager.isBeingBuilt(producer))
+        else if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false) > 0 || m_bot.Buildings().isBeingBuilt(producer))
         {
             hasProducer = true;
             break;
@@ -315,7 +315,7 @@ void ProductionManager::fixBuildOrderDeadlock()
 
     // build supply if we need some
     auto supplyProvider = Util::GetSupplyProvider(m_bot.GetPlayerRace(Players::Self), m_bot);
-    if (m_bot.Data(currentItem.type).supplyCost > (m_bot.GetMaxSupply() - m_bot.GetCurrentSupply()) && !m_buildingManager.isBeingBuilt(supplyProvider))
+    if (m_bot.Data(currentItem.type).supplyCost > (m_bot.GetMaxSupply() - m_bot.GetCurrentSupply()) && !m_bot.Buildings().isBeingBuilt(supplyProvider))
     {
         m_queue.queueAsHighestPriority(MetaType(supplyProvider, m_bot), true);
     }
@@ -487,7 +487,7 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item)
         }
         else
         {
-            m_buildingManager.addBuildingTask(item.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
+            m_bot.Buildings().addBuildingTask(item.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
         }
     }
     // if we're dealing with a non-building unit
@@ -574,12 +574,12 @@ bool ProductionManager::detectBuildOrderDeadlock()
 
 int ProductionManager::getFreeMinerals()
 {
-    return m_bot.GetMinerals() - m_buildingManager.getReservedMinerals();
+    return m_bot.GetMinerals() - m_bot.Buildings().getReservedMinerals();
 }
 
 int ProductionManager::getFreeGas()
 {
-    return m_bot.GetGas() - m_buildingManager.getReservedGas();
+    return m_bot.GetGas() - m_bot.Buildings().getReservedGas();
 }
 
 int ProductionManager::getExtraMinerals()

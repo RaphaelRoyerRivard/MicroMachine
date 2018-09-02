@@ -11,7 +11,6 @@ class ProductionManager
 {
     CCBot &       m_bot;
 
-    BuildingManager m_buildingManager;
     BuildOrderQueue m_queue;
 	bool m_initialBuildOrderFinished;
 	bool m_ccShouldBeInQueue = false;
