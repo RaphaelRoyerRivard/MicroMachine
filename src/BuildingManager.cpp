@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "Common.h"
 #include "BuildingManager.h"
 #include "CCBot.h"
@@ -44,6 +45,20 @@ bool BuildingManager::isBeingBuilt(UnitType type)
     }
 
     return false;
+}
+
+int BuildingManager::countBeingBuilt(UnitType type)
+{
+	int count = 0;
+	for (auto & b : m_buildings)
+	{
+		if (b.type == type)
+		{
+			count++;
+		}
+	}
+
+	return count;
 }
 
 // STEP 1: DO BOOK KEEPING ON WORKERS WHICH MAY HAVE DIED
@@ -453,28 +468,23 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 
 int BuildingManager::getBuildingCountOfType(const sc2::UNIT_TYPEID & b) const
 {
-	/*std::vector<Unit> buildings;
-	for (auto building : m_baseBuildings)
-	{
-		if (building.getAPIUnitType() == b)
-		{
-			buildings.push_back(building);
-		}
-	}
-	if (includeUnderConstruction)
-	{
-		for (auto building : m_buildings)
-		{
-			if (building.type.getAPIUnitType() == b)
-			{
-				buildings.push_back(building.buildingUnit);
-			}
-		}
-	}*/
 	int count = 0;
 	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))
 	{
 		if (building.getAPIUnitType() == b)
+		{
+			count++;
+		}
+	}
+	return count;
+}
+
+int BuildingManager::getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b) const
+{
+	int count = 0;
+	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))
+	{
+		if (std::find(b.begin(), b.end(), building.getAPIUnitType()) != b.end())
 		{
 			count++;
 		}

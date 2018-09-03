@@ -42,11 +42,13 @@ public:
     void                drawBuildingInformation();
     CCTilePosition      getBuildingLocation(const Building & b);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b) const;
+	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b) const;
 
     int                 getReservedMinerals();
     int                 getReservedGas();
 
     bool                isBeingBuilt(UnitType type);
+	int					countBeingBuilt(UnitType type);
 
     std::vector<UnitType> buildingsQueued() const;
 };

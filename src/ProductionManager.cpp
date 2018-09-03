@@ -126,9 +126,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	// build supply if we need some
 	auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
 	auto metaTypeSupplyProvider = MetaType(supplyProvider, m_bot);
-	if (!m_queue.contains(metaTypeSupplyProvider) && 
-		m_bot.GetCurrentSupply() > (m_bot.GetMaxSupply() - 2 * getUnitTrainingBuildings(playerRace).size()) && 
-		!m_bot.Buildings().isBeingBuilt(supplyProvider))
+	if(m_bot.GetCurrentSupply() + 2 * getUnitTrainingBuildings(playerRace).size() + baseCount > m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8 && !m_queue.contains(metaTypeSupplyProvider))
 	{
 		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
 	}
@@ -159,18 +157,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (productionBuildingCount < maxProductionABaseCanSupport * baseCount)
 				{
 					const auto metaTypeBarrack = MetaType("Barracks", m_bot);
-					if (!m_queue.contains(metaTypeBarrack) && getFreeMinerals() + getExtraMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
+					if (!m_queue.contains(metaTypeBarrack) && meetsReservedResourcesWithExtra(metaTypeBarrack))
 					{
 						m_queue.queueAsLowestPriority(metaTypeBarrack, false);
 					}
 
-					int factories = m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_FACTORY);
-					int flyingFactories = m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING);
+					/*int factories = m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING });
 					const auto metaTypeFactory = MetaType("Factory", m_bot);
-					if (factories + flyingFactories < 2 * baseCount && !m_queue.contains(metaTypeFactory) && getFreeMinerals() + getExtraMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() + getExtraGas() > metaTypeFactory.getUnitType().gasPrice())
+					if (factories < 2 * baseCount && !m_queue.contains(metaTypeFactory) && meetsReservedResourcesWithExtra(metaTypeFactory))
 					{
 						m_queue.queueAsLowestPriority(metaTypeFactory, false);
-					}
+					}*/
 				}
 				else
 				{
@@ -188,17 +185,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueAsLowestPriority(metaTypeReaper, false);
 				}
 
-				const auto metaTypeHellion = MetaType("Hellion", m_bot);
+				/*const auto metaTypeHellion = MetaType("Hellion", m_bot);
 				if (!m_queue.contains(metaTypeHellion))
 				{
 					m_queue.queueAsLowestPriority(metaTypeHellion, false);
-				}
+				}*/
 				break;
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
 			{
 				const auto metaTypeFactory = MetaType("Factory", m_bot);
-				if (productionBuildingCount < maxProductionABaseCanSupport * baseCount && !m_queue.contains(metaTypeFactory) && getFreeMinerals() + getExtraMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() + getExtraGas() > metaTypeFactory.getUnitType().gasPrice())
+				if (productionBuildingCount < maxProductionABaseCanSupport * baseCount && !m_queue.contains(metaTypeFactory) && meetsReservedResourcesWithExtra(metaTypeFactory))
 				{
 					m_queue.queueAsLowestPriority(metaTypeFactory, false);
 				}
@@ -219,13 +216,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER :
 			{
 				const auto metaTypeBarrack = MetaType("Barracks", m_bot);
-				if (productionBuildingCount < maxProductionABaseCanSupport * baseCount && !m_queue.contains(metaTypeBarrack) && getFreeMinerals() + getExtraMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
+				if (productionBuildingCount < maxProductionABaseCanSupport * baseCount && !m_queue.contains(metaTypeBarrack) && meetsReservedResourcesWithExtra(metaTypeBarrack))
 				{
 					m_queue.queueAsLowestPriority(metaTypeBarrack, false);
 				}
 
 				const auto metaTypeMarine = MetaType("Marine", m_bot);
-				if (!m_queue.contains(metaTypeMarine) && getFreeMinerals() + getExtraMinerals() > metaTypeMarine.getUnitType().mineralPrice() * 2)
+				if (!m_queue.contains(metaTypeMarine) && meetsReservedResourcesWithExtra(metaTypeMarine))
 				{
 					m_queue.queueAsLowestPriority(metaTypeMarine, false);
 				}
@@ -254,7 +251,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 void ProductionManager::fixBuildOrderDeadlock()
 {
-    /*if (m_queue.isEmpty()) { return; }
+    if (m_queue.isEmpty()) { return; }
     BuildOrderItem & currentItem = m_queue.getHighestPriorityItem();
 
     // check to see if we have the prerequisites for the topmost item
@@ -320,7 +317,7 @@ void ProductionManager::fixBuildOrderDeadlock()
     if (m_bot.Data(currentItem.type).supplyCost > (m_bot.GetMaxSupply() - m_bot.GetCurrentSupply()) && !m_bot.Buildings().isBeingBuilt(supplyProvider))
     {
         m_queue.queueAsHighestPriority(MetaType(supplyProvider, m_bot), true);
-    }*/
+    }
 }
 
 Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo) const
@@ -379,30 +376,29 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 
 int ProductionManager::getProductionBuildingsCount() const
 {
-	int productionBuildingCount = 0;
 	switch (m_bot.GetPlayerRace(Players::Self))
 	{
 		case CCRace::Terran:
 		{
-			productionBuildingCount = m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
-			productionBuildingCount += m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING);
-			productionBuildingCount += m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_FACTORY);
-			productionBuildingCount += m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING);
-			productionBuildingCount += m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_STARPORT);
-			productionBuildingCount += m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING);
+
+			return m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::TERRAN_BARRACKS, 
+				sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, 
+				sc2::UNIT_TYPEID::TERRAN_FACTORY, 
+				sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING, 
+				sc2::UNIT_TYPEID::TERRAN_STARPORT, 
+				sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING });
 		}
 		case CCRace::Protoss:
 		{
 			//TODO
-			break;
+			return 0;
 		}
 		case CCRace::Zerg:
 		{
 			//TODO
-			break;
+			return 0;
 		}
 	}
-	return productionBuildingCount;
 }
 
 std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
