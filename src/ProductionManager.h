@@ -14,7 +14,9 @@ class ProductionManager
     BuildOrderQueue m_queue;
 	bool m_initialBuildOrderFinished;
 	bool m_ccShouldBeInQueue = false;
+	std::list<MetaType> startedUpgrades;
 
+	MetaType getUpgradeMetaType(const MetaType type) const;
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
     bool    meetsReservedResources(const MetaType & type);
 	bool    meetsReservedResourcesWithExtra(const MetaType & type);
@@ -44,5 +46,4 @@ public:
     Unit getProducer(const MetaType & type, CCPosition closestTo = CCPosition(0, 0)) const;
 	int getProductionBuildingsCount() const;
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
-	int ProductionManager::getMaxSupplyProduction(CCRace race);
 };

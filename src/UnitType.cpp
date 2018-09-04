@@ -113,7 +113,21 @@ bool UnitType::isCombatUnit() const
 
 bool UnitType::isSupplyProvider() const
 {
-    return (supplyProvided() < 0) && !isResourceDepot();
+	bool isProvider = supplyProvided() < 0 && !isResourceDepot();
+	if (!isProvider)
+	{
+		switch (m_type.ToType())
+		{
+			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT: return true;
+			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED: return true;
+			case sc2::UNIT_TYPEID::PROTOSS_PYLON: return true;
+			case sc2::UNIT_TYPEID::ZERG_OVERLORD: return true;
+			case sc2::UNIT_TYPEID::ZERG_OVERSEER: return true;
+			default:
+				return false;
+		}
+	}
+    return true;
 }
 
 bool UnitType::isResourceDepot() const

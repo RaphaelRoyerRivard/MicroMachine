@@ -202,12 +202,12 @@ void BuildingPlacer::drawReservedTiles()
     int rheight = (int)m_reserveMap[0].size();
 
     for (int x = 0; x < rwidth; ++x)
-    {
+    { 
         for (int y = 0; y < rheight; ++y)
         {
             if (m_reserveMap[x][y] || isInResourceBox(x, y))
             {
-                m_bot.Map().drawTile(x, y, CCColor(255, 255, 0));
+                m_bot.Map().drawTile(x - 1, y - 1, CCColor(255, 255, 0));
             }
         }
     }

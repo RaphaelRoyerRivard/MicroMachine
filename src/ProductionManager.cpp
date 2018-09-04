@@ -149,7 +149,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				// Strategy base logic
 		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
-		const int maxProductionABaseCanSupport = 5;
+		const int maxProductionABaseCanSupport = 4;
 		switch (currentStrategy)
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
@@ -176,6 +176,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						m_queue.queueAsLowestPriority(metaTypeCommandCenter, false);
 						m_ccShouldBeInQueue = true;
+
+						if (baseCount == 1)//Do only first upgrade. 2 and 3, don't work yet.
+						{
+							auto metaTypeInfWeap = getUpgradeMetaType(MetaType("TerranInfantryWeaponsLevel1", m_bot));
+							m_queue.queueAsHighestPriority(metaTypeInfWeap, true);
+							startedUpgrades.push_back(metaTypeInfWeap);
+						}
 					}
 				}
 
@@ -436,6 +443,88 @@ std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
 	return trainers;
 }
 
+MetaType ProductionManager::getUpgradeMetaType(const MetaType type) const
+{
+	const std::list<std::list<MetaType>> terranUpgrades = {
+		{ MetaType("TerranInfantryWeaponsLevel1", m_bot), MetaType("TerranInfantryWeaponsLevel2", m_bot), MetaType("TerranInfantryWeaponsLevel3", m_bot) },
+		{ MetaType("TerranInfantryArmorsLevel1", m_bot), MetaType("TerranInfantryArmorsLevel2", m_bot), MetaType("TerranInfantryArmorsLevel3", m_bot) },
+		{ MetaType("TerranVehicleWeaponsLevel1", m_bot), MetaType("TerranVehicleWeaponsLevel2", m_bot), MetaType("TerranVehicleWeaponsLevel3", m_bot) },
+		{ MetaType("TerranShipWeaponsLevel1", m_bot), MetaType("TerranShipWeaponsLevel2", m_bot), MetaType("TerranShipWeaponsLevel3", m_bot) },
+		{ MetaType("TerranVehicleAndShipArmorsLevel1", m_bot), MetaType("TerranVehicleAndShipArmorsLevel2", m_bot), MetaType("TerranVehicleAndShipArmorsLevel3", m_bot) },
+	};
+
+	const std::list<std::list<MetaType>> protossUpgrades = {
+		{ MetaType("ProtossGroundWeaponsLevel1", m_bot), MetaType("ProtossGroundWeaponsLevel2", m_bot), MetaType("ProtossGroundWeaponsLevel3", m_bot) },
+		{ MetaType("ProtossGroundArmorsLevel1", m_bot), MetaType("ProtossGroundArmorsLevel2", m_bot), MetaType("ProtossGroundArmorsLevel3", m_bot) },
+		{ MetaType("ProtossAirWeaponsLevel1", m_bot), MetaType("ProtossAirWeaponsLevel2", m_bot), MetaType("ProtossAirWeaponsLevel3", m_bot) },
+		{ MetaType("ProtossAirArmorsLevel1", m_bot), MetaType("ProtossAirArmorsLevel2", m_bot), MetaType("ProtossAirArmorsLevel3", m_bot) },
+		{ MetaType("ProtossShieldsLevel1", m_bot), MetaType("ProtossShieldsLevel2", m_bot), MetaType("ProtossShieldsLevel3", m_bot) },
+	};
+
+	const std::list<std::list<MetaType>> zergUpgrades = {
+		{ MetaType("ZergMeleeWeaponsLevel1", m_bot), MetaType("ZergMeleeWeaponsLevel2", m_bot), MetaType("ZergMeleeWeaponsLevel3", m_bot) },
+		{ MetaType("ZergMissileWeaponsLevel1", m_bot), MetaType("ZergMissileWeaponsLevel2", m_bot), MetaType("ZergMissileWeaponsLevel3", m_bot) },
+		{ MetaType("ZergGroundArmorsLevel1", m_bot), MetaType("ZergGroundArmorsLevel2", m_bot), MetaType("ZergGroundArmorsLevel3", m_bot) },
+		{ MetaType("ZergFlyerWeaponsLevel1", m_bot), MetaType("ZergFlyerWeaponsLevel2", m_bot), MetaType("ZergFlyerWeaponsLevel3", m_bot) },
+		{ MetaType("ZergFlyerArmorsLevel1", m_bot), MetaType("ZergFlyerArmorsLevel2", m_bot), MetaType("ZergFlyerArmorsLevel3", m_bot) },
+	};
+
+	std::list<std::list<MetaType>> upgrades;
+	switch (m_bot.GetPlayerRace(Players::Self))
+	{
+		case CCRace::Terran:
+		{
+			upgrades = terranUpgrades;
+			break;
+		}
+		case CCRace::Protoss:
+		{
+			upgrades = protossUpgrades;
+			break;
+		}
+		case CCRace::Zerg:
+		{
+			upgrades = zergUpgrades;
+			break;
+		}
+	}
+
+	bool found = false;
+	for (auto upCategory : upgrades)
+	{
+		for (auto upgrade : upCategory)
+		{
+			if (found)
+			{
+				return upgrade;
+			}
+			if (upgrade.getName().compare(type.getName()) == 0)//Equals
+			{
+				bool started = false;
+				for (auto startedUpgrade : startedUpgrades)//If startedUpgrades.contains
+				{
+					if (startedUpgrade.getName().compare(type.getName()) == 0)
+					{
+						started = true;
+						break;
+					}
+				}
+				if (!started)//if not started, return it.
+				{
+					return type;
+				}
+				//if started, return the next one.
+				found = true;
+			}
+		}
+		if (found)
+		{//Found, but it was level 3.
+			assert("Upgrade level 4 doesn't exist.");
+		}
+	}
+	assert("Upgrade wasn't found.");
+}
+
 Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const
 {
     if (units.size() == 0)
@@ -515,6 +604,10 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 	{
 		// check to see if one of the unit's available abilities matches the build ability type
 		sc2::AbilityID MetaTypeAbility = m_bot.Data(type).buildAbility;
+		if (type.isUpgrade())//TODO Not safe, is a fix for upgrades having the wrong ID
+		{
+			return true;
+		}
 		for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
 		{
 			if (available_ability.ability_id == MetaTypeAbility)

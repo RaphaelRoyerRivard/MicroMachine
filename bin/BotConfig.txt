@@ -23,7 +23,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "LostAndFoundLE.SC2Map",
+        "MapFile"                   : "Redshift.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -70,7 +70,7 @@
     {
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
-        "DrawBaseLocationInfo"      : false,
+        "DrawBaseLocationInfo"      : true,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
         "DrawScoutInfo"             : false,
@@ -79,7 +79,7 @@
         "DrawUnitTargetInfo"        : false,
         "DrawLastSeenTileInfo"      : false,
         "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : true,
+        "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,

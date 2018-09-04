@@ -41,6 +41,90 @@ void WorkerManager::stopRepairing(Unit worker)
     finishedWithWorker(worker);
 }
 
+/*void WorkerManager::handleMineralWorkers()
+{
+	auto workers = getWorkers();
+	if (workers.empty())
+	{
+		return;
+	}
+
+	std::list<Unit> mineralWorkers;
+	for (auto worker : workers)
+	{
+		int workerJob = m_workerData.getWorkerJob(worker);
+		if (workerJob == WorkerJobs::Minerals && !isReturningCargo(worker))
+		{
+			mineralWorkers.push_back(worker);
+		}
+	}
+	if (mineralWorkers.empty())
+	{
+		return;
+	}
+	
+	std::list<Unit> minerals;
+	std::list<std::pair<Unit, int>> mineralsUsage;
+	for (auto base : m_bot.Bases().getBaseLocations())
+	{
+		if (base->isOccupiedByPlayer(Players::Self))
+		{
+			auto mineralsVector = base->getMinerals();
+			for (auto t : mineralsVector)
+			{
+				minerals.push_back(t);
+				mineralsUsage.push_back(std::pair<Unit, int>(t, 0));
+			}
+		}
+	}
+	//TODO Remove workers within X of a mineral (no changing target when already mining).
+	std::list<std::pair<Unit, float>> temp;
+	for (auto mineralWorker : mineralWorkers)
+	{
+		auto closestMineral = getClosest(mineralWorker, minerals);
+		const float dist = Util::Dist(mineralWorker.getPosition(), closestMineral.getPosition());
+		temp.push_back(std::pair<Unit, float>(mineralWorker, dist));
+	}
+
+	std::list<Unit> orderedMineralWorkers;
+	for (auto mineralWorker : orderedMineralWorkers)
+	{
+		if (!mineralWorker.isValid())
+		{
+			continue;
+		}
+
+		int lowest = 200;
+		std::list<Unit> lowestMinerals;
+		for (auto mineral : mineralsUsage)
+		{
+			if (mineral.second < lowest)
+			{
+				lowest = mineral.second;
+				lowestMinerals.clear();
+			}
+			if (mineral.second == lowest)
+			{
+				lowestMinerals.push_back(mineral.first);
+			}
+		}
+
+		auto closestMineral = getClosest(mineralWorker, lowestMinerals);
+		for (auto & mineral : mineralsUsage)
+		{
+			if (mineral.first.getID() == closestMineral.getID())
+			{
+				mineral.second++;
+				break;
+			}
+		}
+
+		mineralWorker.rightClick(closestMineral);
+		//m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Minerals, closestMineral);
+		//workers.erase(mineralWorker);
+	}
+}*/
+
 void WorkerManager::handleGasWorkers()
 {
     // for each unit we have
@@ -177,6 +261,97 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos) const
     return getClosestMineralWorkerTo(pos, CCUnitID{});
 }
 
+/*Unit WorkerManager::getClosest(const Unit unit, const std::list<Unit> units) const
+{
+	Unit currentClosest;
+	float minDist = -1;
+	for (auto potentialClosest : units)
+	{
+		if (!potentialClosest.isValid())
+		{
+			continue;
+		}
+		const float dist = Util::Dist(potentialClosest.getUnitPtr()->pos, unit.getPosition());
+		if (minDist == -1) {
+			currentClosest = potentialClosest;
+			minDist = dist;
+		}
+		else if (dist < minDist) {
+			currentClosest = potentialClosest;
+			minDist = dist;
+		}
+	}
+	return currentClosest;
+}*/
+
+/*std::list<Unit> WorkerManager::orderByDistance(const std::list<Unit> units, CCPosition pos, bool closestFirst)
+{
+	struct UnitDistance
+	{
+		Unit unit;
+		float distance;
+
+		UnitDistance(Unit unit, float distance) : unit(unit), distance(distance) {}
+
+		bool operator < (const UnitDistance& str) const
+		{
+			return (distance < str.distance);
+		}
+
+		bool operator - (const UnitDistance& str) const
+		{
+			return (distance - str.distance);
+		}
+
+		bool operator == (const UnitDistance& str) const
+		{
+			return (distance == str.distance);
+		}
+	};
+
+	std::list<UnitDistance> unorderedUnitsDistance;
+	std::list<UnitDistance> orderedUnitsDistance;
+
+	for (auto unit : units)
+	{
+		auto a = unit.getUnitPtr();
+		unorderedUnitsDistance.push_back(UnitDistance(unit, Util::Dist(unit.getUnitPtr()->pos, pos)));
+	}
+	
+	//sort
+	UnitDistance bestDistance = UnitDistance(Unit(), 1000000);
+	while (!unorderedUnitsDistance.empty())
+	{
+		for (auto distance : unorderedUnitsDistance)
+		{
+			if (distance < bestDistance)
+			{
+				bestDistance = distance;
+			}
+		}
+		if (bestDistance.distance == 1000000)
+		{
+			break;
+		}
+		orderedUnitsDistance.push_back(bestDistance);
+		unorderedUnitsDistance.remove(bestDistance);
+		bestDistance = UnitDistance(Unit(), 1000000);
+	}
+
+	std::list<Unit> orderedUnits;
+	for (auto unitDistance : orderedUnitsDistance)
+	{
+		if (closestFirst)
+		{
+			orderedUnits.push_back(unitDistance.unit);
+		}
+		else
+		{
+			orderedUnits.push_front(unitDistance.unit);
+		}
+	}
+	return orderedUnits;
+}*/
 
 // set a worker to mine minerals
 void WorkerManager::setMineralWorker(const Unit & unit)

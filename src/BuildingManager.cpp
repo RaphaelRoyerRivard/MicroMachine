@@ -27,7 +27,7 @@ void BuildingManager::onFrame()
     assignWorkersToUnassignedBuildings();   // assign workers to the unassigned buildings and label them 'planned'    
     constructAssignedBuildings();           // for each planned building, if the worker isn't constructing, send the command    
     checkForStartedConstruction();          // check to see if any buildings have started construction and update data structures    
-    checkForDeadTerranBuilders();           // if we are terran and a building is under construction without a worker, assign a new one    
+    checkForDeadTerranBuilders();           // if we are terran and a building is under construction without a worker, assign a new one
     checkForCompletedBuildings();           // check to see if any buildings have completed and update data structures
 	castBuildingsAbilities();
 
@@ -136,6 +136,20 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 			{
 				// reserve this building's space
 				m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y, b.type.tileWidth(), b.type.tileHeight());
+
+				if (b.type.getRace() == CCRace::Terran)
+				{
+					sc2::UNIT_TYPEID type = b.type.getAPIUnitType();
+					switch (type)
+					{
+						case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+						case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+						{
+							m_buildingPlacer.reserveTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, 2, 2);
+						}
+					}
+				}
 			}
 		}
 
@@ -332,6 +346,10 @@ void BuildingManager::checkForCompletedBuildings()
             if (Util::IsTerran(m_bot.GetPlayerRace(Players::Self)))
             {
                 m_bot.Workers().finishedWithWorker(b.builderUnit);
+				if (b.buildingUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
+				{
+					Micro::SmartAbility(b.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER, m_bot);
+				}
             }
 
             // remove this unit from the under construction vector

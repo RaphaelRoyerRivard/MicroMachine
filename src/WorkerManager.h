@@ -14,8 +14,9 @@ class WorkerManager
 
     void setMineralWorker(const Unit & unit);
     
-    void handleIdleWorkers();
+	//void handleMineralWorkers();
     void handleGasWorkers();
+	void handleIdleWorkers();
     void handleRepairWorkers();
 
 public:
@@ -50,5 +51,7 @@ public:
     Unit getGasWorker(Unit refinery) const;
     Unit getClosestMineralWorkerTo(const CCPosition & pos) const;
     Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore) const;
+	Unit getClosest(const Unit unit, const std::list<Unit> units) const;
+	std::list<Unit> WorkerManager::orderByDistance(const std::list<Unit> units, CCPosition pos, bool closestFirst);
 };
 
