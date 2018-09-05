@@ -55,7 +55,7 @@ void ProductionManager::manageBuildOrderQueue()
 		m_initialBuildOrderFinished = true;
 	}
 
-	if(m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder)
+	if((m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder) || m_bot.Strategy().isWorkerRushed())
     {
 		putImportantBuildOrderItemsInQueue();
     }
@@ -135,6 +135,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	if (playerRace == sc2::Race::Terran)
 	{
+		if(m_bot.Strategy().isWorkerRushed() && baseCount == 1)
+		{
+			const auto metaTypeReaper = MetaType("Reaper", m_bot);
+			if (m_queue.getHighestPriorityItem().type.getUnitType().getAPIUnitType() != metaTypeReaper.getUnitType().getAPIUnitType())
+			{
+				m_queue.queueAsHighestPriority(metaTypeReaper, true);
+				return;
+			}
+		}
+
 		const auto metaTypeCommandCenter = MetaType("CommandCenter", m_bot);
 
 		// Logic for building Orbital Commands and Refineries
@@ -165,8 +175,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			{
 				if (productionBuildingCount < maxProductionABaseCanSupport * baseCount)
 				{
+					std::vector<Unit> barracks = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKS, true);
+					std::vector<Unit> flyingBarracks = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, false);
 					const auto metaTypeBarrack = MetaType("Barracks", m_bot);
-					if (!m_queue.contains(metaTypeBarrack) && getFreeMinerals() > metaTypeBarrack.getUnitType().mineralPrice())
+					if (barracks.size() + flyingBarracks.size() < 3 * baseCount && !m_queue.contains(metaTypeBarrack))
 					{
 						m_queue.queueAsLowestPriority(metaTypeBarrack, false);
 					}
@@ -174,10 +186,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					std::vector<Unit> factories = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_FACTORY, true);
 					std::vector<Unit> flyingFactories = m_bot.Buildings().getAllBuildingOfType(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING, false);
 					const auto metaTypeFactory = MetaType("Factory", m_bot);
-					if (factories.size() + flyingFactories.size() < 2 * baseCount && !m_queue.contains(metaTypeFactory) && getFreeMinerals() > metaTypeFactory.getUnitType().mineralPrice() && getFreeGas() > metaTypeFactory.getUnitType().gasPrice())
+					if (factories.size() + flyingFactories.size() < baseCount && !m_queue.contains(metaTypeFactory))
 					{
 						m_queue.queueAsLowestPriority(metaTypeFactory, false);
 					}
+
+					/*const auto metaTypeStarport = MetaType("Starport", m_bot);
+					if (factories.size() + flyingFactories.size() >= 1 && !m_queue.contains(metaTypeStarport))
+					{
+						m_queue.queueAsLowestPriority(metaTypeStarport, false);
+					}*/
 				}
 
 				const auto metaTypeReaper = MetaType("Reaper", m_bot);
@@ -191,6 +209,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueAsLowestPriority(metaTypeHellion, false);
 				}
+
+				/*const auto metaTypeBanshee = MetaType("Banshee", m_bot);
+				if (!m_queue.contains(metaTypeBanshee))
+				{
+					m_queue.queueAsLowestPriority(metaTypeBanshee, false);
+				}*/
 				break;
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :

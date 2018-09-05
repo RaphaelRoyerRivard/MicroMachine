@@ -50,7 +50,7 @@ const Strategy & StrategyManager::getCurrentStrategy() const
 const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 {
 	//TODO Add all IF to check which strategy we want to use.
-	if (m_bot.EnemyHasMetabolicBoost())
+	if (m_enemyHasMetabolicBoost)
 		return StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING;
 	return StrategyPostBuildOrder::TERRAN_REAPER;
 }

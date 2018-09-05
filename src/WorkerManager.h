@@ -20,6 +20,8 @@ class WorkerManager
 
 public:
 
+	const float MIN_HP_PERCENTAGE_TO_FIGHT = 0.25f;
+
     WorkerManager(CCBot & bot);
 
     void onStart();
@@ -48,7 +50,7 @@ public:
     Unit getBuilder(Building & b,bool setJobAsBuilder = true) const;
     Unit getClosestDepot(Unit worker) const;
     Unit getGasWorker(Unit refinery) const;
-    Unit getClosestMineralWorkerTo(const CCPosition & pos) const;
-    Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore) const;
+    Unit getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f) const;
+    Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f) const;
 };
 

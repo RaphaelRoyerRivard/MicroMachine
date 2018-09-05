@@ -105,7 +105,7 @@ void CCBot::setUnits()
 		{
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
 			// If the enemy zergling was seen last frame
-			if (zergEnemy && !m_enemyHasMetabolicBoost && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
+			if (zergEnemy && !m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
 				&& m_lastSeenUnits.find(unitptr->tag) != m_lastSeenUnits.end() && m_lastSeenUnits[unitptr->tag] == step - 1)
 			{
 				float dist = Util::Dist(unitptr->pos, m_lastSeenPosUnits[unitptr->tag]);
@@ -114,7 +114,7 @@ void CCBot::setUnits()
 				if(realSpeed > speed + 1.f)
 				{
 					// This is a Wingling!!!
-					m_enemyHasMetabolicBoost = true;
+					m_strategy.setEnemyHasMetabolicBoost(true);
 				}
 			}
 			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, unitptr->pos);
@@ -169,7 +169,7 @@ const MapTools & CCBot::Map() const
     return m_map;
 }
 
-const StrategyManager & CCBot::Strategy() const
+StrategyManager & CCBot::Strategy()
 {
     return m_strategy;
 }

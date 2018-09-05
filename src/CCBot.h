@@ -36,7 +36,6 @@ class CCBot
 	std::map<sc2::Tag, CCPosition> m_lastSeenPosUnits;
     std::vector<Unit>       m_allUnits;
     std::vector<CCPosition> m_baseLocations;
-	bool m_enemyHasMetabolicBoost = false;
 
     void setUnits();
 
@@ -74,7 +73,7 @@ public:
 	const GameCommander & Commander() const;
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;
-    const StrategyManager & Strategy() const;
+    StrategyManager & Strategy();
     const TypeData & Data(const UnitType & type) const;
     const TypeData & Data(const CCUpgrade & type) const;
     const TypeData & Data(const MetaType & type) const;
@@ -93,5 +92,4 @@ public:
 	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();
 	uint32_t GetLastStepSeenUnit(sc2::Tag tag);
     const std::vector<CCPosition> & GetStartLocations() const;
-	bool EnemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; };
 };
