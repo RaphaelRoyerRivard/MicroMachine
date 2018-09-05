@@ -149,7 +149,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				// Strategy base logic
 		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
-		const int maxProductionABaseCanSupport = 4;
+		const int maxProductionABaseCanSupport = 2;
 		switch (currentStrategy)
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
@@ -177,12 +177,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueAsLowestPriority(metaTypeCommandCenter, false);
 						m_ccShouldBeInQueue = true;
 
-						if (baseCount == 1)//Do only first upgrade. 2 and 3, don't work yet.
-						{
-							auto metaTypeInfWeap = getUpgradeMetaType(MetaType("TerranInfantryWeaponsLevel1", m_bot));
-							m_queue.queueAsHighestPriority(metaTypeInfWeap, true);
-							startedUpgrades.push_back(metaTypeInfWeap);
-						}
+						auto metaTypeInfWeap = getUpgradeMetaType(MetaType("TerranInfantryWeaponsLevel1", m_bot));
+						m_queue.queueAsHighestPriority(metaTypeInfWeap, true);
+						startedUpgrades.push_back(metaTypeInfWeap);
 					}
 				}
 
@@ -262,15 +259,15 @@ void ProductionManager::fixBuildOrderDeadlock()
     BuildOrderItem & currentItem = m_queue.getHighestPriorityItem();
 
     // check to see if we have the prerequisites for the topmost item
-    bool hasRequired = m_bot.Data(currentItem.type).requiredUnits.empty();
-    for (auto & required : m_bot.Data(currentItem.type).requiredUnits)
-    {
+	bool hasRequired = m_bot.Data(currentItem.type).requiredUnits.empty();
+	for (auto & required : m_bot.Data(currentItem.type).requiredUnits)
+	{
 		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false) > 0 || m_bot.Buildings().isBeingBuilt(required))
-        {
-            hasRequired = true;
+		{
+			hasRequired = true;
 			break;
-        }
-    }
+		}
+	}
 
     if (!hasRequired)
     {
@@ -325,6 +322,24 @@ void ProductionManager::fixBuildOrderDeadlock()
     {
         m_queue.queueAsHighestPriority(MetaType(supplyProvider, m_bot), true);
     }
+}
+
+bool ProductionManager::currentlyHasRequirement(MetaType currentItem)
+{
+	auto requiredUnits = m_bot.Data(currentItem).requiredUnits;
+	if (requiredUnits.empty())
+	{
+		return true;
+	}
+
+	for (auto & required : m_bot.Data(currentItem).requiredUnits)
+	{
+		if (!m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false) > 0);// && (allowIsBeingBuilt && m_bot.Buildings().isBeingBuilt(required)))
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo) const
@@ -606,7 +621,9 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 		sc2::AbilityID MetaTypeAbility = m_bot.Data(type).buildAbility;
 		if (type.isUpgrade())//TODO Not safe, is a fix for upgrades having the wrong ID
 		{
-			return true;
+			bool hasReq = currentlyHasRequirement(type);
+			//hasReq = false;
+			return hasReq;
 		}
 		for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
 		{

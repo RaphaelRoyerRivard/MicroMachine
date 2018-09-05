@@ -33,6 +33,7 @@ class ProductionManager
 	int     getExtraGas();
 
     void    fixBuildOrderDeadlock();
+	bool	currentlyHasRequirement(MetaType currentItem);
 
 public:
 
