@@ -439,7 +439,7 @@ void CombatCommander::updateDefenseSquads()
 			{
 				if(base.getUnitPtr()->cargo_space_taken == 0)
 					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
-				else if(!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.25f)
+				else if(!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.4f)
 					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 			}
 		}
