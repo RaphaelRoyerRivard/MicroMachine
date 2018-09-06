@@ -55,7 +55,7 @@ void ProductionManager::manageBuildOrderQueue()
 		m_initialBuildOrderFinished = true;
 	}
 
-	if(m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder)
+	if((m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder) || m_bot.Strategy().isWorkerRushed())
     {
 		putImportantBuildOrderItemsInQueue();
     }
@@ -133,6 +133,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	if (playerRace == sc2::Race::Terran)
 	{
+		if(m_bot.Strategy().isWorkerRushed() && baseCount == 1)
+		{
+			const auto metaTypeReaper = MetaType("Reaper", m_bot);
+			if (m_queue.getHighestPriorityItem().type.getUnitType().getAPIUnitType() != metaTypeReaper.getUnitType().getAPIUnitType())
+			{
+				m_queue.queueAsHighestPriority(metaTypeReaper, true);
+				return;
+			}
+		}
+
 		const auto metaTypeCommandCenter = MetaType("CommandCenter", m_bot);
 
 		// Logic for building Orbital Commands and Refineries
@@ -157,14 +167,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (productionBuildingCount < maxProductionABaseCanSupport * baseCount)
 				{
 					const auto metaTypeBarrack = MetaType("Barracks", m_bot);
+
 					if (!m_queue.contains(metaTypeBarrack) && meetsReservedResourcesWithExtra(metaTypeBarrack))
 					{
 						m_queue.queueAsLowestPriority(metaTypeBarrack, false);
 					}
 
 					/*int factories = m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING });
-					const auto metaTypeFactory = MetaType("Factory", m_bot);
-					if (factories < 2 * baseCount && !m_queue.contains(metaTypeFactory) && meetsReservedResourcesWithExtra(metaTypeFactory))
+					if (factories < baseCount && !m_queue.contains(metaTypeFactory))
 					{
 						m_queue.queueAsLowestPriority(metaTypeFactory, false);
 					}*/
@@ -181,6 +191,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueAsHighestPriority(metaTypeInfWeap, true);
 						startedUpgrades.push_back(metaTypeInfWeap);
 					}
+
+					/*const auto metaTypeStarport = MetaType("Starport", m_bot);
+					if (factories.size() + flyingFactories.size() >= 1 && !m_queue.contains(metaTypeStarport))
+					{
+						m_queue.queueAsLowestPriority(metaTypeStarport, false);
+					}*/
 				}
 
 				const auto metaTypeReaper = MetaType("Reaper", m_bot);
@@ -193,6 +209,15 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (!m_queue.contains(metaTypeHellion))
 				{
 					m_queue.queueAsLowestPriority(metaTypeHellion, false);
+<<<<<<< HEAD
+=======
+				}
+
+				/*const auto metaTypeBanshee = MetaType("Banshee", m_bot);
+				if (!m_queue.contains(metaTypeBanshee))
+				{
+					m_queue.queueAsLowestPriority(metaTypeBanshee, false);
+>>>>>>> a3689462f4c3131131ae8c5dd4b5e709ed82b3b2
 				}*/
 				break;
 			}
@@ -403,7 +428,8 @@ int ProductionManager::getProductionBuildingsCount() const
 		case CCRace::Terran:
 		{
 
-			return m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::TERRAN_BARRACKS, 
+			return m_bot.Buildings().getBuildingCountOfType({
+				sc2::UNIT_TYPEID::TERRAN_BARRACKS, 
 				sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, 
 				sc2::UNIT_TYPEID::TERRAN_FACTORY, 
 				sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING, 

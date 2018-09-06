@@ -38,6 +38,8 @@ class StrategyManager
     std::map<std::string, Strategy> m_strategies;
     int                             m_totalGamesPlayed;
     const BuildOrder                m_emptyBuildOrder;
+	bool m_workerRushed = false;
+	bool m_enemyHasMetabolicBoost = false;
 
     bool  shouldExpandNow() const;
     const UnitPairVector getProtossBuildOrderGoal() const;
@@ -59,4 +61,8 @@ public:
     const UnitPairVector getBuildOrderGoal() const;
     const BuildOrder & getOpeningBookBuildOrder() const;
     void readStrategyFile(const std::string & str);
+	bool isWorkerRushed() const { return m_workerRushed; }
+	void setIsWorkerRushed(bool workerRushed) { m_workerRushed = workerRushed; }
+	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
+	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
 };

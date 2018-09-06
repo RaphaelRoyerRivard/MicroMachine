@@ -256,23 +256,39 @@ void CombatCommander::updateScoutDefenseSquad()
     bool assignScoutDefender = enemyUnitsInRegion.size() >= 1;
 
     // if our current squad is empty and we should assign a worker, do it
-    if (scoutDefenseSquad.isEmpty() && assignScoutDefender)
+    if (assignScoutDefender)
     {
-        // the enemy worker that is attacking us
-        Unit enemyWorkerUnit = *enemyUnitsInRegion.begin();
-        BOT_ASSERT(enemyWorkerUnit.isValid(), "null enemy worker unit");
+		if (!scoutDefenseSquad.isEmpty())
+		{
+			auto & units = scoutDefenseSquad.getUnits();
+			for (auto & unit : units)
+			{
+				if (unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT)
+				{
+					m_bot.Workers().finishedWithWorker(unit);
+					scoutDefenseSquad.removeUnit(unit);
+				}
+			}
+		}
 
-        if (enemyWorkerUnit.isValid())
-        {
-            Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition());
-            if (workerDefender.isValid())
-            {
-                m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
-            }
-        }
+		if(scoutDefenseSquad.isEmpty())
+		{
+			// the enemy worker that is attacking us
+			Unit enemyWorkerUnit = *enemyUnitsInRegion.begin();
+			BOT_ASSERT(enemyWorkerUnit.isValid(), "null enemy worker unit");
+
+			if (enemyWorkerUnit.isValid())
+			{
+				Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition());
+				if (workerDefender.isValid())
+				{
+					m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
+				}
+			}
+		}
     }
     // if our squad is not empty and we shouldn't have a worker chasing then take him out of the squad
-    else if (!scoutDefenseSquad.isEmpty() && !assignScoutDefender)
+    else if (!scoutDefenseSquad.isEmpty())
     {
         for (auto & unit : scoutDefenseSquad.getUnits())
         {
@@ -291,6 +307,7 @@ void CombatCommander::updateScoutDefenseSquad()
 
 void CombatCommander::updateDefenseSquads()
 {
+	bool workerRushed = false;
     // for each of our occupied regions
     const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
     for (const BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
@@ -321,10 +338,14 @@ void CombatCommander::updateDefenseSquads()
             if (myBaseLocation->containsPosition(unit.getPosition()))
             {
                 //we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
-                if (unit.getType().isWorker() && firstWorker)
+                if (unit.getType().isWorker())
                 {
-                    firstWorker = false;
-                    continue;
+					if (firstWorker)
+					{
+						firstWorker = false;
+						continue;
+					}
+					workerRushed = true;
                 }
 
                 enemyUnitsInRegion.push_back(unit);
@@ -357,7 +378,6 @@ void CombatCommander::updateDefenseSquads()
             }
         }
 
-
         std::stringstream squadName;
         squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
 
@@ -369,6 +389,18 @@ void CombatCommander::updateDefenseSquads()
             {
                 m_squadData.getSquad(squadName.str()).clear();
             }
+
+			if (Util::IsTerran(m_bot.GetPlayerRace(Players::Self)))
+			{
+				Unit base = m_bot.Buildings().getClosestResourceDepot(basePosition);
+				if (base.isValid())
+				{
+					if (base.isFlying())
+						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LAND, basePosition, m_bot);
+					else if(base.getUnitPtr()->cargo_space_taken > 0)
+						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+				}
+			}
 
             // and return, nothing to defend here
             continue;
@@ -398,7 +430,22 @@ void CombatCommander::updateDefenseSquads()
         {
             BOT_ASSERT(false, "Squad should have existed: %s", squadName.str().c_str());
         }
+
+		// Hide our last SCVs
+		if(Util::IsTerran(m_bot.GetPlayerRace(Players::Self)) && m_bot.Workers().getNumWorkers() <= 5)
+		{
+			Unit base = m_bot.Buildings().getClosestResourceDepot(basePosition);
+			if (base.isValid())
+			{
+				if(base.getUnitPtr()->cargo_space_taken == 0)
+					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
+				else if(!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.4f)
+					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+			}
+		}
     }
+
+	m_bot.Strategy().setIsWorkerRushed(workerRushed);
 
     // for each of our defense squads, if there aren't any enemy units near the position, clear the squad
     std::set<std::string> uselessDefenseSquads;
@@ -445,7 +492,13 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
     size_t defendersNeeded = flyingDefendersNeeded + groundDefendersNeeded;
     for (auto & unit : squadUnits)
     {
-        if (unit.isAlive())
+		// Let injured worker return mining, no need to sacrifice it
+		if (unit.getType().isWorker() && unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT)
+		{
+			m_bot.Workers().finishedWithWorker(unit);
+			defenseSquad.removeUnit(unit);
+		}
+        else if (unit.isAlive())
         {
             defendersNeeded--;
         }
@@ -503,7 +556,6 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     {
         // we search for worker to defend.
         closestDefender = findWorkerToAssignToSquad(defenseSquad, pos);
-
     }
 
     return closestDefender;
@@ -513,7 +565,7 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
 {
 
     // get our worker unit that is mining that is closest to it
-    Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(pos);
+    Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(pos, m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
 
     if (workerDefender.isValid())
     {

@@ -21,6 +21,8 @@ class WorkerManager
 
 public:
 
+	const float MIN_HP_PERCENTAGE_TO_FIGHT = 0.25f;
+
     WorkerManager(CCBot & bot);
 
     void onStart();
@@ -47,10 +49,10 @@ public:
 	bool WorkerManager::isReturningCargo(Unit worker) const;
 
     Unit getBuilder(Building & b,bool setJobAsBuilder = true) const;
+	Unit getGasWorker(Unit refinery) const;
     Unit getClosestDepot(Unit worker) const;
-    Unit getGasWorker(Unit refinery) const;
-    Unit getClosestMineralWorkerTo(const CCPosition & pos) const;
-    Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore) const;
+	Unit getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f) const;
+	Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f) const;
 	Unit getClosest(const Unit unit, const std::list<Unit> units) const;
 	std::list<Unit> WorkerManager::orderByDistance(const std::list<Unit> units, CCPosition pos, bool closestFirst);
 };

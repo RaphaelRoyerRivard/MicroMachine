@@ -218,7 +218,7 @@ void WorkerManager::handleRepairWorkers()
             const std::set<Unit> & repairedBy = m_workerData.getWorkerRepairingThatTargetC(worker);
             if (repairedBy.empty())
             {
-                auto repairGuy = getClosestMineralWorkerTo(worker.getPosition(), worker.getID());
+                auto repairGuy = getClosestMineralWorkerTo(worker.getPosition(), worker.getID(), MIN_HP_PERCENTAGE_TO_FIGHT);
                  
                 if (repairGuy.isValid() && Util::Dist(worker.getPosition(), repairGuy.getPosition()) <= m_bot.Config().MaxWorkerRepairDistance)
                 {
@@ -229,7 +229,7 @@ void WorkerManager::handleRepairWorkers()
     }
 }
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage) const
 {
     Unit closestMineralWorker;
     double closestDist = std::numeric_limits<double>::max();
@@ -238,6 +238,11 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID w
     for (auto & worker : m_workerData.getWorkers())
     {
         if (!worker.isValid() || worker.getID() == workerToIgnore) { continue; }
+		const sc2::Unit* workerPtr = worker.getUnitPtr();
+		if (workerPtr->health < minHpPercentage * workerPtr->health_max)
+		{
+			continue;
+		}
 
         // if it is a mineral worker, Idle or None
         if(isFree(worker))
@@ -256,9 +261,9 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID w
 	return closestMineralWorker;
 }
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage) const
 {
-    return getClosestMineralWorkerTo(pos, CCUnitID{});
+    return getClosestMineralWorkerTo(pos, CCUnitID{}, minHpPercentage);
 }
 
 /*Unit WorkerManager::getClosest(const Unit unit, const std::list<Unit> units) const

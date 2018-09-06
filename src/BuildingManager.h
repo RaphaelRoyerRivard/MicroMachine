@@ -43,6 +43,8 @@ public:
     CCTilePosition      getBuildingLocation(const Building & b);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b) const;
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b) const;
+	Unit				getClosestResourceDepot(CCPosition position);
+	std::vector<Unit>	getAllBuildingOfType(const sc2::UNIT_TYPEID & b, bool includeUnderConstruction);
 
     int                 getReservedMinerals();
     int                 getReservedGas();

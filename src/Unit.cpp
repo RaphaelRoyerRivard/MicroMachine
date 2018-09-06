@@ -384,34 +384,37 @@ sc2::AvailableAbilities Unit::getAbilities() const
 	return m_bot->Query()->GetAbilitiesForUnit(m_unit);
 }
 
+/*
+ * This method queries the game to check if the ability is available.
+ * Since queries are slow, this method should not be used on every frame.
+ */
 bool Unit::useAbility(const sc2::ABILITY_ID abilityId) const
 {
 	BOT_ASSERT(isValid(), "Unit is not valid");
-	//TODO move that to TechTree
+
 	if (abilityId == sc2::ABILITY_ID::EFFECT_STIM)
 	{
 		sc2::BUFF_ID stimpack = m_unitType.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MARINE ? sc2::BUFF_ID::STIMPACK : sc2::BUFF_ID::STIMPACKMARAUDER;
-		//if it does not find the stimpack buff in the list of buffs the unit has
-		if(std::find(m_unit->buffs.begin(), m_unit->buffs.end(), stimpack) == m_unit->buffs.end())
+		if(std::find(m_unit->buffs.begin(), m_unit->buffs.end(), stimpack) != m_unit->buffs.end())
 		{
-			auto query = m_bot->Query();
-			auto abilities = m_bot->Observation()->GetAbilityData();
-			sc2::AvailableAbilities available_abilities = query->GetAbilitiesForUnit(m_unit);
-			for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
-			{
-				if (available_ability.ability_id >= abilities.size()) { continue; }
-				const sc2::AbilityData & ability = abilities[available_ability.ability_id];
-				if (ability.ability_id == sc2::ABILITY_ID::EFFECT_STIM) {
-					m_bot->Actions()->UnitCommand(m_unit, ability.ability_id);
-					return true;
-				}
-			}
+			// Stimpack already in use
+			return false;
 		}
 	}
-	else
+
+	auto query = m_bot->Query();
+	auto abilities = m_bot->Observation()->GetAbilityData();
+	sc2::AvailableAbilities available_abilities = query->GetAbilitiesForUnit(m_unit);
+	for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
 	{
-		std::cout << "Cannot use ability " << (int) abilityId << std::endl;
+		if (available_ability.ability_id >= abilities.size()) { continue; }
+		const sc2::AbilityData & ability = abilities[available_ability.ability_id];
+		if (ability.ability_id == abilityId) {
+			m_bot->Actions()->UnitCommand(m_unit, ability.ability_id);
+			return true;
+		}
 	}
+
 	return false;
 }
 
