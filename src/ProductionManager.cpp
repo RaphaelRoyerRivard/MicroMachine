@@ -66,38 +66,42 @@ void ProductionManager::manageBuildOrderQueue()
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
     {
-        // this is the unit which can produce the currentItem
-        Unit producer = getProducer(currentItem.type);
-
-        // TODO: if it's a building and we can't make it yet, predict the worker movement to the location
-
-        // if we can make the current item
-        if (producer.isValid() && canMakeNow(producer, currentItem.type))
-        {
-            // create it and remove it from the _queue
-            create(producer, currentItem);
-            m_queue.removeCurrentHighestPriorityItem();
-
-            // don't actually loop around in here
-            break;
-        }
-
-		// is a building (doesn't include addons) and we can make it soon
-    	if (producer.isValid() && m_bot.Data(currentItem.type).isBuilding && !currentItem.type.getUnitType().isMorphedBuilding() && canMakeSoon(producer, currentItem.type))
+		//check if we have the prerequirements.
+		if (currentlyHasRequirement(currentItem.type))
 		{
-			Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));			
-			CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
-			Unit worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition{ static_cast<float>(targetLocation.x), static_cast<float>(targetLocation.y) });
-			worker.move(targetLocation);
+			// this is the unit which can produce the currentItem
+			Unit producer = getProducer(currentItem.type);
 
-			// create it and remove it from the _queue
-			create(producer, currentItem);
-			m_queue.removeCurrentHighestPriorityItem();
+			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location
 
-			// don't actually loop around in here
-			break;
+			// if we can make the current item
+			if (producer.isValid() && canMakeNow(producer, currentItem.type))
+			{
+				// create it and remove it from the _queue
+				create(producer, currentItem);
+				m_queue.removeCurrentHighestPriorityItem();
+
+				// don't actually loop around in here
+				break;
+			}
+
+			// is a building (doesn't include addons) and we can make it soon
+			if (producer.isValid() && m_bot.Data(currentItem.type).isBuilding && !currentItem.type.getUnitType().isMorphedBuilding() && canMakeSoon(producer, currentItem.type))
+			{
+				Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
+				CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
+				Unit worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition{ static_cast<float>(targetLocation.x), static_cast<float>(targetLocation.y) });
+				worker.move(targetLocation);
+
+				// create it and remove it from the _queue
+				create(producer, currentItem);
+				m_queue.removeCurrentHighestPriorityItem();
+
+				// don't actually loop around in here
+				break;
+			}
 		}
-        
+		              
     	// otherwise, if we can skip the current item
     	if (m_queue.canSkipItem())
         {
@@ -188,7 +192,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_ccShouldBeInQueue = true;
 
 						auto metaTypeInfWeap = getUpgradeMetaType(MetaType("TerranInfantryWeaponsLevel1", m_bot));
-						m_queue.queueAsHighestPriority(metaTypeInfWeap, true);
+						m_queue.queueAsHighestPriority(metaTypeInfWeap, false);
 						startedUpgrades.push_back(metaTypeInfWeap);
 					}
 
@@ -209,15 +213,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (!m_queue.contains(metaTypeHellion))
 				{
 					m_queue.queueAsLowestPriority(metaTypeHellion, false);
-<<<<<<< HEAD
-=======
 				}
 
 				/*const auto metaTypeBanshee = MetaType("Banshee", m_bot);
 				if (!m_queue.contains(metaTypeBanshee))
 				{
 					m_queue.queueAsLowestPriority(metaTypeBanshee, false);
->>>>>>> a3689462f4c3131131ae8c5dd4b5e709ed82b3b2
 				}*/
 				break;
 			}
@@ -287,7 +288,7 @@ void ProductionManager::fixBuildOrderDeadlock()
 	bool hasRequired = m_bot.Data(currentItem.type).requiredUnits.empty();
 	for (auto & required : m_bot.Data(currentItem.type).requiredUnits)
 	{
-		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false) > 0 || m_bot.Buildings().isBeingBuilt(required))
+		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false, true) > 0 || m_bot.Buildings().isBeingBuilt(required))
 		{
 			hasRequired = true;
 			break;
@@ -314,7 +315,7 @@ void ProductionManager::fixBuildOrderDeadlock()
 				break;
 			}
 		}
-        else if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false) > 0 || m_bot.Buildings().isBeingBuilt(producer))
+        else if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false, true) > 0 || m_bot.Buildings().isBeingBuilt(producer))
         {
             hasProducer = true;
             break;
@@ -336,7 +337,7 @@ void ProductionManager::fixBuildOrderDeadlock()
 
     // build a refinery if we don't have one and the thing costs gas
     auto refinery = Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot);
-    if (m_bot.Data(currentItem.type).gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false) == 0)
+    if (m_bot.Data(currentItem.type).gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
     {
         m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
     }
@@ -359,7 +360,19 @@ bool ProductionManager::currentlyHasRequirement(MetaType currentItem)
 
 	for (auto & required : m_bot.Data(currentItem).requiredUnits)
 	{
-		if (!m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false) > 0);// && (allowIsBeingBuilt && m_bot.Buildings().isBeingBuilt(required)))
+		sc2::UNIT_TYPEID type = currentItem.getUnitType().getAPIUnitType();
+		switch (type)
+		{
+			case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER:
+			case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING:
+			case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:
+			case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING:
+			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
+				if (m_bot.Bases().getBaseCount(Players::Self) > 0)
+					continue;
+				return false;
+		}
+		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, true, true) <= 0)// && (allowIsBeingBuilt && m_bot.Buildings().isBeingBuilt(required)))
 		{
 			return false;
 		}
@@ -647,9 +660,7 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 		sc2::AbilityID MetaTypeAbility = m_bot.Data(type).buildAbility;
 		if (type.isUpgrade())//TODO Not safe, is a fix for upgrades having the wrong ID
 		{
-			bool hasReq = currentlyHasRequirement(type);
-			//hasReq = false;
-			return hasReq;
+			return true;
 		}
 		for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
 		{
