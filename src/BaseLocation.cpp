@@ -127,7 +127,8 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
         m_isPlayerStartLocation[player] = true;
     }
 
-	if(occupying && player == Players::Self)
+	//Replace ressource snapshots
+	if(occupying && !m_snapshotsRemoved && player == Players::Self)
 	{
 		bool refreshResources = m_minerals.empty();
 		if(!refreshResources)
@@ -145,7 +146,7 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 		{
 			std::vector<Unit> minerals;
 			std::vector<Unit> geysers;
-			for (auto & unit : m_bot.GetUnits())
+			for (auto & unit : m_bot.UnitInfo().getUnits(Players::Neutral))
 			{
 				// skip minerals that don't have more than 100 starting minerals
 				// these are probably stupid map-blocking minerals to confuse us
@@ -165,10 +166,11 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 						geysers.push_back(unit);
 				}
 			}
-			if (minerals.size() == 8 && geysers.size() == 2)
+			if (minerals.size() == m_minerals.size() && geysers.size() == m_geysers.size())
 			{
 				m_minerals = minerals;
 				m_geysers = geysers;
+				m_snapshotsRemoved = true;
 			}
 		}
 	}

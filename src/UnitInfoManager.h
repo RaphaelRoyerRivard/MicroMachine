@@ -20,6 +20,7 @@ class UnitInfoManager
     const UnitData &        getUnitData(CCPlayer player) const;
 
     void drawSelectedUnitDebugInfo();
+	void drawUnitID();
 
 public:
 

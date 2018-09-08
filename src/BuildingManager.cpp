@@ -531,12 +531,12 @@ Unit BuildingManager::getClosestResourceDepot(CCPosition position)
 }
 
 
-int BuildingManager::getBuildingCountOfType(const sc2::UNIT_TYPEID & b) const
+int BuildingManager::getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted) const
 {
 	int count = 0;
 	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))
 	{
-		if (building.getAPIUnitType() == b)
+		if (building.getAPIUnitType() == b && (!isCompleted || building.isCompleted()))
 		{
 			count++;
 		}
@@ -544,12 +544,12 @@ int BuildingManager::getBuildingCountOfType(const sc2::UNIT_TYPEID & b) const
 	return count;
 }
 
-int BuildingManager::getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b) const
+int BuildingManager::getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b, bool isCompleted) const
 {
 	int count = 0;
 	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))
 	{
-		if (std::find(b.begin(), b.end(), building.getAPIUnitType()) != b.end())
+		if (std::find(b.begin(), b.end(), building.getAPIUnitType()) != b.end() && (!isCompleted || building.isCompleted()))
 		{
 			count++;
 		}

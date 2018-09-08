@@ -43,6 +43,7 @@ public:
     CCHealth getEnergy() const;
     CCPlayer getPlayer() const;
     CCUnitID getID() const;
+	int getIDAsInt() const;
     float getBuildPercentage() const;
     int getWeaponCooldown() const;
     bool isCompleted() const;

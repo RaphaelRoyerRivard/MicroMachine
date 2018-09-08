@@ -156,6 +156,18 @@ CCUnitID Unit::getID() const
     return id;
 }
 
+int Unit::getIDAsInt() const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+#ifdef SC2API
+	int id = m_unit->tag;
+#else
+	int id = m_unit->getID();
+#endif
+
+	return id;
+}
+
 bool Unit::isCompleted() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");

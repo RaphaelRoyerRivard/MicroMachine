@@ -41,10 +41,9 @@ public:
     void                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
     void                drawBuildingInformation();
     CCTilePosition      getBuildingLocation(const Building & b);
-	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b) const;
-	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b) const;
+	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
+	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);
-	std::vector<Unit>	getAllBuildingOfType(const sc2::UNIT_TYPEID & b, bool includeUnderConstruction);
 
     int                 getReservedMinerals();
     int                 getReservedGas();

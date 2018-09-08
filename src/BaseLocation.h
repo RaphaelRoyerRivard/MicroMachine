@@ -30,6 +30,7 @@ class BaseLocation
     CCPositionType              m_top;
     CCPositionType              m_bottom;
     bool                        m_isStartLocation;
+	bool						m_snapshotsRemoved = false;
     
 public:
 

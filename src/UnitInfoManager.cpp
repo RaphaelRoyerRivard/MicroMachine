@@ -21,6 +21,7 @@ void UnitInfoManager::onFrame()
     updateUnitInfo();
     drawUnitInformation(100, 100);
     drawSelectedUnitDebugInfo();
+	drawUnitID();
 }
 
 void UnitInfoManager::updateUnitInfo()
@@ -309,6 +310,18 @@ void UnitInfoManager::drawUnitInformation(float x,float y) const
     //    m_bot.Map().drawText(kv.second.lastPosition, sc2::UnitTypeToName(kv.second.type));
     //}
     //
+}
+
+void UnitInfoManager::drawUnitID()
+{
+	if (!m_bot.Config().DrawUnitID)
+	{
+		return;
+	}
+	for (auto & unit : getUnits(Players::Self))
+	{
+		m_bot.Map().drawText(unit.getPosition(), std::to_string(unit.getIDAsInt()) + " (" + std::to_string(unit.getPosition().x) + ", " + std::to_string(unit.getPosition().y) + ")");
+	}
 }
 
 void UnitInfoManager::updateUnit(const Unit & unit)

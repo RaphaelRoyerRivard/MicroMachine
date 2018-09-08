@@ -15,9 +15,6 @@ class BaseLocationManager
     std::map<int, std::set<const BaseLocation *>>   m_occupiedBaseLocations;
     std::vector<std::vector<BaseLocation *>>        m_tileBaseLocations;
 
-    BaseLocation * getBaseLocation(const CCPosition & pos) const;
-
-
 public:
 
     BaseLocationManager(CCBot & bot);
@@ -26,11 +23,12 @@ public:
     void onFrame();
     void drawBaseLocations();
 
+	BaseLocation * getBaseLocation(const CCPosition & pos) const;
     const std::vector<const BaseLocation *> & getBaseLocations() const;
     const std::vector<const BaseLocation *> & getStartingBaseLocations() const;
     const std::set<const BaseLocation *> & getOccupiedBaseLocations(int player) const;
     const BaseLocation * getPlayerStartingBaseLocation(int player) const;
-	int BaseLocationManager::getBaseCount(int player) const;
+	int BaseLocationManager::getBaseCount(int player, bool isCompleted = false) const;
 
 	CCTilePosition getNextExpansion(int player) const;
 	CCTilePosition getBasePosition(int player, int index) const;

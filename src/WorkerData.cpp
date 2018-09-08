@@ -68,7 +68,7 @@ void WorkerData::updateWorker(const Unit & unit)
     }
 }
 
-void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit)
+void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool mineralWorkerTargetJobUnit)
 {
     clearPreviousJob(unit);
     m_workerJobMap[unit] = job;
@@ -90,7 +90,15 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit)
         m_depotWorkerCount[jobUnit]++;
 
         // find the mineral to mine and mine it
-        Unit mineralToMine = getMineralToMine(unit);
+		Unit mineralToMine;
+		if (!mineralWorkerTargetJobUnit)
+		{
+			mineralToMine = getMineralToMine(unit);
+		}
+		else
+		{
+			mineralToMine = getMineralToMine(jobUnit);
+		}
 
         unit.rightClick(mineralToMine);
     }
@@ -167,6 +175,16 @@ int WorkerData::getWorkerJobCount(int job) const
     return m_workerJobCount.at(job);
 }
 
+int WorkerData::getCountWorkerAtDepot(Unit & depot) const
+{
+	auto it = m_depotWorkerCount.find(depot);
+	if (it == m_depotWorkerCount.end())
+	{
+		return 0;
+	}
+	return it->second;
+}
+
 int WorkerData::getWorkerJob(const Unit & unit) const
 {
     auto it = m_workerJobMap.find(unit);
@@ -204,7 +222,8 @@ void WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, con
 {
     for (auto & mineral : unitsToTest)
     {
-        if (!mineral.getType().isMineral() || !mineral.isAlive() || mineral.getUnitPtr()->display_type != sc2::Unit::DisplayType::Visible) continue;
+		if (!mineral.getType().isMineral() || !mineral.isAlive() || mineral.getUnitPtr()->display_type != sc2::Unit::DisplayType::Visible)
+			continue;
 
         double dist = Util::Dist(mineral, worker);
 

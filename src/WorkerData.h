@@ -35,12 +35,13 @@ public:
     void    workerDestroyed(const Unit & unit);
     void    updateAllWorkerData();
     void    updateWorker(const Unit & unit);
-    void    setWorkerJob(const Unit & unit, int job, Unit jobUnit = Unit());
+    void    setWorkerJob(const Unit & unit, int job, Unit jobUnit = Unit(), bool mineralWorkerTargetJobUnit = false);
     void    drawDepotDebugInfo();
     size_t  getNumWorkers() const;
     int     getWorkerJobCount(int job) const;
     int     getNumAssignedWorkers(const Unit & unit);
     int     getWorkerJob(const Unit & unit) const;
+	int		getCountWorkerAtDepot(Unit & depot) const;
     Unit    getMineralToMine(const Unit & unit) const;
     Unit    getWorkerDepot(const Unit & unit) const;
     const char * getJobCode(const Unit & unit);

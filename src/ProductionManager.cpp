@@ -361,16 +361,11 @@ bool ProductionManager::currentlyHasRequirement(MetaType currentItem)
 	for (auto & required : m_bot.Data(currentItem).requiredUnits)
 	{
 		sc2::UNIT_TYPEID type = currentItem.getUnitType().getAPIUnitType();
-		switch (type)
+		if (currentItem.getUnitType().isResourceDepot())
 		{
-			case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER:
-			case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING:
-			case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:
-			case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING:
-			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
-				if (m_bot.Bases().getBaseCount(Players::Self) > 0)
-					continue;
-				return false;
+			if (m_bot.Bases().getBaseCount(Players::Self) > 0)
+				continue;
+			return false;
 		}
 		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, true, true) <= 0)// && (allowIsBeingBuilt && m_bot.Buildings().isBeingBuilt(required)))
 		{

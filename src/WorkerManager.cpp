@@ -19,6 +19,7 @@ void WorkerManager::onStart()
 void WorkerManager::onFrame()
 {
     m_workerData.updateAllWorkerData();
+	handleMineralWorkers();
     handleGasWorkers();
     handleIdleWorkers();
 
@@ -41,7 +42,7 @@ void WorkerManager::stopRepairing(Unit worker)
     finishedWithWorker(worker);
 }
 
-/*void WorkerManager::handleMineralWorkers()
+void WorkerManager::handleMineralWorkers()
 {
 	auto workers = getWorkers();
 	if (workers.empty())
@@ -63,6 +64,70 @@ void WorkerManager::stopRepairing(Unit worker)
 		return;
 	}
 	
+	if (!m_isFirstFrame)
+	{
+		if (m_bot.Bases().getBaseCount(Players::Self, true) <= 1)
+		{//No point trying to split workers
+			return;
+		}
+		WorkerData workerData = m_bot.Workers().getWorkerData();
+		auto & bases = m_bot.Bases().getBaseLocations();
+		std::vector<Unit> dispatchedWorkers;
+		for (auto & base : bases)
+		{
+			if (base->isOccupiedByPlayer(Players::Self))
+			{
+				int workerCount = getWorkerCountAtBasePosition(base->getPosition());
+				int optimalWorkers = base->getMinerals().size() * 2;
+				if (workerCount > optimalWorkers)
+				{
+					int needed = optimalWorkers - workerCount;
+					for (auto & worker : workers)//TODO order by closest to the target base location
+					{
+						if (m_bot.Workers().isFree(worker) && !worker.getType().isMule() && base->containsPosition(worker.getPosition()))
+						{
+							dispatchedWorkers.push_back(worker);
+							needed--;
+							if (needed <= 0)
+							{
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		for (auto & base : bases)//Dispatch workers to bases missing some
+		{
+			if (base->isOccupiedByPlayer(Players::Self))
+			{
+				int workerCount = getWorkerCountAtBasePosition(base->getPosition());
+				int optimalWorkers = base->getMinerals().size() * 2;
+				if (workerCount < optimalWorkers)
+				{
+					int needed = optimalWorkers - workerCount;
+					for (auto & worker : dispatchedWorkers)//TODO order by closest again
+					{
+						m_workerData.setWorkerJob(worker, WorkerJobs::Minerals, getDepotAtBasePosition(base->getPosition()), true);
+						needed--;
+						if (needed <= 0)
+						{
+							break;
+						}
+					}
+					if (needed <= 0)
+					{
+						break;
+					}
+				}
+			}
+		}
+		return;
+	}
+
+	//split workers on first frame
+	m_isFirstFrame = false;
+
 	std::list<Unit> minerals;
 	std::list<std::pair<Unit, int>> mineralsUsage;
 	for (auto base : m_bot.Bases().getBaseLocations())
@@ -77,7 +142,7 @@ void WorkerManager::stopRepairing(Unit worker)
 			}
 		}
 	}
-	//TODO Remove workers within X of a mineral (no changing target when already mining).
+
 	std::list<std::pair<Unit, float>> temp;
 	for (auto mineralWorker : mineralWorkers)
 	{
@@ -86,8 +151,8 @@ void WorkerManager::stopRepairing(Unit worker)
 		temp.push_back(std::pair<Unit, float>(mineralWorker, dist));
 	}
 
-	std::list<Unit> orderedMineralWorkers;
-	for (auto mineralWorker : orderedMineralWorkers)
+	std::list<Unit> orderedMineralWorkers;//Replaces workers
+	for (auto mineralWorker : workers)
 	{
 		if (!mineralWorker.isValid())
 		{
@@ -123,7 +188,7 @@ void WorkerManager::stopRepairing(Unit worker)
 		//m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Minerals, closestMineral);
 		//workers.erase(mineralWorker);
 	}
-}*/
+}
 
 void WorkerManager::handleGasWorkers()
 {
@@ -266,7 +331,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, float minH
     return getClosestMineralWorkerTo(pos, CCUnitID{}, minHpPercentage);
 }
 
-/*Unit WorkerManager::getClosest(const Unit unit, const std::list<Unit> units) const
+Unit WorkerManager::getClosest(const Unit unit, const std::list<Unit> units) const
 {
 	Unit currentClosest;
 	float minDist = -1;
@@ -287,7 +352,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, float minH
 		}
 	}
 	return currentClosest;
-}*/
+}
 
 /*std::list<Unit> WorkerManager::orderByDistance(const std::list<Unit> units, CCPosition pos, bool closestFirst)
 {
@@ -381,8 +446,19 @@ Unit WorkerManager::getClosestDepot(Unit worker) const
     {
         if (!unit.isValid()) { continue; }
 
-        if (unit.getType().isResourceDepot() && unit.isCompleted())
+        if (unit.getType().isResourceDepot())
         {
+			if (!unit.isCompleted())
+			{
+				//Cannont allow unfinished bases, unless the base is morphing (orbital, lair and hive).
+				switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())
+				{
+					case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER://Ignores flying depot
+					case sc2::UNIT_TYPEID::PROTOSS_NEXUS:
+					case sc2::UNIT_TYPEID::ZERG_HATCHERY:
+						continue;
+				}
+			}
             double distance = Util::Dist(unit, worker);
             if (!closestDepot.isValid() || distance < closestDistance)
             {
@@ -407,6 +483,43 @@ void WorkerManager::finishedWithWorker(const Unit & unit)
 Unit WorkerManager::getGasWorker(Unit refinery) const
 {
     return getClosestMineralWorkerTo(refinery.getPosition());
+}
+
+Unit WorkerManager::getDepotAtBasePosition(CCPosition basePosition) const
+{
+	for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
+	{
+		// we only care about buildings on the ground
+		if (!unit.getType().isBuilding() || unit.isFlying() || !unit.getType().isResourceDepot())
+		{
+			continue;
+		}
+		BaseLocation * baseLocation = m_bot.Bases().getBaseLocation(unit.getPosition());
+		if (baseLocation->getPosition().x == basePosition.x && baseLocation->getPosition().y == basePosition.y)
+		{
+			return unit;
+		}
+	}
+}
+
+int WorkerManager::getWorkerCountAtBasePosition(CCPosition basePosition) const
+{
+	// for each unit on the map, update which base location it may be occupying
+	for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
+	{
+		// we only care about buildings on the ground
+		if (!unit.getType().isBuilding() || unit.isFlying() || !unit.getType().isResourceDepot())
+		{
+			continue;
+		}
+		BaseLocation * baseLocation = m_bot.Bases().getBaseLocation(unit.getPosition());
+		if (baseLocation->getPosition().x == basePosition.x && baseLocation->getPosition().y == basePosition.y)
+		{
+			Unit depot = unit;
+			return m_bot.Workers().getWorkerData().getCountWorkerAtDepot(depot);
+		}
+	}
+	return -1;
 }
 
 void WorkerManager::setBuildingWorker(Unit worker)
@@ -468,6 +581,34 @@ void WorkerManager::drawResourceDebugInfo()
             m_bot.Map().drawLine(worker.getPosition(), depot.getPosition());
         }
     }
+
+	for (auto & unit : m_bot.UnitInfo().getUnits(Players::Neutral))
+	{
+		if (unit.getType().isMineral())
+		{
+			switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())
+			{
+				case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD:
+				case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD750:
+				case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD:
+				case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD750:
+					m_bot.Map().drawText(unit.getPosition(), "Rich mineral");
+					break;
+				case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD:
+				case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD750:
+				case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD:
+				case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD750:
+				case sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD:
+				case sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD750:
+				case sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD:
+				case sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD750:
+					m_bot.Map().drawText(unit.getPosition(), "Mineral");
+					break;
+				default:
+					m_bot.Map().drawText(unit.getPosition(), "Not mineral");
+			}
+		}
+	}
 }
 
 void WorkerManager::drawWorkerInformation()

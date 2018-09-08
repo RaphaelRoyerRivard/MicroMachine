@@ -340,21 +340,21 @@ const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocat
     return m_occupiedBaseLocations.at(player);
 }
 
-int BaseLocationManager::getBaseCount(int player) const
+int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 {
 	switch (m_bot.GetPlayerRace(Players::Self))
 	{
 		case CCRace::Terran:
 		{
-			return m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND , sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS });
+			return m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND , sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS }, isCompleted);
 		}
 		case CCRace::Protoss:
 		{
-			return m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::PROTOSS_NEXUS);
+			return m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, isCompleted);
 		}
 		case CCRace::Zerg:
 		{
-			return m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::ZERG_HATCHERY, sc2::UNIT_TYPEID::ZERG_LAIR , sc2::UNIT_TYPEID::ZERG_HIVE });
+			return m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::ZERG_HATCHERY, sc2::UNIT_TYPEID::ZERG_LAIR , sc2::UNIT_TYPEID::ZERG_HIVE }, isCompleted);
 		}
 	}
 }
