@@ -123,6 +123,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
 	CCRace playerRace = m_bot.GetPlayerRace(Players::Self);
 	const auto productionBuildingCount = getProductionBuildingsCount();
+	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self);
 
 	const auto metaTypeOrbitalCommand = MetaType("OrbitalCommand", m_bot);
@@ -130,30 +131,19 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	// build supply if we need some
 	auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
 	auto metaTypeSupplyProvider = MetaType(supplyProvider, m_bot);
-	if(m_bot.GetCurrentSupply() + 2 * getUnitTrainingBuildings(playerRace).size() + baseCount > m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8 && !m_queue.contains(metaTypeSupplyProvider))
+	if(m_bot.GetCurrentSupply() + 1.75 * getUnitTrainingBuildings(playerRace).size() + baseCount > m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8 && !m_queue.contains(metaTypeSupplyProvider))
 	{
 		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
 	}
 
 	if (playerRace == sc2::Race::Terran)
 	{
-		if(m_bot.Strategy().isWorkerRushed() && baseCount == 1)
-		{
-			const auto metaTypeReaper = MetaType("Reaper", m_bot);
-			if (m_queue.getHighestPriorityItem().type.getUnitType().getAPIUnitType() != metaTypeReaper.getUnitType().getAPIUnitType())
-			{
-				m_queue.queueAsHighestPriority(metaTypeReaper, true);
-				return;
-			}
-		}
-
 		const auto metaTypeCommandCenter = MetaType("CommandCenter", m_bot);
 
 		// Logic for building Orbital Commands and Refineries
-		int ccsInQueue = m_queue.getCountOfType(metaTypeCommandCenter);
-		if(m_ccShouldBeInQueue && ccsInQueue == 0 && !m_bot.Buildings().isBeingBuilt(metaTypeCommandCenter.getUnitType()) && !m_queue.contains(metaTypeOrbitalCommand))
+		if(m_ccShouldBeInQueue && !m_queue.contains(metaTypeCommandCenter) && !m_bot.Buildings().isBeingBuilt(metaTypeCommandCenter.getUnitType()) && !m_queue.contains(metaTypeOrbitalCommand))
 		{
-			m_queue.queueAsHighestPriority(metaTypeOrbitalCommand, false);
+			m_queue.queueAsLowestPriority(metaTypeOrbitalCommand, false);
 
 			const auto metaTypeRefinery = MetaType("Refinery", m_bot);
 			m_queue.queueAsLowestPriority(metaTypeRefinery, false);
@@ -161,20 +151,33 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			m_ccShouldBeInQueue = false;
 		}
 
-				// Strategy base logic
+		// Strategy base logic
 		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
-		const int maxProductionABaseCanSupport = 2;
+		const int maxProductionABaseCanSupport = 3;
 		switch (currentStrategy)
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
 			{
-				if (productionBuildingCount < maxProductionABaseCanSupport * baseCount)
+				if (productionBuildingCount + productionBuildingAddonCount < maxProductionABaseCanSupport * baseCount)
 				{
 					const auto metaTypeBarrack = MetaType("Barracks", m_bot);
-
-					if (!m_queue.contains(metaTypeBarrack) && meetsReservedResourcesWithExtra(metaTypeBarrack))
+					const auto metaTypeBarrackReactor = MetaType("BarracksReactor", m_bot);
+					const auto metaTypeBarrackTechLab = MetaType("BarracksTechLab", m_bot);
+					const auto metaTypeStarportTechlab = MetaType("StarportTechLab", m_bot);
+					MetaType toBuild;
+					if (productionBuildingAddonCount < productionBuildingCount)//handles barracks only for now
+					{//Addon
+						toBuild = metaTypeBarrack;//TODO Not making addons since they are broken.
+					}
+					else
+					{//Building
+						toBuild = metaTypeBarrack;
+					}
+					
+					if (!m_queue.contains(toBuild) && meetsReservedResourcesWithExtra(toBuild))
 					{
-						m_queue.queueAsLowestPriority(metaTypeBarrack, false);
+						//m_queue.queueAsLowestPriority(toBuild, false);
+						m_queue.queueAsLowestPriority(toBuild, false);
 					}
 
 					/*int factories = m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING });
@@ -192,7 +195,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_ccShouldBeInQueue = true;
 
 						auto metaTypeInfWeap = getUpgradeMetaType(MetaType("TerranInfantryWeaponsLevel1", m_bot));
-						m_queue.queueAsHighestPriority(metaTypeInfWeap, false);
+						m_queue.queueAsLowestPriority(metaTypeInfWeap, false);
 						startedUpgrades.push_back(metaTypeInfWeap);
 					}
 
@@ -207,6 +210,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (!m_queue.contains(metaTypeReaper))
 				{
 					m_queue.queueAsLowestPriority(metaTypeReaper, false);
+				}
+
+				const auto metaTypeBanshee = MetaType("Viking", m_bot);
+				if (!m_queue.contains(metaTypeBanshee) && m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB) > 0)
+				{
+					m_queue.queueAsLowestPriority(metaTypeBanshee, false);
 				}
 
 				/*const auto metaTypeHellion = MetaType("Hellion", m_bot);
@@ -264,11 +273,21 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				break;
 			}
+			case StrategyPostBuildOrder::WORKER_RUSH_DEFENSE:
+			{
+				const auto metaTypeReaper = MetaType("Reaper", m_bot);
+				if (m_queue.getHighestPriorityItem().type.getUnitType().getAPIUnitType() != metaTypeReaper.getUnitType().getAPIUnitType())
+				{
+					m_queue.queueAsHighestPriority(metaTypeReaper, true);
+					return;
+				}
+				break;
+			}
 		}
 	}
 
-	//has to stay below the Orbital Command upgrade
-	if (m_bot.Workers().getNumWorkers() < baseCount * 23 && !m_queue.contains(metaTypeOrbitalCommand))
+	const int maxWorkers = 23 * 2 + 4;//23 workers per base, maximum of 2 base, + 4 for builders.
+	if (m_bot.Workers().getNumWorkers() < maxWorkers && !m_queue.contains(metaTypeOrbitalCommand))//baseCount * 23
 	{
 		auto workerType = Util::GetWorkerType(playerRace, m_bot);
 		const auto metaTypeWorker = MetaType(workerType, m_bot);
@@ -298,7 +317,7 @@ void ProductionManager::fixBuildOrderDeadlock()
     if (!hasRequired)
     {
         std::cout << currentItem.type.getName() << " needs " << m_bot.Data(currentItem.type).requiredUnits[0].getName() << "\n";
-        m_queue.queueAsHighestPriority(MetaType(m_bot.Data(currentItem.type).requiredUnits[0], m_bot), true);
+        m_queue.queueAsHighestPriority(MetaType(m_bot.Data(currentItem.type).requiredUnits[0], m_bot), currentItem.blocking);
         fixBuildOrderDeadlock();
         return;
     }
@@ -367,9 +386,22 @@ bool ProductionManager::currentlyHasRequirement(MetaType currentItem)
 				continue;
 			return false;
 		}
-		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, true, true) <= 0)// && (allowIsBeingBuilt && m_bot.Buildings().isBeingBuilt(required)))
+		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, true, true) <= 0)
 		{
-			return false;
+			//Only for terran because all their bases are used for the same prerequirements. Not the case for zergs.
+			//TODO zerg might need something similar
+			switch ((sc2::UNIT_TYPEID)required.getAPIUnitType())
+			{
+				case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER:
+				case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING:
+				case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:
+				case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING:
+				case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
+					return m_bot.Bases().getBaseCount(Players::Self) > 0;
+					break;
+				default:
+					return false;
+			}
 		}
 	}
 	return true;
@@ -452,6 +484,32 @@ int ProductionManager::getProductionBuildingsCount() const
 		case CCRace::Zerg:
 		{
 			//TODO
+			return 0;
+		}
+	}
+}
+
+int ProductionManager::getProductionBuildingsAddonsCount() const
+{
+	switch (m_bot.GetPlayerRace(Players::Self))
+	{
+		case CCRace::Terran:
+		{
+
+			return m_bot.Buildings().getBuildingCountOfType({
+				sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR,
+				sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB,
+				sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR,
+				sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB,
+				sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR,
+				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB });
+		}
+		case CCRace::Protoss:
+		{
+			return 0;
+		}
+		case CCRace::Zerg:
+		{
 			return 0;
 		}
 	}

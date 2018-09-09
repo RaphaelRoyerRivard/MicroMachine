@@ -95,7 +95,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
     // for each building that doesn't have a builder, assign one
     for (Building & b : m_buildings)
     {
-        if (b.status != BuildingStatus::Unassigned)
+        if (b.status != BuildingStatus::Unassigned)//b.buildingUnit.isBeingConstructed()//|| b.underConstruction)
         {
             continue;
         }
@@ -106,6 +106,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 
 		if (b.type.isAddon())
 		{
+			
 			MetaType addonType = MetaType(b.type, m_bot);
 			Unit producer = m_bot.Commander().Production().getProducer(addonType);
 			b.builderUnit = producer;
@@ -162,7 +163,7 @@ void BuildingManager::constructAssignedBuildings()
 {
     for (auto & b : m_buildings)
     {
-        if (b.status != BuildingStatus::Assigned)
+        if (b.status != BuildingStatus::Assigned || b.type.isAddon())
         {
             continue;
         }

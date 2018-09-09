@@ -195,8 +195,9 @@ size_t UnitInfoManager::getUnitTypeCount(CCPlayer player, UnitType type, bool co
 	if (ignoreState)
 	{
 		//TODO PROTOSS AND ZERG NOT IMPLEMENTED
+		sc2::UNIT_TYPEID typeID = type.getAPIUnitType();
 		sc2::UNIT_TYPEID alternate;
-		switch ((sc2::UNIT_TYPEID)type.getAPIUnitType())
+		switch (typeID)
 		{
 			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT:
 				alternate = sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED;

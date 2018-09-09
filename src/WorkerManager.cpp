@@ -65,7 +65,7 @@ void WorkerManager::handleMineralWorkers()
 	}
 	
 	if (!m_isFirstFrame)
-	{
+	{//Worker split between bases
 		if (m_bot.Bases().getBaseCount(Players::Self, true) <= 1)
 		{//No point trying to split workers
 			return;
@@ -81,7 +81,7 @@ void WorkerManager::handleMineralWorkers()
 				int optimalWorkers = base->getMinerals().size() * 2;
 				if (workerCount > optimalWorkers)
 				{
-					int needed = optimalWorkers - workerCount;
+					int needed = workerCount - optimalWorkers;
 					for (auto & worker : workers)//TODO order by closest to the target base location
 					{
 						if (m_bot.Workers().isFree(worker) && !worker.getType().isMule() && base->containsPosition(worker.getPosition()))
