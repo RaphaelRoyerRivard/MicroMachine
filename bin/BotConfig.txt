@@ -2,7 +2,7 @@
     "Bot Info" :
     {
         "BotName"                   : "MicroMachine",
-        "Authors"                   : "David Churchill, Raphael Royer-Rivard, Antoine Theberge, Benjamin Ross, Jean-Philippe Croteau, Francois Genest",
+        "Authors"                   : "David Churchill, Raphael Royer-Rivard, Antoine Theberge, Benjamin Ross, Jean-Philippe Croteau, Francois Genest, Alexis Caron",
         "PrintInfoOnStart"          : false
     },
 
@@ -21,7 +21,7 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 10,
+        "EnemyDifficulty"           : 1,
         "EnemyRace"                 : "Protoss",
         "MapFile"                   : "Redshift.SC2Map",
         "StepSize"                  : 1,
@@ -222,6 +222,15 @@
 										"Refinery",
 										"SCV",
 										"OrbitalCommand"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
+            },
+			"Terran_ExpensionTest"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV",
+										"CommandCenter",
+										"CommandCenter"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },

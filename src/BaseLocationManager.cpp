@@ -371,7 +371,7 @@ CCTilePosition BaseLocationManager::getNextExpansion(int player) const
 	for (auto & base : getBaseLocations())
 	{
 		// skip mineral only and starting locations (TODO: fix this)
-		if (base->isMineralOnly() || base->isStartLocation())
+		if (base->isMineralOnly() || base->isStartLocation() || base->isOccupiedByPlayer(Players::Self) || base->isOccupiedByPlayer(Players::Enemy))
 		{
 			continue;
 		}
@@ -380,7 +380,21 @@ CCTilePosition BaseLocationManager::getNextExpansion(int player) const
 		auto tile = base->getDepotPosition();
 
 		bool buildingInTheWay = false; // TODO: check if there are any units on the tile
-
+		for (auto unit : m_bot.GetUnits())
+		{
+			if (unit.isValid() && (unit.getPlayer() == Players::Self || unit.getPlayer() == Players::Enemy) && unit.getType().isBuilding())
+			{
+				int height = unit.getType().tileHeight() * 0.5;
+				int width = unit.getType().tileWidth() * 0.5;
+				//tile position is always at the center, but if its an odd width or height, it picks the bottom left '+' of the center
+				//Check if the position of the building is within the border of the ressource depot
+				if (tile.x + 3 >= unit.getTilePosition().x - width && tile.x - 2 <= unit.getTilePosition().x + width && tile.y + 3 >= unit.getTilePosition().y - height && tile.y - 2 <= unit.getTilePosition().y + height)
+				{
+					buildingInTheWay = true;
+					break;
+				}
+			}
+		}
 		if (buildingInTheWay)
 		{
 			continue;

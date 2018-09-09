@@ -52,6 +52,8 @@ const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 	//TODO Add all IF to check which strategy we want to use.
 	if (m_enemyHasMetabolicBoost)
 		return StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING;
+	if (m_bot.Strategy().isWorkerRushed() && m_bot.Bases().getBaseCount(Players::Self) == 1)
+		return StrategyPostBuildOrder::WORKER_RUSH_DEFENSE;
 	return StrategyPostBuildOrder::TERRAN_REAPER;
 }
 
