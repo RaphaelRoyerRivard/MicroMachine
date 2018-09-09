@@ -486,30 +486,10 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 
 Unit BuildingManager::getClosestResourceDepot(CCPosition position)
 {
-	std::vector<sc2::UNIT_TYPEID> resourceDepotTypes;
 	std::vector<Unit> resourceDepots;
-	switch (m_bot.GetPlayerRace(Players::Self))
-	{
-		case CCRace::Terran:
-		{
-			resourceDepotTypes = { sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS };
-			break;
-		}
-		case CCRace::Protoss:
-		{
-			resourceDepotTypes = { sc2::UNIT_TYPEID::PROTOSS_NEXUS };
-			break;
-		}
-		case CCRace::Zerg:
-		{
-			resourceDepotTypes = { sc2::UNIT_TYPEID::ZERG_HATCHERY, sc2::UNIT_TYPEID::ZERG_LAIR, sc2::UNIT_TYPEID::ZERG_HIVE };
-			break;
-		}
-	}
-
 	for (auto building : m_baseBuildings)
 	{
-		if(std::find(resourceDepotTypes.begin(), resourceDepotTypes.end(), building.getAPIUnitType()) != resourceDepotTypes.end())
+		if(building.getType().isResourceDepot())
 		{
 			resourceDepots.push_back(building);
 		}

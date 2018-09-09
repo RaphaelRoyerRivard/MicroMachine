@@ -318,7 +318,7 @@ void CombatCommander::updateDefenseSquads()
             continue;
         }
 
-        CCPosition basePosition = myBaseLocation->getPosition();
+        CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotPosition());
 
         // start off assuming all enemy units in region are just workers
         int numDefendersPerEnemyUnit = 2; // 2 might be too much if we consider them workers...
