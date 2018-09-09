@@ -563,7 +563,6 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
 
 Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos)
 {
-
     // get our worker unit that is mining that is closest to it
     Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(pos, m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
 
