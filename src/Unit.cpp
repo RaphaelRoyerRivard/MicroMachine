@@ -143,6 +143,11 @@ CCPlayer Unit::getPlayer() const
 #endif
 }
 
+sc2::Tag Unit::getTag() const
+{
+	return m_unit->tag;
+}
+
 CCUnitID Unit::getID() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
@@ -188,6 +193,18 @@ bool Unit::isTraining() const
 #endif
 }
 
+
+bool Unit::isAddonTraining() const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+#ifdef SC2API
+	return m_unit->orders.size() > 1;
+	
+#else
+	return false;
+#endif
+}
+
 bool Unit::isBeingConstructed() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
@@ -196,6 +213,12 @@ bool Unit::isBeingConstructed() const
 #else
     return m_unit->isBeingConstructed();
 #endif
+}
+
+sc2::Tag Unit::getAddonTag() const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+	return m_unit->add_on_tag;
 }
 
 int Unit::getWeaponCooldown() const

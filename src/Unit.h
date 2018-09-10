@@ -42,6 +42,7 @@ public:
     CCHealth getShields() const;
     CCHealth getEnergy() const;
     CCPlayer getPlayer() const;
+	sc2::Tag getTag() const;
     CCUnitID getID() const;
 	int getIDAsInt() const;
     float getBuildPercentage() const;
@@ -57,7 +58,9 @@ public:
     bool isValid() const;
 	bool isVisible() const;
     bool isTraining() const;
+	bool isAddonTraining() const;
     bool isConstructing(const UnitType & type) const;
+	sc2::Tag getAddonTag() const;
 
     void stop           () const;
     void attackUnit     (const Unit & target) const;

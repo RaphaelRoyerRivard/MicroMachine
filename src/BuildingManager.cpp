@@ -163,7 +163,7 @@ void BuildingManager::constructAssignedBuildings()
 {
     for (auto & b : m_buildings)
     {
-        if (b.status != BuildingStatus::Assigned || b.type.isAddon())
+        if (b.status != BuildingStatus::Assigned)
         {
             continue;
         }
@@ -267,11 +267,11 @@ void BuildingManager::checkForStartedConstruction()
             }
 
             // check if the positions match
-			int addonOffset = b.type.isAddon() ? 3 : 0;
-            int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
+			//int addonOffset = b.type.isAddon() ? 3 : 0;
+            int dx = b.finalPosition.x /*+ addonOffset*/ - buildingStarted.getTilePosition().x;
             int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
 
-            if (dx*dx + dy*dy < Util::TileToPosition(1.0f))
+            if (dx*dx + dy*dy < Util::TileToPosition(1.0f) || b.type.isAddon())
             {
                 if (b.buildingUnit.isValid())
                 {
