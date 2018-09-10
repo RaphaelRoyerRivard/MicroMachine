@@ -605,7 +605,7 @@ CCPosition CombatCommander::getMainAttackLocation()
             // if it has been explored, go there if there are any visible enemy units there
             for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
             {
-                if (Util::Dist(enemyUnit, enemyBasePosition) < 15)
+                if (enemyUnit.getType().isBuilding() && Util::Dist(enemyUnit, enemyBasePosition) < 15)
                 {
                     return enemyBasePosition;
                 }

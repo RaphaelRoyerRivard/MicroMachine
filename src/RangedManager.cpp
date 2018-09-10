@@ -36,13 +36,27 @@ RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 void RangedManager::setTargets(const std::vector<Unit> & targets)
 {
     std::vector<Unit> rangedUnitTargets;
+	bool filterPassiveBuildings = false;
+	if(m_harassMode)
+	{
+		// In harass mode, we do not want to target buildings unless there are no better targets
+		for (auto & target : targets)
+		{
+			// Check if the target is a unit (not building) or a combat building. In this case, we won't consider passive buildings
+			if (!target.getType().isBuilding() || target.getType().isCombatUnit())
+			{
+				filterPassiveBuildings = true;
+				break;
+			}
+		}
+	}
     for (auto & target : targets)
     {
         auto targetPtr = target.getUnitPtr();
         if (!targetPtr) { continue; }
         if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_EGG) { continue; }
         if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_LARVA) { continue; }
-		if (m_harassMode && target.getType().isBuilding() && !target.getType().isCombatUnit()) { continue; }
+		if (filterPassiveBuildings && target.getType().isBuilding() && !target.getType().isCombatUnit()) { continue; }
 
         rangedUnitTargets.push_back(target);
     }
