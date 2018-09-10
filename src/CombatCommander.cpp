@@ -641,12 +641,14 @@ CCPosition CombatCommander::getMainAttackLocation()
 
 CCPosition CombatCommander::exploreMap()
 {
-	CCPosition mainAttackSquadCenter = m_squadData.getSquad("MainAttack").calcCenter();
 	CCPosition basePosition = Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
-	if (Util::Dist(mainAttackSquadCenter, basePosition) < 3.f)
+	for (auto & unit : m_combatUnits)
 	{
-		m_currentBaseExplorationIndex = m_currentBaseExplorationIndex + 1 % m_bot.Bases().getBaseLocations().size();
-		return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
+		if (Util::Dist(unit.getPosition(), basePosition) < 3.f)
+		{
+			m_currentBaseExplorationIndex = m_currentBaseExplorationIndex + 1 % m_bot.Bases().getBaseLocations().size();
+			return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
+		}
 	}
 	return basePosition;
 }
