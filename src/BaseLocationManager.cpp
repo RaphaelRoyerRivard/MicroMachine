@@ -355,6 +355,7 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 			return m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::ZERG_HATCHERY, sc2::UNIT_TYPEID::ZERG_LAIR , sc2::UNIT_TYPEID::ZERG_HIVE }, isCompleted);
 		}
 	}
+	return 0;
 }
 
 CCTilePosition BaseLocationManager::getNextExpansion(int player) const

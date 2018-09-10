@@ -500,6 +500,7 @@ Unit WorkerManager::getDepotAtBasePosition(CCPosition basePosition) const
 			return unit;
 		}
 	}
+	return {};
 }
 
 int WorkerManager::getWorkerCountAtBasePosition(CCPosition basePosition) const

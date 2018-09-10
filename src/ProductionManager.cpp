@@ -487,6 +487,7 @@ int ProductionManager::getProductionBuildingsCount() const
 			return 0;
 		}
 	}
+	return 0;
 }
 
 int ProductionManager::getProductionBuildingsAddonsCount() const
@@ -513,6 +514,7 @@ int ProductionManager::getProductionBuildingsAddonsCount() const
 			return 0;
 		}
 	}
+	return 0;
 }
 
 std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
@@ -630,13 +632,15 @@ MetaType ProductionManager::getUpgradeMetaType(const MetaType type) const
 		}
 	}
 	assert("Upgrade wasn't found.");
+
+	return {};
 }
 
 Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const
 {
-    if (units.size() == 0)
+    if (units.empty())
     {
-        return Unit();
+        return {};
     }
 
     // if we don't care where the unit is return the first one we have
