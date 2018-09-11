@@ -292,6 +292,15 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				break;
 			}
+			case StrategyPostBuildOrder::TERRAN_BANSHEE:
+			{
+				const auto metaTypeBanshee = MetaType("Banshee", m_bot);
+				if (!m_queue.contains(metaTypeBanshee))
+				{
+					m_queue.queueAsLowestPriority(metaTypeBanshee, false);
+				}
+				break;
+			}
 		}
 	}
 

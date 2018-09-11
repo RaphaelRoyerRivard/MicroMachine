@@ -29,6 +29,7 @@ struct StrategyPostBuildOrder {
 	const static int TERRAN_MARINE_MARAUDER = 2;
 	const static int WORKER_RUSH_DEFENSE = 3;
 	const static int TERRAN_VIKING = 4;
+	const static int TERRAN_BANSHEE = 5;
 };
 
 class StrategyManager

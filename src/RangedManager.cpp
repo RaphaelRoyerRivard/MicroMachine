@@ -20,9 +20,7 @@ const float HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE = 10.f;
 const float HARASS_FRIENDLY_ATTRACTION_INTENSITY = 1.5f;
 const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
 const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
-const int REAPER_ATTACK_FRAME_COUNT = 2;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
-const int VIKING_ATTACK_FRAME_COUNT = 2;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const float HARASS_THREAT_MIN_DISTANCE_TO_TARGET = 2.f;
 const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
@@ -145,13 +143,9 @@ void RangedManager::RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedU
 
 void RangedManager::setNextCommandFrameAfterAttack(const sc2::Unit* unit)
 {
-	int attackFrameCount = 1;
-	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
-		attackFrameCount = REAPER_ATTACK_FRAME_COUNT;
-	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
+	int attackFrameCount = 2;
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
 		attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
-	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
-		attackFrameCount = VIKING_ATTACK_FRAME_COUNT;
 	nextCommandFrameForUnit[unit] = m_bot.Observation()->GetGameLoop() + attackFrameCount;
 }
 
