@@ -367,7 +367,8 @@ int UnitType::gasPrice() const
 UnitType UnitType::GetUnitTypeFromName(const std::string & name, CCBot & bot)
 {
 #ifdef SC2API
-    for (const sc2::UnitTypeData & data : bot.Observation()->GetUnitTypeData())
+	const sc2::UnitTypes unitTypes = bot.Observation()->GetUnitTypeData();
+    for (const sc2::UnitTypeData & data : unitTypes)
     {
         if (name == data.name)
         {

@@ -283,6 +283,15 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				break;
 			}
+			case StrategyPostBuildOrder::TERRAN_VIKING:
+			{
+				const auto metaTypeVikingFighter = MetaType("VikingFighter", m_bot);
+				if (!m_queue.contains(metaTypeVikingFighter))
+				{
+					m_queue.queueAsLowestPriority(metaTypeVikingFighter, false);
+				}
+				break;
+			}
 		}
 	}
 
@@ -343,9 +352,7 @@ void ProductionManager::fixBuildOrderDeadlock()
 
     if (!hasProducer)
     {
-        // si on veut faire un worker et qu'on n'a plus de worker et qu'on n'a plus de main building, GG
-        bool noMoreWorker = m_bot.Workers().getNumWorkers() == 0;
-        if (currentItem.type.getUnitType().isWorker() && noMoreWorker)
+        if (currentItem.type.getUnitType().isWorker() && m_bot.Observation()->GetFoodWorkers() == 0)
         {
             // We no longer have worker and no longer have buildings to do more, so we are rip...
             return;

@@ -22,6 +22,7 @@ const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
 const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
 const int REAPER_ATTACK_FRAME_COUNT = 2;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
+const int VIKING_ATTACK_FRAME_COUNT = 2;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const float HARASS_THREAT_MIN_DISTANCE_TO_TARGET = 2.f;
 const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
@@ -142,13 +143,26 @@ void RangedManager::RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedU
 	}
 }
 
+void RangedManager::setNextCommandFrameAfterAttack(const sc2::Unit* unit)
+{
+	int attackFrameCount = 1;
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+		attackFrameCount = REAPER_ATTACK_FRAME_COUNT;
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
+		attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+		attackFrameCount = VIKING_ATTACK_FRAME_COUNT;
+	nextCommandFrameForUnit[unit] = m_bot.Observation()->GetGameLoop() + attackFrameCount;
+}
+
 void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
 {
 	// for each rangedUnit
 	for (auto rangedUnit : rangedUnits)
 	{
-		bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
-		bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
+		const bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
+		const bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
+		const bool isGroundUnit = !rangedUnit->is_flying;
 
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawText(rangedUnit->pos, std::to_string(rangedUnit->tag));
@@ -218,12 +232,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			// if our unit is not in range of threat (unless it is faster) and target is in range and weapon is ready, attack target
 			if ((!inRangeOfThreat || isCloseThreatFaster) && targetInAttackRange && rangedUnit->weapon_cooldown <= 0.f) {
 				Micro::SmartAttackUnit(rangedUnit, target, m_bot);
-				int attackFrameCount = 1;
-				if (isReaper)
-					attackFrameCount = REAPER_ATTACK_FRAME_COUNT;
-				else if (isHellion)
-					attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
-				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + attackFrameCount;
+				setNextCommandFrameAfterAttack(rangedUnit);
 				continue;
 			}
 
@@ -268,12 +277,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				{
 					RunBehaviorTree(units, threats);
 					m_harassMode = true;
-					int attackFrameCount = 1;
-					if (isReaper)
-						attackFrameCount = REAPER_ATTACK_FRAME_COUNT;
-					else if (isHellion)
-						attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
-					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + attackFrameCount;
+					setNextCommandFrameAfterAttack(rangedUnit);
 					continue;
 				}
 				m_harassMode = true;
@@ -308,7 +312,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				{
 					//TODO find a group of threat
 					Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, m_bot);
-					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_ATTACK_FRAME_COUNT;
+					setNextCommandFrameAfterAttack(rangedUnit);
 					madeAction = true;
 					break;
 				}
@@ -418,37 +422,42 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			const int initialMoveDistance = 9;
 			int moveDistance = initialMoveDistance;
 			CCPosition moveTo = rangedUnit->pos + dirVec * moveDistance;
-			const int mapWidth = m_bot.Map().width();
-			const int mapHeight = m_bot.Map().height();
+			
+			if(isGroundUnit)
+			{
+				const int mapWidth = m_bot.Map().width();
+				const int mapHeight = m_bot.Map().height();
 
-			// Check if we can move in the direction of the vector
-			// We check if we are moving towards and close to an unpathable position
-			while (!m_bot.Observation()->IsPathable(moveTo))
-			{
-				++moveDistance;
-				moveTo = rangedUnit->pos + dirVec * moveDistance;
-				// If moveTo is out of the map, stop checking farther and switch to influence map navigation
-				if (mapWidth < moveTo.x || moveTo.x < 0 || mapHeight < moveTo.y || moveTo.y < 0)
+				// Check if we can move in the direction of the vector
+				// We check if we are moving towards and close to an unpathable position
+				while (!m_bot.Observation()->IsPathable(moveTo))
 				{
-					useInfluenceMap = true;
-					break;
-				}
-			}
-			// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
-			if (useInfluenceMap)
-			{
-				moveDistance = initialMoveDistance;
-				while (moveDistance > 2)
-				{
-					--moveDistance;
+					++moveDistance;
 					moveTo = rangedUnit->pos + dirVec * moveDistance;
-					if (m_bot.Observation()->IsPathable(moveTo))
+					// If moveTo is out of the map, stop checking farther and switch to influence map navigation
+					if (mapWidth < moveTo.x || moveTo.x < 0 || mapHeight < moveTo.y || moveTo.y < 0)
 					{
-						useInfluenceMap = false;
+						useInfluenceMap = true;
 						break;
 					}
 				}
+				// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
+				if (useInfluenceMap)
+				{
+					moveDistance = initialMoveDistance;
+					while (moveDistance > 2)
+					{
+						--moveDistance;
+						moveTo = rangedUnit->pos + dirVec * moveDistance;
+						if (m_bot.Observation()->IsPathable(moveTo))
+						{
+							useInfluenceMap = false;
+							break;
+						}
+					}
+				}
 			}
+
 			// If a closer pathable tile was found, move there
 			if(!useInfluenceMap)
 			{
@@ -520,7 +529,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 	{
 		for (int y = 0; y < mapHeight; ++y)
 		{
-			bool pathable = m_bot.Observation()->IsPathable(sc2::Point2D(rangedUnit->pos.x - centerPos.x + x, rangedUnit->pos.y - centerPos.y + y));
+			bool pathable = rangedUnit->is_flying || m_bot.Observation()->IsPathable(sc2::Point2D(rangedUnit->pos.x - centerPos.x + x, rangedUnit->pos.y - centerPos.y + y));
 			map[x][y] = pathable ? 0.f : 9999.f;
 		}
 	}
@@ -755,26 +764,32 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     {
         BOT_ASSERT(target, "null target unit in getTarget");
 
-		// We do not want to target melee units surrounded by ranged units with our harass units 
-		if(m_harassMode && !isTargetRanged(target))
+		if(m_harassMode)
 		{
-			bool threatTooClose = false;
-			for (auto otherTarget : targets)
+			const float unitRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+			const float targetRange = Util::GetAttackRangeForTarget(target, rangedUnit, m_bot);
+			if (unitRange > targetRange + 2.f)
 			{
-				if(otherTarget != target 
-					&& isTargetRanged(otherTarget)
-					&& Util::Dist(otherTarget->pos, target->pos) < HARASS_THREAT_MIN_DISTANCE_TO_TARGET
-					&& Util::GetDpsForTarget(otherTarget, rangedUnit, m_bot) > 0.f)
+				// We do not want to target melee units surrounded by ranged units with our harass units 
+				bool threatTooClose = false;
+				for (auto otherTarget : targets)
 				{
-					threatTooClose = true;
-					break;
+					if (otherTarget == target)
+						continue;
+
+					const float otherTargetRange = Util::GetAttackRangeForTarget(otherTarget, rangedUnit, m_bot);
+					if (otherTargetRange + 2.f > unitRange && Util::Dist(otherTarget->pos, target->pos) < HARASS_THREAT_MIN_DISTANCE_TO_TARGET)
+					{
+						threatTooClose = true;
+						break;
+					}
 				}
+				if (threatTooClose)
+					continue;
 			}
-			if (threatTooClose)
-				continue;
 		}
 
-        float priority = getAttackPriority(rangedUnit, target);
+        const float priority = getAttackPriority(rangedUnit, target);
 
         // if it's a higher priority, set it
         if (priority > highestPriority)
@@ -823,14 +838,16 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 {
     BOT_ASSERT(target, "null unit in getAttackPriority");
 
-	if (attacker->unit_type == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT)
+	if (target->unit_type == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT
+		|| target->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 		return 0.f;
-    
-    Unit targetUnit(target, m_bot);
+
+	float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot);
+	float targetRange = Util::GetAttackRangeForTarget(target, attacker, m_bot);
 
 	if (m_harassMode)
 	{
-		if (isTargetRanged(target))
+		if (targetRange + 2.f > attackerRange)
 			return 0.f;
 	}
 
@@ -838,14 +855,12 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 	if (unitDps == 0.f)	//Do not attack targets on which we would do no damage
 		return 0.f;
 
-	if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
-		return 0.f;
-
 	float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized
 	float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);   //the more far a unit is, the less it is prioritized
-	if (distanceValue > Util::GetAttackRangeForTarget(attacker, target, m_bot))
+	if (distanceValue > attackerRange)
 		distanceValue /= 2;
 
+	Unit targetUnit(target, m_bot);
     if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
     {
         float targetDps = Util::GetDpsForTarget(target, attacker, m_bot);

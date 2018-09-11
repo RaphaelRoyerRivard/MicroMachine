@@ -172,9 +172,10 @@ void CombatCommander::updateHarassSquads()
 	{
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
 
-		// get every Reaper of a lower priority and put it into the harass squad
+		// put high mobility units in the harass squad
 		if ((unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER
-			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION)
+			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION
+			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
 		{
 			m_squadData.assignUnitToSquad(unit, harassSquad);
