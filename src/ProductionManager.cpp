@@ -233,6 +233,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
 			{
+				const auto metaTypeBlueFlame = MetaType("HighCapacityBarrels", m_bot);
+				if (!m_queue.contains(metaTypeBlueFlame) && std::find(startedUpgrades.begin(), startedUpgrades.end(), metaTypeBlueFlame) == startedUpgrades.end())
+				{
+					m_queue.queueAsLowestPriority(metaTypeBlueFlame, false);
+					startedUpgrades.push_back(metaTypeBlueFlame);
+				}
+
 				const auto metaTypeFactory = MetaType("Factory", m_bot);
 				if (productionBuildingCount < maxProductionABaseCanSupport * baseCount && !m_queue.contains(metaTypeFactory) && meetsReservedResourcesWithExtra(metaTypeFactory))
 				{
@@ -322,8 +329,9 @@ void ProductionManager::fixBuildOrderDeadlock()
     BuildOrderItem & currentItem = m_queue.getHighestPriorityItem();
 
     // check to see if we have the prerequisites for the topmost item
-	bool hasRequired = m_bot.Data(currentItem.type).requiredUnits.empty();
-	for (auto & required : m_bot.Data(currentItem.type).requiredUnits)
+	const TypeData& typeData = m_bot.Data(currentItem.type);
+	bool hasRequired = typeData.requiredUnits.empty();
+	for (auto & required : typeData.requiredUnits)
 	{
 		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false, true) > 0 || m_bot.Buildings().isBeingBuilt(required))
 		{
@@ -334,15 +342,15 @@ void ProductionManager::fixBuildOrderDeadlock()
 
     if (!hasRequired)
     {
-        std::cout << currentItem.type.getName() << " needs " << m_bot.Data(currentItem.type).requiredUnits[0].getName() << "\n";
-        m_queue.queueAsHighestPriority(MetaType(m_bot.Data(currentItem.type).requiredUnits[0], m_bot), currentItem.blocking);
+        std::cout << currentItem.type.getName() << " needs " << typeData.requiredUnits[0].getName() << "\n";
+        m_queue.queueAsHighestPriority(MetaType(typeData.requiredUnits[0], m_bot), currentItem.blocking);
         fixBuildOrderDeadlock();
         return;
     }
 
     // build the producer of the unit if we don't have one
-    bool hasProducer = m_bot.Data(currentItem.type).whatBuilds.empty();
-    for (auto & producer : m_bot.Data(currentItem.type).whatBuilds)
+    bool hasProducer = typeData.whatBuilds.empty();
+    for (auto & producer : typeData.whatBuilds)
     {
 		if (currentItem.type.getUnitType().isWorker())
 		{
@@ -366,20 +374,20 @@ void ProductionManager::fixBuildOrderDeadlock()
             // We no longer have worker and no longer have buildings to do more, so we are rip...
             return;
         }
-        m_queue.queueAsHighestPriority(MetaType(m_bot.Data(currentItem.type).whatBuilds[0], m_bot), true);
+        m_queue.queueAsHighestPriority(MetaType(typeData.whatBuilds[0], m_bot), true);
         fixBuildOrderDeadlock();
     }
 
     // build a refinery if we don't have one and the thing costs gas
     auto refinery = Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot);
-    if (m_bot.Data(currentItem.type).gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
+    if (typeData.gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
     {
         m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
     }
 
     // build supply if we need some
     auto supplyProvider = Util::GetSupplyProvider(m_bot.GetPlayerRace(Players::Self), m_bot);
-    if (m_bot.Data(currentItem.type).supplyCost > (m_bot.GetMaxSupply() - m_bot.GetCurrentSupply()) && !m_bot.Buildings().isBeingBuilt(supplyProvider))
+    if (typeData.supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply() && !m_bot.Buildings().isBeingBuilt(supplyProvider))
     {
         m_queue.queueAsHighestPriority(MetaType(supplyProvider, m_bot), true);
     }
