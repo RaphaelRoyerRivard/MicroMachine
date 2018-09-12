@@ -79,14 +79,14 @@
         "DrawUnitTargetInfo"        : false,
         "DrawLastSeenTileInfo"      : false,
         "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : true,
+        "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : false,
+        "DrawReservedBuildingTiles" : true,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
-        "DrawUnitID"            	: true
+        "DrawUnitID"            	: false
     },
     
     "Modules" :
