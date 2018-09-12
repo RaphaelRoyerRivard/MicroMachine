@@ -81,7 +81,7 @@
         "DrawSquadInfo"             : false,
         "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : false,
+        "DrawReservedBuildingTiles" : true,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : false,
@@ -231,6 +231,14 @@
                 "OpeningBuildOrder" : ["SCV",
 										"CommandCenter",
 										"CommandCenter"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
+            },
+			"Terran_BansheeTest"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV",
+										"Banshee"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },

@@ -109,6 +109,10 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 			
 			MetaType addonType = MetaType(b.type, m_bot);
 			Unit producer = m_bot.Commander().Production().getProducer(addonType);
+			if (!producer.isValid())
+			{
+				continue;
+			}
 			b.builderUnit = producer;
 			b.finalPosition = Util::GetTilePosition(producer.getPosition());
 		}
@@ -163,7 +167,7 @@ void BuildingManager::constructAssignedBuildings()
 {
     for (auto & b : m_buildings)
     {
-        if (b.status != BuildingStatus::Assigned || b.type.isAddon())
+        if (b.status != BuildingStatus::Assigned)
         {
             continue;
         }
@@ -217,71 +221,97 @@ void BuildingManager::constructAssignedBuildings()
                     for (auto unit : m_bot.GetUnits())
                     {
                         if (unit.getType().isGeyser() && Util::Dist(Util::GetPosition(b.finalPosition), unit.getPosition()) < 3)
-                        {
-                            geyser = unit;
-                            break;
-                        }
-                    }
+						{
+						geyser = unit;
+						break;
+						}
+					}
 
-                    if (geyser.isValid())
-                    {
-                        b.builderUnit.buildTarget(b.type, geyser);
-                    }
-                    else
-                    {
-                        std::cout << "WARNING: NO VALID GEYSER UNIT FOUND TO BUILD ON, SKIPPING REFINERY\n";
-                    }
-                }
-                // if it's not a refinery, we build right on the position
-                else
-                {
-                    b.builderUnit.build(b.type, b.finalPosition);
-                }
+					if (geyser.isValid())
+					{
+						b.builderUnit.buildTarget(b.type, geyser);
+					}
+					else
+					{
+						std::cout << "WARNING: NO VALID GEYSER UNIT FOUND TO BUILD ON, SKIPPING REFINERY\n";
+					}
+				}
+				// if it's not a refinery, we build right on the position
+				else
+				{
+					if (b.type.isAddon())
+					{
+						//Pick the right type of addon to build
+						MetaType addonMetatype;
+						switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
+						{
+							case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+							{
+								addonMetatype = MetaType("Reactor", m_bot);
+								break;
+							}
+							case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
+							case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
+							case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
+							{
+								addonMetatype = MetaType("TechLab", m_bot);
+								break;
+							}
+						}
+						b.builderUnit.build(b.type, b.finalPosition);
+					}
+					else
+					{
+						b.builderUnit.build(b.type, b.finalPosition);
+					}
+				}
 
-                // set the flag to true
-                b.buildCommandGiven = true;
-            }
-        }
-    }
+				// set the flag to true
+				b.buildCommandGiven = true;
+			}
+		}
+	}
 }
 
 // STEP 4: UPDATE DATA STRUCTURES FOR BUILDINGS STARTING CONSTRUCTION
 void BuildingManager::checkForStartedConstruction()
 {
-    // for each building unit which is being constructed
-    for (auto buildingStarted : m_bot.UnitInfo().getUnits(Players::Self))
-    {
-        // filter out units which aren't buildings under construction
-        if (!buildingStarted.getType().isBuilding() || !buildingStarted.isBeingConstructed())
-        {
-            continue;
-        }
+	// for each building unit which is being constructed
+	for (auto buildingStarted : m_bot.UnitInfo().getUnits(Players::Self))
+	{
+		// filter out units which aren't buildings under construction
+		if (!buildingStarted.getType().isBuilding() || !buildingStarted.isBeingConstructed())
+		{
+			continue;
+		}
 
-        // check all our building status objects to see if we have a match and if we do, update it
+		// check all our building status objects to see if we have a match and if we do, update it
 
-        for (auto & b : m_buildings)
-        {
-            if (b.status != BuildingStatus::Assigned)
-            {
-                continue;
-            }
+		for (auto & b : m_buildings)
+		{
+			if (b.status != BuildingStatus::Assigned)
+			{
+				continue;
+			}
 
-            // check if the positions match
-			int addonOffset = b.type.isAddon() ? 3 : 0;
-            int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
-            int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
+			// check if the positions match
+			int dx = b.finalPosition.x - buildingStarted.getTilePosition().x;
+			int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
 
-            if (dx*dx + dy*dy < Util::TileToPosition(1.0f))
-            {
-                if (b.buildingUnit.isValid())
-                {
-                    std::cout << "Building mis-match somehow\n";
-                }
-				//TODO
-                // the resources should now be spent, so unreserve them
-                m_reservedMinerals -= buildingStarted.getType().mineralPrice();
-                m_reservedGas      -= buildingStarted.getType().gasPrice();
-                
+			if (dx*dx + dy * dy < Util::TileToPosition(1.0f) || b.type.isAddon())
+			{
+				if (b.buildingUnit.isValid())
+				{
+					std::cout << "Building mis-match somehow\n";
+					continue;
+				}
+
+				// the resources should now be spent, so unreserve them
+				m_reservedMinerals -= buildingStarted.getType().mineralPrice();
+				m_reservedGas -= buildingStarted.getType().gasPrice();
+
                 // flag it as started and set the buildingUnit
                 b.underConstruction = true;
                 b.buildingUnit = buildingStarted;
@@ -364,12 +394,12 @@ void BuildingManager::checkForCompletedBuildings()
 // add a new building to be constructed
 void BuildingManager::addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition)
 {
-    m_reservedMinerals  += m_bot.Data(type).mineralCost;
-    m_reservedGas	    += m_bot.Data(type).gasCost;
+    m_reservedMinerals += m_bot.Data(type).mineralCost;
+    m_reservedGas += m_bot.Data(type).gasCost;
 
     Building b(type, desiredPosition);
     b.status = BuildingStatus::Unassigned;
-
+	
     m_buildings.push_back(b);
 }
 
@@ -447,6 +477,11 @@ void BuildingManager::drawBuildingInformation()
     }
 
     m_bot.Map().drawTextScreen(0.3f, 0.05f, ss.str());
+}
+
+const BuildingPlacer BuildingManager::getBuildingPlacer() const
+{
+	return m_buildingPlacer;
 }
 
 std::vector<UnitType> BuildingManager::buildingsQueued() const

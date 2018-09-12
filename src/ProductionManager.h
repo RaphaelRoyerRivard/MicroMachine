@@ -18,8 +18,6 @@ class ProductionManager
 
 	MetaType getUpgradeMetaType(const MetaType type) const;
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
-    bool    meetsReservedResources(const MetaType & type);
-	bool    meetsReservedResourcesWithExtra(const MetaType & type);
     bool    canMakeNow(const Unit & producer, const MetaType & type);
 	bool    canMakeSoon(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
@@ -47,5 +45,7 @@ public:
     Unit getProducer(const MetaType & type, CCPosition closestTo = CCPosition(0, 0)) const;
 	int getProductionBuildingsCount() const;
 	int getProductionBuildingsAddonsCount() const;
+	bool meetsReservedResources(const MetaType & type);
+	bool meetsReservedResourcesWithExtra(const MetaType & type);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
 };

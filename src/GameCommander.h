@@ -33,7 +33,7 @@ public:
     void onStart();
     void onFrame();
 
-	const ProductionManager & Production() const;
+	ProductionManager Production() const;
 
     void handleUnitAssignments();
     void setValidUnits();

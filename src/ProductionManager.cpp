@@ -85,8 +85,8 @@ void ProductionManager::manageBuildOrderQueue()
 				break;
 			}
 
-			// is a building (doesn't include addons) and we can make it soon
-			if (producer.isValid() && m_bot.Data(currentItem.type).isBuilding && !currentItem.type.getUnitType().isMorphedBuilding() && canMakeSoon(producer, currentItem.type))
+			// is a building (doesn't include addons, because no travel time) and we can make it soon
+			if (producer.isValid() && m_bot.Data(currentItem.type).isBuilding && !m_bot.Data(currentItem.type).isAddon && !currentItem.type.getUnitType().isMorphedBuilding() && canMakeSoon(producer, currentItem.type))
 			{
 				Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
 				CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
@@ -153,7 +153,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 		// Strategy base logic
 		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
-		const int maxProductionABaseCanSupport = 3;
+		const int maxProductionABaseCanSupport = 4;
 		switch (currentStrategy)
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
@@ -161,23 +161,55 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (productionBuildingCount + productionBuildingAddonCount < maxProductionABaseCanSupport * baseCount)
 				{
 					const auto metaTypeBarrack = MetaType("Barracks", m_bot);
+					const auto metaTypeStarport = MetaType("Starport", m_bot);
 					const auto metaTypeBarrackReactor = MetaType("BarracksReactor", m_bot);
 					const auto metaTypeBarrackTechLab = MetaType("BarracksTechLab", m_bot);
 					const auto metaTypeStarportTechlab = MetaType("StarportTechLab", m_bot);
+
+					bool hasPicked = false;
 					MetaType toBuild;
 					if (productionBuildingAddonCount < productionBuildingCount)//handles barracks only for now
 					{//Addon
-						toBuild = metaTypeBarrack;//TODO Not making addons since they are broken.
+						int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaType("Barracks", m_bot).getUnitType(), false, true);
+						int barracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaType("BarracksReactor", m_bot).getUnitType(), false, true);
+						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaType("Starport", m_bot).getUnitType(), false, true);
+						int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaType("StarportTechLab", m_bot).getUnitType(), false, true);
+						if (barracksCount > barracksReactorCount)
+						{
+							toBuild = metaTypeBarrackReactor;
+							hasPicked = true;
+						}
+						else if (starportCount > starportTechLabCount)
+						{
+							toBuild = metaTypeStarportTechlab;
+							hasPicked = true;
+						}
+
+						if (hasPicked && !m_queue.contains(toBuild))
+						{
+							m_queue.queueAsLowestPriority(toBuild, false);
+						}
 					}
-					else
+					if(!hasPicked)
 					{//Building
-						toBuild = metaTypeBarrack;
-					}
-					
-					if (!m_queue.contains(toBuild) && meetsReservedResourcesWithExtra(toBuild))
-					{
-						//m_queue.queueAsLowestPriority(toBuild, false);
-						m_queue.queueAsLowestPriority(toBuild, false);
+						int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaType("Barracks", m_bot).getUnitType(), false, true);
+						int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaType("Factory", m_bot).getUnitType(), false, true);
+						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaType("Starport", m_bot).getUnitType(), false, true);
+						if (barracksCount >= (starportCount + 1) * 2)
+						{
+							toBuild = metaTypeStarport;
+							hasPicked = true;
+						}
+						else
+						{
+							toBuild = metaTypeBarrack;
+							hasPicked = true;
+						}
+
+						if (!m_queue.contains(toBuild)/* && meetsReservedResourcesWithExtra(toBuild)*/)
+						{
+							m_queue.queueAsLowestPriority(toBuild, false);
+						}
 					}
 
 					/*int factories = m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING });
@@ -212,7 +244,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueAsLowestPriority(metaTypeReaper, false);
 				}
 
-				const auto metaTypeBanshee = MetaType("Viking", m_bot);
+				const auto metaTypeBanshee = MetaType("Banshee", m_bot);
 				if (!m_queue.contains(metaTypeBanshee) && m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB) > 0)
 				{
 					m_queue.queueAsLowestPriority(metaTypeBanshee, false);
@@ -414,17 +446,44 @@ bool ProductionManager::currentlyHasRequirement(MetaType currentItem)
 		{
 			//Only for terran because all their bases are used for the same prerequirements. Not the case for zergs.
 			//TODO zerg might need something similar
-			switch ((sc2::UNIT_TYPEID)required.getAPIUnitType())
+			sc2::UNIT_TYPEID type = required.getAPIUnitType();
+			switch (type)
 			{
 				case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER:
 				case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING:
 				case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:
 				case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING:
 				case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
+				{
 					return m_bot.Bases().getBaseCount(Players::Self) > 0;
 					break;
+				}
+				case sc2::UNIT_TYPEID::TERRAN_TECHLAB:
+				{//TODO Techlabs may all be considereed the same, should verify and fix if it is the case.
+					switch ((sc2::UNIT_TYPEID)currentItem.getUnitType().getAPIUnitType())
+					{
+						case sc2::UNIT_TYPEID::TERRAN_MARAUDER:
+						case sc2::UNIT_TYPEID::TERRAN_GHOST:
+						{
+							return m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaType("BarracksTechLab", m_bot).getUnitType(), true, true) >= 0;
+						}
+						case sc2::UNIT_TYPEID::TERRAN_SIEGETANK:
+						case sc2::UNIT_TYPEID::TERRAN_THOR:
+						{
+							return m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaType("FactoryTechLab", m_bot).getUnitType(), true, true) >= 0;
+						}
+						case sc2::UNIT_TYPEID::TERRAN_RAVEN:
+						case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+						case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
+						{
+							return m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaType("StarportTechLab", m_bot).getUnitType(), true, true) >= 0;
+						}
+					}
+				}
 				default:
+				{
 					return false;
+				}
 			}
 		}
 	}
@@ -444,10 +503,57 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
         if (std::find(producerTypes.begin(), producerTypes.end(), unit.getType()) == producerTypes.end()) { continue; }
         if (!unit.isCompleted()) { continue; }
 		if (unit.isFlying()) { continue; }
-        if (m_bot.Data(unit).isBuilding && unit.isTraining()) { continue; }
+
+		bool isBuilding = m_bot.Data(unit).isBuilding;
+		if (isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }
+		if (isBuilding && m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
+		{//If is terran, check for Reactor addon
+			sc2::Tag addonTag = unit.getAddonTag();
+			if (addonTag != 0 && unit.isTraining())
+			{
+				bool addonIsReactor = false;
+				for (auto unit : m_bot.UnitInfo().getUnits(Players::Self))
+				{
+					switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())
+					{
+						case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+						case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+						{
+							if (unit.getTag() == addonTag)
+							{
+								addonIsReactor = true;
+								break;
+							}
+						}
+					}
+				}
+				if (unit.isAddonTraining() || !addonIsReactor)
+				{//skip, Techlab can't build two units or reactor already has two.
+					continue;
+				}
+			}
+		}
+
+		switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())
+		{
+			case sc2::UNIT_TYPEID::TERRAN_SCV:
+			case sc2::UNIT_TYPEID::PROTOSS_PROBE:
+			case sc2::UNIT_TYPEID::ZERG_DRONE:
+			{
+				if (!m_bot.Workers().isFree(unit))
+				{
+					continue;
+				}
+				break;
+			}
+			case sc2::UNIT_TYPEID::TERRAN_MULE:
+			{
+				continue;
+			}
+		}
 
         // TODO: if unit is not powered continue
-        // TODO: if the type is an addon, some special cases
         // TODO: if the type requires an addon and the producer doesn't have one
 
 		// if the type we want to produce has required units, we make sure the unit is one of those unit types
@@ -476,6 +582,18 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 				}
 			}
 			if (!hasRequiredUnit) { continue; }
+		}
+
+		//if the type is an addon, some special cases
+		if (m_bot.Data(type).isAddon)
+		{
+			//validate space next to building is reserved
+			auto addonPosition = CCTilePosition(unit.getTilePosition().x + 2, unit.getTilePosition().y);
+			Building b(type.getUnitType(), addonPosition);
+			if (m_bot.Buildings().getBuildingPlacer().canBuildHere(unit.getTilePosition().x + 2, unit.getTilePosition().y, b))
+			{//Tiles are not reserved, since addon logic is reversed, this means we can't build here, there should be an addon already
+				continue;
+			}
 		}
 
         // if we haven't cut it, add it to the set of candidates
@@ -546,17 +664,17 @@ std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
 	std::set<sc2::UnitTypeID> unitTrainingBuildingTypes;
 	switch (race)
 	{
-	case CCRace::Terran:
-		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
-		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_STARPORT);
-		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_FACTORY);
-		break;
-	case CCRace::Protoss:
-		//TODO complete
-		break;
-	case CCRace::Zerg:
-		//TODO complete
-		break;
+		case CCRace::Terran:
+			unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+			unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_STARPORT);
+			unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_FACTORY);
+			break;
+		case CCRace::Protoss:
+			//TODO complete
+			break;
+		case CCRace::Zerg:
+			//TODO complete
+			break;
 	}
 
 	std::vector<Unit> trainers;
@@ -706,7 +824,8 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item)
         }
         else
         {
-            m_bot.Buildings().addBuildingTask(item.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
+			auto tilePosition = Util::GetTilePosition(m_bot.GetStartLocation());
+			m_bot.Buildings().addBuildingTask(item.type.getUnitType(), tilePosition);
         }
     }
     // if we're dealing with a non-building unit
@@ -726,6 +845,10 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
     {
         return false;
     }
+	if (m_bot.Data(type).isAddon)
+	{//Do not check for abilities, buildings don't seem to have it listed. They always have the ability anyway, so its safe.
+		return true;
+	}
 
 #ifdef SC2API
 	sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(producer.getUnitPtr());
@@ -847,6 +970,7 @@ bool ProductionManager::meetsReservedResources(const MetaType & type)
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type)
 {
+	assert("Addons cannot use extra ressources",m_bot.Data(type).isAddon);
 	return (m_bot.Data(type).mineralCost <= getFreeMinerals() + getExtraMinerals()) && (m_bot.Data(type).gasCost <= getFreeGas() + getExtraGas());
 }
 
@@ -869,6 +993,8 @@ void ProductionManager::drawProductionInformation()
     }*/
 
     ss << m_queue.getQueueInformation();
+	ss << "Free Mineral:     " << getFreeMinerals() << "\n";
+	ss << "Free Gas:         " << getFreeGas();
 
     m_bot.Map().drawTextScreen(0.01f, 0.01f, ss.str(), CCColor(255, 255, 0));
 }
