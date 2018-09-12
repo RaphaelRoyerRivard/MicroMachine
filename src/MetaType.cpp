@@ -178,3 +178,8 @@ const BWAPI::TechType & MetaType::getTechType() const
     return m_tech;
 }
 #endif
+
+bool MetaType::operator == (const MetaType & mt) const
+{
+	return this->m_name == mt.getName();
+}
