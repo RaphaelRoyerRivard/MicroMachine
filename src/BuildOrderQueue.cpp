@@ -173,8 +173,14 @@ std::string BuildOrderQueue::getQueueInformation() const
     // for each unit in the queue
     for (size_t i(0); i<reps; i++)
     {
-        const MetaType & type = m_queue[m_queue.size() - 1 - i].type;
-        ss << type.getName() << "\n";
+		auto item = m_queue[m_queue.size() - 1 - i];
+        const MetaType & type = item.type;
+		ss << type.getName() << std::setw(30 - item.type.getName().length()) << std::right << " [" << item.priority << "]";
+		if (item.blocking)
+		{
+			ss << " (B)";
+		}
+		ss << "\n";
     }
 
     return ss.str();
