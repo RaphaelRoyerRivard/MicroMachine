@@ -298,7 +298,8 @@ void BuildingManager::checkForStartedConstruction()
 			auto type = b.type;
 
 			// check if the positions match
-			int dx = b.finalPosition.x + (type.isAddon()? 3 : 0) - buildingStarted.getTilePosition().x;
+			int addonOffset = (type.isAddon() ? 3 : 0);
+			int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
 			int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
 
 			if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
@@ -339,14 +340,7 @@ void BuildingManager::checkForStartedConstruction()
 				else
 				{
 					// free this space
-					if (type.isAddon())
-					{
-						m_buildingPlacer.freeTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
-					}
-					else
-					{
-						m_buildingPlacer.freeTiles((int)b.finalPosition.x, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
-					}
+					m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
 				}
 
                 // only one building will match

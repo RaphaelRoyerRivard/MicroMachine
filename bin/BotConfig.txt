@@ -81,12 +81,12 @@
         "DrawSquadInfo"             : false,
         "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : true,
+        "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
-        "DrawUnitID"            	: true
+        "DrawUnitID"            	: false
     },
     
     "Modules" :
