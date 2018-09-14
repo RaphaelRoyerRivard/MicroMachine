@@ -86,7 +86,7 @@
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
-        "DrawUnitID"            	: false
+        "DrawUnitID"            	: true
     },
     
     "Modules" :

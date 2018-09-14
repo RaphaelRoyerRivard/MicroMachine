@@ -295,12 +295,13 @@ void BuildingManager::checkForStartedConstruction()
 			{
 				continue;
 			}
+			auto type = b.type;
 
 			// check if the positions match
-			int dx = b.finalPosition.x - buildingStarted.getTilePosition().x;
+			int dx = b.finalPosition.x + (type.isAddon()? 3 : 0) - buildingStarted.getTilePosition().x;
 			int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
 
-			if (dx*dx + dy * dy < Util::TileToPosition(1.0f) || b.type.isAddon())
+			if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
 			{
 				if (b.buildingUnit.isValid())
 				{
@@ -330,8 +331,23 @@ void BuildingManager::checkForStartedConstruction()
                 // put it in the under construction vector
                 b.status = BuildingStatus::UnderConstruction;
 
-                // free this space
-                m_buildingPlacer.freeTiles((int)b.finalPosition.x, (int)b.finalPosition.y, b.type.tileWidth(), b.type.tileHeight());
+				//Check for invalid data
+				if (type.tileWidth() > 5 || type.tileHeight() > 5 || type.tileWidth() < 1 || type.tileHeight() < 1)
+				{
+					std::cout << "Invalid size for free space " << type.tileWidth() << " x " << type.tileHeight() << "\n";
+				}
+				else
+				{
+					// free this space
+					if (type.isAddon())
+					{
+						m_buildingPlacer.freeTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
+					}
+					else
+					{
+						m_buildingPlacer.freeTiles((int)b.finalPosition.x, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
+					}
+				}
 
                 // only one building will match
                 break;

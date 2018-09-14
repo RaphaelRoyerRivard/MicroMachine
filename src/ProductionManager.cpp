@@ -964,7 +964,7 @@ void ProductionManager::drawProductionInformation()
         }
     }*/
 
-    ss << m_queue.getQueueInformation();
+    ss << m_queue.getQueueInformation() << "\n";
 	ss << "Free Mineral:     " << getFreeMinerals() << "\n";
 	ss << "Free Gas:         " << getFreeGas();
 
