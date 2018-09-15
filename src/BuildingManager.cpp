@@ -665,7 +665,11 @@ void BuildingManager::castBuildingsAbilities()
 		{
 			if (b.getEnergy() >= 50)
 			{
+				auto orbitalPosition = b.getPosition();
 				auto point = getClosestMineral(b.getUnitPtr())->pos;
+				//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
+				point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
+				point.y = (point.y + (point.y + (point.y + orbitalPosition.y) / 2) / 2) / 2;
 				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 			}
 		}

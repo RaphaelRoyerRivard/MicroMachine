@@ -138,7 +138,7 @@
     "SC2API Strategy" :
     {
         "Protoss"                   : "Protoss_ZealotRush",
-        "Terran"                    : "Terran_ReaperHarass4",
+        "Terran"                    : "Terran_ExpensionTest",
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "AutoCompleteBuildOrder"    : true,
@@ -229,7 +229,7 @@
             { 
                 "Race"              : "Terran",  
                 "OpeningBuildOrder" : ["SCV",
-										"CommandCenter",
+										"OrbitalCommand",
 										"CommandCenter"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
