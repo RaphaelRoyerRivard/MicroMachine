@@ -249,14 +249,14 @@ void BuildingManager::constructAssignedBuildings()
 							case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
 							case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
 							{
-								addonMetatype = MetaType("Reactor", m_bot);
+								addonMetatype = MetaTypeEnum::Reactor;
 								break;
 							}
 							case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
 							case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
 							case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
 							{
-								addonMetatype = MetaType("TechLab", m_bot);
+								addonMetatype = MetaTypeEnum::TechLab;
 								break;
 							}
 						}

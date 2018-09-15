@@ -55,6 +55,9 @@ void CCBot::OnGameStart() //full start
         BWAPI::Broodwar->enableFlag(BWAPI::Flag::UserInput);
     }
 #endif
+
+	//Initialize list of MetaType
+	MetaTypeEnum::Initialize(*this);
     
     setUnits();
     m_techTree.onStart();
@@ -71,7 +74,7 @@ void CCBot::OnGameStart() //full start
 void CCBot::OnStep()
 {
     setUnits();
-    m_map.onFrame();
+	m_map.onFrame();
     m_unitInfo.onFrame();
     m_bases.onFrame();
     m_workers.onFrame();

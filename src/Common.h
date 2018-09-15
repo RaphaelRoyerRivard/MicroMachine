@@ -10,6 +10,7 @@
 #include <string>
 #include <array>
 #include "json/json.hpp"
+#include "MetaTypeEnum.h"
 
 using json = nlohmann::json;
 
