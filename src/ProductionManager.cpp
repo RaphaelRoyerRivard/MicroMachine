@@ -31,7 +31,6 @@ void ProductionManager::onFrame()
 	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
 		return;
 
-    fixBuildOrderDeadlock();
     manageBuildOrderQueue();
 
     // TODO: if nothing is currently building, get a new goal from the strategy manager
@@ -67,6 +66,13 @@ void ProductionManager::manageBuildOrderQueue()
     while (!m_queue.isEmpty())
     {
 		//check if we have the prerequirements.
+		if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
+		{
+			fixBuildOrderDeadlock(currentItem);
+			currentItem = m_queue.getHighestPriorityItem();
+			continue;
+		}
+
 		if (currentlyHasRequirement(currentItem.type))
 		{
 			// this is the unit which can produce the currentItem
@@ -102,20 +108,15 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 		}
 		              
-    	// otherwise, if we can skip the current item
-    	if (m_queue.canSkipItem())
-        {
-            // skip it
-            m_queue.skipItem();
+    	// if we can't skip the current item, we stop here
+		if (!m_queue.canSkipItem())
+			break;
 
-            // and get the next one
-            currentItem = m_queue.getNextHighestPriorityItem();
-        }
-        else
-        {
-            // so break out
-            break;
-        }
+        // otherwise, skip it
+        m_queue.skipItem();
+
+        // and get the next one
+        currentItem = m_queue.getNextHighestPriorityItem();
     }
 }
 
@@ -355,59 +356,29 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	}
 }
 
-void ProductionManager::fixBuildOrderDeadlock()
+void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 {
-    if (m_queue.isEmpty()) { return; }
-    BuildOrderItem & currentItem = m_queue.getHighestPriorityItem();
+	const TypeData& typeData = m_bot.Data(item.type);
 
-    // check to see if we have the prerequisites for the topmost item
-	const TypeData& typeData = m_bot.Data(currentItem.type);
-	bool hasRequired = typeData.requiredUnits.empty();
-	for (auto & required : typeData.requiredUnits)
-	{
-		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false, true) > 0 || m_bot.Buildings().isBeingBuilt(required))
-		{
-			hasRequired = true;
-			break;
-		}
-	}
-
-    if (!hasRequired)
+	// check to see if we have the prerequisites for the item
+    if (!hasRequired(item.type, false))
     {
-        std::cout << currentItem.type.getName() << " needs " << typeData.requiredUnits[0].getName() << "\n";
-        m_queue.queueAsHighestPriority(MetaType(typeData.requiredUnits[0], m_bot), currentItem.blocking);
-        fixBuildOrderDeadlock();
+        std::cout << item.type.getName() << " needs " << typeData.requiredUnits[0].getName() << "\n";
+        BuildOrderItem requiredItem = m_queue.queueAsHighestPriority(MetaType(typeData.requiredUnits[0], m_bot), item.blocking);
+        fixBuildOrderDeadlock(requiredItem);
         return;
     }
 
     // build the producer of the unit if we don't have one
-    bool hasProducer = typeData.whatBuilds.empty();
-    for (auto & producer : typeData.whatBuilds)
+    if (!hasProducer(item.type, false))
     {
-		if (currentItem.type.getUnitType().isWorker())
-		{
-			if (m_bot.Bases().getBaseCount(Players::Self) > 0)
-			{
-				hasProducer = true;
-				break;
-			}
-		}
-        else if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false, true) > 0 || m_bot.Buildings().isBeingBuilt(producer))
-        {
-            hasProducer = true;
-            break;
-        }
-    }
-
-    if (!hasProducer)
-    {
-        if (currentItem.type.getUnitType().isWorker() && m_bot.Observation()->GetFoodWorkers() == 0)
+        if (item.type.getUnitType().isWorker() && m_bot.Observation()->GetFoodWorkers() == 0)
         {
             // We no longer have worker and no longer have buildings to do more, so we are rip...
             return;
         }
-        m_queue.queueAsHighestPriority(MetaType(typeData.whatBuilds[0], m_bot), true);
-        fixBuildOrderDeadlock();
+		BuildOrderItem producerItem = m_queue.queueAsHighestPriority(MetaType(typeData.whatBuilds[0], m_bot), item.blocking);
+        fixBuildOrderDeadlock(producerItem);
     }
 
     // build a refinery if we don't have one and the thing costs gas
@@ -488,6 +459,47 @@ bool ProductionManager::currentlyHasRequirement(MetaType currentItem)
 		}
 	}
 	return true;
+}
+
+bool ProductionManager::hasRequired(const MetaType& metaType, bool checkInQueue)
+{
+	const TypeData& typeData = m_bot.Data(metaType);
+
+	if (typeData.requiredUnits.empty())
+		return true;
+
+	for (auto & required : typeData.requiredUnits)
+	{
+		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false, true) > 0 || m_bot.Buildings().isBeingBuilt(required))
+			return true;
+
+		if (checkInQueue && m_queue.contains(MetaType(required, m_bot)))
+			return true;
+	}
+
+	return false;
+}
+
+bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
+{
+	const TypeData& typeData = m_bot.Data(metaType);
+
+	if (typeData.whatBuilds.empty())
+		return true;
+
+	for (auto & producer : typeData.whatBuilds)
+	{
+		if (metaType.getUnitType().isWorker() && m_bot.Bases().getBaseCount(Players::Self) > 0)
+			return true;
+		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false, true) > 0)
+			return true;
+		if (m_bot.Buildings().isBeingBuilt(producer))
+			return true;
+		if (checkInQueue && m_queue.contains(MetaType(producer, m_bot)))
+			return true;
+	}
+
+	return false;
 }
 
 Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo) const

@@ -110,22 +110,28 @@ void BuildOrderQueue::queueItem(const BuildOrderItem & b)
     m_lowestPriority  = (b.priority < m_lowestPriority)  ? b.priority : m_lowestPriority;
 }
 
-void BuildOrderQueue::queueAsHighestPriority(const MetaType & type, bool blocking)
+BuildOrderItem BuildOrderQueue::queueAsHighestPriority(const MetaType & type, bool blocking)
 {
     // the new priority will be higher
     int newPriority = m_highestPriority + m_defaultPrioritySpacing;
 
+	BuildOrderItem item(type, newPriority, blocking);
     // queue the item
-    queueItem(BuildOrderItem(type, newPriority, blocking));
+    queueItem(item);
+
+	return item;
 }
 
-void BuildOrderQueue::queueAsLowestPriority(const MetaType & type, bool blocking)
+BuildOrderItem BuildOrderQueue::queueAsLowestPriority(const MetaType & type, bool blocking)
 {
     // the new priority will be higher
     int newPriority = m_lowestPriority - m_defaultPrioritySpacing;
 
-    // queue the item
-    queueItem(BuildOrderItem(type, newPriority, blocking));
+	BuildOrderItem item(type, newPriority, blocking);
+	// queue the item
+	queueItem(item);
+
+	return item;
 }
 
 void BuildOrderQueue::removeHighestPriorityItem()

@@ -2,8 +2,8 @@
 
 #include "Common.h"
 #include "BuildOrder.h"
-#include "BuildingManager.h"
 #include "BuildOrderQueue.h"
+#include "Unit.h"
 
 class CCBot;
 
@@ -30,8 +30,10 @@ class ProductionManager
 	int     getExtraMinerals();
 	int     getExtraGas();
 
-    void    fixBuildOrderDeadlock();
+	void	fixBuildOrderDeadlock(BuildOrderItem & item);
 	bool	currentlyHasRequirement(MetaType currentItem);
+	bool	hasRequired(const MetaType& metaType, bool checkInQueue);
+	bool	hasProducer(const MetaType& metaType, bool checkInQueue);
 
 public:
 

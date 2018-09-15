@@ -9,7 +9,6 @@
 #include "BuildingManager.h"
 #include "BotConfig.h"
 #include "GameCommander.h"
-#include "BuildingManager.h"
 #include "StrategyManager.h"
 #include "TechTree.h"
 #include "MetaType.h"

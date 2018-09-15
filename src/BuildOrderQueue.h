@@ -32,8 +32,8 @@ public:
 
     void clearAll();											// clears the entire build order queue
     void skipItem();											// increments skippedItems
-    void queueAsHighestPriority(const MetaType & type, bool blocking);		// queues something at the highest priority
-    void queueAsLowestPriority(const MetaType & type, bool blocking);		// queues something at the lowest priority
+    BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);		// queues something at the highest priority
+	BuildOrderItem queueAsLowestPriority(const MetaType & type, bool blocking);		// queues something at the lowest priority
     void queueItem(const BuildOrderItem & b);			// queues something with a given priority
     void removeHighestPriorityItem();								// removes the highest priority item
     void removeCurrentHighestPriorityItem();
