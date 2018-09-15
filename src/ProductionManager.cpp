@@ -195,17 +195,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							hasPicked = true;
 						}
 
-						if (!m_queue.contains(toBuild)/* && meetsReservedResourcesWithExtra(toBuild)*/)
+						if (hasPicked && !m_queue.contains(toBuild))
 						{
 							m_queue.queueAsLowestPriority(toBuild, false);
 						}
 					}
-
-					/*int factories = m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING });
-					if (factories < baseCount && !m_queue.contains(metaTypeFactory))
-					{
-						m_queue.queueAsLowestPriority(metaTypeFactory, false);
-					}*/
 				}
 				else
 				{
@@ -219,12 +213,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueAsLowestPriority(metaTypeInfWeap, false);
 						startedUpgrades.push_back(metaTypeInfWeap);
 					}
-
-					/*const auto metaTypeStarport = MetaType("Starport", m_bot);
-					if (factories.size() + flyingFactories.size() >= 1 && !m_queue.contains(metaTypeStarport))
-					{
-						m_queue.queueAsLowestPriority(metaTypeStarport, false);
-					}*/
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
@@ -236,18 +224,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueAsLowestPriority(MetaTypeEnum::Banshee, false);
 				}
-
-				/*const auto metaTypeHellion = MetaType("Hellion", m_bot);
-				if (!m_queue.contains(metaTypeHellion))
-				{
-					m_queue.queueAsLowestPriority(metaTypeHellion, false);
-				}
-
-				/*const auto metaTypeBanshee = MetaType("Banshee", m_bot);
-				if (!m_queue.contains(metaTypeBanshee))
-				{
-					m_queue.queueAsLowestPriority(metaTypeBanshee, false);
-				}*/
 				break;
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
@@ -294,6 +270,77 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					return;
 				}
 				break;
+			}
+			case StrategyPostBuildOrder::TERRAN_ANTI_ADEPT:
+			{
+				if (productionBuildingCount + productionBuildingAddonCount < maxProductionABaseCanSupport * baseCount)
+				{
+					bool hasPicked = false;
+					MetaType toBuild;
+					if (productionBuildingAddonCount < productionBuildingCount)//handles barracks only for now
+					{//Addon
+						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+						int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
+						int starportReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
+						if (starportCount > starportTechLabCount + starportReactorCount)
+						{
+							if (starportTechLabCount <= starportReactorCount * 2)
+							{
+								toBuild = MetaTypeEnum::StarportTechLab;
+								hasPicked = true;
+							}
+							else
+							{
+								toBuild = MetaTypeEnum::StarportReactor;
+								hasPicked = true;
+							}
+						}
+
+						if (hasPicked && !m_queue.contains(toBuild))
+						{
+							m_queue.queueAsLowestPriority(toBuild, false);
+						}
+					}
+					if (!hasPicked)
+					{//Building
+							toBuild = MetaTypeEnum::Starport;
+							hasPicked = true;
+
+						if (hasPicked && !m_queue.contains(toBuild))
+						{
+							m_queue.queueAsLowestPriority(toBuild, false);
+						}
+					}
+
+				}
+				else
+				{
+					// Logic for building Command Centers
+					if (!m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
+					{
+						m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
+						m_ccShouldBeInQueue = true;
+
+						auto metaTypeShipWeap = getUpgradeMetaType(MetaTypeEnum::TerranShipWeaponsLevel1);
+						m_queue.queueAsLowestPriority(metaTypeShipWeap, false);
+						startedUpgrades.push_back(metaTypeShipWeap);
+					}
+				}
+
+				if (!m_queue.contains(MetaTypeEnum::Banshee))
+				{
+					m_queue.queueAsLowestPriority(MetaTypeEnum::Banshee, false);
+				}
+
+				if (!m_queue.contains(MetaTypeEnum::Viking))
+				{
+					m_queue.queueAsLowestPriority(MetaTypeEnum::Viking, false);
+				}
+				break;
+			}
+			default:
+			{
+				assert("This strategy doesn't exist.");
 			}
 		}
 	}

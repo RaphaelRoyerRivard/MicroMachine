@@ -24,6 +24,7 @@ MetaType MetaTypeEnum::Marauder;
 MetaType MetaTypeEnum::Reaper;
 MetaType MetaTypeEnum::Hellion;
 MetaType MetaTypeEnum::Banshee;
+MetaType MetaTypeEnum::Viking;
 	//Upgrades
 MetaType MetaTypeEnum::TerranInfantryWeaponsLevel1;
 MetaType MetaTypeEnum::TerranInfantryWeaponsLevel2;
@@ -44,6 +45,7 @@ MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel3;
 //PROTOSS
 	//Buildings
 	//Units
+MetaType MetaTypeEnum::Adept;
 	//Upgrades
 MetaType MetaTypeEnum::ProtossGroundWeaponsLevel1;
 MetaType MetaTypeEnum::ProtossGroundWeaponsLevel2;
@@ -105,6 +107,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::Reaper = MetaType("Reaper", m_bot);
 	MetaTypeEnum::Hellion = MetaType("Hellion", m_bot);
 	MetaTypeEnum::Banshee = MetaType("Banshee", m_bot);
+	MetaTypeEnum::Viking = MetaType("VikingFighter", m_bot);
 		//Upgrades
 	MetaTypeEnum::TerranInfantryWeaponsLevel1 = MetaType("TerranInfantryWeaponsLevel1", m_bot);
 	MetaTypeEnum::TerranInfantryWeaponsLevel2 = MetaType("TerranInfantryWeaponsLevel2", m_bot);
@@ -125,6 +128,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	//PROTOSS
 		//Buildings
 		//Units
+	MetaTypeEnum::Adept = MetaType("Adept", m_bot);
 		//Upgrades
 	MetaTypeEnum::ProtossGroundWeaponsLevel1 = MetaType("ProtossGroundWeaponsLevel1", m_bot);
 	MetaTypeEnum::ProtossGroundWeaponsLevel2 = MetaType("ProtossGroundWeaponsLevel2", m_bot);

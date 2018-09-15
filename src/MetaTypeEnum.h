@@ -29,6 +29,7 @@ class MetaTypeEnum
 		static MetaType Reaper;
 		static MetaType Hellion;
 		static MetaType Banshee;
+		static MetaType Viking;
 			//Upgrades
 		static MetaType TerranInfantryWeaponsLevel1;
 		static MetaType TerranInfantryWeaponsLevel2;
@@ -49,6 +50,7 @@ class MetaTypeEnum
 		//PROTOSS
 			//Buildings
 			//Units
+		static MetaType Adept;
 			//Upgrades
 		static MetaType ProtossGroundWeaponsLevel1;
 		static MetaType ProtossGroundWeaponsLevel2;

@@ -21,7 +21,7 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 1,
+        "EnemyDifficulty"           : 9,
         "EnemyRace"                 : "Protoss",
         "MapFile"                   : "Redshift.SC2Map",
         "StepSize"                  : 1,
