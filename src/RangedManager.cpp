@@ -265,7 +265,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				units.push_back(rangedUnit);
 				// The harass mode deactivation is a hack to not ignore range targets
 				m_harassMode = false;
-				target = getTarget(rangedUnit, rangedUnitTargets);
+				//target = getTarget(rangedUnit, rangedUnitTargets);
+				target = getTarget(rangedUnit, threats);
 				// Use behavior tree only against ranged units
 				if(target && isTargetRanged(target))
 				{
