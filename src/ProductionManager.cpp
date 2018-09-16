@@ -158,6 +158,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	if (playerRace == sc2::Race::Terran)
 	{
+		const int maxProductionABaseCanSupport = 4;
 		// Logic for building Orbital Commands and Refineries
 		if(m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_bot.Buildings().isBeingBuilt(MetaTypeEnum::CommandCenter.getUnitType()) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
 		{
@@ -168,9 +169,18 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			m_ccShouldBeInQueue = false;
 		}
 
+		// Logic for building Command Centers
+		if (baseCount * maxProductionABaseCanSupport <= productionBuildingCount + productionBuildingAddonCount)
+		{
+			if (!m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
+			{
+				m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
+				m_ccShouldBeInQueue = true;
+			}
+		}
+
 		// Strategy base logic
 		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
-		const int maxProductionABaseCanSupport = 4;
 		switch (currentStrategy)
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
@@ -198,7 +208,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 						if (hasPicked && !m_queue.contains(toBuild))
 						{
-							m_queue.queueAsLowestPriority(toBuild, false);
+							m_queue.queueAsHighestPriority(toBuild, false);
 						}
 					}
 					if(!hasPicked)
@@ -239,12 +249,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Reaper, false);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee) && m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB) > 0)
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Banshee, false);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Banshee, false);
 				}
 				break;
 			}
@@ -264,12 +274,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (!m_queue.contains(MetaTypeEnum::Hellion))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Hellion, false);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Hellion, false);
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Reaper, false);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
 				}
 				break;
 			}
@@ -282,12 +292,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (!m_queue.contains(MetaTypeEnum::Marine) && meetsReservedResourcesWithExtra(MetaTypeEnum::Marine))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Marine, false);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Marauder))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Marauder, false);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Marauder, false);
 				}
 				break;
 			}
@@ -306,7 +316,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					bool hasPicked = false;
 					MetaType toBuild;
-					if (productionBuildingAddonCount < productionBuildingCount)//handles barracks only for now
+					if (productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
 						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 						int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
@@ -327,43 +337,48 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 						if (hasPicked && !m_queue.contains(toBuild))
 						{
-							m_queue.queueAsLowestPriority(toBuild, false);
+							m_queue.queueAsHighestPriority(toBuild, false);
 						}
 					}
 					if (!hasPicked)
 					{//Building
-							toBuild = MetaTypeEnum::Starport;
-							hasPicked = true;
+						toBuild = MetaTypeEnum::Starport;
+						hasPicked = true;
 
 						if (hasPicked && !m_queue.contains(toBuild))
 						{
 							m_queue.queueAsLowestPriority(toBuild, false);
 						}
 					}
-
 				}
-				else
-				{
-					// Logic for building Command Centers
-					if (!m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
-					{
-						m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
-						m_ccShouldBeInQueue = true;
 
-						auto metaTypeShipWeap = getUpgradeMetaType(MetaTypeEnum::TerranShipWeaponsLevel1);
-						m_queue.queueAsLowestPriority(metaTypeShipWeap, false);
-						startedUpgrades.push_back(metaTypeShipWeap);
+				int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
+				int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
+
+				if(bansheeCount + vikingCount >= 5)
+				{
+					auto metaTypeShipWeapon = getUpgradeMetaType(MetaTypeEnum::TerranShipWeaponsLevel1);
+					if (std::find(startedUpgrades.begin(), startedUpgrades.end(), metaTypeShipWeapon) == startedUpgrades.end())
+					{
+						m_queue.queueAsLowestPriority(metaTypeShipWeapon, false);
+						startedUpgrades.push_back(metaTypeShipWeapon);
 					}
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Banshee, false);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Banshee, false);
 				}
 
-				if (!m_queue.contains(MetaTypeEnum::Viking))
+				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Viking))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Viking, false);
+					if(vikingCount < 2 * bansheeCount)
+						m_queue.queueAsHighestPriority(MetaTypeEnum::Viking, false);
+				}
+
+				if (!m_queue.contains(MetaTypeEnum::Reaper))
+				{
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
 				}
 				break;
 			}
@@ -374,7 +389,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		}
 	}
 
-	const int maxWorkers = 23 * 2 + 4;//23 workers per base, maximum of 2 base, + 4 for builders.
+	const int maxWorkers = (23 + 2) * 3;	//23 resource workers + 2 builders per base, maximum of 3 bases.
 	if (m_bot.Workers().getNumWorkers() < maxWorkers && !m_queue.contains(MetaTypeEnum::OrbitalCommand))//baseCount * 23
 	{
 		auto workerType = Util::GetWorkerType(playerRace, m_bot);

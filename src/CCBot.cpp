@@ -120,6 +120,39 @@ void CCBot::setUnits()
 					m_strategy.setEnemyHasMetabolicBoost(true);
 				}
 			}
+			if (!m_strategy.shouldProduceAntiAir())
+			{
+				// If unit is flying and not part of the following list, we should produce Anti Air units
+				if (unitptr->is_flying)
+				{
+					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
+					{
+					case sc2::UNIT_TYPEID::ZERG_OVERLORD:
+					case sc2::UNIT_TYPEID::ZERG_OVERLORDCOCOON:
+					case sc2::UNIT_TYPEID::ZERG_OVERSEER:
+					case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+						break;
+					default:
+						m_strategy.setShouldProduceAntiAir(true);
+					}
+				}
+
+				// If the opponent has built a building that can produce flying units, we should produce Anti Air units
+				switch(sc2::UNIT_TYPEID(unitptr->unit_type))
+				{
+				case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+				case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
+				case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
+				case sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON:
+				case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
+				case sc2::UNIT_TYPEID::ZERG_SPIRE:
+				case sc2::UNIT_TYPEID::ZERG_HIVE:
+				case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS:
+					m_strategy.setShouldProduceAntiAir(true);
+				default:
+					break;
+				}
+			}
 			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, unitptr->pos);
 		}
 		if(unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
