@@ -21,7 +21,7 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 1,
+        "EnemyDifficulty"           : 9,
         "EnemyRace"                 : "Protoss",
         "MapFile"                   : "Redshift.SC2Map",
         "StepSize"                  : 1,
@@ -81,7 +81,7 @@
         "DrawSquadInfo"             : false,
         "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : true,
+        "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : false,
@@ -229,7 +229,7 @@
             { 
                 "Race"              : "Terran",  
                 "OpeningBuildOrder" : ["SCV",
-										"CommandCenter",
+										"OrbitalCommand",
 										"CommandCenter"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]

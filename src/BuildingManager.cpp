@@ -249,14 +249,14 @@ void BuildingManager::constructAssignedBuildings()
 							case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
 							case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
 							{
-								addonMetatype = MetaType("Reactor", m_bot);
+								addonMetatype = MetaTypeEnum::Reactor;
 								break;
 							}
 							case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
 							case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
 							case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
 							{
-								addonMetatype = MetaType("TechLab", m_bot);
+								addonMetatype = MetaTypeEnum::TechLab;
 								break;
 							}
 						}
@@ -295,12 +295,14 @@ void BuildingManager::checkForStartedConstruction()
 			{
 				continue;
 			}
+			auto type = b.type;
 
 			// check if the positions match
-			int dx = b.finalPosition.x - buildingStarted.getTilePosition().x;
+			int addonOffset = (type.isAddon() ? 3 : 0);
+			int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
 			int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
 
-			if (dx*dx + dy * dy < Util::TileToPosition(1.0f) || b.type.isAddon())
+			if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
 			{
 				if (b.buildingUnit.isValid())
 				{
@@ -330,8 +332,16 @@ void BuildingManager::checkForStartedConstruction()
                 // put it in the under construction vector
                 b.status = BuildingStatus::UnderConstruction;
 
-                // free this space
-                m_buildingPlacer.freeTiles((int)b.finalPosition.x, (int)b.finalPosition.y, b.type.tileWidth(), b.type.tileHeight());
+				//Check for invalid data
+				if (type.tileWidth() > 5 || type.tileHeight() > 5 || type.tileWidth() < 1 || type.tileHeight() < 1)
+				{
+					std::cout << "Invalid size for free space " << type.tileWidth() << " x " << type.tileHeight() << "\n";
+				}
+				else
+				{
+					// free this space
+					m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
+				}
 
                 // only one building will match
                 break;
@@ -635,7 +645,11 @@ void BuildingManager::castBuildingsAbilities()
 		{
 			if (b.getEnergy() >= 50)
 			{
+				auto orbitalPosition = b.getPosition();
 				auto point = getClosestMineral(b.getUnitPtr())->pos;
+				//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
+				point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
+				point.y = (point.y + (point.y + (point.y + orbitalPosition.y) / 2) / 2) / 2;
 				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 			}
 		}

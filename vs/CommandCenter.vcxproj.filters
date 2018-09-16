@@ -181,6 +181,9 @@
     <ClCompile Include="..\src\UCTConsideringDurations.cpp">
       <Filter>micro\UCTCD</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\MetaTypeEnum.cpp">
+      <Filter>macro</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CCBot.h" />
@@ -389,6 +392,9 @@
     </ClInclude>
     <ClInclude Include="..\src\UCTCDTimeOut.h">
       <Filter>micro\UCTCD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MetaTypeEnum.h">
+      <Filter>macro</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
