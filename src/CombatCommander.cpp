@@ -172,9 +172,11 @@ void CombatCommander::updateHarassSquads()
 	{
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
 
-		// get every Reaper of a lower priority and put it into the harass squad
+		// put high mobility units in the harass squad
 		if ((unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER
-			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION)
+			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION
+			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
+			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
 		{
 			m_squadData.assignUnitToSquad(unit, harassSquad);
@@ -318,7 +320,7 @@ void CombatCommander::updateDefenseSquads()
             continue;
         }
 
-        CCPosition basePosition = myBaseLocation->getPosition();
+        CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotPosition());
 
         // start off assuming all enemy units in region are just workers
         int numDefendersPerEnemyUnit = 2; // 2 might be too much if we consider them workers...
@@ -563,7 +565,6 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
 
 Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos)
 {
-
     // get our worker unit that is mining that is closest to it
     Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(pos, m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
 
@@ -606,7 +607,7 @@ CCPosition CombatCommander::getMainAttackLocation()
             // if it has been explored, go there if there are any visible enemy units there
             for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
             {
-                if (Util::Dist(enemyUnit, enemyBasePosition) < 15)
+                if (enemyUnit.getType().isBuilding() && Util::Dist(enemyUnit, enemyBasePosition) < 15)
                 {
                     return enemyBasePosition;
                 }
@@ -642,12 +643,14 @@ CCPosition CombatCommander::getMainAttackLocation()
 
 CCPosition CombatCommander::exploreMap()
 {
-	CCPosition mainAttackSquadCenter = m_squadData.getSquad("MainAttack").calcCenter();
 	CCPosition basePosition = Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
-	if (Util::Dist(mainAttackSquadCenter, basePosition) < 3.f)
+	for (auto & unit : m_combatUnits)
 	{
-		m_currentBaseExplorationIndex = m_currentBaseExplorationIndex + 1 % m_bot.Bases().getBaseLocations().size();
-		return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
+		if (Util::Dist(unit.getPosition(), basePosition) < 3.f)
+		{
+			m_currentBaseExplorationIndex = m_currentBaseExplorationIndex + 1 % m_bot.Bases().getBaseLocations().size();
+			return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
+		}
 	}
 	return basePosition;
 }

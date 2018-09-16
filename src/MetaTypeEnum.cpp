@@ -17,6 +17,7 @@ MetaType MetaTypeEnum::StarportTechLab;
 MetaType MetaTypeEnum::StarportReactor;
 MetaType MetaTypeEnum::CommandCenter;
 MetaType MetaTypeEnum::OrbitalCommand;
+MetaType MetaTypeEnum::SupplyDepot;
 MetaType MetaTypeEnum::Refinery;
 	//Units
 MetaType MetaTypeEnum::Marine;
@@ -41,7 +42,7 @@ MetaType MetaTypeEnum::TerranShipWeaponsLevel3;
 MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel1;
 MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel2;
 MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel3;
-
+MetaType MetaTypeEnum::InfernalPreIgniter;
 //PROTOSS
 	//Buildings
 	//Units
@@ -100,6 +101,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::StarportReactor = MetaType("StarportReactor", m_bot);
 	MetaTypeEnum::CommandCenter = MetaType("CommandCenter", m_bot);
 	MetaTypeEnum::OrbitalCommand = MetaType("OrbitalCommand", m_bot);
+	MetaTypeEnum::SupplyDepot = MetaType("SupplyDepot", m_bot);
 	MetaTypeEnum::Refinery = MetaType("Refinery", m_bot);
 		//Units
 	MetaTypeEnum::Marine = MetaType("Marine", m_bot);
@@ -124,7 +126,8 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::TerranVehicleAndShipArmorsLevel1 = MetaType("TerranVehicleAndShipArmorsLevel1", m_bot);
 	MetaTypeEnum::TerranVehicleAndShipArmorsLevel2 = MetaType("TerranVehicleAndShipArmorsLevel2", m_bot);
 	MetaTypeEnum::TerranVehicleAndShipArmorsLevel3 = MetaType("TerranVehicleAndShipArmorsLevel3", m_bot);
-
+	MetaTypeEnum::InfernalPreIgniter = MetaType("HighCapacityBarrels", m_bot);
+	
 	//PROTOSS
 		//Buildings
 		//Units

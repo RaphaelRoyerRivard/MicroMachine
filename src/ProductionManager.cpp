@@ -31,7 +31,6 @@ void ProductionManager::onFrame()
 	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
 		return;
 
-    fixBuildOrderDeadlock();
     manageBuildOrderQueue();
 
     // TODO: if nothing is currently building, get a new goal from the strategy manager
@@ -67,12 +66,33 @@ void ProductionManager::manageBuildOrderQueue()
     while (!m_queue.isEmpty())
     {
 		//check if we have the prerequirements.
+		if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
+		{
+			fixBuildOrderDeadlock(currentItem);
+			currentItem = m_queue.getHighestPriorityItem();
+			continue;
+		}
+
 		if (currentlyHasRequirement(currentItem.type))
 		{
 			// this is the unit which can produce the currentItem
 			Unit producer = getProducer(currentItem.type);
 
 			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location
+
+			/*if (currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true) == 0)
+			{
+				if (getFreeMinerals() > 35)
+				{
+					auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getPosition();
+					auto worker = m_bot.Workers().getClosestMineralWorkerTo(enemyBase);
+					worker.move(enemyBase);
+					if (getFreeMinerals() >= 100)
+					{
+						create(worker, currentItem, worker.getTilePosition());
+					}
+				}
+			}*/
 
 			// if we can make the current item
 			if (producer.isValid() && canMakeNow(producer, currentItem.type))
@@ -102,20 +122,15 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 		}
 		              
-    	// otherwise, if we can skip the current item
-    	if (m_queue.canSkipItem())
-        {
-            // skip it
-            m_queue.skipItem();
+    	// if we can't skip the current item, we stop here
+		if (!m_queue.canSkipItem())
+			break;
 
-            // and get the next one
-            currentItem = m_queue.getNextHighestPriorityItem();
-        }
-        else
-        {
-            // so break out
-            break;
-        }
+        // otherwise, skip it
+        m_queue.skipItem();
+
+        // and get the next one
+        currentItem = m_queue.getNextHighestPriorityItem();
     }
 }
 
@@ -228,6 +243,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
 			{
+				if (!m_queue.contains(MetaTypeEnum::InfernalPreIgniter) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::InfernalPreIgniter) == startedUpgrades.end())
+				{
+					m_queue.queueAsLowestPriority(MetaTypeEnum::InfernalPreIgniter, false);
+					startedUpgrades.push_back(MetaTypeEnum::InfernalPreIgniter);
+				}
+
+				const auto metaTypeFactory = MetaType("Factory", m_bot);
 				if (productionBuildingCount < maxProductionABaseCanSupport * baseCount && !m_queue.contains(MetaTypeEnum::Factory) && meetsReservedResourcesWithExtra(MetaTypeEnum::Factory))
 				{
 					m_queue.queueAsLowestPriority(MetaTypeEnum::Factory, false);
@@ -357,72 +379,41 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	}
 }
 
-void ProductionManager::fixBuildOrderDeadlock()
+void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 {
-    if (m_queue.isEmpty()) { return; }
-    BuildOrderItem & currentItem = m_queue.getHighestPriorityItem();
+	const TypeData& typeData = m_bot.Data(item.type);
 
-    // check to see if we have the prerequisites for the topmost item
-	bool hasRequired = m_bot.Data(currentItem.type).requiredUnits.empty();
-	for (auto & required : m_bot.Data(currentItem.type).requiredUnits)
-	{
-		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false, true) > 0 || m_bot.Buildings().isBeingBuilt(required))
-		{
-			hasRequired = true;
-			break;
-		}
-	}
-
-    if (!hasRequired)
+	// check to see if we have the prerequisites for the item
+    if (!hasRequired(item.type, true))
     {
-        std::cout << currentItem.type.getName() << " needs " << m_bot.Data(currentItem.type).requiredUnits[0].getName() << "\n";
-        m_queue.queueAsHighestPriority(MetaType(m_bot.Data(currentItem.type).requiredUnits[0], m_bot), currentItem.blocking);
-        fixBuildOrderDeadlock();
+        std::cout << item.type.getName() << " needs " << typeData.requiredUnits[0].getName() << "\n";
+        BuildOrderItem requiredItem = m_queue.queueAsHighestPriority(MetaType(typeData.requiredUnits[0], m_bot), item.blocking);
+        fixBuildOrderDeadlock(requiredItem);
         return;
     }
 
     // build the producer of the unit if we don't have one
-    bool hasProducer = m_bot.Data(currentItem.type).whatBuilds.empty();
-    for (auto & producer : m_bot.Data(currentItem.type).whatBuilds)
+    if (!hasProducer(item.type, true))
     {
-		if (currentItem.type.getUnitType().isWorker())
-		{
-			if (m_bot.Bases().getBaseCount(Players::Self) > 0)
-			{
-				hasProducer = true;
-				break;
-			}
-		}
-        else if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false, true) > 0 || m_bot.Buildings().isBeingBuilt(producer))
-        {
-            hasProducer = true;
-            break;
-        }
-    }
-
-    if (!hasProducer)
-    {
-        // si on veut faire un worker et qu'on n'a plus de worker et qu'on n'a plus de main building, GG
-        bool noMoreWorker = m_bot.Workers().getNumWorkers() == 0;
-        if (currentItem.type.getUnitType().isWorker() && noMoreWorker)
+        if (item.type.getUnitType().isWorker() && m_bot.Observation()->GetFoodWorkers() == 0)
         {
             // We no longer have worker and no longer have buildings to do more, so we are rip...
             return;
         }
-        m_queue.queueAsHighestPriority(MetaType(m_bot.Data(currentItem.type).whatBuilds[0], m_bot), true);
-        fixBuildOrderDeadlock();
+		BuildOrderItem producerItem = m_queue.queueAsHighestPriority(MetaType(typeData.whatBuilds[0], m_bot), item.blocking);
+        fixBuildOrderDeadlock(producerItem);
     }
 
     // build a refinery if we don't have one and the thing costs gas
     auto refinery = Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot);
-    if (m_bot.Data(currentItem.type).gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
+    if (typeData.gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
     {
         m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
     }
 
     // build supply if we need some
     auto supplyProvider = Util::GetSupplyProvider(m_bot.GetPlayerRace(Players::Self), m_bot);
-    if (m_bot.Data(currentItem.type).supplyCost > (m_bot.GetMaxSupply() - m_bot.GetCurrentSupply()) && !m_bot.Buildings().isBeingBuilt(supplyProvider))
+    if (typeData.supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply() && !m_bot.Buildings().isBeingBuilt(supplyProvider))
     {
         m_queue.queueAsHighestPriority(MetaType(supplyProvider, m_bot), true);
     }
@@ -491,6 +482,47 @@ bool ProductionManager::currentlyHasRequirement(MetaType currentItem)
 		}
 	}
 	return true;
+}
+
+bool ProductionManager::hasRequired(const MetaType& metaType, bool checkInQueue)
+{
+	const TypeData& typeData = m_bot.Data(metaType);
+
+	if (typeData.requiredUnits.empty())
+		return true;
+
+	for (auto & required : typeData.requiredUnits)
+	{
+		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false, true) > 0 || m_bot.Buildings().isBeingBuilt(required))
+			return true;
+
+		if (checkInQueue && m_queue.contains(MetaType(required, m_bot)))
+			return true;
+	}
+
+	return false;
+}
+
+bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
+{
+	const TypeData& typeData = m_bot.Data(metaType);
+
+	if (typeData.whatBuilds.empty())
+		return true;
+
+	for (auto & producer : typeData.whatBuilds)
+	{
+		if (metaType.getUnitType().isWorker() && m_bot.Bases().getBaseCount(Players::Self) > 0)
+			return true;
+		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false, true) > 0)
+			return true;
+		if (m_bot.Buildings().isBeingBuilt(producer))
+			return true;
+		if (checkInQueue && m_queue.contains(MetaType(producer, m_bot)))
+			return true;
+	}
+
+	return false;
 }
 
 Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo) const
@@ -632,6 +664,7 @@ int ProductionManager::getProductionBuildingsCount() const
 			return 0;
 		}
 	}
+	return 0;
 }
 
 int ProductionManager::getProductionBuildingsAddonsCount() const
@@ -658,6 +691,7 @@ int ProductionManager::getProductionBuildingsAddonsCount() const
 			return 0;
 		}
 	}
+	return 0;
 }
 
 std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
@@ -775,13 +809,15 @@ MetaType ProductionManager::getUpgradeMetaType(const MetaType type) const
 		}
 	}
 	assert("Upgrade wasn't found.");
+
+	return {};
 }
 
 Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const
 {
-    if (units.size() == 0)
+    if (units.empty())
     {
-        return Unit();
+        return {};
     }
 
     // if we don't care where the unit is return the first one we have
@@ -807,7 +843,7 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 }
 
 // this function will check to see if all preconditions are met and then create a unit
-void ProductionManager::create(const Unit & producer, BuildOrderItem & item)
+void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition position)
 {
     if (!producer.isValid())
     {
@@ -823,8 +859,11 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item)
         }
         else
         {
-			auto tilePosition = Util::GetTilePosition(m_bot.GetStartLocation());
-			m_bot.Buildings().addBuildingTask(item.type.getUnitType(), tilePosition);
+			if (position.x == 0 && position.y == 0)
+			{
+				position = Util::GetTilePosition(m_bot.GetStartLocation());
+			}
+			m_bot.Buildings().addBuildingTask(item.type.getUnitType(), position);
         }
     }
     // if we're dealing with a non-building unit

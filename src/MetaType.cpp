@@ -25,7 +25,8 @@ MetaType::MetaType(const std::string & name, CCBot & bot)
         return;
     }
 
-    for (const sc2::UpgradeData & data : bot.Observation()->GetUpgradeData())
+	const sc2::Upgrades& upgradeData = bot.Observation()->GetUpgradeData();
+    for (const sc2::UpgradeData & data : upgradeData)
     {
         if (name == data.name)
         {
@@ -177,3 +178,8 @@ const BWAPI::TechType & MetaType::getTechType() const
     return m_tech;
 }
 #endif
+
+bool MetaType::operator == (const MetaType & mt) const
+{
+	return this->m_name == mt.getName();
+}

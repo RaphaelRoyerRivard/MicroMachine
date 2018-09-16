@@ -500,6 +500,7 @@ Unit WorkerManager::getDepotAtBasePosition(CCPosition basePosition) const
 			return unit;
 		}
 	}
+	return {};
 }
 
 int WorkerManager::getWorkerCountAtBasePosition(CCPosition basePosition) const
@@ -635,11 +636,9 @@ void WorkerManager::drawWorkerInformation()
 
 bool WorkerManager::isFree(Unit worker) const
 {
-	int job = m_workerData.getWorkerJob(worker);
 	if (worker.getType().isMule())
-	{
 		return false;
-	}
+	int job = m_workerData.getWorkerJob(worker);
     return job == WorkerJobs::Minerals || job == WorkerJobs::Idle || job == WorkerJobs::None;
 }
 

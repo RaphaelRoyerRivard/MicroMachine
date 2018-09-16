@@ -15,6 +15,14 @@ WorkerData::WorkerData(CCBot & bot)
 
 void WorkerData::updateAllWorkerData()
 {
+	if(m_bot.Config().DrawWorkerInfo)
+	{
+		for (auto & unit : m_workerRefineryMap)
+		{
+			m_bot.Map().drawText(unit.first.getPosition(), "  Affected to refinery");
+		}
+	}
+
     // check all our units and add new workers if we find them
     for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
@@ -41,7 +49,7 @@ void WorkerData::updateAllWorkerData()
     for (auto worker : getWorkers())
     {
         // TODO: for now skip gas workers because they disappear inside refineries, this is annoying
-        if (!worker.isValid() && (getWorkerJob(worker) != WorkerJobs::Gas))
+        if ((!worker.isValid() || !worker.isAlive()) && getWorkerJob(worker) != WorkerJobs::Gas)
         {
             workersDestroyed.push_back(worker);
         }
@@ -266,6 +274,8 @@ int WorkerData::getNumAssignedWorkers(const Unit & unit)
         // if there is an entry, return it
         if (it != m_refineryWorkerCount.end())
         {
+			if(m_bot.Config().DrawWorkerInfo)
+				m_bot.Map().drawText(unit.getPosition(), "Workers affected: " + std::to_string(it->second));
             return it->second;
         }
         // otherwise, we are only calling this on completed refineries, so set it

@@ -2,8 +2,8 @@
 
 #include "Common.h"
 #include "BuildOrder.h"
-#include "BuildingManager.h"
 #include "BuildOrderQueue.h"
+#include "Unit.h"
 
 class CCBot;
 
@@ -22,7 +22,7 @@ class ProductionManager
 	bool    canMakeSoon(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
     void    setBuildOrder(const BuildOrder & buildOrder);
-    void    create(const Unit & producer, BuildOrderItem & item);
+    void    create(const Unit & producer, BuildOrderItem & item, CCTilePosition position = CCTilePosition(0,0));
     void    manageBuildOrderQueue();
 	void	putImportantBuildOrderItemsInQueue();
     int     getFreeMinerals();
@@ -30,8 +30,10 @@ class ProductionManager
 	int     getExtraMinerals();
 	int     getExtraGas();
 
-    void    fixBuildOrderDeadlock();
+	void	fixBuildOrderDeadlock(BuildOrderItem & item);
 	bool	currentlyHasRequirement(MetaType currentItem);
+	bool	hasRequired(const MetaType& metaType, bool checkInQueue);
+	bool	hasProducer(const MetaType& metaType, bool checkInQueue);
 
 public:
 

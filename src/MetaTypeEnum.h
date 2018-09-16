@@ -22,6 +22,7 @@ class MetaTypeEnum
 		static MetaType StarportReactor;
 		static MetaType CommandCenter;
 		static MetaType OrbitalCommand;
+		static MetaType SupplyDepot;
 		static MetaType Refinery;
 			//Units
 		static MetaType Marine;
@@ -46,6 +47,7 @@ class MetaTypeEnum
 		static MetaType TerranVehicleAndShipArmorsLevel1;
 		static MetaType TerranVehicleAndShipArmorsLevel2;
 		static MetaType TerranVehicleAndShipArmorsLevel3;
+		static MetaType InfernalPreIgniter;
 
 		//PROTOSS
 			//Buildings

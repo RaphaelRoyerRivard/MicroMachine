@@ -21,6 +21,7 @@ public:
 
 private:
 	void RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
+	void setNextCommandFrameAfterAttack(const sc2::Unit* unit);
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	CCTilePosition FindSafestPathWithInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats);
 	float getAttackPriority(const sc2::Unit * rangedUnit, const sc2::Unit * target);

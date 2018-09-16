@@ -42,6 +42,8 @@ public:
 
     std::vector<UnitType>   whatBuilds;
 
+	bool operator == (const MetaType & mt) const;
+
 #ifndef SC2API
     MetaType(const BWAPI::TechType & tech, CCBot & bot);
     const BWAPI::TechType & getTechType() const;

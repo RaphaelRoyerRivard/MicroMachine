@@ -191,11 +191,9 @@ void BaseLocationManager::onFrame()
     // for each unit on the map, update which base location it may be occupying
     for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
-        // we only care about buildings on the ground
-        if (!unit.getType().isBuilding() || unit.isFlying() || !unit.getType().isResourceDepot())
-        {
+        // we only care about resource depots
+        if (!unit.getType().isResourceDepot())
             continue;
-        }
 
         BaseLocation * baseLocation = getBaseLocation(unit.getPosition());
 
@@ -357,6 +355,7 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 			return m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::ZERG_HATCHERY, sc2::UNIT_TYPEID::ZERG_LAIR , sc2::UNIT_TYPEID::ZERG_HIVE }, isCompleted);
 		}
 	}
+	return 0;
 }
 
 CCTilePosition BaseLocationManager::getNextExpansion(int player) const
