@@ -14,6 +14,7 @@ class ProductionManager
     BuildOrderQueue m_queue;
 	bool m_initialBuildOrderFinished;
 	bool m_ccShouldBeInQueue = false;
+	Unit rampSupplyDepotWorker;
 	std::list<MetaType> startedUpgrades;
 
 	MetaType getUpgradeMetaType(const MetaType type) const;

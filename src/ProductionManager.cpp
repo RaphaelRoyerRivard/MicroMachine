@@ -80,19 +80,31 @@ void ProductionManager::manageBuildOrderQueue()
 
 			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location
 
-			/*if (currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true) == 0)
+			if (currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
+				m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), false, true) == 0 && 
+				m_bot.Workers().getNumWorkers() > 10)
 			{
-				if (getFreeMinerals() > 35)
+				if (getFreeMinerals() > 30)
 				{
+					//TODO Doesnt work for maps with more than 2 players.
 					auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getPosition();
-					auto worker = m_bot.Workers().getClosestMineralWorkerTo(enemyBase);
-					worker.move(enemyBase);
-					if (getFreeMinerals() >= 100)
+					if (!rampSupplyDepotWorker.isValid())
 					{
-						create(worker, currentItem, worker.getTilePosition());
+						rampSupplyDepotWorker = m_bot.Workers().getClosestMineralWorkerTo(enemyBase);
+					}
+					if (getFreeMinerals() + getExtraMinerals() >= 100)
+					{
+						rampSupplyDepotWorker.move(rampSupplyDepotWorker.getTilePosition());
+						create(rampSupplyDepotWorker, currentItem, rampSupplyDepotWorker.getTilePosition());
+						m_queue.removeCurrentHighestPriorityItem();
+						break;
+					}
+					else
+					{
+						rampSupplyDepotWorker.move(enemyBase);
 					}
 				}
-			}*/
+			}
 
 			// if we can make the current item
 			if (producer.isValid() && canMakeNow(producer, currentItem.type))

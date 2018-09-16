@@ -22,8 +22,8 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
-        "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "Redshift.SC2Map",
+        "EnemyRace"                 : "Zerg",
+        "MapFile"                   : "MechDepotLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
