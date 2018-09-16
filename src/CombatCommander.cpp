@@ -398,9 +398,22 @@ void CombatCommander::updateDefenseSquads()
 				if (base.isValid())
 				{
 					if (base.isFlying())
+					{
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LAND, basePosition, m_bot);
-					else if(base.getUnitPtr()->cargo_space_taken > 0)
+					}
+					else if (base.getUnitPtr()->cargo_space_taken > 0)
+					{
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+
+						//Remove builder and gas jobs.
+						for (auto worker : m_bot.Workers().getWorkers())
+						{
+							if (m_bot.Workers().getWorkerData().getWorkerJob(worker) != WorkerJobs::Scout)
+							{
+								m_bot.Workers().finishedWithWorker(worker);
+							}
+						}
+					}
 				}
 			}
 
