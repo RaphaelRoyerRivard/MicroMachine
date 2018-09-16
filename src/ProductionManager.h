@@ -48,6 +48,8 @@ public:
     Unit getProducer(const MetaType & type, CCPosition closestTo = CCPosition(0, 0)) const;
 	int getProductionBuildingsCount() const;
 	int getProductionBuildingsAddonsCount() const;
+	float getProductionScore() const;
+	float getProductionScoreInQueue();
 	bool meetsReservedResources(const MetaType & type);
 	bool meetsReservedResourcesWithExtra(const MetaType & type);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
