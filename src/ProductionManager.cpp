@@ -192,16 +192,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					MetaType toBuild;
 					if (productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
-						int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-						int barracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
+						//int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
+						//int barracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
 						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 						int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
-						if (barracksCount > barracksReactorCount)
+						/*if (barracksCount > barracksReactorCount)
 						{
 							toBuild = MetaTypeEnum::BarracksReactor;
 							hasPicked = true;
 						}
-						else if (starportCount > starportTechLabCount)
+						else*/ if (starportCount > starportTechLabCount)
 						{
 							toBuild = MetaTypeEnum::StarportTechLab;
 							hasPicked = true;
