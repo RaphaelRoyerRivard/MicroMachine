@@ -268,7 +268,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{//Building
 					int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-					if (factoryCount >= (starportCount + 1) * 2)
+					if (factoryCount >= baseCount * 2)
 					{
 						toBuild = MetaTypeEnum::Starport;
 						hasPicked = true;
