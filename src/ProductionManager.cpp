@@ -164,7 +164,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		// Logic for building Orbital Commands and Refineries
 		if(m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_bot.Buildings().isBeingBuilt(MetaTypeEnum::CommandCenter.getUnitType()) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
 		{
-			m_queue.queueAsLowestPriority(MetaTypeEnum::OrbitalCommand, false);
+			m_queue.queueAsHighestPriority(MetaTypeEnum::OrbitalCommand, false);
 
 			m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
 			m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
@@ -232,9 +232,30 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
 
-				if (!m_queue.contains(MetaTypeEnum::Banshee) && m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB) > 0)
+				int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
+				int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
+
+				if (bansheeCount + vikingCount >= 5)
+				{
+					auto metaTypeShipWeapon = getUpgradeMetaType(MetaTypeEnum::TerranShipWeaponsLevel1);
+					if (std::find(startedUpgrades.begin(), startedUpgrades.end(), metaTypeShipWeapon) == startedUpgrades.end())
+					{
+						m_queue.queueAsLowestPriority(metaTypeShipWeapon, false);
+						startedUpgrades.push_back(metaTypeShipWeapon);
+					}
+				}
+
+				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
+				}
+
+				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Viking))
+				{
+					if (vikingCount < 2 * bansheeCount)
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+					}
 				}
 				break;
 			}
@@ -267,14 +288,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{//Building
 					int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-					if (factoryCount >= (starportCount + 1) * 2)
-					{
-						toBuild = MetaTypeEnum::Starport;
-						hasPicked = true;
-					}
-					else
+					if (factoryCount < baseCount * 2)
 					{
 						toBuild = MetaTypeEnum::Factory;
+						hasPicked = true;
+					}
+					else if (starportCount < baseCount)
+					{
+						toBuild = MetaTypeEnum::Starport;
 						hasPicked = true;
 					}
 
