@@ -148,7 +148,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const float productionScore = getProductionScore();;// +getProductionScoreInQueue();
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
-	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self);
+	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
 	int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 
 	// build supply if we need some
@@ -215,16 +215,15 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					if(!hasPicked)
 					{//Building
 						int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-						int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-						if (barracksCount >= (starportCount + 1) * 2)
-						{
-							toBuild = MetaTypeEnum::Starport;
-							hasPicked = true;
-						}
-						else
+						if (barracksCount < baseCount * 2)
 						{
 							toBuild = MetaTypeEnum::Barracks;
+							hasPicked = true;
+						}
+						else if (starportCount < baseCount)
+						{
+							toBuild = MetaTypeEnum::Starport;
 							hasPicked = true;
 						}
 

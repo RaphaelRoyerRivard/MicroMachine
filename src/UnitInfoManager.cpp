@@ -192,6 +192,11 @@ size_t UnitInfoManager::getUnitTypeCount(CCPlayer player, UnitType type, bool co
         }
     }
 
+	if(!completed)
+	{
+		count += m_bot.Buildings().countBeingBuilt(type);
+	}
+
 	if (ignoreState)
 	{
 		//TODO PROTOSS AND ZERG NOT IMPLEMENTED
