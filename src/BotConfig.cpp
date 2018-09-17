@@ -166,6 +166,7 @@ void BotConfig::readConfigFile()
     if (j.count("Debug") && j["Debug"].is_object())
     {
         const json & debug = j["Debug"];
+		JSONTools::ReadBool("AllowDebug", debug, AllowDebug);
         JSONTools::ReadBool("DrawGameInfo", debug, DrawGameInfo);
         JSONTools::ReadBool("DrawTileInfo", debug, DrawTileInfo);
         JSONTools::ReadBool("DrawBaseLocationInfo", debug, DrawBaseLocationInfo);

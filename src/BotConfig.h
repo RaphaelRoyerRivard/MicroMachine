@@ -31,7 +31,8 @@ public:
     std::string WriteDir;
     bool UseEnemySpecificStrategy;
     bool FoundEnemySpecificStrategy;
-    
+
+	bool AllowDebug;
     bool DrawGameInfo;
     bool DrawTileInfo;
     bool DrawBaseLocationInfo;

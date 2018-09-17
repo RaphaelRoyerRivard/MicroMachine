@@ -84,7 +84,10 @@ void CCBot::OnStep()
     m_gameCommander.onFrame();
 
 #ifdef SC2API
-    Debug()->SendDebug();
+	if (Config().AllowDebug)
+	{
+		Debug()->SendDebug();
+	}
 #endif
 }
 
