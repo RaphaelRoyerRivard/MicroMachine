@@ -122,7 +122,7 @@ void ProductionManager::manageBuildOrderQueue()
 				worker.move(targetLocation);
 
 				// create it and remove it from the _queue
-				create(producer, currentItem);
+				create(worker, currentItem);
 				m_queue.removeCurrentHighestPriorityItem();
 
 				// don't actually loop around in here
@@ -149,6 +149,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self);
+	int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 
 	// build supply if we need some
 	auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
@@ -181,7 +182,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		}
 
 		// Strategy base logic
-		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 		switch (currentStrategy)
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
@@ -291,7 +291,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::WORKER_RUSH_DEFENSE:
 			{
-				if (m_queue.getHighestPriorityItem().type.getUnitType().getAPIUnitType() != MetaTypeEnum::Reaper.getUnitType().getAPIUnitType())
+				int refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true);
+				if (m_queue.getHighestPriorityItem().type.getUnitType().getAPIUnitType() != MetaTypeEnum::Reaper.getUnitType().getAPIUnitType() && refineryCount > 0)
 				{
 					//Queue has highest, there is nothing else we want.
 					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, true);
@@ -381,7 +382,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	}
 
 	const int maxWorkers = (23 + 2) * 3;	//23 resource workers + 2 builders per base, maximum of 3 bases.
-	if (m_bot.Workers().getNumWorkers() < maxWorkers && !m_queue.contains(MetaTypeEnum::OrbitalCommand))//baseCount * 23
+	if (m_bot.Workers().getNumWorkers() < maxWorkers && !m_queue.contains(MetaTypeEnum::OrbitalCommand) && currentStrategy != StrategyPostBuildOrder::WORKER_RUSH_DEFENSE)//baseCount * 23
 	{
 		auto workerType = Util::GetWorkerType(playerRace, m_bot);
 		const auto metaTypeWorker = MetaType(workerType, m_bot);
