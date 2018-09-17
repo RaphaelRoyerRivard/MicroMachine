@@ -61,7 +61,7 @@ const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 	{
 		return StrategyPostBuildOrder::TERRAN_ANTI_ADEPT;
 	}
-	return StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING;
+	return StrategyPostBuildOrder::TERRAN_REAPER;
 }
 
 const BuildOrder & StrategyManager::getOpeningBookBuildOrder() const
