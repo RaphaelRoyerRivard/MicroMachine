@@ -192,16 +192,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					MetaType toBuild;
 					if (productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
-						//int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-						//int barracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
 						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 						int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
-						/*if (barracksCount > barracksReactorCount)
-						{
-							toBuild = MetaTypeEnum::BarracksReactor;
-							hasPicked = true;
-						}
-						else*/ if (starportCount > starportTechLabCount)
+						if (starportCount > starportTechLabCount)
 						{
 							toBuild = MetaTypeEnum::StarportTechLab;
 							hasPicked = true;
@@ -228,7 +221,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							hasPicked = true;
 						}
 
-						if (hasPicked && !m_queue.contains(toBuild))
+						if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
 						{
 							m_queue.queueAsLowestPriority(toBuild, false);
 						}
@@ -248,18 +241,56 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
 			{
+				bool hasPicked = false;
+				MetaType toBuild;
+				int factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
+				int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+				int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
+				if (factoryTechLabCount < 1 || starportCount > starportTechLabCount)
+				{//Addon
+					if (factoryTechLabCount < 1)
+					{
+						toBuild = MetaTypeEnum::FactoryTechLab;
+						hasPicked = true;
+					}
+					if (starportCount > starportTechLabCount)
+					{
+						toBuild = MetaTypeEnum::StarportTechLab;
+						hasPicked = true;
+					}
+
+					if (hasPicked && !m_queue.contains(toBuild))
+					{
+						m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
+					}
+				}
+				if (!hasPicked)
+				{//Building
+					int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
+					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+					if (factoryCount >= (starportCount + 1) * 2)
+					{
+						toBuild = MetaTypeEnum::Starport;
+						hasPicked = true;
+					}
+					else
+					{
+						toBuild = MetaTypeEnum::Factory;
+						hasPicked = true;
+					}
+
+					if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
+					{
+						m_queue.queueAsLowestPriority(toBuild, false);
+					}
+				}
+
 				if (!m_queue.contains(MetaTypeEnum::InfernalPreIgniter) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::InfernalPreIgniter) == startedUpgrades.end())
 				{
 					m_queue.queueAsLowestPriority(MetaTypeEnum::InfernalPreIgniter, false);
 					startedUpgrades.push_back(MetaTypeEnum::InfernalPreIgniter);
 				}
-
-				const auto metaTypeFactory = MetaType("Factory", m_bot);
-				if (productionBuildingCount < baseCount && !m_queue.contains(MetaTypeEnum::Factory))
-				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Factory, false);
-				}
-
+				
 				if (!m_queue.contains(MetaTypeEnum::Hellion))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
@@ -273,6 +304,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER :
 			{
+				assert("Will never make barracks, check other build orders to update this one.");
 				if (productionBuildingCount < baseCount && !m_queue.contains(MetaTypeEnum::Barracks))
 				{
 					m_queue.queueAsLowestPriority(MetaTypeEnum::Barracks, false);
@@ -335,7 +367,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						toBuild = MetaTypeEnum::Starport;
 						hasPicked = true;
 
-						if (hasPicked && !m_queue.contains(toBuild))
+						if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
 						{
 							m_queue.queueAsLowestPriority(toBuild, false);
 						}

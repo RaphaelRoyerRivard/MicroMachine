@@ -84,8 +84,8 @@
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
-        "DrawHarassInfo"            : true,
-        "DrawMemoryInfo"            : true,
+        "DrawHarassInfo"            : false,
+        "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false
     },
     
