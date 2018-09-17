@@ -873,8 +873,8 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 			targetDps = 5.f;
         }
         float workerBonus = targetUnit.getType().isWorker() ? m_harassMode ? 2.f : 1.5f : 1.f;   //workers are important to kill
-
-        return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus;
+		float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;	//targets that cannot hit our unit are less prioritized
+        return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus * nonThreateningModifier;
     }
 
 	return (healthValue + distanceValue * 50) / 100.f;		//we do not want non combat buildings to have a higher priority than other units
