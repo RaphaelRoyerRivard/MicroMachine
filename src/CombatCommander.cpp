@@ -398,9 +398,22 @@ void CombatCommander::updateDefenseSquads()
 				if (base.isValid())
 				{
 					if (base.isFlying())
+					{
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LAND, basePosition, m_bot);
-					else if(base.getUnitPtr()->cargo_space_taken > 0)
+					}
+					else if (base.getUnitPtr()->cargo_space_taken > 0)
+					{
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+
+						//Remove builder and gas jobs.
+						for (auto worker : m_bot.Workers().getWorkers())
+						{
+							if (m_bot.Workers().getWorkerData().getWorkerJob(worker) != WorkerJobs::Scout)
+							{
+								m_bot.Workers().finishedWithWorker(worker);
+							}
+						}
+					}
 				}
 			}
 
@@ -434,7 +447,7 @@ void CombatCommander::updateDefenseSquads()
         }
 
 		// Hide our last SCVs
-		if(Util::IsTerran(m_bot.GetPlayerRace(Players::Self)) && m_bot.Workers().getNumWorkers() <= 5)
+		if(Util::IsTerran(m_bot.GetPlayerRace(Players::Self)) && m_bot.Workers().getNumWorkers() <= 7)//Should be 5, but is higher because some workers will end up dying on the way.
 		{
 			Unit base = m_bot.Buildings().getClosestResourceDepot(basePosition);
 			if (base.isValid())

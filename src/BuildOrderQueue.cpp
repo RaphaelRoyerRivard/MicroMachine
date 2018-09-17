@@ -79,7 +79,7 @@ bool BuildOrderQueue::canSkipItem()
     return highestNotBlocking;
 }
 
-void BuildOrderQueue::queueItem(const BuildOrderItem & b)
+BuildOrderItem BuildOrderQueue::queueItem(const BuildOrderItem & b)
 {
     // if the queue is empty, set the highest and lowest priorities
     if (m_queue.empty())
@@ -108,6 +108,8 @@ void BuildOrderQueue::queueItem(const BuildOrderItem & b)
     // update the highest or lowest if it is beaten
     m_highestPriority = (b.priority > m_highestPriority) ? b.priority : m_highestPriority;
     m_lowestPriority  = (b.priority < m_lowestPriority)  ? b.priority : m_lowestPriority;
+
+	return b;
 }
 
 BuildOrderItem BuildOrderQueue::queueAsHighestPriority(const MetaType & type, bool blocking)
@@ -204,10 +206,10 @@ bool BuildOrderQueue::contains(const MetaType & type)
 }
 
 
-BuildOrderItem::BuildOrderItem(const MetaType & t, int p, bool b)
-    : type(t)
-    , priority(p)
-    , blocking(b)
+BuildOrderItem::BuildOrderItem(const MetaType & metatype, int priority, bool blocking)
+    : type(metatype)
+    , priority(priority)
+    , blocking(blocking)
 {
 }
 
