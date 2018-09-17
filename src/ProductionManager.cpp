@@ -81,29 +81,24 @@ void ProductionManager::manageBuildOrderQueue()
 			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location
 
 			//Build supply depot at ramp against protoss
-			if (currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
-				m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), false, true) == 0 && 
-				m_bot.Workers().getNumWorkers() > 10)
+			if (m_bot.Observation()->GetFoodCap() <= 15 && currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
+				m_bot.Observation()->GetGameLoop() > 5 && getFreeMinerals() > 30)
 			{
-				if (getFreeMinerals() > 30)
+				const CCPosition centerMap(m_bot.Map().width() / 2, m_bot.Map().height() / 2);
+				if (!rampSupplyDepotWorker.isValid())
 				{
-					//TODO Doesnt work for maps with more than 2 players.
-					auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getPosition();
-					if (!rampSupplyDepotWorker.isValid())
-					{
-						rampSupplyDepotWorker = m_bot.Workers().getClosestMineralWorkerTo(enemyBase);
-					}
-					if (getFreeMinerals() + getExtraMinerals() >= 100)
-					{
-						rampSupplyDepotWorker.move(rampSupplyDepotWorker.getTilePosition());
-						create(rampSupplyDepotWorker, currentItem, rampSupplyDepotWorker.getTilePosition());
-						m_queue.removeCurrentHighestPriorityItem();
-						break;
-					}
-					else
-					{
-						rampSupplyDepotWorker.move(enemyBase);
-					}
+					rampSupplyDepotWorker = m_bot.Workers().getClosestMineralWorkerTo(centerMap);
+				}
+				if (getFreeMinerals() + getExtraMinerals() >= 100)
+				{
+					rampSupplyDepotWorker.move(rampSupplyDepotWorker.getTilePosition());
+					create(rampSupplyDepotWorker, currentItem, rampSupplyDepotWorker.getTilePosition());
+					m_queue.removeCurrentHighestPriorityItem();
+					break;
+				}
+				else
+				{
+					rampSupplyDepotWorker.move(centerMap);
 				}
 			}
 
@@ -175,6 +170,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			m_ccShouldBeInQueue = false;
 		}
 
+		// Logic for building Command Centers
+		if (baseCount <= productionScore)
+		{
+			if (!m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
+			{
+				m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
+				m_ccShouldBeInQueue = true;
+			}
+		}
+
 		// Strategy base logic
 		int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 		switch (currentStrategy)
@@ -204,7 +209,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 						if (hasPicked && !m_queue.contains(toBuild))
 						{
-							m_queue.queueAsLowestPriority(toBuild, false);
+							m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
 						}
 					}
 					if(!hasPicked)
@@ -229,28 +234,15 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						}
 					}
 				}
-				else
-				{
-					// Logic for building Command Centers
-					if (!m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
-					{
-						m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
-						m_ccShouldBeInQueue = true;
-
-						auto metaTypeInfWeap = getUpgradeMetaType(MetaTypeEnum::TerranInfantryWeaponsLevel1);
-						m_queue.queueAsLowestPriority(metaTypeInfWeap, false);
-						startedUpgrades.push_back(metaTypeInfWeap);
-					}
-				}
 
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Reaper, false);
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee) && m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB) > 0)
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Banshee, false);
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 				break;
 			}
@@ -270,12 +262,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (!m_queue.contains(MetaTypeEnum::Hellion))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Hellion, false);
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Reaper, false);
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
 				break;
 			}
@@ -288,12 +280,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (!m_queue.contains(MetaTypeEnum::Marine))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Marine, false);
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Marauder))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Marauder, false);
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marauder, 0, false));
 				}
 				break;
 			}
@@ -301,6 +293,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			{
 				if (m_queue.getHighestPriorityItem().type.getUnitType().getAPIUnitType() != MetaTypeEnum::Reaper.getUnitType().getAPIUnitType())
 				{
+					//Queue has highest, there is nothing else we want.
 					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, true);
 					return;
 				}
@@ -333,7 +326,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 						if (hasPicked && !m_queue.contains(toBuild))
 						{
-							m_queue.queueAsLowestPriority(toBuild, false);
+							m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
 						}
 					}
 					if (!hasPicked)
@@ -346,30 +339,37 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							m_queue.queueAsLowestPriority(toBuild, false);
 						}
 					}
-
 				}
-				else
-				{
-					// Logic for building Command Centers
-					if (!m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
-					{
-						m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
-						m_ccShouldBeInQueue = true;
 
-						auto metaTypeShipWeap = getUpgradeMetaType(MetaTypeEnum::TerranShipWeaponsLevel1);
-						m_queue.queueAsLowestPriority(metaTypeShipWeap, false);
-						startedUpgrades.push_back(metaTypeShipWeap);
+				int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
+				int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
+
+				if(bansheeCount + vikingCount >= 5)
+				{
+					auto metaTypeShipWeapon = getUpgradeMetaType(MetaTypeEnum::TerranShipWeaponsLevel1);
+					if (std::find(startedUpgrades.begin(), startedUpgrades.end(), metaTypeShipWeapon) == startedUpgrades.end())
+					{
+						m_queue.queueAsLowestPriority(metaTypeShipWeapon, false);
+						startedUpgrades.push_back(metaTypeShipWeapon);
 					}
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Banshee, false);
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 
-				if (!m_queue.contains(MetaTypeEnum::Viking))
+				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Viking))
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Viking, false);
+					if (vikingCount < 2 * bansheeCount)
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+					}
+				}
+
+				if (!m_queue.contains(MetaTypeEnum::Reaper))
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
 				break;
 			}
@@ -380,14 +380,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		}
 	}
 
-	const int maxWorkers = 23 * 2 + 4;//23 workers per base, maximum of 2 base, + 4 for builders.
+	const int maxWorkers = (23 + 2) * 3;	//23 resource workers + 2 builders per base, maximum of 3 bases.
 	if (m_bot.Workers().getNumWorkers() < maxWorkers && !m_queue.contains(MetaTypeEnum::OrbitalCommand))//baseCount * 23
 	{
 		auto workerType = Util::GetWorkerType(playerRace, m_bot);
 		const auto metaTypeWorker = MetaType(workerType, m_bot);
 		if (!m_queue.contains(metaTypeWorker))
 		{
-			m_queue.queueItem(BuildOrderItem(metaTypeWorker, 1, false));
+			m_queue.queueItem(BuildOrderItem(metaTypeWorker, 2, false));
 		}
 	}
 }
@@ -400,7 +400,7 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     if (!hasRequired(item.type, true))
     {
         std::cout << item.type.getName() << " needs " << typeData.requiredUnits[0].getName() << "\n";
-        BuildOrderItem requiredItem = m_queue.queueAsHighestPriority(MetaType(typeData.requiredUnits[0], m_bot), item.blocking);
+		BuildOrderItem requiredItem = m_queue.queueItem(BuildOrderItem(MetaType(typeData.requiredUnits[0], m_bot), 0, item.blocking));
         fixBuildOrderDeadlock(requiredItem);
         return;
     }
@@ -413,7 +413,7 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
             // We no longer have worker and no longer have buildings to do more, so we are rip...
             return;
         }
-		BuildOrderItem producerItem = m_queue.queueAsHighestPriority(MetaType(typeData.whatBuilds[0], m_bot), item.blocking);
+		BuildOrderItem producerItem = m_queue.queueItem(BuildOrderItem(MetaType(typeData.whatBuilds[0], m_bot), 0, item.blocking));
         fixBuildOrderDeadlock(producerItem);
     }
 

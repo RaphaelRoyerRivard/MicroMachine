@@ -447,7 +447,7 @@ void CombatCommander::updateDefenseSquads()
         }
 
 		// Hide our last SCVs
-		if(Util::IsTerran(m_bot.GetPlayerRace(Players::Self)) && m_bot.Workers().getNumWorkers() <= 5)
+		if(Util::IsTerran(m_bot.GetPlayerRace(Players::Self)) && m_bot.Workers().getNumWorkers() <= 7)//Should be 5, but is higher because some workers will end up dying on the way.
 		{
 			Unit base = m_bot.Buildings().getClosestResourceDepot(basePosition);
 			if (base.isValid())

@@ -38,14 +38,22 @@ void RangedManager::setTargets(const std::vector<Unit> & targets)
 	bool filterPassiveBuildings = false;
 	if(m_harassMode)
 	{
-		// In harass mode, we do not want to target buildings unless there are no better targets
-		for (auto & target : targets)
+		// In harass mode, we don't want to attack buildings (like a wall or proxy) if we never reached the enemy base
+		if (!m_bot.Map().isExplored(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getPosition()))
 		{
-			// Check if the target is a unit (not building) or a combat building. In this case, we won't consider passive buildings
-			if (!target.getType().isBuilding() || target.getType().isCombatUnit())
+			filterPassiveBuildings = true;
+		}
+		else
+		{
+			//Also, we do not want to target buildings unless there are no better targets
+			for (auto & target : targets)
 			{
-				filterPassiveBuildings = true;
-				break;
+				// Check if the target is a unit (not building) or a combat building. In this case, we won't consider passive buildings
+				if (!target.getType().isBuilding() || target.getType().isCombatUnit())
+				{
+					filterPassiveBuildings = true;
+					break;
+				}
 			}
 		}
 	}
@@ -265,7 +273,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				units.push_back(rangedUnit);
 				// The harass mode deactivation is a hack to not ignore range targets
 				m_harassMode = false;
-				target = getTarget(rangedUnit, rangedUnitTargets);
+				//target = getTarget(rangedUnit, rangedUnitTargets);
+				target = getTarget(rangedUnit, threats);
 				// Use behavior tree only against ranged units
 				if(target && isTargetRanged(target))
 				{

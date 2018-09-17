@@ -57,7 +57,7 @@ const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 	{
 		return StrategyPostBuildOrder::WORKER_RUSH_DEFENSE;
 	}
-	if (m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss/* && m_bot.UnitInfo().getUnitTypeCount(Players::Enemy, MetaTypeEnum::Adept.getUnitType(), false, true) > 3*/)
+	if (m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss && m_bot.UnitInfo().getUnitTypeCount(Players::Enemy, MetaTypeEnum::Adept.getUnitType(), false, true) >= 5)
 	{
 		return StrategyPostBuildOrder::TERRAN_ANTI_ADEPT;
 	}
