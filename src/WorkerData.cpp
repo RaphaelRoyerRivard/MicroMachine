@@ -48,8 +48,7 @@ void WorkerData::updateAllWorkerData()
     std::vector<Unit> workersDestroyed;
     for (auto worker : getWorkers())
     {
-        // TODO: for now skip gas workers because they disappear inside refineries, this is annoying
-        if ((!worker.isValid() || !worker.isAlive()) && getWorkerJob(worker) != WorkerJobs::Gas)
+		if (!worker.isValid() || !worker.isAlive())
         {
             workersDestroyed.push_back(worker);
         }
