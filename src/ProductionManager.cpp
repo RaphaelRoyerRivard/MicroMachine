@@ -307,7 +307,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (!m_queue.contains(MetaTypeEnum::InfernalPreIgniter) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::InfernalPreIgniter) == startedUpgrades.end())
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::InfernalPreIgniter, false);
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::InfernalPreIgniter, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::InfernalPreIgniter);
 				}
 				
@@ -319,6 +319,21 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
+				}
+
+				if (!m_queue.contains(MetaTypeEnum::Banshee))
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
+				}
+
+				int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
+				int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
+				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Viking))
+				{
+					if (vikingCount < 2 * bansheeCount)
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+					}
 				}
 				break;
 			}
