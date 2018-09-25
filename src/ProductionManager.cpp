@@ -31,6 +31,7 @@ void ProductionManager::onFrame()
 	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
 		return;
 
+	lowPriorityChecks();
     manageBuildOrderQueue();
 
     // TODO: if nothing is currently building, get a new goal from the strategy manager
@@ -145,7 +146,7 @@ void ProductionManager::manageBuildOrderQueue()
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
 	CCRace playerRace = m_bot.GetPlayerRace(Players::Self);
-	const float productionScore = getProductionScore();;// +getProductionScoreInQueue();
+	const float productionScore = getProductionScore();
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
@@ -164,7 +165,15 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		// Logic for building Orbital Commands and Refineries
 		if(m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_bot.Buildings().isBeingBuilt(MetaTypeEnum::CommandCenter.getUnitType()) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
 		{
-			m_queue.queueAsHighestPriority(MetaTypeEnum::OrbitalCommand, false);
+			auto orbitalCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::OrbitalCommand.getUnitType(), false, true);
+			if (orbitalCount < 3)
+			{
+				m_queue.queueAsHighestPriority(MetaTypeEnum::OrbitalCommand, false);
+			}
+			else
+			{
+				m_queue.queueAsHighestPriority(MetaTypeEnum::PlanetaryFortress, false);
+			}
 
 			m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
 			m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
@@ -487,9 +496,9 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 
     // build a refinery if we don't have one and the thing costs gas
     auto refinery = Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot);
-    if (typeData.gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
+	if (typeData.gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
     {
-        m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
+		m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
     }
 
     // build supply if we need some
@@ -498,6 +507,30 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     {
         m_queue.queueAsHighestPriority(MetaType(supplyProvider, m_bot), true);
     }
+}
+
+void ProductionManager::lowPriorityChecks()
+{
+	if (m_bot.Observation()->GetGameLoop() % 10)
+	{
+		return;
+	}
+
+	// build a refinery if we are missing one
+	//TODO doesn't handle extra hatcheries, doesn't handle rich geyser
+	auto refinery = Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot);
+	if (!m_queue.contains(MetaType(refinery, m_bot)))
+	{
+		auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
+		if (baseCount > 1)
+		{
+			auto geyserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true);
+			if (geyserCount < baseCount * 2)
+			{
+				m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
+			}
+		}
+	}
 }
 
 bool ProductionManager::currentlyHasRequirement(MetaType currentItem)

@@ -32,6 +32,7 @@ class ProductionManager
 	int     getExtraGas();
 
 	void	fixBuildOrderDeadlock(BuildOrderItem & item);
+	void	lowPriorityChecks();
 	bool	currentlyHasRequirement(MetaType currentItem);
 	bool	hasRequired(const MetaType& metaType, bool checkInQueue);
 	bool	hasProducer(const MetaType& metaType, bool checkInQueue);

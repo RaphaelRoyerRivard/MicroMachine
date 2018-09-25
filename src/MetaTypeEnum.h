@@ -22,6 +22,7 @@ class MetaTypeEnum
 		static MetaType StarportReactor;
 		static MetaType CommandCenter;
 		static MetaType OrbitalCommand;
+		static MetaType PlanetaryFortress;
 		static MetaType SupplyDepot;
 		static MetaType Refinery;
 			//Units
