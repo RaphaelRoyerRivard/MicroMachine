@@ -128,6 +128,8 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 			continue;
 		if (!enemyUnit.isAlive())
 			continue;
+		if (enemyUnit.getHitPoints() <= 0.f)	// Just in case isAlive does not work
+			continue;
 		if (visibilityFilter && !enemyUnit.isVisible())
 			continue;
 

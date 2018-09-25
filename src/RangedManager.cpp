@@ -162,6 +162,9 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	// for each rangedUnit
 	for (auto rangedUnit : rangedUnits)
 	{
+		if (!rangedUnit)
+			continue;
+
 		const bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
 		const bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
 		const bool isGroundUnit = !rangedUnit->is_flying;
@@ -177,7 +180,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		sc2::Units threats = getThreats(rangedUnit, rangedUnitTargets);
 
 		// if there is no potential target or threat, move to objective
-		if ((target == nullptr || Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()) && threats.empty())
+		if ((!target || Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()) && threats.empty())
 		{
 			if(Util::Dist(rangedUnit->pos, m_order.getPosition()) > 10.f)
 				Micro::SmartMove(rangedUnit, m_order.getPosition(), m_bot);
@@ -209,7 +212,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 		CCPosition dirVec(0, 0);
 
-		if (target != nullptr)
+		if (target)
 		{
 			bool targetInAttackRange = Util::Dist(rangedUnit->pos, target->pos) <= Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 			bool inRangeOfThreat = false;
@@ -332,7 +335,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				m_bot.Map().drawLine(rangedUnit->pos, threat->pos, sc2::Colors::Red);
 			}
 			// The intensity is linearly interpolated in the buffer zone (between 0 and 1) * dps
-			float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - dist) / (totalRange - threatRange)));
+			float rangeDiff = totalRange - threatRange;
+			if (rangeDiff == 0.f)
+				rangeDiff = 1.f;
+			float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - dist) / rangeDiff));
 			sumedFleeVec += fleeVec * intensity;
 		}
 		if (madeAction)
@@ -604,6 +610,8 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 			float dist = Util::Dist(rangedUnit->pos, rangedUnit->pos + returnPos);
 			if (dist < HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE)
 			{
+				if (dist == 0.f)
+					dist = 1;
 				returnPos *= HARASS_INFLUENCE_MAP_MIN_MOVE_DISTANCE / dist;
 			}
 			return Util::GetTilePosition(rangedUnit->pos + returnPos);
@@ -845,6 +853,12 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 		|| target->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 		return 0.f;
 
+	if ((target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMOR
+		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED
+		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN)
+		&& target->display_type == sc2::Unit::Snapshot)
+		return 0.f;
+
 	float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot);
 	float targetRange = Util::GetAttackRangeForTarget(target, attacker, m_bot);
 
@@ -859,10 +873,11 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 		return 0.f;
 
 	float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized
-	float distanceValue = 1 / Util::Dist(attacker->pos, target->pos);   //the more far a unit is, the less it is prioritized
+	float distance = std::max(Util::Dist(attacker->pos, target->pos), 1.f);
+	float distanceValue = 1 / distance;   //the more far a unit is, the less it is prioritized
 	if (distanceValue > attackerRange)
 		distanceValue /= 2;
-
+	
 	Unit targetUnit(target, m_bot);
     if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
     {
