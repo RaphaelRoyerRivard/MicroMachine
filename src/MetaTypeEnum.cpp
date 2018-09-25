@@ -17,6 +17,7 @@ MetaType MetaTypeEnum::StarportTechLab;
 MetaType MetaTypeEnum::StarportReactor;
 MetaType MetaTypeEnum::CommandCenter;
 MetaType MetaTypeEnum::OrbitalCommand;
+MetaType MetaTypeEnum::PlanetaryFortress;
 MetaType MetaTypeEnum::SupplyDepot;
 MetaType MetaTypeEnum::Refinery;
 	//Units
@@ -101,6 +102,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::StarportReactor = MetaType("StarportReactor", m_bot);
 	MetaTypeEnum::CommandCenter = MetaType("CommandCenter", m_bot);
 	MetaTypeEnum::OrbitalCommand = MetaType("OrbitalCommand", m_bot);
+	MetaTypeEnum::PlanetaryFortress = MetaType("PlanetaryFortress", m_bot);
 	MetaTypeEnum::SupplyDepot = MetaType("SupplyDepot", m_bot);
 	MetaTypeEnum::Refinery = MetaType("Refinery", m_bot);
 		//Units

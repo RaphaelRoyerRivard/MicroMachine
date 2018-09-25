@@ -68,8 +68,9 @@
 
     "Debug" :
     {
+		"AllowDebug"				: true,
         "DrawGameInfo"              : false, 
-        "DrawProductionInfo"        : true, 
+        "DrawProductionInfo"        : false, 
         "DrawBaseLocationInfo"      : false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
