@@ -62,6 +62,13 @@ void ProductionManager::manageBuildOrderQueue()
     // the current item to be used
     BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
 
+	// We are currently putting a blocking Reaper in the BO when getting worker rushed and it fucks up the BO when the enemy workers are gone, so this is an hardcoded fix
+	if(!m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed() && currentItem.type == MetaTypeEnum::Reaper)
+	{
+		m_queue.removeCurrentHighestPriorityItem();
+		currentItem = m_queue.getHighestPriorityItem();
+	}
+
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
     {
