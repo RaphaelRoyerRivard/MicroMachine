@@ -48,6 +48,14 @@ std::string getexepath()
 }
 
 void handler(int sig) {
+	time_t t;
+	char buffer[80];
+	time(&t);
+	struct tm *timeinfo = localtime(&t);
+	strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", timeinfo);
+	std::string str(buffer);
+	std::cerr << str << std::endl;
+
 	// print out all the frames to stderr
 	fprintf(stderr, "Error: signal %d:\n", sig);
 
