@@ -224,8 +224,8 @@ float Util::GetUnitPower(const Unit &unit, const Unit& closestUnit, CCBot& bot)
 		if (unitRange + 1 < distance)   //if the unit can't reach the closest unit (with a small buffer)
 		{
 			distance -= unitRange + 1;
-			float distancePenalty = unit.getType().isBuilding() ? 0.9f : 0.95f;
-			distancePenalty = pow(distancePenalty, distance);
+			//float distancePenalty = unit.getType().isBuilding() ? 0.9f : 0.95f;
+			float distancePenalty = pow(0.95f, distance);
 			unitPower *= distancePenalty;	//penalty for distance (very fast for building but slow for units)
 		}
 	}
