@@ -146,7 +146,7 @@ void TechTree::initUnitTypeData()
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_HIVE, m_bot)] =                       { sc2::Race::Zerg, 0, 0, 0, 0, true, true, false, false, false,  true, false, sc2::ABILITY_ID::MORPH_HIVE, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_LAIR, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_INFESTATIONPIT, m_bot) }, {} };  
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_CREEPTUMOR, m_bot)] =                 { sc2::Race::Zerg, 0, 0, 0, 0, true, true, false,  true, false, false, false, sc2::ABILITY_ID::BUILD_CREEPTUMOR, 0,{ UnitType(sc2::UNIT_TYPEID::ZERG_QUEEN, m_bot) },{},{} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, m_bot)] =         { sc2::Race::Zerg, 0, 0, 0, 0, true, true, false,  true, false, false, false, sc2::ABILITY_ID::BUILD_CREEPTUMOR, 0,{ UnitType(sc2::UNIT_TYPEID::ZERG_CREEPTUMOR, m_bot) },{},{} };
-
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN, m_bot)] =			 { sc2::Race::Zerg, 0, 0, 0, 0, true, true, false,  true, false, false, false, sc2::ABILITY_ID::BUILD_CREEPTUMOR, 0,{ UnitType(sc2::UNIT_TYPEID::ZERG_CREEPTUMOR, m_bot) },{},{} };
 
     // Zerg Units                                                                          m  g  s  t  unit  bld    wrk    rfn    sup    hall   add
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, m_bot)] =                   { sc2::Race::Zerg, 0, 0, 0, 0, true, false, false, false,  true, false, false, sc2::ABILITY_ID::TRAIN_OVERLORD, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_LARVA, m_bot) }, {}, {} };
