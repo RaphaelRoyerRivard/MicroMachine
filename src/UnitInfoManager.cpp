@@ -186,7 +186,7 @@ size_t UnitInfoManager::getUnitTypeCount(CCPlayer player, UnitType type, bool co
 
     for (auto & unit : getUnits(player))
     {
-        if ((!type.isValid() || type == unit.getType()) && (!completed || unit.isCompleted()))
+        if ((!type.isValid() || type == unit.getType()) && (!completed || unit.isCompleted()) && unit.isAlive())
         {
             count++;
         }
