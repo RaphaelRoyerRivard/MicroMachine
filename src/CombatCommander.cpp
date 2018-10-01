@@ -255,7 +255,7 @@ void CombatCommander::updateScoutDefenseSquad()
     }
 
     // if there's an enemy worker in our region then assign someone to chase him
-    bool assignScoutDefender = enemyUnitsInRegion.size() >= 1;
+    bool assignScoutDefender = !enemyUnitsInRegion.empty();
 
     // if our current squad is empty and we should assign a worker, do it
     if (assignScoutDefender)
@@ -281,7 +281,7 @@ void CombatCommander::updateScoutDefenseSquad()
 
 			if (enemyWorkerUnit.isValid())
 			{
-				Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition());
+				Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit.getPosition());
 				if (workerDefender.isValid())
 				{
 					m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
@@ -328,6 +328,8 @@ void CombatCommander::updateDefenseSquads()
 
         // all of the enemy units in this region
         std::vector<Unit> enemyUnitsInRegion;
+		float minEnemyDistance = 0;
+		Unit closestEnemy;
         bool firstWorker = true;
         for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
         {
@@ -350,6 +352,12 @@ void CombatCommander::updateDefenseSquads()
 					workerRushed = true;
                 }
 
+				float enemyDistance = Util::Dist(unit.getPosition(), basePosition);
+				if(!closestEnemy.isValid() || enemyDistance < minEnemyDistance)
+				{
+					minEnemyDistance = enemyDistance;
+					closestEnemy = unit;
+				}
                 enemyUnitsInRegion.push_back(unit);
             }
         }
@@ -439,7 +447,7 @@ void CombatCommander::updateDefenseSquads()
             int flyingDefendersNeeded = numDefendersPerEnemyUnit * numEnemyFlyingInRegion;
             int groundDefensersNeeded = numDefendersPerEnemyUnit * numEnemyGroundInRegion + numForCanonRush * numDefendersPerEnemyCanon;
 
-            updateDefenseSquadUnits(defenseSquad, flyingDefendersNeeded, groundDefensersNeeded);
+            updateDefenseSquadUnits(defenseSquad, flyingDefendersNeeded, groundDefensersNeeded, closestEnemy.getPosition());
         }
         else
         {
@@ -491,7 +499,7 @@ void CombatCommander::updateDefenseSquads()
     }
 }
 
-void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t & flyingDefendersNeeded, const size_t & groundDefendersNeeded)
+void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t & flyingDefendersNeeded, const size_t & groundDefendersNeeded, const CCPosition & closestEnemyPosition)
 {
     auto & squadUnits = defenseSquad.getUnits();
 
@@ -518,11 +526,11 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
             defendersNeeded--;
         }
     }
-    size_t defendersAdded = 0;
 
+    size_t defendersAdded = 0;
     while (defendersNeeded > defendersAdded)
     {
-        Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition());
+        Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemyPosition);
 
         if (defenderToAdd.isValid())
         {
@@ -536,7 +544,7 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
     }
 }
 
-Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos)
+Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, const CCPosition & closestEnemyPosition)
 {
     Unit closestDefender;
     float minDistance = std::numeric_limits<float>::max();
@@ -570,13 +578,13 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     if (!closestDefender.isValid())
     {
         // we search for worker to defend.
-        closestDefender = findWorkerToAssignToSquad(defenseSquad, pos);
+        closestDefender = findWorkerToAssignToSquad(defenseSquad, pos, closestEnemyPosition);
     }
 
     return closestDefender;
 }
 
-Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos)
+Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, const CCPosition & closestEnemyPosition)
 {
     // get our worker unit that is mining that is closest to it
     Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(pos, m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
@@ -584,7 +592,7 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
     if (workerDefender.isValid())
     {
         // grab it from the worker manager and put it in the squad
-        if (m_squadData.canAssignUnitToSquad(workerDefender, defenseSquad))
+        if (m_squadData.canAssignUnitToSquad(workerDefender, defenseSquad) && Util::Dist(workerDefender, closestEnemyPosition) < 8.f)
         {
             m_bot.Workers().setCombatWorker(workerDefender);
         }
