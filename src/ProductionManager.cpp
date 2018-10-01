@@ -55,20 +55,22 @@ void ProductionManager::manageBuildOrderQueue()
 		m_initialBuildOrderFinished = true;
 	}
 
-	if((m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder) || m_bot.Strategy().isWorkerRushed())
+	if(!m_initialBuildOrderFinished && m_bot.Strategy().isWorkerRushed())
+	{
+		m_initialBuildOrderFinished = true;
+		m_queue.clearAll();
+	}
+
+	if(m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder)
     {
 		putImportantBuildOrderItemsInQueue();
     }
 
+	if (m_queue.isEmpty())
+		return;
+
     // the current item to be used
     BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
-
-	// We are currently putting a blocking Reaper in the BO when getting worker rushed and it fucks up the BO when the enemy workers are gone, so this is an hardcoded fix
-	if(!m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed() && currentItem.type == MetaTypeEnum::Reaper)
-	{
-		m_queue.removeCurrentHighestPriorityItem();
-		currentItem = m_queue.getHighestPriorityItem();
-	}
 
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
@@ -97,16 +99,19 @@ void ProductionManager::manageBuildOrderQueue()
 				{
 					rampSupplyDepotWorker = m_bot.Workers().getClosestMineralWorkerTo(centerMap);
 				}
-				if (getFreeMinerals() + getExtraMinerals() >= 100)
+				if (rampSupplyDepotWorker.isValid())
 				{
-					rampSupplyDepotWorker.move(rampSupplyDepotWorker.getTilePosition());
-					create(rampSupplyDepotWorker, currentItem, rampSupplyDepotWorker.getTilePosition());
-					m_queue.removeCurrentHighestPriorityItem();
-					break;
-				}
-				else
-				{
-					rampSupplyDepotWorker.move(centerMap);
+					if (getFreeMinerals() + getExtraMinerals() >= 100)
+					{
+						rampSupplyDepotWorker.move(rampSupplyDepotWorker.getTilePosition());
+						create(rampSupplyDepotWorker, currentItem, rampSupplyDepotWorker.getTilePosition());
+						m_queue.removeCurrentHighestPriorityItem();
+						break;
+					}
+					else
+					{
+						rampSupplyDepotWorker.move(centerMap);
+					}
 				}
 			}
 
@@ -127,14 +132,17 @@ void ProductionManager::manageBuildOrderQueue()
 				Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
 				CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
 				Unit worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition{ static_cast<float>(targetLocation.x), static_cast<float>(targetLocation.y) });
-				worker.move(targetLocation);
+				if (worker.isValid())
+				{
+					worker.move(targetLocation);
 
-				// create it and remove it from the _queue
-				create(worker, currentItem);
-				m_queue.removeCurrentHighestPriorityItem();
+					// create it and remove it from the _queue
+					create(worker, currentItem);
+					m_queue.removeCurrentHighestPriorityItem();
 
-				// don't actually loop around in here
-				break;
+					// don't actually loop around in here
+					break;
+				}
 			}
 		}
 		              
@@ -304,7 +312,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{//Building
 					int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-					if (factoryCount < baseCount * 2)
+					if (factoryCount < baseCount)
 					{
 						toBuild = MetaTypeEnum::Factory;
 						hasPicked = true;
@@ -374,11 +382,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::WORKER_RUSH_DEFENSE:
 			{
-				int refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true);
-				if (m_queue.getHighestPriorityItem().type.getUnitType().getAPIUnitType() != MetaTypeEnum::Reaper.getUnitType().getAPIUnitType() && refineryCount > 0)
+				if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
-					//Queue has highest, there is nothing else we want.
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, true);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
 					return;
 				}
 				break;
