@@ -235,7 +235,7 @@ void BaseLocationManager::onFrame()
             }
         }
     }
-    
+
     // 2. we've explored every other start location and haven't seen the enemy yet
     if (m_playerStartingBaseLocations[Players::Enemy] == nullptr)
     {

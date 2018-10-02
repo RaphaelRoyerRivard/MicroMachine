@@ -592,7 +592,7 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
     if (workerDefender.isValid())
     {
         // grab it from the worker manager and put it in the squad
-        if (m_squadData.canAssignUnitToSquad(workerDefender, defenseSquad) && Util::Dist(workerDefender, closestEnemyPosition) < 8.f)
+        if (m_squadData.canAssignUnitToSquad(workerDefender, defenseSquad) && Util::Dist(workerDefender, closestEnemyPosition) < 7.f)
         {
             m_bot.Workers().setCombatWorker(workerDefender);
         }

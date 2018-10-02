@@ -534,13 +534,13 @@ void ProductionManager::lowPriorityChecks()
 	auto refinery = Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot);
 	if (!m_queue.contains(MetaType(refinery, m_bot)))
 	{
-		auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
-		if (baseCount > 1)
+		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
 		{
+			auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
 			auto geyserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true);
 			if (geyserCount < baseCount * 2)
 			{
-				m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
+				m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), false);
 			}
 		}
 	}

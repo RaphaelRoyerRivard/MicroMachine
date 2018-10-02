@@ -255,6 +255,8 @@ bool Unit::isAlive() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API
+	if (m_unit->is_alive && m_unit->health <= 0.f && m_unit->health_max > 0.f)
+		std::cout << m_unitType.getName() << " " << getTag() << " is alive with no hp" << std::endl;
     return m_unit->is_alive;
 #else
     return m_unit->getHitPoints() > 0;

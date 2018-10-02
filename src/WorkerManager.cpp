@@ -546,7 +546,7 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
     // if the worker exists (one may not have been found in rare cases)
     if (builderWorker.isValid() && setJobAsBuilder)
     {
-        m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.builderUnit);
+        m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.builderUnit);	// b.builderUnit is actually not used
     }
 
     return builderWorker;

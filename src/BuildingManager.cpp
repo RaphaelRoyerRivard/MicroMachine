@@ -64,9 +64,6 @@ int BuildingManager::countBeingBuilt(UnitType type)
 // STEP 1: DO BOOK KEEPING ON WORKERS WHICH MAY HAVE DIED
 void BuildingManager::validateWorkersAndBuildings()
 {
-    // TODO: if a terran worker dies while constructing and its building
-    //       is under construction, place unit back into buildingsNeedingBuilders
-
     std::vector<Building> toRemove;
 
     // find any buildings which have become obsolete
@@ -210,6 +207,7 @@ void BuildingManager::constructAssignedBuildings()
                 // If the building has been started and no more worker are on it.
 
                 b.builderUnit.rightClick(b.buildingUnit);
+				b.status = BuildingStatus::UnderConstruction;
             }
             else
             {
@@ -359,11 +357,17 @@ void BuildingManager::checkForDeadTerranBuilders()
     // for each of our buildings under construction
     for (auto & b : m_buildings)
     {
-        if (b.status == BuildingStatus::UnderConstruction && !b.builderUnit.isAlive())
-        {
-            b.status = BuildingStatus::Unassigned;
-            b.builderUnit = Unit();
-        }
+		// if the building has a builder that died or that is not a builder anymore because of a bug
+		if (b.builderUnit.isValid() && (!b.builderUnit.isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(b.builderUnit) != WorkerJobs::Build))
+		{
+			// grab the worker unit from WorkerManager which is closest to this final position
+			Unit builderUnit = m_bot.Workers().getBuilder(b);
+			if (builderUnit.isValid())
+			{
+				b.builderUnit = builderUnit;
+				b.status = BuildingStatus::Assigned;
+			}
+		}
     }
 }
 
@@ -483,6 +487,8 @@ void BuildingManager::drawBuildingInformation()
         else if (b.status == BuildingStatus::UnderConstruction)
         {
             ss << "Constructing " << b.type.getName() << "    " << getBuildingWorkerCode(b) << "\n";
+			if(b.builderUnit.isValid())
+				m_bot.Map().drawLine(b.buildingUnit.getPosition(), b.builderUnit.getPosition(), sc2::Colors::White);
         }
     }
 

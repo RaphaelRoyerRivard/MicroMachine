@@ -39,7 +39,8 @@ void RangedManager::setTargets(const std::vector<Unit> & targets)
 	if(m_harassMode)
 	{
 		// In harass mode, we don't want to attack buildings (like a wall or proxy) if we never reached the enemy base
-		if (!m_bot.Map().isExplored(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getPosition()))
+		const BaseLocation* enemyStartingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+		if (enemyStartingBase && !m_bot.Map().isExplored(enemyStartingBase->getPosition()))
 		{
 			filterPassiveBuildings = true;
 		}
