@@ -24,13 +24,13 @@ class CombatCommander
     void            updateIdleSquad();
     bool            isSquadUpdateFrame();
 
-    Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, const CCPosition & closestEnemyPosition);
-    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, const CCPosition & closestEnemyPosition);
+    Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy);
+    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy);
 
     CCPosition      getMainAttackLocation();
 	CCPosition		exploreMap();
 
-    void            updateDefenseSquadUnits(Squad & defenseSquad, const size_t & flyingDefendersNeeded, const size_t & groundDefendersNeeded, const CCPosition & closestEnemyPosition);
+    void            updateDefenseSquadUnits(Squad & defenseSquad, const size_t & flyingDefendersNeeded, const size_t & groundDefendersNeeded, Unit & closestEnemy);
     bool            shouldWeStartAttacking();
 
 public:

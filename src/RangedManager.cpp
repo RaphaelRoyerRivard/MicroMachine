@@ -854,11 +854,15 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 		|| target->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 		return 0.f;
 
+	// Ignoring invisible creep tumors
+	const uint32_t lastGameLoop = m_bot.Observation()->GetGameLoop() - 1;
 	if ((target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMOR
 		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED
 		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN)
-		&& target->display_type == sc2::Unit::Snapshot)
+		&& target->last_seen_game_loop < lastGameLoop)
+	{
 		return 0.f;
+	}
 
 	float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot);
 	float targetRange = Util::GetAttackRangeForTarget(target, attacker, m_bot);
