@@ -439,7 +439,7 @@ void CombatCommander::updateDefenseSquads()
             if (!m_squadData.squadExists(squadName.str()))
             {
 				//SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
-				SquadOrder defendRegion(SquadOrderTypes::Defend, closestEnemy.getPosition(), DefaultOrderRadius, "Defend Region!");
+				SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
 				m_squadData.addSquad(squadName.str(), Squad(squadName.str(), defendRegion, BaseDefensePriority, m_bot));
             }
         }
@@ -460,15 +460,19 @@ void CombatCommander::updateDefenseSquads()
             BOT_ASSERT(false, "Squad should have existed: %s", squadName.str().c_str());
         }
 
-		// Hide our last SCVs (should be 5, but is higher because some workers may end up dying on the way)
-		if(Util::IsTerran(m_bot.GetPlayerRace(Players::Self)) && m_bot.Workers().getNumWorkers() <= 7)
+		//Protect our SCVs and lift our base
+		if(Util::IsTerran(m_bot.GetPlayerRace(Players::Self)))
 		{
 			Unit base = m_bot.Buildings().getClosestResourceDepot(basePosition);
 			if (base.isValid())
 			{
-				if(base.getUnitPtr()->cargo_space_taken == 0)
-					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
-				else if(!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.4f)
+				if(base.getUnitPtr()->cargo_space_taken == 0 && m_bot.Workers().getNumWorkers() > 0)
+				{
+					// Hide our last SCVs (should be 5, but is higher because some workers may end up dying on the way)
+					if(m_bot.Workers().getNumWorkers() <= 7)
+						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
+				}
+				else if(!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
 					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 			}
 		}
@@ -522,10 +526,14 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
     for (auto & unit : squadUnits)
     {
 		// Let injured worker return mining, no need to sacrifice it
-		if (unit.getType().isWorker() && unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT)
+		if (unit.getType().isWorker())
 		{
-			m_bot.Workers().finishedWithWorker(unit);
-			defenseSquad.removeUnit(unit);
+			if (unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT ||
+				!ShouldWorkerDefend(unit, defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy))
+			{
+				m_bot.Workers().finishedWithWorker(unit);
+				defenseSquad.removeUnit(unit);
+			}
 		}
         else if (unit.isAlive())
         {
@@ -566,7 +574,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
             continue;
         }
 
-        float dist = Util::Dist(unit, pos);
+        float dist = Util::Dist(unit, closestEnemy);
         Squad *unitSquad = m_squadData.getUnitSquad(unit);
         if (unitSquad && (unitSquad->getName() == "MainAttack" || unitSquad->getName() == "Harass") && Util::Dist(unit.getPosition(), unitSquad->getSquadOrder().getPosition()) < dist)
         {
@@ -574,7 +582,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
             continue;
         }
 
-        if (!closestDefender.isValid() || (dist < minDistance))
+        if (!closestDefender.isValid() || dist < minDistance)
         {
             closestDefender = unit;
             minDistance = dist;
@@ -593,21 +601,31 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
 Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy)
 {
     // get our worker unit that is mining that is closest to it
-    Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(pos, m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
+    Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
 
-    if (workerDefender.isValid())
+	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy))
+	{
+        m_bot.Workers().setCombatWorker(workerDefender);
+    }
+    else
     {
-        // grab it from the worker manager and put it in the squad, but only if the closest enemy is a building or if it is close to it
-        if (m_squadData.canAssignUnitToSquad(workerDefender, defenseSquad) && (closestEnemy.getType().isBuilding() || Util::Dist(workerDefender, closestEnemy) < 7.f))
-        {
-            m_bot.Workers().setCombatWorker(workerDefender);
-        }
-        else
-        {
-            workerDefender = {};
-        }
+        workerDefender = {};
     }
     return workerDefender;
+}
+
+bool CombatCommander::ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy)
+{
+	// grab it from the worker manager and put it in the squad, but only if it meets the distance requirements
+	if (woker.isValid() && 
+		m_squadData.canAssignUnitToSquad(woker, defenseSquad) &&
+		Util::Dist(woker, pos) < 15.f &&	// worker should not get too far from base
+		(Util::Dist(woker, closestEnemy) < 7.f ||	// worker can fight only units close to it
+		(closestEnemy.getType().isBuilding() && Util::Dist(closestEnemy, pos) < 12.f)))	// worker can fight buildings somewhat close to the base
+	{
+		return true;
+	}
+	return false;
 }
 
 void CombatCommander::drawSquadInformation()

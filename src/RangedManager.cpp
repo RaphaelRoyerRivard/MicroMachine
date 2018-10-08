@@ -180,8 +180,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
 		sc2::Units threats = getThreats(rangedUnit, rangedUnitTargets);
 
-		// if there is no potential target or threat, move to objective
-		if ((!target || Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()) && threats.empty())
+		// if there is no potential target or threat, move to objective (max distance is not considered when defending)
+		if ((!target || 
+			 (m_order.getType() != SquadOrderTypes::Defend && Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()))
+			&& threats.empty())
 		{
 			if(Util::Dist(rangedUnit->pos, m_order.getPosition()) > 10.f)
 				Micro::SmartMove(rangedUnit, m_order.getPosition(), m_bot);
@@ -311,7 +313,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if (canUseKD8Charge)
 			{
 				CCPosition expectedThreatPosition = threat->pos + fleeVec * threatSpeed * HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE;
-				if (Unit(threat, m_bot).getType().isWorker())
+				Unit threatUnit = Unit(threat, m_bot);
+				if (threatUnit.getType().isWorker() || threatUnit.getType().isBuilding())	//because some buildings speed > 0
 					expectedThreatPosition = threat->pos;
 				float distToExpectedPosition = Util::Dist(rangedUnit->pos, expectedThreatPosition);
 				// Check if we have enough reach to throw at the threat
