@@ -21,7 +21,7 @@ void SquadData::clearSquadData()
     for (auto & kv : m_squads)
     {
         Squad & squad = kv.second;
-        squad.giveBackWorkers();
+        squad.giveBackWorkers();//TODO 99% sure its useless since similar code is in .clear()
     }
 
     m_squads.clear();

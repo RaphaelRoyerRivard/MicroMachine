@@ -463,7 +463,6 @@ void CombatCommander::updateDefenseSquads()
 	m_bot.Strategy().setIsWorkerRushed(workerRushed);
 
     // for each of our defense squads, if there aren't any enemy units near the position, clear the squad
-    std::set<std::string> uselessDefenseSquads;
     for (const auto & kv : m_squadData.getSquads())
     {
         const Squad & squad = kv.second;

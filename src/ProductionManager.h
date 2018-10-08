@@ -16,6 +16,7 @@ class ProductionManager
 	bool m_ccShouldBeInQueue = false;
 	Unit rampSupplyDepotWorker;
 	std::list<MetaType> startedUpgrades;
+	bool firstBarrackBuilt = false;
 
 	MetaType getUpgradeMetaType(const MetaType type) const;
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;

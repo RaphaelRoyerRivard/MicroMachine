@@ -35,7 +35,6 @@ void ProductionManager::onFrame()
     manageBuildOrderQueue();
 
     // TODO: if nothing is currently building, get a new goal from the strategy manager
-    // TODO: detect if there's a build order deadlock once per second
     // TODO: triggers for game things like cloaked units etc
 
     drawProductionInformation();
@@ -101,6 +100,24 @@ void ProductionManager::manageBuildOrderQueue()
 				{
 					rampSupplyDepotWorker.move(centerMap);
 				}
+			}
+
+			//TODO TEMP build barrack being mineral line to protect from protoss worker rush
+			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
+				canMakeSoon(producer, MetaTypeEnum::Barracks))
+			{
+				firstBarrackBuilt = true;
+
+				auto startBase = Util::GetTilePosition(m_bot.GetStartLocation());
+				auto base = m_bot.Workers().getDepotAtBasePosition(m_bot.GetStartLocation());
+				auto mineral = getClosestMineral(sc2::UNIT_TYPEID::TERRAN_SCV, CCPosition(startBase.x, startBase.y));
+				auto mineralPosition = mineral->pos;
+				auto position = CCTilePosition(startBase.x + mineralPosition.x, startBase.y + mineralPosition.y);
+
+				create(producer, currentItem, position);
+				m_queue.removeCurrentHighestPriorityItem();
+
+				break;
 			}
 
 			// if we can make the current item
