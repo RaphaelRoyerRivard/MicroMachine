@@ -21,7 +21,6 @@ class MapTools
     std::vector<std::vector<bool>>  m_walkable;         // whether a tile is buildable (includes static resources)
     std::vector<std::vector<bool>>  m_buildable;        // whether a tile is buildable (includes static resources)
     std::vector<std::vector<bool>>  m_depotBuildable;   // whether a depot is buildable on a tile (illegal within 3 tiles of static resource)
-    std::vector<std::vector<int>>   m_lastSeen;         // the last time any of our units has seen this position on the map
     std::vector<std::vector<int>>   m_sectorNumber;     // connectivity sector number, two tiles are ground connected if they have the same number
     std::vector<std::vector<float>> m_terrainHeight;        // height of the map at x+0.5, y+0.5
     
@@ -81,8 +80,6 @@ public:
     bool    isBuildable(int tileX, int tileY) const;
     bool    isBuildable(const CCTilePosition & tile) const;
     bool    isDepotBuildableTile(int tileX, int tileY) const;
-    
-    CCTilePosition getLeastRecentlySeenTile() const;
 
     // returns a list of all tiles on the map, sorted by 4-direcitonal walk distance from the given position
     const std::vector<CCTilePosition> & getClosestTilesTo(const CCTilePosition & pos) const;
