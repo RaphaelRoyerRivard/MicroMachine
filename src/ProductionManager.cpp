@@ -340,10 +340,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
 				}
 
-				if (!m_queue.contains(MetaTypeEnum::Reaper))
+				/*if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
-				}
+				}*/
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{

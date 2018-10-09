@@ -473,6 +473,7 @@ void CombatCommander::updateDefenseSquads()
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
 				}
 				else if(!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
+					if(m_bot.)
 					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 			}
 		}
@@ -513,7 +514,6 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
 {
     auto & squadUnits = defenseSquad.getUnits();
 
-    // TODO: right now this will assign arbitrary defenders, change this so that we make sure they can attack air/ground
 
     // if there's nothing left to defend, clear the squad
     if (flyingDefendersNeeded == 0 && groundDefendersNeeded == 0)
@@ -522,6 +522,8 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
         return;
     }
 
+	size_t flyingDefendersNeededLocal = flyingDefendersNeeded;
+	size_t groundDefendersNeededLocal = groundDefendersNeeded;
     size_t defendersNeeded = flyingDefendersNeeded + groundDefendersNeeded;
     for (auto & unit : squadUnits)
     {
@@ -537,6 +539,8 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
 		}
         else if (unit.isAlive())
         {
+			// TODO: right now this will assign arbitrary defenders, change this so that we make sure they can attack air/ground
+			//if(flyingDefendersNeededLocal > 0 && canAttackAir)
             defendersNeeded--;
         }
     }
@@ -562,8 +566,6 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
 {
     Unit closestDefender;
     float minDistance = std::numeric_limits<float>::max();
-
-    // TODO: add back special case of zergling rush defense
 
     for (auto & unit : m_combatUnits)
     {
@@ -619,12 +621,11 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & woker, const Squad & defen
 	// grab it from the worker manager and put it in the squad, but only if it meets the distance requirements
 	if (woker.isValid() && 
 		m_squadData.canAssignUnitToSquad(woker, defenseSquad) &&
+		!closestEnemy.isFlying() &&
 		Util::Dist(woker, pos) < 15.f &&	// worker should not get too far from base
 		(Util::Dist(woker, closestEnemy) < 7.f ||	// worker can fight only units close to it
 		(closestEnemy.getType().isBuilding() && Util::Dist(closestEnemy, pos) < 12.f)))	// worker can fight buildings somewhat close to the base
-	{
 		return true;
-	}
 	return false;
 }
 
@@ -641,7 +642,6 @@ CCPosition CombatCommander::getMainAttackLocation()
     if (enemyBaseLocation)
     {
         CCPosition enemyBasePosition = enemyBaseLocation->getPosition();
-
         // If the enemy base hasn't been seen yet, go there.
         if (!m_bot.Map().isExplored(enemyBasePosition))
         {
@@ -661,21 +661,22 @@ CCPosition CombatCommander::getMainAttackLocation()
     }
 
     // Second choice: Attack known enemy buildings
-    for (const auto & kv : m_bot.UnitInfo().getUnitInfoMap(Players::Enemy))
+	Squad& harassSquad = m_squadData.getSquad("Harass");
+    for (const auto & enemyUnit : harassSquad.getTargets())
     {
-        const UnitInfo & ui = kv.second;
-
-        if (m_bot.Data(ui.type).isBuilding && ui.lastHealth > 0.0f && ui.unit.isAlive() && !(ui.lastPosition.x == 0.0f && ui.lastPosition.y == 0.0f))
+        if (enemyUnit.getType().isBuilding() && enemyUnit.isAlive())
         {
 			CCPosition mainAttackSquadCenter = m_squadData.getSquad("MainAttack").calcCenter();
-			if(Util::Dist(mainAttackSquadCenter, ui.lastPosition) > 3)
-				return ui.lastPosition;
+			if(Util::Dist(mainAttackSquadCenter, enemyUnit.getPosition()) > 3)
+			{
+				return enemyUnit.getPosition();
+			}
         }
     }
 
     // Third choice: Attack visible enemy units that aren't overlords
-    for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
-    {
+	for (const auto & enemyUnit : harassSquad.getTargets())
+	{
         if (!enemyUnit.getType().isOverlord())
         {
             return enemyUnit.getPosition();
@@ -693,7 +694,7 @@ CCPosition CombatCommander::exploreMap()
 	{
 		if (Util::Dist(unit.getPosition(), basePosition) < 3.f)
 		{
-			m_currentBaseExplorationIndex = m_currentBaseExplorationIndex + 1 % m_bot.Bases().getBaseLocations().size();
+			m_currentBaseExplorationIndex = (m_currentBaseExplorationIndex + 1) % m_bot.Bases().getBaseLocations().size();
 			return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
 		}
 	}

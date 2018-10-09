@@ -422,11 +422,13 @@ CCTilePosition BaseLocationManager::getNextExpansion(int player) const
 
 CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
 {
-	if(index < 0 || index >= m_baseLocationPtrs.size())
-		return CCTilePosition(0, 0);
+	BOT_ASSERT(index >= 0, "Negative index given to BaseLocationManager::getBasePosition");
+	BOT_ASSERT(index < m_baseLocationPtrs.size(), "Index to high in BaseLocationManager::getBasePosition");
 
 	if (player == Players::Self)
 		index = m_baseLocationPtrs.size() - index - 1;
 
-	return m_baseLocationPtrs[index]->getDepotPosition();
+	CCTilePosition position = m_baseLocationPtrs[index]->getDepotPosition();
+	BOT_ASSERT(position.x != 0.f || position.y != 0.f, "Base location is 0,0");
+	return position;
 }
