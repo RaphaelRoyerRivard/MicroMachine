@@ -53,7 +53,7 @@ const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 	{
 		return StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING;
 	}
-	if (m_bot.Strategy().isWorkerRushed() && m_bot.Bases().getBaseCount(Players::Self) == 1)
+	if (m_bot.Strategy().isWorkerRushed())
 	{
 		return StrategyPostBuildOrder::WORKER_RUSH_DEFENSE;
 	}

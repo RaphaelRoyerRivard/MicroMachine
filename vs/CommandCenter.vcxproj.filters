@@ -184,6 +184,7 @@
     <ClCompile Include="..\src\MetaTypeEnum.cpp">
       <Filter>macro</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\StackWalker.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CCBot.h" />
@@ -396,6 +397,7 @@
     <ClInclude Include="..\src\MetaTypeEnum.h">
       <Filter>macro</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\StackWalker.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CommandCenter.rc" />

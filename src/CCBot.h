@@ -88,6 +88,7 @@ public:
     Unit GetUnit(const CCUnitID & tag) const;
     const std::vector<Unit> & GetUnits() const;
 	std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits();
+	std::map<sc2::Tag, Unit> CCBot::GetAllyUnits(sc2::UNIT_TYPEID type);
 	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();
 	uint32_t GetLastStepSeenUnit(sc2::Tag tag);
     const std::vector<CCPosition> & GetStartLocations() const;

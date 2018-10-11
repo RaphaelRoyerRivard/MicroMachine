@@ -3,6 +3,10 @@
 #include "JSONTools.h"
 #include "Util.h"
 #include "LadderInterface.h"
+#include <cstdio>
+#include <csignal>
+#include <cstdlib>
+#include "StackWalker.h"
 
 #ifdef SC2API
 
@@ -43,8 +47,37 @@ std::string getexepath()
 	return s_cwd;
 }
 
+void handler(int sig) {
+	time_t t;
+	char buffer[80];
+	time(&t);
+	struct tm *timeinfo = localtime(&t);
+	strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", timeinfo);
+	std::string str(buffer);
+	std::cerr << str << std::endl;
+
+	// print out all the frames to stderr
+	fprintf(stderr, "Error: signal %d:\n", sig);
+
+	StackWalker sw;
+	sw.ShowCallstack();
+
+	exit(1);
+}
+
 int main(int argc, char* argv[]) 
 {
+	signal(SIGABRT, handler);
+	signal(SIGABRT_COMPAT, handler);
+	signal(SIGBREAK, handler);
+	signal(SIGFPE, handler);
+	signal(SIGILL, handler);
+	signal(SIGINT, handler);
+	signal(SIGSEGV, handler);
+	signal(SIGTERM, handler);
+	signal(SIG_ATOMIC_MAX, handler);
+	signal(SIG_ATOMIC_MIN, handler);
+
 	sc2::Coordinator coordinator;
     
 	std::cout << "Current working directory: " << getexepath() << std::endl;

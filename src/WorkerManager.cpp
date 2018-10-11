@@ -28,7 +28,7 @@ void WorkerManager::onFrame()
 
     m_workerData.drawDepotDebugInfo();
 
-    handleRepairWorkers();
+    //handleRepairWorkers();	// this has been commented out because it doesn't work well against worker rushes (less combat scvs and too much minerals are spent repairing)
 }
 
 void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)
@@ -204,6 +204,9 @@ void WorkerManager::handleGasWorkers()
             // if it's less than we want it to be, fill 'er up
             for (int i=0; i<(3-numAssigned); ++i)
             {
+				if (getWorkerData().getWorkerJobCount(WorkerJobs::Minerals) <= getWorkerData().getWorkerJobCount(WorkerJobs::Gas))
+					break;
+
                 auto gasWorker = getGasWorker(unit);
                 if (gasWorker.isValid())
                 {
@@ -543,7 +546,7 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
     // if the worker exists (one may not have been found in rare cases)
     if (builderWorker.isValid() && setJobAsBuilder)
     {
-        m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.builderUnit);
+        m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.builderUnit);	// b.builderUnit is actually not used
     }
 
     return builderWorker;

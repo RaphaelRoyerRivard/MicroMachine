@@ -39,7 +39,8 @@ void RangedManager::setTargets(const std::vector<Unit> & targets)
 	if(m_harassMode)
 	{
 		// In harass mode, we don't want to attack buildings (like a wall or proxy) if we never reached the enemy base
-		if (!m_bot.Map().isExplored(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getPosition()))
+		const BaseLocation* enemyStartingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+		if (enemyStartingBase && !m_bot.Map().isExplored(enemyStartingBase->getPosition()))
 		{
 			filterPassiveBuildings = true;
 		}
@@ -179,8 +180,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
 		sc2::Units threats = getThreats(rangedUnit, rangedUnitTargets);
 
-		// if there is no potential target or threat, move to objective
-		if ((!target || Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()) && threats.empty())
+		// if there is no potential target or threat, move to objective (max distance is not considered when defending)
+		if ((!target || 
+			 (m_order.getType() != SquadOrderTypes::Defend && Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()))
+			&& threats.empty())
 		{
 			if(Util::Dist(rangedUnit->pos, m_order.getPosition()) > 10.f)
 				Micro::SmartMove(rangedUnit, m_order.getPosition(), m_bot);
@@ -310,7 +313,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if (canUseKD8Charge)
 			{
 				CCPosition expectedThreatPosition = threat->pos + fleeVec * threatSpeed * HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE;
-				if (Unit(threat, m_bot).getType().isWorker())
+				Unit threatUnit = Unit(threat, m_bot);
+				if (threatUnit.getType().isWorker() || threatUnit.getType().isBuilding())	//because some buildings speed > 0
 					expectedThreatPosition = threat->pos;
 				float distToExpectedPosition = Util::Dist(rangedUnit->pos, expectedThreatPosition);
 				// Check if we have enough reach to throw at the threat
@@ -853,11 +857,15 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 		|| target->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 		return 0.f;
 
+	// Ignoring invisible creep tumors
+	const uint32_t lastGameLoop = m_bot.Observation()->GetGameLoop() - 1;
 	if ((target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMOR
 		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED
 		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN)
-		&& target->display_type == sc2::Unit::Snapshot)
+		&& target->last_seen_game_loop < lastGameLoop)
+	{
 		return 0.f;
+	}
 
 	float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot);
 	float targetRange = Util::GetAttackRangeForTarget(target, attacker, m_bot);

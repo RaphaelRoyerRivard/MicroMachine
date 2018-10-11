@@ -54,10 +54,19 @@ void ProductionManager::manageBuildOrderQueue()
 		m_initialBuildOrderFinished = true;
 	}
 
-	if((m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder) || m_bot.Strategy().isWorkerRushed())
+	if(!m_initialBuildOrderFinished && m_bot.Strategy().isWorkerRushed())
+	{
+		m_initialBuildOrderFinished = true;
+		m_queue.clearAll();
+	}
+
+	if(m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder)
     {
 		putImportantBuildOrderItemsInQueue();
     }
+
+	if (m_queue.isEmpty())
+		return;
 
     // the current item to be used
     BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
@@ -89,32 +98,36 @@ void ProductionManager::manageBuildOrderQueue()
 				{
 					rampSupplyDepotWorker = m_bot.Workers().getClosestMineralWorkerTo(centerMap);
 				}
-				if (getFreeMinerals() + getExtraMinerals() >= 100)
+				if (rampSupplyDepotWorker.isValid())
 				{
-					rampSupplyDepotWorker.move(rampSupplyDepotWorker.getTilePosition());
-					create(rampSupplyDepotWorker, currentItem, rampSupplyDepotWorker.getTilePosition());
-					m_queue.removeCurrentHighestPriorityItem();
-					break;
-				}
-				else
-				{
-					rampSupplyDepotWorker.move(centerMap);
+					if (getFreeMinerals() + getExtraMinerals() >= 100)
+					{
+						rampSupplyDepotWorker.move(rampSupplyDepotWorker.getTilePosition());
+						create(rampSupplyDepotWorker, currentItem, rampSupplyDepotWorker.getTilePosition());
+						m_queue.removeCurrentHighestPriorityItem();
+						break;
+					}
+					else
+					{
+						rampSupplyDepotWorker.move(centerMap);
+					}
 				}
 			}
 
-			//TODO TEMP build barrack being mineral line to protect from protoss worker rush
+			//TODO TEMP build barrack away from the ramp to protect it from worker rush
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
 				canMakeSoon(producer, MetaTypeEnum::Barracks))
 			{
 				firstBarrackBuilt = true;
 
-				auto startBase = Util::GetTilePosition(m_bot.GetStartLocation());
-				auto base = m_bot.Workers().getDepotAtBasePosition(m_bot.GetStartLocation());
-				auto mineral = getClosestMineral(sc2::UNIT_TYPEID::TERRAN_SCV, CCPosition(startBase.x, startBase.y));
-				auto mineralPosition = mineral->pos;
-				auto position = CCTilePosition(startBase.x + mineralPosition.x, startBase.y + mineralPosition.y);
+				auto baseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+				auto supplyDepot = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT).begin()->second;
 
-				create(producer, currentItem, position);
+				auto basePosition = baseLocation->getDepotPosition();
+				auto point = supplyDepot.getTilePosition();
+				CCTilePosition target = CCTilePosition(basePosition.x + (basePosition.x - point.x), basePosition.y + (basePosition.y - point.y));
+				
+				create(producer, currentItem, target);
 				m_queue.removeCurrentHighestPriorityItem();
 
 				break;
@@ -137,14 +150,17 @@ void ProductionManager::manageBuildOrderQueue()
 				Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
 				CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
 				Unit worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition{ static_cast<float>(targetLocation.x), static_cast<float>(targetLocation.y) });
-				worker.move(targetLocation);
+				if (worker.isValid())
+				{
+					worker.move(targetLocation);
 
-				// create it and remove it from the _queue
-				create(worker, currentItem);
-				m_queue.removeCurrentHighestPriorityItem();
+					// create it and remove it from the _queue
+					create(worker, currentItem);
+					m_queue.removeCurrentHighestPriorityItem();
 
-				// don't actually loop around in here
-				break;
+					// don't actually loop around in here
+					break;
+				}
 			}
 		}
 		              
@@ -314,7 +330,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{//Building
 					int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-					if (factoryCount < baseCount * 2)
+					if (factoryCount < baseCount)
 					{
 						toBuild = MetaTypeEnum::Factory;
 						hasPicked = true;
@@ -384,11 +400,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::WORKER_RUSH_DEFENSE:
 			{
-				int refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true);
-				if (m_queue.getHighestPriorityItem().type.getUnitType().getAPIUnitType() != MetaTypeEnum::Reaper.getUnitType().getAPIUnitType() && refineryCount > 0)
+				if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
-					//Queue has highest, there is nothing else we want.
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, true);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
 					return;
 				}
 				break;
@@ -538,13 +552,13 @@ void ProductionManager::lowPriorityChecks()
 	auto refinery = Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot);
 	if (!m_queue.contains(MetaType(refinery, m_bot)))
 	{
-		auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
-		if (baseCount > 1)
+		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
 		{
+			auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
 			auto geyserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true);
 			if (geyserCount < baseCount * 2)
 			{
-				m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
+				m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), false);
 			}
 		}
 	}

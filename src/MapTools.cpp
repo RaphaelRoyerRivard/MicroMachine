@@ -45,7 +45,6 @@ void MapTools::onStart()
     m_walkable       = vvb(m_width, std::vector<bool>(m_height, true));
     m_buildable      = vvb(m_width, std::vector<bool>(m_height, false));
     m_depotBuildable = vvb(m_width, std::vector<bool>(m_height, false));
-    m_lastSeen       = vvi(m_width, std::vector<int>(m_height, 0));
     m_sectorNumber   = vvi(m_width, std::vector<int>(m_height, 0));
     m_terrainHeight  = vvf(m_width, std::vector<float>(m_height, 0.0f));
 
@@ -149,17 +148,6 @@ void MapTools::onStart()
 void MapTools::onFrame()
 {
     m_frame++;
-
-    for (int x=0; x<m_width; ++x)
-    {
-        for (int y=0; y<m_height; ++y)
-        {
-            if (isVisible(x, y))
-            {
-                m_lastSeen[x][y] = m_frame;
-            }
-        }
-    }
 
     draw();
 }
@@ -527,28 +515,6 @@ int MapTools::height() const
 const std::vector<CCTilePosition> & MapTools::getClosestTilesTo(const CCTilePosition & pos) const
 {
     return getDistanceMap(pos).getSortedTiles();
-}
-
-CCTilePosition MapTools::getLeastRecentlySeenTile() const
-{
-    int minSeen = std::numeric_limits<int>::max();
-    CCTilePosition leastSeen;
-    const BaseLocation * baseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-    if (baseLocation)
-    {
-        for (auto & tile : baseLocation->getClosestTiles())
-        {
-            BOT_ASSERT(isValidTile(tile), "How is this tile not valid?");
-
-            int lastSeen = m_lastSeen[tile.x][tile.y];
-            if (lastSeen < minSeen)
-            {
-                minSeen = lastSeen;
-                leastSeen = tile;
-            }
-        }
-    }
-    return leastSeen;
 }
 
 bool MapTools::canWalk(int tileX, int tileY) 
