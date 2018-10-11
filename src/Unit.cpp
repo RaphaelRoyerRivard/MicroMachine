@@ -173,6 +173,16 @@ int Unit::getIDAsInt() const
 	return id;
 }
 
+bool Unit::canAttackAir() const
+{
+	return Util::CanUnitAttackAir(m_unit, *m_bot);
+}
+
+bool Unit::canAttackGround() const
+{
+	return Util::CanUnitAttackGround(m_unit, *m_bot);
+}
+
 bool Unit::isCompleted() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");

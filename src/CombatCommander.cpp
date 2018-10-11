@@ -473,8 +473,7 @@ void CombatCommander::updateDefenseSquads()
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
 				}
 				else if(!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
-					if(m_bot.)
-					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);	//TODO do not lift if we actually have no combat unit nor in production (otherwise it's BM)
 			}
 		}
     }
@@ -510,10 +509,9 @@ void CombatCommander::updateDefenseSquads()
     }
 }
 
-void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t & flyingDefendersNeeded, const size_t & groundDefendersNeeded, Unit & closestEnemy)
+void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, size_t flyingDefendersNeeded, size_t groundDefendersNeeded, Unit & closestEnemy)
 {
     auto & squadUnits = defenseSquad.getUnits();
-
 
     // if there's nothing left to defend, clear the squad
     if (flyingDefendersNeeded == 0 && groundDefendersNeeded == 0)
@@ -522,9 +520,6 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
         return;
     }
 
-	size_t flyingDefendersNeededLocal = flyingDefendersNeeded;
-	size_t groundDefendersNeededLocal = groundDefendersNeeded;
-    size_t defendersNeeded = flyingDefendersNeeded + groundDefendersNeeded;
     for (auto & unit : squadUnits)
     {
 		// Let injured worker return mining, no need to sacrifice it
@@ -539,30 +534,47 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
 		}
         else if (unit.isAlive())
         {
-			// TODO: right now this will assign arbitrary defenders, change this so that we make sure they can attack air/ground
-			//if(flyingDefendersNeededLocal > 0 && canAttackAir)
-            defendersNeeded--;
+			if (flyingDefendersNeeded > 0 && unit.canAttackAir())
+				--flyingDefendersNeeded;
+			else if (groundDefendersNeeded > 0 && unit.canAttackGround())
+				--groundDefendersNeeded;
+			else
+				defenseSquad.removeUnit(unit);
         }
     }
 
-    size_t defendersAdded = 0;
-    while (defendersNeeded > defendersAdded)
-    {
-        Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy);
+	while (flyingDefendersNeeded > 0)
+	{
+		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "air");
 
-        if (defenderToAdd.isValid())
-        {
-            m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
-            defendersAdded++;
-        }
-        else
-        {
-            break;
-        }
-    }
+		if (defenderToAdd.isValid())
+		{
+			m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
+			--flyingDefendersNeeded;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	while (groundDefendersNeeded > 0)
+	{
+		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "ground");
+
+		if (defenderToAdd.isValid())
+		{
+			m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
+			--groundDefendersNeeded;
+		}
+		else
+		{
+			break;
+		}
+	}
 }
 
-Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy)
+Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type)
 {
     Unit closestDefender;
     float minDistance = std::numeric_limits<float>::max();
@@ -570,6 +582,11 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     for (auto & unit : m_combatUnits)
     {
         BOT_ASSERT(unit.isValid(), "null combat unit");
+
+		if (type == "air" && !unit.canAttackAir())
+			continue;
+		if (type == "ground" && !unit.canAttackGround())
+			continue;
 
         if (!m_squadData.canAssignUnitToSquad(unit, defenseSquad))
         {
@@ -591,7 +608,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
         }
     }
 
-    if (!closestDefender.isValid())
+    if (!closestDefender.isValid() && type == "ground")
     {
         // we search for worker to defend.
         closestDefender = findWorkerToAssignToSquad(defenseSquad, pos, closestEnemy);

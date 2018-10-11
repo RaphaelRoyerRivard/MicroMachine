@@ -287,6 +287,28 @@ bool Util::IsProtoss(const CCRace & race)
 #endif
 }
 
+bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
+{
+	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
+	for (auto & weapon : unitTypeData.weapons)
+	{
+		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Air)
+			return true;
+	}
+	return false;
+}
+
+bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
+{
+	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
+	for (auto & weapon : unitTypeData.weapons)
+	{
+		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Ground)
+			return true;
+	}
+	return false;
+}
+
 float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
@@ -296,7 +318,7 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	for (auto & weapon : unitTypeData.weapons)
 	{
 		// can attack target with a weapon
-		if ((weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType))
+		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
 			maxRange = weapon.range;
 	}
 

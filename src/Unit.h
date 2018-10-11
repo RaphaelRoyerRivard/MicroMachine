@@ -47,6 +47,8 @@ public:
 	int getIDAsInt() const;
     float getBuildPercentage() const;
     int getWeaponCooldown() const;
+	bool canAttackAir() const;
+	bool canAttackGround() const;
     bool isCompleted() const;
     bool isBeingConstructed() const;
     bool isCloaked() const;
