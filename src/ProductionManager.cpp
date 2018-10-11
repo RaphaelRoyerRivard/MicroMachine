@@ -126,6 +126,14 @@ void ProductionManager::manageBuildOrderQueue()
 				auto basePosition = baseLocation->getDepotPosition();
 				auto point = supplyDepot.getTilePosition();
 				CCTilePosition target = CCTilePosition(basePosition.x + (basePosition.x - point.x), basePosition.y + (basePosition.y - point.y));
+				if (target.x < 0)
+				{
+					target.x = 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+				}
+				if (target.y < 0)
+				{
+					target.y = 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+				}
 				
 				create(producer, currentItem, target);
 				m_queue.removeCurrentHighestPriorityItem();
