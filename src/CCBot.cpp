@@ -317,6 +317,19 @@ std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()
 	return m_allyUnits;
 }
 
+std::map<sc2::Tag, Unit> CCBot::GetAllyUnits(sc2::UNIT_TYPEID type)
+{
+	std::map<sc2::Tag, Unit> units;
+	for (auto unit : m_allyUnits)
+	{
+		if (unit.second.getAPIUnitType() == type)
+		{
+			units.insert(unit);
+		}
+	}
+	return units;
+}
+
 std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits()
 {
 	return m_enemyUnits;

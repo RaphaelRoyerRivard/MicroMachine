@@ -19,7 +19,6 @@ class BuildingManager
 
     bool            isBuildingPositionExplored(const Building & b) const;
     void            removeBuildings(const std::vector<Building> & toRemove);
-	const sc2::Unit * getClosestMineral(const sc2::Unit * unit) const;
 	void			castBuildingsAbilities();
 	void			updateBaseBuildings();
 
@@ -44,6 +43,7 @@ public:
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);
+	const sc2::Unit * getClosestMineral(const sc2::Unit * unit) const;
 
     int                 getReservedMinerals();
     int                 getReservedGas();
