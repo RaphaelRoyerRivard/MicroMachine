@@ -271,7 +271,7 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
 bool BuildingPlacer::buildable(const Building & b, int x, int y) const
 {
     // TODO: doesnt take units on the map into account
-	return m_bot.Map().isWalkable(x, y) && m_bot.Map().isBuildable(x, y);//Remplaced !m_bot.Map().canBuildTypeAtPosition(x, y, b.type)) with isBuildable.
+	return m_bot.Map().isBuildable(x, y) && m_bot.Map().canBuildTypeAtPosition(x, y, b.type);//Remplaced !m_bot.Map().canBuildTypeAtPosition(x, y, b.type)) with isBuildable.
 }
 
 void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)

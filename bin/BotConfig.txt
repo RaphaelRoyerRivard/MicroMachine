@@ -69,6 +69,8 @@
     "Debug" :
     {
 		"AllowDebug"				: true,
+		"AllowDynamicConfig"		: true,
+		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : false, 
         "DrawBaseLocationInfo"      : false,
