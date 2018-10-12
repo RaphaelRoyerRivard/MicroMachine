@@ -176,13 +176,6 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 	}
 }
 
-bool BaseLocation::isInResourceBox(int tileX, int tileY) const
-{
-    CCPositionType px = Util::TileToPosition((float)tileX);
-    CCPositionType py = Util::TileToPosition((float)tileY);
-    return px >= m_left && px < m_right && py < m_top && py >= m_bottom;
-}
-
 bool BaseLocation::isOccupiedByPlayer(CCPlayer player) const
 {
     return m_isPlayerOccupying.at(player);

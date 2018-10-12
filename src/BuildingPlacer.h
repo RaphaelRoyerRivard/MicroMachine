@@ -15,7 +15,6 @@ class BuildingPlacer
     // queries for various BuildingPlacer data
     bool buildable(const Building & b, int x, int y) const;
     bool isReserved(int x, int y) const;
-    bool isInResourceBox(int x, int y) const;
     bool tileOverlapsBaseLocation(int x, int y, UnitType type) const;
 
 
@@ -35,6 +34,7 @@ public:
     void drawReservedTiles();
 
     void reserveTiles(int x, int y, int width, int height);
+	void reserveTiles(CCTilePosition start, CCTilePosition end);
     void freeTiles(int x, int y, int width, int height);
     CCTilePosition getRefineryPosition();
 };
