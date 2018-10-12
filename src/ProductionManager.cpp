@@ -130,9 +130,17 @@ void ProductionManager::manageBuildOrderQueue()
 				{
 					target.x = 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
 				}
+				else if (target.x > m_bot.Map().width())
+				{
+					target.x = m_bot.Map().width() - 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+				}
 				if (target.y < 0)
 				{
 					target.y = 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+				}
+				else if (target.y > m_bot.Map().height())
+				{
+					target.y = m_bot.Map().height() - 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
 				}
 				
 				create(producer, currentItem, target);
@@ -196,7 +204,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	// build supply if we need some
 	auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
 	auto metaTypeSupplyProvider = MetaType(supplyProvider, m_bot);
-	if(m_bot.GetCurrentSupply() + 1.75 * getUnitTrainingBuildings(playerRace).size() + baseCount > m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8 && !m_queue.contains(metaTypeSupplyProvider))
+	auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
+	if(supplyWithAdditionalSupplyDepot < 200 && m_bot.GetCurrentSupply() + 1.75 * getUnitTrainingBuildings(playerRace).size() + baseCount > supplyWithAdditionalSupplyDepot && !m_queue.contains(metaTypeSupplyProvider))
 	{
 		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
 	}

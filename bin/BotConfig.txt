@@ -70,7 +70,7 @@
     {
 		"AllowDebug"				: true,
         "DrawGameInfo"              : false, 
-        "DrawProductionInfo"        : true, 
+        "DrawProductionInfo"        : false, 
         "DrawBaseLocationInfo"      : false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
@@ -87,7 +87,7 @@
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
-        "DrawUnitID"            	: true
+        "DrawUnitID"            	: false
     },
     
     "Modules" :

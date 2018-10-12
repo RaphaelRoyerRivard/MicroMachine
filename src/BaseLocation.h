@@ -48,7 +48,6 @@ public:
     const std::vector<Unit> & getMinerals() const;
     bool isOccupiedByPlayer(CCPlayer player) const;
     bool isExplored() const;
-    bool isInResourceBox(int x, int y) const;
 
     void setPlayerOccupying(CCPlayer player, bool occupying);
 
