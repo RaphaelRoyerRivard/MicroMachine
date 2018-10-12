@@ -143,7 +143,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 	{
 		buildLocation = CCTilePosition(55, 170);
 	}
-	while(!m_bot.Map().getClosestTilesTo(buildLocation).size() < 10)
+	while(!m_bot.Map().isWalkable(buildLocation) || m_bot.Map().getClosestTilesTo(buildLocation).size() < 10)
 	{
 		switch (direction)
 		{
