@@ -73,6 +73,8 @@ void CCBot::OnGameStart() //full start
 
 void CCBot::OnStep()
 {
+	m_config.updateDynamicConfig();
+
     setUnits();
 	m_map.onFrame();
     m_unitInfo.onFrame();

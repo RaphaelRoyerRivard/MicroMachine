@@ -33,6 +33,7 @@ public:
     bool FoundEnemySpecificStrategy;
 
 	bool AllowDebug;
+	bool AllowDynamicConfig;
     bool DrawGameInfo;
     bool DrawTileInfo;
     bool DrawBaseLocationInfo;
@@ -89,4 +90,5 @@ public:
     BotConfig();
 
     void readConfigFile();
+	void updateDynamicConfig();
 };

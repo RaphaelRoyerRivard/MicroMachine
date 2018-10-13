@@ -37,6 +37,7 @@ public:
 	BuildOrderItem queueItem(const BuildOrderItem & b);			// queues something with a given priority
     void removeHighestPriorityItem();								// removes the highest priority item
     void removeCurrentHighestPriorityItem();
+	void removeAllOfType(const MetaType & type);
 
     size_t size();													// returns the size of the queue
 

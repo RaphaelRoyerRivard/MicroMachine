@@ -199,6 +199,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
+
 	int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 
 	// build supply if we need some
@@ -375,10 +376,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
 				}
 
-				/*if (!m_queue.contains(MetaTypeEnum::Reaper))
+				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Marine))
 				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
-				}*/
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+				}
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{
@@ -536,6 +537,96 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
+				}
+				break;
+			}
+			case StrategyPostBuildOrder::TERRAN_ANTI_AIR:
+			{
+				//clear up behind other strategies
+				if (m_queue.contains(MetaTypeEnum::InfernalPreIgniter))
+				{
+					m_queue.removeAllOfType(MetaTypeEnum::InfernalPreIgniter);
+				}
+
+				bool hasPicked = false;
+				MetaType toBuild;
+				int barrackTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true);
+				int barrackReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
+				int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+				int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
+				if (barrackTechlabCount + barrackReactorCount < 1 || starportCount > starportTechLabCount)
+				{//Addon
+					if (barrackTechlabCount + barrackReactorCount < 1)
+					{
+						toBuild = MetaTypeEnum::BarracksReactor;
+						hasPicked = true;
+					}
+					if (starportCount > starportTechLabCount)
+					{
+						toBuild = MetaTypeEnum::StarportTechLab;
+						hasPicked = true;
+					}
+
+					if (hasPicked && !m_queue.contains(toBuild))
+					{
+						m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
+					}
+				}
+				if (!hasPicked)
+				{//Building
+					int barrackCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
+					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+					if (barrackCount < baseCount)
+					{
+						toBuild = MetaTypeEnum::Barracks;
+						hasPicked = true;
+					}
+					else if (starportCount < baseCount)
+					{
+						toBuild = MetaTypeEnum::Starport;
+						hasPicked = true;
+					}
+
+					if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
+					{
+						m_queue.queueAsLowestPriority(toBuild, false);
+					}
+				}
+
+				if (!m_queue.contains(MetaTypeEnum::Marine))
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+				}
+
+				int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
+				int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
+				if (vikingCount < 2 * bansheeCount)
+				{
+					if (!m_queue.contains(MetaTypeEnum::Viking))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+					}
+				}
+				else
+				{
+					if (!m_queue.contains(MetaTypeEnum::Banshee))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
+					}
+				}
+
+				auto infantryUpgrade = getUpgradeMetaType(MetaTypeEnum::TerranInfantryWeaponsLevel1);
+				if (!m_queue.contains(infantryUpgrade) && std::find(startedUpgrades.begin(), startedUpgrades.end(), infantryUpgrade) == startedUpgrades.end())
+				{
+					m_queue.queueItem(BuildOrderItem(infantryUpgrade, 0, false));
+					startedUpgrades.push_back(infantryUpgrade);
+				}
+
+				auto vehiculeUpgrade = getUpgradeMetaType(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
+				if (!m_queue.contains(vehiculeUpgrade) && std::find(startedUpgrades.begin(), startedUpgrades.end(), vehiculeUpgrade) == startedUpgrades.end())
+				{
+					m_queue.queueItem(BuildOrderItem(vehiculeUpgrade, 0, false));
+					startedUpgrades.push_back(vehiculeUpgrade);
 				}
 				break;
 			}

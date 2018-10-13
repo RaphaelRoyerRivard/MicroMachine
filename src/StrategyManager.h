@@ -29,6 +29,7 @@ struct StrategyPostBuildOrder {
 	const static int TERRAN_MARINE_MARAUDER = 2;
 	const static int WORKER_RUSH_DEFENSE = 3;
 	const static int TERRAN_ANTI_ADEPT = 4;
+	const static int TERRAN_ANTI_AIR = 5;
 };
 
 class StrategyManager
@@ -43,6 +44,7 @@ class StrategyManager
 	bool m_workerRushed = false;
 	bool m_shouldProduceAntiAir = false;
 	bool m_enemyHasMetabolicBoost = false;
+	bool m_enemyHasFlyingCombatUnit = false;
 
     bool  shouldExpandNow() const;
     const UnitPairVector getProtossBuildOrderGoal() const;
