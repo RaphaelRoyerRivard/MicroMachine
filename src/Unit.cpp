@@ -326,7 +326,7 @@ void Unit::attackUnit(const Unit & target) const
     BOT_ASSERT(isValid(), "Unit is not valid");
     BOT_ASSERT(target.isValid(), "Target is not valid");
 #ifdef SC2API
-    m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::ATTACK_ATTACK, target.getUnitPtr());
+    m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::ATTACK, target.getUnitPtr());
 #else
     m_unit->attack(target.getUnitPtr());
 #endif
@@ -336,7 +336,7 @@ void Unit::attackMove(const CCPosition & targetPosition) const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API
-    m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::ATTACK_ATTACK, targetPosition);
+    m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::ATTACK, targetPosition);
 #else
     m_unit->attack(targetPosition);
 #endif

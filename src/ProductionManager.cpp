@@ -205,7 +205,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
 	auto metaTypeSupplyProvider = MetaType(supplyProvider, m_bot);
 	auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
-	if(supplyWithAdditionalSupplyDepot < 200 && m_bot.GetCurrentSupply() + 1.75 * getUnitTrainingBuildings(playerRace).size() + baseCount > supplyWithAdditionalSupplyDepot && !m_queue.contains(metaTypeSupplyProvider))
+	if(supplyWithAdditionalSupplyDepot < 200 && m_bot.GetCurrentSupply() + 1.75 * getUnitTrainingBuildings(playerRace).size() + baseCount > supplyWithAdditionalSupplyDepot && !m_queue.contains(metaTypeSupplyProvider) && !m_bot.Strategy().isWorkerRushed())
 	{
 		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
 	}
@@ -396,15 +396,52 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				break;
 			}
-			case StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER :
+			case StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER:
 			{
-				assert("Will never make barracks, check other build orders to update this one.");
-				if (productionBuildingCount < baseCount && !m_queue.contains(MetaTypeEnum::Barracks))
+				if (productionScore < (float)baseCount)
 				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Barracks, false);
+					bool hasPicked = false;
+					MetaType toBuild;
+					if (productionBuildingAddonCount < productionBuildingCount)
+					{//Addon
+						int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
+						int barracksTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true);
+						if (barracksCount > barracksTechLabCount)
+						{
+							toBuild = MetaTypeEnum::BarracksTechLab;
+							hasPicked = true;
+						}
+
+						if (hasPicked && !m_queue.contains(toBuild))
+						{
+							m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
+						}
+					}
+					if (!hasPicked)
+					{//Building
+						int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
+						if (barracksCount < baseCount * 2)
+						{
+							toBuild = MetaTypeEnum::Barracks;
+							hasPicked = true;
+						}
+
+						if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
+						{
+							m_queue.queueAsLowestPriority(toBuild, false);
+						}
+					}
 				}
 
-				if (!m_queue.contains(MetaTypeEnum::Marine))
+				if (!m_queue.contains(MetaTypeEnum::Stimpack) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::Stimpack) == startedUpgrades.end())
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Stimpack, 0, false));
+					startedUpgrades.push_back(MetaTypeEnum::Stimpack);
+				}
+
+				int marinesCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marine.getUnitType(), false, true);
+				int maraudersCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), false, true);
+				if (!m_queue.contains(MetaTypeEnum::Marine) && marinesCount < maraudersCount * 2 + 1)
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
 				}
@@ -420,9 +457,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
 					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
-					return;
 				}
-				break;
+
+				if (!m_queue.contains(MetaTypeEnum::Refinery) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false) == 0)
+				{
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Refinery, false);
+				}
+				return;
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_ADEPT:
 			{

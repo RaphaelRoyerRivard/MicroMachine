@@ -43,6 +43,7 @@ MetaType MetaTypeEnum::TerranShipWeaponsLevel3;
 MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel1;
 MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel2;
 MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel3;
+MetaType MetaTypeEnum::Stimpack;
 MetaType MetaTypeEnum::InfernalPreIgniter;
 //PROTOSS
 	//Buildings
@@ -128,6 +129,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::TerranVehicleAndShipArmorsLevel1 = MetaType("TerranVehicleAndShipArmorsLevel1", m_bot);
 	MetaTypeEnum::TerranVehicleAndShipArmorsLevel2 = MetaType("TerranVehicleAndShipArmorsLevel2", m_bot);
 	MetaTypeEnum::TerranVehicleAndShipArmorsLevel3 = MetaType("TerranVehicleAndShipArmorsLevel3", m_bot);
+	MetaTypeEnum::Stimpack = MetaType("Stimpack", m_bot);
 	MetaTypeEnum::InfernalPreIgniter = MetaType("HighCapacityBarrels", m_bot);
 	
 	//PROTOSS

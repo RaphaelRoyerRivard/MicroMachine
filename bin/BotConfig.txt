@@ -70,7 +70,7 @@
     {
 		"AllowDebug"				: true,
         "DrawGameInfo"              : false, 
-        "DrawProductionInfo"        : false, 
+        "DrawProductionInfo"        : true, 
         "DrawBaseLocationInfo"      : false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,

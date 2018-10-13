@@ -33,8 +33,7 @@ void CombatCommander::onStart()
     m_squadData.clearSquadData();
 
     // the squad that consists of units waiting for the squad to be big enough to begin the main attack
-    CCTilePosition nextExpansionPosition = m_bot.Bases().getNextExpansion(Players::Self);
-    SquadOrder idleOrder(SquadOrderTypes::Attack, CCPosition(nextExpansionPosition.x, nextExpansionPosition.y), DefaultOrderRadius, "Prepare for battle");
+    SquadOrder idleOrder(SquadOrderTypes::Idle, CCPosition(), DefaultOrderRadius, "Prepare for battle");
     m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
 	// the harass attack squad that will pressure the enemy's main base workers
@@ -50,7 +49,8 @@ void CombatCommander::onStart()
     m_squadData.addSquad("Backup1", Squad("Backup1", backupSquadOrder, BackupPriority, m_bot));
 
     // the scout defense squad will handle chasing the enemy worker scout
-    SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, m_bot.GetStartLocation(), DefaultOrderRadius, "Chase scout");
+	// the -5 is to prevent enemy workers (during worker rush) to get outside the base defense range
+    SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, m_bot.GetStartLocation(), DefaultOrderRadius - 5, "Chase scout");
     m_squadData.addSquad("ScoutDefense", Squad("ScoutDefense", enemyScoutDefense, ScoutDefensePriority, m_bot));
 }
 
@@ -533,42 +533,31 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, size_t flyin
 		}
         else if (unit.isAlive())
         {
-			if (flyingDefendersNeeded > 0 && unit.canAttackAir())
-				--flyingDefendersNeeded;
-			else if (groundDefendersNeeded > 0 && unit.canAttackGround())
-				--groundDefendersNeeded;
-			else
+			bool isUseful = (flyingDefendersNeeded > 0 && unit.canAttackAir()) || (groundDefendersNeeded > 0 && unit.canAttackGround());
+			if(!isUseful)
 				defenseSquad.removeUnit(unit);
         }
     }
 
-	while (flyingDefendersNeeded > 0)
+	if (flyingDefendersNeeded > 0)
 	{
 		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "air");
 
-		if (defenderToAdd.isValid())
+		while(defenderToAdd.isValid())
 		{
 			m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
-			--flyingDefendersNeeded;
-		}
-		else
-		{
-			break;
+			defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "air");
 		}
 	}
 
-	while (groundDefendersNeeded > 0)
+	if (groundDefendersNeeded > 0)
 	{
 		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "ground");
 
-		if (defenderToAdd.isValid())
+		while (defenderToAdd.isValid())
 		{
 			m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
-			--groundDefendersNeeded;
-		}
-		else
-		{
-			break;
+			defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "ground");
 		}
 	}
 }

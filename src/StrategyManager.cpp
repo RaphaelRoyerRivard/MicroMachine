@@ -61,6 +61,7 @@ const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 	{
 		return StrategyPostBuildOrder::TERRAN_ANTI_ADEPT;
 	}
+	//return StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER;
 	return StrategyPostBuildOrder::TERRAN_REAPER;
 }
 

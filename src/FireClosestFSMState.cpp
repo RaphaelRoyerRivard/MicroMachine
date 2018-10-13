@@ -40,6 +40,6 @@ void FireClosestFSMState::onUpdate(const sc2::Unit * target, CCBot* bot)
 		}
 
 		m_target = target;
-		bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::ATTACK_ATTACK, target);
+		bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::ATTACK, target);
     }
 }
