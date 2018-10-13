@@ -22,6 +22,7 @@ void WorkerManager::onFrame()
 	handleMineralWorkers();
     handleGasWorkers();
     handleIdleWorkers();
+	everySoOften();
 
     drawResourceDebugInfo();
     drawWorkerInformation();
@@ -65,63 +66,7 @@ void WorkerManager::handleMineralWorkers()
 	}
 	
 	if (!m_isFirstFrame)
-	{//Worker split between bases
-		if (m_bot.Bases().getBaseCount(Players::Self, true) <= 1)
-		{//No point trying to split workers
-			return;
-		}
-		WorkerData workerData = m_bot.Workers().getWorkerData();
-		auto & bases = m_bot.Bases().getBaseLocations();
-		std::vector<Unit> dispatchedWorkers;
-		for (auto & base : bases)
-		{
-			if (base->isOccupiedByPlayer(Players::Self))
-			{
-				int workerCount = getWorkerCountAtBasePosition(base->getPosition());
-				int optimalWorkers = base->getMinerals().size() * 2;
-				if (workerCount > optimalWorkers)
-				{
-					int needed = workerCount - optimalWorkers;
-					for (auto & worker : workers)//TODO order by closest to the target base location
-					{
-						if (m_bot.Workers().isFree(worker) && !worker.getType().isMule() && base->containsPosition(worker.getPosition()))
-						{
-							dispatchedWorkers.push_back(worker);
-							needed--;
-							if (needed <= 0)
-							{
-								break;
-							}
-						}
-					}
-				}
-			}
-		}
-		for (auto & base : bases)//Dispatch workers to bases missing some
-		{
-			if (base->isOccupiedByPlayer(Players::Self))
-			{
-				int workerCount = getWorkerCountAtBasePosition(base->getPosition());
-				int optimalWorkers = base->getMinerals().size() * 2;
-				if (workerCount < optimalWorkers)
-				{
-					int needed = optimalWorkers - workerCount;
-					for (auto & worker : dispatchedWorkers)//TODO order by closest again
-					{
-						m_workerData.setWorkerJob(worker, WorkerJobs::Minerals, getDepotAtBasePosition(base->getPosition()), true);
-						needed--;
-						if (needed <= 0)
-						{
-							break;
-						}
-					}
-					if (needed <= 0)
-					{
-						break;
-					}
-				}
-			}
-		}
+	{
 		return;
 	}
 
@@ -295,6 +240,81 @@ void WorkerManager::handleRepairWorkers()
             }
         }
     }
+}
+
+void WorkerManager::everySoOften()
+{
+	if (m_bot.GetCurrentFrame() % 60)
+	{
+		return;
+	}
+
+	//Worker split between bases
+	if (m_bot.Bases().getBaseCount(Players::Self, true) <= 1)
+	{//No point trying to split workers
+		return;
+	}
+	auto workers = getWorkers();
+	WorkerData workerData = m_bot.Workers().getWorkerData();
+	auto & bases = m_bot.Bases().getBaseLocations();
+	std::vector<Unit> dispatchedWorkers;
+	for (auto & base : bases)
+	{
+		if (base->isOccupiedByPlayer(Players::Self))
+		{
+			int workerCount = getWorkerCountAtBasePosition(base->getPosition());
+			int optimalWorkers = base->getMinerals().size() * 2;
+			if (workerCount > optimalWorkers)
+			{
+				int extra = workerCount - optimalWorkers;
+				for (auto & worker : workers)//TODO order by closest to the target base location
+				{
+					if (m_bot.Workers().isFree(worker) && !worker.getType().isMule() && base->containsPosition(worker.getPosition()))
+					{
+						dispatchedWorkers.push_back(worker);
+						extra--;
+						if (extra <= 0)
+						{
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+	for (auto & base : bases)//Dispatch workers to bases missing some
+	{
+		if (base->isOccupiedByPlayer(Players::Self))
+		{
+			int workerCount = getWorkerCountAtBasePosition(base->getPosition());
+			int optimalWorkers = base->getMinerals().size() * 2;
+			if (workerCount < optimalWorkers)
+			{
+				int needed = optimalWorkers - workerCount;
+				int moved = 0;
+				for (int i = 0; i < dispatchedWorkers.size(); i++)//TODO order by closest again
+				{
+					auto basePosition = base->getPosition();
+					m_workerData.setWorkerJob(dispatchedWorkers[i], WorkerJobs::Minerals, getDepotAtBasePosition(basePosition), true);
+					moved++;
+					if (moved >= needed)
+					{
+						break;
+					}
+				}
+
+				//remove dispatched workers
+				for (int i = 0; i < moved; i++)
+				{
+					dispatchedWorkers.erase(dispatchedWorkers.begin());
+				}
+				if (dispatchedWorkers.empty())
+				{
+					break;
+				}
+			}
+		}
+	}
 }
 
 Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage) const

@@ -216,8 +216,18 @@ bool BuildOrderQueue::contains(const MetaType & type)
 	while (it != m_queue.end())
 	{
 		auto itType = (*it++).type;
-		if(type == itType)
+		auto itTypeApi = itType.getUnitType().getAPIUnitType();
+		if (itTypeApi == 0)
+		{//If it isn't a Unit, check the metatype
+			if (type == itType)
+			{
+				return true;
+			}
+		}
+		else if (type.getUnitType().getAPIUnitType() == itTypeApi)
+		{
 			return true;
+		}
 	}
 	return false;
 }
