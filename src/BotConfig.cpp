@@ -167,7 +167,11 @@ void BotConfig::readConfigFile()
     {
         const json & debug = j["Debug"];
 		JSONTools::ReadBool("AllowDebug", debug, AllowDebug);
+#if _DEBUG
 		JSONTools::ReadBool("AllowDynamicConfig", debug, AllowDynamicConfig);
+#else
+		AllowDynamicConfig = false;
+#endif
 		if (!AllowDynamicConfig)
 		{
 			JSONTools::ReadBool("DrawGameInfo", debug, DrawGameInfo);
