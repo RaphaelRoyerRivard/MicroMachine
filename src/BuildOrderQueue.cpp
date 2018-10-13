@@ -158,6 +158,22 @@ void BuildOrderQueue::removeCurrentHighestPriorityItem()
     m_lowestPriority  = m_queue.empty() ? 0 : m_lowestPriority;
 }
 
+void BuildOrderQueue::removeAllOfType(const MetaType & type)
+{
+	std::list<int> stack;
+	for (int i = 0; i < m_queue.size(); i++)
+	{
+		if (m_queue[i].type == type)
+		{
+			stack.push_front(i);
+		}
+	}
+	for(int index : stack)
+	{
+		m_queue.erase(m_queue.begin() + index);
+	}
+}
+
 size_t BuildOrderQueue::size()
 {
     return m_queue.size();
@@ -199,7 +215,8 @@ bool BuildOrderQueue::contains(const MetaType & type)
 	auto it = m_queue.begin();
 	while (it != m_queue.end())
 	{
-		if(type.getUnitType().getAPIUnitType() == (*it++).type.getUnitType().getAPIUnitType())
+		auto itType = (*it++).type;
+		if(type == itType)
 			return true;
 	}
 	return false;
