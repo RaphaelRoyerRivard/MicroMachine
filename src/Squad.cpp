@@ -90,6 +90,8 @@ void Squad::onFrame()
             m_meleeManager.setTargets(targets);
             m_rangedManager.setTargets(targets);
 
+			m_targets = targets;
+
             //TODO remove the order dependancy
             m_meleeManager.setOrder(m_order);
             m_rangedManager.setOrder(m_order);

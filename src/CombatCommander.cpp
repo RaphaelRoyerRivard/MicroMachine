@@ -168,6 +168,7 @@ void CombatCommander::updateHarassSquads()
 {
 	Squad & harassSquad = m_squadData.getSquad("Harass");
 	std::vector<Unit*> idleHellions;
+	std::vector<Unit*> idleBanshees;
 	for (auto & unit : m_combatUnits)
 	{
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
@@ -179,8 +180,10 @@ void CombatCommander::updateHarassSquads()
 			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
 		{
-			if(unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION)
+			if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION)
 				idleHellions.push_back(&unit);
+			/*else if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
+				idleBanshees.push_back(&unit);*/
 			else
 				m_squadData.assignUnitToSquad(unit, harassSquad);
 		}
@@ -192,6 +195,13 @@ void CombatCommander::updateHarassSquads()
 			m_squadData.assignUnitToSquad(*hellion, harassSquad);
 		}
 	}
+	/*if (idleBanshees.size() >= 3)
+	{
+		for (auto banshee : idleBanshees)
+		{
+			m_squadData.assignUnitToSquad(*banshee, harassSquad);
+		}
+	}*/
 
 	if (harassSquad.getUnits().empty())
 		return;
@@ -679,28 +689,50 @@ CCPosition CombatCommander::getMainAttackLocation()
         }
     }
 
+	CCPosition harassSquadCenter = m_squadData.getSquad("Harass").calcCenter();
+	float lowestDistance = -1.f;
+	CCPosition closestEnemyPosition;
+
     // Second choice: Attack known enemy buildings
 	Squad& harassSquad = m_squadData.getSquad("Harass");
     for (const auto & enemyUnit : harassSquad.getTargets())
     {
-        if (enemyUnit.getType().isBuilding() && enemyUnit.isAlive())
+        if (enemyUnit.getType().isBuilding() && enemyUnit.isAlive() && enemyUnit.getUnitPtr()->display_type != sc2::Unit::Hidden)
         {
-			if (m_bot.GetCurrentFrame() % 25 == 0)
-				std::cout << m_bot.GetCurrentFrame() << ": Memory enemy building" << std::endl;
-        	return enemyUnit.getPosition();
+			float dist = Util::Dist(enemyUnit, harassSquadCenter);
+			if(lowestDistance < 0 || dist < lowestDistance)
+			{
+				lowestDistance = dist;
+				closestEnemyPosition = enemyUnit.getPosition();
+			}
         }
     }
+	if (lowestDistance >= 0.f)
+	{
+		if (m_bot.GetCurrentFrame() % 25 == 0)
+			std::cout << m_bot.GetCurrentFrame() << ": Memory enemy building" << std::endl;
+		return closestEnemyPosition;
+	}
 
     // Third choice: Attack visible enemy units that aren't overlords
 	for (const auto & enemyUnit : harassSquad.getTargets())
 	{
-        if (!enemyUnit.getType().isOverlord())
+        if (!enemyUnit.getType().isOverlord() && enemyUnit.isAlive() && enemyUnit.getUnitPtr()->display_type != sc2::Unit::Hidden)
         {
-			if (m_bot.GetCurrentFrame() % 25 == 0)
-				std::cout << m_bot.GetCurrentFrame() << ": Memory enemy unit" << std::endl;
-            return enemyUnit.getPosition();
+			float dist = Util::Dist(enemyUnit, harassSquadCenter);
+			if (lowestDistance < 0 || dist < lowestDistance)
+			{
+				lowestDistance = dist;
+				closestEnemyPosition = enemyUnit.getPosition();
+			}
         }
     }
+	if (lowestDistance >= 0.f)
+	{
+		if (m_bot.GetCurrentFrame() % 25 == 0)
+			std::cout << m_bot.GetCurrentFrame() << ": Memory enemy unit" << std::endl;
+		return closestEnemyPosition;
+	}
 
     // Fourth choice: We can't see anything so explore the map attacking along the way
 	return exploreMap();

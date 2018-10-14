@@ -335,7 +335,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
 			{
-				if (productionScore < (float)baseCount)
+				// the -0.5f is because the 2 barracks are not used
+				if (productionScore - 0.5f < (float)baseCount)
 				{
 					bool hasPicked = false;
 					MetaType toBuild;

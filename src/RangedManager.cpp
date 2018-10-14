@@ -424,30 +424,31 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				}
 			}
 			// We attract the Hellion towards our closest other Hellion
-			else if(isHellion)
+			//else if(isHellion || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
+			else if (isHellion)
 			{
 				// Check if there is a friendly harass unit close to this one
-				std::vector<const sc2::Unit*> closeHellions;
+				std::vector<const sc2::Unit*> closeAllies;
 				for (auto friendlyRangedUnit : rangedUnits)
 				{
-					if (friendlyRangedUnit->tag != rangedUnit->tag && friendlyRangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
+					if (friendlyRangedUnit->tag != rangedUnit->tag && friendlyRangedUnit->unit_type == rangedUnit->unit_type)
 					{
 						float dist = Util::Dist(rangedUnit->pos, friendlyRangedUnit->pos);
 						if (dist < HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE)
-							closeHellions.push_back(friendlyRangedUnit);
+							closeAllies.push_back(friendlyRangedUnit);
 					}
 				}
 				// Add attraction vector if there is a friendly harass unit close enough
-				if (!closeHellions.empty())
+				if (!closeAllies.empty())
 				{
-					const CCPosition closeHellionsCenter = Util::CalcCenter(closeHellions);
-					const float distToCloseHellionsCenter = Util::Dist(rangedUnit->pos, closeHellionsCenter);
-					CCPosition attractionVector = closeHellionsCenter - rangedUnit->pos;
+					const CCPosition closeAlliesCenter = Util::CalcCenter(closeAllies);
+					const float distToCloseAlliesCenter = Util::Dist(rangedUnit->pos, closeAlliesCenter);
+					CCPosition attractionVector = closeAlliesCenter - rangedUnit->pos;
 					if (m_bot.Config().DrawHarassInfo)
-						m_bot.Map().drawLine(rangedUnit->pos, closeHellionsCenter, sc2::Colors::Green);
+						m_bot.Map().drawLine(rangedUnit->pos, closeAlliesCenter, sc2::Colors::Green);
 					sc2::Normalize2D(attractionVector);
 					// The repulsion intensity is linearly interpolated (stronger the farthest to lower the closest)
-					float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToCloseHellionsCenter / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
+					float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToCloseAlliesCenter / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
 					dirVec += attractionVector * intensity;
 				}
 			}
