@@ -141,7 +141,7 @@
     "SC2API Strategy" :
     {
         "Protoss"                   : "Protoss_ZealotRush",
-        "Terran"                    : "Terran_TurretTest",
+        "Terran"                    : "Terran_ReaperHarass4",
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "AutoCompleteBuildOrder"    : true,
@@ -225,6 +225,16 @@
 										"Refinery",
 										"SCV",
 										"OrbitalCommand"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
+            },
+			"Terran_FastExpand"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV","SupplyDepot","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SCV","SCV","SupplyDepot","CommandCenter","SCV","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SupplyDepot","SCV",
+										"SCV","SCV","CommandCenter","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","CommandCenter","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SCV","SupplyDepot",
+										"SCV","SCV","SCV","SCV","CommandCenter","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","CommandCenter","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SupplyDepot","SCV",
+										"SCV","SCV","SCV","CommandCenter","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
