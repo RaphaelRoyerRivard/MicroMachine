@@ -321,47 +321,50 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
 			{
-				bool hasPicked = false;
-				MetaType toBuild;
-				int factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
-				int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-				int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
-				if (factoryTechLabCount < 1 || starportCount > starportTechLabCount)
-				{//Addon
-					if (factoryTechLabCount < 1)
-					{
-						toBuild = MetaTypeEnum::FactoryTechLab;
-						hasPicked = true;
-					}
-					if (starportCount > starportTechLabCount)
-					{
-						toBuild = MetaTypeEnum::StarportTechLab;
-						hasPicked = true;
-					}
-
-					if (hasPicked && !m_queue.contains(toBuild))
-					{
-						m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
-					}
-				}
-				if (!hasPicked)
-				{//Building
-					int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
+				if (productionScore < (float)baseCount)
+				{
+					bool hasPicked = false;
+					MetaType toBuild;
+					int factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
 					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-					if (factoryCount < baseCount)
-					{
-						toBuild = MetaTypeEnum::Factory;
-						hasPicked = true;
-					}
-					else if (starportCount < baseCount)
-					{
-						toBuild = MetaTypeEnum::Starport;
-						hasPicked = true;
-					}
+					int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
+					if (factoryTechLabCount < 1 || starportCount > starportTechLabCount)
+					{//Addon
+						if (factoryTechLabCount < 1)
+						{
+							toBuild = MetaTypeEnum::FactoryTechLab;
+							hasPicked = true;
+						}
+						if (starportCount > starportTechLabCount)
+						{
+							toBuild = MetaTypeEnum::StarportTechLab;
+							hasPicked = true;
+						}
 
-					if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
-					{
-						m_queue.queueAsLowestPriority(toBuild, false);
+						if (hasPicked && !m_queue.contains(toBuild))
+						{
+							m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
+						}
+					}
+					if (!hasPicked)
+					{//Building
+						int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
+						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+						if (factoryCount < baseCount)
+						{
+							toBuild = MetaTypeEnum::Factory;
+							hasPicked = true;
+						}
+						else if (starportCount < baseCount)
+						{
+							toBuild = MetaTypeEnum::Starport;
+							hasPicked = true;
+						}
+
+						if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
+						{
+							m_queue.queueAsLowestPriority(toBuild, false);
+						}
 					}
 				}
 
@@ -376,10 +379,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
 				}
 
-				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Marine))
+				/*if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Marine))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
-				}
+				}*/
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{
@@ -542,12 +545,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_AIR:
 			{
-				//clear up behind other strategies
-				if (m_queue.contains(MetaTypeEnum::InfernalPreIgniter))
-				{
-					m_queue.removeAllOfType(MetaTypeEnum::InfernalPreIgniter);
-				}
-
 				bool hasPicked = false;
 				MetaType toBuild;
 				int barrackTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true);

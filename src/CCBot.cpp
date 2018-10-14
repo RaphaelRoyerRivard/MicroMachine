@@ -123,6 +123,7 @@ void CCBot::setUnits()
 				{
 					// This is a Wingling!!!
 					m_strategy.setEnemyHasMetabolicBoost(true);
+					Actions()->SendChat("Speedlings won't save you my friend");
 				}
 			}
 			if (!m_strategy.shouldProduceAntiAir())

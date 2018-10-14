@@ -167,7 +167,7 @@ void CombatCommander::updateBackupSquads()
 void CombatCommander::updateHarassSquads()
 {
 	Squad & harassSquad = m_squadData.getSquad("Harass");
-
+	std::vector<Unit*> idleHellions;
 	for (auto & unit : m_combatUnits)
 	{
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
@@ -179,7 +179,17 @@ void CombatCommander::updateHarassSquads()
 			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
 		{
-			m_squadData.assignUnitToSquad(unit, harassSquad);
+			if(unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION)
+				idleHellions.push_back(&unit);
+			else
+				m_squadData.assignUnitToSquad(unit, harassSquad);
+		}
+	}
+	if(idleHellions.size() >= 10)
+	{
+		for (auto hellion : idleHellions)
+		{
+			m_squadData.assignUnitToSquad(*hellion, harassSquad);
 		}
 	}
 
@@ -650,6 +660,8 @@ CCPosition CombatCommander::getMainAttackLocation()
         // If the enemy base hasn't been seen yet, go there.
         if (!m_bot.Map().isExplored(enemyBasePosition))
         {
+			if (m_bot.GetCurrentFrame() % 25 == 0)
+				std::cout << m_bot.GetCurrentFrame() << ": Unexplored enemy base" << std::endl;
             return enemyBasePosition;
         }
         else
@@ -659,6 +671,8 @@ CCPosition CombatCommander::getMainAttackLocation()
             {
                 if (enemyUnit.getType().isBuilding() && Util::Dist(enemyUnit, enemyBasePosition) < 15)
                 {
+					if (m_bot.GetCurrentFrame() % 25 == 0)
+						std::cout << m_bot.GetCurrentFrame() << ": Visible enemy building" << std::endl;
                     return enemyBasePosition;
                 }
             }
@@ -671,11 +685,9 @@ CCPosition CombatCommander::getMainAttackLocation()
     {
         if (enemyUnit.getType().isBuilding() && enemyUnit.isAlive())
         {
-			CCPosition mainAttackSquadCenter = m_squadData.getSquad("MainAttack").calcCenter();
-			if(Util::Dist(mainAttackSquadCenter, enemyUnit.getPosition()) > 3)
-			{
-				return enemyUnit.getPosition();
-			}
+			if (m_bot.GetCurrentFrame() % 25 == 0)
+				std::cout << m_bot.GetCurrentFrame() << ": Memory enemy building" << std::endl;
+        	return enemyUnit.getPosition();
         }
     }
 
@@ -684,6 +696,8 @@ CCPosition CombatCommander::getMainAttackLocation()
 	{
         if (!enemyUnit.getType().isOverlord())
         {
+			if (m_bot.GetCurrentFrame() % 25 == 0)
+				std::cout << m_bot.GetCurrentFrame() << ": Memory enemy unit" << std::endl;
             return enemyUnit.getPosition();
         }
     }
@@ -700,8 +714,12 @@ CCPosition CombatCommander::exploreMap()
 		if (Util::Dist(unit.getPosition(), basePosition) < 3.f)
 		{
 			m_currentBaseExplorationIndex = (m_currentBaseExplorationIndex + 1) % m_bot.Bases().getBaseLocations().size();
+			if (m_bot.GetCurrentFrame() % 25 == 0)
+				std::cout << m_bot.GetCurrentFrame() << ": Explore map, base index increased to " << m_currentBaseExplorationIndex << std::endl;
 			return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
 		}
 	}
+	if (m_bot.GetCurrentFrame() % 25 == 0)
+		std::cout << m_bot.GetCurrentFrame() << ": Explore map, base index " << m_currentBaseExplorationIndex << std::endl;
 	return basePosition;
 }

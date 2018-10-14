@@ -180,15 +180,29 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
 		sc2::Units threats = getThreats(rangedUnit, rangedUnitTargets);
 
+		CCPosition goal = m_order.getPosition();
+		// if the reaper is damaged, go to center of the map
+		if (isReaper && rangedUnit->health / rangedUnit->health_max < 0.75f)
+			goal = CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f;
+
 		// if there is no potential target or threat, move to objective (max distance is not considered when defending)
 		if ((!target || 
 			 (m_order.getType() != SquadOrderTypes::Defend && Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()))
 			&& threats.empty())
 		{
-			if(Util::Dist(rangedUnit->pos, m_order.getPosition()) > 10.f)
-				Micro::SmartMove(rangedUnit, m_order.getPosition(), m_bot);
+			if (m_bot.Config().DrawHarassInfo)
+				m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
+
+			float dist = Util::Dist(rangedUnit->pos, goal);
+			if(dist > 10.f)
+				Micro::SmartMove(rangedUnit, goal, m_bot);
 			else
-				Micro::SmartAttackMove(rangedUnit, m_order.getPosition(), m_bot);
+			{
+				if(dist < 5.f && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+					Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, m_bot);
+				else
+					Micro::SmartAttackMove(rangedUnit, goal, m_bot);
+			}
 
 			if (isReaper)
 			{
@@ -246,6 +260,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 			if(m_bot.Config().DrawHarassInfo)
 				m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
+
 			// if not in range of target, add normalized vector towards target
 			if (!targetInAttackRange)
 			{
@@ -257,7 +272,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		else
 		{
 			// add normalized vector towards objective
-			dirVec = m_order.getPosition() - rangedUnit->pos;
+			dirVec = goal - rangedUnit->pos;
+
+			if (m_bot.Config().DrawHarassInfo)
+				m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
 		}
 		if(dirVec.x != 0.f || dirVec.y != 0.f)
 			sc2::Normalize2D(dirVec);
@@ -265,14 +283,26 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		// Check if our units are powerful enough to exchange fire with the enemies
 		if (!threats.empty())
 		{
+			float unitsPower = 0.f;
+			float targetsPower = 0.f;
 			sc2::Units closeUnits;
 			for(auto unit : rangedUnits)
 			{
 				if (Util::Dist(unit->pos, rangedUnit->pos) < HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE)
 					closeUnits.push_back(unit);
 			}
-			float unitsPower = Util::GetUnitsPower(closeUnits, threats, m_bot);
-			float targetsPower = Util::GetUnitsPower(threats, closeUnits, m_bot);
+			for (auto closeUnit : closeUnits)
+			{
+				target = getTarget(closeUnit, threats);
+				unitsPower += Util::GetUnitPower(closeUnit, target, m_bot);
+			}
+			for (auto threat : threats)
+			{
+				target = getTarget(threat, closeUnits);
+				targetsPower += Util::GetUnitPower(threat, target, m_bot);
+			}
+			//float unitsPower = Util::GetUnitsPower(closeUnits, threats, m_bot);
+			//float targetsPower = Util::GetUnitsPower(threats, closeUnits, m_bot);
 			if (unitsPower > targetsPower)
 			{
 				sc2::Units units;
@@ -397,29 +427,27 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			else if(isHellion)
 			{
 				// Check if there is a friendly harass unit close to this one
-				float distToClosestFriendlyHellion = HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
-				CCPosition closestFriendlyHellionPosition;
+				std::vector<const sc2::Unit*> closeHellions;
 				for (auto friendlyRangedUnit : rangedUnits)
 				{
 					if (friendlyRangedUnit->tag != rangedUnit->tag && friendlyRangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
 					{
 						float dist = Util::Dist(rangedUnit->pos, friendlyRangedUnit->pos);
-						if (dist < distToClosestFriendlyHellion)
-						{
-							distToClosestFriendlyHellion = dist;
-							closestFriendlyHellionPosition = friendlyRangedUnit->pos;
-						}
+						if (dist < HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE)
+							closeHellions.push_back(friendlyRangedUnit);
 					}
 				}
 				// Add attraction vector if there is a friendly harass unit close enough
-				if (distToClosestFriendlyHellion != HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE)
+				if (!closeHellions.empty())
 				{
-					CCPosition attractionVector = closestFriendlyHellionPosition - rangedUnit->pos;
+					const CCPosition closeHellionsCenter = Util::CalcCenter(closeHellions);
+					const float distToCloseHellionsCenter = Util::Dist(rangedUnit->pos, closeHellionsCenter);
+					CCPosition attractionVector = closeHellionsCenter - rangedUnit->pos;
 					if (m_bot.Config().DrawHarassInfo)
-						m_bot.Map().drawLine(rangedUnit->pos, closestFriendlyHellionPosition, sc2::Colors::Green);
+						m_bot.Map().drawLine(rangedUnit->pos, closeHellionsCenter, sc2::Colors::Green);
 					sc2::Normalize2D(attractionVector);
 					// The repulsion intensity is linearly interpolated (stronger the farthest to lower the closest)
-					float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToClosestFriendlyHellion / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
+					float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToCloseHellionsCenter / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
 					dirVec += attractionVector * intensity;
 				}
 			}
@@ -474,6 +502,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			// If a closer pathable tile was found, move there
 			if(!useInfluenceMap)
 			{
+				if (m_bot.Config().DrawHarassInfo)
+					m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
 				Micro::SmartMove(rangedUnit, moveTo, m_bot);
 				if (isReaper)
 				{
@@ -882,9 +912,12 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 
 	float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized
 	float distance = std::max(Util::Dist(attacker->pos, target->pos), 1.f);
-	float distanceValue = 1 / distance;   //the more far a unit is, the less it is prioritized
+	float distanceValue = 1.f;
+	if (distance > attackerRange)
+		distanceValue = std::max(0.f, 0.5f - (distance - attackerRange) * 0.1f);
+	/*float distanceValue = 1 / distance;   //the more far a unit is, the less it is prioritized
 	if (distanceValue > attackerRange)
-		distanceValue /= 2;
+		distanceValue /= 2;*/
 	
 	Unit targetUnit(target, m_bot);
     if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())

@@ -244,7 +244,8 @@ void WorkerManager::handleRepairWorkers()
 
 void WorkerManager::everySoOften()
 {
-	if (m_bot.GetCurrentFrame() % 60)
+	int currentFrame = m_bot.GetCurrentFrame();
+	if (currentFrame % 60)
 	{
 		return;
 	}

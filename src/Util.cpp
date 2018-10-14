@@ -108,6 +108,26 @@ UnitType Util::GetRefinery(const CCRace & race, CCBot & bot)
 #endif
 }
 
+CCPosition Util::CalcCenter(const std::vector<const sc2::Unit*> & units)
+{
+	if (units.empty())
+	{
+		return CCPosition(0, 0);
+	}
+
+	CCPositionType cx = 0;
+	CCPositionType cy = 0;
+
+	for (auto & unit : units)
+	{
+		BOT_ASSERT(unit, "Unit pointer was null");
+		cx += unit->pos.x;
+		cy += unit->pos.y;
+	}
+
+	return CCPosition(cx / units.size(), cy / units.size());
+}
+
 CCPosition Util::CalcCenter(const std::vector<Unit> & units)
 {
     if (units.empty())
@@ -188,22 +208,42 @@ float Util::GetUnitsPower(const std::vector<Unit> & units, const std::vector<Uni
 	return unitsPower;
 }
 
-float Util::GetUnitPower(const sc2::Unit* unit, const sc2::Unit* closestUnit, CCBot& bot)
+float Util::GetUnitPower(const sc2::Unit* unit, const sc2::Unit* target, CCBot& bot)
 {
-	return GetUnitPower(Unit(unit, bot), Unit(closestUnit, bot), bot);
+	Unit targetUnit = target ? Unit(target, bot) : Unit();
+	return GetUnitPower(Unit(unit, bot), targetUnit, bot);
 }
 
-float Util::GetUnitPower(const Unit &unit, const Unit& closestUnit, CCBot& bot)
+float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 {
-	float unitRange = unit.getType().getAttackRange();
-	bool isRanged = unitRange >= 1.5f;
+	float unitRange = target.isValid() ? GetAttackRangeForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot) : unit.getType().getAttackRange();
+	///////// HEALTH
+	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.5f);
+	///////// DPS
+	if (target.isValid())
+		unitPower *= Util::GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot);
+	else
+		unitPower *= Util::GetDps(unit.getUnitPtr(), bot);
+	///////// DISTANCE
+	if (target.isValid())
+	{
+		float distance = Util::Dist(unit.getPosition(), target.getPosition());
+		if (unitRange < distance)
+		{
+			distance -= unitRange;
+			float distancePenalty = pow(0.5f, distance);
+			unitPower *= distancePenalty;
+		}
+	}
+
+	/*bool isRanged = unitRange >= 1.5f;
 
 	///////// HEALTH
 	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.15f);
 
 	///////// DPS
-	if (closestUnit.isValid())
-		unitPower *= Util::GetDpsForTarget(unit.getUnitPtr(), closestUnit.getUnitPtr(), bot);
+	if (target.isValid())
+		unitPower *= Util::GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot);
 	else
 		unitPower *= Util::GetDps(unit.getUnitPtr(), bot);
 
@@ -218,9 +258,9 @@ float Util::GetUnitPower(const Unit &unit, const Unit& closestUnit, CCBot& bot)
 	//TODO bonus for splash damage
 
 	///////// DISTANCE
-	if (closestUnit.isValid())
+	if (target.isValid())
 	{
-		float distance = Util::Dist(unit.getPosition(), closestUnit.getPosition());
+		float distance = Util::Dist(unit.getPosition(), target.getPosition());
 		if (unitRange + 1 < distance)   //if the unit can't reach the closest unit (with a small buffer)
 		{
 			distance -= unitRange + 1;
@@ -228,20 +268,6 @@ float Util::GetUnitPower(const Unit &unit, const Unit& closestUnit, CCBot& bot)
 			float distancePenalty = pow(0.95f, distance);
 			unitPower *= distancePenalty;	//penalty for distance (very fast for building but slow for units)
 		}
-	}
-
-	///////// TERRAIN
-	/*if (averageSquadHeight > 0)
-	{
-	float unitHeight = m_bot.Map().terrainHeight(unit.getTilePosition().x, unit.getTilePosition().y);
-	if (unitHeight > averageSquadHeight + 1)
-	{
-	unitPower *= 1.25f;  //height bonus (+25%)
-	}
-	else if (unitHeight < averageSquadHeight + 1)
-	{
-	unitPower *= 0.75f; //height penalty (-25%)
-	}
 	}*/
 
 	if (bot.Config().DrawUnitPowerInfo)
