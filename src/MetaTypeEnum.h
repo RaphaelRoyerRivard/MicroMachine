@@ -25,6 +25,7 @@ class MetaTypeEnum
 		static MetaType PlanetaryFortress;
 		static MetaType SupplyDepot;
 		static MetaType Refinery;
+		static MetaType MissileTurret;
 			//Units
 		static MetaType Marine;
 		static MetaType Marauder;

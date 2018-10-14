@@ -69,7 +69,7 @@
     "Debug" :
     {
 		"AllowDebug"				: true,
-		"AllowDynamicConfig"		: true,
+		"AllowKeyControl"			: true,
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : false, 
@@ -84,12 +84,12 @@
         "DrawSquadInfo"             : false,
         "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : false,
+        "DrawReservedBuildingTiles" : true,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
-        "DrawUnitID"            	: false
+        "DrawUnitID"            	: true
     },
     
     "Modules" :
@@ -141,7 +141,7 @@
     "SC2API Strategy" :
     {
         "Protoss"                   : "Protoss_ZealotRush",
-        "Terran"                    : "Terran_ReaperHarass4",
+        "Terran"                    : "Terran_TurretTest",
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "AutoCompleteBuildOrder"    : true,
@@ -234,6 +234,23 @@
                 "OpeningBuildOrder" : ["SCV",
 										"OrbitalCommand",
 										"CommandCenter"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
+            },
+			"Terran_TurretTest"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV",
+										"SupplyDepot",
+										"Barracks",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },

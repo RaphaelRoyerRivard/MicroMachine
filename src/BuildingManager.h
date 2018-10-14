@@ -51,7 +51,7 @@ public:
     bool                isBeingBuilt(UnitType type);
 	int					countBeingBuilt(UnitType type);
 
-	const BuildingPlacer getBuildingPlacer() const;
+	BuildingPlacer getBuildingPlacer() const;
 
     std::vector<UnitType> buildingsQueued() const;
 };

@@ -126,15 +126,6 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
 
 CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist) const
 {
-    //Timer t;
-    //t.start();
-
-	//if we can already build at that location
-	/*if (canBuildHereWithSpace(b.desiredPosition.x, b.desiredPosition.y, b, buildDist))
-	{
-		return b.desiredPosition;
-	}*/
-
 	//If the space is not walkable, look arround for a walkable space. The result may not be the most optimal location.
 	int offset = 1;
 	int direction = 0;
@@ -207,9 +198,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 	}
 
     // get the precomputed vector of tile positions which are sorted closes to this location
-    auto & closestToBuilding = m_bot.Map().getClosestTilesTo(buildLocation);	
-
-    //double ms1 = t.getElapsedTimeInMilliSec();
+    auto & closestToBuilding = m_bot.Map().getClosestTilesTo(buildLocation);
 
     // iterate through the list until we've found a suitable location
     for (size_t i(0); i < closestToBuilding.size(); ++i)
@@ -218,14 +207,10 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 
         if (canBuildHereWithSpace(pos.x, pos.y, b, buildDist))
         {
-            //double ms = t.getElapsedTimeInMilliSec();
-            //printf("Building Placer Took %d iterations, lasting %lf ms @ %lf iterations/ms, %lf setup ms\n", (int)i, ms, (i / ms), ms1);
-
             return pos;
         }
     }
 
-    //double ms = t.getElapsedTimeInMilliSec();
     //printf("Building Placer Failure: %s - Took %lf ms\n", b.type.getName().c_str(), ms);
 	printf("Building Placer Failure, couldn't find anywhere valide to place it");
     return CCTilePosition(0, 0);
@@ -362,6 +347,17 @@ void BuildingPlacer::freeTiles(int bx, int by, int width, int height)
     }
 }
 
+CCTilePosition BuildingPlacer::freeTilesForTurrets(BaseLocation location)
+{
+	auto turretPosition = CCTilePosition(location.getPosition().x, location.getPosition().y);
+	auto closestMineral = getClosestMineral(turretPosition);
+	int x = (turretPosition.x > closestMineral->pos.x ? turretPosition.x - 1 : turretPosition.x);
+	int y = (turretPosition.y > closestMineral->pos.y ? turretPosition.y - 1 : turretPosition.y);
+	freeTiles(x, y, 2, 2);
+
+	return CCTilePosition(turretPosition);
+}
+
 CCTilePosition BuildingPlacer::getRefineryPosition()
 {
     CCPosition closestGeyser(0, 0);
@@ -412,3 +408,28 @@ bool BuildingPlacer::isReserved(int x, int y) const
     return m_reserveMap[x][y];
 }
 
+const sc2::Unit * BuildingPlacer::getClosestMineral(const CCTilePosition position) const
+{
+	auto potentialMinerals = m_bot.UnitInfo().getUnits(Players::Neutral);
+	const sc2::Unit * mineralField = nullptr;
+	float minDist;
+	for (auto mineral : potentialMinerals)
+	{
+		if (!mineral.getType().isMineral())
+		{//Not mineral
+			continue;
+		}
+
+		auto mineralPosition = mineral.getTilePosition();
+		const float dist = Util::Dist(mineralPosition, position);
+		if (mineralField == nullptr) {
+			mineralField = mineral.getUnitPtr();
+			minDist = dist;
+		}
+		else if (dist < minDist) {
+			mineralField = mineral.getUnitPtr();
+			minDist = dist;
+		}
+	}
+	return mineralField;
+}

@@ -49,10 +49,10 @@ const Strategy & StrategyManager::getCurrentStrategy() const
 
 const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 {
-	if (m_shouldProduceAntiAir)
+	/*if (m_shouldProduceAntiAir)
 	{
 		return StrategyPostBuildOrder::TERRAN_ANTI_AIR;
-	}
+	}*/
 	if (m_enemyHasMetabolicBoost)
 	{
 		return StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING;

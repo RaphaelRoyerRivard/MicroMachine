@@ -167,53 +167,7 @@ void BotConfig::readConfigFile()
     {
         const json & debug = j["Debug"];
 		JSONTools::ReadBool("AllowDebug", debug, AllowDebug);
-#if _DEBUG
-		JSONTools::ReadBool("AllowDynamicConfig", debug, AllowDynamicConfig);
-#else
-		AllowDynamicConfig = false;
-#endif
-		if (!AllowDynamicConfig)
-		{
-			JSONTools::ReadBool("DrawGameInfo", debug, DrawGameInfo);
-			JSONTools::ReadBool("DrawTileInfo", debug, DrawTileInfo);
-			JSONTools::ReadBool("DrawBaseLocationInfo", debug, DrawBaseLocationInfo);
-			JSONTools::ReadBool("DrawWalkableSectors", debug, DrawWalkableSectors);
-			JSONTools::ReadBool("DrawResourceInfo", debug, DrawResourceInfo);
-			JSONTools::ReadBool("DrawWorkerInfo", debug, DrawWorkerInfo);
-			JSONTools::ReadBool("DrawProductionInfo", debug, DrawProductionInfo);
-			JSONTools::ReadBool("DrawScoutInfo", debug, DrawScoutInfo);
-			JSONTools::ReadBool("DrawSquadInfo", debug, DrawSquadInfo);
-			JSONTools::ReadBool("DrawBuildingInfo", debug, DrawBuildingInfo);
-			JSONTools::ReadBool("DrawModuleTimers", debug, DrawModuleTimers);
-			JSONTools::ReadBool("DrawEnemyUnitInfo", debug, DrawEnemyUnitInfo);
-			JSONTools::ReadBool("DrawLastSeenTileInfo", debug, DrawLastSeenTileInfo);
-			JSONTools::ReadBool("DrawUnitTargetInfo", debug, DrawUnitTargetInfo);
-			JSONTools::ReadBool("DrawUnitPowerInfo", debug, DrawUnitPowerInfo);
-			JSONTools::ReadBool("DrawFSMStateInfo", debug, DrawFSMStateInfo);
-			JSONTools::ReadBool("DrawReservedBuildingTiles", debug, DrawReservedBuildingTiles);
-			JSONTools::ReadBool("DrawHarassInfo", debug, DrawHarassInfo);
-			JSONTools::ReadBool("DrawMemoryInfo", debug, DrawMemoryInfo);
-			JSONTools::ReadBool("DrawUnitID", debug, DrawUnitID);
-		}
-    }
-
-    // Parse the Module Options
-    if (j.count("Modules") && j["Modules"].is_object())
-    {
-        const json & module = j["Modules"];
-
-        JSONTools::ReadBool("UseAutoObserver", module, UsingAutoObserver);
-    }
-}
-
-void BotConfig::updateDynamicConfig()
-{
-	if (AllowDynamicConfig)
-	{
-		std::ifstream file(ConfigFileLocation);
-		json j;
-		file >> j;
-		const json & debug = j["Debug"];
+		JSONTools::ReadBool("AllowKeyControl", debug, AllowKeyControl);
 
 		JSONTools::ReadBool("DrawGameInfo", debug, DrawGameInfo);
 		JSONTools::ReadBool("DrawTileInfo", debug, DrawTileInfo);
@@ -235,5 +189,13 @@ void BotConfig::updateDynamicConfig()
 		JSONTools::ReadBool("DrawHarassInfo", debug, DrawHarassInfo);
 		JSONTools::ReadBool("DrawMemoryInfo", debug, DrawMemoryInfo);
 		JSONTools::ReadBool("DrawUnitID", debug, DrawUnitID);
-	}
+    }
+
+    // Parse the Module Options
+    if (j.count("Modules") && j["Modules"].is_object())
+    {
+        const json & module = j["Modules"];
+
+        JSONTools::ReadBool("UseAutoObserver", module, UsingAutoObserver);
+    }
 }

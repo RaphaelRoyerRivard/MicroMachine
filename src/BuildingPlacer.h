@@ -36,5 +36,8 @@ public:
     void reserveTiles(int x, int y, int width, int height);
 	void reserveTiles(CCTilePosition start, CCTilePosition end);
     void freeTiles(int x, int y, int width, int height);
+	CCTilePosition freeTilesForTurrets(BaseLocation location);
     CCTilePosition getRefineryPosition();
+
+	const sc2::Unit * getClosestMineral(const CCTilePosition position) const;
 };

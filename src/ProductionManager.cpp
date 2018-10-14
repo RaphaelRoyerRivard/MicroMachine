@@ -118,35 +118,49 @@ void ProductionManager::manageBuildOrderQueue()
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
 				canMakeSoon(producer, MetaTypeEnum::Barracks))
 			{
+				//DOESNT BELONG HERE!!! Test for Turret placement.
+				/*for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+				{
+					auto turretPosition = m_bot.Buildings().getBuildingPlacer().freeTilesForTurrets(*base);
+					auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(turretPosition.x, turretPosition.y));
+					create(worker, BuildOrderItem(MetaTypeEnum::MissileTurret, 1000, false), turretPosition);
+				}*/
+
+
 				firstBarrackBuilt = true;
 
 				auto baseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-				auto supplyDepot = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT).begin()->second;
-
-				auto basePosition = baseLocation->getDepotPosition();
-				auto point = supplyDepot.getTilePosition();
-				CCTilePosition target = CCTilePosition(basePosition.x + (basePosition.x - point.x), basePosition.y + (basePosition.y - point.y));
-				if (target.x < 0)
-				{
-					target.x = 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
-				}
-				else if (target.x > m_bot.Map().width())
-				{
-					target.x = m_bot.Map().width() - 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
-				}
-				if (target.y < 0)
-				{
-					target.y = 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
-				}
-				else if (target.y > m_bot.Map().height())
-				{
-					target.y = m_bot.Map().height() - 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
-				}
+				auto supplyDepots = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT);
 				
-				create(producer, currentItem, target);
-				m_queue.removeCurrentHighestPriorityItem();
+				if (supplyDepots.begin() != supplyDepots.end())//If we have a depot
+				{
+					auto supplyDepot = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT).begin()->second;
 
-				break;
+					auto basePosition = baseLocation->getDepotPosition();
+					auto point = supplyDepot.getTilePosition();
+					CCTilePosition target = CCTilePosition(basePosition.x + (basePosition.x - point.x), basePosition.y + (basePosition.y - point.y));
+					if (target.x < 0)
+					{
+						target.x = 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+					}
+					else if (target.x > m_bot.Map().width())
+					{
+						target.x = m_bot.Map().width() - 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+					}
+					if (target.y < 0)
+					{
+						target.y = 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+					}
+					else if (target.y > m_bot.Map().height())
+					{
+						target.y = m_bot.Map().height() - 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+					}
+
+					create(producer, currentItem, target);
+					m_queue.removeCurrentHighestPriorityItem();
+
+					break;
+				}				
 			}
 
 			// if we can make the current item
