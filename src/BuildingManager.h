@@ -38,7 +38,9 @@ public:
     void                onStart();
     void                onFrame();
     void                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
+	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
+	std::vector<Unit>	getFinishedBuildings();
     CCTilePosition      getBuildingLocation(const Building & b);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b, bool isCompleted = false) const;
@@ -51,7 +53,7 @@ public:
     bool                isBeingBuilt(UnitType type);
 	int					countBeingBuilt(UnitType type);
 
-	BuildingPlacer getBuildingPlacer() const;
+	BuildingPlacer& getBuildingPlacer();
 
     std::vector<UnitType> buildingsQueued() const;
 };

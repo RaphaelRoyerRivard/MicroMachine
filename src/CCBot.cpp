@@ -93,6 +93,7 @@ void CCBot::OnStep()
 #endif
 }
 
+#pragma optimize( "checkKeyState", off )
 void CCBot::checkKeyState()
 {
 	if (!m_config.AllowDebug || !m_config.AllowKeyControl)
@@ -128,6 +129,8 @@ void CCBot::checkKeyState()
 		m_config.DrawReservedBuildingTiles = !m_config.DrawReservedBuildingTiles;
 	}
 }
+#pragma optimize( "checkKeyState", on )
+
 
 void CCBot::setUnits()
 {

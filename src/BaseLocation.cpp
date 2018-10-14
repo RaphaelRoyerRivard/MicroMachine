@@ -56,7 +56,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     }
 
     m_centerOfResources = CCPosition(m_left + (m_right-m_left)/2, m_top + (m_bottom-m_top)/2);
-
+	
     // compute this BaseLocation's DistanceMap, which will compute the ground distance
     // from the center of its recourses to every other tile on the map
     m_distanceMap = m_bot.Map().getDistanceMap(m_centerOfResources);
@@ -109,6 +109,20 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
             }
         }
     }
+
+	//Get the location to place the turret
+	auto turretPosition = CCTilePosition(m_centerOfResources.x, m_centerOfResources.y);
+	turretPosition.x = (turretPosition.x > m_depotPosition.x ? turretPosition.x + 2 : turretPosition.x - 2);
+	turretPosition.y = (turretPosition.y > m_depotPosition.y ? turretPosition.y + 2 : turretPosition.y - 2);
+
+	Building b(MetaTypeEnum::MissileTurret.getUnitType(), turretPosition);
+	turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true);
+	m_turretPosition = turretPosition;
+}
+
+const CCTilePosition & BaseLocation::getTurretPosition() const
+{
+	return m_turretPosition;
 }
 
 // TODO: calculate the actual depot position

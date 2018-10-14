@@ -24,6 +24,8 @@ void ProductionManager::setBuildOrder(const BuildOrder & buildOrder)
 void ProductionManager::onStart()
 {
     setBuildOrder(m_bot.Strategy().getOpeningBookBuildOrder());
+	playerRace = m_bot.GetPlayerRace(Players::Self);
+	supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
 }
 
 void ProductionManager::onFrame()
@@ -118,15 +120,6 @@ void ProductionManager::manageBuildOrderQueue()
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
 				canMakeSoon(producer, MetaTypeEnum::Barracks))
 			{
-				//DOESNT BELONG HERE!!! Test for Turret placement.
-				/*for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
-				{
-					auto turretPosition = m_bot.Buildings().getBuildingPlacer().freeTilesForTurrets(*base);
-					auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(turretPosition.x, turretPosition.y));
-					create(worker, BuildOrderItem(MetaTypeEnum::MissileTurret, 1000, false), turretPosition);
-				}*/
-
-
 				firstBarrackBuilt = true;
 
 				auto baseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
@@ -208,7 +201,6 @@ void ProductionManager::manageBuildOrderQueue()
 
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
-	CCRace playerRace = m_bot.GetPlayerRace(Players::Self);
 	const float productionScore = getProductionScore();
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
@@ -217,7 +209,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 
 	// build supply if we need some
-	auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
 	auto metaTypeSupplyProvider = MetaType(supplyProvider, m_bot);
 	auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
 	if(supplyWithAdditionalSupplyDepot < 200 && m_bot.GetCurrentSupply() + 1.75 * getUnitTrainingBuildings(playerRace).size() + baseCount > supplyWithAdditionalSupplyDepot && !m_queue.contains(metaTypeSupplyProvider))
@@ -648,14 +639,14 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     }
 
     // build a refinery if we don't have one and the thing costs gas
-    auto refinery = Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot);
+    auto refinery = Util::GetRefinery(playerRace, m_bot);
 	if (typeData.gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
     {
 		m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
     }
 
     // build supply if we need some
-    auto supplyProvider = Util::GetSupplyProvider(m_bot.GetPlayerRace(Players::Self), m_bot);
+    auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
     if (typeData.supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply() && !m_bot.Buildings().isBeingBuilt(supplyProvider))
     {
         m_queue.queueAsHighestPriority(MetaType(supplyProvider, m_bot), true);
@@ -671,7 +662,7 @@ void ProductionManager::lowPriorityChecks()
 
 	// build a refinery if we are missing one
 	//TODO doesn't handle extra hatcheries, doesn't handle rich geyser
-	auto refinery = Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot);
+	auto refinery = Util::GetRefinery(playerRace, m_bot);
 	if (!m_queue.contains(MetaType(refinery, m_bot)))
 	{
 		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
@@ -681,6 +672,39 @@ void ProductionManager::lowPriorityChecks()
 			if (geyserCount < baseCount * 2)
 			{
 				m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), false);
+			}
+		}
+	}
+
+	//build turrets in mineral field
+	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
+	if (!m_bot.Strategy().shouldProduceAntiAir())
+	{
+		if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::MissileTurret.getUnitType()))
+		{
+			int engeneeringCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), true, true);
+			if (engeneeringCount > 0)
+			{
+				for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+				{
+					auto hasTurret = false;
+					auto position = base->getTurretPosition();
+					auto buildings = m_bot.Buildings().getFinishedBuildings();
+					for (auto b : buildings)
+					{
+						if (b.getTilePosition() == position)
+						{
+							hasTurret = true;
+							break;
+						}
+					}
+					if (!hasTurret)
+					{
+						m_bot.Buildings().getBuildingPlacer().freeTilesForTurrets(position);
+						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(position.x, position.y));
+						create(worker, BuildOrderItem(MetaTypeEnum::MissileTurret, 1000, false), position);
+					}
+				}
 			}
 		}
 	}
@@ -808,7 +832,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 
 		bool isBuilding = m_bot.Data(unit).isBuilding;
 		if (isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }
-		if (isBuilding && m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
+		if (isBuilding && playerRace == CCRace::Terran)
 		{//If is terran, check for Reactor addon
 			sc2::Tag addonTag = unit.getAddonTag();
 			if (addonTag != 0 && unit.isTraining())
@@ -907,7 +931,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 
 int ProductionManager::getProductionBuildingsCount() const
 {
-	switch (m_bot.GetPlayerRace(Players::Self))
+	switch (playerRace)
 	{
 		case CCRace::Terran:
 		{
@@ -936,7 +960,7 @@ int ProductionManager::getProductionBuildingsCount() const
 
 int ProductionManager::getProductionBuildingsAddonsCount() const
 {
-	switch (m_bot.GetPlayerRace(Players::Self))
+	switch (playerRace)
 	{
 		case CCRace::Terran:
 		{
@@ -964,7 +988,7 @@ int ProductionManager::getProductionBuildingsAddonsCount() const
 float ProductionManager::getProductionScore() const
 {
 	float score = 0;
-	switch (m_bot.GetPlayerRace(Players::Self))
+	switch (playerRace)
 	{
 		case CCRace::Terran:
 		{
@@ -1002,7 +1026,7 @@ float ProductionManager::getProductionScoreInQueue()
 {
 	float score = 0;
 	
-	switch (m_bot.GetPlayerRace(Players::Self))
+	switch (playerRace)
 	{
 		case CCRace::Terran:
 		{
@@ -1092,7 +1116,7 @@ MetaType ProductionManager::getUpgradeMetaType(const MetaType type) const
 	};
 
 	std::list<std::list<MetaType>> upgrades;
-	switch (m_bot.GetPlayerRace(Players::Self))
+	switch (playerRace)
 	{
 		case CCRace::Terran:
 		{
@@ -1366,9 +1390,9 @@ void ProductionManager::drawProductionInformation()
         }
     }*/
 
-    ss << m_queue.getQueueInformation() << "\n";
+    ss << m_queue.getQueueInformation() << "\n\n";
 	ss << "Free Mineral:     " << getFreeMinerals() << "\n";
 	ss << "Free Gas:         " << getFreeGas();
-
+	
     m_bot.Map().drawTextScreen(0.01f, 0.01f, ss.str(), CCColor(255, 255, 0));
 }
