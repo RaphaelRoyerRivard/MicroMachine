@@ -36,6 +36,7 @@ class CCBot
     std::vector<Unit>       m_allUnits;
     std::vector<CCPosition> m_baseLocations;
 
+	void checkKeyState();
     void setUnits();
 
 #ifdef SC2API

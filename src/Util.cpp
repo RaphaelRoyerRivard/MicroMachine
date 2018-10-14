@@ -575,6 +575,11 @@ float Util::Dist(const CCPosition & p1, const CCPosition & p2)
     return sqrtf((float)Util::DistSq(p1,p2));
 }
 
+float Util::Dist(const CCTilePosition & p1, const CCTilePosition & p2)
+{
+	return sqrtf((float)Util::DistSq(p1, p2));
+}
+
 float Util::Dist(const Unit & unit, const CCPosition & p2)
 {
     return Dist(unit.getPosition(), p2);
@@ -583,6 +588,14 @@ float Util::Dist(const Unit & unit, const CCPosition & p2)
 float Util::Dist(const Unit & unit1, const Unit & unit2)
 {
     return Dist(unit1.getPosition(), unit2.getPosition());
+}
+
+CCPositionType Util::DistSq(const CCTilePosition & p1, const CCTilePosition & p2)
+{
+	CCPositionType dx = p1.x - p2.x;
+	CCPositionType dy = p1.y - p2.y;
+
+	return dx * dx + dy * dy;
 }
 
 CCPositionType Util::DistSq(const CCPosition & p1, const CCPosition & p2)

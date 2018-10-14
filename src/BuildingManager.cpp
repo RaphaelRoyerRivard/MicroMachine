@@ -495,7 +495,7 @@ void BuildingManager::drawBuildingInformation()
     m_bot.Map().drawTextScreen(0.3f, 0.05f, ss.str());
 }
 
-const BuildingPlacer BuildingManager::getBuildingPlacer() const
+BuildingPlacer BuildingManager::getBuildingPlacer() const
 {
 	return m_buildingPlacer;
 }

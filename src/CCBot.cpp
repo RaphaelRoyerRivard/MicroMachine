@@ -73,7 +73,7 @@ void CCBot::OnGameStart() //full start
 
 void CCBot::OnStep()
 {
-	m_config.updateDynamicConfig();
+	checkKeyState();
 
     setUnits();
 	m_map.onFrame();
@@ -91,6 +91,42 @@ void CCBot::OnStep()
 		Debug()->SendDebug();
 	}
 #endif
+}
+
+void CCBot::checkKeyState()
+{
+	if (!m_config.AllowDebug || !m_config.AllowKeyControl)
+	{
+		return;
+	}
+	if (GetAsyncKeyState(VK_DELETE))
+	{
+		printf("Pausing...");
+	}
+	if (GetAsyncKeyState('1'))
+	{
+		m_config.DrawProductionInfo = !m_config.DrawProductionInfo;
+	}
+	if (GetAsyncKeyState('2'))
+	{
+		m_config.DrawHarassInfo = !m_config.DrawHarassInfo;
+	}
+	if (GetAsyncKeyState('3'))
+	{
+		m_config.DrawUnitPowerInfo = !m_config.DrawUnitPowerInfo;
+	}
+	if (GetAsyncKeyState('4'))
+	{
+		m_config.DrawWorkerInfo = !m_config.DrawWorkerInfo;
+	}
+	if (GetAsyncKeyState('9'))
+	{
+		m_config.DrawUnitID = !m_config.DrawUnitID;
+	}
+	if (GetAsyncKeyState('0'))
+	{
+		m_config.DrawReservedBuildingTiles = !m_config.DrawReservedBuildingTiles;
+	}
 }
 
 void CCBot::setUnits()

@@ -69,7 +69,7 @@
     "Debug" :
     {
 		"AllowDebug"				: true,
-		"AllowDynamicConfig"		: true,
+		"AllowKeyControl"			: true,
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
@@ -89,7 +89,7 @@
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
-        "DrawUnitID"            	: false
+        "DrawUnitID"            	: true
     },
     
     "Modules" :
@@ -234,6 +234,23 @@
                 "OpeningBuildOrder" : ["SCV",
 										"OrbitalCommand",
 										"CommandCenter"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
+            },
+			"Terran_TurretTest"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV",
+										"SupplyDepot",
+										"Barracks",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret",
+										"MissileTurret"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
