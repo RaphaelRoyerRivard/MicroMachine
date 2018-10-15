@@ -48,7 +48,7 @@ public:
 
     bool canSkipItem();
     std::string getQueueInformation() const;
-	bool contains(const MetaType & type);
+	bool contains(const MetaType & type) const;
 
     // overload the bracket operator for ease of use
     BuildOrderItem operator [] (int i);

@@ -210,7 +210,7 @@ std::string BuildOrderQueue::getQueueInformation() const
     return ss.str();
 }
 
-bool BuildOrderQueue::contains(const MetaType & type)
+bool BuildOrderQueue::contains(const MetaType & type) const
 {
 	auto it = m_queue.begin();
 	while (it != m_queue.end())
