@@ -347,7 +347,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					auto metaTypeShipArmor = queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
 				}
-				auto metaTypeInfantryWeapon = queueUpgrade(MetaTypeEnum::TerranInfantryWeaponsLevel1);
+
+				int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
+				if (reaperCount > 3)
+				{
+					auto metaTypeInfantryWeapon = queueUpgrade(MetaTypeEnum::TerranInfantryWeaponsLevel1);
+				}
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{
