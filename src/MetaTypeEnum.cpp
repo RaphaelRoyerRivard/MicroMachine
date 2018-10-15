@@ -20,6 +20,7 @@ MetaType MetaTypeEnum::OrbitalCommand;
 MetaType MetaTypeEnum::PlanetaryFortress;
 MetaType MetaTypeEnum::SupplyDepot;
 MetaType MetaTypeEnum::Refinery;
+MetaType MetaTypeEnum::EngineeringBay;
 MetaType MetaTypeEnum::MissileTurret;
 	//Units
 MetaType MetaTypeEnum::Marine;
@@ -107,6 +108,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::PlanetaryFortress = MetaType("PlanetaryFortress", m_bot);
 	MetaTypeEnum::SupplyDepot = MetaType("SupplyDepot", m_bot);
 	MetaTypeEnum::Refinery = MetaType("Refinery", m_bot);
+	MetaTypeEnum::EngineeringBay = MetaType("EngineeringBay", m_bot);
 	MetaTypeEnum::MissileTurret = MetaType("MissileTurret", m_bot);
 		//Units
 	MetaTypeEnum::Marine = MetaType("Marine", m_bot);

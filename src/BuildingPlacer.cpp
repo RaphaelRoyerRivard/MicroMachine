@@ -57,15 +57,15 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b) const
 }
 
 //returns true if we can build this type of unit here with the specified amount of space.
-bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist) const
+bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved) const
 {
     UnitType type = b.type;
 
     //if we can't build here, we of course can't build here with space
-    if (!canBuildHere(bx, by, b))
+    /*if (!canBuildHere(bx, by, b))
     {
         return false;
-    }
+    }*/
 
     // height and width of the building
     int width  = b.type.tileWidth();
@@ -92,18 +92,13 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
         {
             if (!b.type.isRefinery())
             {
-                if (!buildable(b, x, y) || m_reserveMap[x][y])
+                if (!buildable(b.type, x, y) || (!ignoreReserved && m_reserveMap[x][y]))
                 {
                     return false;
                 }
             }
         }
     }
-
-	if (!m_bot.Map().canBuildTypeAtPosition(startx, starty, b.type))
-	{
-		return false;
-	}
 
 	//Test if there is space for an addon
 	switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
@@ -124,7 +119,7 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     return true;
 }
 
-CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist) const
+CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved) const
 {
 	//If the space is not walkable, look arround for a walkable space. The result may not be the most optimal location.
 	int offset = 1;
@@ -153,22 +148,28 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 			case 3://down
 				buildLocation.x = b.desiredPosition.x;
 				buildLocation.y = b.desiredPosition.y - offset;
+				break;
 			case 4://diag up-right
 				buildLocation.x = b.desiredPosition.x + offset;
 				buildLocation.y = b.desiredPosition.y + offset;
+				break;
 			case 5://diag up-left
 				buildLocation.x = b.desiredPosition.x - offset;
 				buildLocation.y = b.desiredPosition.y + offset;
+				break;
 			case 6://diag down-right
 				buildLocation.x = b.desiredPosition.x + offset;
 				buildLocation.y = b.desiredPosition.y - offset;
+				break;
 			case 7://diag down-left
 				buildLocation.x = b.desiredPosition.x - offset;
 				buildLocation.y = b.desiredPosition.y - offset;
 				direction = -1;//will be 0 after the ++
 				offset++;
+				break;
 			default:
 				printf("Should never happen [BuildingPlacer::getBuildLocationNear]");
+				break;
 		}
 		if (buildLocation.x < 0)
 		{
@@ -205,7 +206,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
     {
         auto & pos = closestToBuilding[i];
 
-        if (canBuildHereWithSpace(pos.x, pos.y, b, buildDist))
+        if (canBuildHereWithSpace(pos.x, pos.y, b, buildDist, ignoreReserved))
         {
             return pos;
         }
@@ -253,10 +254,10 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
     return false;
 }
 
-bool BuildingPlacer::buildable(const Building & b, int x, int y) const
+bool BuildingPlacer::buildable(const UnitType type, int x, int y) const
 {
     // TODO: doesnt take units on the map into account
-	return m_bot.Map().isBuildable(x, y) && m_bot.Map().canBuildTypeAtPosition(x, y, b.type);//Remplaced !m_bot.Map().canBuildTypeAtPosition(x, y, b.type)) with isBuildable.
+	return m_bot.Map().isBuildable(x, y) && m_bot.Map().canBuildTypeAtPosition(x, y, type);//Remplaced !m_bot.Map().canBuildTypeAtPosition(x, y, b.type)) with isBuildable.
 }
 
 void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)
@@ -347,15 +348,9 @@ void BuildingPlacer::freeTiles(int bx, int by, int width, int height)
     }
 }
 
-CCTilePosition BuildingPlacer::freeTilesForTurrets(BaseLocation location)
+void BuildingPlacer::freeTilesForTurrets(CCTilePosition position)
 {
-	auto turretPosition = CCTilePosition(location.getPosition().x, location.getPosition().y);
-	auto closestMineral = getClosestMineral(turretPosition);
-	int x = (turretPosition.x > closestMineral->pos.x ? turretPosition.x - 1 : turretPosition.x);
-	int y = (turretPosition.y > closestMineral->pos.y ? turretPosition.y - 1 : turretPosition.y);
-	freeTiles(x, y, 2, 2);
-
-	return CCTilePosition(turretPosition);
+	freeTiles(position.x, position.y, 2, 2);
 }
 
 CCTilePosition BuildingPlacer::getRefineryPosition()
@@ -406,30 +401,4 @@ bool BuildingPlacer::isReserved(int x, int y) const
     }
 
     return m_reserveMap[x][y];
-}
-
-const sc2::Unit * BuildingPlacer::getClosestMineral(const CCTilePosition position) const
-{
-	auto potentialMinerals = m_bot.UnitInfo().getUnits(Players::Neutral);
-	const sc2::Unit * mineralField = nullptr;
-	float minDist;
-	for (auto mineral : potentialMinerals)
-	{
-		if (!mineral.getType().isMineral())
-		{//Not mineral
-			continue;
-		}
-
-		auto mineralPosition = mineral.getTilePosition();
-		const float dist = Util::Dist(mineralPosition, position);
-		if (mineralField == nullptr) {
-			mineralField = mineral.getUnitPtr();
-			minDist = dist;
-		}
-		else if (dist < minDist) {
-			mineralField = mineral.getUnitPtr();
-			minDist = dist;
-		}
-	}
-	return mineralField;
 }

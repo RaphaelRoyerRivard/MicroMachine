@@ -417,6 +417,18 @@ void BuildingManager::addBuildingTask(const UnitType & type, const CCTilePositio
     m_buildings.push_back(b);
 }
 
+bool BuildingManager::isConstructingType(const UnitType & type)
+{
+	for (auto building : m_buildings)
+	{
+		if (building.type == type)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 // TODO: may need to iterate over all tiles of the building footprint
 bool BuildingManager::isBuildingPositionExplored(const Building & b) const
 {
@@ -495,7 +507,12 @@ void BuildingManager::drawBuildingInformation()
     m_bot.Map().drawTextScreen(0.3f, 0.05f, ss.str());
 }
 
-BuildingPlacer BuildingManager::getBuildingPlacer() const
+std::vector<Unit> BuildingManager::getFinishedBuildings()
+{
+	return m_baseBuildings;
+}
+
+BuildingPlacer& BuildingManager::getBuildingPlacer()
 {
 	return m_buildingPlacer;
 }
@@ -646,6 +663,11 @@ void BuildingManager::castBuildingsAbilities()
 {
 	for (const auto & b : m_baseBuildings)
 	{
+		if (b.getEnergy() <= 0)
+		{
+			continue;
+		}
+
 		auto id = b.getType().getAPIUnitType();
 		if (b.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND)
 		{
