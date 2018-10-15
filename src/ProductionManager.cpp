@@ -750,6 +750,12 @@ void ProductionManager::lowPriorityChecks()
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
 	if (m_bot.Strategy().shouldProduceAntiAir())
 	{
+		auto engeneeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
+		if (engeneeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
+		{
+			m_queue.queueAsHighestPriority(MetaTypeEnum::EngineeringBay, false);
+		}
+
 		if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::MissileTurret.getUnitType()))
 		{
 			int engeneeringCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), true, true);
