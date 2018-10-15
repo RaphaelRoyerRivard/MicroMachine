@@ -111,9 +111,16 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     }
 
 	//Get the location to place the turret
-	auto turretPosition = CCTilePosition(m_centerOfResources.x, m_centerOfResources.y);
-	turretPosition.x = (turretPosition.x > m_depotPosition.x ? turretPosition.x + 2 : turretPosition.x - 2);
-	turretPosition.y = (turretPosition.y > m_depotPosition.y ? turretPosition.y + 2 : turretPosition.y - 2);
+	auto centerOfMinerals = CCTilePosition();
+	for (auto & mineral : m_minerals)
+	{
+		centerOfMinerals.x += mineral.getPosition().x;
+		centerOfMinerals.y += mineral.getPosition().y;
+	}
+	centerOfMinerals.x /= m_minerals.size();
+	centerOfMinerals.y /= m_minerals.size();
+
+	auto turretPosition = CCTilePosition(centerOfMinerals.x, centerOfMinerals.y);
 
 	Building b(MetaTypeEnum::MissileTurret.getUnitType(), turretPosition);
 	turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true);
