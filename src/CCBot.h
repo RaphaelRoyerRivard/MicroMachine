@@ -35,6 +35,7 @@ class CCBot
 	std::map<sc2::Tag, CCPosition> m_lastSeenPosUnits;
     std::vector<Unit>       m_allUnits;
     std::vector<CCPosition> m_baseLocations;
+	CCRace selfRace;
 
 	void checkKeyState();
     void setUnits();
@@ -79,6 +80,7 @@ public:
     const TypeData & Data(const MetaType & type) const;
     const TypeData & Data(const Unit & unit) const;
     CCRace GetPlayerRace(int player) const;
+	CCRace GetSelfRace() const;
     CCPosition GetStartLocation() const;
 
     int GetCurrentFrame() const;

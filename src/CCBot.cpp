@@ -58,6 +58,7 @@ void CCBot::OnGameStart() //full start
 
 	//Initialize list of MetaType
 	MetaTypeEnum::Initialize(*this);
+	selfRace = GetPlayerRace(Players::Self);
     
     setUnits();
     m_techTree.onStart();
@@ -240,6 +241,11 @@ CCRace CCBot::GetPlayerRace(int player) const
         return BWAPI::Broodwar->enemy()->getRace();
     }
 #endif
+}
+
+CCRace CCBot::GetSelfRace() const
+{
+	return selfRace;
 }
 
 BotConfig & CCBot::Config()

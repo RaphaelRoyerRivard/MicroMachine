@@ -24,8 +24,8 @@ void ProductionManager::setBuildOrder(const BuildOrder & buildOrder)
 void ProductionManager::onStart()
 {
     setBuildOrder(m_bot.Strategy().getOpeningBookBuildOrder());
-	playerRace = m_bot.GetPlayerRace(Players::Self);
-	supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
+	supplyProvider = Util::GetSupplyProvider(m_bot.GetSelfRace(), m_bot);
+	supplyProviderType = MetaType(supplyProvider, m_bot);
 }
 
 void ProductionManager::onFrame()
@@ -209,14 +209,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 
 	// build supply if we need some
-	auto metaTypeSupplyProvider = MetaType(supplyProvider, m_bot);
 	auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
-	if(supplyWithAdditionalSupplyDepot < 200 && m_bot.GetCurrentSupply() + 1.75 * getUnitTrainingBuildings(playerRace).size() + baseCount > supplyWithAdditionalSupplyDepot && !m_queue.contains(metaTypeSupplyProvider) && !m_bot.Strategy().isWorkerRushed())
+	if(m_bot.GetCurrentSupply() + 1.75 * getUnitTrainingBuildings(m_bot.GetSelfRace()).size() + baseCount > supplyWithAdditionalSupplyDepot && !m_queue.contains(supplyProviderType) && supplyWithAdditionalSupplyDepot < 200 && !m_bot.Strategy().isWorkerRushed())
 	{
-		m_queue.queueAsHighestPriority(metaTypeSupplyProvider, false);
+		m_queue.queueAsHighestPriority(supplyProviderType, false);
 	}
 
-	if (playerRace == sc2::Race::Terran)
+	if (m_bot.GetSelfRace() == sc2::Race::Terran)
 	{
 		// Logic for building Orbital Commands and Refineries
 		if(m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_bot.Buildings().isBeingBuilt(MetaTypeEnum::CommandCenter.getUnitType()) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
@@ -326,8 +325,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
 			{
-				// the -0.5f is because the 2 barracks are not used
-				if (productionScore - 0.5f < (float)baseCount)
+				// the strategy does not use the barracks, so we remove the barracks score
+				int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
+				if (productionScore - 0.25f * barracksCount < (float)baseCount)
 				{
 					bool hasPicked = false;
 					MetaType toBuild;
@@ -643,7 +643,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const int maxWorkers = (23 + 2) * 3;	//23 resource workers + 2 builders per base, maximum of 3 bases.
 	if (m_bot.Workers().getNumWorkers() < maxWorkers && !m_queue.contains(MetaTypeEnum::OrbitalCommand) && currentStrategy != StrategyPostBuildOrder::WORKER_RUSH_DEFENSE)//baseCount * 23
 	{
-		auto workerType = Util::GetWorkerType(playerRace, m_bot);
+		auto workerType = Util::GetWorkerType(m_bot.GetSelfRace(), m_bot);
 		const auto metaTypeWorker = MetaType(workerType, m_bot);
 		if (!m_queue.contains(metaTypeWorker))
 		{
@@ -678,17 +678,16 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     }
 
     // build a refinery if we don't have one and the thing costs gas
-    auto refinery = Util::GetRefinery(playerRace, m_bot);
+    auto refinery = Util::GetRefinery(m_bot.GetSelfRace(), m_bot);
 	if (typeData.gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
     {
 		m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
     }
 
     // build supply if we need some
-    auto supplyProvider = Util::GetSupplyProvider(playerRace, m_bot);
     if (typeData.supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply() && !m_bot.Buildings().isBeingBuilt(supplyProvider))
     {
-        m_queue.queueAsHighestPriority(MetaType(supplyProvider, m_bot), true);
+        m_queue.queueAsHighestPriority(supplyProviderType, true);
     }
 }
 
@@ -701,7 +700,7 @@ void ProductionManager::lowPriorityChecks()
 
 	// build a refinery if we are missing one
 	//TODO doesn't handle extra hatcheries, doesn't handle rich geyser
-	auto refinery = Util::GetRefinery(playerRace, m_bot);
+	auto refinery = Util::GetRefinery(m_bot.GetSelfRace(), m_bot);
 	if (!m_queue.contains(MetaType(refinery, m_bot)))
 	{
 		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
@@ -871,7 +870,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 
 		bool isBuilding = m_bot.Data(unit).isBuilding;
 		if (isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }
-		if (isBuilding && playerRace == CCRace::Terran)
+		if (isBuilding && m_bot.GetSelfRace() == CCRace::Terran)
 		{//If is terran, check for Reactor addon
 			sc2::Tag addonTag = unit.getAddonTag();
 			if (addonTag != 0 && unit.isTraining())
@@ -970,7 +969,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 
 int ProductionManager::getProductionBuildingsCount() const
 {
-	switch (playerRace)
+	switch (m_bot.GetSelfRace())
 	{
 		case CCRace::Terran:
 		{
@@ -999,7 +998,7 @@ int ProductionManager::getProductionBuildingsCount() const
 
 int ProductionManager::getProductionBuildingsAddonsCount() const
 {
-	switch (playerRace)
+	switch (m_bot.GetSelfRace())
 	{
 		case CCRace::Terran:
 		{
@@ -1027,7 +1026,7 @@ int ProductionManager::getProductionBuildingsAddonsCount() const
 float ProductionManager::getProductionScore() const
 {
 	float score = 0;
-	switch (playerRace)
+	switch (m_bot.GetSelfRace())
 	{
 		case CCRace::Terran:
 		{
@@ -1065,7 +1064,7 @@ float ProductionManager::getProductionScoreInQueue()
 {
 	float score = 0;
 	
-	switch (playerRace)
+	switch (m_bot.GetSelfRace())
 	{
 		case CCRace::Terran:
 		{
@@ -1155,7 +1154,7 @@ MetaType ProductionManager::getUpgradeMetaType(const MetaType type) const
 	};
 
 	std::list<std::list<MetaType>> upgrades;
-	switch (playerRace)
+	switch (m_bot.GetSelfRace())
 	{
 		case CCRace::Terran:
 		{

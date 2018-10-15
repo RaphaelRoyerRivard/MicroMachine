@@ -425,7 +425,7 @@ void CombatCommander::updateDefenseSquads()
                 m_squadData.getSquad(squadName.str()).clear();
             }
 
-			if (Util::IsTerran(m_bot.GetPlayerRace(Players::Self)))
+			if (Util::IsTerran(m_bot.GetSelfRace()))
 			{
 				Unit base = m_bot.Buildings().getClosestResourceDepot(basePosition);
 				if (base.isValid())
@@ -481,7 +481,7 @@ void CombatCommander::updateDefenseSquads()
         }
 
 		//Protect our SCVs and lift our base
-		if(Util::IsTerran(m_bot.GetPlayerRace(Players::Self)))
+		if(Util::IsTerran(m_bot.GetSelfRace()))
 		{
 			Unit base = m_bot.Buildings().getClosestResourceDepot(basePosition);
 			if (base.isValid())

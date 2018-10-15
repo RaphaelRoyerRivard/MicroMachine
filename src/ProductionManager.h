@@ -18,7 +18,7 @@ class ProductionManager
 	std::list<MetaType> startedUpgrades;
 	bool firstBarrackBuilt = false;
 	UnitType supplyProvider;
-	CCRace playerRace;
+	MetaType supplyProviderType;
 
 	MetaType getUpgradeMetaType(const MetaType type) const;
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;

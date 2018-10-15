@@ -22,6 +22,7 @@ void WorkerManager::onFrame()
 	handleMineralWorkers();
     handleGasWorkers();
     handleIdleWorkers();
+	repairCombatBuildings();
 	lowPriorityChecks();
 
     drawResourceDebugInfo();
@@ -29,7 +30,7 @@ void WorkerManager::onFrame()
 
     m_workerData.drawDepotDebugInfo();
 
-    //handleRepairWorkers();	// this has been commented out because it doesn't work well against worker rushes (less combat scvs and too much minerals are spent repairing)
+    handleRepairWorkers();
 }
 
 void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)
@@ -130,8 +131,6 @@ void WorkerManager::handleMineralWorkers()
 		}
 
 		mineralWorker.rightClick(closestMineral);
-		//m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Minerals, closestMineral);
-		//workers.erase(mineralWorker);
 	}
 }
 
@@ -199,7 +198,7 @@ void WorkerManager::handleIdleWorkers()
 void WorkerManager::handleRepairWorkers()
 {
     // Only terran worker can repair
-    if (!Util::IsTerran(m_bot.GetPlayerRace(Players::Self)))
+    if (!Util::IsTerran(m_bot.GetSelfRace()))
         return;
 
     for (auto & worker : m_workerData.getWorkers())
@@ -226,7 +225,8 @@ void WorkerManager::handleRepairWorkers()
             }
         }
 
-        if (worker.isAlive() && worker.getHitPoints() < worker.getUnitPtr()->health_max)
+		// this has been commented out because it doesn't work well against worker rushes (less combat scvs and too much minerals are spent repairing)
+        /*if (worker.isAlive() && worker.getHitPoints() < worker.getUnitPtr()->health_max)
         {
             const std::set<Unit> & repairedBy = m_workerData.getWorkerRepairingThatTargetC(worker);
             if (repairedBy.empty())
@@ -238,8 +238,74 @@ void WorkerManager::handleRepairWorkers()
                     setRepairWorker(repairGuy, worker);
                 }
             }
-        }
+        }*/
     }
+}
+
+void WorkerManager::repairCombatBuildings()
+{
+	const float repairAt = 0.9; //90% health
+	const int maxReparator = 5; //Turret and bunkers only
+
+	if (m_bot.GetSelfRace() != CCRace::Terran)
+	{
+		return;
+	}
+
+	auto workers = getWorkers();
+	auto buildings = m_bot.Buildings().getFinishedBuildings();
+	for (auto building : buildings)
+	{
+		if (building.isBeingConstructed())
+		{
+			continue;
+		}
+
+		int alreadyRepairing = 0;
+		switch ((sc2::UNIT_TYPEID)building.getAPIUnitType())
+		{
+			case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET:
+			case sc2::UNIT_TYPEID::TERRAN_BUNKER:
+				if (building.getHitPoints() > repairAt * building.getUnitPtr()->health_max)
+				{
+					continue;
+				}
+
+				for (auto & worker : workers)
+				{
+					Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
+					if (repairedUnit.isValid() && repairedUnit.getID() == building.getID())
+					{
+						alreadyRepairing++;
+						if (maxReparator == alreadyRepairing)
+						{
+							break;
+						}
+					}
+				}
+				for (int i = 0; i < maxReparator - alreadyRepairing; i++)
+				{
+					Unit worker = getClosestMineralWorkerTo(building.getPosition());
+					setRepairWorker(worker, building);
+				}
+				break;
+			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
+				//TODO Doesn't use the gas workers
+				if (building.getHitPoints() > repairAt * building.getUnitPtr()->health_max)
+				{
+					continue;
+				}
+				for (auto & worker : workers)//TODO order by closest to the target base location
+				{
+					auto depot = m_workerData.getWorkerDepot(worker);
+					if (depot.isValid() && depot.getID() == building.getID())
+					{
+						setRepairWorker(worker, building);
+					}
+				}
+				break;
+		}
+	}
 }
 
 void WorkerManager::lowPriorityChecks()

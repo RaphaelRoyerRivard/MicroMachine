@@ -19,6 +19,7 @@ class WorkerManager
     void handleGasWorkers();
 	void handleIdleWorkers();
     void handleRepairWorkers();
+	void repairCombatBuildings();
 	void lowPriorityChecks();
 
 public:
