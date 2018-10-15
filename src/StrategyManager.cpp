@@ -121,8 +121,7 @@ void StrategyManager::onEnd(const bool isWinner)
 
 void StrategyManager::readStrategyFile(const std::string & filename)
 {
-    CCRace race = m_bot.GetPlayerRace(Players::Self);
-    std::string ourRace = Util::GetStringFromRace(race);
+    std::string ourRace = Util::GetStringFromRace(m_bot.GetSelfRace());
 
     std::ifstream file(filename);
     json j;

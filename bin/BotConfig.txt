@@ -238,12 +238,13 @@
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
-			"Terran_ExpensionTest"     : 
+			"Terran_RepairTest"     : 
             { 
                 "Race"              : "Terran",  
                 "OpeningBuildOrder" : ["SCV",
-										"OrbitalCommand",
-										"CommandCenter"],
+										"PlanetaryFortress",
+										"MissileTurret",
+										"Bunker"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },

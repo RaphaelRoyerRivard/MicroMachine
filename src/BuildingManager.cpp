@@ -176,7 +176,7 @@ void BuildingManager::constructAssignedBuildings()
         bool isConstructing = false;
 
         // if we're zerg and the builder unit is null, we assume it morphed into the building
-        if (Util::IsZerg(m_bot.GetPlayerRace(Players::Self)))
+        if (Util::IsZerg(m_bot.GetSelfRace()))
         {
             if (!builderUnit.isValid())
             {
@@ -317,11 +317,11 @@ void BuildingManager::checkForStartedConstruction()
                 b.buildingUnit = buildingStarted;
 
                 // if we are zerg, the buildingUnit now becomes nullptr since it's destroyed
-                if (Util::IsZerg(m_bot.GetPlayerRace(Players::Self)))
+                if (Util::IsZerg(m_bot.GetSelfRace()))
                 {
                     b.builderUnit = Unit();
                 }
-                else if (Util::IsProtoss(m_bot.GetPlayerRace(Players::Self)))
+                else if (Util::IsProtoss(m_bot.GetSelfRace()))
                 {
                     m_bot.Workers().finishedWithWorker(b.builderUnit);
                     b.builderUnit = Unit();
@@ -351,7 +351,7 @@ void BuildingManager::checkForStartedConstruction()
 // STEP 5: IF WE ARE TERRAN, THIS MATTERS, SO: LOL
 void BuildingManager::checkForDeadTerranBuilders() 
 {
-    if (!Util::IsTerran(m_bot.GetPlayerRace(Players::Self)))
+    if (!Util::IsTerran(m_bot.GetSelfRace()))
         return;
 
     // for each of our buildings under construction
@@ -388,7 +388,7 @@ void BuildingManager::checkForCompletedBuildings()
         if (b.buildingUnit.isCompleted())
         {
             // if we are terran, give the worker back to worker manager
-            if (Util::IsTerran(m_bot.GetPlayerRace(Players::Self)))
+            if (Util::IsTerran(m_bot.GetSelfRace()))
             {
                 m_bot.Workers().finishedWithWorker(b.builderUnit);
 				if (b.buildingUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
@@ -534,7 +534,7 @@ std::vector<UnitType> BuildingManager::buildingsQueued() const
 
 CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 {
-    size_t numPylons = m_bot.UnitInfo().getUnitTypeCount(Players::Self, Util::GetSupplyProvider(m_bot.GetPlayerRace(Players::Self), m_bot), true);
+    //size_t numPylons = m_bot.UnitInfo().getUnitTypeCount(Players::Self, Util::GetSupplyProvider(m_bot.GetSelfRace(), m_bot), true);
 
     // TODO: if requires psi and we have no pylons return 0
 

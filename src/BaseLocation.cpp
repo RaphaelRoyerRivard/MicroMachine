@@ -86,7 +86,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     // if it's not a start location, we need to calculate the depot position
     if (!isStartLocation())
     {
-        UnitType depot = Util::GetTownHall(m_bot.GetPlayerRace(Players::Self), m_bot);
+        UnitType depot = Util::GetTownHall(m_bot.GetSelfRace(), m_bot);
 #ifdef SC2API
         int offsetX = 0;
         int offsetY = 0;

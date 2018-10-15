@@ -340,7 +340,7 @@ const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocat
 
 int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 {
-	switch (m_bot.GetPlayerRace(Players::Self))
+	switch (m_bot.GetSelfRace())
 	{
 		case CCRace::Terran:
 		{

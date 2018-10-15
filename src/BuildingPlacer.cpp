@@ -12,7 +12,6 @@ BuildingPlacer::BuildingPlacer(CCBot & bot)
 
 void BuildingPlacer::onStart()
 {
-	playerRace = m_bot.GetPlayerRace(Players::Self);
     m_reserveMap = std::vector< std::vector<bool> >(m_bot.Map().width(), std::vector<bool>(m_bot.Map().height(), false));
 
 	auto bases = m_bot.Bases().getBaseLocations();
@@ -238,8 +237,8 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
         // dimensions of the base location
         int bx1 = (int)base->getDepotPosition().x;
         int by1 = (int)base->getDepotPosition().y;
-        int bx2 = bx1 + Util::GetTownHall(m_bot.GetPlayerRace(Players::Self), m_bot).tileWidth();
-        int by2 = by1 + Util::GetTownHall(m_bot.GetPlayerRace(Players::Self), m_bot).tileHeight();
+        int bx2 = bx1 + Util::GetTownHall(m_bot.GetSelfRace(), m_bot).tileWidth();
+        int by2 = by1 + Util::GetTownHall(m_bot.GetSelfRace(), m_bot).tileHeight();
 
         // conditions for non-overlap are easy
         bool noOverlap = (tx2 < bx1) || (tx1 > bx2) || (ty2 < by1) || (ty1 > by2);
@@ -258,7 +257,7 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
 bool BuildingPlacer::buildable(const UnitType type, int x, int y) const
 {
     // TODO: doesnt take units on the map into account
-	return m_bot.Map().isBuildable(x, y) && m_bot.Map().canBuildTypeAtPosition(x, y, type) && (playerRace == CCRace::Zerg || !m_bot.Observation()->HasCreep(CCPosition(x,y)));//Remplaced !m_bot.Map().canBuildTypeAtPosition(x, y, b.type)) with isBuildable.
+	return m_bot.Map().isBuildable(x, y) && m_bot.Map().canBuildTypeAtPosition(x, y, type) && (m_bot.GetSelfRace() == CCRace::Zerg || !m_bot.Observation()->HasCreep(CCPosition(x,y)));//Remplaced !m_bot.Map().canBuildTypeAtPosition(x, y, b.type)) with isBuildable.
 }
 
 void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)
