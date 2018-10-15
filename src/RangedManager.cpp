@@ -195,10 +195,15 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 			float dist = Util::Dist(rangedUnit->pos, goal);
 			if(dist > 10.f)
-				Micro::SmartMove(rangedUnit, goal, m_bot);
+			{
+				if(m_bot.Strategy().shouldFocusBuildings())
+					Micro::SmartAttackMove(rangedUnit, goal, m_bot);
+				else
+					Micro::SmartMove(rangedUnit, goal, m_bot);
+			}
 			else
 			{
-				if(dist < 5.f && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+				if(rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && dist < 5.f && m_order.getType() != SquadOrderTypes::Defend)
 					Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, m_bot);
 				else
 					Micro::SmartAttackMove(rangedUnit, goal, m_bot);

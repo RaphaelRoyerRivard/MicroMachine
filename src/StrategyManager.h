@@ -45,6 +45,7 @@ class StrategyManager
 	bool m_shouldProduceAntiAir = false;
 	bool m_enemyHasMetabolicBoost = false;
 	bool m_enemyHasFlyingCombatUnit = false;
+	bool m_focusBuildings = false;
 
     bool  shouldExpandNow() const;
     const UnitPairVector getProtossBuildOrderGoal() const;
@@ -72,4 +73,6 @@ public:
 	void setShouldProduceAntiAir(bool shouldProduceAntiAir) { m_shouldProduceAntiAir = shouldProduceAntiAir; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
+	bool shouldFocusBuildings() const { return m_focusBuildings; }
+	void setFocusBuildings(bool focusBuildings) { m_focusBuildings = focusBuildings; }
 };
