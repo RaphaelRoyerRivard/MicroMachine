@@ -26,6 +26,50 @@ void ProductionManager::onStart()
     setBuildOrder(m_bot.Strategy().getOpeningBookBuildOrder());
 	supplyProvider = Util::GetSupplyProvider(m_bot.GetSelfRace(), m_bot);
 	supplyProviderType = MetaType(supplyProvider, m_bot);
+
+	//Upgrades
+	const std::list<std::list<MetaType>> terranUpgrades = {
+		{ MetaTypeEnum::TerranInfantryWeaponsLevel1, MetaTypeEnum::TerranInfantryWeaponsLevel2, MetaTypeEnum::TerranInfantryWeaponsLevel3 },
+		{ MetaTypeEnum::TerranInfantryArmorsLevel1, MetaTypeEnum::TerranInfantryArmorsLevel2, MetaTypeEnum::TerranInfantryArmorsLevel3 },
+		{ MetaTypeEnum::TerranVehicleWeaponsLevel1, MetaTypeEnum::TerranVehicleWeaponsLevel2, MetaTypeEnum::TerranVehicleWeaponsLevel3 },
+		{ MetaTypeEnum::TerranShipWeaponsLevel1, MetaTypeEnum::TerranShipWeaponsLevel2, MetaTypeEnum::TerranShipWeaponsLevel3 },
+		{ MetaTypeEnum::TerranVehicleAndShipArmorsLevel1, MetaTypeEnum::TerranVehicleAndShipArmorsLevel2, MetaTypeEnum::TerranVehicleAndShipArmorsLevel3 },
+	};
+
+	const std::list<std::list<MetaType>> protossUpgrades = {
+		{ MetaTypeEnum::ProtossGroundWeaponsLevel1, MetaTypeEnum::ProtossGroundWeaponsLevel2, MetaTypeEnum::ProtossGroundWeaponsLevel3 },
+		{ MetaTypeEnum::ProtossGroundArmorsLevel1, MetaTypeEnum::ProtossGroundArmorsLevel2, MetaTypeEnum::ProtossGroundArmorsLevel3 },
+		{ MetaTypeEnum::ProtossAirWeaponsLevel1, MetaTypeEnum::ProtossAirWeaponsLevel2, MetaTypeEnum::ProtossAirWeaponsLevel3 },
+		{ MetaTypeEnum::ProtossAirArmorsLevel1, MetaTypeEnum::ProtossAirArmorsLevel2, MetaTypeEnum::ProtossAirArmorsLevel3 },
+		{ MetaTypeEnum::ProtossShieldsLevel1, MetaTypeEnum::ProtossShieldsLevel2, MetaTypeEnum::ProtossShieldsLevel3 },
+	};
+
+	const std::list<std::list<MetaType>> zergUpgrades = {
+		{ MetaTypeEnum::ZergMeleeWeaponsLevel1, MetaTypeEnum::ZergMeleeWeaponsLevel2, MetaTypeEnum::ZergMeleeWeaponsLevel3 },
+		{ MetaTypeEnum::ZergMissileWeaponsLevel1, MetaTypeEnum::ZergMissileWeaponsLevel2, MetaTypeEnum::ZergMissileWeaponsLevel3 },
+		{ MetaTypeEnum::ZergGroundArmorsLevel1, MetaTypeEnum::ZergGroundArmorsLevel2, MetaTypeEnum::ZergGroundArmorsLevel3 },
+		{ MetaTypeEnum::ZergFlyerWeaponsLevel1, MetaTypeEnum::ZergFlyerWeaponsLevel2, MetaTypeEnum::ZergFlyerWeaponsLevel3 },
+		{ MetaTypeEnum::ZergFlyerArmorsLevel1, MetaTypeEnum::ZergFlyerArmorsLevel2, MetaTypeEnum::ZergFlyerArmorsLevel3 },
+	};
+
+	switch (m_bot.GetSelfRace())
+	{
+		case CCRace::Terran:
+		{
+			possibleUpgrades = terranUpgrades;
+			break;
+		}
+		case CCRace::Protoss:
+		{
+			possibleUpgrades = protossUpgrades;
+			break;
+		}
+		case CCRace::Zerg:
+		{
+			possibleUpgrades = zergUpgrades;
+			break;
+		}
+	}
 }
 
 void ProductionManager::onFrame()
@@ -301,12 +345,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (bansheeCount + vikingCount >= 5)
 				{
-					auto metaTypeShipWeapon = getUpgradeMetaType(MetaTypeEnum::TerranShipWeaponsLevel1);
-					if (std::find(startedUpgrades.begin(), startedUpgrades.end(), metaTypeShipWeapon) == startedUpgrades.end())
-					{
-						m_queue.queueAsLowestPriority(metaTypeShipWeapon, false);
-						startedUpgrades.push_back(metaTypeShipWeapon);
-					}
+					auto metaTypeShipArmor = queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
+				}
+
+				int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
+				if (reaperCount > 3)
+				{
+					auto metaTypeInfantryWeapon = queueUpgrade(MetaTypeEnum::TerranInfantryWeaponsLevel1);
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
@@ -379,6 +424,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::InfernalPreIgniter, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::InfernalPreIgniter);
 				}
+
+				auto vehiculeUpgrade = queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
 				
 				if (!m_queue.contains(MetaTypeEnum::Hellion))
 				{
@@ -395,15 +442,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 
-				int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
-				int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Viking))
 				{
+					int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
+					int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 					if (vikingCount < 2 * bansheeCount)
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
 				}
+
 				break;
 			}
 			case StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER:
@@ -522,12 +570,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if(bansheeCount + vikingCount >= 5)
 				{
-					auto metaTypeShipWeapon = getUpgradeMetaType(MetaTypeEnum::TerranShipWeaponsLevel1);
-					if (std::find(startedUpgrades.begin(), startedUpgrades.end(), metaTypeShipWeapon) == startedUpgrades.end())
-					{
-						m_queue.queueAsLowestPriority(metaTypeShipWeapon, false);
-						startedUpgrades.push_back(metaTypeShipWeapon);
-					}
+					auto metaTypeShipWeapon = queueUpgrade(MetaTypeEnum::TerranShipWeaponsLevel1);
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
@@ -618,19 +661,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				auto infantryUpgrade = getUpgradeMetaType(MetaTypeEnum::TerranInfantryWeaponsLevel1);
-				if (!m_queue.contains(infantryUpgrade) && std::find(startedUpgrades.begin(), startedUpgrades.end(), infantryUpgrade) == startedUpgrades.end())
-				{
-					m_queue.queueItem(BuildOrderItem(infantryUpgrade, 0, false));
-					startedUpgrades.push_back(infantryUpgrade);
-				}
-
-				auto vehiculeUpgrade = getUpgradeMetaType(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
-				if (!m_queue.contains(vehiculeUpgrade) && std::find(startedUpgrades.begin(), startedUpgrades.end(), vehiculeUpgrade) == startedUpgrades.end())
-				{
-					m_queue.queueItem(BuildOrderItem(vehiculeUpgrade, 0, false));
-					startedUpgrades.push_back(vehiculeUpgrade);
-				}
+				auto infantryUpgrade = queueUpgrade(MetaTypeEnum::TerranInfantryWeaponsLevel1);
+				auto vehiculeUpgrade = queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
 				break;
 			}
 			default:
@@ -1127,87 +1159,58 @@ std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
 	return trainers;
 }
 
-MetaType ProductionManager::getUpgradeMetaType(const MetaType type) const
+MetaType ProductionManager::queueUpgrade(const MetaType type)
 {
-	const std::list<std::list<MetaType>> terranUpgrades = {
-		{ MetaTypeEnum::TerranInfantryWeaponsLevel1, MetaTypeEnum::TerranInfantryWeaponsLevel2, MetaTypeEnum::TerranInfantryWeaponsLevel3 },
-		{ MetaTypeEnum::TerranInfantryArmorsLevel1, MetaTypeEnum::TerranInfantryArmorsLevel2, MetaTypeEnum::TerranInfantryArmorsLevel3 },
-		{ MetaTypeEnum::TerranVehicleWeaponsLevel1, MetaTypeEnum::TerranVehicleWeaponsLevel2, MetaTypeEnum::TerranVehicleWeaponsLevel3 },
-		{ MetaTypeEnum::TerranShipWeaponsLevel1, MetaTypeEnum::TerranShipWeaponsLevel2, MetaTypeEnum::TerranShipWeaponsLevel3 },
-		{ MetaTypeEnum::TerranVehicleAndShipArmorsLevel1, MetaTypeEnum::TerranVehicleAndShipArmorsLevel2, MetaTypeEnum::TerranVehicleAndShipArmorsLevel3 },
-	};
+	auto previousUpgradeName = std::string();
+	auto upgradeName = type.getName();
+	bool started = false;
+	bool categoryFound = false;
 
-	const std::list<std::list<MetaType>> protossUpgrades = {
-		{ MetaTypeEnum::ProtossGroundWeaponsLevel1, MetaTypeEnum::ProtossGroundWeaponsLevel2, MetaTypeEnum::ProtossGroundWeaponsLevel3 },
-		{ MetaTypeEnum::ProtossGroundArmorsLevel1, MetaTypeEnum::ProtossGroundArmorsLevel2, MetaTypeEnum::ProtossGroundArmorsLevel3 },
-		{ MetaTypeEnum::ProtossAirWeaponsLevel1, MetaTypeEnum::ProtossAirWeaponsLevel2, MetaTypeEnum::ProtossAirWeaponsLevel3 },
-		{ MetaTypeEnum::ProtossAirArmorsLevel1, MetaTypeEnum::ProtossAirArmorsLevel2, MetaTypeEnum::ProtossAirArmorsLevel3 },
-		{ MetaTypeEnum::ProtossShieldsLevel1, MetaTypeEnum::ProtossShieldsLevel2, MetaTypeEnum::ProtossShieldsLevel3 },
-	};
-
-	const std::list<std::list<MetaType>> zergUpgrades = {
-		{ MetaTypeEnum::ZergMeleeWeaponsLevel1, MetaTypeEnum::ZergMeleeWeaponsLevel2, MetaTypeEnum::ZergMeleeWeaponsLevel3 },
-		{ MetaTypeEnum::ZergMissileWeaponsLevel1, MetaTypeEnum::ZergMissileWeaponsLevel2, MetaTypeEnum::ZergMissileWeaponsLevel3 },
-		{ MetaTypeEnum::ZergGroundArmorsLevel1, MetaTypeEnum::ZergGroundArmorsLevel2, MetaTypeEnum::ZergGroundArmorsLevel3 },
-		{ MetaTypeEnum::ZergFlyerWeaponsLevel1, MetaTypeEnum::ZergFlyerWeaponsLevel2, MetaTypeEnum::ZergFlyerWeaponsLevel3 },
-		{ MetaTypeEnum::ZergFlyerArmorsLevel1, MetaTypeEnum::ZergFlyerArmorsLevel2, MetaTypeEnum::ZergFlyerArmorsLevel3 },
-	};
-
-	std::list<std::list<MetaType>> upgrades;
-	switch (m_bot.GetSelfRace())
+	for (auto & upCategory : possibleUpgrades)
 	{
-		case CCRace::Terran:
+		for (auto & potentialUpgrade : upCategory)
 		{
-			upgrades = terranUpgrades;
-			break;
-		}
-		case CCRace::Protoss:
-		{
-			upgrades = protossUpgrades;
-			break;
-		}
-		case CCRace::Zerg:
-		{
-			upgrades = zergUpgrades;
-			break;
-		}
-	}
-
-	bool found = false;
-	for (auto upCategory : upgrades)
-	{
-		for (auto upgrade : upCategory)
-		{
-			if (found)
+			if (started)
 			{
-				return upgrade;
+				previousUpgradeName = upgradeName;
+				upgradeName = potentialUpgrade.getName();
+				started = false;
 			}
-			if (upgrade.getName().compare(type.getName()) == 0)//Equals
+			if (potentialUpgrade.getName().compare(upgradeName) == 0)//Equals
 			{
-				bool started = false;
+				categoryFound = true;
+
 				for (auto startedUpgrade : startedUpgrades)//If startedUpgrades.contains
 				{
-					if (startedUpgrade.getName().compare(type.getName()) == 0)
+					if (startedUpgrade.getName().compare(upgradeName) == 0)
 					{
 						started = true;
+						previousUpgradeName = potentialUpgrade.getName();
 						break;
 					}
 				}
 				if (!started)//if not started, return it.
 				{
-					return type;
+					//Can't merge both if since [empty] isn't a MetaType.
+					if (previousUpgradeName.empty() || !m_queue.contains(MetaType(previousUpgradeName, m_bot)))
+					{
+						if (potentialUpgrade.getName() != "MetaType")//If we found the right category, and we haven't done all the upgrades.
+						{
+							m_queue.queueAsLowestPriority(potentialUpgrade, false);
+							startedUpgrades.push_back(potentialUpgrade);
+							return potentialUpgrade;
+						}
+					}
+					//Did not finish previous upgrade.
 				}
 				//if started, return the next one.
-				found = true;
 			}
 		}
-		if (found)
-		{//Found, but it was level 3.
-			assert("Upgrade level 4 doesn't exist.");
+		if (categoryFound)
+		{
+			break;
 		}
 	}
-	assert("Upgrade wasn't found.");
-
 	return {};
 }
 
