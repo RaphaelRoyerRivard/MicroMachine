@@ -699,6 +699,8 @@ CCPosition CombatCommander::getMainAttackLocation()
     {
         if (enemyUnit.getType().isBuilding() && enemyUnit.isAlive() && enemyUnit.getUnitPtr()->display_type != sc2::Unit::Hidden)
         {
+			if (enemyUnit.getType().isCreepTumor())
+				continue;
 			float dist = Util::Dist(enemyUnit, harassSquadCenter);
 			if(lowestDistance < 0 || dist < lowestDistance)
 			{
@@ -719,6 +721,8 @@ CCPosition CombatCommander::getMainAttackLocation()
 	{
         if (!enemyUnit.getType().isOverlord() && enemyUnit.isAlive() && enemyUnit.getUnitPtr()->display_type != sc2::Unit::Hidden)
         {
+			if (enemyUnit.getType().isCreepTumor())
+				continue;
 			float dist = Util::Dist(enemyUnit, harassSquadCenter);
 			if (lowestDistance < 0 || dist < lowestDistance)
 			{

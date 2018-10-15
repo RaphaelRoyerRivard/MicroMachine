@@ -45,6 +45,7 @@ public:
     bool isMineral() const;
     bool isWorker() const;
 	bool isMule() const;
+	bool isCreepTumor() const;
     bool isMorphedBuilding() const;
     bool isAttackingBuilding() const;
     bool canAttack() const;

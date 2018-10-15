@@ -261,6 +261,11 @@ bool UnitType::isMule() const
 	return m_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MULE;
 }
 
+bool UnitType::isCreepTumor() const
+{
+	return m_type.ToType() == sc2::UNIT_TYPEID::ZERG_CREEPTUMOR || m_type.ToType() == sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN || m_type.ToType() == sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED;
+}
+
 CCPositionType UnitType::getAttackRange() const
 {
 #ifdef SC2API
