@@ -22,7 +22,7 @@ void WorkerManager::onFrame()
 	handleMineralWorkers();
     handleGasWorkers();
     handleIdleWorkers();
-	everySoOften();
+	lowPriorityChecks();
 
     drawResourceDebugInfo();
     drawWorkerInformation();
@@ -242,7 +242,7 @@ void WorkerManager::handleRepairWorkers()
     }
 }
 
-void WorkerManager::everySoOften()
+void WorkerManager::lowPriorityChecks()
 {
 	int currentFrame = m_bot.GetCurrentFrame();
 	if (currentFrame % 60)
@@ -257,62 +257,74 @@ void WorkerManager::everySoOften()
 	}
 	auto workers = getWorkers();
 	WorkerData workerData = m_bot.Workers().getWorkerData();
-	auto & bases = m_bot.Bases().getBaseLocations();
+	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 	std::vector<Unit> dispatchedWorkers;
 	for (auto & base : bases)
 	{
-		if (base->isOccupiedByPlayer(Players::Self))
+		//calculate optimal worker count
+		int optimalWorkers = 0;
+		auto minerals = base->getMinerals();
+		for(auto mineral : minerals)
 		{
-			int workerCount = getWorkerCountAtBasePosition(base->getPosition());
-			int optimalWorkers = base->getMinerals().size() * 2;
-			if (workerCount > optimalWorkers)
+			if (mineral.getUnitPtr()->mineral_contents > 50)//at 50, its basically empty. We can transfer the workers.
 			{
-				int extra = workerCount - optimalWorkers;
-				for (auto & worker : workers)//TODO order by closest to the target base location
+				optimalWorkers += 2;
+			}
+		}
+
+		auto depot = getDepotAtBasePosition(base->getPosition());
+		int workerCount = m_workerData.getNumAssignedWorkers(depot);
+		if (workerCount > optimalWorkers)
+		{
+			int extra = workerCount - optimalWorkers;
+			for (auto & worker : workers)//TODO order by closest to the target base location
+			{
+				if (m_bot.Workers().isFree(worker) && m_workerData.getWorkerDepot(worker).getID() == depot.getID())
 				{
-					if (m_bot.Workers().isFree(worker) && !worker.getType().isMule() && base->containsPosition(worker.getPosition()))
+					dispatchedWorkers.push_back(worker);
+					extra--;
+					if (extra <= 0)
 					{
-						dispatchedWorkers.push_back(worker);
-						extra--;
-						if (extra <= 0)
-						{
-							break;
-						}
+						break;
 					}
 				}
 			}
 		}
 	}
-	for (auto & base : bases)//Dispatch workers to bases missing some
-	{
-		if (base->isOccupiedByPlayer(Players::Self))
-		{
-			int workerCount = getWorkerCountAtBasePosition(base->getPosition());
-			int optimalWorkers = base->getMinerals().size() * 2;
-			if (workerCount < optimalWorkers)
-			{
-				int needed = optimalWorkers - workerCount;
-				int moved = 0;
-				for (int i = 0; i < dispatchedWorkers.size(); i++)//TODO order by closest again
-				{
-					auto basePosition = base->getPosition();
-					m_workerData.setWorkerJob(dispatchedWorkers[i], WorkerJobs::Minerals, getDepotAtBasePosition(basePosition), true);
-					moved++;
-					if (moved >= needed)
-					{
-						break;
-					}
-				}
 
-				//remove dispatched workers
-				for (int i = 0; i < moved; i++)
-				{
-					dispatchedWorkers.erase(dispatchedWorkers.begin());
-				}
-				if (dispatchedWorkers.empty())
+	//Dispatch workers to bases missing some
+	for (auto & base : bases)
+	{
+		auto depot = getDepotAtBasePosition(base->getPosition());
+		if (depot.isBeingConstructed())
+		{
+			continue;
+		}
+
+		int workerCount = m_workerData.getNumAssignedWorkers(depot);
+		int optimalWorkers = base->getMinerals().size() * 2;
+		if (workerCount < optimalWorkers)
+		{
+			int needed = optimalWorkers - workerCount;
+			int moved = 0;
+			for (int i = 0; i < dispatchedWorkers.size(); i++)//TODO order by closest again
+			{
+				m_workerData.setWorkerJob(dispatchedWorkers[i], WorkerJobs::Minerals, depot, true);
+				moved++;
+				if (moved >= needed)
 				{
 					break;
 				}
+			}
+
+			//remove dispatched workers
+			for (int i = 0; i < moved; i++)
+			{
+				dispatchedWorkers.erase(dispatchedWorkers.begin());
+			}
+			if (dispatchedWorkers.empty())
+			{
+				break;
 			}
 		}
 	}
@@ -529,22 +541,7 @@ Unit WorkerManager::getDepotAtBasePosition(CCPosition basePosition) const
 
 int WorkerManager::getWorkerCountAtBasePosition(CCPosition basePosition) const
 {
-	// for each unit on the map, update which base location it may be occupying
-	for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
-	{
-		// we only care about buildings on the ground
-		if (!unit.getType().isBuilding() || unit.isFlying() || !unit.getType().isResourceDepot())
-		{
-			continue;
-		}
-		BaseLocation * baseLocation = m_bot.Bases().getBaseLocation(unit.getPosition());
-		if (baseLocation->getPosition().x == basePosition.x && baseLocation->getPosition().y == basePosition.y)
-		{
-			Unit depot = unit;
-			return m_bot.Workers().getWorkerData().getCountWorkerAtDepot(depot);
-		}
-	}
-	return -1;
+	return m_bot.Workers().getWorkerData().getCountWorkerAtDepot(getDepotAtBasePosition(basePosition));
 }
 
 void WorkerManager::setBuildingWorker(Unit worker)

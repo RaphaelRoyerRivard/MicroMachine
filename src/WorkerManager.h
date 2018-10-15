@@ -19,7 +19,7 @@ class WorkerManager
     void handleGasWorkers();
 	void handleIdleWorkers();
     void handleRepairWorkers();
-	void everySoOften();
+	void lowPriorityChecks();
 
 public:
 

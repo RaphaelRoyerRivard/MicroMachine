@@ -9,6 +9,7 @@ class BaseLocation;
 class BuildingPlacer
 {
     CCBot & m_bot;
+	CCRace playerRace;
 
     std::vector< std::vector<bool> > m_reserveMap;
 
