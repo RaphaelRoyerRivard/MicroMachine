@@ -174,24 +174,23 @@ void BuildingManager::constructAssignedBuildings()
 
         // TODO: not sure if this is the correct way to tell if the building is constructing
         //sc2::AbilityID buildAbility = m_bot.Data(b.type).buildAbility;
-        Unit builderUnit = b.builderUnit;
+		Unit builderUnit = b.builderUnit;
 
-        bool isConstructing = false;
+		// if we're zerg and the builder unit is null, we assume it morphed into the building
+		bool isConstructing = false;
+		if (Util::IsZerg(m_bot.GetSelfRace()))
+		{
+			if (!builderUnit.isValid())
+			{
+				isConstructing = true;
+			}
+		}
+		else
+		{
+			BOT_ASSERT(builderUnit.isValid(), "null builder unit");
 
-        // if we're zerg and the builder unit is null, we assume it morphed into the building
-        if (Util::IsZerg(m_bot.GetSelfRace()))
-        {
-            if (!builderUnit.isValid())
-            {
-                isConstructing = true;
-            }
-        }
-        else
-        {
-            BOT_ASSERT(builderUnit.isValid(), "null builder unit");
-
-            isConstructing = builderUnit.isConstructing(b.type);
-        }
+			isConstructing = builderUnit.isConstructing(b.type);
+		}
 
         // if that worker is not currently constructing
         if (!isConstructing)
@@ -360,6 +359,11 @@ void BuildingManager::checkForDeadTerranBuilders()
     // for each of our buildings under construction
     for (auto & b : m_buildings)
     {
+		if (b.type.isAddon())
+		{
+			continue;
+		}
+
 		// if the building has a builder that died or that is not a builder anymore because of a bug
 		if (b.builderUnit.isValid() && (!b.builderUnit.isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(b.builderUnit) != WorkerJobs::Build))
 		{

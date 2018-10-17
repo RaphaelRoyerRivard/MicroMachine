@@ -49,6 +49,7 @@ const Strategy & StrategyManager::getCurrentStrategy() const
 
 const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 {
+	return StrategyPostBuildOrder::NO_STRATEGY;
 	/*if (m_shouldProduceAntiAir)
 	{
 		return StrategyPostBuildOrder::TERRAN_ANTI_AIR;
