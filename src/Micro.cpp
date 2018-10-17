@@ -16,13 +16,13 @@ void Micro::SmartAttackUnit(const sc2::Unit * attacker, const sc2::Unit * target
 {
     BOT_ASSERT(attacker != nullptr, "Attacker is null");
     BOT_ASSERT(target != nullptr, "Target is null");
-    bot.Actions()->UnitCommand(attacker, sc2::ABILITY_ID::ATTACK_ATTACK, target);
+    bot.Actions()->UnitCommand(attacker, sc2::ABILITY_ID::ATTACK, target);
 }
 
 void Micro::SmartAttackMove(const sc2::Unit * attacker, const sc2::Point2D & targetPosition, CCBot & bot)
 {
     BOT_ASSERT(attacker != nullptr, "Attacker is null");
-    bot.Actions()->UnitCommand(attacker, sc2::ABILITY_ID::ATTACK_ATTACK, targetPosition);
+    bot.Actions()->UnitCommand(attacker, sc2::ABILITY_ID::ATTACK, targetPosition);
 }
 
 void Micro::SmartMove(const sc2::Unit * attacker, const sc2::Point2D & targetPosition, CCBot & bot)

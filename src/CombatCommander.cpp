@@ -33,8 +33,7 @@ void CombatCommander::onStart()
     m_squadData.clearSquadData();
 
     // the squad that consists of units waiting for the squad to be big enough to begin the main attack
-    CCTilePosition nextExpansionPosition = m_bot.Bases().getNextExpansion(Players::Self);
-    SquadOrder idleOrder(SquadOrderTypes::Attack, CCPosition(nextExpansionPosition.x, nextExpansionPosition.y), DefaultOrderRadius, "Prepare for battle");
+    SquadOrder idleOrder(SquadOrderTypes::Idle, CCPosition(), DefaultOrderRadius, "Prepare for battle");
     m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
 	// the harass attack squad that will pressure the enemy's main base workers
@@ -50,7 +49,8 @@ void CombatCommander::onStart()
     m_squadData.addSquad("Backup1", Squad("Backup1", backupSquadOrder, BackupPriority, m_bot));
 
     // the scout defense squad will handle chasing the enemy worker scout
-    SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, m_bot.GetStartLocation(), DefaultOrderRadius, "Chase scout");
+	// the -5 is to prevent enemy workers (during worker rush) to get outside the base defense range
+    SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, m_bot.GetStartLocation(), DefaultOrderRadius - 5, "Chase scout");
     m_squadData.addSquad("ScoutDefense", Squad("ScoutDefense", enemyScoutDefense, ScoutDefensePriority, m_bot));
 }
 
@@ -192,7 +192,8 @@ void CombatCommander::updateBackupSquads()
 void CombatCommander::updateHarassSquads()
 {
 	Squad & harassSquad = m_squadData.getSquad("Harass");
-
+	std::vector<Unit*> idleHellions;
+	std::vector<Unit*> idleBanshees;
 	for (auto & unit : m_combatUnits)
 	{
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
@@ -204,9 +205,28 @@ void CombatCommander::updateHarassSquads()
 			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
 		{
-			m_squadData.assignUnitToSquad(unit, harassSquad);
+			if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION)
+				idleHellions.push_back(&unit);
+			/*else if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
+				idleBanshees.push_back(&unit);*/
+			else
+				m_squadData.assignUnitToSquad(unit, harassSquad);
 		}
 	}
+	if(idleHellions.size() >= 10)
+	{
+		for (auto hellion : idleHellions)
+		{
+			m_squadData.assignUnitToSquad(*hellion, harassSquad);
+		}
+	}
+	/*if (idleBanshees.size() >= 3)
+	{
+		for (auto banshee : idleBanshees)
+		{
+			m_squadData.assignUnitToSquad(*banshee, harassSquad);
+		}
+	}*/
 
 	if (harassSquad.getUnits().empty())
 		return;
@@ -498,7 +518,7 @@ void CombatCommander::updateDefenseSquads()
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
 				}
 				else if(!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
-					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);	//TODO do not lift if we actually have no combat unit nor in production (otherwise it's BM)
 			}
 		}
     }
@@ -533,10 +553,9 @@ void CombatCommander::updateDefenseSquads()
     }
 }
 
-void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t & flyingDefendersNeeded, const size_t & groundDefendersNeeded, Unit & closestEnemy)
+void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, size_t flyingDefendersNeeded, size_t groundDefendersNeeded, Unit & closestEnemy)
 {
     auto & squadUnits = defenseSquad.getUnits();
-
 
     // if there's nothing left to defend, clear the squad
     if (flyingDefendersNeeded == 0 && groundDefendersNeeded == 0)
@@ -545,9 +564,6 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
         return;
     }
 
-	size_t flyingDefendersNeededLocal = flyingDefendersNeeded;
-	size_t groundDefendersNeededLocal = groundDefendersNeeded;
-    size_t defendersNeeded = flyingDefendersNeeded + groundDefendersNeeded;
     for (auto & unit : squadUnits)
     {
 		// Let injured worker return mining, no need to sacrifice it
@@ -562,27 +578,33 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
 		}
         else if (unit.isAlive())
         {
-			// TODO: right now this will assign arbitrary defenders, change this so that we make sure they can attack air/ground
-			//if(flyingDefendersNeededLocal > 0 && canAttackAir)
-            defendersNeeded--;
+			bool isUseful = (flyingDefendersNeeded > 0 && unit.canAttackAir()) || (groundDefendersNeeded > 0 && unit.canAttackGround());
+			if(!isUseful)
+				defenseSquad.removeUnit(unit);
         }
     }
 
-    size_t defendersAdded = 0;
-    while (defendersNeeded > defendersAdded)
-    {
-        Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy);
+	if (flyingDefendersNeeded > 0)
+	{
+		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "air");
 
-        if (defenderToAdd.isValid())
-        {
-            m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
-            defendersAdded++;
-        }
-        else
-        {
-            break;
-        }
-    }
+		while(defenderToAdd.isValid())
+		{
+			m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
+			defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "air");
+		}
+	}
+
+	if (groundDefendersNeeded > 0)
+	{
+		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "ground");
+
+		while (defenderToAdd.isValid())
+		{
+			m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
+			defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "ground");
+		}
+	}
 }
 
 void CombatCommander::checkUnitsState()
@@ -643,7 +665,7 @@ void CombatCommander::checkUnitsState()
 	}
 }
 
-Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy)
+Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type)
 {
     Unit closestDefender;
     float minDistance = std::numeric_limits<float>::max();
@@ -651,6 +673,11 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     for (auto & unit : m_combatUnits)
     {
         BOT_ASSERT(unit.isValid(), "null combat unit");
+
+		if (type == "air" && !unit.canAttackAir())
+			continue;
+		if (type == "ground" && !unit.canAttackGround())
+			continue;
 
         if (!m_squadData.canAssignUnitToSquad(unit, defenseSquad))
         {
@@ -672,7 +699,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
         }
     }
 
-    if (!closestDefender.isValid())
+    if (!closestDefender.isValid() && type == "ground")
     {
         // we search for worker to defend.
         closestDefender = findWorkerToAssignToSquad(defenseSquad, pos, closestEnemy);
@@ -731,6 +758,8 @@ CCPosition CombatCommander::getMainAttackLocation()
         // If the enemy base hasn't been seen yet, go there.
         if (!m_bot.Map().isExplored(enemyBasePosition))
         {
+			if (m_bot.GetCurrentFrame() % 25 == 0)
+				std::cout << m_bot.GetCurrentFrame() << ": Unexplored enemy base" << std::endl;
             return enemyBasePosition;
         }
         else
@@ -740,34 +769,69 @@ CCPosition CombatCommander::getMainAttackLocation()
             {
                 if (enemyUnit.getType().isBuilding() && Util::Dist(enemyUnit, enemyBasePosition) < 15)
                 {
+					if (m_bot.GetCurrentFrame() % 25 == 0)
+						std::cout << m_bot.GetCurrentFrame() << ": Visible enemy building" << std::endl;
                     return enemyBasePosition;
                 }
             }
         }
     }
 
+	if(!m_bot.Strategy().shouldFocusBuildings())
+	{
+		m_bot.Actions()->SendChat("Looks like you lost your main base, time to conceed? :)");
+		m_bot.Actions()->SendChat("Entering Derp mode... sorry for the glitches to come");
+		m_bot.Strategy().setFocusBuildings(true);
+	}
+
+	CCPosition harassSquadCenter = m_squadData.getSquad("Harass").calcCenter();
+	float lowestDistance = -1.f;
+	CCPosition closestEnemyPosition;
+
     // Second choice: Attack known enemy buildings
 	Squad& harassSquad = m_squadData.getSquad("Harass");
     for (const auto & enemyUnit : harassSquad.getTargets())
     {
-        if (enemyUnit.getType().isBuilding() && enemyUnit.isAlive())
+        if (enemyUnit.getType().isBuilding() && enemyUnit.isAlive() && enemyUnit.getUnitPtr()->display_type != sc2::Unit::Hidden)
         {
-			CCPosition mainAttackSquadCenter = m_squadData.getSquad("MainAttack").calcCenter();
-			if(Util::Dist(mainAttackSquadCenter, enemyUnit.getPosition()) > 3)
+			if (enemyUnit.getType().isCreepTumor())
+				continue;
+			float dist = Util::Dist(enemyUnit, harassSquadCenter);
+			if(lowestDistance < 0 || dist < lowestDistance)
 			{
-				return enemyUnit.getPosition();
+				lowestDistance = dist;
+				closestEnemyPosition = enemyUnit.getPosition();
 			}
         }
     }
+	if (lowestDistance >= 0.f)
+	{
+		if (m_bot.GetCurrentFrame() % 25 == 0)
+			std::cout << m_bot.GetCurrentFrame() << ": Memory enemy building" << std::endl;
+		return closestEnemyPosition;
+	}
 
     // Third choice: Attack visible enemy units that aren't overlords
 	for (const auto & enemyUnit : harassSquad.getTargets())
 	{
-        if (!enemyUnit.getType().isOverlord())
+        if (!enemyUnit.getType().isOverlord() && enemyUnit.isAlive() && enemyUnit.getUnitPtr()->display_type != sc2::Unit::Hidden)
         {
-            return enemyUnit.getPosition();
+			if (enemyUnit.getType().isCreepTumor())
+				continue;
+			float dist = Util::Dist(enemyUnit, harassSquadCenter);
+			if (lowestDistance < 0 || dist < lowestDistance)
+			{
+				lowestDistance = dist;
+				closestEnemyPosition = enemyUnit.getPosition();
+			}
         }
     }
+	if (lowestDistance >= 0.f)
+	{
+		if (m_bot.GetCurrentFrame() % 25 == 0)
+			std::cout << m_bot.GetCurrentFrame() << ": Memory enemy unit" << std::endl;
+		return closestEnemyPosition;
+	}
 
     // Fourth choice: We can't see anything so explore the map attacking along the way
 	return exploreMap();
@@ -781,8 +845,12 @@ CCPosition CombatCommander::exploreMap()
 		if (Util::Dist(unit.getPosition(), basePosition) < 3.f)
 		{
 			m_currentBaseExplorationIndex = (m_currentBaseExplorationIndex + 1) % m_bot.Bases().getBaseLocations().size();
+			if (m_bot.GetCurrentFrame() % 25 == 0)
+				std::cout << m_bot.GetCurrentFrame() << ": Explore map, base index increased to " << m_currentBaseExplorationIndex << std::endl;
 			return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
 		}
 	}
+	if (m_bot.GetCurrentFrame() % 25 == 0)
+		std::cout << m_bot.GetCurrentFrame() << ": Explore map, base index " << m_currentBaseExplorationIndex << std::endl;
 	return basePosition;
 }

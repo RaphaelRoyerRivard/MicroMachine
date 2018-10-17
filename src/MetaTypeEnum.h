@@ -50,6 +50,7 @@ class MetaTypeEnum
 		static MetaType TerranVehicleAndShipArmorsLevel1;
 		static MetaType TerranVehicleAndShipArmorsLevel2;
 		static MetaType TerranVehicleAndShipArmorsLevel3;
+		static MetaType Stimpack;
 		static MetaType InfernalPreIgniter;
 
 		//PROTOSS

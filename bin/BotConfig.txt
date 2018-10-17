@@ -72,7 +72,7 @@
 		"AllowKeyControl"			: true,
 		
         "DrawGameInfo"              : false, 
-        "DrawProductionInfo"        : false, 
+        "DrawProductionInfo"        : true, 
         "DrawBaseLocationInfo"      : false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
@@ -85,7 +85,7 @@
         "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
-        "DrawUnitPowerInfo"         : false,
+        "DrawUnitPowerInfo"         : true,
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,

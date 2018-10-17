@@ -46,6 +46,7 @@ class StrategyManager
 	bool m_enemyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
 	bool m_enemyHasFlyingCombatUnit = false;
+	bool m_focusBuildings = false;
 
     bool  shouldExpandNow() const;
     const UnitPairVector getProtossBuildOrderGoal() const;
@@ -75,4 +76,6 @@ public:
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
+	bool shouldFocusBuildings() const { return m_focusBuildings; }
+	void setFocusBuildings(bool focusBuildings) { m_focusBuildings = focusBuildings; }
 };

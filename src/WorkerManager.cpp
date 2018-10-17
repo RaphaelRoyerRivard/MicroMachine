@@ -310,7 +310,8 @@ void WorkerManager::repairCombatBuildings()
 
 void WorkerManager::lowPriorityChecks()
 {
-	if (m_bot.GetCurrentFrame() % 60)
+	int currentFrame = m_bot.GetCurrentFrame();
+	if (currentFrame % 60)
 	{
 		return;
 	}

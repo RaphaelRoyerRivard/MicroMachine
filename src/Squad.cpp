@@ -90,6 +90,8 @@ void Squad::onFrame()
             m_meleeManager.setTargets(targets);
             m_rangedManager.setTargets(targets);
 
+			m_targets = targets;
+
             //TODO remove the order dependancy
             m_meleeManager.setOrder(m_order);
             m_rangedManager.setOrder(m_order);
@@ -123,8 +125,6 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 
 		if (!enemyUnit.isValid())
 			continue;
-		/*if (!enemyUnit.isCompleted())
-			continue;*/
 		if (!enemyUnit.isAlive())
 			continue;
 		if (enemyUnit.getHitPoints() <= 0.f)	// Just in case isAlive does not work
@@ -149,12 +149,8 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (m_order.getType() == SquadOrderTypes::Defend)
 		{
 			addUnit = Util::Dist(enemyUnit, m_order.getPosition()) < m_order.getRadius();
-		} // if the order is to attack, we care about units around the center of the squad
-		else if (m_order.getType() == SquadOrderTypes::Attack)
-		{
-			addUnit = Util::Dist(enemyUnit, calcCenter()) < m_order.getRadius();
 		} // if the order is to harass, we care about every unit around each of our units
-		else if (m_order.getType() == SquadOrderTypes::Harass)
+		else if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Harass)
 		{
 			for (auto & unit : m_units)
 			{

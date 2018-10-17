@@ -164,6 +164,7 @@ void CCBot::setUnits()
 				{
 					// This is a Wingling!!!
 					m_strategy.setEnemyHasMetabolicBoost(true);
+					Actions()->SendChat("Speedlings won't save you my friend");
 				}
 			}
 			if (!m_strategy.shouldProduceAntiAir())
@@ -180,6 +181,7 @@ void CCBot::setUnits()
 						break;
 					default:
 						m_strategy.setShouldProduceAntiAir(true);
+						Actions()->SendChat("Producing air units eh? Have you met my Vikings?");
 					}
 				}
 
@@ -195,6 +197,7 @@ void CCBot::setUnits()
 				case sc2::UNIT_TYPEID::ZERG_HIVE:
 				case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS:
 					m_strategy.setShouldProduceAntiAir(true);
+					Actions()->SendChat("You are finally ready to produce air units :o took you long enough");
 				default:
 					break;
 				}
