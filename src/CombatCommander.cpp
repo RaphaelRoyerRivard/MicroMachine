@@ -79,6 +79,31 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		updateAttackSquads();
         updateBackupSquads();
     }
+
+	lowPriorityCheck();
+	checkUnitsState();
+}
+
+void CombatCommander::lowPriorityCheck()
+{
+	auto frame = m_bot.GetGameLoop();
+	if (frame % 5)
+	{
+		return;
+	}
+
+	std::vector<Unit> toRemove;
+	for (auto sighting : m_invisibleSighting)
+	{
+		if (frame + FRAME_BEFORE_SIGHTING_INVALIDATED < sighting.second.second)
+		{
+			toRemove.push_back(sighting.first);
+		}
+	}
+	for (auto unit : toRemove)
+	{
+		m_invisibleSighting.erase(unit);
+	}
 }
 
 bool CombatCommander::shouldWeStartAttacking()
@@ -512,7 +537,6 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
 {
     auto & squadUnits = defenseSquad.getUnits();
 
-    // TODO: right now this will assign arbitrary defenders, change this so that we make sure they can attack air/ground
 
     // if there's nothing left to defend, clear the squad
     if (flyingDefendersNeeded == 0 && groundDefendersNeeded == 0)
@@ -521,6 +545,8 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
         return;
     }
 
+	size_t flyingDefendersNeededLocal = flyingDefendersNeeded;
+	size_t groundDefendersNeededLocal = groundDefendersNeeded;
     size_t defendersNeeded = flyingDefendersNeeded + groundDefendersNeeded;
     for (auto & unit : squadUnits)
     {
@@ -536,6 +562,8 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
 		}
         else if (unit.isAlive())
         {
+			// TODO: right now this will assign arbitrary defenders, change this so that we make sure they can attack air/ground
+			//if(flyingDefendersNeededLocal > 0 && canAttackAir)
             defendersNeeded--;
         }
     }
@@ -557,12 +585,68 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, const size_t
     }
 }
 
+void CombatCommander::checkUnitsState()
+{
+	for (auto & state : m_unitStates)
+	{
+		state.second.Reset();
+	}
+
+	for (auto & unit : m_bot.Commander().getValidUnits())
+	{
+		auto tag = unit.getTag();
+
+		auto it = m_unitStates.find(tag);
+		if (it == m_unitStates.end())
+		{
+			UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
+			state.Update();
+			m_unitStates[tag] = state;
+			continue;
+		}
+
+		UnitState & state = it->second;
+		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
+		
+
+		if (state.WasAttacked())
+		{
+			auto threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetEnemyUnits(), m_bot);
+			if (threats.size() == 0 && state.HadRecentTreats())
+			{
+				//Invisible unit detected
+				m_bot.Strategy().setEnemyHasInvisible(true);
+				m_invisibleSighting[unit] = std::pair<CCPosition, uint32_t>(unit.getPosition(), m_bot.GetGameLoop());
+			}
+		}
+		else if (m_bot.GetGameLoop() % 5)
+		{
+			auto threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetEnemyUnits(), m_bot);
+			state.UpdateThreat(threats.size() != 0);
+		}
+	}
+
+	std::vector<CCUnitID> toRemove;
+	for (auto & state : m_unitStates)
+	{
+		if (!state.second.WasUpdated())
+		{
+			//Unit died
+			toRemove.push_back(state.first);
+		}
+	}
+
+	//Remove dead units from the map
+	for (auto & tag : toRemove)
+	{
+		m_unitStates.erase(tag);
+	}
+}
+
 Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy)
 {
     Unit closestDefender;
     float minDistance = std::numeric_limits<float>::max();
-
-    // TODO: add back special case of zergling rush defense
 
     for (auto & unit : m_combatUnits)
     {
@@ -618,13 +702,17 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & woker, const Squad & defen
 	// grab it from the worker manager and put it in the squad, but only if it meets the distance requirements
 	if (woker.isValid() && 
 		m_squadData.canAssignUnitToSquad(woker, defenseSquad) &&
+		!closestEnemy.isFlying() &&
 		Util::Dist(woker, pos) < 15.f &&	// worker should not get too far from base
 		(Util::Dist(woker, closestEnemy) < 7.f ||	// worker can fight only units close to it
 		(closestEnemy.getType().isBuilding() && Util::Dist(closestEnemy, pos) < 12.f)))	// worker can fight buildings somewhat close to the base
-	{
 		return true;
-	}
 	return false;
+}
+
+std::map<Unit, std::pair<CCPosition, uint32_t>> & CombatCommander::GetInvisibleSighting()
+{
+	return m_invisibleSighting;
 }
 
 void CombatCommander::drawSquadInformation()
@@ -640,7 +728,6 @@ CCPosition CombatCommander::getMainAttackLocation()
     if (enemyBaseLocation)
     {
         CCPosition enemyBasePosition = enemyBaseLocation->getPosition();
-
         // If the enemy base hasn't been seen yet, go there.
         if (!m_bot.Map().isExplored(enemyBasePosition))
         {
@@ -660,21 +747,22 @@ CCPosition CombatCommander::getMainAttackLocation()
     }
 
     // Second choice: Attack known enemy buildings
-    for (const auto & kv : m_bot.UnitInfo().getUnitInfoMap(Players::Enemy))
+	Squad& harassSquad = m_squadData.getSquad("Harass");
+    for (const auto & enemyUnit : harassSquad.getTargets())
     {
-        const UnitInfo & ui = kv.second;
-
-        if (m_bot.Data(ui.type).isBuilding && ui.lastHealth > 0.0f && ui.unit.isAlive() && !(ui.lastPosition.x == 0.0f && ui.lastPosition.y == 0.0f))
+        if (enemyUnit.getType().isBuilding() && enemyUnit.isAlive())
         {
 			CCPosition mainAttackSquadCenter = m_squadData.getSquad("MainAttack").calcCenter();
-			if(Util::Dist(mainAttackSquadCenter, ui.lastPosition) > 3)
-				return ui.lastPosition;
+			if(Util::Dist(mainAttackSquadCenter, enemyUnit.getPosition()) > 3)
+			{
+				return enemyUnit.getPosition();
+			}
         }
     }
 
     // Third choice: Attack visible enemy units that aren't overlords
-    for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
-    {
+	for (const auto & enemyUnit : harassSquad.getTargets())
+	{
         if (!enemyUnit.getType().isOverlord())
         {
             return enemyUnit.getPosition();
@@ -692,7 +780,7 @@ CCPosition CombatCommander::exploreMap()
 	{
 		if (Util::Dist(unit.getPosition(), basePosition) < 3.f)
 		{
-			m_currentBaseExplorationIndex = m_currentBaseExplorationIndex + 1 % m_bot.Bases().getBaseLocations().size();
+			m_currentBaseExplorationIndex = (m_currentBaseExplorationIndex + 1) % m_bot.Bases().getBaseLocations().size();
 			return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
 		}
 	}

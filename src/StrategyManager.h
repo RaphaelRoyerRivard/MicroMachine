@@ -43,6 +43,7 @@ class StrategyManager
     const BuildOrder                m_emptyBuildOrder;
 	bool m_workerRushed = false;
 	bool m_shouldProduceAntiAir = false;
+	bool m_enemyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
 	bool m_enemyHasFlyingCombatUnit = false;
 
@@ -70,6 +71,8 @@ public:
 	void setIsWorkerRushed(bool workerRushed) { m_workerRushed = workerRushed; }
 	bool shouldProduceAntiAir() const { return m_shouldProduceAntiAir; }
 	void setShouldProduceAntiAir(bool shouldProduceAntiAir) { m_shouldProduceAntiAir = shouldProduceAntiAir; }
+	bool enemyHasInvisible() const { return m_enemyHasInvisible; }
+	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
 };

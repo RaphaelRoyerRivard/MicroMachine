@@ -666,7 +666,8 @@ void BuildingManager::castBuildingsAbilities()
 {
 	for (const auto & b : m_baseBuildings)
 	{
-		if (b.getEnergy() <= 0)
+		auto energy = b.getEnergy();
+		if (energy <= 0)
 		{
 			continue;
 		}
@@ -674,7 +675,21 @@ void BuildingManager::castBuildingsAbilities()
 		auto id = b.getType().getAPIUnitType();
 		if (b.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND)
 		{
-			if (b.getEnergy() >= 50)
+			bool hasInvisible = m_bot.Strategy().enemyHasInvisible();
+			//Scan
+			if (hasInvisible)
+			{
+				for (auto sighting : m_bot.Commander().Combat().GetInvisibleSighting())
+				{
+					if (energy >= 50)//TODO: do not scan if no combat unit close by
+					{
+						Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, sighting.second.first, m_bot);
+					}
+				}
+			}
+
+			//Mule
+			if (energy >= 50 && (!hasInvisible || energy >= 100))
 			{
 				auto orbitalPosition = b.getPosition();
 				auto point = getClosestMineral(b.getUnitPtr())->pos;

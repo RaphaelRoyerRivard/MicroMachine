@@ -23,10 +23,8 @@ const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const float HARASS_THREAT_MIN_DISTANCE_TO_TARGET = 2.f;
-const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
-const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
@@ -155,7 +153,7 @@ void RangedManager::setNextCommandFrameAfterAttack(const sc2::Unit* unit)
 	int attackFrameCount = 2;
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
 		attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
-	nextCommandFrameForUnit[unit] = m_bot.Observation()->GetGameLoop() + attackFrameCount;
+	nextCommandFrameForUnit[unit] = m_bot.GetGameLoop() + attackFrameCount;
 }
 
 void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
@@ -174,11 +172,11 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			m_bot.Map().drawText(rangedUnit->pos, std::to_string(rangedUnit->tag));
 		// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 		uint32_t availableFrame = nextCommandFrameForUnit.find(rangedUnit) != nextCommandFrameForUnit.end() ? nextCommandFrameForUnit[rangedUnit] : 0;
-		if (m_bot.Observation()->GetGameLoop() < availableFrame)
+		if (m_bot.GetGameLoop() < availableFrame)
 			continue;
 
 		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
-		sc2::Units threats = getThreats(rangedUnit, rangedUnitTargets);
+		sc2::Units threats = Util::getThreats(rangedUnit, rangedUnitTargets, m_bot);
 
 		// if there is no potential target or threat, move to objective (max distance is not considered when defending)
 		if ((!target || 
@@ -192,7 +190,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 			if (isReaper)
 			{
-				nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
+				nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 			}
 			continue;
 		}
@@ -329,7 +327,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			}
 
 			float dist = Util::Dist(rangedUnit->pos, threat->pos);
-			float totalRange = getThreatRange(rangedUnit, threat);
+			float totalRange = Util::getThreatRange(rangedUnit, threat, m_bot);
 			if (dist < threatRange + 0.5f)
 				useInfluenceMap = true;
 			if (m_bot.Config().DrawHarassInfo)
@@ -477,7 +475,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				Micro::SmartMove(rangedUnit, moveTo, m_bot);
 				if (isReaper)
 				{
-					nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
+					nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 				}
 				continue;
 			}
@@ -489,7 +487,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		Micro::SmartMove(rangedUnit, moveTo, m_bot);
 		if (isReaper)
 		{
-			nextCommandFrameForUnit[rangedUnit] = m_bot.Observation()->GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
+			nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 		}
 	}
 }
@@ -552,7 +550,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 		if ((int)threatRelativePosition.x < 0 || (int)threatRelativePosition.y < 0 || (int)threatRelativePosition.x >= mapWidth || (int)threatRelativePosition.y >= mapHeight)
 			continue;
 
-		float radius = getThreatRange(rangedUnit, threat);
+		float radius = Util::getThreatRange(rangedUnit, threat, m_bot);
 		float intensity = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
 		float fminX = floor(threatRelativePosition.x - radius);
 		float fmaxX = ceil(threatRelativePosition.x + radius);
@@ -817,38 +815,6 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     return bestTarget;
 }
 
-// get threats to our harass unit
-const std::vector<const sc2::Unit *> RangedManager::getThreats(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets)
-{
-	BOT_ASSERT(rangedUnit, "null ranged unit in getThreats");
-
-	std::vector<const sc2::Unit *> threats;
-
-	// for each possible threat
-	for (auto targetUnit : targets)
-	{
-		BOT_ASSERT(targetUnit, "null target unit in getThreats");
-		if (Util::GetDpsForTarget(targetUnit, rangedUnit, m_bot) == 0.f)
-			continue;
-		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
-		//But this is not working so well for melee units, we keep every units in a radius of min threat range
-		float threatRange = getThreatRange(rangedUnit, targetUnit);
-		if (Util::Dist(rangedUnit->pos, targetUnit->pos) < threatRange)
-			threats.push_back(targetUnit);
-	}
-
-	return threats;
-}
-
-//calculate radius max(min range, range + speed + height bonus + small buffer)
-float RangedManager::getThreatRange(const sc2::Unit * rangedUnit, const sc2::Unit * threat)
-{
-	sc2::GameInfo gameInfo = m_bot.Observation()->GetGameInfo();
-	float heightBonus = Util::TerainHeight(gameInfo, threat->pos) > Util::TerainHeight(gameInfo, rangedUnit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
-	float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + HARASS_THREAT_RANGE_BUFFER;
-	return threatRange;
-}
-
 float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target)
 {
     BOT_ASSERT(target, "null unit in getAttackPriority");
@@ -858,7 +824,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 		return 0.f;
 
 	// Ignoring invisible creep tumors
-	const uint32_t lastGameLoop = m_bot.Observation()->GetGameLoop() - 1;
+	const uint32_t lastGameLoop = m_bot.GetGameLoop() - 1;
 	if ((target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMOR
 		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED
 		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN)

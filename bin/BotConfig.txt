@@ -21,7 +21,7 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 10,
+        "EnemyDifficulty"           : 1,
         "EnemyRace"                 : "Protoss",
         "MapFile"                   : "MechDepotLE.SC2Map",
         "StepSize"                  : 1,
@@ -231,10 +231,7 @@
 			"Terran_FastExpand"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV","SupplyDepot","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SCV","SCV","SupplyDepot","CommandCenter","SCV","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SupplyDepot","SCV",
-										"SCV","SCV","CommandCenter","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","CommandCenter","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SCV","SupplyDepot",
-										"SCV","SCV","SCV","SCV","CommandCenter","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","CommandCenter","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SupplyDepot","SCV",
-										"SCV","SCV","SCV","CommandCenter","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV","SCV","SCV","SCV","SCV","SupplyDepot","SCV","SCV"],
+                "OpeningBuildOrder" : ["SCV","SupplyDepot","CommandCenter"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },

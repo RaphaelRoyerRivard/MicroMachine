@@ -20,6 +20,8 @@ class ProductionManager
 	bool firstBarrackBuilt = false;
 	UnitType supplyProvider;
 	MetaType supplyProviderType;
+	UnitType workerType;
+	MetaType workerMetatype;
 
 	MetaType queueUpgrade(const MetaType type);
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;

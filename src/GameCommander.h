@@ -34,9 +34,11 @@ public:
     void onFrame();
 
 	ProductionManager Production() const;
+	CombatCommander Combat() const;
 
     void handleUnitAssignments();
     void setValidUnits();
+	std::vector<Unit> getValidUnits() const;
     void setScoutUnits();
     void setCombatUnits();
 
