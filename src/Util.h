@@ -30,6 +30,9 @@ namespace Util
     float GetDps(const sc2::Unit * unit, CCBot & bot);
     float GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
     float GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot);
+	const std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & m_bot);
+	const std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::map<sc2::Tag, Unit> & targets, CCBot & m_bot);
+	float getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCBot & m_bot);
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
 	float getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
     

@@ -27,6 +27,9 @@ void ProductionManager::onStart()
 	supplyProvider = Util::GetSupplyProvider(m_bot.GetSelfRace(), m_bot);
 	supplyProviderType = MetaType(supplyProvider, m_bot);
 
+	workerType = Util::GetWorkerType(m_bot.GetSelfRace(), m_bot);
+	workerMetatype = MetaType(workerType, m_bot);
+
 	//Upgrades
 	const std::list<std::list<MetaType>> terranUpgrades = {
 		{ MetaTypeEnum::TerranInfantryWeaponsLevel1, MetaTypeEnum::TerranInfantryWeaponsLevel2, MetaTypeEnum::TerranInfantryWeaponsLevel3 },
@@ -137,7 +140,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 			//Build supply depot at ramp against protoss
 			if (m_bot.Observation()->GetFoodCap() <= 15 && currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
-				m_bot.Observation()->GetGameLoop() > 5 && getFreeMinerals() > 30)
+				m_bot.GetGameLoop() > 5 && getFreeMinerals() > 30)
 			{
 				const CCPosition centerMap(m_bot.Map().width() / 2, m_bot.Map().height() / 2);
 				if (!rampSupplyDepotWorker.isValid())
@@ -502,7 +505,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				if (!m_queue.contains(MetaTypeEnum::Stimpack) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::Stimpack) == startedUpgrades.end())
+				if (std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::Stimpack) == startedUpgrades.end() && !m_queue.contains(MetaTypeEnum::Stimpack))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Stimpack, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::Stimpack);
@@ -682,15 +685,18 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 	}
-
-	const int maxWorkers = (23 + 2) * 3;	//23 resource workers + 2 builders per base, maximum of 3 bases.
-	if (m_bot.Workers().getNumWorkers() < maxWorkers && !m_queue.contains(MetaTypeEnum::OrbitalCommand) && currentStrategy != StrategyPostBuildOrder::WORKER_RUSH_DEFENSE)//baseCount * 23
+	
+	const int maxWorkersPerBase = 22;//16 mineral, 6 gas
+	const int maxWorkers = maxWorkersPerBase * 3;//maximum of 3 bases.
+	if (!m_queue.contains(workerMetatype) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))//check queue
 	{
-		auto workerType = Util::GetWorkerType(m_bot.GetSelfRace(), m_bot);
-		const auto metaTypeWorker = MetaType(workerType, m_bot);
-		if (!m_queue.contains(metaTypeWorker))
+		int workerCount = m_bot.Workers().getNumWorkers();
+		if (baseCount * maxWorkersPerBase * 1.25 > workerCount < maxWorkers)//check worker count, max 27 per bases we have
 		{
-			m_queue.queueItem(BuildOrderItem(metaTypeWorker, 2, false));
+			if (currentStrategy != StrategyPostBuildOrder::WORKER_RUSH_DEFENSE)//check strategy
+			{
+				m_queue.queueItem(BuildOrderItem(workerMetatype, 2, false));
+			}
 		}
 	}
 }
@@ -736,7 +742,7 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 
 void ProductionManager::lowPriorityChecks()
 {
-	if (m_bot.Observation()->GetGameLoop() % 10)
+	if (m_bot.GetGameLoop() % 10)
 	{
 		return;
 	}

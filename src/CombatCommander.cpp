@@ -79,6 +79,31 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		updateAttackSquads();
         updateBackupSquads();
     }
+
+	lowPriorityCheck();
+	checkUnitsState();
+}
+
+void CombatCommander::lowPriorityCheck()
+{
+	auto frame = m_bot.GetGameLoop();
+	if (frame % 5)
+	{
+		return;
+	}
+
+	std::vector<Unit> toRemove;
+	for (auto sighting : m_invisibleSighting)
+	{
+		if (frame + FRAME_BEFORE_SIGHTING_INVALIDATED < sighting.second.second)
+		{
+			toRemove.push_back(sighting.first);
+		}
+	}
+	for (auto unit : toRemove)
+	{
+		m_invisibleSighting.erase(unit);
+	}
 }
 
 bool CombatCommander::shouldWeStartAttacking()
@@ -582,6 +607,64 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, size_t flyin
 	}
 }
 
+void CombatCommander::checkUnitsState()
+{
+	for (auto & state : m_unitStates)
+	{
+		state.second.Reset();
+	}
+
+	for (auto & unit : m_bot.Commander().getValidUnits())
+	{
+		auto tag = unit.getTag();
+
+		auto it = m_unitStates.find(tag);
+		if (it == m_unitStates.end())
+		{
+			UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
+			state.Update();
+			m_unitStates[tag] = state;
+			continue;
+		}
+
+		UnitState & state = it->second;
+		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
+		
+
+		if (state.WasAttacked())
+		{
+			auto threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetEnemyUnits(), m_bot);
+			if (threats.size() == 0 && state.HadRecentTreats())
+			{
+				//Invisible unit detected
+				m_bot.Strategy().setEnemyHasInvisible(true);
+				m_invisibleSighting[unit] = std::pair<CCPosition, uint32_t>(unit.getPosition(), m_bot.GetGameLoop());
+			}
+		}
+		else if (m_bot.GetGameLoop() % 5)
+		{
+			auto threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetEnemyUnits(), m_bot);
+			state.UpdateThreat(threats.size() != 0);
+		}
+	}
+
+	std::vector<CCUnitID> toRemove;
+	for (auto & state : m_unitStates)
+	{
+		if (!state.second.WasUpdated())
+		{
+			//Unit died
+			toRemove.push_back(state.first);
+		}
+	}
+
+	//Remove dead units from the map
+	for (auto & tag : toRemove)
+	{
+		m_unitStates.erase(tag);
+	}
+}
+
 Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type)
 {
     Unit closestDefender;
@@ -652,6 +735,11 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & woker, const Squad & defen
 		(closestEnemy.getType().isBuilding() && Util::Dist(closestEnemy, pos) < 12.f)))	// worker can fight buildings somewhat close to the base
 		return true;
 	return false;
+}
+
+std::map<Unit, std::pair<CCPosition, uint32_t>> & CombatCommander::GetInvisibleSighting()
+{
+	return m_invisibleSighting;
 }
 
 void CombatCommander::drawSquadInformation()

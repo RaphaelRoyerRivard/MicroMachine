@@ -80,6 +80,8 @@ void CCBot::OnGameStart() //full start
 
 void CCBot::OnStep()
 {
+	m_gameLoop = Observation()->GetGameLoop();
+
 	checkKeyState();
 
     setUnits();
@@ -144,7 +146,6 @@ void CCBot::setUnits()
     m_allUnits.clear();
 #ifdef SC2API
     Control()->GetObservation();
-	uint32_t step = Observation()->GetGameLoop();
 	bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
     for (auto unitptr : Observation()->GetUnits())
     {
@@ -160,7 +161,7 @@ void CCBot::setUnits()
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
 			// If the enemy zergling was seen last frame
 			if (zergEnemy && !m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
-				&& m_lastSeenUnits.find(unitptr->tag) != m_lastSeenUnits.end() && m_lastSeenUnits[unitptr->tag] == step - 1)
+				&& m_lastSeenUnits.find(unitptr->tag) != m_lastSeenUnits.end() && m_lastSeenUnits[unitptr->tag] == GetGameLoop() - 1)
 			{
 				float dist = Util::Dist(unitptr->pos, m_lastSeenPosUnits[unitptr->tag]);
 				float speed = Util::getSpeedOfUnit(unitptr, *this);
@@ -212,7 +213,7 @@ void CCBot::setUnits()
 		if(unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
         m_allUnits.push_back(Unit(unitptr, *this));
-		m_lastSeenUnits.insert_or_assign(unitptr->tag, step);
+		m_lastSeenUnits.insert_or_assign(unitptr->tag, GetGameLoop());
     }
 #else
     for (auto & unit : BWAPI::Broodwar->getAllUnits())
@@ -220,6 +221,11 @@ void CCBot::setUnits()
         m_allUnits.push_back(Unit(unit, *this));
     }
 #endif
+}
+
+uint32_t CCBot::GetGameLoop() const
+{
+	return m_gameLoop;
 }
 
 CCRace CCBot::GetPlayerRace(int player) const
@@ -287,7 +293,7 @@ const UnitInfoManager & CCBot::UnitInfo() const
 int CCBot::GetCurrentFrame() const
 {
 #ifdef SC2API
-    return (int)Observation()->GetGameLoop();
+    return (int)GetGameLoop();
 #else
     return BWAPI::Broodwar->getFrameCount();
 #endif

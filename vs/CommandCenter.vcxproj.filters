@@ -185,6 +185,9 @@
       <Filter>macro</Filter>
     </ClCompile>
     <ClCompile Include="..\src\StackWalker.cpp" />
+    <ClCompile Include="..\src\UnitState.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CCBot.h" />
@@ -398,6 +401,9 @@
       <Filter>macro</Filter>
     </ClInclude>
     <ClInclude Include="..\src\StackWalker.h" />
+    <ClInclude Include="..\src\UnitState.h">
+      <Filter>micro</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CommandCenter.rc" />

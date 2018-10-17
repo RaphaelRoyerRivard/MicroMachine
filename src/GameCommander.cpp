@@ -51,6 +51,11 @@ ProductionManager GameCommander::Production() const
 	return m_productionManager;
 }
 
+CombatCommander GameCommander::Combat() const
+{
+	return m_combatCommander;
+}
+
 // assigns units to various managers
 void GameCommander::handleUnitAssignments()
 {
@@ -87,6 +92,11 @@ void GameCommander::setValidUnits()
 			continue;
         m_validUnits.push_back(unit);
     }
+}
+
+std::vector<Unit> GameCommander::getValidUnits() const
+{
+	return m_validUnits;
 }
 
 void GameCommander::setScoutUnits()

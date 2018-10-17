@@ -505,6 +505,65 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
     return dps;
 }
 
+// get threats to our harass unit
+const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & m_bot)
+{
+	BOT_ASSERT(unit, "null ranged unit in getThreats");
+
+	std::vector<const sc2::Unit *> threats;
+
+	// for each possible threat
+	for (auto targetUnit : targets)
+	{
+		BOT_ASSERT(targetUnit, "null target unit in getThreats");
+		if (Util::GetDpsForTarget(targetUnit, unit, m_bot) == 0.f)
+			continue;
+		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
+		//But this is not working so well for melee units, we keep every units in a radius of min threat range
+		float threatRange = getThreatRange(unit, targetUnit, m_bot);
+		if (Util::Dist(unit->pos, targetUnit->pos) < threatRange)
+			threats.push_back(targetUnit);
+	}
+
+	return threats;
+}
+
+// get threats to our harass unit
+const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::map<sc2::Tag, Unit> & targets, CCBot & m_bot)
+{
+	BOT_ASSERT(unit, "null ranged unit in getThreats");
+
+	std::vector<const sc2::Unit *> threats;
+
+	// for each possible threat
+	for (auto targetTagUnit : targets)
+	{
+		auto targetUnit = targetTagUnit.second.getUnitPtr();
+		BOT_ASSERT(targetUnit, "null target unit in getThreats");
+		if (Util::GetDpsForTarget(targetUnit, unit, m_bot) == 0.f)
+			continue;
+		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
+		//But this is not working so well for melee units, we keep every units in a radius of min threat range
+		float threatRange = Util::getThreatRange(unit, targetUnit, m_bot);
+		if (Util::Dist(unit->pos, targetUnit->pos) < threatRange)
+			threats.push_back(targetUnit);
+	}
+
+	return threats;
+}
+
+//calculate radius max(min range, range + speed + height bonus + small buffer)
+float Util::getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCBot & m_bot)
+{
+	const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
+	const float HARASS_THREAT_RANGE_BUFFER = 1.f;
+	const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
+	sc2::GameInfo gameInfo = m_bot.Observation()->GetGameInfo();
+	float heightBonus = Util::TerainHeight(gameInfo, threat->pos) > Util::TerainHeight(gameInfo, unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
+	float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + HARASS_THREAT_RANGE_BUFFER;
+	return threatRange;
+}
+
 float Util::getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot)
 {
 	if (units.empty())

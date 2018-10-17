@@ -29,7 +29,6 @@ private:
 	const std::vector<const sc2::Unit *> getThreats(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);
 	void UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets);
 	void AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets);
-	float getThreatRange(const sc2::Unit * rangedUnit, const sc2::Unit * threat);
     std::vector<const sc2::Unit *> lastUnitCommand;
     std::map<const sc2::Unit *, UCTCDAction> command_for_unit;
 	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
