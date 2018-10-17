@@ -168,6 +168,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 		const bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
 		const bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
+		const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
 		const bool isGroundUnit = !rangedUnit->is_flying;
 
 		if (m_bot.Config().DrawHarassInfo)
@@ -180,10 +181,35 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
 		sc2::Units threats = getThreats(rangedUnit, rangedUnitTargets);
 
+		if(isBanshee && m_bot.Strategy().isBansheeCloakCompleted())
+		{
+			//TODO consider detectors
+			if (!threats.empty() && rangedUnit->cloak == sc2::Unit::NotCloaked && rangedUnit->energy > 50.f)
+				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::BEHAVIOR_CLOAKON, m_bot);
+			/*else if(threats.empty() && rangedUnit->cloak == sc2::Unit::Cloaked)
+				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::BEHAVIOR_CLOAKOFF, m_bot);*/
+		}
+
 		CCPosition goal = m_order.getPosition();
 		// if the reaper is damaged, go to center of the map
 		if (isReaper && rangedUnit->health / rangedUnit->health_max < 0.75f)
 			goal = CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f;
+
+		float distanceToGoal = Util::Dist(rangedUnit->pos, goal);
+		if (distanceToGoal < 7.f && !target)
+		{
+			if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+			{
+				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, m_bot);
+				continue;
+			}
+			//TODO should morph to assault mode if there are close flying units
+			if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT && !m_bot.Strategy().shouldFocusBuildings())
+			{
+				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE, m_bot);
+				continue;
+			}
+		}
 
 		// if there is no potential target or threat, move to objective (max distance is not considered when defending)
 		if ((!target || 
@@ -193,8 +219,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if (m_bot.Config().DrawHarassInfo)
 				m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
 
-			float dist = Util::Dist(rangedUnit->pos, goal);
-			if(dist > 10.f)
+			if(distanceToGoal > 10.f)
 			{
 				if(m_bot.Strategy().shouldFocusBuildings())
 					Micro::SmartAttackMove(rangedUnit, goal, m_bot);
@@ -203,10 +228,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			}
 			else
 			{
-				if(rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && dist < 5.f && m_order.getType() != SquadOrderTypes::Defend)
-					Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, m_bot);
-				else
-					Micro::SmartAttackMove(rangedUnit, goal, m_bot);
+				Micro::SmartAttackMove(rangedUnit, goal, m_bot);
 			}
 
 			if (isReaper)
@@ -233,6 +255,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		}
 
 		CCPosition dirVec(0, 0);
+		bool moveTowardsObjective = true;
 
 		if (target)
 		{
@@ -263,18 +286,26 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				continue;
 			}
 
-			if(m_bot.Config().DrawHarassInfo)
-				m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
-
-			// if not in range of target, add normalized vector towards target
-			if (!targetInAttackRange)
+			const bool reaperShouldHeal = isReaper && rangedUnit->health / rangedUnit->health_max < 0.5f;
+			if (!reaperShouldHeal)
 			{
-				dirVec = target->pos - rangedUnit->pos;
-				if (m_bot.Config().DrawHarassInfo)
-					m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
+				// if not in range of target, add normalized vector towards target
+				if (!targetInAttackRange)
+				{
+					dirVec = target->pos - rangedUnit->pos;
+					if (m_bot.Config().DrawHarassInfo)
+						m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
+				}
+				else
+				{
+					if (m_bot.Config().DrawHarassInfo)
+						m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Yellow);
+				}
+				moveTowardsObjective = false;
 			}
 		}
-		else
+
+		if(moveTowardsObjective)
 		{
 			// add normalized vector towards objective
 			dirVec = goal - rangedUnit->pos;
@@ -306,15 +337,12 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 				target = getTarget(threat, closeUnits);
 				targetsPower += Util::GetUnitPower(threat, target, m_bot);
 			}
-			//float unitsPower = Util::GetUnitsPower(closeUnits, threats, m_bot);
-			//float targetsPower = Util::GetUnitsPower(threats, closeUnits, m_bot);
 			if (unitsPower > targetsPower)
 			{
 				sc2::Units units;
 				units.push_back(rangedUnit);
 				// The harass mode deactivation is a hack to not ignore range targets
 				m_harassMode = false;
-				//target = getTarget(rangedUnit, rangedUnitTargets);
 				target = getTarget(rangedUnit, threats);
 				// Use behavior tree only against ranged units
 				if(target && isTargetRanged(target))
@@ -428,8 +456,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 					dirVec += fleeVec * intensity;
 				}
 			}
-			// We attract the Hellion towards our closest other Hellion
-			//else if(isHellion || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
+			// We attract the Hellion towards our other close Hellions
 			else if (isHellion)
 			{
 				// Check if there is a friendly harass unit close to this one
@@ -463,7 +490,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if (vecLen < 0.5f)
 				continue;
 
-			sc2::Normalize2D(dirVec);
+			if (dirVec.x != 0.f || dirVec.y != 0.f)
+				sc2::Normalize2D(dirVec);
 
 			// Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
 			const int initialMoveDistance = 9;
@@ -916,14 +944,20 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 	if (unitDps == 0.f)	//Do not attack targets on which we would do no damage
 		return 0.f;
 
-	float healthValue = pow(target->health + target->shield, 0.4f);		//the more health a unit has, the less it is prioritized
-	float distance = std::max(Util::Dist(attacker->pos, target->pos), 1.f);
+	float healthValue = pow(target->health + target->shield, 0.5f);		//the more health a unit has, the less it is prioritized
+	const float distance = Util::Dist(attacker->pos, target->pos) + attacker->radius + target->radius;
 	float distanceValue = 1.f;
 	if (distance > attackerRange)
-		distanceValue = std::max(0.f, 0.5f - (distance - attackerRange) * 0.1f);
-	/*float distanceValue = 1 / distance;   //the more far a unit is, the less it is prioritized
-	if (distanceValue > attackerRange)
-		distanceValue /= 2;*/
+		distanceValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
+
+	float invisModifier = 1.f;
+	if (target->cloak == sc2::Unit::CloakedDetected)
+		invisModifier = 2.f;
+	else if (target->is_burrowed &&
+		(target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED ||
+		target->unit_type != sc2::UNIT_TYPEID::ZERG_BANELINGBURROWED ||
+		target->unit_type != sc2::UNIT_TYPEID::ZERG_ROACHBURROWED))
+		invisModifier = 2.f;
 	
 	Unit targetUnit(target, m_bot);
     if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
@@ -936,10 +970,10 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
         }
         float workerBonus = targetUnit.getType().isWorker() ? m_harassMode ? 2.f : 1.5f : 1.f;   //workers are important to kill
 		float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;	//targets that cannot hit our unit are less prioritized
-        return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus * nonThreateningModifier;
+        return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus * nonThreateningModifier * invisModifier;
     }
 
-	return (healthValue + distanceValue * 50) / 100.f;		//we do not want non combat buildings to have a higher priority than other units
+	return (healthValue + distanceValue * 50) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
 }
 
 // according to http://wiki.teamliquid.net/starcraft2/Range

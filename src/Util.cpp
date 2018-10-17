@@ -354,6 +354,9 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE && !target->is_flying)
 		maxRange = 3.f;
 
+	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::ZERG_QUEEN)
+		maxRange += 0.5f;	//because they often seem to be able to attack farther than they should be able to
+
 	if (maxRange > 0.f)
 		maxRange += unit->radius + target->radius;
 	return maxRange; 

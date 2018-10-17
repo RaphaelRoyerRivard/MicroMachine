@@ -52,6 +52,7 @@ class MetaTypeEnum
 		static MetaType TerranVehicleAndShipArmorsLevel3;
 		static MetaType Stimpack;
 		static MetaType InfernalPreIgniter;
+		static MetaType BansheeCloak;
 
 		//PROTOSS
 			//Buildings
