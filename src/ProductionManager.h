@@ -32,6 +32,7 @@ class ProductionManager
     void    create(const Unit & producer, BuildOrderItem & item, CCTilePosition position = CCTilePosition(0,0));
     void    manageBuildOrderQueue();
 	void	putImportantBuildOrderItemsInQueue();
+	void	QueueDeadBuildings();
     int     getFreeMinerals();
     int     getFreeGas();
 	int     getExtraMinerals();

@@ -474,3 +474,14 @@ bool Unit::isConstructing(const UnitType & type) const
     return m_unit->isConstructing();
 #endif
 }
+
+bool Unit::isConstructingAnything() const
+{
+#ifdef SC2API
+	BOT_ASSERT(isValid(), "Cannot check if unit is constructing because unit ptr is null");
+
+	return (getUnitPtr()->orders.size() > 0);
+#else
+	return m_unit->isConstructing();
+#endif
+}

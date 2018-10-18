@@ -180,6 +180,11 @@ void WorkerManager::handleIdleWorkers()
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 			workerJob = WorkerJobs::Idle;
 		}
+		else if (workerJob == WorkerJobs::Build && !worker.isConstructingAnything())
+		{
+			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
+			workerJob = WorkerJobs::Idle;
+		}
 
 		if (workerJob == WorkerJobs::Idle)
 		{
@@ -628,9 +633,9 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
     Unit builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition));
 
     // if the worker exists (one may not have been found in rare cases)
-    if (builderWorker.isValid() && setJobAsBuilder)
+    if (builderWorker.isValid() && setJobAsBuilder && m_workerData.getWorkerJob(builderWorker) != WorkerJobs::Build)
     {
-        m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.builderUnit);	// b.builderUnit is actually not used
+		m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.builderUnit);	// b.builderUnit is actually not used
     }
 
     return builderWorker;
