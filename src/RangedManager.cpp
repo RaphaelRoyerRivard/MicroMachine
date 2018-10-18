@@ -632,7 +632,8 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 			for (int y = minY; y < maxY; ++y)
 			{
 				//value is linear interpolation
-				map[x][y] += intensity * std::max(0.f, radius - Util::Dist(threatRelativePosition, CCPosition(x, y)));
+				const float distance = Util::Dist(threatRelativePosition, CCPosition(x, y));
+				map[x][y] += intensity * std::max(0.f, (radius - distance) / radius);
 			}
 		}
 	}
