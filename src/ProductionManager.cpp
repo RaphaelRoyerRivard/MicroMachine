@@ -679,6 +679,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				auto vehiculeUpgrade = queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
 				break;
 			}
+			case StrategyPostBuildOrder::NO_STRATEGY:
+				break;
 			default:
 			{
 				assert("This strategy doesn't exist.");
@@ -1283,7 +1285,7 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
         }
         else
         {
-			if (position.x == 0 && position.y == 0)
+			if (position == CCTilePosition())
 			{
 				position = Util::GetTilePosition(m_bot.GetStartLocation());
 			}
