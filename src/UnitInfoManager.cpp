@@ -32,6 +32,10 @@ void UnitInfoManager::updateUnitInfo()
 
     for (auto & unit : m_bot.GetUnits())
     {
+		if (!unit.isAlive())
+		{
+			continue;
+		}
         updateUnit(unit);
         m_units[unit.getPlayer()].push_back(unit);     
     }

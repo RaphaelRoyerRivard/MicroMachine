@@ -61,6 +61,11 @@ int BuildingManager::countBeingBuilt(UnitType type)
 	return count;
 }
 
+void BuildingManager::updatePreviousBuildings()
+{
+	m_previousBaseBuildings = m_baseBuildings;
+}
+
 // STEP 1: DO BOOK KEEPING ON WORKERS WHICH MAY HAVE DIED
 void BuildingManager::validateWorkersAndBuildings()
 {
@@ -129,6 +134,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 			// grab the worker unit from WorkerManager which is closest to this final position
 			Unit builderUnit = m_bot.Workers().getBuilder(b);
 			b.builderUnit = builderUnit;
+
 			if (!b.builderUnit.isValid())
 			{
 				continue;
@@ -514,9 +520,19 @@ void BuildingManager::drawBuildingInformation()
     m_bot.Map().drawTextScreen(0.3f, 0.05f, ss.str());
 }
 
-std::vector<Unit> BuildingManager::getFinishedBuildings()
+std::vector<Unit> BuildingManager::getBuildings()
 {
 	return m_baseBuildings;
+}
+
+std::vector<Unit> BuildingManager::getFinishedBuildings()
+{
+	return m_finishedBaseBuildings;
+}
+
+std::vector<Unit> BuildingManager::getPreviousBuildings()
+{
+	return m_previousBaseBuildings;
 }
 
 BuildingPlacer& BuildingManager::getBuildingPlacer()
@@ -563,7 +579,7 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 Unit BuildingManager::getClosestResourceDepot(CCPosition position)
 {
 	std::vector<Unit> resourceDepots;
-	for (auto building : m_baseBuildings)
+	for (auto building : m_finishedBaseBuildings)
 	{
 		if(building.getType().isResourceDepot())
 		{
@@ -629,14 +645,21 @@ void BuildingManager::removeBuildings(const std::vector<Building> & toRemove)
 void BuildingManager::updateBaseBuildings()
 {
 	m_baseBuildings.clear();
+	m_finishedBaseBuildings.clear();
 	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))
 	{
 		// filter out non building or building under construction
-		if (!building.getType().isBuilding() || building.isBeingConstructed())
+		if (!building.getType().isBuilding())
 		{
 			continue;
 		}
+		if (building.isBeingConstructed())
+		{
+			m_baseBuildings.push_back(building);
+			continue;
+		}
 		m_baseBuildings.push_back(building);
+		m_finishedBaseBuildings.push_back(building);
 	}
 }
 
@@ -668,7 +691,7 @@ const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) con
 
 void BuildingManager::castBuildingsAbilities()
 {
-	for (const auto & b : m_baseBuildings)
+	for (const auto & b : m_finishedBaseBuildings)
 	{
 		auto energy = b.getEnergy();
 		if (energy <= 0)

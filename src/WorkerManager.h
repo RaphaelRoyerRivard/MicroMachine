@@ -51,7 +51,7 @@ public:
     bool isBuilder(Unit worker) const;
 	bool WorkerManager::isReturningCargo(Unit worker) const;
 
-    Unit getBuilder(Building & b,bool setJobAsBuilder = true) const;
+    Unit getBuilder(Building & b, bool setJobAsBuilder = true) const;
 	Unit getGasWorker(Unit refinery) const;
 	Unit getDepotAtBasePosition(CCPosition basePosition) const;
 	int  getWorkerCountAtBasePosition(CCPosition basePosition) const;
