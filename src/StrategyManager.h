@@ -48,6 +48,7 @@ class StrategyManager
 	bool m_enemyHasMetabolicBoost = false;
 	bool m_enemyHasFlyingCombatUnit = false;
 	bool m_focusBuildings = false;
+	bool m_bansheeCloakCompleted = false;
 
     bool  shouldExpandNow() const;
     const UnitPairVector getProtossBuildOrderGoal() const;
@@ -79,4 +80,6 @@ public:
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
 	bool shouldFocusBuildings() const { return m_focusBuildings; }
 	void setFocusBuildings(bool focusBuildings) { m_focusBuildings = focusBuildings; }
+	bool isBansheeCloakCompleted() const { return m_bansheeCloakCompleted; }
+	void setBansheeCloakCompleted(bool bansheeCloakCompleted) { m_bansheeCloakCompleted = bansheeCloakCompleted; }
 };

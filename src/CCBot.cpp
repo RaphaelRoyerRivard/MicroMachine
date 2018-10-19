@@ -18,7 +18,13 @@ void CCBot::OnGameEnd() {}//Start
 void CCBot::OnUnitDestroyed(const sc2::Unit*) {}
 void CCBot::OnUnitCreated(const sc2::Unit*) {}
 void CCBot::OnUnitIdle(const sc2::Unit*) {}
-void CCBot::OnUpgradeCompleted(sc2::UpgradeID) {}
+void CCBot::OnUpgradeCompleted(sc2::UpgradeID upgrade)
+{
+	if(upgrade == sc2::UPGRADE_ID::BANSHEECLOAK)
+	{
+		m_strategy.setBansheeCloakCompleted(true);
+	}
+}
 void CCBot::OnBuildingConstructionComplete(const sc2::Unit*) {}
 void CCBot::OnNydusDetected() {}
 void CCBot::OnUnitEnterVision(const sc2::Unit*) {}

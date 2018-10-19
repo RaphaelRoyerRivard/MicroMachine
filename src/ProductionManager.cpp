@@ -82,6 +82,7 @@ void ProductionManager::onFrame()
 
 	lowPriorityChecks();
     manageBuildOrderQueue();
+	QueueDeadBuildings();
 
     // TODO: if nothing is currently building, get a new goal from the strategy manager
     // TODO: triggers for game things like cloaked units etc
@@ -248,6 +249,9 @@ void ProductionManager::manageBuildOrderQueue()
 
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
+	if (m_bot.Config().AllowDebug && m_bot.GetCurrentFrame() % 10)
+		return;
+
 	const float productionScore = getProductionScore();
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
@@ -336,6 +340,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							m_queue.queueAsLowestPriority(toBuild, false);
 						}
 					}
+				}
+
+				if (!m_queue.contains(MetaTypeEnum::BansheeCloak) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::BansheeCloak) == startedUpgrades.end())
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::BansheeCloak, 0, false));
+					startedUpgrades.push_back(MetaTypeEnum::BansheeCloak);
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
@@ -428,7 +438,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					startedUpgrades.push_back(MetaTypeEnum::InfernalPreIgniter);
 				}
 
- 				auto vehiculeUpgrade = queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
+				int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
+				int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), true, true);
+				int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true);
+				if(hellionCount + bansheeCount + vikingCount >= 5)
+					auto vehiculeUpgrade = queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
 				
 				if (!m_queue.contains(MetaTypeEnum::Hellion))
 				{
@@ -447,8 +461,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Viking))
 				{
-					int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
-					int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 					if (vikingCount < 2 * bansheeCount)
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
@@ -690,6 +702,34 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 	}
+}
+
+void ProductionManager::QueueDeadBuildings()
+{
+	auto buildings = m_bot.Buildings().getBuildings();
+	auto deadBuildings = m_bot.Buildings().getPreviousBuildings();
+	if (deadBuildings.size() > buildings.size())
+	{
+		auto a = true;
+	}
+	for (int i = 0; i < buildings.size(); i++)
+	{
+		auto it = std::find(deadBuildings.begin(), deadBuildings.end(), buildings.at(i));
+		if (it != deadBuildings.end())
+		{
+			deadBuildings.erase(it);
+		}
+	}
+	for (int i = 0; i < deadBuildings.size(); i++)
+	{
+		MetaType type = MetaType(deadBuildings.at(i).getType(), m_bot);
+		if (!m_queue.contains(type))
+		{
+			m_queue.queueItem(BuildOrderItem(type, 0, false));
+		}
+	}
+
+	m_bot.Buildings().updatePreviousBuildings();
 }
 
 void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)

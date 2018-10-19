@@ -47,6 +47,7 @@ MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel2;
 MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel3;
 MetaType MetaTypeEnum::Stimpack;
 MetaType MetaTypeEnum::InfernalPreIgniter;
+MetaType MetaTypeEnum::BansheeCloak;
 //PROTOSS
 	//Buildings
 	//Units
@@ -135,6 +136,8 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::TerranVehicleAndShipArmorsLevel3 = MetaType("TerranVehicleAndShipArmorsLevel3", m_bot);
 	MetaTypeEnum::Stimpack = MetaType("Stimpack", m_bot);
 	MetaTypeEnum::InfernalPreIgniter = MetaType("HighCapacityBarrels", m_bot);
+	MetaTypeEnum::BansheeCloak = MetaType("BansheeCloak", m_bot);
+
 	
 	//PROTOSS
 		//Buildings

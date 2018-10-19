@@ -12,6 +12,8 @@ class BuildingManager
     BuildingPlacer  m_buildingPlacer;
     std::vector<Building> m_buildings; //under construction
 	std::vector<Unit> m_baseBuildings;
+	std::vector<Unit> m_finishedBaseBuildings;
+	std::vector<Unit> m_previousBaseBuildings; //Base buildings last frame, useful to find dead buildings
 
     bool            m_debugMode;
     int             m_reservedMinerals;				// minerals reserved for planned buildings
@@ -40,18 +42,22 @@ public:
     void                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
 	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
+	std::vector<Unit>	getBuildings();
 	std::vector<Unit>	getFinishedBuildings();
+	std::vector<Unit>	getPreviousBuildings();
     CCTilePosition      getBuildingLocation(const Building & b);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);
-	const sc2::Unit * getClosestMineral(const sc2::Unit * unit) const;
+	const sc2::Unit *	getClosestMineral(const sc2::Unit * unit) const;
 
     int                 getReservedMinerals();
     int                 getReservedGas();
 
     bool                isBeingBuilt(UnitType type);
 	int					countBeingBuilt(UnitType type);
+
+	void				updatePreviousBuildings();
 
 	BuildingPlacer& getBuildingPlacer();
 
