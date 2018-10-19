@@ -74,19 +74,41 @@ void CCBot::OnGameStart() //full start
 
 void CCBot::OnStep()
 {
+	std::clock_t start;
+
+	start = std::clock();
 	m_gameLoop = Observation()->GetGameLoop();
+	std::cout << "m_gameLoop: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
 
+	start = std::clock();
 	checkKeyState();
+	std::cout << "checkKeyState: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
 
+	start = std::clock();
     setUnits();
+	std::cout << "setUnits: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
+	start = std::clock();
 	m_map.onFrame();
+	std::cout << "m_map: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
+	start = std::clock();
     m_unitInfo.onFrame();
+	std::cout << "m_unitInfo: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
+	start = std::clock();
     m_bases.onFrame();
+	std::cout << "m_bases: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
+	start = std::clock();
     m_workers.onFrame();
+	std::cout << "m_workers: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
+	start = std::clock();
 	m_buildings.onFrame();
+	std::cout << "m_buildings: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
+	start = std::clock();
     m_strategy.onFrame();
+	std::cout << "m_strategy: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
+	start = std::clock();
 
     m_gameCommander.onFrame();
+	std::cout << "m_gameCommander: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
 
 #ifdef SC2API
 	if (Config().AllowDebug)
