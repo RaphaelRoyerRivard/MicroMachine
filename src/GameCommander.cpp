@@ -21,24 +21,13 @@ void GameCommander::onStart()
 
 void GameCommander::onFrame()
 {
-	std::clock_t start;
-	start = std::clock();
     handleUnitAssignments();
-	std::cout << "     handleUnitAssignments: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
-
-	start = std::clock();
-    m_productionManager.onFrame();
-	std::cout << "     m_productionManager: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
-	start = std::clock();
-    m_scoutManager.onFrame();
-	std::cout << "     m_scoutManager: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
-	start = std::clock();
+	
+    m_productionManager.onFrame();	
+    m_scoutManager.onFrame();	
     m_combatCommander.onFrame(m_combatUnits);
-	std::cout << "     m_combatCommander: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
-
-	start = std::clock();
+	
     drawDebugInterface();
-	std::cout << "     drawDebugInterface: " << (std::clock() - start) / (double)CLOCKS_PER_SEC << '\n';
 }
 
 void GameCommander::drawDebugInterface()

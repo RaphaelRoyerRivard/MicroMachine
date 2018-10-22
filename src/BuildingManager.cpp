@@ -403,7 +403,15 @@ void BuildingManager::checkForCompletedBuildings()
             // if we are terran, give the worker back to worker manager
             if (Util::IsTerran(m_bot.GetSelfRace()))
             {
-                m_bot.Workers().finishedWithWorker(b.builderUnit);
+				if(b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REFINERY)//Worker that built the refinery, will be a gas worker for it.
+				{
+					m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Gas, b.buildingUnit);
+				}
+				else
+				{
+					m_bot.Workers().finishedWithWorker(b.builderUnit);
+				}
+
 				if (b.buildingUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
 				{
 					Micro::SmartAbility(b.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER, m_bot);

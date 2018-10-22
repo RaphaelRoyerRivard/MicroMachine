@@ -137,13 +137,13 @@ void WorkerManager::handleMineralWorkers()
 void WorkerManager::handleGasWorkers()
 {
     // for each unit we have
-    for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
+    for (auto & building : m_bot.Buildings().getFinishedBuildings())
     {
         // if that unit is a refinery
-        if (unit.getType().isRefinery() && unit.isCompleted())
+        if (building.getType().isRefinery() && building.isCompleted())
         {
             // get the number of workers currently assigned to it
-            int numAssigned = m_workerData.getNumAssignedWorkers(unit);
+            int numAssigned = m_workerData.getNumAssignedWorkers(building);
 
             // if it's less than we want it to be, fill 'er up
             for (int i=0; i<(3-numAssigned); ++i)
@@ -151,10 +151,10 @@ void WorkerManager::handleGasWorkers()
 				if (getWorkerData().getWorkerJobCount(WorkerJobs::Minerals) <= getWorkerData().getWorkerJobCount(WorkerJobs::Gas))
 					break;
 
-                auto gasWorker = getGasWorker(unit);
+                auto gasWorker = getGasWorker(building);
                 if (gasWorker.isValid())
                 {
-                    m_workerData.setWorkerJob(gasWorker, WorkerJobs::Gas, unit);
+                    m_workerData.setWorkerJob(gasWorker, WorkerJobs::Gas, building);
                 }
             }
         }
@@ -641,6 +641,11 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
     return builderWorker;
 }
 
+void WorkerManager::setGasWorker(Unit workerTag)
+{
+	m_workerData.setWorkerJob(workerTag, WorkerJobs::Gas);
+}
+
 // sets a worker as a scout
 void WorkerManager::setScoutWorker(Unit workerTag)
 {
@@ -787,7 +792,7 @@ std::set<Unit> WorkerManager::getWorkers() const
 	return m_workerData.getWorkers();
 }
 
-WorkerData WorkerManager::getWorkerData() const
+WorkerData & WorkerManager::getWorkerData() const
 {
 	return m_workerData;
 }

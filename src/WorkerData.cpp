@@ -111,6 +111,8 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool min
     }
     else if (job == WorkerJobs::Gas)
     {
+		BOT_ASSERT(jobUnit.getType().isRefinery(), "JobUnit should be refinery");
+		BOT_ASSERT(unit.getType().isWorker(), "Unit should be worker");
         // if we haven't assigned any workers to this refinery yet set count to 0
         if (m_refineryWorkerCount.find(jobUnit) == m_refineryWorkerCount.end())
         {

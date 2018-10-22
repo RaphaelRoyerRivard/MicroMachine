@@ -34,6 +34,7 @@ public:
     void finishedWithWorker(const Unit & unit);
     void drawResourceDebugInfo();
     void drawWorkerInformation();
+	void setGasWorker(Unit workerTag);
     void setScoutWorker(Unit worker);
     void setCombatWorker(Unit worker);
 	void setBuildingWorker(Unit worker);
@@ -45,7 +46,7 @@ public:
     int  getNumGasWorkers();
     int  getNumWorkers();
 	std::set<Unit> WorkerManager::getWorkers() const;
-	WorkerData WorkerManager::getWorkerData() const;
+	WorkerData & WorkerManager::getWorkerData() const;
     bool isWorkerScout(Unit worker) const;
     bool isFree(Unit worker) const;
     bool isBuilder(Unit worker) const;
