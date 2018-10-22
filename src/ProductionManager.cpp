@@ -706,18 +706,15 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 void ProductionManager::QueueDeadBuildings()
 {
+	std::vector<Unit> deadBuildings;
 	auto buildings = m_bot.Buildings().getBuildings();
-	auto deadBuildings = m_bot.Buildings().getPreviousBuildings();
-	if (deadBuildings.size() > buildings.size())
+	auto previousBuildings = m_bot.Buildings().getPreviousBuildings();
+	for (int i = 0; i < previousBuildings.size(); i++)
 	{
-		auto a = true;
-	}
-	for (int i = 0; i < buildings.size(); i++)
-	{
-		auto it = std::find(deadBuildings.begin(), deadBuildings.end(), buildings.at(i));
-		if (it != deadBuildings.end())
+		auto it = std::find(buildings.begin(), buildings.end(), previousBuildings.at(i));
+		if (it == buildings.end())
 		{
-			deadBuildings.erase(it);
+			deadBuildings.push_back(previousBuildings.at(i));
 		}
 	}
 	for (int i = 0; i < deadBuildings.size(); i++)
@@ -1318,6 +1315,7 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 			{
 				position = Util::GetTilePosition(m_bot.GetStartLocation());
 			}
+
 			m_bot.Buildings().addBuildingTask(item.type.getUnitType(), position);
         }
     }

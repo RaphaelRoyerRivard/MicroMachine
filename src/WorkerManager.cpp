@@ -641,11 +641,6 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
     return builderWorker;
 }
 
-void WorkerManager::setGasWorker(Unit workerTag)
-{
-	m_workerData.setWorkerJob(workerTag, WorkerJobs::Gas);
-}
-
 // sets a worker as a scout
 void WorkerManager::setScoutWorker(Unit workerTag)
 {

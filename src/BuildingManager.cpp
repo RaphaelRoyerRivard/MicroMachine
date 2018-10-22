@@ -79,10 +79,7 @@ void BuildingManager::validateWorkersAndBuildings()
             continue;
         }
 
-        auto buildingUnit = b.buildingUnit;
-
-        // TODO: || !b.buildingUnit->getType().isBuilding()
-        if (!buildingUnit.isValid())
+        if (!b.buildingUnit.isValid())
         {
             toRemove.push_back(b);
         }
@@ -431,7 +428,7 @@ void BuildingManager::addBuildingTask(const UnitType & type, const CCTilePositio
 {
     m_reservedMinerals += m_bot.Data(type).mineralCost;
     m_reservedGas += m_bot.Data(type).gasCost;
-
+	
     Building b(type, desiredPosition);
     b.status = BuildingStatus::Unassigned;
 	
