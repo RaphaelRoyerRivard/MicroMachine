@@ -30,6 +30,8 @@ class CCBot
     BotConfig               m_config;
     TechTree                m_techTree;
     GameCommander           m_gameCommander;
+	std::map<sc2::UNIT_TYPEID, int> m_unitCount;
+	std::map<sc2::UNIT_TYPEID, int> m_unitCompletedCount;
 	std::map<sc2::Tag, Unit> m_allyUnits;
 	std::map<sc2::Tag, Unit> m_enemyUnits;
 	std::map<sc2::Tag, uint32_t> m_lastSeenUnits;
@@ -92,6 +94,7 @@ public:
     int GetGas() const;
     Unit GetUnit(const CCUnitID & tag) const;
     const std::vector<Unit> & GetUnits() const;
+	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false) const;
 	std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits();
 	std::map<sc2::Tag, Unit> CCBot::GetAllyUnits(sc2::UNIT_TYPEID type);
 	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();

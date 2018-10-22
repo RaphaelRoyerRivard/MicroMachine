@@ -177,7 +177,14 @@ void CCBot::setUnits()
 		if (!unit.isAlive())
 			continue;
 		if (unitptr->alliance == sc2::Unit::Self || unitptr->alliance == sc2::Unit::Ally)
+		{
 			m_allyUnits.insert_or_assign(unitptr->tag, unit);
+			m_unitCount[unit.getAPIUnitType()]++;
+			if (unit.isCompleted())
+			{
+				m_unitCompletedCount[unit.getAPIUnitType()]++;
+			}
+		}
 		else if (unitptr->alliance == sc2::Unit::Enemy)
 		{
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
@@ -253,11 +260,15 @@ uint32_t CCBot::GetGameLoop() const
 CCRace CCBot::GetPlayerRace(int player) const
 {
 #ifdef SC2API
-	bool isSelf = player == Players::Self;
+	if (player == Players::Self)
+	{
+		return GetSelfRace();
+	}
+
     auto ourID = Observation()->GetPlayerID();
     for (auto & playerInfo : Observation()->GetGameInfo().player_info)
     {
-        if ((isSelf && playerInfo.player_id == ourID) || (!isSelf && playerInfo.player_id != ourID))
+        if (playerInfo.player_id != ourID)
         {
             return playerInfo.race_requested;
         }
@@ -394,6 +405,15 @@ Unit CCBot::GetUnit(const CCUnitID & tag) const
 #else
     return Unit(BWAPI::Broodwar->getUnit(tag), *(CCBot *)this);
 #endif
+}
+
+
+int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed) const
+{ 
+	if ((!completed && m_unitCount.find(type) != m_unitCount.end()) || (completed && m_unitCompletedCount.find(type) != m_unitCompletedCount.end()))
+		return completed ? m_unitCompletedCount.at(type) : m_unitCount.at(type);
+	else
+		return 0;
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()

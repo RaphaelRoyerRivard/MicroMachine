@@ -11,7 +11,6 @@ class CCBot;
 class GameCommander
 {
     CCBot &                 m_bot;
-    Timer                   m_timer;
 
     ProductionManager       m_productionManager;
     ScoutManager            m_scoutManager;
