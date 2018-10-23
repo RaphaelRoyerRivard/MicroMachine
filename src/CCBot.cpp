@@ -240,7 +240,14 @@ CCRace CCBot::GetPlayerRace(int player) const
 #ifdef SC2API
 	if (player == Players::Self)
 	{
-		return GetSelfRace();
+		for (auto & playerInfo : Observation()->GetGameInfo().player_info)
+		{
+			if (playerInfo.player_id != player)
+			{
+				return playerInfo.race_actual;
+			}
+		}
+		BOT_ASSERT(false, "Didn't find player to get their race");
 	}
 
     auto ourID = Observation()->GetPlayerID();

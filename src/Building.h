@@ -17,8 +17,8 @@ public:
     CCTilePosition  finalPosition;
     CCTilePosition  position;
     UnitType        type;
-    Unit            buildingUnit;
-    Unit            builderUnit;
+    Unit            buildingUnit;//Building
+    Unit            builderUnit;//Worker
     size_t          status;
     int             lastOrderFrame;
     bool            buildCommandGiven;

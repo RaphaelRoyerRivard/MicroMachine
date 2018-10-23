@@ -707,14 +707,30 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 void ProductionManager::QueueDeadBuildings()
 {
 	std::vector<Unit> deadBuildings;
-	auto buildings = m_bot.Buildings().getBuildings();
-	auto previousBuildings = m_bot.Buildings().getPreviousBuildings();
+	auto baseBuildings = m_bot.Buildings().getBaseBuildings();
+	auto previousBuildings = m_bot.Buildings().getPreviousBaseBuildings();
 	for (int i = 0; i < previousBuildings.size(); i++)
 	{
-		auto it = std::find(buildings.begin(), buildings.end(), previousBuildings.at(i));
-		if (it == buildings.end())
+		auto unit = previousBuildings.at(i);
+		auto it = std::find(baseBuildings.begin(), baseBuildings.end(), unit);
+		if (it == baseBuildings.end())
 		{
-			deadBuildings.push_back(previousBuildings.at(i));
+			deadBuildings.push_back(unit);
+
+			//Manual find of the worker to free him.
+			auto & buildings = m_bot.Buildings().getPreviousBuildings();
+			auto buildingsIt = buildings.begin();
+			for (; buildingsIt != buildings.end(); ++buildingsIt)
+			{
+				if (buildingsIt->buildingUnit.isValid() && buildingsIt->buildingUnit.getTag() == unit.getTag())
+				{
+					m_bot.Workers().finishedWithWorker(buildingsIt->builderUnit);
+					std::vector<Building> toRemove;
+					toRemove.push_back(*buildingsIt);
+					m_bot.Buildings().removeBuildings(toRemove);
+					break;
+				}
+			}
 		}
 	}
 	for (int i = 0; i < deadBuildings.size(); i++)
@@ -727,6 +743,7 @@ void ProductionManager::QueueDeadBuildings()
 	}
 
 	m_bot.Buildings().updatePreviousBuildings();
+	m_bot.Buildings().updatePreviousBaseBuildings();
 }
 
 void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)

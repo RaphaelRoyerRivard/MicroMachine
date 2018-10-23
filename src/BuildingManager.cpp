@@ -63,6 +63,11 @@ int BuildingManager::countBeingBuilt(UnitType type)
 
 void BuildingManager::updatePreviousBuildings()
 {
+	m_previousBuildings = m_buildings;
+}
+
+void BuildingManager::updatePreviousBaseBuildings()
+{
 	m_previousBaseBuildings = m_baseBuildings;
 }
 
@@ -129,7 +134,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 			b.finalPosition = testLocation;
 
 			// grab the worker unit from WorkerManager which is closest to this final position
-			Unit builderUnit = m_bot.Workers().getBuilder(b);
+			Unit builderUnit = m_bot.Workers().getBuilder(b, true);
 			b.builderUnit = builderUnit;
 
 			if (!b.builderUnit.isValid())
@@ -225,8 +230,8 @@ void BuildingManager::constructAssignedBuildings()
                     {
                         if (unit.getType().isGeyser() && Util::Dist(Util::GetPosition(b.finalPosition), unit.getPosition()) < 3)
 						{
-						geyser = unit;
-						break;
+							geyser = unit;
+							break;
 						}
 					}
 
@@ -371,7 +376,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 		if (b.builderUnit.isValid() && (!b.builderUnit.isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(b.builderUnit) != WorkerJobs::Build))
 		{
 			// grab the worker unit from WorkerManager which is closest to this final position
-			Unit builderUnit = m_bot.Workers().getBuilder(b);
+			Unit builderUnit = m_bot.Workers().getBuilder(b, true);
 			if (builderUnit.isValid())
 			{
 				b.builderUnit = builderUnit;
@@ -525,7 +530,18 @@ void BuildingManager::drawBuildingInformation()
     m_bot.Map().drawTextScreen(0.3f, 0.05f, ss.str());
 }
 
-std::vector<Unit> BuildingManager::getBuildings()
+std::vector<Building> BuildingManager::getBuildings()
+{
+	return m_buildings;
+}
+
+std::vector<Building> BuildingManager::getPreviousBuildings()
+{
+	return m_previousBuildings;
+}
+
+
+std::vector<Unit> BuildingManager::getBaseBuildings()
 {
 	return m_baseBuildings;
 }
@@ -535,7 +551,7 @@ std::vector<Unit> BuildingManager::getFinishedBuildings()
 	return m_finishedBaseBuildings;
 }
 
-std::vector<Unit> BuildingManager::getPreviousBuildings()
+std::vector<Unit> BuildingManager::getPreviousBaseBuildings()
 {
 	return m_previousBaseBuildings;
 }

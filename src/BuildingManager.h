@@ -11,6 +11,7 @@ class BuildingManager
 
     BuildingPlacer  m_buildingPlacer;
     std::vector<Building> m_buildings; //under construction
+	std::vector<Building> m_previousBuildings; //previous under construction
 	std::vector<Unit> m_baseBuildings;
 	std::vector<Unit> m_finishedBaseBuildings;
 	std::vector<Unit> m_previousBaseBuildings; //Base buildings last frame, useful to find dead buildings
@@ -20,7 +21,6 @@ class BuildingManager
     int             m_reservedGas;					// gas reserved for planned buildings
 
     bool            isBuildingPositionExplored(const Building & b) const;
-    void            removeBuildings(const std::vector<Building> & toRemove);
 	void			castBuildingsAbilities();
 	void			updateBaseBuildings();
 
@@ -42,9 +42,11 @@ public:
     void                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
 	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
-	std::vector<Unit>	getBuildings();
+	std::vector<Building> getBuildings();//Cannot be passed by reference
+	std::vector<Building> getPreviousBuildings();//Cannot be passed by reference
+	std::vector<Unit>	getBaseBuildings();
 	std::vector<Unit>	getFinishedBuildings();
-	std::vector<Unit>	getPreviousBuildings();
+	std::vector<Unit>	getPreviousBaseBuildings();
     CCTilePosition      getBuildingLocation(const Building & b);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b, bool isCompleted = false) const;
@@ -57,7 +59,10 @@ public:
     bool                isBeingBuilt(UnitType type);
 	int					countBeingBuilt(UnitType type);
 
+	void				removeBuildings(const std::vector<Building> & toRemove);
+
 	void				updatePreviousBuildings();
+	void				updatePreviousBaseBuildings();
 
 	BuildingPlacer& getBuildingPlacer();
 

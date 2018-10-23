@@ -286,7 +286,7 @@ void UnitInfoManager::drawUnitID()
 	}
 	for (auto & unit : getUnits(Players::Self))
 	{
-		m_bot.Map().drawText(unit.getPosition(), std::to_string(unit.getIDAsInt()) + " (" + std::to_string(unit.getPosition().x) + ", " + std::to_string(unit.getPosition().y) + ")");
+		m_bot.Map().drawText(unit.getPosition(), std::to_string(unit.getTag()) + " (" + std::to_string(unit.getPosition().x) + ", " + std::to_string(unit.getPosition().y) + ")");
 	}
 }
 
