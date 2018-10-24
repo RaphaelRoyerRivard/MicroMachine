@@ -27,8 +27,10 @@ MetaType MetaTypeEnum::Marine;
 MetaType MetaTypeEnum::Marauder;
 MetaType MetaTypeEnum::Reaper;
 MetaType MetaTypeEnum::Hellion;
+MetaType MetaTypeEnum::WidowMine;
 MetaType MetaTypeEnum::Banshee;
 MetaType MetaTypeEnum::Viking;
+MetaType MetaTypeEnum::Medivac;
 	//Upgrades
 MetaType MetaTypeEnum::TerranInfantryWeaponsLevel1;
 MetaType MetaTypeEnum::TerranInfantryWeaponsLevel2;
@@ -116,8 +118,10 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::Marauder = MetaType("Marauder", m_bot);
 	MetaTypeEnum::Reaper = MetaType("Reaper", m_bot);
 	MetaTypeEnum::Hellion = MetaType("Hellion", m_bot);
+	MetaTypeEnum::WidowMine = MetaType("WidowMine", m_bot);
 	MetaTypeEnum::Banshee = MetaType("Banshee", m_bot);
 	MetaTypeEnum::Viking = MetaType("VikingFighter", m_bot);
+	MetaTypeEnum::Medivac = MetaType("Medivac", m_bot);
 		//Upgrades
 	MetaTypeEnum::TerranInfantryWeaponsLevel1 = MetaType("TerranInfantryWeaponsLevel1", m_bot);
 	MetaTypeEnum::TerranInfantryWeaponsLevel2 = MetaType("TerranInfantryWeaponsLevel2", m_bot);

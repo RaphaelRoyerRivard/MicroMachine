@@ -32,9 +32,11 @@ class MetaTypeEnum
 		static MetaType Marauder;
 		static MetaType Reaper;
 		static MetaType Hellion;
+		static MetaType WidowMine;
 		static MetaType Banshee;
 		static MetaType Viking;
-			//Upgrades
+		static MetaType Medivac;
+				//Upgrades
 		static MetaType TerranInfantryWeaponsLevel1;
 		static MetaType TerranInfantryWeaponsLevel2;
 		static MetaType TerranInfantryWeaponsLevel3;

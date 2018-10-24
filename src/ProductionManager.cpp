@@ -134,9 +134,6 @@ void ProductionManager::manageBuildOrderQueue()
 
 		if (currentlyHasRequirement(currentItem.type))
 		{
-			// this is the unit which can produce the currentItem
-			Unit producer = getProducer(currentItem.type);
-
 			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location
 
 			//Build supply depot at ramp against protoss
@@ -166,7 +163,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 			//TODO TEMP build barrack away from the ramp to protect it from worker rush
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
-				canMakeSoon(producer, MetaTypeEnum::Barracks))
+				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks))
 			{
 				firstBarrackBuilt = true;
 
@@ -197,6 +194,7 @@ void ProductionManager::manageBuildOrderQueue()
 						target.y = m_bot.Map().height() - 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
 					}
 
+					Unit producer = getProducer(currentItem.type);
 					create(producer, currentItem, target);
 					m_queue.removeCurrentHighestPriorityItem();
 
@@ -205,18 +203,22 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 
 			// if we can make the current item
-			if (producer.isValid() && canMakeNow(producer, currentItem.type))
+			if (meetsReservedResources(currentItem.type))
 			{
-				// create it and remove it from the _queue
-				create(producer, currentItem);
-				m_queue.removeCurrentHighestPriorityItem();
+				Unit producer = getProducer(currentItem.type);
+				if (canMakeNow(producer, currentItem.type))
+				{
+					// create it and remove it from the _queue
+					create(producer, currentItem);
+					m_queue.removeCurrentHighestPriorityItem();
 
-				// don't actually loop around in here
-				break;
+					// don't actually loop around in here
+					break;
+				}
 			}
 
 			// is a building (doesn't include addons, because no travel time) and we can make it soon
-			if (producer.isValid() && m_bot.Data(currentItem.type).isBuilding && !m_bot.Data(currentItem.type).isAddon && !currentItem.type.getUnitType().isMorphedBuilding() && canMakeSoon(producer, currentItem.type))
+			if (m_bot.Data(currentItem.type).isBuilding && !m_bot.Data(currentItem.type).isAddon && !currentItem.type.getUnitType().isMorphedBuilding() && meetsReservedResourcesWithExtra(currentItem.type))
 			{
 				Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
 				CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
@@ -956,44 +958,100 @@ bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
 
 Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo) const
 {
-    // get all the types of units that cna build this type
-    auto & producerTypes = m_bot.Data(type).whatBuilds;
+	// get all the types of units that cna build this type
+	auto & producerTypes = m_bot.Data(type).whatBuilds;
+	bool priorizeReactor = false;
+
+	if (m_bot.GetSelfRace() == CCRace::Terran)
+	{
+		//check if we can prioritize a building with a reactor instead of a techlab
+		auto typeName = type.getName();
+		if (typeName == "Marine" ||
+			typeName == "Reaper" ||
+			typeName == "WidowMine" |
+			typeName == "Hellion" ||
+			typeName == "VikingFighter" ||
+			typeName == "Medivac" ||
+			typeName == "Liberator")
+		{
+			for (auto unit : m_bot.UnitInfo().getUnits(Players::Self))
+			{
+				// reasons a unit can not train the desired type
+				if (!unit.isValid()) { continue; }
+				if (!unit.isCompleted()) { continue; }
+				if (unit.isFlying()) { continue; }
+				if (std::find(producerTypes.begin(), producerTypes.end(), unit.getType()) == producerTypes.end()) { continue; }
+				if (unit.isAddonTraining()) { continue; }
+
+				//Building can produce unit, now check if addon is reactor and available
+				auto addonTag = unit.getAddonTag();
+				if (addonTag == 0)
+				{
+					continue;
+				}
+
+				auto addon = m_bot.GetUnit(addonTag);
+				auto addonType = (sc2::UNIT_TYPEID)addon.getAPIUnitType();
+				switch (addonType)
+				{
+					case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+					case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+					case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+					{
+						priorizeReactor = true;
+						break;
+					}
+				}
+				break;
+			}
+		}
+	}
 
     // make a set of all candidate producers
     std::vector<Unit> candidateProducers;
     for (auto unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
         // reasons a unit can not train the desired type
-        if (std::find(producerTypes.begin(), producerTypes.end(), unit.getType()) == producerTypes.end()) { continue; }
-        if (!unit.isCompleted()) { continue; }
+		if (!unit.isValid()) { continue; }
+		if (!unit.isCompleted()) { continue; }
 		if (unit.isFlying()) { continue; }
+        if (std::find(producerTypes.begin(), producerTypes.end(), unit.getType()) == producerTypes.end()) { continue; }
 
 		bool isBuilding = m_bot.Data(unit).isBuilding;
 		if (isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }
 		if (isBuilding && m_bot.GetSelfRace() == CCRace::Terran)
 		{//If is terran, check for Reactor addon
 			sc2::Tag addonTag = unit.getAddonTag();
-			if (addonTag != 0 && unit.isTraining())
+			sc2::UNIT_TYPEID unitType = unit.getAPIUnitType();
+			
+			if (addonTag != 0)
 			{
 				bool addonIsReactor = false;
-				for (auto unit : m_bot.UnitInfo().getUnits(Players::Self))
+				auto addon = m_bot.GetUnit(addonTag);
+				switch ((sc2::UNIT_TYPEID)addon.getAPIUnitType())
 				{
-					switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())
+					case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+					case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+					case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
 					{
-						case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
-						case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
-						case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
-						{
-							if (unit.getTag() == addonTag)
-							{
-								addonIsReactor = true;
-								break;
-							}
-						}
+						addonIsReactor = true;
+						break;
 					}
 				}
-				if (unit.isAddonTraining() || !addonIsReactor)
-				{//skip, Techlab can't build two units or reactor already has two.
+
+				if (unit.isTraining() && !addonIsReactor)
+				{//skip, Techlab can't build two units
+					continue;
+				}
+				
+				if (addonIsReactor && unit.isAddonTraining())
+				{//skip, reactor at max capacity
+					continue;
+				}
+
+				//Skip techlab if we have an available reactor
+				if (priorizeReactor && !addonIsReactor)
+				{
 					continue;
 				}
 			}
@@ -1349,7 +1407,7 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 
 bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 {
-    if (!producer.isValid() || !meetsReservedResources(type))
+    if (!producer.isValid())
     {
         return false;
     }
@@ -1408,16 +1466,6 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 
 	return canMake;
 #endif
-}
-
-bool ProductionManager::canMakeSoon(const Unit & producer, const MetaType & type)
-{
-	if (!producer.isValid() || !meetsReservedResourcesWithExtra(type))
-	{
-		return false;
-	}
-
-	return true;//Do not check the builder abilities, it won't contain the building we want.
 }
 
 bool ProductionManager::detectBuildOrderDeadlock()
