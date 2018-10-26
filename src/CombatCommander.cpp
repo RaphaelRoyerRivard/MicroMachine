@@ -139,8 +139,13 @@ void CombatCommander::updateIdleSquad()
 	}
 	else
 	{
-		CCTilePosition nextExpansionPosition = m_bot.Bases().getNextExpansion(Players::Self);
-		SquadOrder idleOrder(SquadOrderTypes::Attack, CCPosition(nextExpansionPosition.x, nextExpansionPosition.y), DefaultOrderRadius, "Prepare for battle");
+		const BaseLocation * nextExpansion = m_bot.Bases().getNextExpansion(Players::Self);
+
+		CCPosition idlePosition = CCPosition(nextExpansion->getDepotPosition().x, nextExpansion->getDepotPosition().y);
+		idlePosition.x += nextExpansion->getDepotPosition().x - nextExpansion->getCenterOfMinerals().x;
+		idlePosition.y += nextExpansion->getDepotPosition().y - nextExpansion->getCenterOfMinerals().y;
+
+		SquadOrder idleOrder(SquadOrderTypes::Attack, idlePosition, DefaultOrderRadius, "Prepare for battle");
 		m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 	}
 }

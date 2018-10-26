@@ -312,7 +312,7 @@ void BaseLocationManager::drawBaseLocations()
     }
 
     // draw a purple sphere at the next expansion location
-    CCTilePosition nextExpansionPosition = getNextExpansion(Players::Self);
+    CCTilePosition nextExpansionPosition = getNextExpansionPosition(Players::Self);
 
     m_bot.Map().drawCircle(Util::GetPosition(nextExpansionPosition), 1, CCColor(255, 0, 255));
     m_bot.Map().drawText(Util::GetPosition(nextExpansionPosition), "Next Expansion Location", CCColor(255, 0, 255));
@@ -358,11 +358,10 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 	return 0;
 }
 
-CCTilePosition BaseLocationManager::getNextExpansion(int player) const
+const BaseLocation* BaseLocationManager::getNextExpansion(int player) const
 {
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
-	if (!homeBase)
-		return CCTilePosition(0, 0);
+	BOT_ASSERT(homeBase, "No home base detected");
 
 	const BaseLocation * closestBase = nullptr;
 	int minDistance = std::numeric_limits<int>::max();
@@ -417,6 +416,12 @@ CCTilePosition BaseLocationManager::getNextExpansion(int player) const
 		}
 	}
 
+	return closestBase;
+}
+
+CCTilePosition BaseLocationManager::getNextExpansionPosition(int player) const
+{
+	auto closestBase = getNextExpansion(player);
 	return closestBase ? closestBase->getDepotPosition() : CCTilePosition(0, 0);
 }
 

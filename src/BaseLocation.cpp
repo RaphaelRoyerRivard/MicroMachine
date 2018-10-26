@@ -56,6 +56,17 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     }
 
     m_centerOfResources = CCPosition(m_left + (m_right-m_left)/2, m_top + (m_bottom-m_top)/2);
+
+	for (auto & mineral : m_minerals)
+	{
+		m_centerOfMinerals.x += mineral.getTilePosition().x;
+		m_centerOfMinerals.y += mineral.getTilePosition().y;
+	}
+	if (m_minerals.size() > 0)
+	{
+		m_centerOfMinerals.x /= m_minerals.size();
+		m_centerOfMinerals.y /= m_minerals.size();
+	}
 	
     // compute this BaseLocation's DistanceMap, which will compute the ground distance
     // from the center of its recourses to every other tile on the map
@@ -110,21 +121,8 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
         }
     }
 
-	//Get the location to place the turret
-	auto centerOfMinerals = CCTilePosition();
-	for (auto & mineral : m_minerals)
-	{
-		centerOfMinerals.x += mineral.getPosition().x;
-		centerOfMinerals.y += mineral.getPosition().y;
-	}
-	centerOfMinerals.x /= m_minerals.size();
-	centerOfMinerals.y /= m_minerals.size();
-
-	auto turretPosition = CCTilePosition(centerOfMinerals.x, centerOfMinerals.y);
-
-	Building b(MetaTypeEnum::MissileTurret.getUnitType(), turretPosition);
-	turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true);
-	m_turretPosition = turretPosition;
+	Building b(MetaTypeEnum::MissileTurret.getUnitType(), m_centerOfMinerals);
+	m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true);;
 }
 
 const CCTilePosition & BaseLocation::getTurretPosition() const
@@ -230,6 +228,11 @@ const std::vector<Unit> & BaseLocation::getGeysers() const
 const std::vector<Unit> & BaseLocation::getMinerals() const
 {
     return m_minerals;
+}
+
+const CCTilePosition BaseLocation::getCenterOfMinerals() const
+{
+	return m_centerOfMinerals;
 }
 
 const CCPosition & BaseLocation::getPosition() const
