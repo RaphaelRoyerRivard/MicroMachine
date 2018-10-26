@@ -30,8 +30,8 @@ public:
     const BaseLocation * getPlayerStartingBaseLocation(int player) const;
 	int BaseLocationManager::getBaseCount(int player, bool isCompleted = false) const;
 
-	const BaseLocation* getNextExpansion(int player) const;
-	CCTilePosition getNextExpansionPosition(int player) const;
+	const BaseLocation* getNextExpansion(int player, bool checkBuildable = false) const;
+	CCTilePosition getNextExpansionPosition(int player, bool checkBuildable = false) const;
 	CCTilePosition getBasePosition(int player, int index) const;
 
 };
