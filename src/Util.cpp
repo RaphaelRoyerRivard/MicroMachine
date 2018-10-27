@@ -279,13 +279,16 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 void Util::Normalize(sc2::Point2D& point)
 {
     float norm = sqrt(pow(point.x, 2) + pow(point.y, 2));
-    point /= norm;
+	if(norm > 0.f)
+		point /= norm;
 }
 
 sc2::Point2D Util::Normalized(const sc2::Point2D& point)
 {
     float norm = sqrt(pow(point.x, 2) + pow(point.y, 2));
-    return sc2::Point2D(point.x / norm, point.y / norm);
+	if(norm > 0.f)
+		return sc2::Point2D(point.x / norm, point.y / norm);
+    return sc2::Point2D(point.x, point.y);
 }
 
 float Util::GetDotProduct(const sc2::Point2D& v1, const sc2::Point2D& v2)
