@@ -222,17 +222,20 @@ void ProductionManager::manageBuildOrderQueue()
 			{
 				Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
 				CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
-				Unit worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition{ static_cast<float>(targetLocation.x), static_cast<float>(targetLocation.y) });
-				if (worker.isValid())
+				if (targetLocation != CCTilePosition(0, 0))
 				{
-					worker.move(targetLocation);
+					Unit worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition{ static_cast<float>(targetLocation.x), static_cast<float>(targetLocation.y) });
+					if (worker.isValid())
+					{
+						worker.move(targetLocation);
 
-					// create it and remove it from the _queue
-					create(worker, currentItem);
-					m_queue.removeCurrentHighestPriorityItem();
+						// create it and remove it from the _queue
+						create(worker, currentItem);
+						m_queue.removeCurrentHighestPriorityItem();
 
-					// don't actually loop around in here
-					break;
+						// don't actually loop around in here
+						break;
+					}
 				}
 			}
 		}
@@ -812,7 +815,7 @@ void ProductionManager::lowPriorityChecks()
 
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
-	if (m_bot.Strategy().shouldProduceAntiAir())
+	if (true || m_bot.Strategy().shouldProduceAntiAir())
 	{
 		auto engeneeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
 		if (engeneeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
@@ -1112,7 +1115,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 			//validate space next to building is reserved
 			auto addonPosition = CCTilePosition(unit.getTilePosition().x + 2, unit.getTilePosition().y);
 			Building b(type.getUnitType(), addonPosition);
-			if (m_bot.Buildings().getBuildingPlacer().canBuildHere(unit.getTilePosition().x + 2, unit.getTilePosition().y, b))
+			if (m_bot.Buildings().getBuildingPlacer().canBuildHereWithSpace(unit.getTilePosition().x + 2, unit.getTilePosition().y, b, 0, false))
 			{//Tiles are not reserved, since addon logic is reversed, this means we can't build here, there should be an addon already
 				continue;
 			}

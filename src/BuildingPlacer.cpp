@@ -35,12 +35,16 @@ void BuildingPlacer::onStart()
 // makes final checks to see if a building can be built at a certain location
 bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b) const
 {
+	//TODO: Unused, it is outdated, check canBuildHereWithSpace instead
+	BOT_ASSERT(true, "Unused, it is outdated, check canBuildHereWithSpace instead");
+	auto race = m_bot.GetSelfRace();
+
     // check the reserve map
     for (int x = bx; x < bx + b.type.tileWidth(); x++)
     {
         for (int y = by; y < by + b.type.tileHeight(); y++)
         {
-            if (!m_bot.Map().isValidTile(x, y) || m_reserveMap[x][y])
+            if (!buildable(b.type, x, y) || m_reserveMap[x][y])
             {
                 return false;
             }
@@ -257,7 +261,7 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
 bool BuildingPlacer::buildable(const UnitType type, int x, int y) const
 {
     // TODO: doesnt take units on the map into account
-	return m_bot.Map().isBuildable(x, y) && m_bot.Map().canBuildTypeAtPosition(x, y, type) && (m_bot.GetSelfRace() == CCRace::Zerg || !m_bot.Observation()->HasCreep(CCPosition(x,y)));//Remplaced !m_bot.Map().canBuildTypeAtPosition(x, y, b.type)) with isBuildable.
+	return m_bot.Map().isBuildable(x, y) && m_bot.Map().canBuildTypeAtPosition(x, y, type) && (Util::IsZerg(m_bot.GetSelfRace()) || !m_bot.Observation()->HasCreep(CCPosition(x,y)));//Remplaced !m_bot.Map().canBuildTypeAtPosition(x, y, b.type)) with isBuildable.
 }
 
 void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)

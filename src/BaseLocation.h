@@ -19,6 +19,8 @@ class BaseLocation
     std::vector<Unit>           m_geysers;
     std::vector<Unit>           m_minerals;
 
+	CCTilePosition				m_centerOfMinerals;
+
     std::vector<CCPosition>     m_mineralPositions;
     std::vector<CCPosition>     m_geyserPositions;
 
@@ -48,6 +50,7 @@ public:
     const CCPosition & getPosition() const;
     const std::vector<Unit> & getGeysers() const;
     const std::vector<Unit> & getMinerals() const;
+	const CCTilePosition getCenterOfMinerals() const;
     bool isOccupiedByPlayer(CCPlayer player) const;
     bool isExplored() const;
 

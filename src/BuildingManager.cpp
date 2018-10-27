@@ -589,7 +589,7 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 
     if (b.type.isResourceDepot())
     {
-        return m_bot.Bases().getNextExpansion(Players::Self);
+        return m_bot.Bases().getNextExpansionPosition(Players::Self);
     }
 
     // get a position within our region
