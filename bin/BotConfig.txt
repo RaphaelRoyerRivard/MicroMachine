@@ -21,7 +21,7 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 1,
+        "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
         "MapFile"                   : "MechDepotLE.SC2Map",
         "StepSize"                  : 1,
@@ -85,11 +85,11 @@
         "DrawWorkerInfo"            : false,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
-        "DrawUnitPowerInfo"         : true,
+        "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : true,
-        "DrawMemoryInfo"            : false,
-        "DrawUnitID"            	: false
+        "DrawMemoryInfo"            : true,
+        "DrawUnitID"            	: true
     },
     
     "Modules" :
