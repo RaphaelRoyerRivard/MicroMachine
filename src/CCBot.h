@@ -41,7 +41,8 @@ class CCBot
 	CCRace selfRace;
 
 	void checkKeyState();
-    void setUnits();
+	void setUnits();
+	void clearDeadUnits();
 
 #ifdef SC2API
     void OnError(const std::vector<sc2::ClientError> & client_errors, 

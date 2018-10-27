@@ -84,7 +84,8 @@ void CCBot::OnStep()
 		
 	checkKeyState();
 		
-    setUnits();	
+    setUnits();
+	clearDeadUnits();
 	m_map.onFrame();	
     m_unitInfo.onFrame();	
     m_bases.onFrame();
@@ -228,6 +229,38 @@ void CCBot::setUnits()
         m_allUnits.push_back(Unit(unit, *this));
     }
 #endif
+}
+
+void CCBot::clearDeadUnits()
+{
+	std::vector<sc2::Tag> unitsToRemove;
+	// Find dead ally units
+	for (auto& pair : m_allyUnits)
+	{
+		auto& unit = pair.second;
+		if (!unit.isAlive())
+			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+	}
+	// Remove dead ally units
+	for (auto tag : unitsToRemove)
+	{
+		m_allyUnits.erase(tag);
+		std::cout << "Dead ally unit removed from map" << std::endl;
+	}
+	unitsToRemove.clear();
+	// Find dead ally units
+	for (auto& pair : m_enemyUnits)
+	{
+		auto& unit = pair.second;
+		if (!unit.isAlive())
+			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+	}
+	// Remove dead ally units
+	for (auto tag : unitsToRemove)
+	{
+		m_enemyUnits.erase(tag);
+		std::cout << "Dead enemy unit removed from map" << std::endl;
+	}
 }
 
 uint32_t CCBot::GetGameLoop() const
