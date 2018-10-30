@@ -88,7 +88,7 @@ void ScoutManager::moveScouts()
             if (!m_scoutUnderAttack)
             {
                 // if there is a worker nearby, harass it
-                if (m_bot.Config().ScoutHarassEnemy && closestEnemyWorkerUnit.isValid() && (Util::Dist(workerScout, closestEnemyWorkerUnit) < 12))
+                if (m_bot.Config().ScoutHarassEnemy && closestEnemyWorkerUnit.isValid() && (Util::DistSq(workerScout, closestEnemyWorkerUnit) < 12 * 12))
                 {
                     m_scoutStatus = "Harass enemy worker";
                     m_scoutUnit.attackUnit(closestEnemyWorkerUnit);
@@ -156,7 +156,7 @@ Unit ScoutManager::closestEnemyWorkerTo(const CCPosition & pos) const
     {
         if (unit.getType().isWorker())
         {
-            float dist = Util::Dist(unit, m_scoutUnit);
+            const float dist = Util::DistSq(unit, m_scoutUnit);
 
             if (dist < minDist)
             {
@@ -172,7 +172,7 @@ bool ScoutManager::enemyWorkerInRadiusOf(const CCPosition & pos) const
 {
     for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
     {
-        if (unit.getType().isWorker() && Util::Dist(unit, pos) < 10)
+        if (unit.getType().isWorker() && Util::DistSq(unit, pos) < 10 * 10)
         {
             return true;
         }

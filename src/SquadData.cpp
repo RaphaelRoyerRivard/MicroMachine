@@ -177,8 +177,8 @@ bool SquadData::canAssignUnitToSquad(const Unit & unit, const Squad & newSquad) 
 
     if (newSquad.getMaxDistanceFromCenter() > 0.f && !newSquad.isEmpty())
     {
-        float distance = Util::Dist(unit.getPosition(), newSquad.calcCenter());
-        bool closeEnough = distance < newSquad.getMaxDistanceFromCenter();
+        const float distance = Util::DistSq(unit.getPosition(), newSquad.calcCenter());
+        const bool closeEnough = distance < newSquad.getMaxDistanceFromCenter() * newSquad.getMaxDistanceFromCenter();
         return closeEnough;
     }
     return true;

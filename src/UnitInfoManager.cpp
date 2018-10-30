@@ -326,7 +326,7 @@ void UnitInfoManager::getNearbyForce(std::vector<UnitInfo> & unitInfo, CCPositio
 
         // if it's a combat unit we care about
         // and it's finished! 
-        if (ui.type.isCombatUnit() && Util::Dist(ui.lastPosition,p) <= radius)
+        if (ui.type.isCombatUnit() && Util::DistSq(ui.lastPosition, p) <= radius * radius)
         {
             // add it to the vector
             unitInfo.push_back(ui);

@@ -177,7 +177,7 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 				if (!unit.isVisible())
 					continue;
 
-				if (Util::Dist(m_centerOfResources, unit.getPosition()) < 10)
+				if (Util::DistSq(m_centerOfResources, unit.getPosition()) < 10 * 10)
 				{
 					if (unit.getType().isMineral())
 						minerals.push_back(unit);

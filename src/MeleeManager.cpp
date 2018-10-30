@@ -55,7 +55,7 @@ void MeleeManager::executeMicro()
             else
             {
                 // if we're not near the order position
-                if (Util::Dist(meleeUnit, m_order.getPosition()) > 4)
+                if (Util::DistSq(meleeUnit, m_order.getPosition()) > 4 * 4)
                 {
                     // move to it
                     meleeUnit.move(m_order.getPosition());
@@ -84,8 +84,8 @@ Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets)
     {
         BOT_ASSERT(targetUnit.isValid(), "null target unit in getTarget");
 
-        int priority = getAttackPriority(meleeUnit, targetUnit);
-        float distance = Util::Dist(meleeUnit, targetUnit);
+        const int priority = getAttackPriority(meleeUnit, targetUnit);
+        const float distance = Util::DistSq(meleeUnit, targetUnit);
 
         // if it's a higher priority, or it's closer, set it
         if (!closestTarget.isValid() || (priority > highPriority) || (priority == highPriority && distance < closestDist))

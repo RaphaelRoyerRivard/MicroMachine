@@ -96,5 +96,7 @@ namespace Util
 	float Dist(const CCTilePosition & p1, const CCTilePosition & p2);
     float Dist(const CCPosition & p1, const CCPosition & p2);
 	CCPositionType DistSq(const CCTilePosition & p1, const CCTilePosition & p2);
+	CCPositionType DistSq(const Unit & unit, const CCPosition & p2);
+	CCPositionType DistSq(const Unit & unit, const Unit & unit2);
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
 };

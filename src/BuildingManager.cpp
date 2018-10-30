@@ -228,7 +228,7 @@ void BuildingManager::constructAssignedBuildings()
                     Unit geyser;
                     for (auto unit : m_bot.GetUnits())
                     {
-                        if (unit.getType().isGeyser() && Util::Dist(Util::GetPosition(b.finalPosition), unit.getPosition()) < 3)
+                        if (unit.getType().isGeyser() && Util::DistSq(Util::GetPosition(b.finalPosition), unit.getPosition()) < 3 * 3)
 						{
 							geyser = unit;
 							break;
@@ -612,7 +612,7 @@ Unit BuildingManager::getClosestResourceDepot(CCPosition position)
 	float smallestDistance = 0.f;
 	for (auto & base : resourceDepots)
 	{
-		const float dist = Util::Dist(base, position);
+		const float dist = Util::DistSq(base, position);
 		if (smallestDistance == 0.f || dist < smallestDistance)
 		{
 			closestBase = base;
@@ -688,7 +688,7 @@ const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) con
 {
 	auto potentialMinerals = m_bot.UnitInfo().getUnits(Players::Neutral);
 	const sc2::Unit * mineralField = nullptr;
-	float minDist;
+	float minDist = 0.f;
 	for (auto mineral : potentialMinerals)
 	{
 		if (!mineral.getType().isMineral())
@@ -696,12 +696,8 @@ const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) con
 			continue;
 		}
 
-		const float dist = Util::Dist(mineral.getUnitPtr()->pos, unit->pos);
-		if (mineralField == nullptr) {
-			mineralField = mineral.getUnitPtr();
-			minDist = dist;
-		}
-		else if (dist < minDist) {
+		const float dist = Util::DistSq(mineral.getUnitPtr()->pos, unit->pos);
+		if (mineralField == nullptr || dist < minDist) {
 			mineralField = mineral.getUnitPtr();
 			minDist = dist;
 		}

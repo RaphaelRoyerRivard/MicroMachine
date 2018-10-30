@@ -176,7 +176,7 @@ void CCBot::setUnits()
 				float realSpeed = dist * 16.f;	// Magic number calculated from real values
 				if(realSpeed > speed + 1.f)
 				{
-					// This is a Wingling!!!
+					// This is a Speedling!!!
 					m_strategy.setEnemyHasMetabolicBoost(true);
 					Actions()->SendChat("Speedlings won't save you my friend");
 				}

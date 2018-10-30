@@ -17,7 +17,7 @@ void BaseLocationManager::onStart()
     
     // a BaseLocation will be anything where there are minerals to mine
     // so we will first look over all minerals and cluster them based on some distance
-    const CCPositionType clusterDistance = Util::TileToPosition(12);
+    const CCPositionType clusterDistanceSq = Util::TileToPosition(12*12);
     
     // stores each cluster of resources based on some ground distance
     std::vector<std::vector<Unit>> resourceClusters;
@@ -38,14 +38,14 @@ void BaseLocationManager::onStart()
         bool foundCluster = false;
         for (auto & cluster : resourceClusters)
         {
-            float dist = Util::Dist(mineral, Util::CalcCenter(cluster));
+            float distSq = Util::DistSq(mineral, Util::CalcCenter(cluster));
             
             // quick initial air distance check to eliminate most resources
-            if (dist < clusterDistance)
+            if (distSq < clusterDistanceSq)
             {
                 // now do a more expensive ground distance check
-                float groundDist = dist; //m_bot.Map().getGroundDistance(mineral.pos, Util::CalcCenter(cluster));
-                if (groundDist >= 0 && groundDist < clusterDistance)
+                //float groundDist = dist; //m_bot.Map().getGroundDistance(mineral.pos, Util::CalcCenter(cluster));
+                //if (groundDist >= 0 && groundDist < clusterDistance)
                 {
                     cluster.push_back(mineral);
                     foundCluster = true;
@@ -72,9 +72,9 @@ void BaseLocationManager::onStart()
         for (auto & cluster : resourceClusters)
         {
             //int groundDist = m_bot.Map().getGroundDistance(geyser.pos, Util::CalcCenter(cluster));
-            float groundDist = Util::Dist(geyser, Util::CalcCenter(cluster));
+            float groundDistSq = Util::DistSq(geyser, Util::CalcCenter(cluster));
 
-            if (groundDist >= 0 && groundDist < clusterDistance)
+            if (/*groundDist >= 0 &&*/ groundDistSq < clusterDistanceSq)
             {
                 cluster.push_back(geyser);
                 break;

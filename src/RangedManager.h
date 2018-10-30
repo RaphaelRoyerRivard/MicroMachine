@@ -23,8 +23,8 @@ private:
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	bool ShouldSkipFrame(const sc2::Unit * rangedUnit) const;
 	void ExecuteBansheeCloakLogic(const sc2::Unit * rangedUnit, sc2::Units & threats) const;
-	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, float distanceToGoal, const sc2::Unit* target);
-	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float distanceToGoal);
+	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target);
+	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float squaredDistanceToGoal);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;
 	CCPosition GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange) const;
 	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats);

@@ -13,7 +13,7 @@ bool DonePullBackTransition::isValid(const sc2::Unit * target, const std::vector
 {
     bool done(false);
     done = m_position == m_unit->pos;
-    if (Util::Dist(m_position, m_unit->pos) < 1.5f)
+    if (Util::DistSq(m_position, m_unit->pos) < 1.5f * 1.5f)
         return true;
     else
         return false;

@@ -13,10 +13,10 @@ PullBackFSMState::PullBackFSMState(const sc2::Unit * unit)
 void PullBackFSMState::onEnter(const std::vector<const sc2::Unit*> * targets, CCBot* bot)
 {
     const sc2::Unit* closestTarget = targets->at(0);
-    float minDist = Util::Dist(closestTarget->pos, m_unit->pos);
+    float minDist = Util::DistSq(closestTarget->pos, m_unit->pos);
     for (auto target : *targets)
     {
-        float targetDist = Util::Dist(target->pos, m_unit->pos);
+        const float targetDist = Util::DistSq(target->pos, m_unit->pos);
         if (targetDist < minDist)
         {
             closestTarget = target;

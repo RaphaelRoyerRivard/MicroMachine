@@ -234,7 +234,7 @@ void WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, con
 		if (!mineral.getType().isMineral() || !mineral.isAlive() || mineral.getUnitPtr()->display_type != sc2::Unit::DisplayType::Visible)
 			continue;
 
-        double dist = Util::Dist(mineral, worker);
+        double dist = Util::DistSq(mineral, worker);
 
         if (dist < bestDist)
         {

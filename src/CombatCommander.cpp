@@ -403,7 +403,7 @@ void CombatCommander::updateDefenseSquads()
 					workerRushed = true;
                 }
 
-				float enemyDistance = Util::Dist(unit.getPosition(), basePosition);
+				const float enemyDistance = Util::DistSq(unit.getPosition(), basePosition);
 				if(!closestEnemy.isValid() || enemyDistance < minEnemyDistance)
 				{
 					minEnemyDistance = enemyDistance;
@@ -544,7 +544,7 @@ void CombatCommander::updateDefenseSquads()
         bool enemyUnitInRange = false;
         for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
         {
-            if (Util::Dist(unit, order.getPosition()) < order.getRadius())
+            if (Util::DistSq(unit, order.getPosition()) < order.getRadius() * order.getRadius())
             {
                 enemyUnitInRange = true;
                 break;
@@ -689,9 +689,9 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
             continue;
         }
 
-        float dist = Util::Dist(unit, closestEnemy);
+        const float dist = Util::DistSq(unit, closestEnemy);
         Squad *unitSquad = m_squadData.getUnitSquad(unit);
-        if (unitSquad && (unitSquad->getName() == "MainAttack" || unitSquad->getName() == "Harass") && Util::Dist(unit.getPosition(), unitSquad->getSquadOrder().getPosition()) < dist)
+        if (unitSquad && (unitSquad->getName() == "MainAttack" || unitSquad->getName() == "Harass") && Util::DistSq(unit.getPosition(), unitSquad->getSquadOrder().getPosition()) < dist)
         {
             //We do not want to bring back the main attackers when they are closer to their objective than our base
             continue;
@@ -735,9 +735,9 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & woker, const Squad & defen
 	if (woker.isValid() && 
 		m_squadData.canAssignUnitToSquad(woker, defenseSquad) &&
 		!closestEnemy.isFlying() &&
-		Util::Dist(woker, pos) < 15.f &&	// worker should not get too far from base
-		(Util::Dist(woker, closestEnemy) < 7.f ||	// worker can fight only units close to it
-		(closestEnemy.getType().isBuilding() && Util::Dist(closestEnemy, pos) < 12.f)))	// worker can fight buildings somewhat close to the base
+		Util::DistSq(woker, pos) < 15.f * 15.f &&	// worker should not get too far from base
+		(Util::DistSq(woker, closestEnemy) < 7.f * 7.f ||	// worker can fight only units close to it
+		(closestEnemy.getType().isBuilding() && Util::DistSq(closestEnemy, pos) < 12.f * 12.f)))	// worker can fight buildings somewhat close to the base
 		return true;
 	return false;
 }
@@ -801,7 +801,7 @@ CCPosition CombatCommander::getMainAttackLocation()
         {
 			if (enemyUnit.getType().isCreepTumor())
 				continue;
-			float dist = Util::Dist(enemyUnit, harassSquadCenter);
+			float dist = Util::DistSq(enemyUnit, harassSquadCenter);
 			if(lowestDistance < 0 || dist < lowestDistance)
 			{
 				lowestDistance = dist;
@@ -823,7 +823,7 @@ CCPosition CombatCommander::getMainAttackLocation()
         {
 			if (enemyUnit.getType().isCreepTumor())
 				continue;
-			float dist = Util::Dist(enemyUnit, harassSquadCenter);
+			float dist = Util::DistSq(enemyUnit, harassSquadCenter);
 			if (lowestDistance < 0 || dist < lowestDistance)
 			{
 				lowestDistance = dist;
@@ -847,7 +847,7 @@ CCPosition CombatCommander::exploreMap()
 	CCPosition basePosition = Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
 	for (auto & unit : m_combatUnits)
 	{
-		if (Util::Dist(unit.getPosition(), basePosition) < 3.f)
+		if (Util::DistSq(unit.getPosition(), basePosition) < 3.f * 3.f)
 		{
 			m_currentBaseExplorationIndex = (m_currentBaseExplorationIndex + 1) % m_bot.Bases().getBaseLocations().size();
 			if (m_bot.GetCurrentFrame() % 25 == 0)

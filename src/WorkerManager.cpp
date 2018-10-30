@@ -89,13 +89,13 @@ void WorkerManager::handleMineralWorkers()
 		}
 	}
 
-	std::list<std::pair<Unit, float>> temp;
+	/*std::list<std::pair<Unit, float>> temp;
 	for (auto mineralWorker : mineralWorkers)
 	{
 		auto closestMineral = getClosest(mineralWorker, minerals);
 		const float dist = Util::Dist(mineralWorker.getPosition(), closestMineral.getPosition());
 		temp.push_back(std::pair<Unit, float>(mineralWorker, dist));
-	}
+	}*/
 
 	std::list<Unit> orderedMineralWorkers;//Replaces workers
 	for (auto mineralWorker : workers)
@@ -448,12 +448,8 @@ Unit WorkerManager::getClosest(const Unit unit, const std::list<Unit> units) con
 		{
 			continue;
 		}
-		const float dist = Util::Dist(potentialClosest.getUnitPtr()->pos, unit.getPosition());
-		if (minDist == -1) {
-			currentClosest = potentialClosest;
-			minDist = dist;
-		}
-		else if (dist < minDist) {
+		const float dist = Util::DistSq(potentialClosest.getUnitPtr()->pos, unit.getPosition());
+		if (minDist == -1 || dist < minDist) {
 			currentClosest = potentialClosest;
 			minDist = dist;
 		}
@@ -566,7 +562,7 @@ Unit WorkerManager::getClosestDepot(Unit worker) const
 						continue;
 				}
 			}
-            double distance = Util::Dist(unit, worker);
+            const double distance = Util::DistSq(unit, worker);
             if (!closestDepot.isValid() || distance < closestDistance)
             {
                 closestDepot = unit;

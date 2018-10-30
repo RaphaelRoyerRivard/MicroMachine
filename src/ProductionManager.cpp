@@ -1361,7 +1361,7 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 
     for (auto & unit : units)
     {
-        double distance = Util::Dist(unit, closestTo);
+        double distance = Util::DistSq(unit, closestTo);
         if (!closestUnit.isValid() || distance < minDist)
         {
             closestUnit = unit;
