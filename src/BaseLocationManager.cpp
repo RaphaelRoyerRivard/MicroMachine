@@ -358,7 +358,7 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 	return 0;
 }
 
-const BaseLocation* BaseLocationManager::getNextExpansion(int player) const
+const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBuildable) const
 {
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
 	BOT_ASSERT(homeBase, "No home base detected");
@@ -399,6 +399,12 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player) const
 		{
 			continue;
 		}
+		
+		//Check if buildable (creep check), using CC for building size, should work for all races.
+		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, Building(MetaTypeEnum::CommandCenter.getUnitType(), tile)))
+		{
+			continue;
+		}
 
 		// the base's distance from our main nexus
 		int distanceFromHome = homeBase->getGroundDistance(tile);
@@ -419,7 +425,7 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player) const
 	return closestBase;
 }
 
-CCTilePosition BaseLocationManager::getNextExpansionPosition(int player) const
+CCTilePosition BaseLocationManager::getNextExpansionPosition(int player, bool checkBuildable) const
 {
 	auto closestBase = getNextExpansion(player);
 	return closestBase ? closestBase->getDepotPosition() : CCTilePosition(0, 0);

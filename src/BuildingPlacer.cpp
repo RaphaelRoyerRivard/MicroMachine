@@ -37,7 +37,6 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b) const
 {
 	//TODO: Unused, it is outdated, check canBuildHereWithSpace instead
 	BOT_ASSERT(true, "Unused, it is outdated, check canBuildHereWithSpace instead");
-	auto race = m_bot.GetSelfRace();
 
     // check the reserve map
     for (int x = bx; x < bx + b.type.tileWidth(); x++)
