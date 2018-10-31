@@ -48,8 +48,6 @@ public:
 	bool isCreepTumor() const;
     bool isMorphedBuilding() const;
     bool isAttackingBuilding() const;
-    bool canAttack() const;
-    bool canMove() const;
     bool isAddon() const;
     CCPositionType getAttackRange() const;
     int tileWidth() const;
@@ -58,8 +56,6 @@ public:
     int supplyRequired() const;
     int mineralPrice() const;
     int gasPrice() const;
-
-    const std::vector<UnitType> & whatBuilds() const;
 
     static UnitType GetUnitTypeFromName(const std::string & name, CCBot & bot);
 

@@ -33,6 +33,7 @@ public:
     bool    isUpgrade()     const;
     bool    isTech()        const;
     bool    isBuilding()    const;
+	bool	isAddon()		const;
 
     const size_t &          getMetaType()  const;
     const std::string &     getName()       const;
