@@ -23,7 +23,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "MechDepotLE.SC2Map",
+        "MapFile"                   : "DreamcatcherLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -89,7 +89,8 @@
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : true,
         "DrawMemoryInfo"            : true,
-        "DrawUnitID"            	: true
+        "DrawUnitID"            	: true,
+        "DrawProfilingInfo"         : true
     },
     
     "Modules" :

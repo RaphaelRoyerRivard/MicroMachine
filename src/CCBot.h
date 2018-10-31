@@ -39,10 +39,12 @@ class CCBot
     std::vector<Unit>       m_allUnits;
     std::vector<CCPosition> m_baseLocations;
 	CCRace selfRace;
+	std::map<std::string, std::pair<std::deque<long long>, long long>> m_profilingTimes;
 
 	void checkKeyState();
 	void setUnits();
 	void clearDeadUnits();
+	void drawProfilingInfo() const;
 
 #ifdef SC2API
     void OnError(const std::vector<sc2::ClientError> & client_errors, 
@@ -101,4 +103,5 @@ public:
 	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();
 	uint32_t GetLastStepSeenUnit(sc2::Tag tag);
     const std::vector<CCPosition> & GetStartLocations() const;
+	void AddProfilingTime(const std::string & profiler, const long long timeInMicroseconds);
 };

@@ -98,6 +98,7 @@ void CCBot::OnStep()
 #ifdef SC2API
 	if (Config().AllowDebug)
 	{
+		drawProfilingInfo();
 		Debug()->SendDebug();
 	}
 #endif
@@ -487,3 +488,33 @@ void CCBot::OnError(const std::vector<sc2::ClientError> & client_errors, const s
     
 }
 #endif
+
+void CCBot::AddProfilingTime(const std::string & profiler, const long long timeInMicroseconds)
+{
+	if (m_config.DrawProfilingInfo)
+	{
+		auto & pair = m_profilingTimes[profiler];	// Get the profiling queue
+		pair.second += timeInMicroseconds;			// Add the time to the total of the last 100 steps
+		pair.first.push_back(timeInMicroseconds);	// Add the time to the queue
+		if (pair.first.size() > 100)
+		{
+			pair.second -= pair.first[0];			// Remove the old time from the total of the last 100 steps
+			pair.first.pop_front();					// Remove the old time from the queue
+		}
+	}
+}
+
+void CCBot::drawProfilingInfo() const
+{
+	if (m_config.DrawProfilingInfo)
+	{
+		std::string profilingInfo = "Profiling info (ms)";
+		for(auto & mapPair : m_profilingTimes)
+		{
+			const long long totalTime = mapPair.second.second;
+			const size_t queueCount = mapPair.second.first.size();
+			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * totalTime / queueCount);
+		}
+		m_map.drawTextScreen(0.45f, 0.01f, profilingInfo);
+	}
+}
