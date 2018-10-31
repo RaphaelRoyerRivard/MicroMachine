@@ -1543,17 +1543,19 @@ void ProductionManager::drawProductionInformation()
     std::stringstream ss;
     ss << "Production Information\n\n";
 
-    /*for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
-    {
-        if (unit.isBeingConstructed())
-        {
-            ss << sc2::UnitTypeToName(unit.unit_type) << " " << unit.build_progress << "\n";
-        }
-    }*/
-
     ss << m_queue.getQueueInformation() << "\n\n";
+	m_bot.Map().drawTextScreen(0.01f, 0.01f, ss.str(), CCColor(255, 255, 0));
+
+	ss.str(std::string());
 	ss << "Free Mineral:     " << getFreeMinerals() << "\n";
-	ss << "Free Gas:         " << getFreeGas();
-	
-    m_bot.Map().drawTextScreen(0.01f, 0.01f, ss.str(), CCColor(255, 255, 0));
+	ss << "Free Gas:         " << getFreeGas() << "\n\n";
+	m_bot.Map().drawTextScreen(0.75f, 0.05f, ss.str(), CCColor(255, 255, 0));
+
+	ss.str(std::string());
+	ss << "Being built:      \n";
+	for (auto & underConstruction : m_bot.Buildings().getBuildings())
+	{
+		ss << underConstruction.type.getName() << "\n";
+	}
+	m_bot.Map().drawTextScreen(0.01f, 0.4f, ss.str(), CCColor(255, 255, 0));	
 }
