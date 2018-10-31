@@ -489,17 +489,30 @@ void CCBot::OnError(const std::vector<sc2::ClientError> & client_errors, const s
 }
 #endif
 
-void CCBot::AddProfilingTime(const std::string & profiler, const long long timeInMicroseconds)
+void CCBot::StartProfiling(const std::string & profiler)
 {
 	if (m_config.DrawProfilingInfo)
 	{
-		auto & pair = m_profilingTimes[profiler];	// Get the profiling queue
-		pair.second += timeInMicroseconds;			// Add the time to the total of the last 100 steps
-		pair.first.push_back(timeInMicroseconds);	// Add the time to the queue
-		if (pair.first.size() > 100)
+		auto & tuple = m_profilingTimes[profiler];				// Get the profiling queue tuple
+		std::get<2>(tuple) = std::chrono::steady_clock::now();	// Set the start time (third element of the tuple) to now
+	}
+}
+
+void CCBot::StopProfiling(const std::string & profiler)
+{
+	if (m_config.DrawProfilingInfo)
+	{
+		auto & tuple = m_profilingTimes[profiler];	// Get the profiling queue tuple
+		const auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - std::get<2>(tuple)).count();
+
+		auto & totalTime = std::get<1>(tuple);		
+		totalTime += elapsedTime;					// Add the time to the total of the last 100 steps
+		auto & queue = std::get<0>(tuple);	
+		queue.push_back(elapsedTime);				// Add the time to the queue
+		if (queue.size() > 100)
 		{
-			pair.second -= pair.first[0];			// Remove the old time from the total of the last 100 steps
-			pair.first.pop_front();					// Remove the old time from the queue
+			totalTime -= queue[0];					// Remove the old time from the total of the last 100 steps
+			queue.pop_front();						// Remove the old time from the queue
 		}
 	}
 }
@@ -509,10 +522,10 @@ void CCBot::drawProfilingInfo() const
 	if (m_config.DrawProfilingInfo)
 	{
 		std::string profilingInfo = "Profiling info (ms)";
-		for(auto & mapPair : m_profilingTimes)
+		for (auto & mapPair : m_profilingTimes)
 		{
-			const long long totalTime = mapPair.second.second;
-			const size_t queueCount = mapPair.second.first.size();
+			auto & totalTime = std::get<1>(mapPair.second);
+			const size_t queueCount = std::get<0>(mapPair.second).size();
 			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * totalTime / queueCount);
 		}
 		m_map.drawTextScreen(0.45f, 0.01f, profilingInfo);
