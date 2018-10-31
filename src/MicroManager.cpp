@@ -23,7 +23,7 @@ void MicroManager::regroup(const CCPosition & regroupPosition) const
     {
         BOT_ASSERT(unit.isValid(), "null unit in MicroManager regroup");
 
-        if (Util::Dist(unit, regroupPosition) > 4)
+        if (Util::DistSq(unit, regroupPosition) > 4 * 4)
         {
             // regroup it
 			Micro::SmartMove(unit.getUnitPtr(), regroupPosition, m_bot);

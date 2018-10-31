@@ -84,7 +84,8 @@ void CCBot::OnStep()
 		
 	checkKeyState();
 		
-    setUnits();	
+    setUnits();
+	clearDeadUnits();
 	m_map.onFrame();	
     m_unitInfo.onFrame();	
     m_bases.onFrame();
@@ -97,6 +98,7 @@ void CCBot::OnStep()
 #ifdef SC2API
 	if (Config().AllowDebug)
 	{
+		drawProfilingInfo();
 		Debug()->SendDebug();
 	}
 #endif
@@ -175,7 +177,7 @@ void CCBot::setUnits()
 				float realSpeed = dist * 16.f;	// Magic number calculated from real values
 				if(realSpeed > speed + 1.f)
 				{
-					// This is a Wingling!!!
+					// This is a Speedling!!!
 					m_strategy.setEnemyHasMetabolicBoost(true);
 					Actions()->SendChat("Speedlings won't save you my friend");
 				}
@@ -228,6 +230,38 @@ void CCBot::setUnits()
         m_allUnits.push_back(Unit(unit, *this));
     }
 #endif
+}
+
+void CCBot::clearDeadUnits()
+{
+	std::vector<sc2::Tag> unitsToRemove;
+	// Find dead ally units
+	for (auto& pair : m_allyUnits)
+	{
+		auto& unit = pair.second;
+		if (!unit.isAlive())
+			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+	}
+	// Remove dead ally units
+	for (auto tag : unitsToRemove)
+	{
+		m_allyUnits.erase(tag);
+		std::cout << "Dead ally unit removed from map" << std::endl;
+	}
+	unitsToRemove.clear();
+	// Find dead ally units
+	for (auto& pair : m_enemyUnits)
+	{
+		auto& unit = pair.second;
+		if (!unit.isAlive())
+			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+	}
+	// Remove dead ally units
+	for (auto tag : unitsToRemove)
+	{
+		m_enemyUnits.erase(tag);
+		std::cout << "Dead enemy unit removed from map" << std::endl;
+	}
 }
 
 uint32_t CCBot::GetGameLoop() const
@@ -454,3 +488,33 @@ void CCBot::OnError(const std::vector<sc2::ClientError> & client_errors, const s
     
 }
 #endif
+
+void CCBot::AddProfilingTime(const std::string & profiler, const long long timeInMicroseconds)
+{
+	if (m_config.DrawProfilingInfo)
+	{
+		auto & pair = m_profilingTimes[profiler];	// Get the profiling queue
+		pair.second += timeInMicroseconds;			// Add the time to the total of the last 100 steps
+		pair.first.push_back(timeInMicroseconds);	// Add the time to the queue
+		if (pair.first.size() > 100)
+		{
+			pair.second -= pair.first[0];			// Remove the old time from the total of the last 100 steps
+			pair.first.pop_front();					// Remove the old time from the queue
+		}
+	}
+}
+
+void CCBot::drawProfilingInfo() const
+{
+	if (m_config.DrawProfilingInfo)
+	{
+		std::string profilingInfo = "Profiling info (ms)";
+		for(auto & mapPair : m_profilingTimes)
+		{
+			const long long totalTime = mapPair.second.second;
+			const size_t queueCount = mapPair.second.first.size();
+			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * totalTime / queueCount);
+		}
+		m_map.drawTextScreen(0.45f, 0.01f, profilingInfo);
+	}
+}

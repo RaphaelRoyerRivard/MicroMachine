@@ -22,6 +22,8 @@ const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
 const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_MOVE_FRAME_COUNT = 3;
+const int REAPER_KD8_CHARGE_COOLDOWN = 314;
+const int VIKING_MORPH_FRAME_COUNT = 80;
 const float HARASS_THREAT_MIN_DISTANCE_TO_TARGET = 2.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
@@ -100,7 +102,11 @@ void RangedManager::executeMicro()
     }
 	else if (m_harassMode)
 	{
+		const auto start = std::chrono::steady_clock::now();
 		HarassLogic(rangedUnits, rangedUnitTargets);
+		const auto end = std::chrono::steady_clock::now();
+		const auto time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+		m_bot.AddProfilingTime("Harass", time);
 	}
     else 
 	{
@@ -119,7 +125,7 @@ void RangedManager::RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedU
 		const sc2::Unit * target = nullptr;
 		target = getTarget(rangedUnit, rangedUnitTargets);
 		bool isEnemyInSightCondition = rangedUnitTargets.size() > 0 &&
-			target != nullptr && Util::Dist(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance;
+			target != nullptr && Util::DistSq(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance * m_bot.Config().MaxTargetDistance;
 
 		ConditionAction isEnemyInSight(isEnemyInSightCondition);
 		ConditionAction isEnemyRanged(target != nullptr && isTargetRanged(target));
@@ -167,13 +173,13 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		const bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
 		const bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
 		const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
-		const bool isGroundUnit = !rangedUnit->is_flying;
+		const bool isViking = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
 
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawText(rangedUnit->pos, std::to_string(rangedUnit->tag));
+
 		// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
-		uint32_t availableFrame = nextCommandFrameForUnit.find(rangedUnit) != nextCommandFrameForUnit.end() ? nextCommandFrameForUnit[rangedUnit] : 0;
-		if (m_bot.GetGameLoop() < availableFrame)
+		if (ShouldSkipFrame(rangedUnit))
 			continue;
 
 		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
@@ -181,230 +187,80 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 		if(isBanshee && m_bot.Strategy().isBansheeCloakCompleted())
 		{
-			//TODO consider detectors
-			if (!threats.empty() && rangedUnit->cloak == sc2::Unit::NotCloaked && rangedUnit->energy > 50.f)
-				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::BEHAVIOR_CLOAKON, m_bot);
-			/*else if(threats.empty() && rangedUnit->cloak == sc2::Unit::Cloaked)
-				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::BEHAVIOR_CLOAKOFF, m_bot);*/
+			ExecuteBansheeCloakLogic(rangedUnit, threats);
 		}
 
 		CCPosition goal = m_order.getPosition();
+
 		// if the reaper is damaged, go to center of the map
 		if (isReaper && rangedUnit->health / rangedUnit->health_max < 0.75f)
 			goal = CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f;
 
-		float distanceToGoal = Util::Dist(rangedUnit->pos, goal);
-		if (distanceToGoal < 7.f && !target)
+		const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
+
+		// check if the viking should morph
+		if(isViking && ExecuteVikingMorphLogic(rangedUnit, squaredDistanceToGoal, target))
 		{
-			if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
-			{
-				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, m_bot);
-				continue;
-			}
-			//TODO should morph to assault mode if there are close flying units
-			if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT && !m_bot.Strategy().shouldFocusBuildings())
-			{
-				Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE, m_bot);
-				continue;
-			}
-		}
-
-		// if there is no potential target or threat, move to objective (max distance is not considered when defending)
-		if ((!target || 
-			 (m_order.getType() != SquadOrderTypes::Defend && Util::Dist(rangedUnit->pos, target->pos) > m_order.getRadius()))
-			&& threats.empty())
-		{
-			if (m_bot.Config().DrawHarassInfo)
-				m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
-
-			if(distanceToGoal > 10.f)
-			{
-				if(m_bot.Strategy().shouldFocusBuildings())
-					Micro::SmartAttackMove(rangedUnit, goal, m_bot);
-				else
-					Micro::SmartMove(rangedUnit, goal, m_bot);
-			}
-			else
-			{
-				Micro::SmartAttackMove(rangedUnit, goal, m_bot);
-			}
-
-			if (isReaper)
-			{
-				nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
-			}
 			continue;
 		}
 
-		// Check if unit can use KD8Charge
-		bool canUseKD8Charge = false;
-		if (isReaper)
+		// if there is no potential target or threat, move to objective (max distance is not considered when defending)
+		if(MoveToGoal(rangedUnit, threats, target, goal, squaredDistanceToGoal))
 		{
-			Unit harassUnit(rangedUnit, m_bot);
-			sc2::AvailableAbilities abilities = harassUnit.getAbilities();
-			for (const auto & ability : abilities.abilities)
-			{
-				if (ability.ability_id == sc2::ABILITY_ID::EFFECT_KD8CHARGE)
-				{
-					canUseKD8Charge = true;
-					break;
-				}
-			}
+			continue;
 		}
 
-		CCPosition dirVec(0, 0);
-		bool moveTowardsObjective = true;
-
+		bool targetInAttackRange = false;
 		if (target)
 		{
-			bool targetInAttackRange = Util::Dist(rangedUnit->pos, target->pos) <= Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
-			bool inRangeOfThreat = false;
-			bool isCloseThreatFaster = false;
-			for (auto & threat : threats)
-			{
-				float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
-				float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
-				float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
-				float speedDiff = threatSpeed - rangedUnitSpeed;
-				if (Util::Dist(rangedUnit->pos, threat->pos) <= threatRange + std::max(HARASS_THREAT_RANGE_BUFFER, speedDiff))
-				{
-					inRangeOfThreat = true;
-					if (threatSpeed > rangedUnitSpeed)
-					{
-						isCloseThreatFaster = true;
-						break;
-					}
-				}
-			}
-
-			// if our unit is not in range of threat (unless it is faster) and target is in range and weapon is ready, attack target
-			if ((!inRangeOfThreat || isCloseThreatFaster) && targetInAttackRange && rangedUnit->weapon_cooldown <= 0.f) {
-				Micro::SmartAttackUnit(rangedUnit, target, m_bot);
-				setNextCommandFrameAfterAttack(rangedUnit);
-				continue;
-			}
-
-			const bool reaperShouldHeal = isReaper && rangedUnit->health / rangedUnit->health_max < 0.5f;
-			if (!reaperShouldHeal)
-			{
-				// if not in range of target, add normalized vector towards target
-				if (!targetInAttackRange)
-				{
-					dirVec = target->pos - rangedUnit->pos;
-					if (m_bot.Config().DrawHarassInfo)
-						m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Green);
-				}
-				else
-				{
-					if (m_bot.Config().DrawHarassInfo)
-						m_bot.Map().drawLine(rangedUnit->pos, target->pos, sc2::Colors::Yellow);
-				}
-				moveTowardsObjective = false;
-			}
+			const float unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+			targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;
 		}
 
-		if(moveTowardsObjective)
+		if(targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
 		{
-			// add normalized vector towards objective
-			dirVec = goal - rangedUnit->pos;
-
-			if (m_bot.Config().DrawHarassInfo)
-				m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
+			Micro::SmartAttackUnit(rangedUnit, target, m_bot);
+			setNextCommandFrameAfterAttack(rangedUnit);
+			continue;
 		}
-		if(dirVec.x != 0.f || dirVec.y != 0.f)
-			sc2::Normalize2D(dirVec);
 
 		// Check if our units are powerful enough to exchange fire with the enemies
-		if (!threats.empty())
+		if (ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
 		{
-			float unitsPower = 0.f;
-			float targetsPower = 0.f;
-			sc2::Units closeUnits;
-			for(auto unit : rangedUnits)
-			{
-				if (Util::Dist(unit->pos, rangedUnit->pos) < HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE)
-					closeUnits.push_back(unit);
-			}
-			for (auto closeUnit : closeUnits)
-			{
-				target = getTarget(closeUnit, threats);
-				unitsPower += Util::GetUnitPower(closeUnit, target, m_bot);
-			}
-			for (auto threat : threats)
-			{
-				target = getTarget(threat, closeUnits);
-				targetsPower += Util::GetUnitPower(threat, target, m_bot);
-			}
-			if (unitsPower > targetsPower)
-			{
-				sc2::Units units;
-				units.push_back(rangedUnit);
-				// The harass mode deactivation is a hack to not ignore range targets
-				m_harassMode = false;
-				target = getTarget(rangedUnit, threats);
-				// Use behavior tree only against ranged units
-				if(target && isTargetRanged(target))
-				{
-					RunBehaviorTree(units, threats);
-					m_harassMode = true;
-					setNextCommandFrameAfterAttack(rangedUnit);
-					continue;
-				}
-				m_harassMode = true;
-			}
+			continue;
 		}
+
+		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange);
+
+		// Check if unit can use KD8Charge
+		bool canUseKD8Charge = CanUseKD8Charge(rangedUnit);
 
 		bool useInfluenceMap = false;
 		bool madeAction = false;
-		CCPosition sumedFleeVec(0, 0);
+		CCPosition summedFleeVec(0, 0);
 		// add normalied * 1.5 vector of potential threats
 		for (auto threat : threats)
 		{
-			float rangedUnitRange = Util::GetAttackRangeForTarget(rangedUnit, threat, m_bot);
-			float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
-			float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
-			float threatDps = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
-			float fleeDirX = rangedUnit->pos.x - threat->pos.x;
-			float fleeDirY = rangedUnit->pos.y - threat->pos.y;
-			CCPosition fleeVec(fleeDirX, fleeDirY);
-			sc2::Normalize2D(fleeVec);
+			CCPosition fleeVec = Util::Normalized(rangedUnit->pos - threat->pos);
 
 			// The expected threat position will be used to decide where to throw the mine
 			// (between the unit and the enemy or on the enemy if it is a worker)
-			if (canUseKD8Charge)
+			if (canUseKD8Charge && ExecuteKD8ChargeLogic(rangedUnit, threat, fleeVec))
 			{
-				CCPosition expectedThreatPosition = threat->pos + fleeVec * threatSpeed * HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE;
-				Unit threatUnit = Unit(threat, m_bot);
-				if (threatUnit.getType().isWorker() || threatUnit.getType().isBuilding())	//because some buildings speed > 0
-					expectedThreatPosition = threat->pos;
-				float distToExpectedPosition = Util::Dist(rangedUnit->pos, expectedThreatPosition);
-				// Check if we have enough reach to throw at the threat
-				if (distToExpectedPosition <= rangedUnitRange)
-				{
-					//TODO find a group of threat
-					Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, m_bot);
-					setNextCommandFrameAfterAttack(rangedUnit);
-					madeAction = true;
-					break;
-				}
+				madeAction = true;
+				break;
 			}
 
-			float dist = Util::Dist(rangedUnit->pos, threat->pos);
-			float totalRange = Util::getThreatRange(rangedUnit, threat, m_bot);
+			// If our unit is almost in range of threat, use the influence map to find the best flee path
+			const float dist = Util::Dist(rangedUnit->pos, threat->pos);
+			const float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
 			if (dist < threatRange + 0.5f)
-				useInfluenceMap = true;
-			if (m_bot.Config().DrawHarassInfo)
 			{
-				m_bot.Map().drawCircle(threat->pos, Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot), sc2::Colors::Red);
-				m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
-				m_bot.Map().drawLine(rangedUnit->pos, threat->pos, sc2::Colors::Red);
+				useInfluenceMap = true;
+				break;
 			}
-			// The intensity is linearly interpolated in the buffer zone (between 0 and 1) * dps
-			float rangeDiff = totalRange - threatRange;
-			if (rangeDiff == 0.f)
-				rangeDiff = 1.f;
-			float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - dist) / rangeDiff));
-			sumedFleeVec += fleeVec * intensity;
+
+			summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
 		}
 		if (madeAction)
 			continue;
@@ -414,73 +270,19 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			// Sum up the threats vector with the direction vector
 			if (!threats.empty())
 			{
-				// We normalize the threats vector only of if is higher than the max repulsion intensity
-				float vecLen = std::sqrt(std::pow(sumedFleeVec.x, 2) + std::pow(sumedFleeVec.y, 2));
-				if(vecLen > HARASS_THREAT_MAX_REPULSION_INTENSITY)
-				{
-					sc2::Normalize2D(sumedFleeVec);
-					sumedFleeVec *= HARASS_THREAT_MAX_REPULSION_INTENSITY;
-				}
-				dirVec += sumedFleeVec;
+				AdjustSummedFleeVec(summedFleeVec);
+				dirVec += summedFleeVec;
 			}
 
 			// We repulse the Reaper from our closest harass unit
 			if (isReaper)
 			{
-				// Check if there is a friendly harass unit close to this one
-				float distToClosestFriendlyUnit = HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
-				CCPosition closestFriendlyUnitPosition;
-				for (auto friendlyRangedUnit : rangedUnits)
-				{
-					if (friendlyRangedUnit->tag != rangedUnit->tag)
-					{
-						float dist = Util::Dist(rangedUnit->pos, friendlyRangedUnit->pos);
-						if (dist < distToClosestFriendlyUnit)
-						{
-							distToClosestFriendlyUnit = dist;
-							closestFriendlyUnitPosition = friendlyRangedUnit->pos;
-						}
-					}
-				}
-				// Add repulsion vector if there is a friendly harass unit close enough
-				if (distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
-				{
-					CCPosition fleeVec = rangedUnit->pos - closestFriendlyUnitPosition;
-					if (m_bot.Config().DrawHarassInfo)
-						m_bot.Map().drawLine(rangedUnit->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
-					sc2::Normalize2D(fleeVec);
-					// The repulsion intensity is linearly interpolated
-					float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - distToClosestFriendlyUnit) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
-					dirVec += fleeVec * intensity;
-				}
+				dirVec += GetRepulsionVectorFromFriendlyReapers(rangedUnit, rangedUnits);
 			}
 			// We attract the Hellion towards our other close Hellions
 			else if (isHellion)
 			{
-				// Check if there is a friendly harass unit close to this one
-				std::vector<const sc2::Unit*> closeAllies;
-				for (auto friendlyRangedUnit : rangedUnits)
-				{
-					if (friendlyRangedUnit->tag != rangedUnit->tag && friendlyRangedUnit->unit_type == rangedUnit->unit_type)
-					{
-						float dist = Util::Dist(rangedUnit->pos, friendlyRangedUnit->pos);
-						if (dist < HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE)
-							closeAllies.push_back(friendlyRangedUnit);
-					}
-				}
-				// Add attraction vector if there is a friendly harass unit close enough
-				if (!closeAllies.empty())
-				{
-					const CCPosition closeAlliesCenter = Util::CalcCenter(closeAllies);
-					const float distToCloseAlliesCenter = Util::Dist(rangedUnit->pos, closeAlliesCenter);
-					CCPosition attractionVector = closeAlliesCenter - rangedUnit->pos;
-					if (m_bot.Config().DrawHarassInfo)
-						m_bot.Map().drawLine(rangedUnit->pos, closeAlliesCenter, sc2::Colors::Green);
-					sc2::Normalize2D(attractionVector);
-					// The repulsion intensity is linearly interpolated (stronger the farthest to lower the closest)
-					float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToCloseAlliesCenter / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
-					dirVec += attractionVector * intensity;
-				}
+				dirVec += GetAttractionVectorToFriendlyHellions(rangedUnit, rangedUnits);
 			}
 
 			// We move only if the vector is long enough
@@ -488,55 +290,18 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			if (vecLen < 0.5f)
 				continue;
 
+			// Normalize the final direction vector so it's easier to work with
 			if (dirVec.x != 0.f || dirVec.y != 0.f)
 				sc2::Normalize2D(dirVec);
 
-			// Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
-			const int initialMoveDistance = 9;
-			int moveDistance = initialMoveDistance;
-			CCPosition moveTo = rangedUnit->pos + dirVec * moveDistance;
-			
-			if(isGroundUnit)
-			{
-				const int mapWidth = m_bot.Map().width();
-				const int mapHeight = m_bot.Map().height();
-
-				// Check if we can move in the direction of the vector
-				// We check if we are moving towards and close to an unpathable position
-				while (!m_bot.Observation()->IsPathable(moveTo))
-				{
-					++moveDistance;
-					moveTo = rangedUnit->pos + dirVec * moveDistance;
-					// If moveTo is out of the map, stop checking farther and switch to influence map navigation
-					if (mapWidth < moveTo.x || moveTo.x < 0 || mapHeight < moveTo.y || moveTo.y < 0)
-					{
-						useInfluenceMap = true;
-						break;
-					}
-				}
-				// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
-				if (useInfluenceMap)
-				{
-					moveDistance = initialMoveDistance;
-					while (moveDistance > 2)
-					{
-						--moveDistance;
-						moveTo = rangedUnit->pos + dirVec * moveDistance;
-						if (m_bot.Observation()->IsPathable(moveTo))
-						{
-							useInfluenceMap = false;
-							break;
-						}
-					}
-				}
-			}
-
-			// If a closer pathable tile was found, move there
-			if(!useInfluenceMap)
+			// If we find a pathable tile in the direction of the vector, we move at that tile
+			CCPosition pathableTile(0, 0);
+			if(MoveUnitWithDirectionVector(rangedUnit, dirVec, pathableTile))
 			{
 				if (m_bot.Config().DrawHarassInfo)
 					m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
-				Micro::SmartMove(rangedUnit, moveTo, m_bot);
+
+				Micro::SmartMove(rangedUnit, pathableTile, m_bot);
 				if (isReaper)
 				{
 					nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
@@ -547,13 +312,372 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 		// If close to an unpathable position or in danger
 		// Use influence map to find safest path
-		CCPosition moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
+		const CCPosition moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
 		Micro::SmartMove(rangedUnit, moveTo, m_bot);
 		if (isReaper)
 		{
 			nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 		}
 	}
+}
+
+bool RangedManager::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
+{
+	uint32_t availableFrame = nextCommandFrameForUnit.find(rangedUnit) != nextCommandFrameForUnit.end() ? nextCommandFrameForUnit.at(rangedUnit) : 0;
+	return m_bot.GetGameLoop() < availableFrame;
+}
+
+void RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats) const
+{
+	//TODO consider detectors
+	if (!threats.empty() && banshee->cloak == sc2::Unit::NotCloaked && banshee->energy > 50.f)
+		Micro::SmartAbility(banshee, sc2::ABILITY_ID::BEHAVIOR_CLOAKON, m_bot);
+	/*else if(threats.empty() && banshee->cloak == sc2::Unit::Cloaked)
+	Micro::SmartAbility(banshee, sc2::ABILITY_ID::BEHAVIOR_CLOAKOFF, m_bot);*/
+}
+
+bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target)
+{
+	bool morph = false;
+	if (squaredDistanceToGoal < 7.f * 7.f && !target)
+	{
+		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+		{
+			Micro::SmartAbility(viking, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, m_bot);
+			morph = true;
+		}
+		//TODO should morph to assault mode if there are close flying units
+		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT && !m_bot.Strategy().shouldFocusBuildings())
+		{
+			Micro::SmartAbility(viking, sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE, m_bot);
+			morph = true;
+		}
+	}
+	if(morph)
+		nextCommandFrameForUnit[viking] = m_bot.GetGameLoop() + VIKING_MORPH_FRAME_COUNT;
+	return morph;
+}
+
+bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float squaredDistanceToGoal)
+{
+	if ((!target ||
+		(m_order.getType() != SquadOrderTypes::Defend && Util::DistSq(rangedUnit->pos, target->pos) > m_order.getRadius() * m_order.getRadius()))
+		&& threats.empty())
+	{
+		if (m_bot.Config().DrawHarassInfo)
+			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
+
+		if (squaredDistanceToGoal > 10.f * 10.f)
+		{
+			if (m_bot.Strategy().shouldFocusBuildings())
+				Micro::SmartAttackMove(rangedUnit, goal, m_bot);
+			else
+				Micro::SmartMove(rangedUnit, goal, m_bot);
+		}
+		else
+		{
+			Micro::SmartAttackMove(rangedUnit, goal, m_bot);
+		}
+
+		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+		{
+			nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
+		}
+		return true;
+	}
+	return false;
+}
+
+bool RangedManager::ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const
+{
+	if (rangedUnit->weapon_cooldown > 0.f)
+		return false;
+
+	bool inRangeOfThreat = false;
+	bool isCloseThreatFaster = false;
+	for (auto & threat : threats)
+	{
+		const float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
+		const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+		const float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
+		const float speedDiff = threatSpeed - rangedUnitSpeed;
+		const float threatRangeWithBuffer = threatRange + std::max(HARASS_THREAT_RANGE_BUFFER, speedDiff);
+		if (Util::DistSq(rangedUnit->pos, threat->pos) <= threatRangeWithBuffer * threatRangeWithBuffer)
+		{
+			inRangeOfThreat = true;
+			if (threatSpeed > rangedUnitSpeed)
+			{
+				isCloseThreatFaster = true;
+				break;
+			}
+		}
+	}
+
+	return !inRangeOfThreat || isCloseThreatFaster;
+}
+
+CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange) const
+{
+	CCPosition dirVec(0.f, 0.f);
+	const bool reaperShouldHeal = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.5f;
+	if (target && !reaperShouldHeal)
+	{
+		// if not in range of target, add normalized vector towards target
+		if (!targetInAttackRange)
+		{
+			dirVec = target->pos - rangedUnit->pos;
+		}
+
+		if (m_bot.Config().DrawHarassInfo)
+			m_bot.Map().drawLine(rangedUnit->pos, target->pos, targetInAttackRange ? sc2::Colors::Yellow : sc2::Colors::Green);
+	}
+	else
+	{
+		// add normalized vector towards objective
+		dirVec = goal - rangedUnit->pos;
+
+		if (m_bot.Config().DrawHarassInfo)
+			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
+	}
+	if (dirVec.x != 0.f || dirVec.y != 0.f)
+		sc2::Normalize2D(dirVec);
+
+	return dirVec;
+}
+
+bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats)
+{
+	if (threats.empty())
+		return false;
+
+	float unitsPower = 0.f;
+	float targetsPower = 0.f;
+	sc2::Units closeUnits;
+	// The harass mode deactivation is a hack to not ignore range targets
+	m_harassMode = false;
+	for (auto unit : rangedUnits)
+	{
+		if (Util::DistSq(unit->pos, rangedUnit->pos) < HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE * HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE)
+		{
+			closeUnits.push_back(unit);
+			const sc2::Unit* target = getTarget(rangedUnit, threats);
+			unitsPower += Util::GetUnitPower(rangedUnit, target, m_bot);
+		}
+	}
+	for (auto threat : threats)
+	{
+		const sc2::Unit* target = target = getTarget(threat, closeUnits);
+		targetsPower += Util::GetUnitPower(threat, target, m_bot);
+	}
+	if (unitsPower > targetsPower)
+	{
+		sc2::Units units;
+		units.push_back(rangedUnit);
+		const sc2::Unit* target = getTarget(rangedUnit, threats);
+		if (target && isTargetRanged(target))
+		{
+			//RunBehaviorTree(units, threats);
+			sc2::Units targets;
+			targets.push_back(target);
+			RunBehaviorTree(units, targets);
+			m_harassMode = true;
+			//Micro::SmartAttackUnit(rangedUnit, target, m_bot);
+			if (rangedUnit->weapon_cooldown <= 0.f)
+			{
+				const float unitRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+				if (Util::DistSq(rangedUnit->pos, target->pos) <= unitRange * unitRange)
+					setNextCommandFrameAfterAttack(rangedUnit);
+			}
+			return true;
+		}
+	}
+	m_harassMode = true;
+	return false;
+}
+
+bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * rangedUnit, const sc2::Unit * threat, const CCPosition& fleeVec)
+{
+	const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+	CCPosition expectedThreatPosition = threat->pos + fleeVec * threatSpeed * HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE;
+	Unit threatUnit = Unit(threat, m_bot);
+	if (threatUnit.getType().isWorker() || threatUnit.getType().isBuilding())	//because some buildings speed > 0
+		expectedThreatPosition = threat->pos;
+	const float distToExpectedPosition = Util::DistSq(rangedUnit->pos, expectedThreatPosition);
+	const float rangedUnitRange = Util::GetAttackRangeForTarget(rangedUnit, threat, m_bot);
+	// Check if we have enough reach to throw at the threat
+	if (distToExpectedPosition <= rangedUnitRange * rangedUnitRange)
+	{
+		//TODO find a group of threat
+		Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, m_bot);
+		nextAvailableKD8ChargeFrameForReaper[rangedUnit] = m_bot.GetGameLoop() + REAPER_KD8_CHARGE_COOLDOWN;
+		setNextCommandFrameAfterAttack(rangedUnit);
+		return true;
+	}
+	return false;
+}
+
+bool RangedManager::CanUseKD8Charge(const sc2::Unit * rangedUnit) const
+{
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+	{
+		uint32_t availableFrame = nextAvailableKD8ChargeFrameForReaper.find(rangedUnit) != nextAvailableKD8ChargeFrameForReaper.end() ? nextAvailableKD8ChargeFrameForReaper.at(rangedUnit) : 0;
+		return m_bot.GetGameLoop() >= availableFrame;
+
+		// the old and slow way of checking avaiable ability
+		/*Unit harassUnit(rangedUnit, m_bot);
+		sc2::AvailableAbilities abilities = harassUnit.getAbilities();
+		for (const auto & ability : abilities.abilities)
+		{
+			if (ability.ability_id == sc2::ABILITY_ID::EFFECT_KD8CHARGE)
+			{
+				return true;
+			}
+		}*/
+	}
+	return false;
+}
+
+CCPosition RangedManager::GetFleeVectorFromThreat(const sc2::Unit * rangedUnit, const sc2::Unit * threat, CCPosition fleeVec, float distance, float threatRange) const
+{
+	float threatDps = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
+	float totalRange = Util::getThreatRange(rangedUnit, threat, m_bot);
+	// The intensity is linearly interpolated in the buffer zone (between 0 and 1) * dps
+	float bufferSize = totalRange - threatRange;
+	if (bufferSize <= 0.f)
+		bufferSize = 1.f;
+	float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - distance) / bufferSize));
+
+	if (m_bot.Config().DrawHarassInfo)
+	{
+		m_bot.Map().drawCircle(threat->pos, threatRange, sc2::Colors::Red);
+		m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
+		m_bot.Map().drawLine(rangedUnit->pos, threat->pos, sc2::Colors::Red);
+	}
+
+	return fleeVec * intensity;
+}
+
+void RangedManager::AdjustSummedFleeVec(CCPosition & summedFleeVec) const
+{
+	// We normalize the threats vector only of if is higher than the max repulsion intensity
+	float vecSquareLen = std::pow(summedFleeVec.x, 2) + std::pow(summedFleeVec.y, 2);
+	if (vecSquareLen > std::pow(HARASS_THREAT_MAX_REPULSION_INTENSITY, 2))
+	{
+		sc2::Normalize2D(summedFleeVec);
+		summedFleeVec *= HARASS_THREAT_MAX_REPULSION_INTENSITY;
+	}
+}
+
+CCPosition RangedManager::GetRepulsionVectorFromFriendlyReapers(const sc2::Unit * reaper, sc2::Units & rangedUnits) const
+{
+	// Check if there is a friendly harass unit close to this one
+	float distToClosestFriendlyUnit = HARASS_FRIENDLY_REPULSION_MIN_DISTANCE * HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
+	CCPosition closestFriendlyUnitPosition;
+	for (auto friendlyRangedUnit : rangedUnits)
+	{
+		if (friendlyRangedUnit->tag != reaper->tag)
+		{
+			const float dist = Util::DistSq(reaper->pos, friendlyRangedUnit->pos);
+			if (dist < distToClosestFriendlyUnit)
+			{
+				distToClosestFriendlyUnit = dist;
+				closestFriendlyUnitPosition = friendlyRangedUnit->pos;
+			}
+		}
+	}
+	// Add repulsion vector if there is a friendly harass unit close enough
+	if (distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE * HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
+	{
+		if (m_bot.Config().DrawHarassInfo)
+			m_bot.Map().drawLine(reaper->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
+
+		CCPosition fleeVec = reaper->pos - closestFriendlyUnitPosition;
+		sc2::Normalize2D(fleeVec);
+		// The repulsion intensity is linearly interpolated (the closer the friendly Reaper is, the stronger is the repulsion)
+		const float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - std::sqrt(distToClosestFriendlyUnit)) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
+		return fleeVec * intensity;
+	}
+	return CCPosition(0, 0);
+}
+
+CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit * hellion, sc2::Units & rangedUnits) const
+{
+	// Check if there is a friendly harass unit close to this one
+	std::vector<const sc2::Unit*> closeAllies;
+	for (auto friendlyRangedUnit : rangedUnits)
+	{
+		if (friendlyRangedUnit->tag != hellion->tag && friendlyRangedUnit->unit_type == hellion->unit_type)
+		{
+			const float dist = Util::DistSq(hellion->pos, friendlyRangedUnit->pos);
+			if (dist < HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE * HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE)
+				closeAllies.push_back(friendlyRangedUnit);
+		}
+	}
+	// Add attraction vector if there is a friendly harass unit close enough
+	if (!closeAllies.empty())
+	{
+		const CCPosition closeAlliesCenter = Util::CalcCenter(closeAllies);
+		if (m_bot.Config().DrawHarassInfo)
+			m_bot.Map().drawLine(hellion->pos, closeAlliesCenter, sc2::Colors::Green);
+		const float distToCloseAlliesCenter = Util::Dist(hellion->pos, closeAlliesCenter);
+		CCPosition attractionVector = closeAlliesCenter - hellion->pos;
+		if(attractionVector.x != 0.f || attractionVector.y != 0.f)
+			sc2::Normalize2D(attractionVector);
+		// The repulsion intensity is linearly interpolated (stronger the farthest to lower the closest)
+		const float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToCloseAlliesCenter / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
+		return attractionVector * intensity;
+	}
+	return CCPosition(0, 0);
+}
+
+bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const
+{
+	// Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
+	const int initialMoveDistance = 9;
+	int moveDistance = initialMoveDistance;
+	CCPosition moveTo = rangedUnit->pos + directionVector * moveDistance;
+
+	if (!rangedUnit->is_flying)
+	{
+		const int mapWidth = m_bot.Map().width();
+		const int mapHeight = m_bot.Map().height();
+		bool canMoveAtInitialDistanceOrFarther = true;
+
+		// Check if we can move in the direction of the vector
+		// We check if we are moving towards and close to an unpathable position
+		while (!m_bot.Observation()->IsPathable(moveTo))
+		{
+			++moveDistance;
+			moveTo = rangedUnit->pos + directionVector * moveDistance;
+			// If moveTo is out of the map, stop checking farther and switch to influence map navigation
+			if (mapWidth < moveTo.x || moveTo.x < 0 || mapHeight < moveTo.y || moveTo.y < 0)
+			{
+				canMoveAtInitialDistanceOrFarther = false;
+				break;
+			}
+		}
+		if (canMoveAtInitialDistanceOrFarther)
+		{
+			outPathableTile = moveTo;
+			return true;
+		}
+
+		// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
+		moveDistance = initialMoveDistance;
+		while (moveDistance > 2)
+		{
+			--moveDistance;
+			moveTo = rangedUnit->pos + directionVector * moveDistance;
+			if (m_bot.Observation()->IsPathable(moveTo))
+			{
+				outPathableTile = moveTo;
+				return true;
+			}
+		}
+		return false;
+	}
+	outPathableTile = moveTo;
+	return true;
 }
 
 struct Node {
@@ -661,7 +785,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 				if (m_bot.Config().DrawHarassInfo)
 					m_bot.Map().drawCircle(rangedUnit->pos + parentPos, 1.f, sc2::Colors::Teal);
 				//we want to retun a node close to the current position
-				if (Util::Dist(parentPos, Util::GetPosition(centerPos)) <= 3.f && returnPos == currentPos)
+				if (Util::DistSq(parentPos, Util::GetPosition(centerPos)) <= 3.f * 3.f && returnPos == currentPos)
 					returnPos = parentPos;
 				current = current->parent;
 			}
@@ -856,7 +980,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 						continue;
 
 					const float otherTargetRange = Util::GetAttackRangeForTarget(otherTarget, rangedUnit, m_bot);
-					if (otherTargetRange + 2.f > unitRange && Util::Dist(otherTarget->pos, target->pos) < HARASS_THREAT_MIN_DISTANCE_TO_TARGET)
+					if (otherTargetRange + 2.f > unitRange && Util::DistSq(otherTarget->pos, target->pos) < HARASS_THREAT_MIN_DISTANCE_TO_TARGET * HARASS_THREAT_MIN_DISTANCE_TO_TARGET)
 					{
 						threatTooClose = true;
 						break;

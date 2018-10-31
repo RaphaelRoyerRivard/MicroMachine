@@ -54,6 +54,7 @@ public:
 	bool DrawHarassInfo;
 	bool DrawMemoryInfo;
 	bool DrawUnitID;
+	bool DrawProfilingInfo;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;

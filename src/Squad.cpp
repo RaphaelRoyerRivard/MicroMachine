@@ -148,13 +148,13 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		// if the order is to defend, we only care about units in the radius of the defense
 		if (m_order.getType() == SquadOrderTypes::Defend)
 		{
-			addUnit = Util::Dist(enemyUnit, m_order.getPosition()) < m_order.getRadius();
+			addUnit = Util::DistSq(enemyUnit, m_order.getPosition()) < m_order.getRadius() * m_order.getRadius();
 		} // if the order is to harass, we care about every unit around each of our units
 		else if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Harass)
 		{
 			for (auto & unit : m_units)
 			{
-				if (Util::Dist(enemyUnit, unit) < m_order.getRadius())
+				if (Util::DistSq(enemyUnit, unit) < m_order.getRadius() * m_order.getRadius())
 				{
 					addUnit = true;
 					break;
@@ -409,7 +409,7 @@ bool Squad::isUnitNearEnemy(const Unit & unit) const
 
     for (auto & u : m_bot.GetUnits())
     {
-        if ((u.getPlayer() == Players::Enemy) && (Util::Dist(unit, u) < 20))
+        if (u.getPlayer() == Players::Enemy && Util::DistSq(unit, u) < 20 * 20)
         {
             return true;
         }
@@ -499,7 +499,7 @@ int Squad::squadUnitsNear(const CCPosition & p) const
     {
         BOT_ASSERT(unit.isValid(), "null unit");
 
-        if (Util::Dist(unit, p) < 20.0f)
+        if (Util::DistSq(unit, p) < 20.0f * 20.0f)
         {
             numUnits++;
         }

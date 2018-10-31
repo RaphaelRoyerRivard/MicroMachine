@@ -279,13 +279,16 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 void Util::Normalize(sc2::Point2D& point)
 {
     float norm = sqrt(pow(point.x, 2) + pow(point.y, 2));
-    point /= norm;
+	if(norm > 0.f)
+		point /= norm;
 }
 
 sc2::Point2D Util::Normalized(const sc2::Point2D& point)
 {
     float norm = sqrt(pow(point.x, 2) + pow(point.y, 2));
-    return sc2::Point2D(point.x / norm, point.y / norm);
+	if(norm > 0.f)
+		return sc2::Point2D(point.x / norm, point.y / norm);
+    return sc2::Point2D(point.x, point.y);
 }
 
 float Util::GetDotProduct(const sc2::Point2D& v1, const sc2::Point2D& v2)
@@ -337,8 +340,11 @@ bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 
 float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
+	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+		return 0.f;
+
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
-	sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
+	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
 	
 	float maxRange = 0.0f;
 	for (auto & weapon : unitTypeData.weapons)
@@ -448,9 +454,12 @@ float Util::GetDps(const sc2::Unit * unit, CCBot & bot)
 
 float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
+	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+		return 0.f;
+
     sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
     sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
-    sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
+    const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
     float dps = GetSpecialCaseDps(unit, bot);
 
     if (dps == 0.f)
@@ -460,7 +469,7 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
             if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
             {
                 float weaponDps = weapon.damage_;
-                for (auto damageBonus : weapon.damage_bonus)
+                for (auto & damageBonus : weapon.damage_bonus)
                 {
                     if (std::find(targetTypeData.attributes.begin(), targetTypeData.attributes.end(), damageBonus.attribute) != targetTypeData.attributes.end())
                         weaponDps += damageBonus.bonus;
@@ -520,8 +529,8 @@ const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, co
 			continue;
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
 		//But this is not working so well for melee units, we keep every units in a radius of min threat range
-		float threatRange = getThreatRange(unit, targetUnit, m_bot);
-		if (Util::Dist(unit->pos, targetUnit->pos) < threatRange)
+		const float threatRange = getThreatRange(unit, targetUnit, m_bot);
+		if (Util::DistSq(unit->pos, targetUnit->pos) < threatRange * threatRange)
 			threats.push_back(targetUnit);
 	}
 
@@ -545,7 +554,7 @@ const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, co
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
 		//But this is not working so well for melee units, we keep every units in a radius of min threat range
 		float threatRange = Util::getThreatRange(unit, targetUnit, m_bot);
-		if (Util::Dist(unit->pos, targetUnit->pos) < threatRange)
+		if (Util::DistSq(unit->pos, targetUnit->pos) < threatRange * threatRange)
 			threats.push_back(targetUnit);
 	}
 
@@ -558,9 +567,9 @@ float Util::getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCB
 	const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 	const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 	const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
-	sc2::GameInfo gameInfo = m_bot.Observation()->GetGameInfo();
-	float heightBonus = Util::TerainHeight(gameInfo, threat->pos) > Util::TerainHeight(gameInfo, unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
-	float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + HARASS_THREAT_RANGE_BUFFER;
+	const sc2::GameInfo gameInfo = m_bot.Observation()->GetGameInfo();
+	const float heightBonus = Util::TerainHeight(gameInfo, threat->pos) > Util::TerainHeight(gameInfo, unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
+	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + HARASS_THREAT_RANGE_BUFFER;
 	return threatRange;
 }
 
@@ -658,6 +667,16 @@ CCPositionType Util::DistSq(const CCTilePosition & p1, const CCTilePosition & p2
 	CCPositionType dy = p1.y - p2.y;
 
 	return dx * dx + dy * dy;
+}
+
+CCPositionType Util::DistSq(const Unit & unit, const CCPosition & p2)
+{
+	return DistSq(unit.getPosition(), p2);
+}
+
+CCPositionType Util::DistSq(const Unit & unit, const Unit & unit2)
+{
+	return DistSq(unit.getPosition(), unit2.getPosition());
 }
 
 CCPositionType Util::DistSq(const CCPosition & p1, const CCPosition & p2)

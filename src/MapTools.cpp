@@ -244,7 +244,7 @@ bool MapTools::isPowered(int tileX, int tileY) const
 #ifdef SC2API
     for (auto & powerSource : m_bot.Observation()->GetPowerSources())
     {
-        if (Util::Dist(CCPosition(tileX + HALF_TILE, tileY + HALF_TILE), powerSource.position) < powerSource.radius)
+        if (Util::DistSq(CCPosition(tileX + HALF_TILE, tileY + HALF_TILE), powerSource.position) < powerSource.radius * powerSource.radius)
         {
             return true;
         }
