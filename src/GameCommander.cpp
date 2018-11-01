@@ -22,8 +22,10 @@ void GameCommander::onStart()
 void GameCommander::onFrame()
 {
     handleUnitAssignments();
-	
-    m_productionManager.onFrame();	
+
+	m_bot.StartProfiling("Production");
+    m_productionManager.onFrame();
+	m_bot.StopProfiling("Production");
     m_scoutManager.onFrame();	
     m_combatCommander.onFrame(m_combatUnits);
 	
