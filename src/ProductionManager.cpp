@@ -80,9 +80,15 @@ void ProductionManager::onFrame()
 	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
 		return;
 
+	m_bot.StartProfiling("1.0 lowPriorityChecks");
 	lowPriorityChecks();
+	m_bot.StopProfiling("1.0 lowPriorityChecks");
+	m_bot.StartProfiling("2.0 manageBuildOrderQueue");
     manageBuildOrderQueue();
+	m_bot.StopProfiling("2.0 manageBuildOrderQueue");
+	m_bot.StartProfiling("3.0 QueueDeadBuildings");
 	QueueDeadBuildings();
+	m_bot.StopProfiling("3.0 QueueDeadBuildings");
 
     // TODO: if nothing is currently building, get a new goal from the strategy manager
     // TODO: triggers for game things like cloaked units etc
@@ -110,14 +116,17 @@ void ProductionManager::manageBuildOrderQueue()
 		m_queue.clearAll();
 	}
 
+	m_bot.StartProfiling("2.1   putImportantBuildOrderItemsInQueue");
 	if(m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder)
     {
 		putImportantBuildOrderItemsInQueue();
     }
+	m_bot.StopProfiling("2.1   putImportantBuildOrderItemsInQueue");
 
 	if (m_queue.isEmpty())
 		return;
 
+	m_bot.StartProfiling("2.2   checkQueue");
     // the current item to be used
     BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
 
@@ -127,8 +136,10 @@ void ProductionManager::manageBuildOrderQueue()
 		//check if we have the prerequirements.
 		if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
 		{
+			m_bot.StartProfiling("2.2.1     fixBuildOrderDeadlock");
 			fixBuildOrderDeadlock(currentItem);
 			currentItem = m_queue.getHighestPriorityItem();
+			m_bot.StopProfiling("2.2.1     fixBuildOrderDeadlock");
 			continue;
 		}
 
@@ -250,6 +261,7 @@ void ProductionManager::manageBuildOrderQueue()
         // and get the next one
         currentItem = m_queue.getNextHighestPriorityItem();
     }
+	m_bot.StopProfiling("2.2   checkQueue");
 }
 
 void ProductionManager::putImportantBuildOrderItemsInQueue()

@@ -80,20 +80,50 @@ void CCBot::OnGameStart() //full start
 
 void CCBot::OnStep()
 {
+	StartProfiling("0 OnStep");
 	m_gameLoop = Observation()->GetGameLoop();
-		
+
+	StartProfiling("0.1 checkKeyState");
 	checkKeyState();
-		
+	StopProfiling("0.1 checkKeyState");
+
+	StartProfiling("0.2 setUnits");
     setUnits();
+	StopProfiling("0.2 setUnits");
+
+	StartProfiling("0.3 clearDeadUnits");
 	clearDeadUnits();
-	m_map.onFrame();	
-    m_unitInfo.onFrame();	
+	StopProfiling("0.3 clearDeadUnits");
+
+	StartProfiling("0.4 m_map.onFrame");
+	m_map.onFrame();
+	StopProfiling("0.4 m_map.onFrame");
+
+	StartProfiling("0.5 m_unitInfo.onFrame");
+    m_unitInfo.onFrame();
+	StopProfiling("0.5 m_unitInfo.onFrame");
+
+	StartProfiling("0.6 m_bases.onFrame");
     m_bases.onFrame();
-    m_workers.onFrame();	
-	m_buildings.onFrame();	
+	StopProfiling("0.6 m_bases.onFrame");
+
+	StartProfiling("0.7 m_workers.onFrame");
+    m_workers.onFrame();
+	StopProfiling("0.7 m_workers.onFrame");
+
+	StartProfiling("0.8 m_buildings.onFrame");
+	m_buildings.onFrame();
+	StopProfiling("0.8 m_buildings.onFrame");
+
+	StartProfiling("0.9 m_strategy.onFrame");
     m_strategy.onFrame();
-	
+	StopProfiling("0.9 m_strategy.onFrame");
+
+	StartProfiling("0.10 m_gameCommander.onFrame");
 	m_gameCommander.onFrame();
+	StopProfiling("0.10 m_gameCommander.onFrame");
+
+	StopProfiling("0 OnStep");
 
 #ifdef SC2API
 	if (Config().AllowDebug)
@@ -489,44 +519,54 @@ void CCBot::OnError(const std::vector<sc2::ClientError> & client_errors, const s
 }
 #endif
 
-void CCBot::StartProfiling(const std::string & profiler)
+void CCBot::StartProfiling(const std::string & profilerName)
 {
 	if (m_config.DrawProfilingInfo)
 	{
-		auto & tuple = m_profilingTimes[profiler];				// Get the profiling queue tuple
-		std::get<2>(tuple) = std::chrono::steady_clock::now();	// Set the start time (third element of the tuple) to now
+		auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
+		profiler.start = std::chrono::steady_clock::now();	// Set the start time (third element of the tuple) to now
 	}
 }
 
-void CCBot::StopProfiling(const std::string & profiler)
+void CCBot::StopProfiling(const std::string & profilerName)
 {
 	if (m_config.DrawProfilingInfo)
 	{
-		auto & tuple = m_profilingTimes[profiler];	// Get the profiling queue tuple
-		const auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - std::get<2>(tuple)).count();
+		auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
 
-		auto & totalTime = std::get<1>(tuple);		
-		totalTime += elapsedTime;					// Add the time to the total of the last 100 steps
-		auto & queue = std::get<0>(tuple);	
-		queue.push_back(elapsedTime);				// Add the time to the queue
-		if (queue.size() > 100)
+		const auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - profiler.start).count();
+
+		profiler.total += elapsedTime;						// Add the time to the total of the last 100 steps
+		auto & queue = profiler.queue;
+		if (queue.empty())
 		{
-			totalTime -= queue[0];					// Remove the old time from the total of the last 100 steps
-			queue.pop_front();						// Remove the old time from the queue
+			while (queue.size() < 49)
+				queue.push_front(0);						// Fill up the queue with zeros
+			queue.push_front(elapsedTime);					// Add the time to the queue
 		}
+		else
+			queue[0] += elapsedTime;						// Add the time to the queue
 	}
 }
 
-void CCBot::drawProfilingInfo() const
+void CCBot::drawProfilingInfo()
 {
 	if (m_config.DrawProfilingInfo)
 	{
 		std::string profilingInfo = "Profiling info (ms)";
 		for (auto & mapPair : m_profilingTimes)
 		{
-			auto & totalTime = std::get<1>(mapPair.second);
-			const size_t queueCount = std::get<0>(mapPair.second).size();
-			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * totalTime / queueCount);
+			const std::string& key = mapPair.first;
+			auto& profiler = m_profilingTimes.at(mapPair.first);
+			auto& queue = profiler.queue;
+			const size_t queueCount = queue.size();
+			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * profiler.total / queueCount);
+			if(queue.size() >= 50)
+			{
+				queue.push_front(0);
+				profiler.total -= queue[50];
+				queue.pop_back();
+			}
 		}
 		m_map.drawTextScreen(0.45f, 0.01f, profilingInfo);
 	}

@@ -68,8 +68,11 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 
     m_combatUnits = combatUnits;
 
+	m_bot.StartProfiling("0.10.4.1    m_squadData.onFrame");
     m_squadData.onFrame();
+	m_bot.StopProfiling("0.10.4.1    m_squadData.onFrame");
 
+	m_bot.StartProfiling("0.10.4.2    updateSquads");
     if (isSquadUpdateFrame())
     {
         updateIdleSquad();
@@ -79,9 +82,14 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		updateAttackSquads();
         updateBackupSquads();
     }
+	m_bot.StopProfiling("0.10.4.2    updateSquads");
 
+	m_bot.StartProfiling("0.10.4.3    lowPriorityCheck");
 	lowPriorityCheck();
+	m_bot.StopProfiling("0.10.4.3    lowPriorityCheck");
+	/*m_bot.StartProfiling("0.10.4.4    checkUnitsState");
 	checkUnitsState();
+	m_bot.StopProfiling("0.10.4.4    checkUnitsState");*/
 }
 
 void CombatCommander::lowPriorityCheck()

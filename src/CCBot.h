@@ -20,6 +20,19 @@ class CCBot : public sc2::Agent
 class CCBot
 #endif
 {
+	struct Profiler
+	{
+		Profiler() :total(0) {};
+		/*Profiler(std::deque<long long> queue, long long total, std::chrono::steady_clock::time_point start) :
+			m_queue(queue),
+			m_total(total),
+			m_start(start)
+		{};*/
+		std::deque<long long> queue;
+		long long total;
+		std::chrono::steady_clock::time_point start;
+	};
+
 	uint32_t				m_gameLoop;
     MapTools                m_map;
     BaseLocationManager     m_bases;
@@ -39,12 +52,12 @@ class CCBot
     std::vector<Unit>       m_allUnits;
     std::vector<CCPosition> m_baseLocations;
 	CCRace selfRace;
-	std::map<std::string, std::tuple<std::deque<long long>, long long, std::chrono::steady_clock::time_point>> m_profilingTimes;
+	std::map<std::string, Profiler> m_profilingTimes;
 
 	void checkKeyState();
 	void setUnits();
 	void clearDeadUnits();
-	void drawProfilingInfo() const;
+	void drawProfilingInfo();
 
 #ifdef SC2API
     void OnError(const std::vector<sc2::ClientError> & client_errors, 
