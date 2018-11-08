@@ -71,7 +71,6 @@ void WorkerManager::handleMineralWorkers()
 	/*m_bot.StartProfiling("0.7.2.1     selectMineralWorkers");
 	std::list<Unit> mineralWorkers;
 	for (auto& worker : workers)
->>>>>>> 6b2d34daf20f43900c38d789a3c66f47bd652653
 	{
 		int workerJob = m_workerData.getWorkerJob(worker);
 		if (workerJob == WorkerJobs::Minerals && !isReturningCargo(worker))
@@ -93,7 +92,7 @@ void WorkerManager::handleMineralWorkers()
 	//split workers on first frame
 	m_isFirstFrame = false;
 
-	m_bot.StartProfiling("0.7.2.1     selectMinerals");
+	m_bot.StartProfiling("0.7.2.2     selectMinerals");
 	std::list<Unit> minerals;
 	std::list<std::pair<Unit, int>> mineralsUsage;
 	for (auto& base : m_bot.Bases().getBaseLocations())
@@ -108,7 +107,7 @@ void WorkerManager::handleMineralWorkers()
 			}
 		}
 	}
-	m_bot.StopProfiling("0.7.2.1     selectMinerals");
+	m_bot.StopProfiling("0.7.2.2     selectMinerals");
 
 	/*std::list<std::pair<Unit, float>> temp;
 	for (auto mineralWorker : mineralWorkers)
@@ -118,7 +117,7 @@ void WorkerManager::handleMineralWorkers()
 		temp.push_back(std::pair<Unit, float>(mineralWorker, dist));
 	}*/
 
-	m_bot.StartProfiling("0.7.2.2     orderedMineralWorkers");
+	m_bot.StartProfiling("0.7.2.3     orderedMineralWorkers");
 	std::list<Unit> orderedMineralWorkers;//Replaces workers
 	for (auto& mineralWorker : workers)
 	{
@@ -154,7 +153,7 @@ void WorkerManager::handleMineralWorkers()
 
 		mineralWorker.rightClick(closestMineral);
 	}
-	m_bot.StopProfiling("0.7.2.2     orderedMineralWorkers");
+	m_bot.StopProfiling("0.7.2.3     orderedMineralWorkers");
 }
 
 void WorkerManager::handleGasWorkers()
@@ -314,7 +313,10 @@ void WorkerManager::repairCombatBuildings()
 				for (int i = 0; i < maxReparator - alreadyRepairing; i++)
 				{
 					Unit worker = getClosestMineralWorkerTo(building.getPosition());
-					setRepairWorker(worker, building);
+					if (worker.isValid())
+						setRepairWorker(worker, building);
+					else
+						break;
 				}
 				break;
 			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
@@ -775,6 +777,7 @@ bool WorkerManager::isReturningCargo(Unit worker) const
 			return true;
 		}
 	}
+	return false;
 }
 
 int WorkerManager::getNumMineralWorkers()
