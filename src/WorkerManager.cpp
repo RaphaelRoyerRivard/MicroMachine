@@ -52,7 +52,7 @@ void WorkerManager::handleMineralWorkers()
 		return;
 	}
 
-	std::list<Unit> mineralWorkers;
+	/*std::list<Unit> mineralWorkers;
 	for (auto worker : workers)
 	{
 		int workerJob = m_workerData.getWorkerJob(worker);
@@ -64,7 +64,7 @@ void WorkerManager::handleMineralWorkers()
 	if (mineralWorkers.empty())
 	{
 		return;
-	}
+	}*/
 	
 	if (!m_isFirstFrame)
 	{
@@ -742,16 +742,16 @@ bool WorkerManager::isBuilder(Unit worker) const
 
 bool WorkerManager::isReturningCargo(Unit worker) const
 {
-	sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(worker.getUnitPtr());
-	for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
+	auto orders = worker.getUnitPtr()->orders;
+	if (orders.size() > 0)
 	{
-		if (available_ability.ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
+		//Not checking the abilities HARVEST_RETURN_DRONE, HARVEST_RETURN_MULE, HARVEST_RETURN_PROBE and HARVEST_RETURN_SCV, because they seem to never be used.
+		auto order = orders.at(0).ability_id;
+		if (order == sc2::ABILITY_ID::HARVEST_RETURN)
 		{
 			return true;
-			break;
 		}
 	}
-	return false;
 }
 
 int WorkerManager::getNumMineralWorkers()
