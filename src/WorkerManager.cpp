@@ -68,9 +68,10 @@ void WorkerManager::handleMineralWorkers()
 		return;
 	}
 
-	m_bot.StartProfiling("0.7.2.1     selectMineralWorkers");
+	/*m_bot.StartProfiling("0.7.2.1     selectMineralWorkers");
 	std::list<Unit> mineralWorkers;
 	for (auto& worker : workers)
+>>>>>>> 6b2d34daf20f43900c38d789a3c66f47bd652653
 	{
 		int workerJob = m_workerData.getWorkerJob(worker);
 		if (workerJob == WorkerJobs::Minerals && !isReturningCargo(worker))
@@ -82,7 +83,7 @@ void WorkerManager::handleMineralWorkers()
 	if (mineralWorkers.empty())
 	{
 		return;
-	}
+	}*/
 	
 	if (!m_isFirstFrame)
 	{
@@ -117,7 +118,7 @@ void WorkerManager::handleMineralWorkers()
 		temp.push_back(std::pair<Unit, float>(mineralWorker, dist));
 	}*/
 
-	m_bot.StartProfiling("0.7.2.1     orderedMineralWorkers");
+	m_bot.StartProfiling("0.7.2.2     orderedMineralWorkers");
 	std::list<Unit> orderedMineralWorkers;//Replaces workers
 	for (auto& mineralWorker : workers)
 	{
@@ -153,7 +154,7 @@ void WorkerManager::handleMineralWorkers()
 
 		mineralWorker.rightClick(closestMineral);
 	}
-	m_bot.StopProfiling("0.7.2.1     orderedMineralWorkers");
+	m_bot.StopProfiling("0.7.2.2     orderedMineralWorkers");
 }
 
 void WorkerManager::handleGasWorkers()
@@ -764,16 +765,16 @@ bool WorkerManager::isBuilder(Unit worker) const
 
 bool WorkerManager::isReturningCargo(Unit worker) const
 {
-	sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(worker.getUnitPtr());
-	for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
+	auto orders = worker.getUnitPtr()->orders;
+	if (orders.size() > 0)
 	{
-		if (available_ability.ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
+		//Not checking the abilities HARVEST_RETURN_DRONE, HARVEST_RETURN_MULE, HARVEST_RETURN_PROBE and HARVEST_RETURN_SCV, because they seem to never be used.
+		auto order = orders.at(0).ability_id;
+		if (order == sc2::ABILITY_ID::HARVEST_RETURN)
 		{
 			return true;
-			break;
 		}
 	}
-	return false;
 }
 
 int WorkerManager::getNumMineralWorkers()

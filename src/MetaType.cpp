@@ -132,6 +132,11 @@ bool MetaType::isBuilding() const
     return isUnit() && getUnitType().isBuilding();
 }
 
+bool MetaType::isAddon() const
+{
+	return isUnit() && getUnitType().isAddon();
+}
+
 const size_t & MetaType::getMetaType() const
 {
     return m_type;

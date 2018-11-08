@@ -325,8 +325,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					if (productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
 						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-						int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
-						if (starportCount > starportTechLabCount)
+						int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) +
+							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
+						if (starportCount > starportAddonCount)
 						{
 							toBuild = MetaTypeEnum::StarportTechLab;
 							hasPicked = true;
@@ -406,17 +407,19 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					bool hasPicked = false;
 					MetaType toBuild;
-					int factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
+					int factoryAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true) +
+						m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryReactor.getUnitType(), false, true);
 					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-					int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
-					if (factoryTechLabCount < 1 || starportCount > starportTechLabCount)
+					int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) +
+						m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
+					if (factoryAddonCount < 1 || starportCount > starportAddonCount)
 					{//Addon
-						if (factoryTechLabCount < 1)
+						if (factoryAddonCount < 1)
 						{
 							toBuild = MetaTypeEnum::FactoryTechLab;
 							hasPicked = true;
 						}
-						if (starportCount > starportTechLabCount)
+						if (starportCount > starportAddonCount)
 						{
 							toBuild = MetaTypeEnum::StarportTechLab;
 							hasPicked = true;
@@ -495,8 +498,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					if (productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
 						int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-						int barracksTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true);
-						if (barracksCount > barracksTechLabCount)
+						int barracksAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true) + 
+							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
+						if (barracksCount > barracksAddonCount)
 						{
 							toBuild = MetaTypeEnum::BarracksTechLab;
 							hasPicked = true;
@@ -631,15 +635,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				int barrackTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true);
 				int barrackReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
 				int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-				int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
-				if (barrackTechlabCount + barrackReactorCount < 1 || starportCount > starportTechLabCount)
+				int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) + 
+					m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
+				if (barrackTechlabCount + barrackReactorCount < 1 || starportCount > starportAddonCount)
 				{//Addon
 					if (barrackTechlabCount + barrackReactorCount < 1)
 					{
 						toBuild = MetaTypeEnum::BarracksReactor;
 						hasPicked = true;
 					}
-					if (starportCount > starportTechLabCount)
+					if (starportCount > starportAddonCount)
 					{
 						toBuild = MetaTypeEnum::StarportTechLab;
 						hasPicked = true;
@@ -960,6 +965,23 @@ bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
 	{
 		if (metaType.getUnitType().isWorker() && m_bot.Bases().getBaseCount(Players::Self) > 0)
 			return true;
+		if (metaType.isAddon())
+		{
+			auto buildings = m_bot.Buildings().getBaseBuildings();
+			for (auto building : buildings)
+			{
+				if (building.getType() == producer)
+				{
+					if (building.getAddonTag() == 0)
+					{
+						return true;
+					}
+				}
+			}
+			
+			//Addons do not check further or else we could try to build an addon on a building with an addon already.
+			return checkInQueue && m_queue.contains(MetaType(producer, m_bot));
+		}
 		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false, true) > 0)
 			return true;
 		if (m_bot.Buildings().isBeingBuilt(producer))
@@ -1033,7 +1055,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
         if (std::find(producerTypes.begin(), producerTypes.end(), unit.getType()) == producerTypes.end()) { continue; }
 
 		bool isBuilding = m_bot.Data(unit).isBuilding;
-		if (isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }
+		if (isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }//TODO might break other races
 		if (isBuilding && m_bot.GetSelfRace() == CCRace::Terran)
 		{//If is terran, check for Reactor addon
 			sc2::Tag addonTag = unit.getAddonTag();
@@ -1541,7 +1563,7 @@ bool ProductionManager::meetsReservedResources(const MetaType & type)
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type)
 {
-	assert("Addons cannot use extra ressources",m_bot.Data(type).isAddon);
+	assert("Addons cannot use extra ressources", m_bot.Data(type).isAddon);
 	return (m_bot.Data(type).mineralCost <= getFreeMinerals() + getExtraMinerals()) && (m_bot.Data(type).gasCost <= getFreeGas() + getExtraGas());
 }
 
