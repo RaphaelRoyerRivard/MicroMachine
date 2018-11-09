@@ -80,7 +80,7 @@ void CCBot::OnGameStart() //full start
 
 void CCBot::OnStep()
 {
-	StartProfiling("0 OnStep");
+	StartProfiling("0 OnStep");	//Do not remove
 	m_gameLoop = Observation()->GetGameLoop();
 
 	StartProfiling("0.1 checkKeyState");
@@ -123,7 +123,7 @@ void CCBot::OnStep()
 	m_gameCommander.onFrame();
 	StopProfiling("0.10 m_gameCommander.onFrame");
 
-	StopProfiling("0 OnStep");
+	StopProfiling("0 OnStep");	//Do not remove
 
 #ifdef SC2API
 	if (Config().AllowDebug)
@@ -200,7 +200,7 @@ void CCBot::setUnits()
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
 			// If the enemy zergling was seen last frame
 			if (zergEnemy && !m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
-				&& m_lastSeenUnits.find(unitptr->tag) != m_lastSeenUnits.end() && m_lastSeenUnits[unitptr->tag] == GetGameLoop() - 1)
+				&& unitptr->last_seen_game_loop == GetGameLoop())
 			{
 				float dist = Util::Dist(unitptr->pos, m_lastSeenPosUnits[unitptr->tag]);
 				float speed = Util::getSpeedOfUnit(unitptr, *this);
@@ -252,7 +252,6 @@ void CCBot::setUnits()
 		if(unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
         m_allUnits.push_back(Unit(unitptr, *this));
-		m_lastSeenUnits.insert_or_assign(unitptr->tag, GetGameLoop());
     }
 #else
     for (auto & unit : BWAPI::Broodwar->getAllUnits())
@@ -488,11 +487,6 @@ std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits()
 	return m_enemyUnits;
 }
 
-uint32_t CCBot::GetLastStepSeenUnit(sc2::Tag tag)
-{
-	return m_lastSeenUnits[tag];
-}
-
 const std::vector<Unit> & CCBot::GetUnits() const
 {
 	return m_allUnits;
@@ -553,6 +547,14 @@ void CCBot::drawProfilingInfo()
 {
 	if (m_config.DrawProfilingInfo)
 	{
+		const std::string stepString = "0 OnStep";
+		long long stepTime = 0;
+		const auto it = m_profilingTimes.find(stepString);
+		if(it != m_profilingTimes.end())
+		{
+			stepTime = (*it).second.total / (*it).second.queue.size();
+		}
+
 		std::string profilingInfo = "Profiling info (ms)";
 		for (auto & mapPair : m_profilingTimes)
 		{
@@ -560,7 +562,17 @@ void CCBot::drawProfilingInfo()
 			auto& profiler = m_profilingTimes.at(mapPair.first);
 			auto& queue = profiler.queue;
 			const size_t queueCount = queue.size();
-			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * profiler.total / queueCount);
+			const long long time = profiler.total / queueCount;
+			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * time);
+			if (key != stepString && time * 10 > stepTime)
+			{
+				profilingInfo += " !";
+				if (time * 4 > stepTime)
+				{
+					profilingInfo += "!!";
+				}
+			}
+
 			if(queue.size() >= 50)
 			{
 				queue.push_front(0);

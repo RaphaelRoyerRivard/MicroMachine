@@ -47,7 +47,6 @@ class CCBot
 	std::map<sc2::UNIT_TYPEID, int> m_unitCompletedCount;
 	std::map<sc2::Tag, Unit> m_allyUnits;
 	std::map<sc2::Tag, Unit> m_enemyUnits;
-	std::map<sc2::Tag, uint32_t> m_lastSeenUnits;
 	std::map<sc2::Tag, CCPosition> m_lastSeenPosUnits;
     std::vector<Unit>       m_allUnits;
     std::vector<CCPosition> m_baseLocations;
@@ -114,8 +113,7 @@ public:
 	std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits();
 	std::map<sc2::Tag, Unit> CCBot::GetAllyUnits(sc2::UNIT_TYPEID type);
 	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();
-	uint32_t GetLastStepSeenUnit(sc2::Tag tag);
     const std::vector<CCPosition> & GetStartLocations() const;
-	void StartProfiling(const std::string & profiler);
-	void StopProfiling(const std::string & profiler);
+	void StartProfiling(const std::string & profilerName);
+	void StopProfiling(const std::string & profilerName);
 };

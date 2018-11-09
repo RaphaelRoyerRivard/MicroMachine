@@ -22,7 +22,7 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Protoss",
+        "EnemyRace"                 : "Zerg",
         "MapFile"                   : "DreamcatcherLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
