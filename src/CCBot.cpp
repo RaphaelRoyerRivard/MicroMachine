@@ -177,7 +177,6 @@ void CCBot::setUnits()
 {
     m_allUnits.clear();
 #ifdef SC2API
-    Control()->GetObservation();
 	bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
     for (auto unitptr : Observation()->GetUnits())
     {
@@ -231,20 +230,22 @@ void CCBot::setUnits()
 				}
 
 				// If the opponent has built a building that can produce flying units, we should produce Anti Air units
-				switch(sc2::UNIT_TYPEID(unitptr->unit_type))
+				if (unit.getType().isBuilding())
 				{
-				case sc2::UNIT_TYPEID::TERRAN_STARPORT:
-				case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
-				case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
-				case sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON:
-				case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
-				case sc2::UNIT_TYPEID::ZERG_SPIRE:
-				case sc2::UNIT_TYPEID::ZERG_HIVE:
-				case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS:
-					m_strategy.setShouldProduceAntiAir(true);
-					Actions()->SendChat("You are finally ready to produce air units :o took you long enough");
-				default:
-					break;
+					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
+					{
+					case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+					case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
+					case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
+					case sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON:
+					case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
+					case sc2::UNIT_TYPEID::ZERG_SPIRE:
+					case sc2::UNIT_TYPEID::ZERG_HIVE:
+						m_strategy.setShouldProduceAntiAir(true);
+						Actions()->SendChat("You are finally ready to produce air units :o took you long enough");
+					default:
+						break;
+					}
 				}
 			}
 			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, unitptr->pos);
