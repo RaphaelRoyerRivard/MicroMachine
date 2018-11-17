@@ -641,8 +641,7 @@ void CombatCommander::checkUnitsState()
 		}
 
 		UnitState & state = it->second;
-		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
-		
+		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());		
 
 		if (state.WasAttacked())
 		{
