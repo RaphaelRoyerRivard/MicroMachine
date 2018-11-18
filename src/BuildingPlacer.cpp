@@ -331,7 +331,7 @@ void BuildingPlacer::drawReservedTiles()
         {
             if (m_reserveMap[x][y])
             {
-                m_bot.Map().drawTile(x - 1, y - 1, CCColor(255, 255, 0));
+                m_bot.Map().drawTile(x, y, CCColor(255, 255, 0));
             }
         }
     }

@@ -45,6 +45,7 @@ public:
     bool DrawModuleTimers;
     bool DrawReservedBuildingTiles;
     bool DrawBuildingInfo;
+	bool DrawStartingRamp;
     bool DrawEnemyUnitInfo;
     bool DrawLastSeenTileInfo;
     bool DrawUnitTargetInfo;

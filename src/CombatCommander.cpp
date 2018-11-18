@@ -650,7 +650,6 @@ void CombatCommander::checkUnitsState()
 		UnitState & state = it->second;
 		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
 		m_bot.StopProfiling("0.10.4.4.2.2        updateState");
-		
 		if (state.WasAttacked())
 		{
 			m_bot.StartProfiling("0.10.4.4.2.3        checkForInvis");

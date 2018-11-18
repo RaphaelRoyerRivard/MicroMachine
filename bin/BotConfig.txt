@@ -74,6 +74,7 @@
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
         "DrawBaseLocationInfo"      : false,
+        "DrawStartingRamp"		    : true,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
         "DrawScoutInfo"             : false,

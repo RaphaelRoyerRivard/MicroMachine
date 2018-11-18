@@ -17,6 +17,10 @@ BuildingManager::BuildingManager(CCBot & bot)
 void BuildingManager::onStart()
 {
     m_buildingPlacer.onStart();
+
+	//Ramp wall location
+	std::list<CCTilePosition> checkedTiles;
+	FindRamps(rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
 }
 
 // gets called every frame from GameCommander
@@ -32,6 +36,42 @@ void BuildingManager::onFrame()
 	castBuildingsAbilities();
 
     drawBuildingInformation();
+	drawStartingRamp();
+}
+
+void BuildingManager::FindRamps(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile)
+{
+	if (std::find(checkedTiles.begin(), checkedTiles.end(), currentTile) != checkedTiles.end())
+	{
+		return;
+	}
+
+	checkedTiles.push_front(currentTile);
+	if (m_bot.Map().isWalkable(currentTile))
+	{
+		if (m_bot.Map().isBuildable(currentTile))
+		{
+			FindRamps(rampTiles, checkedTiles, CCTilePosition(currentTile.x + 1, currentTile.y));
+			FindRamps(rampTiles, checkedTiles, CCTilePosition(currentTile.x - 1, currentTile.y));
+			FindRamps(rampTiles, checkedTiles, CCTilePosition(currentTile.x, currentTile.y + 1));
+			FindRamps(rampTiles, checkedTiles, CCTilePosition(currentTile.x, currentTile.y - 1));
+		}
+		else
+		{
+			int tileHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y);
+
+			int topHeight = m_bot.Map().terrainHeight(currentTile.x + 1, currentTile.y);
+			int downHeight = m_bot.Map().terrainHeight(currentTile.x - 1, currentTile.y);
+			int rightHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y + 1);
+			int leftHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y - 1);
+
+			//Ramps tiles are 1 lower
+			if (topHeight + 1 == tileHeight || downHeight + 1 == tileHeight || rightHeight + 1 == tileHeight || leftHeight + 1 == tileHeight)
+			{
+				rampTiles.push_back(currentTile);
+			}
+		}
+	}
 }
 
 bool BuildingManager::isBeingBuilt(UnitType type)
@@ -528,6 +568,19 @@ void BuildingManager::drawBuildingInformation()
     }
 
     m_bot.Map().drawTextScreen(0.3f, 0.05f, ss.str());
+}
+
+void BuildingManager::drawStartingRamp()
+{
+	if (!m_bot.Config().DrawStartingRamp)
+	{
+		return;
+	}
+
+	for (auto tile : rampTiles)
+	{
+		m_bot.Map().drawTile(tile.x, tile.y, CCColor(255, 255, 0));
+	}
 }
 
 std::vector<Building> BuildingManager::getBuildings()
