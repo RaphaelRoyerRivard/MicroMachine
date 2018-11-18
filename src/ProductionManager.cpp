@@ -1046,7 +1046,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 
     // make a set of all candidate producers
     std::vector<Unit> candidateProducers;
-    for (auto unit : m_bot.UnitInfo().getUnits(Players::Self))
+    for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
         // reasons a unit can not train the desired type
 		if (!unit.isValid()) { continue; }
@@ -1149,7 +1149,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 			//validate space next to building is reserved
 			auto addonPosition = CCTilePosition(unit.getTilePosition().x + 2, unit.getTilePosition().y);
 			Building b(type.getUnitType(), addonPosition);
-			if (m_bot.Buildings().getBuildingPlacer().canBuildHereWithSpace(unit.getTilePosition().x + 2, unit.getTilePosition().y, b, 0, false))
+			if (!m_bot.Buildings().getBuildingPlacer().canBuildHereWithSpace(addonPosition.x, addonPosition.y, b, 0, true))
 			{//Tiles are not reserved, since addon logic is reversed, this means we can't build here, there should be an addon already
 				continue;
 			}
