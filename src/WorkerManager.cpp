@@ -18,19 +18,33 @@ void WorkerManager::onStart()
 
 void WorkerManager::onFrame()
 {
+	m_bot.StartProfiling("0.7.1   m_workerData.updateAllWorkerData");
     m_workerData.updateAllWorkerData();
+	m_bot.StopProfiling("0.7.1   m_workerData.updateAllWorkerData");
+	m_bot.StartProfiling("0.7.2   handleMineralWorkers");
 	handleMineralWorkers();
+	m_bot.StopProfiling("0.7.2   handleMineralWorkers");
+	m_bot.StartProfiling("0.7.3   handleGasWorkers");
     handleGasWorkers();
+	m_bot.StopProfiling("0.7.3   handleGasWorkers");
+	m_bot.StartProfiling("0.7.4   handleIdleWorkers");
     handleIdleWorkers();
+	m_bot.StopProfiling("0.7.4   handleIdleWorkers");
+	m_bot.StartProfiling("0.7.5   repairCombatBuildings");
 	repairCombatBuildings();
+	m_bot.StopProfiling("0.7.5   repairCombatBuildings");
+	m_bot.StartProfiling("0.7.6   lowPriorityChecks");
 	lowPriorityChecks();
+	m_bot.StopProfiling("0.7.6   lowPriorityChecks");
 
     drawResourceDebugInfo();
     drawWorkerInformation();
 
     m_workerData.drawDepotDebugInfo();
 
+	m_bot.StartProfiling("0.7.7   handleRepairWorkers");
     handleRepairWorkers();
+	m_bot.StopProfiling("0.7.7   handleRepairWorkers");
 }
 
 void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)
@@ -46,14 +60,17 @@ void WorkerManager::stopRepairing(Unit worker)
 
 void WorkerManager::handleMineralWorkers()
 {
+	m_bot.StartProfiling("0.7.2.1     getWorkers");
 	auto workers = getWorkers();
+	m_bot.StopProfiling("0.7.2.1     getWorkers");
 	if (workers.empty())
 	{
 		return;
 	}
 
-	/*std::list<Unit> mineralWorkers;
-	for (auto worker : workers)
+	/*m_bot.StartProfiling("0.7.2.1     selectMineralWorkers");
+	std::list<Unit> mineralWorkers;
+	for (auto& worker : workers)
 	{
 		int workerJob = m_workerData.getWorkerJob(worker);
 		if (workerJob == WorkerJobs::Minerals && !isReturningCargo(worker))
@@ -61,6 +78,7 @@ void WorkerManager::handleMineralWorkers()
 			mineralWorkers.push_back(worker);
 		}
 	}
+	m_bot.StopProfiling("0.7.2.1     selectMineralWorkers");
 	if (mineralWorkers.empty())
 	{
 		return;
@@ -74,20 +92,22 @@ void WorkerManager::handleMineralWorkers()
 	//split workers on first frame
 	m_isFirstFrame = false;
 
+	m_bot.StartProfiling("0.7.2.2     selectMinerals");
 	std::list<Unit> minerals;
 	std::list<std::pair<Unit, int>> mineralsUsage;
-	for (auto base : m_bot.Bases().getBaseLocations())
+	for (auto& base : m_bot.Bases().getBaseLocations())
 	{
 		if (base->isOccupiedByPlayer(Players::Self))
 		{
 			auto mineralsVector = base->getMinerals();
-			for (auto t : mineralsVector)
+			for (auto& t : mineralsVector)
 			{
 				minerals.push_back(t);
 				mineralsUsage.push_back(std::pair<Unit, int>(t, 0));
 			}
 		}
 	}
+	m_bot.StopProfiling("0.7.2.2     selectMinerals");
 
 	/*std::list<std::pair<Unit, float>> temp;
 	for (auto mineralWorker : mineralWorkers)
@@ -97,8 +117,9 @@ void WorkerManager::handleMineralWorkers()
 		temp.push_back(std::pair<Unit, float>(mineralWorker, dist));
 	}*/
 
+	m_bot.StartProfiling("0.7.2.3     orderedMineralWorkers");
 	std::list<Unit> orderedMineralWorkers;//Replaces workers
-	for (auto mineralWorker : workers)
+	for (auto& mineralWorker : workers)
 	{
 		if (!mineralWorker.isValid())
 		{
@@ -107,7 +128,7 @@ void WorkerManager::handleMineralWorkers()
 
 		int lowest = 200;
 		std::list<Unit> lowestMinerals;
-		for (auto mineral : mineralsUsage)
+		for (auto& mineral : mineralsUsage)
 		{
 			if (mineral.second < lowest)
 			{
@@ -132,6 +153,7 @@ void WorkerManager::handleMineralWorkers()
 
 		mineralWorker.rightClick(closestMineral);
 	}
+	m_bot.StopProfiling("0.7.2.3     orderedMineralWorkers");
 }
 
 void WorkerManager::handleGasWorkers()
@@ -291,7 +313,10 @@ void WorkerManager::repairCombatBuildings()
 				for (int i = 0; i < maxReparator - alreadyRepairing; i++)
 				{
 					Unit worker = getClosestMineralWorkerTo(building.getPosition());
-					setRepairWorker(worker, building);
+					if (worker.isValid())
+						setRepairWorker(worker, building);
+					else
+						break;
 				}
 				break;
 			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:

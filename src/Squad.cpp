@@ -55,11 +55,14 @@ Squad::Squad(const std::string & name, const SquadOrder & order, int maxRegroupD
 
 void Squad::onFrame()
 {
+	m_bot.StartProfiling("0.10.4.1.1      updateUnits");
     // update all necessary unit information within this squad
     updateUnits();
+	m_bot.StopProfiling("0.10.4.1.1      updateUnits");
 
     if (m_order.getType() == SquadOrderTypes::Retreat)
     {
+		m_bot.StartProfiling("0.10.4.1.2      SquadOrderTypes::Retreat");
         CCPosition retreatPosition = calcRetreatPosition();
 
 		if(m_bot.Config().DrawSquadInfo)
@@ -67,9 +70,11 @@ void Squad::onFrame()
 
         m_meleeManager.regroup(retreatPosition);
         m_rangedManager.regroup(retreatPosition);
+		m_bot.StopProfiling("0.10.4.1.2      SquadOrderTypes::Retreat");
     }
     else if (m_order.getType() == SquadOrderTypes::Regroup)
     {
+		m_bot.StartProfiling("0.10.4.1.2      SquadOrderTypes::Regroup");
         CCPosition regroupPosition = calcCenter();
 
 		if (m_bot.Config().DrawSquadInfo)
@@ -77,6 +82,7 @@ void Squad::onFrame()
 
         m_meleeManager.regroup(regroupPosition);
         m_rangedManager.regroup(regroupPosition);
+		m_bot.StopProfiling("0.10.4.1.2      SquadOrderTypes::Regroup");
     }
     else // otherwise, execute micro
     {
@@ -85,6 +91,7 @@ void Squad::onFrame()
         // Nothing to do if we have no units
         if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend || m_order.getType() == SquadOrderTypes::Harass))
         {
+			m_bot.StartProfiling("0.10.4.1.3      SetSquadTargets");
             std::vector<Unit> targets = calcTargets();
 
             m_meleeManager.setTargets(targets);
@@ -95,9 +102,14 @@ void Squad::onFrame()
             //TODO remove the order dependancy
             m_meleeManager.setOrder(m_order);
             m_rangedManager.setOrder(m_order);
+			m_bot.StopProfiling("0.10.4.1.3      SetSquadTargets");
 
+			m_bot.StartProfiling("0.10.4.1.4      ExecuteMeleeMicro");
             m_meleeManager.executeMicro();
+			m_bot.StopProfiling("0.10.4.1.4      ExecuteMeleeMicro");
+			m_bot.StartProfiling("0.10.4.1.5      ExecuteRangedMicro");
             m_rangedManager.executeMicro();
+			m_bot.StopProfiling("0.10.4.1.5      ExecuteRangedMicro");
         }
     }
 
@@ -118,7 +130,7 @@ std::vector<Unit> Squad::calcVisibleTargets()
 std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 {
     // Discover enemies within region of interest
-    std::map<sc2::Tag, Unit> nearbyEnemies;
+	std::vector<Unit> targets;
 	for (auto & mapEnemyUnit : m_bot.GetEnemyUnits())
 	{
 		auto & enemyUnit = mapEnemyUnit.second;
@@ -132,7 +144,7 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (visibilityFilter && !enemyUnit.isVisible())
 			continue;
 
-		uint32_t lastStepSeen = m_bot.GetLastStepSeenUnit(enemyUnit.getUnitPtr()->tag);
+		uint32_t lastStepSeen = enemyUnit.getUnitPtr()->last_seen_game_loop;
 		// If the unit is not were we last saw it, ignore it
 		if (m_bot.GetGameLoop() != lastStepSeen && m_bot.Map().isVisible(enemyUnit.getPosition()))
 			continue;
@@ -164,15 +176,12 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 
 		if (addUnit)
 		{
-			nearbyEnemies.insert_or_assign(mapEnemyUnit.first, enemyUnit);
+			targets.push_back(enemyUnit);
 			if(m_bot.Config().DrawMemoryInfo)
 				m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.5f, sc2::Colors::Blue);
 		}
 	}
     
-	std::vector<Unit> targets;
-	for (auto & nearbyEnemy : nearbyEnemies)
-		targets.push_back(nearbyEnemy.second);
     return targets;
 }
 

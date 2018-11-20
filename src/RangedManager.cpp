@@ -103,10 +103,9 @@ void RangedManager::executeMicro()
 	else if (m_harassMode)
 	{
 		const auto start = std::chrono::steady_clock::now();
+		m_bot.StartProfiling("Harass");
 		HarassLogic(rangedUnits, rangedUnitTargets);
-		const auto end = std::chrono::steady_clock::now();
-		const auto time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-		m_bot.AddProfilingTime("Harass", time);
+		m_bot.StopProfiling("Harass");
 	}
     else 
 	{

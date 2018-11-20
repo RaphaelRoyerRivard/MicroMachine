@@ -20,6 +20,19 @@ class CCBot : public sc2::Agent
 class CCBot
 #endif
 {
+	struct Profiler
+	{
+		Profiler() :total(0) {};
+		/*Profiler(std::deque<long long> queue, long long total, std::chrono::steady_clock::time_point start) :
+			m_queue(queue),
+			m_total(total),
+			m_start(start)
+		{};*/
+		std::deque<long long> queue;
+		long long total;
+		std::chrono::steady_clock::time_point start;
+	};
+
 	uint32_t				m_gameLoop;
     MapTools                m_map;
     BaseLocationManager     m_bases;
@@ -34,17 +47,16 @@ class CCBot
 	std::map<sc2::UNIT_TYPEID, int> m_unitCompletedCount;
 	std::map<sc2::Tag, Unit> m_allyUnits;
 	std::map<sc2::Tag, Unit> m_enemyUnits;
-	std::map<sc2::Tag, uint32_t> m_lastSeenUnits;
 	std::map<sc2::Tag, CCPosition> m_lastSeenPosUnits;
     std::vector<Unit>       m_allUnits;
     std::vector<CCPosition> m_baseLocations;
 	CCRace selfRace;
-	std::map<std::string, std::pair<std::deque<long long>, long long>> m_profilingTimes;
+	std::map<std::string, Profiler> m_profilingTimes;
 
 	void checkKeyState();
 	void setUnits();
 	void clearDeadUnits();
-	void drawProfilingInfo() const;
+	void drawProfilingInfo();
 
 #ifdef SC2API
     void OnError(const std::vector<sc2::ClientError> & client_errors, 
@@ -101,7 +113,7 @@ public:
 	std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits();
 	std::map<sc2::Tag, Unit> CCBot::GetAllyUnits(sc2::UNIT_TYPEID type);
 	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();
-	uint32_t GetLastStepSeenUnit(sc2::Tag tag);
     const std::vector<CCPosition> & GetStartLocations() const;
-	void AddProfilingTime(const std::string & profiler, const long long timeInMicroseconds);
+	void StartProfiling(const std::string & profilerName);
+	void StopProfiling(const std::string & profilerName);
 };

@@ -80,20 +80,50 @@ void CCBot::OnGameStart() //full start
 
 void CCBot::OnStep()
 {
+	StartProfiling("0 OnStep");	//Do not remove
 	m_gameLoop = Observation()->GetGameLoop();
-		
+
+	StartProfiling("0.1 checkKeyState");
 	checkKeyState();
-		
+	StopProfiling("0.1 checkKeyState");
+
+	StartProfiling("0.2 setUnits");
     setUnits();
+	StopProfiling("0.2 setUnits");
+
+	StartProfiling("0.3 clearDeadUnits");
 	clearDeadUnits();
-	m_map.onFrame();	
-    m_unitInfo.onFrame();	
+	StopProfiling("0.3 clearDeadUnits");
+
+	StartProfiling("0.4 m_map.onFrame");
+	m_map.onFrame();
+	StopProfiling("0.4 m_map.onFrame");
+
+	StartProfiling("0.5 m_unitInfo.onFrame");
+    m_unitInfo.onFrame();
+	StopProfiling("0.5 m_unitInfo.onFrame");
+
+	StartProfiling("0.6 m_bases.onFrame");
     m_bases.onFrame();
-    m_workers.onFrame();	
-	m_buildings.onFrame();	
+	StopProfiling("0.6 m_bases.onFrame");
+
+	StartProfiling("0.7 m_workers.onFrame");
+    m_workers.onFrame();
+	StopProfiling("0.7 m_workers.onFrame");
+
+	StartProfiling("0.8 m_buildings.onFrame");
+	m_buildings.onFrame();
+	StopProfiling("0.8 m_buildings.onFrame");
+
+	StartProfiling("0.9 m_strategy.onFrame");
     m_strategy.onFrame();
-	
+	StopProfiling("0.9 m_strategy.onFrame");
+
+	StartProfiling("0.10 m_gameCommander.onFrame");
 	m_gameCommander.onFrame();
+	StopProfiling("0.10 m_gameCommander.onFrame");
+
+	StopProfiling("0 OnStep");	//Do not remove
 
 #ifdef SC2API
 	if (Config().AllowDebug)
@@ -147,7 +177,6 @@ void CCBot::setUnits()
 {
     m_allUnits.clear();
 #ifdef SC2API
-    Control()->GetObservation();
 	bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
     for (auto unitptr : Observation()->GetUnits())
     {
@@ -170,7 +199,7 @@ void CCBot::setUnits()
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
 			// If the enemy zergling was seen last frame
 			if (zergEnemy && !m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
-				&& m_lastSeenUnits.find(unitptr->tag) != m_lastSeenUnits.end() && m_lastSeenUnits[unitptr->tag] == GetGameLoop() - 1)
+				&& unitptr->last_seen_game_loop == GetGameLoop())
 			{
 				float dist = Util::Dist(unitptr->pos, m_lastSeenPosUnits[unitptr->tag]);
 				float speed = Util::getSpeedOfUnit(unitptr, *this);
@@ -201,20 +230,22 @@ void CCBot::setUnits()
 				}
 
 				// If the opponent has built a building that can produce flying units, we should produce Anti Air units
-				switch(sc2::UNIT_TYPEID(unitptr->unit_type))
+				if (unit.getType().isBuilding())
 				{
-				case sc2::UNIT_TYPEID::TERRAN_STARPORT:
-				case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
-				case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
-				case sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON:
-				case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
-				case sc2::UNIT_TYPEID::ZERG_SPIRE:
-				case sc2::UNIT_TYPEID::ZERG_HIVE:
-				case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS:
-					m_strategy.setShouldProduceAntiAir(true);
-					Actions()->SendChat("You are finally ready to produce air units :o took you long enough");
-				default:
-					break;
+					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
+					{
+					case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+					case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
+					case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
+					case sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON:
+					case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
+					case sc2::UNIT_TYPEID::ZERG_SPIRE:
+					case sc2::UNIT_TYPEID::ZERG_HIVE:
+						m_strategy.setShouldProduceAntiAir(true);
+						Actions()->SendChat("You are finally ready to produce air units :o took you long enough");
+					default:
+						break;
+					}
 				}
 			}
 			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, unitptr->pos);
@@ -222,7 +253,6 @@ void CCBot::setUnits()
 		if(unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
         m_allUnits.push_back(Unit(unitptr, *this));
-		m_lastSeenUnits.insert_or_assign(unitptr->tag, GetGameLoop());
     }
 #else
     for (auto & unit : BWAPI::Broodwar->getAllUnits())
@@ -458,11 +488,6 @@ std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits()
 	return m_enemyUnits;
 }
 
-uint32_t CCBot::GetLastStepSeenUnit(sc2::Tag tag)
-{
-	return m_lastSeenUnits[tag];
-}
-
 const std::vector<Unit> & CCBot::GetUnits() const
 {
 	return m_allUnits;
@@ -489,31 +514,72 @@ void CCBot::OnError(const std::vector<sc2::ClientError> & client_errors, const s
 }
 #endif
 
-void CCBot::AddProfilingTime(const std::string & profiler, const long long timeInMicroseconds)
+void CCBot::StartProfiling(const std::string & profilerName)
 {
 	if (m_config.DrawProfilingInfo)
 	{
-		auto & pair = m_profilingTimes[profiler];	// Get the profiling queue
-		pair.second += timeInMicroseconds;			// Add the time to the total of the last 100 steps
-		pair.first.push_back(timeInMicroseconds);	// Add the time to the queue
-		if (pair.first.size() > 100)
-		{
-			pair.second -= pair.first[0];			// Remove the old time from the total of the last 100 steps
-			pair.first.pop_front();					// Remove the old time from the queue
-		}
+		auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
+		profiler.start = std::chrono::steady_clock::now();	// Set the start time (third element of the tuple) to now
 	}
 }
 
-void CCBot::drawProfilingInfo() const
+void CCBot::StopProfiling(const std::string & profilerName)
 {
 	if (m_config.DrawProfilingInfo)
 	{
-		std::string profilingInfo = "Profiling info (ms)";
-		for(auto & mapPair : m_profilingTimes)
+		auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
+
+		const auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - profiler.start).count();
+
+		profiler.total += elapsedTime;						// Add the time to the total of the last 100 steps
+		auto & queue = profiler.queue;
+		if (queue.empty())
 		{
-			const long long totalTime = mapPair.second.second;
-			const size_t queueCount = mapPair.second.first.size();
-			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * totalTime / queueCount);
+			while (queue.size() < 49)
+				queue.push_front(0);						// Fill up the queue with zeros
+			queue.push_front(elapsedTime);					// Add the time to the queue
+		}
+		else
+			queue[0] += elapsedTime;						// Add the time to the queue
+	}
+}
+
+void CCBot::drawProfilingInfo()
+{
+	if (m_config.DrawProfilingInfo)
+	{
+		const std::string stepString = "0 OnStep";
+		long long stepTime = 0;
+		const auto it = m_profilingTimes.find(stepString);
+		if(it != m_profilingTimes.end())
+		{
+			stepTime = (*it).second.total / (*it).second.queue.size();
+		}
+
+		std::string profilingInfo = "Profiling info (ms)";
+		for (auto & mapPair : m_profilingTimes)
+		{
+			const std::string& key = mapPair.first;
+			auto& profiler = m_profilingTimes.at(mapPair.first);
+			auto& queue = profiler.queue;
+			const size_t queueCount = queue.size();
+			const long long time = profiler.total / queueCount;
+			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * time);
+			if (key != stepString && time * 10 > stepTime)
+			{
+				profilingInfo += " !";
+				if (time * 4 > stepTime)
+				{
+					profilingInfo += "!!";
+				}
+			}
+
+			if(queue.size() >= 50)
+			{
+				queue.push_front(0);
+				profiler.total -= queue[50];
+				queue.pop_back();
+			}
 		}
 		m_map.drawTextScreen(0.45f, 0.01f, profilingInfo);
 	}

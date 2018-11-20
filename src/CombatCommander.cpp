@@ -68,8 +68,11 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 
     m_combatUnits = combatUnits;
 
+	m_bot.StartProfiling("0.10.4.1    m_squadData.onFrame");
     m_squadData.onFrame();
+	m_bot.StopProfiling("0.10.4.1    m_squadData.onFrame");
 
+	m_bot.StartProfiling("0.10.4.2    updateSquads");
     if (isSquadUpdateFrame())
     {
         updateIdleSquad();
@@ -79,9 +82,14 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		updateAttackSquads();
         updateBackupSquads();
     }
+	m_bot.StopProfiling("0.10.4.2    updateSquads");
 
+	m_bot.StartProfiling("0.10.4.3    lowPriorityCheck");
 	lowPriorityCheck();
+	m_bot.StopProfiling("0.10.4.3    lowPriorityCheck");
+	/*m_bot.StartProfiling("0.10.4.4    checkUnitsState");
 	checkUnitsState();
+	m_bot.StopProfiling("0.10.4.4    checkUnitsState");*/
 }
 
 void CombatCommander::lowPriorityCheck()
@@ -614,13 +622,17 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, size_t flyin
 
 void CombatCommander::checkUnitsState()
 {
+	m_bot.StartProfiling("0.10.4.4.1      resetStates");
 	for (auto & state : m_unitStates)
 	{
 		state.second.Reset();
 	}
+	m_bot.StopProfiling("0.10.4.4.1      resetStates");
 
+	m_bot.StartProfiling("0.10.4.4.2      updateStates");
 	for (auto & unit : m_bot.Commander().getValidUnits())
 	{
+		m_bot.StartProfiling("0.10.4.4.2.1        addState");
 		auto tag = unit.getTag();
 
 		auto it = m_unitStates.find(tag);
@@ -629,29 +641,38 @@ void CombatCommander::checkUnitsState()
 			UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
 			state.Update();
 			m_unitStates[tag] = state;
+			m_bot.StopProfiling("0.10.4.4.2.1        addState");
 			continue;
 		}
+		m_bot.StopProfiling("0.10.4.4.2.1        addState");
 
+		m_bot.StartProfiling("0.10.4.4.2.2        updateState");
 		UnitState & state = it->second;
-		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());		
-
+		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
+		m_bot.StopProfiling("0.10.4.4.2.2        updateState");
 		if (state.WasAttacked())
 		{
-			auto threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetEnemyUnits(), m_bot);
-			if (threats.size() == 0 && state.HadRecentTreats())
+			m_bot.StartProfiling("0.10.4.4.2.3        checkForInvis");
+			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetEnemyUnits(), m_bot);
+			if (threats.empty() && state.HadRecentTreats())
 			{
 				//Invisible unit detected
 				m_bot.Strategy().setEnemyHasInvisible(true);
 				m_invisibleSighting[unit] = std::pair<CCPosition, uint32_t>(unit.getPosition(), m_bot.GetGameLoop());
 			}
+			m_bot.StopProfiling("0.10.4.4.2.3        checkForInvis");
 		}
 		else if (m_bot.GetGameLoop() % 5)
 		{
-			auto threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetEnemyUnits(), m_bot);
-			state.UpdateThreat(threats.size() != 0);
+			m_bot.StartProfiling("0.10.4.4.2.4        updateThreats");
+			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetEnemyUnits(), m_bot);
+			state.UpdateThreat(!threats.empty());
+			m_bot.StopProfiling("0.10.4.4.2.4        updateThreats");
 		}
 	}
+	m_bot.StopProfiling("0.10.4.4.2      updateStates");
 
+	m_bot.StartProfiling("0.10.4.4.3      removeStates");
 	std::vector<CCUnitID> toRemove;
 	for (auto & state : m_unitStates)
 	{
@@ -667,6 +688,7 @@ void CombatCommander::checkUnitsState()
 	{
 		m_unitStates.erase(tag);
 	}
+	m_bot.StopProfiling("0.10.4.4.3      removeStates");
 }
 
 Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type)

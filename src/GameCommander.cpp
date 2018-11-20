@@ -21,12 +21,20 @@ void GameCommander::onStart()
 
 void GameCommander::onFrame()
 {
+	m_bot.StartProfiling("0.10.1   handleUnitAssignments");
     handleUnitAssignments();
-	
-    m_productionManager.onFrame();	
-    m_scoutManager.onFrame();	
+	m_bot.StopProfiling("0.10.1   handleUnitAssignments");
+
+	m_bot.StartProfiling("0.10.2   m_productionManager.onFrame");
+    m_productionManager.onFrame();
+	m_bot.StopProfiling("0.10.2   m_productionManager.onFrame");
+	m_bot.StartProfiling("0.10.3   m_scoutManager.onFrame");
+    m_scoutManager.onFrame();
+	m_bot.StopProfiling("0.10.3   m_scoutManager.onFrame");
+	m_bot.StartProfiling("0.10.4   m_combatCommander.onFrame");
     m_combatCommander.onFrame(m_combatUnits);
-	
+	m_bot.StopProfiling("0.10.4   m_combatCommander.onFrame");
+
     drawDebugInterface();
 }
 
