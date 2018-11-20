@@ -306,13 +306,22 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
 			{
+				/*if (!m_queue.contains(MetaTypeEnum::Starport))
+				{
+					m_queue.queueAsLowestPriority(MetaTypeEnum::Starport, false);
+				}
+				if (!m_queue.contains(MetaTypeEnum::StarportTechLab))
+				{
+					m_queue.queueAsLowestPriority(MetaTypeEnum::StarportTechLab, false);
+				}
+				break;*/
 				if (productionScore < (float)baseCount)
 				{
 					bool hasPicked = false;
 					MetaType toBuild;
-					if (productionBuildingAddonCount < productionBuildingCount)
+					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+					if (true)//productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
-						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 						int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) +
 							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
 						if (starportCount > starportAddonCount)
@@ -329,7 +338,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					if(!hasPicked)
 					{//Building
 						int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 						if (barracksCount < baseCount * 2)
 						{
 							toBuild = MetaTypeEnum::Barracks;
@@ -558,6 +566,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 						int starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
 						int starportReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
+
 						if (starportCount > starportTechLabCount + starportReactorCount)
 						{
 							if (starportTechLabCount <= starportReactorCount * 2)
@@ -632,7 +641,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						toBuild = MetaTypeEnum::BarracksReactor;
 						hasPicked = true;
 					}
-					if (starportCount > starportAddonCount)
+					else if (starportCount > starportAddonCount)
 					{
 						toBuild = MetaTypeEnum::StarportTechLab;
 						hasPicked = true;
@@ -646,7 +655,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (!hasPicked)
 				{//Building
 					int barrackCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 					if (barrackCount < baseCount)
 					{
 						toBuild = MetaTypeEnum::Barracks;
@@ -986,6 +994,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 	// get all the types of units that cna build this type
 	auto & producerTypes = m_bot.Data(type).whatBuilds;
 	bool priorizeReactor = false;
+	bool isTypeAddon = m_bot.Data(type).isAddon;
 
 	if (m_bot.GetSelfRace() == CCRace::Terran)
 	{
@@ -1034,7 +1043,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 
     // make a set of all candidate producers
     std::vector<Unit> candidateProducers;
-    for (auto unit : m_bot.UnitInfo().getUnits(Players::Self))
+    for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
         // reasons a unit can not train the desired type
 		if (!unit.isValid()) { continue; }
@@ -1132,13 +1141,11 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 		}
 
 		//if the type is an addon, some special cases
-		if (m_bot.Data(type).isAddon)
+		if (isTypeAddon)
 		{
-			//validate space next to building is reserved
-			auto addonPosition = CCTilePosition(unit.getTilePosition().x + 2, unit.getTilePosition().y);
-			Building b(type.getUnitType(), addonPosition);
-			if (m_bot.Buildings().getBuildingPlacer().canBuildHereWithSpace(unit.getTilePosition().x + 2, unit.getTilePosition().y, b, 0, false))
-			{//Tiles are not reserved, since addon logic is reversed, this means we can't build here, there should be an addon already
+			//Skip if the building already has an addon
+			if (unit.getUnitPtr()->add_on_tag != 0)
+			{
 				continue;
 			}
 		}

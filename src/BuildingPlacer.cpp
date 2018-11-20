@@ -64,11 +64,11 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
 {
     UnitType type = b.type;
 
-    //if we can't build here, we of course can't build here with space
-    /*if (!canBuildHere(bx, by, b))
+    //if we can't build here, we of course can't build here with space (it is checked again in the loop below)
+    if (!buildable(b.type, bx, by) || (!ignoreReserved && m_reserveMap[bx][by]))
     {
         return false;
-    }*/
+    }
 
     // height and width of the building
     int width  = b.type.tileWidth();
@@ -331,7 +331,7 @@ void BuildingPlacer::drawReservedTiles()
         {
             if (m_reserveMap[x][y])
             {
-                m_bot.Map().drawTile(x, y, CCColor(255, 255, 0));
+                m_bot.Map().drawTile(x - 1, y - 1, CCColor(255, 255, 0));
             }
         }
     }

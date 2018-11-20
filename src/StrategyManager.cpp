@@ -49,7 +49,7 @@ const Strategy & StrategyManager::getCurrentStrategy() const
 
 const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 {
-	//return StrategyPostBuildOrder::NO_STRATEGY;
+	//return StrategyPostBuildOrder::TERRAN_REAPER;
 	/*if (m_shouldProduceAntiAir)
 	{
 		return StrategyPostBuildOrder::TERRAN_ANTI_AIR;

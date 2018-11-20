@@ -752,6 +752,7 @@ bool WorkerManager::isReturningCargo(Unit worker) const
 			return true;
 		}
 	}
+	return false;
 }
 
 int WorkerManager::getNumMineralWorkers()
