@@ -161,6 +161,10 @@ void CCBot::checkKeyState()
 	{
 		m_config.DrawWorkerInfo = !m_config.DrawWorkerInfo;
 	}
+	if (GetAsyncKeyState('8'))
+	{
+		m_config.DrawProfilingInfo = !m_config.DrawProfilingInfo;
+	}
 	if (GetAsyncKeyState('9'))
 	{
 		m_config.DrawUnitID = !m_config.DrawUnitID;
@@ -176,6 +180,8 @@ void CCBot::checkKeyState()
 void CCBot::setUnits()
 {
     m_allUnits.clear();
+	m_unitCount.clear();
+	m_unitCompletedCount.clear();
 #ifdef SC2API
 	bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
     for (auto unitptr : Observation()->GetUnits())
@@ -459,10 +465,15 @@ Unit CCBot::GetUnit(const CCUnitID & tag) const
 
 int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed) const
 { 
-	if ((!completed && m_unitCount.find(type) != m_unitCount.end()) || (completed && m_unitCompletedCount.find(type) != m_unitCompletedCount.end()))
-		return completed ? m_unitCompletedCount.at(type) : m_unitCount.at(type);
-	else
-		return 0;
+	if (completed && m_unitCompletedCount.find(type) != m_unitCompletedCount.end())
+	{
+		return m_unitCompletedCount.at(type);
+	}
+	else if (!completed && m_unitCount.find(type) != m_unitCount.end())
+	{
+		return m_unitCount.at(type);
+	}
+	return 0;
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()

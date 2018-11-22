@@ -91,7 +91,7 @@
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
-        "DrawProfilingInfo"         : true
+        "DrawProfilingInfo"         : false
     },
     
     "Modules" :

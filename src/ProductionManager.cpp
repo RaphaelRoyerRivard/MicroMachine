@@ -325,8 +325,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (!m_queue.contains(MetaTypeEnum::StarportTechLab))
 				{
 					m_queue.queueAsLowestPriority(MetaTypeEnum::StarportTechLab, false);
-				}
-				break;*/
+				}*/
 				if (productionScore < (float)baseCount)
 				{
 					bool hasPicked = false;
