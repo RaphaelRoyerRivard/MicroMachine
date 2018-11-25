@@ -338,6 +338,61 @@ bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 	return false;
 }
 
+float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
+{
+	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+		return 0.f;
+
+	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
+
+	float maxRange = 0.0f;
+	for (auto & weapon : unitTypeData.weapons)
+	{
+		// can attack target with a weapon
+		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Ground)
+			maxRange = weapon.range;
+	}
+
+	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+		maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
+
+	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+		maxRange = 3.f;
+
+	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::ZERG_QUEEN)
+		maxRange += 0.5f;	//because they often seem to be able to attack farther than they should be able to
+
+	if (maxRange > 0.f)
+		maxRange += unit->radius;
+	return maxRange;
+}
+
+float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
+{
+	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+		return 0.f;
+
+	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
+
+	float maxRange = 0.0f;
+	for (auto & weapon : unitTypeData.weapons)
+	{
+		// can attack target with a weapon
+		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Air)
+			maxRange = weapon.range;
+	}
+
+	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+		maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
+
+	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::ZERG_QUEEN)
+		maxRange += 0.5f;	//because they often seem to be able to attack farther than they should be able to
+
+	if (maxRange > 0.f)
+		maxRange += unit->radius;
+	return maxRange;
+}
+
 float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
 	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
@@ -408,7 +463,7 @@ float Util::GetAttackDamageForTarget(const sc2::Unit * unit, const sc2::Unit * t
     sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
     sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
     float damage = 0.f;
-    for (auto weapon : unitTypeData.weapons)
+    for (auto & weapon : unitTypeData.weapons)
     {
         if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
         {
@@ -433,23 +488,36 @@ float Util::GetArmor(const sc2::Unit * unit, CCBot & bot)
     return unitTypeData.armor;
 }
 
+float Util::GetGroundDps(const sc2::Unit * unit, CCBot & bot)
+{
+	return GetDps(unit, sc2::Weapon::TargetType::Ground, bot);
+}
+
+float Util::GetAirDps(const sc2::Unit * unit, CCBot & bot)
+{
+	return GetDps(unit, sc2::Weapon::TargetType::Air, bot);
+}
+
 float Util::GetDps(const sc2::Unit * unit, CCBot & bot)
 {
-    sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-    float dps = GetSpecialCaseDps(unit, bot);
+	return GetDps(unit, sc2::Weapon::TargetType::Any, bot);
+}
 
-    if (dps == 0.f)
-    {
-        for (auto weapon : unitTypeData.weapons)
-        {
-            float weaponDps = weapon.damage_;
-            weaponDps *= weapon.attacks / weapon.speed;
-            if (weaponDps > dps)
-                dps = weaponDps;
-        }
-    }
-
-    return dps;
+float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetType, CCBot & bot)
+{
+	float dps = GetSpecialCaseDps(unit, bot);
+	sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+	for (auto & weapon : unitTypeData.weapons)
+	{
+		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == targetType)
+		{
+			float weaponDps = weapon.damage_;
+			weaponDps *= weapon.attacks / weapon.speed;
+			if (weaponDps > dps)
+				dps = weaponDps;
+		}
+	}
+	return dps;
 }
 
 float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
@@ -464,7 +532,7 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
 
     if (dps == 0.f)
     {
-        for (auto weapon : unitTypeData.weapons)
+        for (auto & weapon : unitTypeData.weapons)
         {
             if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
             {
@@ -515,7 +583,7 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
 }
 
 // get threats to our harass unit
-const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & m_bot)
+const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot)
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
@@ -525,11 +593,11 @@ const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, co
 	for (auto targetUnit : targets)
 	{
 		BOT_ASSERT(targetUnit, "null target unit in getThreats");
-		if (Util::GetDpsForTarget(targetUnit, unit, m_bot) == 0.f)
+		if (Util::GetDpsForTarget(targetUnit, unit, bot) == 0.f)
 			continue;
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
 		//But this is not working so well for melee units, we keep every units in a radius of min threat range
-		const float threatRange = getThreatRange(unit, targetUnit, m_bot);
+		const float threatRange = getThreatRange(unit, targetUnit, bot);
 		if (Util::DistSq(unit->pos, targetUnit->pos) < threatRange * threatRange)
 			threats.push_back(targetUnit);
 	}
@@ -538,27 +606,15 @@ const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, co
 }
 
 // get threats to our harass unit
-const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::map<sc2::Tag, Unit> & targets, CCBot & m_bot)
+const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot)
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
-	std::vector<const sc2::Unit *> threats;
+	std::vector<const sc2::Unit *> targetsPtrs(targets.size());
+	for (auto& targetUnit : targets)
+		targetsPtrs.push_back(targetUnit.getUnitPtr());
 
-	// for each possible threat
-	for (auto& targetTagUnit : targets)
-	{
-		auto targetUnit = targetTagUnit.second.getUnitPtr();
-		BOT_ASSERT(targetUnit, "null target unit in getThreats");
-		if (Util::GetDpsForTarget(targetUnit, unit, m_bot) == 0.f)
-			continue;
-		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
-		//But this is not working so well for melee units, we keep every units in a radius of min threat range
-		const float threatRange = Util::getThreatRange(unit, targetUnit, m_bot);
-		if (Util::DistSq(unit->pos, targetUnit->pos) < threatRange * threatRange)
-			threats.push_back(targetUnit);
-	}
-
-	return threats;
+	return getThreats(unit, targetsPtrs, bot);
 }
 
 //calculate radius max(min range, range + speed + height bonus + small buffer)

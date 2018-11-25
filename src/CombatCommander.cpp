@@ -52,6 +52,8 @@ void CombatCommander::onStart()
 	// the -5 is to prevent enemy workers (during worker rush) to get outside the base defense range
     SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, m_bot.GetStartLocation(), DefaultOrderRadius - 5, "Chase scout");
     m_squadData.addSquad("ScoutDefense", Squad("ScoutDefense", enemyScoutDefense, ScoutDefensePriority, m_bot));
+
+	initInfluenceMaps();
 }
 
 bool CombatCommander::isSquadUpdateFrame()
@@ -67,6 +69,10 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
     }
 
     m_combatUnits = combatUnits;
+
+	m_bot.StartProfiling("0.10.4.0    updateInfluenceMaps");
+	updateInfluenceMaps();
+	m_bot.StopProfiling("0.10.4.0    updateInfluenceMaps");
 
 	m_bot.StartProfiling("0.10.4.1    m_squadData.onFrame");
     m_squadData.onFrame();
@@ -117,6 +123,125 @@ void CombatCommander::lowPriorityCheck()
 bool CombatCommander::shouldWeStartAttacking()
 {
     return m_bot.Strategy().getCurrentStrategy().m_attackCondition.eval();
+}
+
+void CombatCommander::initInfluenceMaps()
+{
+	const size_t mapWidth = m_bot.Map().width();
+	const size_t mapHeight = m_bot.Map().height();
+	m_groundInfluenceMap.resize(mapWidth);
+	m_airInfluenceMap.resize(mapWidth);
+	for(size_t x = 0; x < mapWidth; ++x)
+	{
+		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
+		auto& airInfluenceMapRow = m_airInfluenceMap[x];
+		groundInfluenceMapRow.resize(mapHeight);
+		airInfluenceMapRow.resize(mapHeight);
+		for (size_t y = 0; y < mapHeight; ++y)
+		{
+			groundInfluenceMapRow[y] = 0;
+			airInfluenceMapRow[y] = 0;
+		}
+	}
+}
+
+void CombatCommander::resetInfluenceMaps()
+{
+	const size_t mapWidth = m_bot.Map().width();
+	const size_t mapHeight = m_bot.Map().height();
+	for (size_t x = 0; x < mapWidth; ++x)
+	{
+		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
+		auto& airInfluenceMapRow = m_airInfluenceMap[x];
+		for (size_t y = 0; y < mapHeight; ++y)
+		{
+			groundInfluenceMapRow[y] = 0;
+			airInfluenceMapRow[y] = 0;
+		}
+	}
+}
+
+void CombatCommander::updateInfluenceMaps()
+{
+	resetInfluenceMaps();
+
+	for(auto& enemyUnit : m_bot.GetKnownEnemyUnits())
+	{
+		auto& enemyUnitType = enemyUnit.getType();
+		if(enemyUnitType.isCombatUnit() || (enemyUnitType.isAttackingBuilding() && enemyUnit.getUnitPtr()->build_progress >= 1.f))
+		{
+			updateGroundInfluenceMapForUnit(enemyUnit);
+			updateAirInfluenceMapForUnit(enemyUnit);
+		}
+		else
+		{
+			//TODO ground units cannot move through non flying buildings
+		}
+	}
+
+	if(m_bot.Config().DrawInfluenceMaps)
+	{
+		drawInfluenceMaps();
+	}
+}
+
+void CombatCommander::updateGroundInfluenceMapForUnit(const Unit& enemyUnit)
+{
+	updateInfluenceMapForUnit(enemyUnit, true);
+}
+
+void CombatCommander::updateAirInfluenceMapForUnit(const Unit& enemyUnit)
+{
+	updateInfluenceMapForUnit(enemyUnit, false);
+}
+
+void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground)
+{
+	const auto enemyUnitPosition = enemyUnit.getPosition();
+	const float speed = Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot);
+	const float range = (ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot)) + speed;
+	const float dps = ground ? Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirDps(enemyUnit.getUnitPtr(), m_bot);
+
+	const float fminX = floor(enemyUnitPosition.x - range);
+	const float fmaxX = ceil(enemyUnitPosition.x + range);
+	const float fminY = floor(enemyUnitPosition.y - range);
+	const float fmaxY = ceil(enemyUnitPosition.y + range);
+	const float maxMapX = m_bot.Map().width() - 1.f;
+	const float maxMapY = m_bot.Map().height() - 1.f;
+	const int minX = std::max(0.f, fminX);
+	const int maxX = std::min(maxMapX, fmaxX);
+	const int minY = std::max(0.f, fminY);
+	const int maxY = std::min(maxMapY, fmaxY);
+	auto& influenceMap = ground ? m_groundInfluenceMap : m_airInfluenceMap;
+	//loop for a square of size equal to the diameter of the influence circle
+	for (int x = minX; x < maxX; ++x)
+	{
+		for (int y = minY; y < maxY; ++y)
+		{
+			//TODO should be a linear interpolation only for buffer zone
+			//value is linear interpolation
+			const float distance = Util::Dist(enemyUnitPosition, CCPosition(x, y));
+			influenceMap[x][y] += dps * std::max(0.f, (range - distance) / range);
+		}
+	}
+}
+
+void CombatCommander::drawInfluenceMaps()
+{
+	const size_t mapWidth = m_bot.Map().width();
+	const size_t mapHeight = m_bot.Map().height();
+	for (size_t x = 0; x < mapWidth; ++x)
+	{
+		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
+		auto& airInfluenceMapRow = m_airInfluenceMap[x];
+		for (size_t y = 0; y < mapHeight; ++y)
+		{
+			if (groundInfluenceMapRow[y] > 0.f)
+				m_bot.Map().drawTile(x, y, CCColor(255, 255 - std::max(0.f, groundInfluenceMapRow[y]), 0));
+			if (airInfluenceMapRow[y] > 0.f)
+				m_bot.Map().drawCircle(CCPosition(x, y), 0.5f, CCColor(255, 255 - std::max(0.f, airInfluenceMapRow[y] * 10), 0));
+		}
+	}
 }
 
 void CombatCommander::updateIdleSquad()
@@ -653,7 +778,7 @@ void CombatCommander::checkUnitsState()
 		if (state.WasAttacked())
 		{
 			m_bot.StartProfiling("0.10.4.4.2.3        checkForInvis");
-			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetEnemyUnits(), m_bot);
+			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
 			if (threats.empty() && state.HadRecentTreats())
 			{
 				//Invisible unit detected
@@ -665,7 +790,7 @@ void CombatCommander::checkUnitsState()
 		else if (m_bot.GetGameLoop() % 5)
 		{
 			m_bot.StartProfiling("0.10.4.4.2.4        updateThreats");
-			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetEnemyUnits(), m_bot);
+			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
 			state.UpdateThreat(!threats.empty());
 			m_bot.StopProfiling("0.10.4.4.2.4        updateThreats");
 		}

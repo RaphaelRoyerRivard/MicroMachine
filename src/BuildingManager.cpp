@@ -26,14 +26,30 @@ void BuildingManager::onStart()
 // gets called every frame from GameCommander
 void BuildingManager::onFrame()
 {
+	m_bot.StartProfiling("0.8.1 updateBaseBuildings");
 	updateBaseBuildings();
+	m_bot.StopProfiling("0.8.1 updateBaseBuildings");
+	m_bot.StartProfiling("0.8.2 validateWorkersAndBuildings");
     validateWorkersAndBuildings();          // check to see if assigned workers have died en route or while constructing
-    assignWorkersToUnassignedBuildings();   // assign workers to the unassigned buildings and label them 'planned'    
-    constructAssignedBuildings();           // for each planned building, if the worker isn't constructing, send the command    
-    checkForStartedConstruction();          // check to see if any buildings have started construction and update data structures    
+	m_bot.StopProfiling("0.8.2 validateWorkersAndBuildings");
+	m_bot.StartProfiling("0.8.3 assignWorkersToUnassignedBuildings");
+    assignWorkersToUnassignedBuildings();   // assign workers to the unassigned buildings and label them 'planned'
+	m_bot.StopProfiling("0.8.3 assignWorkersToUnassignedBuildings");
+	m_bot.StartProfiling("0.8.4 constructAssignedBuildings");
+    constructAssignedBuildings();           // for each planned building, if the worker isn't constructing, send the command
+	m_bot.StopProfiling("0.8.4 constructAssignedBuildings");
+	m_bot.StartProfiling("0.8.5 checkForStartedConstruction");
+    checkForStartedConstruction();          // check to see if any buildings have started construction and update data structures
+	m_bot.StopProfiling("0.8.5 checkForStartedConstruction");
+	m_bot.StartProfiling("0.8.6 checkForDeadTerranBuilders");
     checkForDeadTerranBuilders();           // if we are terran and a building is under construction without a worker, assign a new one
+	m_bot.StopProfiling("0.8.6 checkForDeadTerranBuilders");
+	m_bot.StartProfiling("0.8.7 checkForCompletedBuildings");
     checkForCompletedBuildings();           // check to see if any buildings have completed and update data structures
+	m_bot.StopProfiling("0.8.7 checkForCompletedBuildings");
+	m_bot.StartProfiling("0.8.8 castBuildingsAbilities");
 	castBuildingsAbilities();
+	m_bot.StopProfiling("0.8.8 castBuildingsAbilities");
 
     drawBuildingInformation();
 	drawStartingRamp();
@@ -162,8 +178,10 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 		}
 		else
 		{
+			m_bot.StartProfiling("0.8.3.1 getBuildingLocation");
 			// grab a worker unit from WorkerManager which is closest to this final position
 			CCTilePosition testLocation = getBuildingLocation(b);
+			m_bot.StopProfiling("0.8.3.1 getBuildingLocation");
 
 			// Don't test the location if the building is already started
 			if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
@@ -635,19 +653,29 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 
     // TODO: if requires psi and we have no pylons return 0
 
+	CCTilePosition buildingLocation;
+
     if (b.type.isRefinery())
     {
-        return m_buildingPlacer.getRefineryPosition();
+		m_bot.StartProfiling("0.8.3.1.1 getRefineryPosition");
+		buildingLocation = m_buildingPlacer.getRefineryPosition();
+		m_bot.StopProfiling("0.8.3.1.1 getRefineryPosition");
     }
-
-    if (b.type.isResourceDepot())
+	else if (b.type.isResourceDepot())
     {
-        return m_bot.Bases().getNextExpansionPosition(Players::Self, true);
+		m_bot.StartProfiling("0.8.3.1.2 getNextExpansionPosition");
+		buildingLocation = m_bot.Bases().getNextExpansionPosition(Players::Self, true);
+		m_bot.StopProfiling("0.8.3.1.2 getNextExpansionPosition");
     }
-
-    // get a position within our region
-    // TODO: put back in special pylon / cannon spacing
-    return m_buildingPlacer.getBuildLocationNear(b, m_bot.Config().BuildingSpacing);
+	else
+	{
+		// get a position within our region
+		// TODO: put back in special pylon / cannon spacing
+		m_bot.StartProfiling("0.8.3.1.3 getBuildLocationNear");
+		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, m_bot.Config().BuildingSpacing);
+		m_bot.StopProfiling("0.8.3.1.3 getBuildLocationNear");
+	}
+	return buildingLocation;
 }
 
 Unit BuildingManager::getClosestResourceDepot(CCPosition position)

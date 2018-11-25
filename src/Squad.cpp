@@ -131,10 +131,8 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 {
     // Discover enemies within region of interest
 	std::vector<Unit> targets;
-	for (auto & mapEnemyUnit : m_bot.GetEnemyUnits())
+	for (auto & enemyUnit : m_bot.GetKnownEnemyUnits())
 	{
-		auto & enemyUnit = mapEnemyUnit.second;
-
 		if (!enemyUnit.isValid())
 			continue;
 		if (!enemyUnit.isAlive())
@@ -142,14 +140,6 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (enemyUnit.getHitPoints() <= 0.f)	// Just in case isAlive does not work
 			continue;
 		if (visibilityFilter && !enemyUnit.isVisible())
-			continue;
-
-		uint32_t lastStepSeen = enemyUnit.getUnitPtr()->last_seen_game_loop;
-		// If the unit is not were we last saw it, ignore it
-		if (m_bot.GetGameLoop() != lastStepSeen && m_bot.Map().isVisible(enemyUnit.getPosition()))
-			continue;
-		// If mobile unit is not seen for too long (around 5s), ignore it
-		if (!enemyUnit.getType().isBuilding() && lastStepSeen + 100 < m_bot.GetGameLoop())
 			continue;
 
 		if(m_bot.Config().DrawMemoryInfo)

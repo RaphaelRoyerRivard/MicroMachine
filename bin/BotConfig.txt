@@ -22,7 +22,7 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
+        "EnemyRace"                 : "Terran",
         "MapFile"                   : "DreamcatcherLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
@@ -88,10 +88,11 @@
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
-        "DrawHarassInfo"            : false,
-        "DrawMemoryInfo"            : false,
-        "DrawUnitID"            	: false,
-        "DrawProfilingInfo"         : false
+        "DrawHarassInfo"            : true,
+        "DrawMemoryInfo"            : true,
+        "DrawUnitID"            	: true,
+        "DrawProfilingInfo"         : true,
+        "DrawInfluenceMaps"         : true
     },
     
     "Modules" :

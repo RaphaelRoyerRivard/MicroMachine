@@ -23,11 +23,6 @@ class CCBot
 	struct Profiler
 	{
 		Profiler() :total(0) {};
-		/*Profiler(std::deque<long long> queue, long long total, std::chrono::steady_clock::time_point start) :
-			m_queue(queue),
-			m_total(total),
-			m_start(start)
-		{};*/
 		std::deque<long long> queue;
 		long long total;
 		std::chrono::steady_clock::time_point start;
@@ -48,7 +43,8 @@ class CCBot
 	std::map<sc2::Tag, Unit> m_allyUnits;
 	std::map<sc2::Tag, Unit> m_enemyUnits;
 	std::map<sc2::Tag, CCPosition> m_lastSeenPosUnits;
-    std::vector<Unit>       m_allUnits;
+	std::vector<Unit>       m_allUnits;
+	std::vector<Unit>       m_knownEnemyUnits;
     std::vector<CCPosition> m_baseLocations;
 	CCRace selfRace;
 	std::map<std::string, Profiler> m_profilingTimes;
@@ -113,6 +109,7 @@ public:
 	std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits();
 	std::map<sc2::Tag, Unit> CCBot::GetAllyUnits(sc2::UNIT_TYPEID type);
 	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();
+	const std::vector<Unit> & GetKnownEnemyUnits() const;
     const std::vector<CCPosition> & GetStartLocations() const;
 	void StartProfiling(const std::string & profilerName);
 	void StopProfiling(const std::string & profilerName);
