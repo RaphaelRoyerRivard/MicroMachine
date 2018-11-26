@@ -364,26 +364,30 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
     CCPosition closestGeyser(0, 0);
     double minGeyserDistanceFromHome = std::numeric_limits<double>::max();
     CCPosition homePosition = m_bot.GetStartLocation();
+	auto units = m_bot.UnitInfo().getUnits(Players::Self);
 
-    for (auto & unit : m_bot.GetUnits())
+    for (auto & geyser : m_bot.UnitInfo().getUnits(Players::Neutral))
     {
-        if (!unit.getType().isGeyser())
+        if (!geyser.getType().isGeyser())
         {
             continue;
         }
 
-        CCPosition geyserPos(unit.getPosition());
+        CCPosition geyserPos(geyser.getPosition());
 
-		for (auto & ourUnit : m_bot.UnitInfo().getUnits(Players::Self))
+		for (auto & unit : units)
 		{
 			// check to see if it's next to one of our depots
-			if (ourUnit.getType().isResourceDepot() && Util::DistSq(ourUnit, geyserPos) < 10 * 10 && m_bot.Query()->Placement(sc2::ABILITY_ID::BUILD_REFINERY, geyserPos))
+			if (unit.getType().isResourceDepot() && Util::DistSq(unit, geyserPos) < 10 * 10)
 			{
-				const double homeDistance = Util::DistSq(unit, homePosition);
+				const double homeDistance = Util::DistSq(geyser, homePosition);
 				if (homeDistance < minGeyserDistanceFromHome)
 				{
-					minGeyserDistanceFromHome = homeDistance;
-					closestGeyser = geyserPos;
+					if (m_bot.Query()->Placement(sc2::ABILITY_ID::BUILD_REFINERY, geyserPos))
+					{
+						minGeyserDistanceFromHome = homeDistance;
+						closestGeyser = geyserPos;
+					}
 				}
 				break;
 			}
