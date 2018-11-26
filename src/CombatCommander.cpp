@@ -168,7 +168,7 @@ void CombatCommander::updateInfluenceMaps()
 	for(auto& enemyUnit : m_bot.GetKnownEnemyUnits())
 	{
 		auto& enemyUnitType = enemyUnit.getType();
-		if(enemyUnitType.isCombatUnit() || (enemyUnitType.isAttackingBuilding() && enemyUnit.getUnitPtr()->build_progress >= 1.f))
+		if(enemyUnitType.isCombatUnit() || enemyUnitType.isWorker() || (enemyUnitType.isAttackingBuilding() && enemyUnit.getUnitPtr()->build_progress >= 1.f))
 		{
 			updateGroundInfluenceMapForUnit(enemyUnit);
 			updateAirInfluenceMapForUnit(enemyUnit);

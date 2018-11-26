@@ -32,8 +32,8 @@ public:
     void onStart();
     void onFrame();
 
-	ProductionManager Production() const;
-	CombatCommander Combat() const;
+	ProductionManager& Production();
+	CombatCommander& Combat();
 
     void handleUnitAssignments();
     void setValidUnits();

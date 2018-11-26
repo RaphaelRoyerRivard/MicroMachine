@@ -386,7 +386,7 @@ const BaseLocationManager & CCBot::Bases() const
     return m_bases;
 }
 
-const GameCommander & CCBot::Commander() const
+GameCommander & CCBot::Commander()
 {
 	return m_gameCommander;
 }

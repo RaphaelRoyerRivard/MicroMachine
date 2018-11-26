@@ -85,7 +85,7 @@ public:
           WorkerManager & Workers();
 		  BuildingManager & Buildings();
     const BaseLocationManager & Bases() const;
-	const GameCommander & Commander() const;
+		  GameCommander & Commander();
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;
     StrategyManager & Strategy();

@@ -4,6 +4,7 @@
 #include "MicroManager.h"
 #include "UCTCDAction.h"
 
+struct IMNode;
 class CCBot;
 
 class RangedManager : public MicroManager
@@ -35,8 +36,12 @@ private:
 	CCPosition GetRepulsionVectorFromFriendlyReapers(const sc2::Unit * reaper, sc2::Units & rangedUnits) const;
 	CCPosition GetAttractionVectorToFriendlyHellions(const sc2::Unit * reaper, sc2::Units & rangedUnits) const;
 	bool MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const;
-
-	CCTilePosition FindSafestPathWithInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats);
+	CCTilePosition FindSafestPathWithInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats) const;
+	void CreateLocalInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats, float (&map)[50][50]) const;
+	CCPosition FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const;
+	float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to) const;
+	bool ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange) const;
+	float GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit) const;
 	float getAttackPriority(const sc2::Unit * rangedUnit, const sc2::Unit * target);
 	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);
 	const std::vector<const sc2::Unit *> getThreats(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);

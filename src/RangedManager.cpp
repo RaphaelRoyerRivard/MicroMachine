@@ -103,9 +103,7 @@ void RangedManager::executeMicro()
 	else if (m_harassMode)
 	{
 		const auto start = std::chrono::steady_clock::now();
-		m_bot.StartProfiling("Harass");
 		HarassLogic(rangedUnits, rangedUnitTargets);
-		m_bot.StopProfiling("Harass");
 	}
     else 
 	{
@@ -123,8 +121,8 @@ void RangedManager::RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedU
 
 		const sc2::Unit * target = nullptr;
 		target = getTarget(rangedUnit, rangedUnitTargets);
-		bool isEnemyInSightCondition = rangedUnitTargets.size() > 0 &&
-			target != nullptr && Util::DistSq(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance * m_bot.Config().MaxTargetDistance;
+		const bool isEnemyInSightCondition = !rangedUnitTargets.empty() && target != nullptr && 
+			Util::DistSq(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance * m_bot.Config().MaxTargetDistance;
 
 		ConditionAction isEnemyInSight(isEnemyInSightCondition);
 		ConditionAction isEnemyRanged(target != nullptr && isTargetRanged(target));
@@ -210,9 +208,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		}
 
 		bool targetInAttackRange = false;
+		float unitAttackRange = 0.f;
 		if (target)
 		{
-			const float unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 			targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;
 		}
 
@@ -229,10 +228,23 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			continue;
 		}
 
+		// TODO maybe execute KD8 charge logic before pathfinding
+
+		CCPosition closePositionInPath = FindOptimalPathToTarget(rangedUnit, target ? target->pos : goal, target ? unitAttackRange : 3.f);
+		if (closePositionInPath != CCPosition())
+		{
+			Micro::SmartMove(rangedUnit, closePositionInPath, m_bot);
+			if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+			{
+				nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
+			}
+			continue;
+		}
+
 		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange);
 
 		// Check if unit can use KD8Charge
-		bool canUseKD8Charge = CanUseKD8Charge(rangedUnit);
+		const bool canUseKD8Charge = CanUseKD8Charge(rangedUnit);
 
 		bool useInfluenceMap = false;
 		bool madeAction = false;
@@ -240,7 +252,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		// add normalied * 1.5 vector of potential threats
 		for (auto threat : threats)
 		{
-			CCPosition fleeVec = Util::Normalized(rangedUnit->pos - threat->pos);
+			const CCPosition fleeVec = Util::Normalized(rangedUnit->pos - threat->pos);
 
 			// The expected threat position will be used to decide where to throw the mine
 			// (between the unit and the enemy or on the enemy if it is a worker)
@@ -707,7 +719,7 @@ bool isPositionInNodeSet(CCTilePosition& position, std::set<Node*> & set)
 Node* getLowestCostNode(std::map<Node*, float> & costs)
 {
 	std::pair<Node*, float> lowestCost = *(costs.begin());
-	for (std::pair<Node*, float> node : costs)
+	for (const auto & node : costs)
 	{
 		if (node.second < lowestCost.second)
 			lowestCost = node;
@@ -715,51 +727,15 @@ Node* getLowestCostNode(std::map<Node*, float> & costs)
 	return lowestCost.first;
 }
 
-CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats)
+CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats) const
 {
 	if(m_bot.Config().DrawHarassInfo)
 		m_bot.Map().drawText(rangedUnit->pos, "FLEE!", CCColor(255, 0, 0));
-	CCTilePosition centerPos(25, 25);
+	const CCTilePosition centerPos(25, 25);
 	const int mapWidth = 50;
 	const int mapHeight = 50;
 	float map[mapWidth][mapHeight];
-	for (int x = 0; x < mapWidth; ++x)
-	{
-		for (int y = 0; y < mapHeight; ++y)
-		{
-			bool pathable = rangedUnit->is_flying || m_bot.Observation()->IsPathable(sc2::Point2D(rangedUnit->pos.x - centerPos.x + x, rangedUnit->pos.y - centerPos.y + y));
-			map[x][y] = pathable ? 0.f : 9999.f;
-		}
-	}
-	for (auto threat : threats)
-	{
-		CCPosition threatRelativePosition = threat->pos - rangedUnit->pos + Util::GetPosition(centerPos);
-		if ((int)threatRelativePosition.x < 0 || (int)threatRelativePosition.y < 0 || (int)threatRelativePosition.x >= mapWidth || (int)threatRelativePosition.y >= mapHeight)
-			continue;
-
-		float radius = Util::getThreatRange(rangedUnit, threat, m_bot);
-		float intensity = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
-		float fminX = floor(threatRelativePosition.x - radius);
-		float fmaxX = ceil(threatRelativePosition.x + radius);
-		float fminY = floor(threatRelativePosition.y - radius);
-		float fmaxY = ceil(threatRelativePosition.y + radius);
-		float maxMapX = mapWidth - 1;
-		float maxMapY = mapHeight - 1;
-		const int minX = std::max(0.f, fminX);
-		const int maxX = std::min(maxMapX, fmaxX);
-		const int minY = std::max(0.f, fminY);
-		const int maxY = std::min(maxMapY, fmaxY);
-		//loop for a square of size equal to the diameter of the influence circle
-		for (int x = minX; x < maxX; ++x)
-		{
-			for (int y = minY; y < maxY; ++y)
-			{
-				//value is linear interpolation
-				const float distance = Util::Dist(threatRelativePosition, CCPosition(x, y));
-				map[x][y] += intensity * std::max(0.f, (radius - distance) / radius);
-			}
-		}
-	}
+	CreateLocalInfluenceMap(rangedUnit, threats, map);
 
 	std::set<Node*> closedSet;
 	std::set<Node*> openSet;
@@ -774,13 +750,13 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 		//Return condition: No threat influence on this tile
 		if (map[current->position.x][current->position.y] == 0)
 		{
-			CCPosition currentPos = Util::GetPosition(current->position) - Util::GetPosition(centerPos);
+			const CCPosition currentPos = Util::GetPosition(current->position) - Util::GetPosition(centerPos);
 			if (m_bot.Config().DrawHarassInfo)
 				m_bot.Map().drawCircle(rangedUnit->pos + currentPos, 1.f, sc2::Colors::Teal);
 			CCPosition returnPos = currentPos;
 			while (current->parent != nullptr)
 			{
-				CCPosition parentPos = Util::GetPosition(current->parent->position) - Util::GetPosition(centerPos);
+				const CCPosition parentPos = Util::GetPosition(current->parent->position) - Util::GetPosition(centerPos);
 				if (m_bot.Config().DrawHarassInfo)
 					m_bot.Map().drawCircle(rangedUnit->pos + parentPos, 1.f, sc2::Colors::Teal);
 				//we want to retun a node close to the current position
@@ -806,7 +782,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 			}
 			return Util::GetTilePosition(rangedUnit->pos + returnPos);
 		}
-		float currentCost = costs[current];
+		const float currentCost = costs[current];
 		openSet.erase(current);
 		costs.erase(current);
 		closedSet.insert(current);
@@ -823,7 +799,7 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 				{
 					Node* neighbor = new Node(neighborPosition, current);
 					openSet.insert(neighbor);
-					float neighborInfluence = map[neighborPosition.x][neighborPosition.y] + currentCost;
+					const float neighborInfluence = map[neighborPosition.x][neighborPosition.y] + currentCost;
 					costs[neighbor] = neighborInfluence;
 				}
 			}
@@ -835,6 +811,237 @@ CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * r
 	}
 	// No safe tile has been found (should never happen)
 	return Util::GetTilePosition(m_order.getPosition());
+}
+
+void RangedManager::CreateLocalInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats, float (&map)[50][50]) const
+{
+	const CCTilePosition centerPos(25, 25);
+	const int mapWidth = 50;
+	const int mapHeight = 50;
+	for (int x = 0; x < mapWidth; ++x)
+	{
+		for (int y = 0; y < mapHeight; ++y)
+		{
+			const bool pathable = rangedUnit->is_flying || m_bot.Observation()->IsPathable(sc2::Point2D(rangedUnit->pos.x - centerPos.x + x, rangedUnit->pos.y - centerPos.y + y));
+			map[x][y] = pathable ? 0.f : 9999.f;
+		}
+	}
+	for (auto threat : threats)
+	{
+		const CCPosition threatRelativePosition = threat->pos - rangedUnit->pos + Util::GetPosition(centerPos);
+		if ((int)threatRelativePosition.x < 0 || (int)threatRelativePosition.y < 0 || (int)threatRelativePosition.x >= mapWidth || (int)threatRelativePosition.y >= mapHeight)
+			continue;
+
+		const float radius = Util::getThreatRange(rangedUnit, threat, m_bot);
+		const float intensity = Util::GetDpsForTarget(threat, rangedUnit, m_bot);
+		float fminX = floor(threatRelativePosition.x - radius);
+		float fmaxX = ceil(threatRelativePosition.x + radius);
+		float fminY = floor(threatRelativePosition.y - radius);
+		float fmaxY = ceil(threatRelativePosition.y + radius);
+		float maxMapX = mapWidth - 1;
+		float maxMapY = mapHeight - 1;
+		const int minX = std::max(0.f, fminX);
+		const int maxX = std::min(maxMapX, fmaxX);
+		const int minY = std::max(0.f, fminY);
+		const int maxY = std::min(maxMapY, fmaxY);
+		//loop for a square of size equal to the diameter of the influence circle
+		for (int x = minX; x < maxX; ++x)
+		{
+			for (int y = minY; y < maxY; ++y)
+			{
+				//value is linear interpolation
+				const float distance = Util::Dist(threatRelativePosition, CCPosition(x, y));
+				map[x][y] += intensity * std::max(0.f, (radius - distance) / radius);
+			}
+		}
+	}
+}
+
+// Influence Map Node
+struct IMNode {
+	IMNode(CCTilePosition position) :
+		position(position),
+		parent(nullptr),
+		cost(0.f),
+		heuristic(0.f)
+	{
+	}
+	IMNode(CCTilePosition position, IMNode* parent, float heuristic) :
+		position(position),
+		parent(parent),
+		cost(0.f),
+		heuristic(heuristic)
+	{
+	}
+	IMNode(CCTilePosition position, IMNode* parent, float cost, float heuristic) :
+		position(position),
+		parent(parent),
+		cost(cost),
+		heuristic(heuristic)
+	{
+	}
+	CCTilePosition position;
+	IMNode* parent;
+	float cost;
+	float heuristic;
+
+	float getTotalCost() const
+	{
+		return cost + heuristic;
+	}
+
+	bool operator<(const IMNode& rhs) const
+	{
+		return getTotalCost() < rhs.getTotalCost();
+	}
+
+	bool operator<=(const IMNode& rhs) const
+	{
+		return getTotalCost() <= rhs.getTotalCost();
+	}
+
+	bool operator==(const IMNode& rhs) const
+	{
+		return position == rhs.position;
+	}
+};
+
+IMNode* getLowestCostNode(std::set<IMNode*> & set)
+{
+	IMNode* lowestCostNode = nullptr;
+	for (const auto node : set)
+	{
+		if (!lowestCostNode || *node < *lowestCostNode)
+			lowestCostNode = node;
+	}
+	return lowestCostNode;
+}
+
+bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost)
+{
+	for (auto n : set)
+	{
+		if (*n == *node)
+		{
+			return !mustHaveLowerCost || *n <= *node;
+		}
+	}
+	return false;
+}
+
+CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const
+{
+	CCPosition returnPos;
+	const int mapWidth = m_bot.Map().width();
+	const int mapHeight = m_bot.Map().height();
+	std::set<IMNode*> opened;
+	std::set<IMNode*> closed;
+
+	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
+	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
+	const auto start = new IMNode(startPosition);
+	opened.insert(start);
+
+	while(!opened.empty() && closed.size() < 500)
+	{
+		IMNode* currentNode = getLowestCostNode(opened);
+		opened.erase(currentNode);
+		closed.insert(currentNode);
+
+		if(ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange))
+		{
+			do
+			{
+				const CCPosition currentPosition = Util::GetPosition(currentNode->position);
+				if (m_bot.Config().DrawHarassInfo)
+					m_bot.Map().drawCircle(currentPosition, 1.f, sc2::Colors::Teal);
+				//we want to retun a node close to the current position
+				if (Util::DistSq(currentPosition, rangedUnit->pos) <= 3.f * 3.f && returnPos == CCPosition(0, 0))
+					returnPos = currentPosition;
+				currentNode = currentNode->parent;
+			} while (currentNode != nullptr);
+
+			if (returnPos == CCPosition(0, 0))
+				std::cout << "returnPos is null" << std::endl;
+			if (m_bot.Config().DrawHarassInfo)
+				m_bot.Map().drawCircle(returnPos, 0.8f, sc2::Colors::Purple);
+			break;
+		}
+
+		// Find neighbors
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
+			{
+				if (x == 0 && y == 0)
+					continue;	// same tile check
+
+				const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
+
+				if (currentNode->parent && neighborPosition == currentNode->parent->position)
+					continue;	// parent tile check
+
+				if (neighborPosition.x < 0 || neighborPosition.y < 0 || neighborPosition.x >= mapWidth || neighborPosition.y >= mapHeight)
+					continue;	// out of bounds check
+
+				if (!rangedUnit->is_flying)
+				{
+					// TODO check the ground blockers map
+					// All units can pass between 2 command structures, medium units and small units can pass between a command structure and another building 
+					// while only small units can pass between non command buildings (where "between" means when 2 buildings have their corners touching diagonaly)
+
+					if (!m_bot.Map().isWalkable(neighborPosition))
+					{
+						if (rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_REAPER)
+							continue;	// unwalkable tile check
+
+						const CCTilePosition furtherTile(currentNode->position.x + 2 * x, currentNode->position.y + 2 * y);
+						if (!m_bot.Map().isWalkable(furtherTile))
+							continue;	// unwalkable next tile check
+
+						const float heightDiff = abs(m_bot.Map().terrainHeight(currentNode->position.x, currentNode->position.y) - m_bot.Map().terrainHeight(furtherTile.x, furtherTile.y));
+						//std::cout << "Terrain height diff: " << heightDiff << std::endl;
+						if (heightDiff > 10.f)
+							continue;	// unjumpable cliff check
+
+						// TODO neighbor tile will need to have the furtherTile position, while also using cost of both tiles
+					}
+				}
+
+				const float cost = currentNode->cost + GetInfluenceOnTile(neighborPosition, rangedUnit) + 0.001f;
+				auto neighbor = new IMNode(neighborPosition, currentNode, cost, CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition));
+
+				if (SetContainsNode(closed, neighbor, false))
+					continue;	// already explored check
+
+				if (SetContainsNode(opened, neighbor, true))
+					continue;	// node already opened and of lower cost
+
+				opened.insert(neighbor);
+			}
+		}
+	}
+	for (auto node : opened)
+		delete node;
+	for (auto node : closed)
+		delete node;
+	return returnPos;
+}
+
+float RangedManager::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to) const
+{
+	return Util::Dist(from, to) / 100;
+}
+
+bool RangedManager::ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange) const
+{
+	return GetInfluenceOnTile(node->position, unit) == 0.f && Util::Dist(Util::GetPosition(node->position), goal) < maxRange;
+}
+
+float RangedManager::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit) const
+{
+	const auto & influenceMap = unit->is_flying ? m_bot.Commander().Combat().getAirInfluenceMap() : m_bot.Commander().Combat().getGroundInfluenceMap();
+	return influenceMap[tile.x][tile.y];
 }
 
 void RangedManager::AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets) {

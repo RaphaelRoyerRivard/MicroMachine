@@ -61,6 +61,9 @@ public:
 
 	std::map<Unit, std::pair<CCPosition, uint32_t>> & GetInvisibleSighting();
 
+	const std::vector<std::vector<float>> & getGroundInfluenceMap() const { return m_groundInfluenceMap; }
+	const std::vector<std::vector<float>> & getAirInfluenceMap() const { return m_airInfluenceMap; }
+
     void drawSquadInformation();
 };
 

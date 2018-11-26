@@ -52,12 +52,12 @@ void GameCommander::drawGameInformation(int x, int y)
     ss << "Time: " << "\n";
 }
 
-ProductionManager GameCommander::Production() const
+ProductionManager& GameCommander::Production()
 {
 	return m_productionManager;
 }
 
-CombatCommander GameCommander::Combat() const
+CombatCommander& GameCommander::Combat()
 {
 	return m_combatCommander;
 }
