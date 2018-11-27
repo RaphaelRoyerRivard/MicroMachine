@@ -197,31 +197,34 @@ void CombatCommander::updateAirInfluenceMapForUnit(const Unit& enemyUnit)
 
 void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground)
 {
-	const auto enemyUnitPosition = enemyUnit.getPosition();
-	const float speed = Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot);
-	const float range = (ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot)) + speed;
 	const float dps = ground ? Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirDps(enemyUnit.getUnitPtr(), m_bot);
-
-	const float fminX = floor(enemyUnitPosition.x - range);
-	const float fmaxX = ceil(enemyUnitPosition.x + range);
-	const float fminY = floor(enemyUnitPosition.y - range);
-	const float fmaxY = ceil(enemyUnitPosition.y + range);
-	const float maxMapX = m_bot.Map().width() - 1.f;
-	const float maxMapY = m_bot.Map().height() - 1.f;
-	const int minX = std::max(0.f, fminX);
-	const int maxX = std::min(maxMapX, fmaxX);
-	const int minY = std::max(0.f, fminY);
-	const int maxY = std::min(maxMapY, fmaxY);
-	auto& influenceMap = ground ? m_groundInfluenceMap : m_airInfluenceMap;
-	//loop for a square of size equal to the diameter of the influence circle
-	for (int x = minX; x < maxX; ++x)
+	if(dps > 0)
 	{
-		for (int y = minY; y < maxY; ++y)
+		const auto enemyUnitPosition = enemyUnit.getPosition();
+		const float speed = Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot);
+		const float range = (ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirAttackRange(enemyUnit.getUnitPtr(), m_bot)) + speed;
+
+		const float fminX = floor(enemyUnitPosition.x - range);
+		const float fmaxX = ceil(enemyUnitPosition.x + range);
+		const float fminY = floor(enemyUnitPosition.y - range);
+		const float fmaxY = ceil(enemyUnitPosition.y + range);
+		const float maxMapX = m_bot.Map().width() - 1.f;
+		const float maxMapY = m_bot.Map().height() - 1.f;
+		const int minX = std::max(0.f, fminX);
+		const int maxX = std::min(maxMapX, fmaxX);
+		const int minY = std::max(0.f, fminY);
+		const int maxY = std::min(maxMapY, fmaxY);
+		auto& influenceMap = ground ? m_groundInfluenceMap : m_airInfluenceMap;
+		//loop for a square of size equal to the diameter of the influence circle
+		for (int x = minX; x < maxX; ++x)
 		{
-			//TODO should be a linear interpolation only for buffer zone
-			//value is linear interpolation
-			const float distance = Util::Dist(enemyUnitPosition, CCPosition(x, y));
-			influenceMap[x][y] += dps * std::max(0.f, (range - distance) / range);
+			for (int y = minY; y < maxY; ++y)
+			{
+				//TODO should be a linear interpolation only for buffer zone
+				//value is linear interpolation
+				const float distance = Util::Dist(enemyUnitPosition, CCPosition(x, y));
+				influenceMap[x][y] += dps * std::max(0.f, (range - distance) / range);
+			}
 		}
 	}
 }

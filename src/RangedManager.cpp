@@ -20,14 +20,16 @@ const float HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE = 10.f;
 const float HARASS_FRIENDLY_ATTRACTION_INTENSITY = 1.5f;
 const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
 const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
-const int HELLION_ATTACK_FRAME_COUNT = 9;
-const int REAPER_MOVE_FRAME_COUNT = 3;
-const int REAPER_KD8_CHARGE_COOLDOWN = 314;
-const int VIKING_MORPH_FRAME_COUNT = 80;
 const float HARASS_THREAT_MIN_DISTANCE_TO_TARGET = 2.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
+const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 24;
+const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
+const int HELLION_ATTACK_FRAME_COUNT = 9;
+const int REAPER_KD8_CHARGE_COOLDOWN = 314;
+const int REAPER_MOVE_FRAME_COUNT = 3;
+const int VIKING_MORPH_FRAME_COUNT = 80;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
@@ -60,7 +62,7 @@ void RangedManager::setTargets(const std::vector<Unit> & targets)
 	}
     for (auto & target : targets)
     {
-        auto targetPtr = target.getUnitPtr();
+        const auto targetPtr = target.getUnitPtr();
         if (!targetPtr) { continue; }
         if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_EGG) { continue; }
         if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_LARVA) { continue; }
@@ -228,39 +230,50 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			continue;
 		}
 
-		// TODO maybe execute KD8 charge logic before pathfinding
-
-		CCPosition closePositionInPath = FindOptimalPathToTarget(rangedUnit, target ? target->pos : goal, target ? unitAttackRange : 3.f);
-		if (closePositionInPath != CCPosition())
+		// Check if unit can use KD8Charge
+		if(CanUseKD8Charge(rangedUnit))
 		{
-			Micro::SmartMove(rangedUnit, closePositionInPath, m_bot);
-			if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+			bool usedKD8Charge = false;
+			for (auto threat : threats)
 			{
-				nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
+				// The expected threat position will be used to decide where to throw the mine
+				// (between the unit and the enemy or on the enemy if it is a worker)
+				if (ExecuteKD8ChargeLogic(rangedUnit, threat))
+				{
+					usedKD8Charge = true;
+					break;
+				}
 			}
-			continue;
+			if (usedKD8Charge)
+				continue;
+		}
+
+		if (AllowUnitToPathFind(rangedUnit))
+		{
+			CCPosition closePositionInPath = FindOptimalPathToTarget(rangedUnit, target ? target->pos : goal, target ? unitAttackRange : 3.f);
+			if (closePositionInPath != CCPosition())
+			{
+				Micro::SmartMove(rangedUnit, closePositionInPath, m_bot);
+				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+				{
+					nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
+				}
+				continue;
+			}
+			else
+			{
+				nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
+			}
 		}
 
 		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange);
 
-		// Check if unit can use KD8Charge
-		const bool canUseKD8Charge = CanUseKD8Charge(rangedUnit);
-
 		bool useInfluenceMap = false;
-		bool madeAction = false;
 		CCPosition summedFleeVec(0, 0);
 		// add normalied * 1.5 vector of potential threats
 		for (auto threat : threats)
 		{
 			const CCPosition fleeVec = Util::Normalized(rangedUnit->pos - threat->pos);
-
-			// The expected threat position will be used to decide where to throw the mine
-			// (between the unit and the enemy or on the enemy if it is a worker)
-			if (canUseKD8Charge && ExecuteKD8ChargeLogic(rangedUnit, threat, fleeVec))
-			{
-				madeAction = true;
-				break;
-			}
 
 			// If our unit is almost in range of threat, use the influence map to find the best flee path
 			const float dist = Util::Dist(rangedUnit->pos, threat->pos);
@@ -273,8 +286,6 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 			summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
 		}
-		if (madeAction)
-			continue;
 
 		if(!useInfluenceMap)
 		{
@@ -334,8 +345,14 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 bool RangedManager::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
 {
-	uint32_t availableFrame = nextCommandFrameForUnit.find(rangedUnit) != nextCommandFrameForUnit.end() ? nextCommandFrameForUnit.at(rangedUnit) : 0;
+	const uint32_t availableFrame = nextCommandFrameForUnit.find(rangedUnit) != nextCommandFrameForUnit.end() ? nextCommandFrameForUnit.at(rangedUnit) : 0;
 	return m_bot.GetGameLoop() < availableFrame;
+}
+
+bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit) const
+{
+	const uint32_t availableFrame = nextPathFindingFrameForUnit.find(rangedUnit) != nextPathFindingFrameForUnit.end() ? nextPathFindingFrameForUnit.at(rangedUnit) : m_bot.GetGameLoop();
+	return m_bot.GetGameLoop() >= availableFrame;
 }
 
 void RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats) const
@@ -506,8 +523,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	return false;
 }
 
-bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * rangedUnit, const sc2::Unit * threat, const CCPosition& fleeVec)
+bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * rangedUnit, const sc2::Unit * threat)
 {
+	const CCPosition fleeVec = Util::Normalized(rangedUnit->pos - threat->pos);
 	const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
 	CCPosition expectedThreatPosition = threat->pos + fleeVec * threatSpeed * HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE;
 	Unit threatUnit = Unit(threat, m_bot);
@@ -531,19 +549,8 @@ bool RangedManager::CanUseKD8Charge(const sc2::Unit * rangedUnit) const
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
 	{
-		uint32_t availableFrame = nextAvailableKD8ChargeFrameForReaper.find(rangedUnit) != nextAvailableKD8ChargeFrameForReaper.end() ? nextAvailableKD8ChargeFrameForReaper.at(rangedUnit) : 0;
+		const uint32_t availableFrame = nextAvailableKD8ChargeFrameForReaper.find(rangedUnit) != nextAvailableKD8ChargeFrameForReaper.end() ? nextAvailableKD8ChargeFrameForReaper.at(rangedUnit) : 0;
 		return m_bot.GetGameLoop() >= availableFrame;
-
-		// the old and slow way of checking avaiable ability
-		/*Unit harassUnit(rangedUnit, m_bot);
-		sc2::AvailableAbilities abilities = harassUnit.getAbilities();
-		for (const auto & ability : abilities.abilities)
-		{
-			if (ability.ability_id == sc2::ABILITY_ID::EFFECT_KD8CHARGE)
-			{
-				return true;
-			}
-		}*/
 	}
 	return false;
 }
@@ -942,7 +949,7 @@ CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, 
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
 
-	while(!opened.empty() && closed.size() < 500)
+	while(!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE)
 	{
 		IMNode* currentNode = getLowestCostNode(opened);
 		opened.erase(currentNode);
@@ -1210,7 +1217,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     return bestTarget;
 }
 
-float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target)
+float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const
 {
     BOT_ASSERT(target, "null unit in getAttackPriority");
 
