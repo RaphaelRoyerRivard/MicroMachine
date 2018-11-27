@@ -9,6 +9,7 @@ class BuildingManager
 {
     CCBot &   m_bot;
 
+	bool firstFrame = true;
     BuildingPlacer  m_buildingPlacer;
     std::vector<Building> m_buildings; //under construction
 	std::vector<Building> m_previousBuildings; //previous under construction
@@ -39,8 +40,10 @@ public:
     BuildingManager(CCBot & bot);
 
     void                onStart();
+	void				onFirstFrame();
     void                onFrame();
-	void				FindRamps(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile);
+	void				FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile);
+	void				FindMainRamp(std::list<CCTilePosition> &rampTiles);
     void                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
 	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
