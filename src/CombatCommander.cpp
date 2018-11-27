@@ -201,13 +201,14 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	if(dps > 0)
 	{
 		const auto enemyUnitPosition = enemyUnit.getPosition();
+		const float range = ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirAttackRange(enemyUnit.getUnitPtr(), m_bot);
 		const float speed = Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot);
-		const float range = (ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirAttackRange(enemyUnit.getUnitPtr(), m_bot)) + speed;
+		const float totalRange = range + speed;
 
-		const float fminX = floor(enemyUnitPosition.x - range);
-		const float fmaxX = ceil(enemyUnitPosition.x + range);
-		const float fminY = floor(enemyUnitPosition.y - range);
-		const float fmaxY = ceil(enemyUnitPosition.y + range);
+		const float fminX = floor(enemyUnitPosition.x - totalRange);
+		const float fmaxX = ceil(enemyUnitPosition.x + totalRange);
+		const float fminY = floor(enemyUnitPosition.y - totalRange);
+		const float fmaxY = ceil(enemyUnitPosition.y + totalRange);
 		const float maxMapX = m_bot.Map().width() - 1.f;
 		const float maxMapY = m_bot.Map().height() - 1.f;
 		const int minX = std::max(0.f, fminX);
@@ -220,10 +221,11 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 		{
 			for (int y = minY; y < maxY; ++y)
 			{
-				//TODO should be a linear interpolation only for buffer zone
-				//value is linear interpolation
 				const float distance = Util::Dist(enemyUnitPosition, CCPosition(x, y));
-				influenceMap[x][y] += dps * std::max(0.f, (range - distance) / range);
+				float multiplier = 1.f;
+				if (distance > range)
+					multiplier = std::max(0.f, (speed - (distance - range)) / speed);	//value is linearly interpolated in the speed buffer zone
+				influenceMap[x][y] += dps * multiplier;
 			}
 		}
 	}
@@ -240,9 +242,9 @@ void CombatCommander::drawInfluenceMaps()
 		for (size_t y = 0; y < mapHeight; ++y)
 		{
 			if (groundInfluenceMapRow[y] > 0.f)
-				m_bot.Map().drawTile(x, y, CCColor(255, 255 - std::max(0.f, groundInfluenceMapRow[y]), 0));
+				m_bot.Map().drawTile(x, y, CCColor(255, 255 - std::min(255.f, std::max(0.f, groundInfluenceMapRow[y] * 5)), 0));
 			if (airInfluenceMapRow[y] > 0.f)
-				m_bot.Map().drawCircle(CCPosition(x, y), 0.5f, CCColor(255, 255 - std::max(0.f, airInfluenceMapRow[y] * 10), 0));
+				m_bot.Map().drawCircle(CCPosition(x, y), 0.5f, CCColor(255, 255 - std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5)), 0));
 		}
 	}
 }
