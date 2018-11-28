@@ -199,6 +199,10 @@ void CCBot::setUnits()
 			{
 				m_unitCompletedCount[unit.getAPIUnitType()]++;
 			}
+			if (unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+			{
+				m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+			}
 		}
 		else if (unitptr->alliance == sc2::Unit::Enemy)
 		{
@@ -256,10 +260,24 @@ void CCBot::setUnits()
 			}
 			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, unitptr->pos);
 		}
-		if(unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
-			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
-        m_allUnits.push_back(Unit(unitptr, *this));
+        m_allUnits.push_back(unit);
     }
+
+	m_knownEnemyUnits.clear();
+	for(auto& enemyUnitPair : m_enemyUnits)
+	{
+		bool ignoreEnemyUnit = false;
+		const Unit& enemyUnit = enemyUnitPair.second;
+		const sc2::Unit* enemyUnitPtr = enemyUnit.getUnitPtr();
+		// If the unit is not were we last saw it, ignore it
+		if (GetGameLoop() != enemyUnitPtr->last_seen_game_loop && Map().isVisible(enemyUnit.getPosition()))
+			ignoreEnemyUnit = true;
+		// If mobile unit is not seen for too long (around 4s), ignore it
+		else if (!enemyUnit.getType().isBuilding() && enemyUnitPtr->last_seen_game_loop + 100 < GetGameLoop())
+			ignoreEnemyUnit = true;
+		if(!ignoreEnemyUnit)
+			m_knownEnemyUnits.push_back(enemyUnit);
+	}
 #else
     for (auto & unit : BWAPI::Broodwar->getAllUnits())
     {
@@ -368,7 +386,7 @@ const BaseLocationManager & CCBot::Bases() const
     return m_bases;
 }
 
-const GameCommander & CCBot::Commander() const
+GameCommander & CCBot::Commander()
 {
 	return m_gameCommander;
 }
@@ -502,6 +520,14 @@ std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits()
 const std::vector<Unit> & CCBot::GetUnits() const
 {
 	return m_allUnits;
+}
+
+/*
+ * This methods returns the enemy units minus the ones that we might think they have moved (useful for combat micro).
+ */
+const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
+{
+	return m_knownEnemyUnits;
 }
 
 CCPosition CCBot::GetStartLocation() const

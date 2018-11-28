@@ -46,6 +46,7 @@ BotConfig::BotConfig()
 	DrawMemoryInfo = false;
 	DrawUnitID = false;
 	DrawProfilingInfo = false;
+	DrawInfluenceMaps = false;
 
     KiteWithRangedUnits = true;
     ScoutHarassEnemy = true;
@@ -195,6 +196,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawMemoryInfo", debug, DrawMemoryInfo);
 			JSONTools::ReadBool("DrawUnitID", debug, DrawUnitID);
 			JSONTools::ReadBool("DrawProfilingInfo", debug, DrawProfilingInfo);
+			JSONTools::ReadBool("DrawInfluenceMaps", debug, DrawInfluenceMaps);
 		}
     }
 

@@ -24,6 +24,11 @@ using json = nlohmann::json;
     typedef sc2::Race           CCRace;
     typedef float               CCHealth;
     typedef float               CCPositionType;
+
+	inline bool operator<(const CCTilePosition& lhs, const CCTilePosition& rhs)
+	{
+		return lhs.x < rhs.x || lhs.x == rhs.y && lhs.y < rhs.y;
+	}
     
 #else
     #include "BWAPI.h"

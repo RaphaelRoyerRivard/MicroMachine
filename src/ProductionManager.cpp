@@ -331,7 +331,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					bool hasPicked = false;
 					MetaType toBuild;
 					int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-					if (true)//productionBuildingAddonCount < productionBuildingCount)
+					if (productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
 						int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) +
 							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);

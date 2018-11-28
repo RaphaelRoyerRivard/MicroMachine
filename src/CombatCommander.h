@@ -17,6 +17,8 @@ class CombatCommander
     std::vector<Unit>  m_combatUnits;
 	std::map<CCUnitID, UnitState> m_unitStates;
 	std::map<Unit, std::pair<CCPosition, uint32_t>> m_invisibleSighting;
+	std::vector<std::vector<float>> m_groundInfluenceMap;
+	std::vector<std::vector<float>> m_airInfluenceMap;
     bool            m_initialized;
     bool            m_attackStarted;
 	int				m_currentBaseExplorationIndex;
@@ -40,6 +42,14 @@ class CombatCommander
     void            updateDefenseSquadUnits(Squad & defenseSquad, size_t flyingDefendersNeeded, size_t groundDefendersNeeded, Unit & closestEnemy);
     bool            shouldWeStartAttacking();
 
+	void			initInfluenceMaps();
+	void			resetInfluenceMaps();
+	void			updateInfluenceMaps();
+	void			updateGroundInfluenceMapForUnit(const Unit& enemyUnit);
+	void			updateAirInfluenceMapForUnit(const Unit& enemyUnit);
+	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
+	void			drawInfluenceMaps();
+
 public:
 
     CombatCommander(CCBot & bot);
@@ -50,6 +60,9 @@ public:
 	void lowPriorityCheck();
 
 	std::map<Unit, std::pair<CCPosition, uint32_t>> & GetInvisibleSighting();
+
+	const std::vector<std::vector<float>> & getGroundInfluenceMap() const { return m_groundInfluenceMap; }
+	const std::vector<std::vector<float>> & getAirInfluenceMap() const { return m_airInfluenceMap; }
 
     void drawSquadInformation();
 };

@@ -56,6 +56,7 @@ public:
 	bool DrawMemoryInfo;
 	bool DrawUnitID;
 	bool DrawProfilingInfo;
+	bool DrawInfluenceMaps;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;
