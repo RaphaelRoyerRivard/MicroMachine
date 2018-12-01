@@ -204,7 +204,7 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	if (range == 0.f)
 		return;
 	const float speed = Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot);
-	const float totalRange = range + speed;
+	const float totalRange = range + speed / 2;
 
 	const auto enemyUnitPosition = enemyUnit.getPosition();
 	const float fminX = floor(enemyUnitPosition.x - totalRange);
