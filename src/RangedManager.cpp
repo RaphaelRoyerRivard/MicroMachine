@@ -24,7 +24,7 @@ const float HARASS_THREAT_MIN_DISTANCE_TO_TARGET = 2.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
-const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 24;
+const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_COOLDOWN = 314;
@@ -1285,6 +1285,6 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 bool RangedManager::isTargetRanged(const sc2::Unit * target)
 {
     BOT_ASSERT(target, "target is null");
-    float maxRange = Util::GetMaxAttackRange(target->unit_type, m_bot);
-    return maxRange > 1.5f;
+    const float maxRange = Util::GetMaxAttackRange(target, m_bot);
+    return maxRange > 2.5f;
 }

@@ -216,7 +216,7 @@ float Util::GetUnitPower(const sc2::Unit* unit, const sc2::Unit* target, CCBot& 
 
 float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 {
-	float unitRange = target.isValid() ? GetAttackRangeForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot) : unit.getType().getAttackRange();
+	const float unitRange = target.isValid() ? GetAttackRangeForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot) : GetMaxAttackRange(unit.getUnitPtr(), bot);
 	///////// HEALTH
 	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.5f);
 	///////// DPS
@@ -231,7 +231,7 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 		if (unitRange < distance)
 		{
 			distance -= unitRange;
-			float distancePenalty = pow(0.5f, distance);
+			const float distancePenalty = pow(0.5f, distance);
 			unitPower *= distancePenalty;
 		}
 	}
@@ -324,7 +324,7 @@ bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
 		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Air)
 			return true;
 	}
-	return false;
+	return GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air) > 0.f;
 }
 
 bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
@@ -335,7 +335,34 @@ bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Ground)
 			return true;
 	}
-	return false;
+	return GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground) > 0.f;
+}
+
+float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where)
+{
+	float range = 0.f;
+
+	if (unitType == sc2::UNIT_TYPEID::ZERG_BANELING || unitType == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
+	{
+		if(where != sc2::Weapon::TargetType::Air)
+			range = 2.2f;
+	}
+	else if (unitType == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+	{
+		range = 7.f;
+	}
+	else if (unitType == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			range = 3.0f;
+	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			range = 4.f;
+	}
+
+	return range;
 }
 
 float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
@@ -353,14 +380,8 @@ float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
 			maxRange = weapon.range;
 	}
 
-	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-		maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
-
-	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
-		maxRange = 3.f;
-
-	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::ZERG_QUEEN)
-		maxRange += 0.5f;	//because they often seem to be able to attack farther than they should be able to
+	if (maxRange == 0.f)
+		maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground);
 
 	if (maxRange > 0.f)
 		maxRange += unit->radius;
@@ -382,8 +403,8 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 			maxRange = weapon.range;
 	}
 
-	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-		maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
+	if (maxRange == 0.f)
+		maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air);
 
 	if (maxRange > 0.f)
 		maxRange += unit->radius;
@@ -406,11 +427,8 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 			maxRange = weapon.range;
 	}
 
-	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-		maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
-
-	if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE && !target->is_flying)
-		maxRange = 3.f;
+	if (maxRange == 0.f)
+		maxRange = GetSpecialCaseRange(unit->unit_type, expectedWeaponType);
 
 	if (maxRange > 0.f)
 		maxRange += unit->radius + target->radius;
@@ -422,16 +440,30 @@ float Util::GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vecto
     float maxRange = 0.f;
     for (const sc2::Unit * target : targets)
     {
-        float range = GetAttackRangeForTarget(unit, target, bot);
+        const float range = GetAttackRangeForTarget(unit, target, bot);
         if (range > maxRange)
             maxRange = range;
     }
     return maxRange;
 }
 
+float Util::GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot)
+{
+	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+		return 0.f;
+
+	const sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
+
+	float maxRange = GetMaxAttackRange(unitTypeData);
+
+	if (maxRange > 0.f)
+		maxRange += unit->radius;
+	return maxRange;
+}
+
 float Util::GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot)
 {
-    sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unitType]);
+    const sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unitType]);
     return GetMaxAttackRange(unitTypeData);
 }
 
@@ -445,35 +477,10 @@ float Util::GetMaxAttackRange(sc2::UnitTypeData unitTypeData)
             maxRange = weapon.range;
     }
 
-    if (unitTypeData.unit_type_id == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-        maxRange = 7.f; //marauder range (6) + 1, because bunkers give +1 range
+	if (maxRange == 0.f)
+		maxRange = GetSpecialCaseRange(unitTypeData.unit_type_id);
 
     return maxRange;
-}
-
-float Util::GetAttackDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
-{
-    sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-    sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
-    sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
-    float damage = 0.f;
-    for (auto & weapon : unitTypeData.weapons)
-    {
-        if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
-        {
-            float weaponDamage = weapon.damage_;
-            for (auto damageBonus : weapon.damage_bonus)
-            {
-                if (std::find(targetTypeData.attributes.begin(), targetTypeData.attributes.end(), damageBonus.attribute) != targetTypeData.attributes.end())
-                    weaponDamage += damageBonus.bonus;
-            }
-            weaponDamage -= targetTypeData.armor;
-            weaponDamage *= weapon.attacks;
-            if (weaponDamage > damage)
-                damage = weaponDamage;
-        }
-    }
-    return damage;
 }
 
 float Util::GetArmor(const sc2::Unit * unit, CCBot & bot)
@@ -499,16 +506,19 @@ float Util::GetDps(const sc2::Unit * unit, CCBot & bot)
 
 float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetType, CCBot & bot)
 {
-	float dps = GetSpecialCaseDps(unit, bot);
-	sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-	for (auto & weapon : unitTypeData.weapons)
+	float dps = GetSpecialCaseDps(unit, bot, targetType);
+	if (dps == 0.f)
 	{
-		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == targetType)
+		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+		for (auto & weapon : unitTypeData.weapons)
 		{
-			float weaponDps = weapon.damage_;
-			weaponDps *= weapon.attacks / weapon.speed;
-			if (weaponDps > dps)
-				dps = weaponDps;
+			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == targetType)
+			{
+				float weaponDps = weapon.damage_;
+				weaponDps *= weapon.attacks / weapon.speed;
+				if (weaponDps > dps)
+					dps = weaponDps;
+			}
 		}
 	}
 	return dps;
@@ -516,16 +526,12 @@ float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetT
 
 float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
-	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
-		return 0.f;
-
-    sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-    sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
     const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
-    float dps = GetSpecialCaseDps(unit, bot);
-
+    float dps = GetSpecialCaseDps(unit, bot, expectedWeaponType);
     if (dps == 0.f)
     {
+		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+		sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
         for (auto & weapon : unitTypeData.weapons)
         {
             if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
@@ -547,13 +553,14 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
     return dps;
 }
 
-float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
+float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where)
 {
     float dps = 0.f;
 
     if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELING || unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
     {
-        dps = 15.f;
+		if(where != sc2::Weapon::TargetType::Air)
+			dps = 15.f;
     }
     else if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
     {
@@ -566,11 +573,13 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot)
     }
 	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 	{
-		dps = 5.0f;
+		if (where != sc2::Weapon::TargetType::Air)
+			dps = 5.0f;
 	}
 	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT)
 	{
-		dps = 13.7f;
+		if (where != sc2::Weapon::TargetType::Air)
+			dps = 13.7f;
 	}
 
     return dps;

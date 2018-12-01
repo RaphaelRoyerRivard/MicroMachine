@@ -255,12 +255,12 @@ void Squad::addUnitsToMicroManagers()
             detectorUnits.push_back(unit);
         }
         // select ranged _units
-        else if (unit.getType().getAttackRange() >= 1.5f)
+        else if (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) >= 2.5f)
         {
             rangedUnits.push_back(unit);
         }
         // select melee _units
-        else if (unit.getType().getAttackRange() < 1.5f)
+        else
         {
             meleeUnits.push_back(unit);
         }

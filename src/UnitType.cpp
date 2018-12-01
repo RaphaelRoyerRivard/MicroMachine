@@ -270,23 +270,6 @@ CCPositionType UnitType::getAttackRange() const
 {
 #ifdef SC2API
     return Util::GetMaxAttackRange(m_bot->Observation()->GetUnitTypeData()[m_type]);
-    /*auto & weapons = m_bot->Observation()->GetUnitTypeData()[m_type].weapons;
-    
-    if (weapons.empty())
-    {
-        return 0.0f;
-    }
-
-    float maxRange = 0.0f;
-    for (auto & weapon : weapons)
-    {
-        if (weapon.range > maxRange)
-        {
-            maxRange = weapon.range;
-        }
-    }
-
-    return maxRange;*/
 #else
     // TODO: this is ground weapon range right now
     return m_type.groundWeapon().maxRange();
@@ -392,7 +375,7 @@ UnitType UnitType::GetUnitTypeFromName(const std::string & name, CCBot & bot)
 bool UnitType::isOverlord() const
 {
 #ifdef SC2API
-    return m_type == sc2::UNIT_TYPEID::ZERG_OVERLORD;
+    return m_type == sc2::UNIT_TYPEID::ZERG_OVERLORD || m_type == sc2::UNIT_TYPEID::ZERG_OVERLORDCOCOON || m_type == sc2::UNIT_TYPEID::ZERG_OVERSEER || m_type == sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT;
 #else
     return m_type == BWAPI::UnitTypes::Zerg_Overlord;
 #endif
@@ -458,5 +441,5 @@ bool UnitType::isMorphedBuilding() const
 
 bool UnitType::isAttackingBuilding() const
 {
-    return (isBuilding() && getAttackRange() > 0.0f) || m_type.ToType() == sc2::UNIT_TYPEID::TERRAN_BUNKER;
+    return isBuilding() && getAttackRange() > 0.f;
 }
