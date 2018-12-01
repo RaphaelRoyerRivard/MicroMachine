@@ -426,7 +426,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							toBuild = MetaTypeEnum::FactoryTechLab;
 							hasPicked = true;
 						}
-						if (starportCount > starportAddonCount)
+						else if (starportCount > starportAddonCount)
 						{
 							toBuild = MetaTypeEnum::StarportTechLab;
 							hasPicked = true;

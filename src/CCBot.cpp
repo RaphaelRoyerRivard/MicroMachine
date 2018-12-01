@@ -487,9 +487,12 @@ int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed) const
 	{
 		return m_unitCompletedCount.at(type);
 	}
-	else if (!completed && m_unitCount.find(type) != m_unitCount.end())
+	else if (!completed)
 	{
-		return m_unitCount.at(type);
+		int boughtButNotBeingBuilt = m_buildings.countBoughtButNotBeingBuilt(type);
+		if(m_unitCount.find(type) != m_unitCount.end())
+			return m_unitCount.at(type) + boughtButNotBeingBuilt;
+		return boughtButNotBeingBuilt;
 	}
 	return 0;
 }
