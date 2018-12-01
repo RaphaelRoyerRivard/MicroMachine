@@ -17,15 +17,25 @@ BuildingManager::BuildingManager(CCBot & bot)
 void BuildingManager::onStart()
 {
     m_buildingPlacer.onStart();
+}
 
+void BuildingManager::onFirstFrame()
+{
 	//Ramp wall location
 	std::list<CCTilePosition> checkedTiles;
-	FindRamps(rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
+	FindRampTiles(rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
+	FindMainRamp(rampTiles);
 }
 
 // gets called every frame from GameCommander
 void BuildingManager::onFrame()
 {
+	if (firstFrame)
+	{
+		firstFrame = false;
+		onFirstFrame();
+	}
+
 	m_bot.StartProfiling("0.8.1 updateBaseBuildings");
 	updateBaseBuildings();
 	m_bot.StopProfiling("0.8.1 updateBaseBuildings");
@@ -55,7 +65,7 @@ void BuildingManager::onFrame()
 	drawStartingRamp();
 }
 
-void BuildingManager::FindRamps(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile)
+void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile)
 {
 	if (std::find(checkedTiles.begin(), checkedTiles.end(), currentTile) != checkedTiles.end())
 	{
@@ -67,10 +77,10 @@ void BuildingManager::FindRamps(std::list<CCTilePosition> &rampTiles, std::list<
 	{
 		if (m_bot.Map().isBuildable(currentTile))
 		{
-			FindRamps(rampTiles, checkedTiles, CCTilePosition(currentTile.x + 1, currentTile.y));
-			FindRamps(rampTiles, checkedTiles, CCTilePosition(currentTile.x - 1, currentTile.y));
-			FindRamps(rampTiles, checkedTiles, CCTilePosition(currentTile.x, currentTile.y + 1));
-			FindRamps(rampTiles, checkedTiles, CCTilePosition(currentTile.x, currentTile.y - 1));
+			FindRampTiles(rampTiles, checkedTiles, CCTilePosition(currentTile.x + 1, currentTile.y));
+			FindRampTiles(rampTiles, checkedTiles, CCTilePosition(currentTile.x - 1, currentTile.y));
+			FindRampTiles(rampTiles, checkedTiles, CCTilePosition(currentTile.x, currentTile.y + 1));
+			FindRampTiles(rampTiles, checkedTiles, CCTilePosition(currentTile.x, currentTile.y - 1));
 		}
 		else
 		{
@@ -88,6 +98,48 @@ void BuildingManager::FindRamps(std::list<CCTilePosition> &rampTiles, std::list<
 			}
 		}
 	}
+}
+
+void BuildingManager::FindMainRamp(std::list<CCTilePosition> &rampTiles)
+{
+	int minDistance = INT_MAX;
+	CCTilePosition mainRampTile;
+	for (auto & tile : rampTiles)
+	{
+		const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+		int distance = enemyBaseLocation->getGroundDistance(tile);
+		if (distance < minDistance)
+		{
+			minDistance = distance;
+			mainRampTile = tile;
+		}
+	}
+	std::list<CCTilePosition> mainRamp;
+	mainRamp.push_back(mainRampTile);
+	for (auto & tile : rampTiles)
+	{
+		if (tile == mainRampTile)
+		{
+			continue;
+		}
+		if (mainRampTile.x + 1 == tile.x && mainRampTile.y + 1 == tile.y)
+		{
+			mainRamp.push_back(tile);
+		}
+		else if (mainRampTile.x + 1 == tile.x && mainRampTile.y - 1 == tile.y)
+		{
+			mainRamp.push_back(tile);
+		}
+		else if (mainRampTile.x - 1 == tile.x && mainRampTile.y + 1 == tile.y)
+		{
+			mainRamp.push_back(tile);
+		}
+		else if (mainRampTile.x - 1 == tile.x && mainRampTile.y - 1 == tile.y)
+		{
+			mainRamp.push_back(tile);
+		}
+	}
+	auto a = 1;
 }
 
 bool BuildingManager::isBeingBuilt(UnitType type)

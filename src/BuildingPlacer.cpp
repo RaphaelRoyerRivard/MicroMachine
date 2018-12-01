@@ -361,6 +361,7 @@ void BuildingPlacer::freeTilesForTurrets(CCTilePosition position)
 
 CCTilePosition BuildingPlacer::getRefineryPosition()
 {
+	m_bot.StartProfiling("getRefineryPosition");
     CCPosition closestGeyser(0, 0);
     double minGeyserDistanceFromHome = std::numeric_limits<double>::max();
     CCPosition homePosition = m_bot.GetStartLocation();
@@ -393,6 +394,7 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 			}
 		}
     }
+	m_bot.StopProfiling("getRefineryPosition");
 
 #ifdef SC2API
     return CCTilePosition((int)closestGeyser.x, (int)closestGeyser.y);
