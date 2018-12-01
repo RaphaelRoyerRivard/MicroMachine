@@ -23,7 +23,7 @@ class ProductionManager
 	UnitType workerType;
 	MetaType workerMetatype;
 
-	MetaType queueUpgrade(const MetaType type);
+	MetaType queueUpgrade(const MetaType & type);
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
     bool    canMakeNow(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();

@@ -55,6 +55,7 @@ class MetaTypeEnum
 		static MetaType Stimpack;
 		static MetaType InfernalPreIgniter;
 		static MetaType BansheeCloak;
+		static MetaType HyperflightRotors;
 
 		//PROTOSS
 			//Buildings

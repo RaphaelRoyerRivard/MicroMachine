@@ -373,6 +373,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					startedUpgrades.push_back(MetaTypeEnum::BansheeCloak);
 				}
 
+				if (!m_queue.contains(MetaTypeEnum::HyperflightRotors) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::HyperflightRotors) == startedUpgrades.end())
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HyperflightRotors, 0, false));
+					startedUpgrades.push_back(MetaTypeEnum::HyperflightRotors);
+				}
+
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
@@ -1257,7 +1263,7 @@ std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
 	return trainers;
 }
 
-MetaType ProductionManager::queueUpgrade(const MetaType type)
+MetaType ProductionManager::queueUpgrade(const MetaType & type)
 {
 	auto previousUpgradeName = std::string();
 	auto upgradeName = type.getName();
@@ -1274,13 +1280,13 @@ MetaType ProductionManager::queueUpgrade(const MetaType type)
 				upgradeName = potentialUpgrade.getName();
 				started = false;
 			}
-			if (potentialUpgrade.getName().compare(upgradeName) == 0)//Equals
+			if (potentialUpgrade.getName() == upgradeName)
 			{
 				categoryFound = true;
 
-				for (auto startedUpgrade : startedUpgrades)//If startedUpgrades.contains
+				for (const auto & startedUpgrade : startedUpgrades)//If startedUpgrades.contains
 				{
-					if (startedUpgrade.getName().compare(upgradeName) == 0)
+					if (startedUpgrade.getName() == upgradeName)
 					{
 						started = true;
 						previousUpgradeName = potentialUpgrade.getName();

@@ -223,7 +223,7 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	{
 		for (int y = minY; y < maxY; ++y)
 		{
-			const float distance = Util::Dist(enemyUnitPosition, CCPosition(x, y));
+			const float distance = Util::Dist(enemyUnitPosition, CCPosition(x + 0.5f, y + 0.5f));
 			float multiplier = 1.f;
 			if (distance > range)
 				multiplier = std::max(0.f, (speed - (distance - range)) / speed);	//value is linearly interpolated in the speed buffer zone
@@ -245,7 +245,7 @@ void CombatCommander::drawInfluenceMaps()
 			if (groundInfluenceMapRow[y] > 0.f)
 				m_bot.Map().drawTile(x, y, CCColor(255, 255 - std::min(255.f, std::max(0.f, groundInfluenceMapRow[y] * 5)), 0));
 			if (airInfluenceMapRow[y] > 0.f)
-				m_bot.Map().drawCircle(CCPosition(x, y), 0.5f, CCColor(255, 255 - std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5)), 0));
+				m_bot.Map().drawCircle(CCPosition(x + 0.5f, y + 0.5f), 0.5f, CCColor(255, 255 - std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5)), 0));
 		}
 	}
 }

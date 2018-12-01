@@ -26,6 +26,8 @@ const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
+const float HARASS_PATHFINDING_TILE_BASE_COST = 0.001f;
+const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 0.01f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_COOLDOWN = 314;
 const int REAPER_MOVE_FRAME_COUNT = 3;
@@ -959,7 +961,7 @@ CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, 
 		{
 			do
 			{
-				const CCPosition currentPosition = Util::GetPosition(currentNode->position);
+				const CCPosition currentPosition = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
 				if (m_bot.Config().DrawHarassInfo)
 					m_bot.Map().drawCircle(currentPosition, 1.f, sc2::Colors::Teal);
 				//we want to retun a node close to the current position
@@ -1015,7 +1017,7 @@ CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, 
 					}
 				}
 
-				const float cost = currentNode->cost + GetInfluenceOnTile(neighborPosition, rangedUnit) + 0.001f;
+				const float cost = currentNode->cost + GetInfluenceOnTile(neighborPosition, rangedUnit) + HARASS_PATHFINDING_TILE_BASE_COST;
 				auto neighbor = new IMNode(neighborPosition, currentNode, cost, CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition));
 
 				if (SetContainsNode(closed, neighbor, false))
@@ -1037,12 +1039,12 @@ CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, 
 
 float RangedManager::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to) const
 {
-	return Util::Dist(from, to) / 100;
+	return Util::Dist(from, to) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER;
 }
 
 bool RangedManager::ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange) const
 {
-	return GetInfluenceOnTile(node->position, unit) == 0.f && Util::Dist(Util::GetPosition(node->position), goal) < maxRange;
+	return GetInfluenceOnTile(node->position, unit) == 0.f && Util::Dist(Util::GetPosition(node->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
 }
 
 float RangedManager::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit) const
