@@ -194,7 +194,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		CCPosition goal = m_order.getPosition();
 
 		// if the reaper is damaged, go to center of the map
-		if (isReaper && rangedUnit->health / rangedUnit->health_max < 0.75f)
+		const bool reaperShouldHeal = isReaper && rangedUnit->health / rangedUnit->health_max < 0.66f;
+		if (reaperShouldHeal)
 			goal = CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f;
 
 		const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
@@ -227,7 +228,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		}
 
 		// Check if our units are powerful enough to exchange fire with the enemies
-		if (ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
+		if (!reaperShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
 		{
 			continue;
 		}
@@ -252,7 +253,8 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 		if (AllowUnitToPathFind(rangedUnit))
 		{
-			CCPosition closePositionInPath = FindOptimalPathToTarget(rangedUnit, target ? target->pos : goal, target ? unitAttackRange : 3.f);
+			const CCPosition pathFindEndPos = target && !reaperShouldHeal ? target->pos : goal;
+			CCPosition closePositionInPath = FindOptimalPathToTarget(rangedUnit, pathFindEndPos, target ? unitAttackRange : 3.f);
 			if (closePositionInPath != CCPosition())
 			{
 				Micro::SmartMove(rangedUnit, closePositionInPath, m_bot);
@@ -336,7 +338,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 
 		// If close to an unpathable position or in danger
 		// Use influence map to find safest path
-		const CCPosition moveTo = Util::GetPosition(FindSafestPathWithInfluenceMap(rangedUnit, threats));
+		const CCPosition moveTo = FindOptimalPathToSafety(rangedUnit);
 		Micro::SmartMove(rangedUnit, moveTo, m_bot);
 		if (isReaper)
 		{
@@ -449,7 +451,7 @@ bool RangedManager::ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::
 CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange) const
 {
 	CCPosition dirVec(0.f, 0.f);
-	const bool reaperShouldHeal = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.5f;
+	const bool reaperShouldHeal = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.66f;
 	if (target && !reaperShouldHeal)
 	{
 		// if not in range of target, add normalized vector towards target
@@ -700,7 +702,7 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 	return true;
 }
 
-struct Node {
+/*struct Node {
 	Node(CCTilePosition position) :
 		position(position),
 		parent(nullptr)
@@ -736,7 +738,7 @@ Node* getLowestCostNode(std::map<Node*, float> & costs)
 	return lowestCost.first;
 }
 
-CCTilePosition RangedManager::FindSafestPathWithInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats) const
+CCTilePosition RangedManager::FindOptimalPathToSafety(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats) const
 {
 	if(m_bot.Config().DrawHarassInfo)
 		m_bot.Map().drawText(rangedUnit->pos, "FLEE!", CCColor(255, 0, 0));
@@ -864,7 +866,7 @@ void RangedManager::CreateLocalInfluenceMap(const sc2::Unit * rangedUnit, const 
 			}
 		}
 	}
-}
+}*/
 
 // Influence Map Node
 struct IMNode {
@@ -941,8 +943,6 @@ bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveL
 CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const
 {
 	CCPosition returnPos;
-	const int mapWidth = m_bot.Map().width();
-	const int mapHeight = m_bot.Map().height();
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
@@ -959,21 +959,7 @@ CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, 
 
 		if(ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange))
 		{
-			do
-			{
-				const CCPosition currentPosition = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
-				if (m_bot.Config().DrawHarassInfo)
-					m_bot.Map().drawCircle(currentPosition, 1.f, sc2::Colors::Teal);
-				//we want to retun a node close to the current position
-				if (Util::DistSq(currentPosition, rangedUnit->pos) <= 3.f * 3.f && returnPos == CCPosition(0, 0))
-					returnPos = currentPosition;
-				currentNode = currentNode->parent;
-			} while (currentNode != nullptr);
-
-			if (returnPos == CCPosition(0, 0))
-				std::cout << "returnPos is null" << std::endl;
-			if (m_bot.Config().DrawHarassInfo)
-				m_bot.Map().drawCircle(returnPos, 0.8f, sc2::Colors::Purple);
+			returnPos = GetCommandPositionFromPath(currentNode, rangedUnit);
 			break;
 		}
 
@@ -982,40 +968,10 @@ CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, 
 		{
 			for (int y = -1; y <= 1; ++y)
 			{
-				if (x == 0 && y == 0)
-					continue;	// same tile check
+				if (!IsNeighborNodeValid(x, y, currentNode, rangedUnit))
+					continue;
 
 				const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
-
-				if (currentNode->parent && neighborPosition == currentNode->parent->position)
-					continue;	// parent tile check
-
-				if (neighborPosition.x < 0 || neighborPosition.y < 0 || neighborPosition.x >= mapWidth || neighborPosition.y >= mapHeight)
-					continue;	// out of bounds check
-
-				if (!rangedUnit->is_flying)
-				{
-					// TODO check the ground blockers map
-					// All units can pass between 2 command structures, medium units and small units can pass between a command structure and another building 
-					// while only small units can pass between non command buildings (where "between" means when 2 buildings have their corners touching diagonaly)
-
-					if (!m_bot.Map().isWalkable(neighborPosition))
-					{
-						if (rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_REAPER)
-							continue;	// unwalkable tile check
-
-						const CCTilePosition furtherTile(currentNode->position.x + 2 * x, currentNode->position.y + 2 * y);
-						if (!m_bot.Map().isWalkable(furtherTile))
-							continue;	// unwalkable next tile check
-
-						const float heightDiff = abs(m_bot.Map().terrainHeight(currentNode->position.x, currentNode->position.y) - m_bot.Map().terrainHeight(furtherTile.x, furtherTile.y));
-						//std::cout << "Terrain height diff: " << heightDiff << std::endl;
-						if (heightDiff > 10.f)
-							continue;	// unjumpable cliff check
-
-						// TODO neighbor tile will need to have the furtherTile position, while also using cost of both tiles
-					}
-				}
 
 				const float cost = currentNode->cost + GetInfluenceOnTile(neighborPosition, rangedUnit) + HARASS_PATHFINDING_TILE_BASE_COST;
 				auto neighbor = new IMNode(neighborPosition, currentNode, cost, CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition));
@@ -1037,6 +993,120 @@ CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, 
 	return returnPos;
 }
 
+CCPosition RangedManager::FindOptimalPathToSafety(const sc2::Unit * rangedUnit) const
+{
+	CCPosition returnPos;
+	std::set<IMNode*> opened;
+	std::set<IMNode*> closed;
+
+	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
+	const auto start = new IMNode(startPosition);
+	opened.insert(start);
+
+	while (!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE)
+	{
+		IMNode* currentNode = getLowestCostNode(opened);
+		opened.erase(currentNode);
+		closed.insert(currentNode);
+
+		if (ShouldTriggerExit(currentNode, rangedUnit))
+		{
+			returnPos = GetCommandPositionFromPath(currentNode, rangedUnit);
+			break;
+		}
+
+		// Find neighbors
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
+			{
+				if (!IsNeighborNodeValid(x, y, currentNode, rangedUnit))
+					continue;
+
+				const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
+
+				const float cost = currentNode->cost + GetInfluenceOnTile(neighborPosition, rangedUnit) + HARASS_PATHFINDING_TILE_BASE_COST;
+				auto neighbor = new IMNode(neighborPosition, currentNode, cost, 0.f);	// There is no heuristic since we have no idea in which direction is the closest safe spot
+
+				if (SetContainsNode(closed, neighbor, false))
+					continue;	// already explored check
+
+				if (SetContainsNode(opened, neighbor, true))
+					continue;	// node already opened and of lower cost
+
+				opened.insert(neighbor);
+			}
+		}
+	}
+	for (auto node : opened)
+		delete node;
+	for (auto node : closed)
+		delete node;
+	return returnPos;
+}
+
+bool RangedManager::IsNeighborNodeValid(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit) const
+{
+	if (x == 0 && y == 0)
+		return false;	// same tile check
+
+	const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
+
+	if (currentNode->parent && neighborPosition == currentNode->parent->position)
+		return false;	// parent tile check
+
+	// TODO some tiles at the edges of the screen cannot be used
+	if (neighborPosition.x < 0 || neighborPosition.y < 0 || neighborPosition.x >= m_bot.Map().width() || neighborPosition.y >= m_bot.Map().height())
+		return false;	// out of bounds check
+
+	if (!rangedUnit->is_flying)
+	{
+		// TODO check the ground blockers map
+		// All units can pass between 2 command structures, medium units and small units can pass between a command structure and another building 
+		// while only small units can pass between non command buildings (where "between" means when 2 buildings have their corners touching diagonaly)
+
+		if (!m_bot.Map().isWalkable(neighborPosition))
+		{
+			if (rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_REAPER)
+				return false;	// unwalkable tile check
+
+			const CCTilePosition furtherTile(currentNode->position.x + 2 * x, currentNode->position.y + 2 * y);
+			if (!m_bot.Map().isWalkable(furtherTile))
+				return false;	// unwalkable next tile check
+
+			const float heightDiff = abs(m_bot.Map().terrainHeight(currentNode->position.x, currentNode->position.y) - m_bot.Map().terrainHeight(furtherTile.x, furtherTile.y));
+			//std::cout << "Terrain height diff: " << heightDiff << std::endl;
+			if (heightDiff > 10.f)
+				return false;	// unjumpable cliff check
+
+			// TODO neighbor tile will need to have the furtherTile position, while also using cost of both tiles
+		}
+	}
+
+	return true;
+}
+
+CCPosition RangedManager::GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit) const
+{
+	CCPosition returnPos;
+	do
+	{
+		const CCPosition currentPosition = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+		if (m_bot.Config().DrawHarassInfo)
+			m_bot.Map().drawCircle(currentPosition, 1.f, sc2::Colors::Teal);
+		//we want to retun a node close to the current position
+		if (Util::DistSq(currentPosition, rangedUnit->pos) <= 4.f * 4.f && returnPos == CCPosition(0, 0))
+			returnPos = currentPosition;
+		currentNode = currentNode->parent;
+	} while (currentNode != nullptr);
+
+	if (returnPos == CCPosition(0, 0))
+		std::cout << "returnPos is null" << std::endl;
+	if (m_bot.Config().DrawHarassInfo)
+		m_bot.Map().drawCircle(returnPos, 0.8f, sc2::Colors::Purple);
+	return returnPos;
+}
+
 float RangedManager::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to) const
 {
 	return Util::Dist(from, to) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER;
@@ -1045,6 +1115,11 @@ float RangedManager::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTileP
 bool RangedManager::ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange) const
 {
 	return GetInfluenceOnTile(node->position, unit) == 0.f && Util::Dist(Util::GetPosition(node->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
+}
+
+bool RangedManager::ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit) const
+{
+	return GetInfluenceOnTile(node->position, unit) == 0.f;
 }
 
 float RangedManager::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit) const
