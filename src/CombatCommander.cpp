@@ -203,8 +203,8 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	const float range = ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirAttackRange(enemyUnit.getUnitPtr(), m_bot);
 	if (range == 0.f)
 		return;
-	const float speed = Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot);
-	const float totalRange = range + speed / 2;
+	const float speed = std::max(1.f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
+	const float totalRange = range + speed;
 
 	const auto enemyUnitPosition = enemyUnit.getPosition();
 	const float fminX = floor(enemyUnitPosition.x - totalRange);

@@ -218,6 +218,9 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 		{
 			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 			targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;
+
+			if (m_bot.Config().DrawHarassInfo)
+				m_bot.Map().drawLine(rangedUnit->pos, target->pos, targetInAttackRange ? sc2::Colors::Green : sc2::Colors::Yellow);
 		}
 
 		if(targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
@@ -434,8 +437,12 @@ bool RangedManager::ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::
 		const float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
 		const float speedDiff = threatSpeed - rangedUnitSpeed;
 		const float threatRangeWithBuffer = threatRange + std::max(HARASS_THREAT_RANGE_BUFFER, speedDiff);
-		if (Util::DistSq(rangedUnit->pos, threat->pos) <= threatRangeWithBuffer * threatRangeWithBuffer)
+		const float squareDistance = Util::DistSq(rangedUnit->pos, threat->pos);
+		if (squareDistance <= threatRangeWithBuffer * threatRangeWithBuffer)
 		{
+			if (squareDistance > threatRange * threatRange && threatSpeed == 0.f)
+				continue;	// if our unit is just out of the range of a combat building, it's ok
+
 			inRangeOfThreat = true;
 			if (threatSpeed > rangedUnitSpeed)
 			{
@@ -459,9 +466,6 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 		{
 			dirVec = target->pos - rangedUnit->pos;
 		}
-
-		if (m_bot.Config().DrawHarassInfo)
-			m_bot.Map().drawLine(rangedUnit->pos, target->pos, targetInAttackRange ? sc2::Colors::Yellow : sc2::Colors::Green);
 	}
 	else
 	{
@@ -1075,8 +1079,7 @@ bool RangedManager::IsNeighborNodeValid(int x, int y, IMNode* currentNode, const
 				return false;	// unwalkable next tile check
 
 			const float heightDiff = abs(m_bot.Map().terrainHeight(currentNode->position.x, currentNode->position.y) - m_bot.Map().terrainHeight(furtherTile.x, furtherTile.y));
-			//std::cout << "Terrain height diff: " << heightDiff << std::endl;
-			if (heightDiff > 10.f)
+			if (heightDiff < 1.f || heightDiff > 10.f)
 				return false;	// unjumpable cliff check
 
 			// TODO neighbor tile will need to have the furtherTile position, while also using cost of both tiles
@@ -1095,13 +1098,20 @@ CCPosition RangedManager::GetCommandPositionFromPath(IMNode* currentNode, const 
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawCircle(currentPosition, 1.f, sc2::Colors::Teal);
 		//we want to retun a node close to the current position
-		if (Util::DistSq(currentPosition, rangedUnit->pos) <= 4.f * 4.f && returnPos == CCPosition(0, 0))
+		if (Util::DistSq(currentPosition, rangedUnit->pos) <= 3.f * 3.f && returnPos == CCPosition(0, 0))
 			returnPos = currentPosition;
 		currentNode = currentNode->parent;
 	} while (currentNode != nullptr);
 
 	if (returnPos == CCPosition(0, 0))
 		std::cout << "returnPos is null" << std::endl;
+	else if(rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+	{
+		const float squareDistance = Util::DistSq(rangedUnit->pos, returnPos);
+		const float terrainHeightDiff = abs(m_bot.Map().terrainHeight(rangedUnit->pos.x, rangedUnit->pos.y) - m_bot.Map().terrainHeight(returnPos.x, returnPos.y));
+		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > 2.5f)
+			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
+	}
 	if (m_bot.Config().DrawHarassInfo)
 		m_bot.Map().drawCircle(returnPos, 0.8f, sc2::Colors::Purple);
 	return returnPos;
@@ -1255,6 +1265,9 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     for (auto target : targets)
     {
         BOT_ASSERT(target, "null target unit in getTarget");
+
+		if (target->last_seen_game_loop != m_bot.GetGameLoop())
+			continue;
 
 		if(m_harassMode)
 		{
