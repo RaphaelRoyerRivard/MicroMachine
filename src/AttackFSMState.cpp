@@ -44,7 +44,9 @@ void AttackFSMState::onUpdate(const sc2::Unit * target, CCBot* bot)
 	if (!actionSent)
 	{
 		m_target = target;
-		bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::ATTACK, target);
+		bot->GetCommandMutex().lock();
+		Micro::SmartAttackUnit(m_unit, target, *bot);
+		bot->GetCommandMutex().unlock();
 		actionSent = true;
 	}
 }

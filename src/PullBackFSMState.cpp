@@ -24,20 +24,21 @@ void PullBackFSMState::onEnter(const std::vector<const sc2::Unit*> * targets, CC
         }
     }
 
-    float targetRange = Util::GetAttackRangeForTarget(closestTarget, m_unit, *bot);
+    const float targetRange = Util::GetAttackRangeForTarget(closestTarget, m_unit, *bot);
 
     sc2::Point2D direction = m_unit->pos - closestTarget->pos;
     Util::Normalize(direction);
     m_position = (direction * (targetRange + 1.5f)) + closestTarget->pos;
-    //if (!bot->Map().isWalkable(m_position))
-    if (!bot->Map().isWalkable((int)floor(m_position.x), (int)floor(m_position.y)))
+    if (!bot->Map().isWalkable(Util::GetTilePosition(m_position)))
         m_position = m_unit->pos;
 
     FocusFireFSMState* fireClosest = new FireClosestFSMState(m_unit);
     FocusFireFSMTransition* donePull = new DonePullBackTransition(m_unit, m_position, fireClosest);
     this->transitions = { donePull };
 
-    bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::MOVE, m_position);
+	bot->GetCommandMutex().lock();
+	Micro::SmartMove(m_unit, m_position, *bot);
+	bot->GetCommandMutex().unlock();
 	if (bot->Config().DrawFSMStateInfo)
 		bot->Map().drawLine(CCPosition(m_unit->pos), CCPosition(m_position), CCColor(0, 0, 255));
 }

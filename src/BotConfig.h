@@ -85,6 +85,7 @@ public:
     bool ClosestEnemy;
     bool WeakestEnemy;
     bool HighestPriority;
+	bool EnableMultiThreading;
     
     int WorkersPerRefinery;
     int BuildingSpacing;

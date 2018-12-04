@@ -455,7 +455,9 @@ bool Unit::useAbility(const sc2::ABILITY_ID abilityId) const
 		if (available_ability.ability_id >= abilities.size()) { continue; }
 		const sc2::AbilityData & ability = abilities[available_ability.ability_id];
 		if (ability.ability_id == abilityId) {
-			m_bot->Actions()->UnitCommand(m_unit, ability.ability_id);
+			m_bot->GetCommandMutex().lock();
+			Micro::SmartAbility(m_unit, ability.ability_id, *m_bot);
+			m_bot->GetCommandMutex().unlock();
 			return true;
 		}
 	}

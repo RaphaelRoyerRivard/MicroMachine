@@ -13,18 +13,18 @@ public:
 
     RangedManager(CCBot & bot);
 	void setHarassMode(bool harass) { m_harassMode = harass; }
-    void setTargets(const std::vector<Unit> & targets);
-    void executeMicro();
+    void setTargets(const std::vector<Unit> & targets) override;
+    void executeMicro() override;
 	bool isTargetRanged(const sc2::Unit * target);
 
 private:
 	void RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
-
 	void setNextCommandFrameAfterAttack(const sc2::Unit* unit);
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
+	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	bool ShouldSkipFrame(const sc2::Unit * rangedUnit) const;
 	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit) const;
-	void ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats) const;
+	void ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats);
 	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target);
 	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float squaredDistanceToGoal);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;

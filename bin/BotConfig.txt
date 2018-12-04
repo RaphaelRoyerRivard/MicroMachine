@@ -23,7 +23,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "DreamcatcherLE.SC2Map",
+        "MapFile"                   : "FractureLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -40,7 +40,8 @@
         "KiteWithRangedUnits"       : true,
         "MaxTargetDistance"         : 20,
         "MaxWorkerRepairDistance"   : 20,
-        "ScoutHarassEnemy"          : true
+        "ScoutHarassEnemy"          : true,
+        "EnableMultiThreading"      : true
     },
     
     "UCTConsideringDurations" :

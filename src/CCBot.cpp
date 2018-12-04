@@ -628,3 +628,8 @@ void CCBot::drawProfilingInfo()
 		m_map.drawTextScreen(0.45f, 0.01f, profilingInfo);
 	}
 }
+
+std::mutex & CCBot::GetCommandMutex()
+{
+	return m_command_mutex;
+}

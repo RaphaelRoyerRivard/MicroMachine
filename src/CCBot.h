@@ -48,6 +48,7 @@ class CCBot
     std::vector<CCPosition> m_baseLocations;
 	CCRace selfRace;
 	std::map<std::string, Profiler> m_profilingTimes;
+	std::mutex m_command_mutex;
 
 	void checkKeyState();
 	void setUnits();
@@ -113,4 +114,5 @@ public:
     const std::vector<CCPosition> & GetStartLocations() const;
 	void StartProfiling(const std::string & profilerName);
 	void StopProfiling(const std::string & profilerName);
+	std::mutex & GetCommandMutex();
 };

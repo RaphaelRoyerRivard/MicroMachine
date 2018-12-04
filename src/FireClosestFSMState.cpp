@@ -29,17 +29,23 @@ void FireClosestFSMState::onUpdate(const sc2::Unit * target, CCBot* bot)
     //we submit an attack command on a new target even though the cooldown is not finished because it may also move our unit
     if (m_unit->weapon_cooldown == 0 || target != m_target)
     {
-		UnitType targetType(target->unit_type, *bot);
 		//We want to trigger stimpack uses only against combat units
-		if (targetType.isCombatUnit())
+		if (m_unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE || m_unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARAUDER)
 		{
-			Unit unit(m_unit, *bot);
-			//Use stimpack buff
-			if (unit.useAbility(sc2::ABILITY_ID::EFFECT_STIM))
-				return;
+			UnitType targetType(target->unit_type, *bot);
+			if(targetType.isCombatUnit())
+			{
+				Unit unit(m_unit, *bot);
+				//Use stimpack buff
+				const bool usedStimpack = unit.useAbility(sc2::ABILITY_ID::EFFECT_STIM);
+				if (usedStimpack)
+					return;
+			}
 		}
 
 		m_target = target;
-		bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::ATTACK, target);
+		bot->GetCommandMutex().lock();
+		Micro::SmartAttackUnit(m_unit, target, *bot);
+		bot->GetCommandMutex().unlock();
     }
 }

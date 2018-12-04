@@ -117,7 +117,8 @@ void BotConfig::readConfigFile()
         JSONTools::ReadBool("ScoutHarassEnemy", micro, ScoutHarassEnemy);
         JSONTools::ReadBool("ClosestEnemy", micro, ClosestEnemy);
         JSONTools::ReadBool("WeakestEnemy", micro, WeakestEnemy);
-        JSONTools::ReadBool("HighestPriority", micro, HighestPriority);
+		JSONTools::ReadBool("HighestPriority", micro, HighestPriority);
+		JSONTools::ReadBool("EnableMultiThreading", micro, EnableMultiThreading);
     }
 
     if (j.count("UCTConsideringDurations") && j["UCTConsideringDurations"].is_object())
