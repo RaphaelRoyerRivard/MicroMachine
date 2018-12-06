@@ -202,8 +202,12 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (ShouldSkipFrame(rangedUnit))
 		return;
 
+	m_bot.StartProfiling("0.10.4.1.5.0        getTarget");
 	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
+	m_bot.StopProfiling("0.10.4.1.5.0        getTarget");
+	m_bot.StartProfiling("0.10.4.1.5.1        getThreats");
 	sc2::Units threats = Util::getThreats(rangedUnit, rangedUnitTargets, m_bot);
+	m_bot.StopProfiling("0.10.4.1.5.1        getThreats");
 
 	if(isBanshee && m_bot.Strategy().isBansheeCloakCompleted())
 	{
@@ -242,20 +246,26 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			m_bot.Map().drawLine(rangedUnit->pos, target->pos, targetInAttackRange ? sc2::Colors::Green : sc2::Colors::Yellow);
 	}
 
+	m_bot.StartProfiling("0.10.4.1.5.2        ShouldAttackTarget");
 	if(targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
 	{
 		m_bot.GetCommandMutex().lock();
 		Micro::SmartAttackUnit(rangedUnit, target, m_bot);
 		m_bot.GetCommandMutex().unlock();
 		setNextCommandFrameAfterAttack(rangedUnit);
+		m_bot.StopProfiling("0.10.4.1.5.2        ShouldAttackTarget");
 		return;
 	}
+	m_bot.StopProfiling("0.10.4.1.5.2        ShouldAttackTarget");
 
+	m_bot.StartProfiling("0.10.4.1.5.3        ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
 	if (!reaperShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
 	{
+		m_bot.StopProfiling("0.10.4.1.5.3        ThreatFighting");
 		return;
 	}
+	m_bot.StopProfiling("0.10.4.1.5.3        ThreatFighting");
 
 	// Check if unit can use KD8Charge
 	if(CanUseKD8Charge(rangedUnit))
@@ -275,6 +285,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			return;
 	}
 
+	m_bot.StartProfiling("0.10.4.1.5.4        OffensivePathFinding");
 	if (AllowUnitToPathFind(rangedUnit))
 	{
 		const CCPosition pathFindEndPos = target && !reaperShouldHeal ? target->pos : goal;
@@ -288,6 +299,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			{
 				nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + REAPER_MOVE_FRAME_COUNT;
 			}
+			m_bot.StopProfiling("0.10.4.1.5.4        OffensivePathFinding");
 			return;
 		}
 		else
@@ -295,6 +307,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.4        OffensivePathFinding");
 
 	CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange);
 

@@ -41,7 +41,7 @@
         "MaxTargetDistance"         : 20,
         "MaxWorkerRepairDistance"   : 20,
         "ScoutHarassEnemy"          : true,
-        "EnableMultiThreading"      : true
+        "EnableMultiThreading"      : false
     },
     
     "UCTConsideringDurations" :
@@ -229,6 +229,27 @@
 										"Refinery",
 										"SCV",
 										"OrbitalCommand"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
+            },
+            "Terran_Stall"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV", 
+                                        "SupplyDepot", 
+                                        "SupplyDepot", 
+                                        "SupplyDepot", 
+                                        "SupplyDepot", 
+                                        "SupplyDepot", 
+                                        "SCV", 
+                                        "SCV", 
+                                        "Barracks",
+                                        "SCV",
+                                        "Refinery",
+                                        "SCV",
+                                        "Refinery",
+                                        "SCV",
+                                        "OrbitalCommand"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },

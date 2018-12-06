@@ -163,12 +163,29 @@ void CombatCommander::resetInfluenceMaps()
 
 void CombatCommander::updateInfluenceMaps()
 {
+	m_bot.StartProfiling("0.10.4.0.1      resetInfluenceMaps");
 	resetInfluenceMaps();
+	m_bot.StopProfiling("0.10.4.0.1      resetInfluenceMaps");
+	m_bot.StartProfiling("0.10.4.0.2      updateInfluenceMapsWithUnits");
+	updateInfluenceMapsWithUnits();
+	m_bot.StopProfiling("0.10.4.0.2      updateInfluenceMapsWithUnits");
+	m_bot.StartProfiling("0.10.4.0.3      updateInfluenceMapsWithEffects");
+	updateInfluenceMapsWithEffects();
+	m_bot.StopProfiling("0.10.4.0.3      updateInfluenceMapsWithEffects");
+	if (m_bot.Config().DrawInfluenceMaps)
+	{
+		m_bot.StartProfiling("0.10.4.0.4      drawInfluenceMaps");
+		drawInfluenceMaps();
+	}
+	m_bot.StopProfiling("0.10.4.0.4      drawInfluenceMaps");
+}
 
-	for(auto& enemyUnit : m_bot.GetKnownEnemyUnits())
+void CombatCommander::updateInfluenceMapsWithUnits()
+{
+	for (auto& enemyUnit : m_bot.GetKnownEnemyUnits())
 	{
 		auto& enemyUnitType = enemyUnit.getType();
-		if(enemyUnitType.isCombatUnit() || enemyUnitType.isWorker() || (enemyUnitType.isAttackingBuilding() && enemyUnit.getUnitPtr()->build_progress >= 1.f))
+		if (enemyUnitType.isCombatUnit() || enemyUnitType.isWorker() || (enemyUnitType.isAttackingBuilding() && enemyUnit.getUnitPtr()->build_progress >= 1.f))
 		{
 			updateGroundInfluenceMapForUnit(enemyUnit);
 			updateAirInfluenceMapForUnit(enemyUnit);
@@ -178,10 +195,96 @@ void CombatCommander::updateInfluenceMaps()
 			//TODO ground units cannot move through non flying buildings
 		}
 	}
+}
 
-	if(m_bot.Config().DrawInfluenceMaps)
+void CombatCommander::updateInfluenceMapsWithEffects()
+{
+	auto & effectDataVector = m_bot.Observation()->GetEffectData();
+	for (auto & effect : m_bot.Observation()->GetEffects())
 	{
-		drawInfluenceMaps();
+		float radius, dps;
+		sc2::Weapon::TargetType targetType;
+		auto & effectData = effectDataVector[effect.effect_id];
+		switch(effect.effect_id)
+		{
+			case 0: // Nothing
+				continue;
+			case 1:	// Psi Storm
+				radius = effectData.radius;
+				dps = 28.07f;	// 80 dmg over 2.85 sec
+				targetType = sc2::Weapon::TargetType::Any;
+				break;
+			case 2:	// Guardian Shield
+				radius = effectData.radius;
+				//TODO consider it in power calculation
+				continue;
+			case 3:	// Temporal Field Growing (doesn't exist anymore)
+			case 4:	// Temporal Field (doesn't exist anymore)
+				continue;
+			case 5:	// Thermal Lance (Colossus beams)
+				radius = effectData.radius;
+				dps = 18.7f;
+				targetType = sc2::Weapon::TargetType::Ground;
+				break;
+			case 6:	// Scanner Sweep
+				continue;
+			case 7: // Nuke Dot
+				radius = 8.f;
+				dps = 300.f;	// 300 dmg one shot
+				targetType = sc2::Weapon::TargetType::Any;
+				break;
+			case 8: // Liberator Defender Zone Setup
+			case 9: // Liberator Defender Zone
+				radius = effectData.radius;
+				dps = 65.8f;
+				targetType = sc2::Weapon::TargetType::Ground;
+				break;
+			case 10: // Blinding Cloud
+				radius = effectData.radius;
+				dps = 25.f;		// this effect does no damage, but we still want to go avoid it so we set a high dps
+				targetType = sc2::Weapon::TargetType::Ground;
+				break;
+			case 11: // Corrosive Bile
+				radius = effectData.radius;
+				dps = 60.f;		// 60 dmg one shot
+				targetType = sc2::Weapon::TargetType::Any;
+				break;
+			case 12: // Lurker Spines
+				radius = effectData.radius;
+				dps = 20.f;		// 20 dmg one shot
+				targetType = sc2::Weapon::TargetType::Ground;
+				break;
+			default:
+				continue;
+			//TODO The following effects are not part of the list and should be managed elsewhere if possible
+			/*case static_cast<const unsigned>(sc2::ABILITY_ID::EFFECT_PARASITICBOMB) :
+				radius = 3.f;
+				dps = 17.14f;	// 120 dmg over 7 sec
+				targetType = sc2::Weapon::TargetType::Air;
+				break;
+			case static_cast<const unsigned>(sc2::ABILITY_ID::EFFECT_PURIFICATIONNOVA) :
+				radius = 1.5f;
+				dps = 145.f;	// 145 dmg on shot
+				targetType = sc2::Weapon::TargetType::Ground;
+				break;
+			case static_cast<const unsigned>(sc2::ABILITY_ID::EFFECT_TIMEWARP) :
+				radius = 3.5f;
+				dps = 25.f;		// this effect does no damage, but we still want to go avoid it so we set a high dps
+				targetType = sc2::Weapon::TargetType::Ground;
+				break;
+			case static_cast<const unsigned>(sc2::ABILITY_ID::EFFECT_WIDOWMINEATTACK) :
+				radius = 1.5f;
+				dps = 40.f;
+				targetType = sc2::Weapon::TargetType::Any;
+				break;*/
+		}
+		for(auto & pos : effect.positions)
+		{
+			if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Air)
+				updateInfluenceMap(dps, radius, 1.f, pos, false);
+			if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Ground)
+				updateInfluenceMap(dps, radius, 1.f, pos, true);
+		}
 	}
 }
 
@@ -204,13 +307,17 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	if (range == 0.f)
 		return;
 	const float speed = std::max(1.f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
+	updateInfluenceMap(dps, range, speed, enemyUnit.getPosition(), ground);
+}
+
+void CombatCommander::updateInfluenceMap(const float dps, const float range, const float speed, const CCPosition & position, const bool ground)
+{
 	const float totalRange = range + speed;
 
-	const auto enemyUnitPosition = enemyUnit.getPosition();
-	const float fminX = floor(enemyUnitPosition.x - totalRange);
-	const float fmaxX = ceil(enemyUnitPosition.x + totalRange);
-	const float fminY = floor(enemyUnitPosition.y - totalRange);
-	const float fmaxY = ceil(enemyUnitPosition.y + totalRange);
+	const float fminX = floor(position.x - totalRange);
+	const float fmaxX = ceil(position.x + totalRange);
+	const float fminY = floor(position.y - totalRange);
+	const float fmaxY = ceil(position.y + totalRange);
 	const float maxMapX = m_bot.Map().width() - 1.f;
 	const float maxMapY = m_bot.Map().height() - 1.f;
 	const int minX = std::max(0.f, fminX);
@@ -223,7 +330,7 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	{
 		for (int y = minY; y < maxY; ++y)
 		{
-			const float distance = Util::Dist(enemyUnitPosition, CCPosition(x + 0.5f, y + 0.5f));
+			const float distance = Util::Dist(position, CCPosition(x + 0.5f, y + 0.5f));
 			float multiplier = 1.f;
 			if (distance > range)
 				multiplier = std::max(0.f, (speed - (distance - range)) / speed);	//value is linearly interpolated in the speed buffer zone
