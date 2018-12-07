@@ -235,7 +235,7 @@ void ProductionManager::manageBuildOrderQueue()
 				CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
 				if (targetLocation != CCTilePosition(0, 0))
 				{
-					Unit worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition{ static_cast<float>(targetLocation.x), static_cast<float>(targetLocation.y) });
+					Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
 					if (worker.isValid())
 					{
 						worker.move(targetLocation);
@@ -717,7 +717,7 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 	// check to see if we have the prerequisites for the item
     if (!hasRequired(item.type, true))
     {
-        std::cout << item.type.getName() << " needs " << typeData.requiredUnits[0].getName() << "\n";
+        std::cout << item.type.getName() << " needs a requirement: " << typeData.requiredUnits[0].getName() << "\n";
 		BuildOrderItem requiredItem = m_queue.queueItem(BuildOrderItem(MetaType(typeData.requiredUnits[0], m_bot), 0, item.blocking));
         fixBuildOrderDeadlock(requiredItem);
         return;
@@ -731,6 +731,7 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
             // We no longer have worker and no longer have buildings to do more, so we are rip...
             return;
         }
+		std::cout << item.type.getName() << " needs a producer: " << typeData.whatBuilds[0].getName() << "\n";
 		BuildOrderItem producerItem = m_queue.queueItem(BuildOrderItem(MetaType(typeData.whatBuilds[0], m_bot), 0, item.blocking));
         fixBuildOrderDeadlock(producerItem);
     }
@@ -909,6 +910,7 @@ bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
 			return true;
 		if (metaType.isAddon())
 		{
+			int count = m_bot.UnitInfo().getUnitTypeCount(Players::Self, producer, false, false);
 			auto buildings = m_bot.Buildings().getBaseBuildings();
 			for (auto building : buildings)
 			{
@@ -918,8 +920,11 @@ bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
 					{
 						return true;
 					}
+					--count;
 				}
 			}
+			if (count > 0)	// This hack is because there is a moment where the building is purchased and removed from the queue but not yet in the buildings manager
+				return true;
 			
 			//Addons do not check further or else we could try to build an addon on a building with an addon already.
 			return checkInQueue && m_queue.contains(MetaType(producer, m_bot));
