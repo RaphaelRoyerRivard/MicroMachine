@@ -383,24 +383,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 		{
 			m_bot.StartProfiling("0.8.3.1 getBuildingLocation");
 			// grab a worker unit from WorkerManager which is closest to this final position
-			CCTilePosition testLocation;
-			std::map<UnitType, std::list<CCTilePosition>>::iterator it = nextBuildingPosition.find(b.type);
-			if (it != nextBuildingPosition.end())
-			{
-				if (!it->second.empty())
-				{
-					testLocation = it->second.front();
-					it->second.pop_front();
-				}
-				else
-				{
-					testLocation = getBuildingLocation(b);
-				}
-			}
-			else
-			{
-				testLocation = getBuildingLocation(b);
-			}
+			CCTilePosition testLocation = getNextBuildingLocation(b, true);
 			m_bot.StopProfiling("0.8.3.1 getBuildingLocation");
 
 			// Don't test the location if the building is already started
@@ -912,6 +895,32 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 	return buildingLocation;
 }
 
+CCTilePosition BuildingManager::getNextBuildingLocation(const Building & b, bool removeLocation)
+{
+	CCTilePosition location;
+	std::map<UnitType, std::list<CCTilePosition>>::iterator it = nextBuildingPosition.find(b.type);
+	if (it != nextBuildingPosition.end())
+	{
+		if (!it->second.empty())
+		{
+			location = it->second.front();
+			if (removeLocation)
+			{
+				it->second.pop_front();
+			}
+		}
+		else
+		{
+			location = getBuildingLocation(b);
+		}
+	}
+	else
+	{
+		location = getBuildingLocation(b);
+	}
+	return location;
+}
+
 Unit BuildingManager::getClosestResourceDepot(CCPosition position)
 {
 	std::vector<Unit> resourceDepots;
@@ -1019,7 +1028,6 @@ const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) con
 	}
 	return mineralField;
 }
-
 
 void BuildingManager::castBuildingsAbilities()
 {

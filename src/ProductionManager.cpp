@@ -228,11 +228,14 @@ void ProductionManager::manageBuildOrderQueue()
 				}
 			}
 
-			// is a building (doesn't include addons, because no travel time) and we can make it soon
+			// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 			if (m_bot.Data(currentItem.type).isBuilding && !m_bot.Data(currentItem.type).isAddon && !currentItem.type.getUnitType().isMorphedBuilding() && meetsReservedResourcesWithExtra(currentItem.type))
 			{
 				Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
-				CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
+				
+				//Get building location
+				CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, false);
+
 				if (targetLocation != CCTilePosition(0, 0))
 				{
 					Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
