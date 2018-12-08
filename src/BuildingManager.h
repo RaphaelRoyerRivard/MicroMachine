@@ -17,6 +17,8 @@ class BuildingManager
 	std::vector<Unit> m_finishedBaseBuildings;
 	std::vector<Unit> m_previousBaseBuildings; //Base buildings last frame, useful to find dead buildings
 	std::list<CCTilePosition> rampTiles;
+	std::list<CCTilePosition> wallBuilding;
+	std::map<UnitType, std::list<CCTilePosition>> nextBuildingPosition;
 
     bool            m_debugMode;
     int             m_reservedMinerals;				// minerals reserved for planned buildings
@@ -44,10 +46,14 @@ public:
     void                onFrame();
 	void				FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile);
 	void				FindMainRamp(std::list<CCTilePosition> &rampTiles);
+	std::list<CCTilePosition> FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles);
+	void				BuildingManager::PlaceSupplyDepots(std::list<CCTilePosition> tilesToBlock);
+	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
     void                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
 	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
 	void				drawStartingRamp();
+	void				drawWall();
 	std::vector<Building> getBuildings();//Cannot be passed by reference
 	std::vector<Building> getPreviousBuildings();//Cannot be passed by reference
 	std::vector<Unit>	getBaseBuildings();

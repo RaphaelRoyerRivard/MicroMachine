@@ -256,6 +256,11 @@ bool MapTools::isPowered(int tileX, int tileY) const
 #endif
 }
 
+float MapTools::terrainHeight(CCTilePosition tile) const
+{
+	return m_terrainHeight[tile.x][tile.y];
+}
+
 float MapTools::terrainHeight(float x, float y) const
 {
     return m_terrainHeight[(int)x][(int)y];
@@ -618,6 +623,14 @@ void MapTools::draw() const
                 ss << getSectorNumber(x, y);
                 drawText(CCPosition(Util::TileToPosition(x + 0.5f), Util::TileToPosition(y + 0.5f)), ss.str());
             }
+
+			if (m_bot.Config().DrawBuildableSectors)
+			{
+				if (isBuildable(x, y))
+				{
+					drawTile(x, y, CCColor(0, 255, 0));
+				}
+			}
 
             if (m_bot.Config().DrawTileInfo)
             {

@@ -44,6 +44,7 @@ public:
 
     int     width() const;
     int     height() const;
+	float	terrainHeight(CCTilePosition tile) const;
     float   terrainHeight(float x, float y) const;
 
     void    drawLine(CCPositionType x1, CCPositionType y1, CCPositionType x2, CCPositionType y2, const CCColor & color = CCColor(255, 255, 255)) const;

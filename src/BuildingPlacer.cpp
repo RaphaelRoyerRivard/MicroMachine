@@ -328,13 +328,14 @@ void BuildingPlacer::drawReservedTiles()
     int rwidth = (int)m_reserveMap.size();
     int rheight = (int)m_reserveMap[0].size();
 
+	CCColor yellow = CCColor(255, 255, 0);
     for (int x = 0; x < rwidth; ++x)
     { 
         for (int y = 0; y < rheight; ++y)
         {
             if (m_reserveMap[x][y])
             {
-                m_bot.Map().drawTile(x - 1, y - 1, CCColor(255, 255, 0));
+                m_bot.Map().drawTile(x - 1, y - 1, yellow);
             }
         }
     }
