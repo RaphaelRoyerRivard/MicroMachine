@@ -22,8 +22,10 @@ std::vector<KitingFSMTransition*> FleeFSMState::getTransitions()
 }
 void FleeFSMState::onUpdate(const sc2::Unit * target, CCBot* bot)
 {
-    sc2::Point2D fleePosition(m_unit->pos - target->pos + m_unit->pos);
-    bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::MOVE, fleePosition);
+    const sc2::Point2D fleePosition(m_unit->pos - target->pos + m_unit->pos);
+	bot->GetCommandMutex().lock();
+	Micro::SmartMove(m_unit, fleePosition, *bot);
+	bot->GetCommandMutex().unlock();
 	if (bot->Config().DrawFSMStateInfo)
 		bot->Map().drawLine(CCPosition(m_unit->pos), CCPosition(target->pos), CCColor(0, 0, 255));
 }

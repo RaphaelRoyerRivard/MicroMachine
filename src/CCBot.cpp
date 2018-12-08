@@ -211,14 +211,18 @@ void CCBot::setUnits()
 			if (zergEnemy && !m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
 				&& unitptr->last_seen_game_loop == GetGameLoop())
 			{
-				float dist = Util::Dist(unitptr->pos, m_lastSeenPosUnits[unitptr->tag]);
-				float speed = Util::getSpeedOfUnit(unitptr, *this);
-				float realSpeed = dist * 16.f;	// Magic number calculated from real values
-				if(realSpeed > speed + 1.f)
+				auto& lastSeenPair = m_lastSeenPosUnits[unitptr->tag];
+				if (lastSeenPair.first != CCPosition(0, 0) && lastSeenPair.second == GetGameLoop() - 1)
 				{
-					// This is a Speedling!!!
-					m_strategy.setEnemyHasMetabolicBoost(true);
-					Actions()->SendChat("Speedlings won't save you my friend");
+					const float dist = Util::Dist(unitptr->pos, lastSeenPair.first);
+					const float speed = Util::getSpeedOfUnit(unitptr, *this);
+					const float realSpeed = dist * 16.f;	// Magic number calculated from real values
+					if (realSpeed > speed + 1.f)
+					{
+						// This is a Speedling!!!
+						m_strategy.setEnemyHasMetabolicBoost(true);
+						Actions()->SendChat("Speedlings won't save you my friend");
+					}
 				}
 			}
 			if (!m_strategy.shouldProduceAntiAir())
@@ -258,7 +262,7 @@ void CCBot::setUnits()
 					}
 				}
 			}
-			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, unitptr->pos);
+			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, std::pair<CCPosition, uint32_t>(unitptr->pos, GetGameLoop()));
 		}
         m_allUnits.push_back(unit);
     }
@@ -487,9 +491,12 @@ int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed) const
 	{
 		return m_unitCompletedCount.at(type);
 	}
-	else if (!completed && m_unitCount.find(type) != m_unitCount.end())
+	else if (!completed)
 	{
-		return m_unitCount.at(type);
+		int boughtButNotBeingBuilt = m_buildings.countBoughtButNotBeingBuilt(type);
+		if(m_unitCount.find(type) != m_unitCount.end())
+			return m_unitCount.at(type) + boughtButNotBeingBuilt;
+		return boughtButNotBeingBuilt;
 	}
 	return 0;
 }
@@ -620,4 +627,9 @@ void CCBot::drawProfilingInfo()
 		}
 		m_map.drawTextScreen(0.45f, 0.01f, profilingInfo);
 	}
+}
+
+std::mutex & CCBot::GetCommandMutex()
+{
+	return m_command_mutex;
 }

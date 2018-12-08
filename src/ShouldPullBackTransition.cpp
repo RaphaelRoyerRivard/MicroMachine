@@ -17,8 +17,8 @@ bool ShouldPullBackTransition::isValid(const sc2::Unit * target, const std::vect
     float previousHealth = unitHealths->at(m_unit->tag);
     unitHealths->insert_or_assign(m_unit->tag, currentUnitHealth);
 
-    float damage = Util::GetAttackDamageForTarget(target, m_unit, *bot);
-    float unitdamage = Util::GetAttackDamageForTarget(m_unit, target, *bot);
+    float damage = Util::GetDpsForTarget(target, m_unit, *bot);
+    float unitdamage = Util::GetDpsForTarget(m_unit, target, *bot);
 
     bool healthierUnit = false;
     for (const sc2::Unit* unit : *units)

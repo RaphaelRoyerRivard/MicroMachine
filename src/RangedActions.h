@@ -75,7 +75,9 @@ public:
         bot(bot) {}
 private:
     Status update() {
+		bot.GetCommandMutex().lock();
         Micro::SmartMove(rangedUnit, targetPosition, bot);
+		bot.GetCommandMutex().unlock();
         return Status::BH_SUCCESS;
     }
 };
@@ -96,7 +98,9 @@ public:
         bot(bot) {}
 private:
     Status update() {
+		bot.GetCommandMutex().lock();
         Micro::SmartMove(rangedUnit, targetPosition, bot);
+		bot.GetCommandMutex().unlock();
         return Status::BH_SUCCESS;
     }
 };

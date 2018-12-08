@@ -45,9 +45,12 @@ class CombatCommander
 	void			initInfluenceMaps();
 	void			resetInfluenceMaps();
 	void			updateInfluenceMaps();
+	void			updateInfluenceMapsWithUnits();
+	void			updateInfluenceMapsWithEffects();
 	void			updateGroundInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateAirInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
+	void			updateInfluenceMap(const float dps, const float range, const float speed, const CCPosition & position, const bool ground);
 	void			drawInfluenceMaps();
 
 public:

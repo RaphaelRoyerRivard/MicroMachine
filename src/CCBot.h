@@ -42,12 +42,13 @@ class CCBot
 	std::map<sc2::UNIT_TYPEID, int> m_unitCompletedCount;
 	std::map<sc2::Tag, Unit> m_allyUnits;
 	std::map<sc2::Tag, Unit> m_enemyUnits;
-	std::map<sc2::Tag, CCPosition> m_lastSeenPosUnits;
+	std::map<sc2::Tag, std::pair<CCPosition, uint32_t>> m_lastSeenPosUnits;
 	std::vector<Unit>       m_allUnits;
 	std::vector<Unit>       m_knownEnemyUnits;
     std::vector<CCPosition> m_baseLocations;
 	CCRace selfRace;
 	std::map<std::string, Profiler> m_profilingTimes;
+	std::mutex m_command_mutex;
 
 	void checkKeyState();
 	void setUnits();
@@ -113,4 +114,5 @@ public:
     const std::vector<CCPosition> & GetStartLocations() const;
 	void StartProfiling(const std::string & profilerName);
 	void StopProfiling(const std::string & profilerName);
+	std::mutex & GetCommandMutex();
 };

@@ -279,7 +279,7 @@ bool BuildingManager::ValidateSupplyDepotPosition(std::list<CCTilePosition> buil
 	return true;
 }
 
-bool BuildingManager::isBeingBuilt(UnitType type)
+bool BuildingManager::isBeingBuilt(UnitType type) const
 {
     for (auto & b : m_buildings)
     {
@@ -292,12 +292,26 @@ bool BuildingManager::isBeingBuilt(UnitType type)
     return false;
 }
 
-int BuildingManager::countBeingBuilt(UnitType type)
+int BuildingManager::countBeingBuilt(UnitType type) const
 {
 	int count = 0;
 	for (auto & b : m_buildings)
 	{
 		if (b.type == type)
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
+int BuildingManager::countBoughtButNotBeingBuilt(sc2::UNIT_TYPEID type) const
+{
+	int count = 0;
+	for (auto & b : m_buildings)
+	{
+		if (b.type.getAPIUnitType() == type && b.status < BuildingStatus::UnderConstruction)
 		{
 			count++;
 		}

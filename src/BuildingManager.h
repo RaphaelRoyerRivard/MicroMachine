@@ -68,8 +68,9 @@ public:
     int                 getReservedMinerals();
     int                 getReservedGas();
 
-    bool                isBeingBuilt(UnitType type);
-	int					countBeingBuilt(UnitType type);
+    bool                isBeingBuilt(UnitType type) const;
+	int					countBeingBuilt(UnitType type) const;
+	int					countBoughtButNotBeingBuilt(sc2::UNIT_TYPEID type) const;
 
 	void				removeBuildings(const std::vector<Building> & toRemove);
 
