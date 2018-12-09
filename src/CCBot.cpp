@@ -145,32 +145,101 @@ void CCBot::checkKeyState()
 	{
 		printf("Pausing...");
 	}
+
 	if (GetAsyncKeyState('1'))
 	{
+		key1 = true;
+	}
+	else if (key1)
+	{
+		key1 = false;
 		m_config.DrawProductionInfo = !m_config.DrawProductionInfo;
 	}
+
 	if (GetAsyncKeyState('2'))
 	{
+		key2 = true;
+	}
+	else if (key2)
+	{
+		key2 = false;
 		m_config.DrawHarassInfo = !m_config.DrawHarassInfo;
 	}
+
 	if (GetAsyncKeyState('3'))
 	{
+		key3 = true;
+	}
+	else if (key3)
+	{
+		key3 = false;
 		m_config.DrawUnitPowerInfo = !m_config.DrawUnitPowerInfo;
 	}
+
 	if (GetAsyncKeyState('4'))
 	{
+		key4 = true;
+	}
+	else if (key4)
+	{
+		key4 = false;
 		m_config.DrawWorkerInfo = !m_config.DrawWorkerInfo;
 	}
+
+	/*if (GetAsyncKeyState('5'))
+	{
+		key5 = true;
+	}
+	else if (key5)
+	{
+		key5 = false;
+	}
+
+	if (GetAsyncKeyState('6'))
+	{
+		key6 = true;
+	}
+	else if (key6)
+	{
+		key6 = false;
+	}
+
+	if (GetAsyncKeyState('7'))
+	{
+		key7 = true;
+	}
+	else if (key7)
+	{
+		key7 = false;
+	}*/
+
 	if (GetAsyncKeyState('8'))
 	{
+		key8 = true;
+	}
+	else if (key8)
+	{
+		key8 = false;
 		m_config.DrawProfilingInfo = !m_config.DrawProfilingInfo;
 	}
+
 	if (GetAsyncKeyState('9'))
 	{
+		key9 = true;
+	}
+	else if (key9)
+	{
+		key9 = false;
 		m_config.DrawUnitID = !m_config.DrawUnitID;
 	}
+
 	if (GetAsyncKeyState('0'))
 	{
+		key0 = true;
+	}
+	else if (key0)
+	{
+		key0 = false;
 		m_config.DrawReservedBuildingTiles = !m_config.DrawReservedBuildingTiles;
 	}
 }

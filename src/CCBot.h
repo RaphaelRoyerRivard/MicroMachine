@@ -50,6 +50,18 @@ class CCBot
 	std::map<std::string, Profiler> m_profilingTimes;
 	std::mutex m_command_mutex;
 
+	//KeyState
+	bool key1 = false;
+	bool key2 = false;
+	bool key3 = false;
+	bool key4 = false;
+	bool key5 = false;
+	bool key6 = false;
+	bool key7 = false;
+	bool key8 = false;
+	bool key9 = false;
+	bool key0 = false;
+
 	void checkKeyState();
 	void setUnits();
 	void clearDeadUnits();
