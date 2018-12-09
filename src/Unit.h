@@ -38,6 +38,7 @@ public:
 
     CCPosition getPosition() const;
     CCTilePosition getTilePosition() const;
+	float getHitPointsPercentage() const;
     CCHealth getHitPoints() const;
     CCHealth getShields() const;
     CCHealth getEnergy() const;

@@ -358,6 +358,16 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 	return 0;
 }
 
+const BaseLocation * BaseLocationManager::getRepairStation() const
+{
+	return (*--getOccupiedBaseLocations(Players::Self).end());
+}
+
+CCTilePosition BaseLocationManager::getRepairStationPosition() const
+{
+	return (*--getOccupiedBaseLocations(Players::Self).end())->getCenterOfMinerals();
+}
+
 const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBuildable) const
 {
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);

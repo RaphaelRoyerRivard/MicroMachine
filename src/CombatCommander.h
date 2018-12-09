@@ -24,6 +24,7 @@ class CombatCommander
 	int				m_currentBaseExplorationIndex;
 
     void            updateScoutDefenseSquad();
+	void            updateDefenseBuildings();
     void            updateDefenseSquads();
     void            updateBackupSquads();
 	void            updateHarassSquads();

@@ -83,6 +83,9 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
     {
         updateIdleSquad();
         updateScoutDefenseSquad();
+		m_bot.StartProfiling("0.10.4.2.1    updateDefenseBuildings");
+		updateDefenseBuildings();
+		m_bot.StopProfiling("0.10.4.2.1    updateDefenseBuildings");
         updateDefenseSquads();
 		updateHarassSquads();
 		updateAttackSquads();
@@ -603,6 +606,56 @@ void CombatCommander::updateScoutDefenseSquad()
     }
 }
 
+void CombatCommander::updateDefenseBuildings()
+{
+	int SUPPLYDEPOT_DISTANCE = 4;
+
+	auto enemies = m_bot.GetEnemyUnits();
+	auto buildings = m_bot.Buildings().getFinishedBuildings();
+	for (auto building : buildings)
+	{
+		sc2::UNIT_TYPEID buildingType = building.getType().getAPIUnitType();
+		switch (buildingType)
+		{
+			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED:
+				for (auto enemy : enemies)
+				{
+					CCTilePosition enemyPosition = enemy.second.getTilePosition();
+					CCTilePosition buildingPosition = building.getTilePosition();
+					int distance = abs(enemyPosition.x - buildingPosition.x) + abs(enemyPosition.y - buildingPosition.y);
+					if (distance < SUPPLYDEPOT_DISTANCE)
+					{//Raise
+						building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
+						break;
+					}
+				}
+				break;
+			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT:
+				{//Extra bracket needed to compile
+					bool canLower = true;
+					for (auto enemy : enemies)
+					{
+						CCTilePosition enemyPosition = enemy.second.getTilePosition();
+						CCTilePosition buildingPosition = building.getTilePosition();
+						int distance = abs(enemyPosition.x - buildingPosition.x) + abs(enemyPosition.y - buildingPosition.y);
+						if (distance < SUPPLYDEPOT_DISTANCE)
+						{
+							canLower = false;
+							break;
+						}
+					}
+					if (canLower)
+					{
+						building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+					}
+				}
+				break;
+			default:
+				break;
+		}
+	}
+}
+
 void CombatCommander::updateDefenseSquads()
 {
 	bool workerRushed = false;
@@ -777,6 +830,7 @@ void CombatCommander::updateDefenseSquads()
 	m_bot.Strategy().setIsWorkerRushed(workerRushed);
 
     // for each of our defense squads, if there aren't any enemy units near the position, clear the squad
+	auto enemies = m_bot.UnitInfo().getUnits(Players::Enemy);
     for (const auto & kv : m_squadData.getSquads())
     {
         const Squad & squad = kv.second;
@@ -788,7 +842,7 @@ void CombatCommander::updateDefenseSquads()
         }
 
         bool enemyUnitInRange = false;
-        for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+        for (auto & unit : enemies)
         {
             if (Util::DistSq(unit, order.getPosition()) < order.getRadius() * order.getRadius())
             {

@@ -95,7 +95,8 @@
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : false,
-        "DrawInfluenceMaps"         : false
+        "DrawInfluenceMaps"         : false,
+		"DrawRepairStation"			: true
     },
     
     "Modules" :

@@ -29,6 +29,8 @@ public:
     const std::set<const BaseLocation *> & getOccupiedBaseLocations(int player) const;
     const BaseLocation * getPlayerStartingBaseLocation(int player) const;
 	int BaseLocationManager::getBaseCount(int player, bool isCompleted = false) const;
+	const BaseLocation * getRepairStation() const;
+	CCTilePosition BaseLocationManager::getRepairStationPosition() const;
 
 	const BaseLocation* getNextExpansion(int player, bool checkBuildable = false) const;
 	CCTilePosition getNextExpansionPosition(int player, bool checkBuildable = false) const;
