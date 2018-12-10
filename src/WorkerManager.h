@@ -34,7 +34,6 @@ public:
     void finishedWithWorker(const Unit & unit);
     void drawResourceDebugInfo();
     void drawWorkerInformation();
-	void drawRepairStation();
     void setScoutWorker(Unit worker);
     void setCombatWorker(Unit worker);
 	void setBuildingWorker(Unit worker);

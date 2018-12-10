@@ -15,6 +15,7 @@
 #include "UCTCDAction.h"
 #include <thread>
 
+const float HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE = 0.3f;
 const float HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE = 7.f;
 const float HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE = 10.f;
 const float HARASS_FRIENDLY_ATTRACTION_INTENSITY = 1.5f;
@@ -216,10 +217,38 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	CCPosition goal = m_order.getPosition();
 
+	UnitType unitType(rangedUnit->unit_type, m_bot);
+	bool unitShouldHeal = false;
+	if (unitType.shouldRepair())
+	{
+		auto it = unitsBeingRepaired.find(rangedUnit);
+		if (it != unitsBeingRepaired.end())
+		{
+			if (rangedUnit->health != rangedUnit->health_max)
+			{
+				unitShouldHeal = true;
+			}
+			else
+			{
+				unitsBeingRepaired.erase(rangedUnit);
+			}
+		}
+		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE)
+		{
+			unitShouldHeal = true;
+			unitsBeingRepaired.insert(rangedUnit);
+		}
+	}
+
 	// if the reaper is damaged, go to center of the map
 	const bool reaperShouldHeal = isReaper && rangedUnit->health / rangedUnit->health_max < 0.66f;
 	if (reaperShouldHeal)
+	{
 		goal = CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f;
+		unitShouldHeal = true;
+	}
+	else if (unitShouldHeal)
+		goal = Util::GetPosition(m_bot.Bases().getClosestBasePosition(rangedUnit));
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
 
@@ -288,7 +317,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StartProfiling("0.10.4.1.5.4        OffensivePathFinding");
 	if (AllowUnitToPathFind(rangedUnit))
 	{
-		const CCPosition pathFindEndPos = target && !reaperShouldHeal ? target->pos : goal;
+		const CCPosition pathFindEndPos = target && !unitShouldHeal ? target->pos : goal;
 		CCPosition closePositionInPath = FindOptimalPathToTarget(rangedUnit, pathFindEndPos, target ? unitAttackRange : 3.f);
 		if (closePositionInPath != CCPosition())
 		{
