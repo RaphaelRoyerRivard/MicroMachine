@@ -55,7 +55,9 @@ private:
     std::map<const sc2::Unit *, UCTCDAction> command_for_unit;
 	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
 	std::map<const sc2::Unit *, uint32_t> nextAvailableKD8ChargeFrameForReaper;
+	std::set<sc2::Tag> toggledCyclones;
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
+	float lockonAbilityCastingRange;
     bool isCommandDone = false;
 	bool m_harassMode = false;
 };

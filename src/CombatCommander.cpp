@@ -452,6 +452,7 @@ void CombatCommander::updateHarassSquads()
 		// put high mobility units in the harass squad
 		if ((unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER
 			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION
+			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE
 			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
 			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))

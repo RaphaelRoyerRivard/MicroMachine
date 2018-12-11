@@ -31,6 +31,7 @@ MetaType MetaTypeEnum::WidowMine;
 MetaType MetaTypeEnum::Banshee;
 MetaType MetaTypeEnum::Viking;
 MetaType MetaTypeEnum::Medivac;
+MetaType MetaTypeEnum::Cyclone;
 	//Upgrades
 MetaType MetaTypeEnum::TerranInfantryWeaponsLevel1;
 MetaType MetaTypeEnum::TerranInfantryWeaponsLevel2;
@@ -123,6 +124,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::Banshee = MetaType("Banshee", m_bot);
 	MetaTypeEnum::Viking = MetaType("VikingFighter", m_bot);
 	MetaTypeEnum::Medivac = MetaType("Medivac", m_bot);
+	MetaTypeEnum::Cyclone = MetaType("Cyclone", m_bot);
 		//Upgrades
 	MetaTypeEnum::TerranInfantryWeaponsLevel1 = MetaType("TerranInfantryWeaponsLevel1", m_bot);
 	MetaTypeEnum::TerranInfantryWeaponsLevel2 = MetaType("TerranInfantryWeaponsLevel2", m_bot);

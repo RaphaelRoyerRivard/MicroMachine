@@ -26,4 +26,6 @@ namespace Micro
     );
 	void SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot);
 	void SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCPosition position, CCBot & bot);
+	void SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, const sc2::Unit * target, CCBot & bot);
+	void SmartToggleAutoCast(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot);
 };

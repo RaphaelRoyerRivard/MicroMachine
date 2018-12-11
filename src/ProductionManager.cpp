@@ -330,12 +330,19 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					bool hasPicked = false;
 					MetaType toBuild;
+					const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 					const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 					if (productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
+						const int factoryAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
 						const int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) +
 							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
-						if (starportCount > starportAddonCount)
+						if (factoryCount > factoryAddonCount)
+						{
+							toBuild = MetaTypeEnum::FactoryTechLab;
+							hasPicked = true;
+						}
+						else if (starportCount > starportAddonCount)
 						{
 							toBuild = MetaTypeEnum::StarportTechLab;
 							hasPicked = true;
@@ -354,7 +361,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							toBuild = MetaTypeEnum::Barracks;
 							hasPicked = true;
 						}
-						else if (starportCount < baseCount * 2)
+						else if (factoryCount < baseCount)
+						{
+							toBuild = MetaTypeEnum::Factory;
+							hasPicked = true;
+						}
+						else if (starportCount < baseCount)
 						{
 							toBuild = MetaTypeEnum::Starport;
 							hasPicked = true;
@@ -397,6 +409,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					auto metaTypeInfantryWeapon = queueUpgrade(MetaTypeEnum::TerranInfantryWeaponsLevel1);
 				}*/
+
+				if (!m_queue.contains(MetaTypeEnum::Cyclone))
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
+				}
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{

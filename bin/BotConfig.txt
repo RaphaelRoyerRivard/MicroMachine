@@ -22,7 +22,7 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
+        "EnemyRace"                 : "Protoss",
         "MapFile"                   : "FractureLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,

@@ -84,3 +84,15 @@ void Micro::SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityI
 	BOT_ASSERT(unit != nullptr, "Unit using smart ability is null");
 	bot.Actions()->UnitCommand(unit, abilityID, position);
 }
+
+void Micro::SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, const sc2::Unit * target, CCBot & bot)
+{
+	BOT_ASSERT(unit != nullptr, "Unit using smart ability is null");
+	bot.Actions()->UnitCommand(unit, abilityID, target);
+}
+
+void Micro::SmartToggleAutoCast(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot)
+{
+	BOT_ASSERT(unit != nullptr, "Unit using smart toggle auto cast is null");
+	bot.Actions()->ToggleAutocast(unit->tag, abilityID);
+}

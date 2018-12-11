@@ -29,12 +29,22 @@ const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
 const float HARASS_PATHFINDING_TILE_BASE_COST = 0.001f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 0.01f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
+const int CYCLONE_LOCKON_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_COOLDOWN = 314;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 80;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
-{ }
+{
+	for(auto& ability : bot.Observation()->GetAbilityData())
+	{
+		if(ability.ability_id == sc2::ABILITY_ID::EFFECT_LOCKON)
+		{
+			lockonAbilityCastingRange = ability.cast_range;
+			break;
+		}
+	}
+}
 
 void RangedManager::setTargets(const std::vector<Unit> & targets)
 {
@@ -157,6 +167,8 @@ void RangedManager::setNextCommandFrameAfterAttack(const sc2::Unit* unit)
 	int attackFrameCount = 2;
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
 		attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+		attackFrameCount = CYCLONE_LOCKON_FRAME_COUNT;
 	nextCommandFrameForUnit[unit] = m_bot.GetGameLoop() + attackFrameCount;
 }
 
@@ -194,6 +206,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
 	const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
 	const bool isViking = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
+	const bool isCyclone = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE;
 
 	if (m_bot.Config().DrawHarassInfo)
 		m_bot.Map().drawText(rangedUnit->pos, std::to_string(rangedUnit->tag));
@@ -229,21 +242,50 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 
+	if(isCyclone && toggledCyclones.find(rangedUnit->tag) == toggledCyclones.end())
+	{
+		Micro::SmartToggleAutoCast(rangedUnit, sc2::ABILITY_ID::EFFECT_LOCKON, m_bot);
+		toggledCyclones.insert(rangedUnit->tag);
+		return;
+	}
+
 	// if there is no potential target or threat, move to objective (max distance is not considered when defending)
 	if(MoveToGoal(rangedUnit, threats, target, goal, squaredDistanceToGoal))
 	{
 		return;
 	}
 
+	if(isCyclone)
+	{
+		for(auto& order : rangedUnit->orders)
+		{
+			if (order.ability_id != sc2::ABILITY_ID::ATTACK &&order.ability_id != sc2::ABILITY_ID::MOVE)
+			{
+				std::cout << "Cyclone order - Ability id: " << order.ability_id << ", progress: " << order.progress << ", pos: (" << order.target_pos.x << ", " << order.target_pos.y << "), target tag: " << order.target_unit_tag << std::endl;
+				return;
+			}
+		}
+	}
+
 	bool targetInAttackRange = false;
 	float unitAttackRange = 0.f;
 	if (target)
 	{
-		unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+		if(isCyclone)
+			unitAttackRange = lockonAbilityCastingRange + rangedUnit->radius + target->radius;
+		else
+			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 		targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;
 
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(rangedUnit->pos, target->pos, targetInAttackRange ? sc2::Colors::Green : sc2::Colors::Yellow);
+	}
+
+	if(isCyclone && targetInAttackRange)
+	{
+		Micro::SmartAbility(rangedUnit, sc2::ABILITY_ID::EFFECT_LOCKON, target, m_bot);
+		setNextCommandFrameAfterAttack(rangedUnit);
+		return;
 	}
 
 	m_bot.StartProfiling("0.10.4.1.5.2        ShouldAttackTarget");
@@ -1320,7 +1362,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		if (target->last_seen_game_loop != m_bot.GetGameLoop())
 			continue;
 
-		if(m_harassMode)
+		if(m_harassMode && rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_CYCLONE)
 		{
 			const float unitRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 			const float targetRange = Util::GetAttackRangeForTarget(target, rangedUnit, m_bot);
