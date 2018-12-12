@@ -289,7 +289,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.3        ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
-	if (!reaperShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
+	if (!unitShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.3        ThreatFighting");
 		return;

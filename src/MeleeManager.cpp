@@ -49,7 +49,7 @@ void MeleeManager::executeMicro()
                 Unit target = getTarget(meleeUnit, m_targets);
 
                 // attack it
-                meleeUnit.attackUnit(target);
+				Micro::SmartAttackUnit(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
             }
             // if there are no targets
             else
