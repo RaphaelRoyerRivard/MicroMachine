@@ -60,6 +60,7 @@ public:
 	bool DrawProfilingInfo;
 	bool DrawInfluenceMaps;
 	bool DrawRepairStation;
+	bool DrawDamageHealthRatio;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;

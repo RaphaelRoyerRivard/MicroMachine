@@ -5,7 +5,7 @@ UnitState::UnitState()
 
 }
 
-UnitState::UnitState(CCHealth hitPoints, CCHealth shields, CCHealth energy)
+UnitState::UnitState(CCHealth hitPoints, CCHealth shields, CCHealth energy, const sc2::Unit* unitPtr)
 {
 	m_previousHitPoints = hitPoints;
 	m_previousShields = shields;
@@ -14,6 +14,8 @@ UnitState::UnitState(CCHealth hitPoints, CCHealth shields, CCHealth energy)
 	m_hitPoints = hitPoints;
 	m_shields = shields;
 	m_energy = energy;
+
+	unit = unitPtr;
 }
 
 void UnitState::Reset()
@@ -80,4 +82,9 @@ bool UnitState::HadRecentTreats()
 		}
 	}
 	return false;
+}
+
+sc2::UNIT_TYPEID UnitState::GetType()
+{
+	return unit->unit_type;
 }

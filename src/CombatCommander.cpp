@@ -96,9 +96,12 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	m_bot.StartProfiling("0.10.4.3    lowPriorityCheck");
 	lowPriorityCheck();
 	m_bot.StopProfiling("0.10.4.3    lowPriorityCheck");
-	/*m_bot.StartProfiling("0.10.4.4    checkUnitsState");
+	m_bot.StartProfiling("0.10.4.4    checkUnitsState");
 	checkUnitsState();
-	m_bot.StopProfiling("0.10.4.4    checkUnitsState");*/
+	m_bot.StopProfiling("0.10.4.4    checkUnitsState");
+	UpdateTotalHealthLoss();
+
+	drawDamageHealthRatio();
 }
 
 void CombatCommander::lowPriorityCheck()
@@ -121,6 +124,32 @@ void CombatCommander::lowPriorityCheck()
 	{
 		m_invisibleSighting.erase(unit);
 	}
+}
+
+void CombatCommander::increaseTotalDamage(float damageDealt, sc2::UNIT_TYPEID unittype)
+{
+	if (damageDealt <= 0)
+	{
+		return;
+	}
+	if (totalDamage.find(unittype) == totalDamage.end())
+	{
+		totalDamage.insert(std::pair<sc2::UNIT_TYPEID, float>(unittype, 0));
+	}
+	totalDamage.at(unittype) += damageDealt;
+}
+
+void CombatCommander::increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID unittype)
+{
+	if (healthLoss <= 0)
+	{
+		return;
+	}
+	if (totalhealthLoss.find(unittype) == totalhealthLoss.end())
+	{
+		totalhealthLoss.insert(std::pair<sc2::UNIT_TYPEID, float>(unittype, 0));
+	}
+	totalhealthLoss.at(unittype) += healthLoss;
 }
 
 bool CombatCommander::shouldWeStartAttacking()
@@ -930,7 +959,7 @@ void CombatCommander::checkUnitsState()
 		auto it = m_unitStates.find(tag);
 		if (it == m_unitStates.end())
 		{
-			UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
+			UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy(), unit.getUnitPtr());
 			state.Update();
 			m_unitStates[tag] = state;
 			m_bot.StopProfiling("0.10.4.4.2.1        addState");
@@ -942,7 +971,7 @@ void CombatCommander::checkUnitsState()
 		UnitState & state = it->second;
 		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
 		m_bot.StopProfiling("0.10.4.4.2.2        updateState");
-		if (state.WasAttacked())
+		/*if (state.WasAttacked())
 		{
 			m_bot.StartProfiling("0.10.4.4.2.3        checkForInvis");
 			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
@@ -960,7 +989,7 @@ void CombatCommander::checkUnitsState()
 			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
 			state.UpdateThreat(!threats.empty());
 			m_bot.StopProfiling("0.10.4.4.2.4        updateThreats");
-		}
+		}*/
 	}
 	m_bot.StopProfiling("0.10.4.4.2      updateStates");
 
@@ -981,6 +1010,15 @@ void CombatCommander::checkUnitsState()
 		m_unitStates.erase(tag);
 	}
 	m_bot.StopProfiling("0.10.4.4.3      removeStates");
+}
+
+void CombatCommander::UpdateTotalHealthLoss()
+{
+	for (auto unitstate : m_unitStates)
+	{
+		increaseTotalHealthLoss(unitstate.second.GetDamageTaken(), unitstate.second.GetType());
+		increaseTotalHealthLoss(unitstate.second.GetDamageTaken(), (sc2::UNIT_TYPEID)0);
+	}
 }
 
 Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type)
@@ -1063,6 +1101,38 @@ std::map<Unit, std::pair<CCPosition, uint32_t>> & CombatCommander::GetInvisibleS
 void CombatCommander::drawSquadInformation()
 {
     m_squadData.drawSquadInformation();
+}
+
+void CombatCommander::drawDamageHealthRatio()
+{
+	if (!m_bot.Config().DrawDamageHealthRatio)
+	{
+		return;
+	}
+
+	int overrallDamage = 0;
+	int overrallhealthLoss = 0;
+	std::stringstream ss;
+	std::vector<std::pair<sc2::UNIT_TYPEID, std::string>> checkedTypes = { 
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_REAPER, "Reaper"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_BANSHEE, "Banshee"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_CYCLONE, "Cyclone")
+	};
+	for (auto type : checkedTypes)
+	{
+		if (totalhealthLoss.find(type.first) != totalhealthLoss.end() && totalDamage.find(type.first) != totalDamage.end())
+		{
+			float ratio = totalhealthLoss.at(type.first) > 0 ? totalDamage.at(type.first) / totalhealthLoss.at(type.first) : 0;
+			ss << type.second << ": " << ratio << "\n";
+
+			overrallDamage += totalDamage.at(type.first);
+			overrallhealthLoss += totalhealthLoss.at(type.first);
+		}
+	}
+	float overrallRatio = overrallhealthLoss > 0 ? overrallDamage / overrallhealthLoss : 0;
+	ss << "Overrall: " << overrallRatio << "\n";
+
+	m_bot.Map().drawTextScreen(0.7f, 0.7f, std::string("Damage HealhLoss Ratio : \n") + ss.str().c_str());
 }
 
 CCPosition CombatCommander::getMainAttackLocation()

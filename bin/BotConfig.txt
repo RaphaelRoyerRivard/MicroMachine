@@ -96,7 +96,8 @@
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : false,
         "DrawInfluenceMaps"         : false,
-		"DrawRepairStation"			: true
+		"DrawRepairStation"			: true,
+		"DrawDamageHealthRatio"		: true
     },
     
     "Modules" :

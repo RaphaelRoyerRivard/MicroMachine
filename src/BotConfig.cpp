@@ -50,6 +50,7 @@ BotConfig::BotConfig()
 	DrawProfilingInfo = false;
 	DrawInfluenceMaps = false;
 	DrawRepairStation = false;
+	DrawDamageHealthRatio = false;
 
     KiteWithRangedUnits = true;
     ScoutHarassEnemy = true;
@@ -204,6 +205,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawProfilingInfo", debug, DrawProfilingInfo);
 			JSONTools::ReadBool("DrawInfluenceMaps", debug, DrawInfluenceMaps);
 			JSONTools::ReadBool("DrawRepairStation", debug, DrawRepairStation);
+			JSONTools::ReadBool("DrawDamageHealthRatio", debug, DrawDamageHealthRatio);
 		}
     }
 

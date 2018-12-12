@@ -270,6 +270,7 @@ void WorkerManager::handleRepairWorkers()
     }
 
 	//Repair station (RepairStation)
+	int MAX_REPAIR_WORKER = 6;
 	int REPAIR_STATION_SIZE = 10;
 	int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
 	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
@@ -329,17 +330,24 @@ void WorkerManager::handleRepairWorkers()
 		if (unitsToRepair.size() > 0)
 		{
 			//Send workers to repair
+			int repairWorkers = 0;
 			auto workerData = getWorkerData();
 			auto it = unitsToRepair.begin();
 			for (auto worker : getWorkers())
 			{
-				if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals)
+				if (repairWorkers >= MAX_REPAIR_WORKER)
+				{
+					break;
+				}
+
+				if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || WorkerJobs::Repair)
 				{
 					CCTilePosition position = worker.getTilePosition();
 					int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
 					if (distance < REPAIR_STATION_WORKER_ZONE_SIZE)
 					{
 						setRepairWorker(worker, *it);
+						repairWorkers++;
 						it++;
 						if (it == unitsToRepair.end())
 						{

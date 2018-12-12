@@ -254,6 +254,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		m_bot.GetCommandMutex().unlock();
 		setNextCommandFrameAfterAttack(rangedUnit);
 		m_bot.StopProfiling("0.10.4.1.5.2        ShouldAttackTarget");
+
+		m_bot.Commander().Combat().increaseTotalDamage(Util::GetDpsForTarget(rangedUnit, target, m_bot), rangedUnit->unit_type);
+		m_bot.Commander().Combat().increaseTotalDamage(Util::GetDpsForTarget(rangedUnit, target, m_bot), (sc2::UNIT_TYPEID)0);
 		return;
 	}
 	m_bot.StopProfiling("0.10.4.1.5.2        ShouldAttackTarget");

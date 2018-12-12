@@ -19,6 +19,9 @@ class CombatCommander
 	std::map<Unit, std::pair<CCPosition, uint32_t>> m_invisibleSighting;
 	std::vector<std::vector<float>> m_groundInfluenceMap;
 	std::vector<std::vector<float>> m_airInfluenceMap;
+	std::map<sc2::UNIT_TYPEID, float> totalDamage;
+	std::map<sc2::UNIT_TYPEID, float> totalhealthLoss;
+	
     bool            m_initialized;
     bool            m_attackStarted;
 	int				m_currentBaseExplorationIndex;
@@ -31,6 +34,7 @@ class CombatCommander
 	void            updateAttackSquads();
     void            updateIdleSquad();
 	void			checkUnitsState();
+	void			UpdateTotalHealthLoss();
     bool            isSquadUpdateFrame();
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);
@@ -53,6 +57,7 @@ class CombatCommander
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
 	void			updateInfluenceMap(const float dps, const float range, const float speed, const CCPosition & position, const bool ground);
 	void			drawInfluenceMaps();
+	void			drawDamageHealthRatio();
 
 public:
 
@@ -62,6 +67,8 @@ public:
     void onStart();
     void onFrame(const std::vector<Unit> & combatUnits);
 	void lowPriorityCheck();
+	void increaseTotalDamage(float damageDealt, sc2::UNIT_TYPEID unittype);
+	void increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID unittype);
 
 	std::map<Unit, std::pair<CCPosition, uint32_t>> & GetInvisibleSighting();
 

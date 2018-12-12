@@ -10,6 +10,7 @@ class UnitState
 	CCHealth m_previousShields;
 	CCHealth m_energy;
 	CCHealth m_previousEnergy;
+	const sc2::Unit* unit;
 
 	static const int THREAT_CHECK_EVERY_X_FRAME = 5;
 	static const int CONSIDER_X_LAST_THREAT_CHECK = 3;
@@ -17,7 +18,7 @@ class UnitState
 public:
 
 	UnitState();
-	UnitState(CCHealth hitPoints, CCHealth shields, CCHealth energy);
+	UnitState(CCHealth hitPoints, CCHealth shields, CCHealth energy, const sc2::Unit* unitPtr);
 	void Reset();
 	void Update();
 	void Update(CCHealth hitPoints, CCHealth shields, CCHealth energy);
@@ -28,4 +29,5 @@ public:
 	int GetDamageTaken();
 	int GetHealed();
 	bool HadRecentTreats();
+	sc2::UNIT_TYPEID GetType();
 };
