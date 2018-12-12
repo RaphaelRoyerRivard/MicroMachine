@@ -106,8 +106,7 @@ void BuildingManager::FindMainRamp(std::list<CCTilePosition> &rampTiles)
 	CCTilePosition mainRampTile;
 	for (auto & tile : rampTiles)
 	{
-		const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-		int distance = enemyBaseLocation->getGroundDistance(tile);
+		int distance = Util::DistSq(Util::GetPosition(tile), CCPosition(m_bot.Map().width() / 2, m_bot.Map().height() / 2));
 		if (distance < minDistance)
 		{
 			minDistance = distance;
