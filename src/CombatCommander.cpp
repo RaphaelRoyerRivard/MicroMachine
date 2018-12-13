@@ -208,8 +208,8 @@ void CombatCommander::updateInfluenceMaps()
 	{
 		m_bot.StartProfiling("0.10.4.0.4      drawInfluenceMaps");
 		drawInfluenceMaps();
+		m_bot.StopProfiling("0.10.4.0.4      drawInfluenceMaps");
 	}
-	m_bot.StopProfiling("0.10.4.0.4      drawInfluenceMaps");
 }
 
 void CombatCommander::updateInfluenceMapsWithUnits()
@@ -1110,8 +1110,8 @@ void CombatCommander::drawDamageHealthRatio()
 		return;
 	}
 
-	int overrallDamage = 0;
-	int overrallhealthLoss = 0;
+	float overrallDamage = 0;
+	float overrallhealthLoss = 0;
 	std::stringstream ss;
 	std::vector<std::pair<sc2::UNIT_TYPEID, std::string>> checkedTypes = { 
 		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_REAPER, "Reaper"),
@@ -1120,19 +1120,26 @@ void CombatCommander::drawDamageHealthRatio()
 	};
 	for (auto type : checkedTypes)
 	{
-		if (totalhealthLoss.find(type.first) != totalhealthLoss.end() && totalDamage.find(type.first) != totalDamage.end())
+		if (totalDamage.find(type.first) != totalDamage.end())
 		{
-			float ratio = totalhealthLoss.at(type.first) > 0 ? totalDamage.at(type.first) / totalhealthLoss.at(type.first) : 0;
-			ss << type.second << ": " << ratio << "\n";
+			if (totalhealthLoss.find(type.first) != totalhealthLoss.end())
+			{
+				float ratio = totalhealthLoss.at(type.first) > 0 ? totalDamage.at(type.first) / totalhealthLoss.at(type.first) : 0;
+				ss << type.second << ": " << ratio << "\n";
 
+				overrallhealthLoss += totalhealthLoss.at(type.first);
+			}
+			else
+			{
+				ss << type.second << ": " << totalDamage.at(type.first) << "\n";
+			}
 			overrallDamage += totalDamage.at(type.first);
-			overrallhealthLoss += totalhealthLoss.at(type.first);
 		}
 	}
 	float overrallRatio = overrallhealthLoss > 0 ? overrallDamage / overrallhealthLoss : 0;
 	ss << "Overrall: " << overrallRatio << "\n";
 
-	m_bot.Map().drawTextScreen(0.7f, 0.7f, std::string("Damage HealhLoss Ratio : \n") + ss.str().c_str());
+	m_bot.Map().drawTextScreen(0.68f, 0.68f, std::string("Damage HealhLoss Ratio : \n") + ss.str().c_str());
 }
 
 CCPosition CombatCommander::getMainAttackLocation()
