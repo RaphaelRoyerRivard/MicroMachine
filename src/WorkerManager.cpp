@@ -279,10 +279,9 @@ void WorkerManager::handleRepairWorkers()
 			{
 				//Send workers to repair
 				int repairWorkers = 0;
-				auto workerData = getWorkerData();
-				for (auto worker : getWorkers())
+				auto & workerData = getWorkerData();
+				for (auto & worker : getWorkers())
 				{
-					auto workerData = getWorkerData();
 					auto it = unitsToRepair.begin();
 					if (repairWorkers >= MAX_REPAIR_WORKER)
 					{
@@ -297,7 +296,7 @@ void WorkerManager::handleRepairWorkers()
 						{
 							setRepairWorker(worker, *it);
 							repairWorkers++;
-							it++;
+							++it;
 							if (it == unitsToRepair.end())
 							{
 								it = unitsToRepair.begin();

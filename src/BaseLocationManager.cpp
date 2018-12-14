@@ -453,11 +453,11 @@ CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit
 		if (!base.isOccupiedByPlayer(player))
 			continue;
 
-		const float dist = Util::DistSq(Util::GetPosition(base.getCenterOfMinerals()), unit->pos);
+		const float dist = Util::DistSq(base.getPosition(), unit->pos);
 		if (minDistance == 0.f || dist < minDistance)
 		{
 			minDistance = dist;
-			closestBase = base.getCenterOfMinerals();
+			closestBase = Util::GetTilePosition(base.getPosition());
 		}
 	}
 	return closestBase;
