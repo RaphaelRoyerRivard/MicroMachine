@@ -69,23 +69,7 @@ void WorkerManager::handleMineralWorkers()
 		return;
 	}
 
-	/*m_bot.StartProfiling("0.7.2.1     selectMineralWorkers");
-	std::list<Unit> mineralWorkers;
-	for (auto& worker : workers)
-	{
-		int workerJob = m_workerData.getWorkerJob(worker);
-		if (workerJob == WorkerJobs::Minerals && !isReturningCargo(worker))
-		{
-			mineralWorkers.push_back(worker);
-		}
-	}
-	m_bot.StopProfiling("0.7.2.1     selectMineralWorkers");
-	if (mineralWorkers.empty())
-	{
-		return;
-	}*/
-	
-	if (!m_isFirstFrame)
+	if (!m_isFirstFrame || true)//TODO Disable split. might cause the long distance mining issue. Gotta test without this code.
 	{
 		return;
 	}
@@ -109,14 +93,6 @@ void WorkerManager::handleMineralWorkers()
 		}
 	}
 	m_bot.StopProfiling("0.7.2.2     selectMinerals");
-
-	/*std::list<std::pair<Unit, float>> temp;
-	for (auto mineralWorker : mineralWorkers)
-	{
-		auto closestMineral = getClosest(mineralWorker, minerals);
-		const float dist = Util::Dist(mineralWorker.getPosition(), closestMineral.getPosition());
-		temp.push_back(std::pair<Unit, float>(mineralWorker, dist));
-	}*/
 
 	m_bot.StartProfiling("0.7.2.3     orderedMineralWorkers");
 	std::list<Unit> orderedMineralWorkers;//Replaces workers
@@ -863,7 +839,7 @@ bool WorkerManager::isBuilder(Unit worker) const
 }
 
 bool WorkerManager::isReturningCargo(Unit worker) const
-{
+{//(ReturnCargo)
 	auto orders = worker.getUnitPtr()->orders;
 	if (orders.size() > 0)
 	{
