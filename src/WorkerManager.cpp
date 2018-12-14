@@ -39,7 +39,6 @@ void WorkerManager::onFrame()
 
     drawResourceDebugInfo();
     drawWorkerInformation();
-	drawRepairStation();
 
     m_workerData.drawDepotDebugInfo();
 
@@ -251,83 +250,58 @@ void WorkerManager::handleRepairWorkers()
 	int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
 	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
 	{
-		const BaseLocation* repairStation = m_bot.Bases().getRepairStation();
-		CCTilePosition repairStationLocation = m_bot.Bases().getRepairStationPosition();
-		std::vector<Unit> unitsToRepair;
-
-		//Get all units to repair
-		for (auto & tagUnit : m_bot.GetAllyUnits())
+		auto bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+		for (auto & base : bases)
 		{
-			Unit unit = tagUnit.second;
-						float healthPercentage = unit.getHitPointsPercentage();
-			if (healthPercentage < 100 && !unit.isBeingConstructed())
+			std::vector<Unit> unitsToRepair;
+			CCTilePosition repairStationLocation = base->getCenterOfMinerals();
+
+			//Get all units to repair
+			for (auto & tagUnit : m_bot.GetAllyUnits())
 			{
-				switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())
+				Unit unit = tagUnit.second;
+				float healthPercentage = unit.getHitPointsPercentage();
+				if (healthPercentage < 100 && !unit.isBeingConstructed())
 				{
-					case sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING:
-					case sc2::UNIT_TYPEID::TERRAN_BUNKER:
-					case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER:
-					case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING:
-					case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
-					case sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING:
-					case sc2::UNIT_TYPEID::TERRAN_HELLION:
-					case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
-					case sc2::UNIT_TYPEID::TERRAN_LIBERATOR:
-					case sc2::UNIT_TYPEID::TERRAN_LIBERATORAG:
-					case sc2::UNIT_TYPEID::TERRAN_MEDIVAC:
-					case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET:
-					case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:
-					case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING:
-					case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
-					case sc2::UNIT_TYPEID::TERRAN_RAVEN:
-					case sc2::UNIT_TYPEID::TERRAN_REFINERY:
-					case sc2::UNIT_TYPEID::TERRAN_SIEGETANK:
-					case sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED:
-					case sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING:
-					case sc2::UNIT_TYPEID::TERRAN_THOR:
-					case sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT:
-					case sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
-					case sc2::UNIT_TYPEID::TERRAN_WIDOWMINE:
-					case sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
-						break;
-					default:
+					if (!unit.getType().shouldRepair())
 						continue;
-				}
-				
-				CCTilePosition position = unit.getTilePosition();
-				int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
-				if (distance < REPAIR_STATION_SIZE)
-				{
-					unitsToRepair.push_back(unit);
+
+					CCTilePosition position = unit.getTilePosition();
+					int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
+					if (distance < REPAIR_STATION_SIZE)
+					{
+						unitsToRepair.push_back(unit);
+					}
 				}
 			}
-		}
 
-		if (unitsToRepair.size() > 0)
-		{
-			//Send workers to repair
-			int repairWorkers = 0;
-			auto workerData = getWorkerData();
-			auto it = unitsToRepair.begin();
-			for (auto worker : getWorkers())
+			if (unitsToRepair.size() > 0)
 			{
-				if (repairWorkers >= MAX_REPAIR_WORKER)
+				//Send workers to repair
+				int repairWorkers = 0;
+				auto workerData = getWorkerData();
+				for (auto worker : getWorkers())
 				{
-					break;
-				}
-
-				if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || WorkerJobs::Repair)
-				{
-					CCTilePosition position = worker.getTilePosition();
-					int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
-					if (distance < REPAIR_STATION_WORKER_ZONE_SIZE)
+					auto workerData = getWorkerData();
+					auto it = unitsToRepair.begin();
+					if (repairWorkers >= MAX_REPAIR_WORKER)
 					{
-						setRepairWorker(worker, *it);
-						repairWorkers++;
-						it++;
-						if (it == unitsToRepair.end())
+						break;
+					}
+
+					if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || WorkerJobs::Repair)
+					{
+						CCTilePosition position = worker.getTilePosition();
+						int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
+						if (distance < REPAIR_STATION_WORKER_ZONE_SIZE)
 						{
-							it = unitsToRepair.begin();
+							setRepairWorker(worker, *it);
+							repairWorkers++;
+							it++;
+							if (it == unitsToRepair.end())
+							{
+								it = unitsToRepair.begin();
+							}
 						}
 					}
 				}
@@ -812,12 +786,6 @@ void WorkerManager::drawWorkerInformation()
     }
 
     m_bot.Map().drawTextScreen(0.75f, 0.2f, ss.str());
-}
-
-void WorkerManager::drawRepairStation()
-{
-	CCTilePosition position = m_bot.Bases().getRepairStationPosition();
-	m_bot.Map().drawTile(position.x, position.y, CCColor(0, 125, 255));
 }
 
 bool WorkerManager::isFree(Unit worker) const

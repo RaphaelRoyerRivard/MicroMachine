@@ -65,4 +65,5 @@ public:
     bool isEgg() const;
     bool isQueen() const;
     bool isTank() const;
+	bool shouldRepair() const;
 };

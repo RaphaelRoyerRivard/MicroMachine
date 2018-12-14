@@ -358,16 +358,6 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 	return 0;
 }
 
-const BaseLocation * BaseLocationManager::getRepairStation() const
-{
-	return (*--getOccupiedBaseLocations(Players::Self).end());
-}
-
-CCTilePosition BaseLocationManager::getRepairStationPosition() const
-{
-	return (*--getOccupiedBaseLocations(Players::Self).end())->getCenterOfMinerals();
-}
-
 const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBuildable) const
 {
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
@@ -452,4 +442,23 @@ CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
 	CCTilePosition position = m_baseLocationPtrs[index]->getDepotPosition();
 	BOT_ASSERT(position.x != 0.f || position.y != 0.f, "Base location is 0,0");
 	return position;
+}
+
+CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player) const
+{
+	CCTilePosition closestBase;
+	float minDistance = 0.f;
+	for (auto & base : m_baseLocationData)
+	{
+		if (!base.isOccupiedByPlayer(player))
+			continue;
+
+		const float dist = Util::DistSq(Util::GetPosition(base.getCenterOfMinerals()), unit->pos);
+		if (minDistance == 0.f || dist < minDistance)
+		{
+			minDistance = dist;
+			closestBase = base.getCenterOfMinerals();
+		}
+	}
+	return closestBase;
 }
