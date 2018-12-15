@@ -1025,64 +1025,23 @@ bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveL
 
 CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const
 {
-	CCPosition returnPos;
-	std::set<IMNode*> opened;
-	std::set<IMNode*> closed;
-
-	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
-	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
-	const auto start = new IMNode(startPosition);
-	opened.insert(start);
-
-	while(!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE)
-	{
-		IMNode* currentNode = getLowestCostNode(opened);
-		opened.erase(currentNode);
-		closed.insert(currentNode);
-
-		if(ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange))
-		{
-			returnPos = GetCommandPositionFromPath(currentNode, rangedUnit);
-			break;
-		}
-
-		// Find neighbors
-		for (int x = -1; x <= 1; ++x)
-		{
-			for (int y = -1; y <= 1; ++y)
-			{
-				if (!IsNeighborNodeValid(x, y, currentNode, rangedUnit))
-					continue;
-
-				const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
-
-				const float cost = currentNode->cost + GetInfluenceOnTile(neighborPosition, rangedUnit) + HARASS_PATHFINDING_TILE_BASE_COST;
-				auto neighbor = new IMNode(neighborPosition, currentNode, cost, CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition));
-
-				if (SetContainsNode(closed, neighbor, false))
-					continue;	// already explored check
-
-				if (SetContainsNode(opened, neighbor, true))
-					continue;	// node already opened and of lower cost
-
-				opened.insert(neighbor);
-			}
-		}
-	}
-	for (auto node : opened)
-		delete node;
-	for (auto node : closed)
-		delete node;
-	return returnPos;
+	return FindOptimalPath(rangedUnit, goal, maxRange);
 }
 
 CCPosition RangedManager::FindOptimalPathToSafety(const sc2::Unit * rangedUnit) const
+{
+	return FindOptimalPath(rangedUnit, CCPosition(0, 0), 0.f);
+}
+
+CCPosition RangedManager::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const
 {
 	CCPosition returnPos;
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
 	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
+	const bool hasGoal = goal != CCPosition(0, 0);
+	const CCTilePosition goalPosition = hasGoal ? Util::GetTilePosition(goal) : CCTilePosition(0, 0);
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
 
@@ -1092,7 +1051,8 @@ CCPosition RangedManager::FindOptimalPathToSafety(const sc2::Unit * rangedUnit) 
 		opened.erase(currentNode);
 		closed.insert(currentNode);
 
-		if (ShouldTriggerExit(currentNode, rangedUnit))
+		const bool shouldTriggerExit = hasGoal ? ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange) : ShouldTriggerExit(currentNode, rangedUnit);
+		if (shouldTriggerExit)
 		{
 			returnPos = GetCommandPositionFromPath(currentNode, rangedUnit);
 			break;
@@ -1108,8 +1068,11 @@ CCPosition RangedManager::FindOptimalPathToSafety(const sc2::Unit * rangedUnit) 
 
 				const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
 
-				const float cost = currentNode->cost + GetInfluenceOnTile(neighborPosition, rangedUnit) + HARASS_PATHFINDING_TILE_BASE_COST;
-				auto neighbor = new IMNode(neighborPosition, currentNode, cost, 0.f);	// There is no heuristic since we have no idea in which direction is the closest safe spot
+				const bool isDiagonal = abs(x + y) != 1;
+				const float nodeCost = (GetInfluenceOnTile(neighborPosition, rangedUnit) + HARASS_PATHFINDING_TILE_BASE_COST) * (isDiagonal ? sqrt(2) : 1);
+				const float totalCost = currentNode->cost + nodeCost;
+				const float heuristic = hasGoal ? CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition) : 0.f;
+				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
 
 				if (SetContainsNode(closed, neighbor, false))
 					continue;	// already explored check

@@ -41,6 +41,7 @@ private:
 	//void CreateLocalInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats, float (&map)[50][50]) const;
 	CCPosition FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const;
 	CCPosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit) const;
+	CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const;
 	bool IsNeighborNodeValid(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit) const;
 	CCPosition GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit) const;
 	float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to) const;
