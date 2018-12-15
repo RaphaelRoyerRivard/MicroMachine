@@ -2,6 +2,8 @@
 #include "CCBot.h"
 #include <iostream>
 
+const float EPSILON = 1e-5;
+
 std::string Util::GetStringFromRace(const CCRace & race)
 {
 #ifdef SC2API
@@ -279,14 +281,14 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 void Util::Normalize(sc2::Point2D& point)
 {
     float norm = sqrt(pow(point.x, 2) + pow(point.y, 2));
-	if(norm > 0.f)
+	if(norm > EPSILON)
 		point /= norm;
 }
 
 sc2::Point2D Util::Normalized(const sc2::Point2D& point)
 {
     float norm = sqrt(pow(point.x, 2) + pow(point.y, 2));
-	if(norm > 0.f)
+	if(norm > EPSILON)
 		return sc2::Point2D(point.x / norm, point.y / norm);
     return sc2::Point2D(point.x, point.y);
 }

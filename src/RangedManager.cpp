@@ -341,8 +341,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	m_bot.StopProfiling("0.10.4.1.5.4        OffensivePathFinding");
 
-	CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange);
-
 	bool useInfluenceMap = false;
 	CCPosition summedFleeVec(0, 0);
 	// add normalied * 1.5 vector of potential threats
@@ -364,6 +362,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	if(!useInfluenceMap)
 	{
+		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange);
+
 		// Sum up the threats vector with the direction vector
 		if (!threats.empty())
 		{
@@ -388,8 +388,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			return;
 
 		// Normalize the final direction vector so it's easier to work with
-		if (dirVec.x != 0.f || dirVec.y != 0.f)
-			sc2::Normalize2D(dirVec);
+		Util::Normalize(dirVec);
 
 		// If we find a pathable tile in the direction of the vector, we move at that tile
 		CCPosition pathableTile(0, 0);
@@ -556,9 +555,7 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
 	}
-	if (dirVec.x != 0.f || dirVec.y != 0.f)
-		sc2::Normalize2D(dirVec);
-
+	Util::Normalize(dirVec);
 	return dirVec;
 }
 
@@ -672,7 +669,7 @@ void RangedManager::AdjustSummedFleeVec(CCPosition & summedFleeVec) const
 	float vecSquareLen = std::pow(summedFleeVec.x, 2) + std::pow(summedFleeVec.y, 2);
 	if (vecSquareLen > std::pow(HARASS_THREAT_MAX_REPULSION_INTENSITY, 2))
 	{
-		sc2::Normalize2D(summedFleeVec);
+		Util::Normalize(summedFleeVec);
 		summedFleeVec *= HARASS_THREAT_MAX_REPULSION_INTENSITY;
 	}
 }
@@ -701,7 +698,7 @@ CCPosition RangedManager::GetRepulsionVectorFromFriendlyReapers(const sc2::Unit 
 			m_bot.Map().drawLine(reaper->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
 
 		CCPosition fleeVec = reaper->pos - closestFriendlyUnitPosition;
-		sc2::Normalize2D(fleeVec);
+		Util::Normalize(fleeVec);
 		// The repulsion intensity is linearly interpolated (the closer the friendly Reaper is, the stronger is the repulsion)
 		const float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - std::sqrt(distToClosestFriendlyUnit)) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
 		return fleeVec * intensity;
@@ -730,8 +727,7 @@ CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit 
 			m_bot.Map().drawLine(hellion->pos, closeAlliesCenter, sc2::Colors::Green);
 		const float distToCloseAlliesCenter = Util::Dist(hellion->pos, closeAlliesCenter);
 		CCPosition attractionVector = closeAlliesCenter - hellion->pos;
-		if(attractionVector.x != 0.f || attractionVector.y != 0.f)
-			sc2::Normalize2D(attractionVector);
+		Util::Normalize(attractionVector);
 		// The repulsion intensity is linearly interpolated (stronger the farthest to lower the closest)
 		const float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToCloseAlliesCenter / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
 		return attractionVector * intensity;
