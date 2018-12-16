@@ -1107,7 +1107,10 @@ bool RangedManager::IsNeighborNodeValid(int x, int y, IMNode* currentNode, const
 
 	if (!rangedUnit->is_flying)
 	{
-		// TODO check the ground blockers map
+		if (m_bot.Commander().Combat().getBlockedTiles()[neighborPosition.x][neighborPosition.y])
+			return false;	// tile is blocked
+
+		// TODO check if the unit can pass between 2 blocked tiles (this will need a change in the blocked tiles map to have types of block)
 		// All units can pass between 2 command structures, medium units and small units can pass between a command structure and another building 
 		// while only small units can pass between non command buildings (where "between" means when 2 buildings have their corners touching diagonaly)
 

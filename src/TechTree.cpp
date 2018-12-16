@@ -186,6 +186,48 @@ void TechTree::initUnitTypeData()
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_BROODLING, m_bot)] =                  { sc2::Race::Zerg, 0, 0, 2, 0, true, false, false, false, false, false, false, 0, 0, { UnitType() }, { UnitType() }, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_EGG, m_bot)] =                        { sc2::Race::Zerg, 0, 0, 2, 0, true, false, false, false, false, false, false, 0, 0, { UnitType() }, { UnitType() }, {} };
 
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD750, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_COLLAPSIBLEROCKTOWERDEBRIS, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_COLLAPSIBLEROCKTOWERDIAGONAL, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_COLLAPSIBLEROCKTOWERPUSHUNIT, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} }; m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_COLLAPSIBLETERRANTOWERDEBRIS, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_COLLAPSIBLETERRANTOWERDIAGONAL, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_COLLAPSIBLETERRANTOWERPUSHUNIT, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_COLLAPSIBLETERRANTOWERPUSHUNITRAMPLEFT, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_COLLAPSIBLETERRANTOWERPUSHUNITRAMPRIGHT, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_COLLAPSIBLETERRANTOWERRAMPLEFT, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_COLLAPSIBLETERRANTOWERRAMPRIGHT, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_DEBRISRAMPLEFT, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_DEBRISRAMPRIGHT, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_DESTRUCTIBLEDEBRIS6X6, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_DESTRUCTIBLEDEBRISRAMPDIAGONALHUGEBLUR, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_DESTRUCTIBLEDEBRISRAMPDIAGONALHUGEULBR, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_DESTRUCTIBLEROCK6X6, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_DESTRUCTIBLEROCKEX1DIAGONALHUGEBLUR, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_FORCEFIELD, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_KARAKFEMALE, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD750, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD750, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_PROTOSSVESPENEGEYSER, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD750, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD750, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_PURIFIERVESPENEGEYSER, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD750, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_RICHVESPENEGEYSER, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_SCANTIPEDE, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_SHAKURASVESPENEGEYSER, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_SPACEPLATFORMGEYSER, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_UNBUILDABLEBRICKSDESTRUCTIBLE, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_UNBUILDABLEPLATESDESTRUCTIBLE, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_UTILITYBOT, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_VESPENEGEYSER, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::NEUTRAL_XELNAGATOWER, m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+
     // Set the Mineral / Gas cost of each unit
     for (auto & kv : m_unitTypeData)
     {
@@ -346,12 +388,13 @@ void TechTree::initUnitTypeData()
 }
 #endif
 
-const TypeData & TechTree::getData(const UnitType & type) const
+const TypeData & TechTree::getData(const UnitType & type)
 {
     if (m_unitTypeData.find(type) == m_unitTypeData.end())
     {
-        std::cout << "WARNING: Unit type not found: " << type.getName() << "\n";
-        return m_unitTypeData.begin()->second;
+        std::cout << "WARNING: Unit type not found: " << type.getName() << " (" << type.getAPIUnitType() << ")" << "\n";
+		m_unitTypeData[UnitType(sc2::UNIT_TYPEID(type.getAPIUnitType()), m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
+        return m_unitTypeData[UnitType(sc2::UNIT_TYPEID(type.getAPIUnitType()), m_bot)];
     }
 
     return m_unitTypeData.at(type);
@@ -361,14 +404,14 @@ const TypeData & TechTree::getData(const CCUpgrade & type)  const
 {
     if (m_upgradeData.find(type) == m_upgradeData.end())
     {
-        //std::cout << "WARNING: Upgrade not found: " << sc2::UpgradeIDToName(type) << "\n";
+        std::cout << "WARNING: Upgrade not found: " << sc2::UpgradeIDToName(type) << "\n";
         return m_unitTypeData.begin()->second;
     }
 
     return m_upgradeData.at(type);
 }
 
-const TypeData & TechTree::getData(const MetaType & type) const
+const TypeData & TechTree::getData(const MetaType & type)
 {
     if (type.getMetaType() == MetaTypes::Unit)
     {

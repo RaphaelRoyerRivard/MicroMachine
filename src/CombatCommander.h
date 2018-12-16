@@ -19,6 +19,7 @@ class CombatCommander
 	std::map<Unit, std::pair<CCPosition, uint32_t>> m_invisibleSighting;
 	std::vector<std::vector<float>> m_groundInfluenceMap;
 	std::vector<std::vector<float>> m_airInfluenceMap;
+	std::vector<std::vector<bool>> m_blockedTiles;
 	std::map<sc2::UNIT_TYPEID, float> totalDamage;
 	std::map<sc2::UNIT_TYPEID, float> totalhealthLoss;
 	
@@ -56,7 +57,9 @@ class CombatCommander
 	void			updateAirInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
 	void			updateInfluenceMap(const float dps, const float range, const float speed, const CCPosition & position, const bool ground);
+	void			updateBlockedTilesWithUnit(const Unit& unit);
 	void			drawInfluenceMaps();
+	void			drawBlockedTiles();
 	void			drawDamageHealthRatio();
 
 public:
@@ -74,6 +77,7 @@ public:
 
 	const std::vector<std::vector<float>> & getGroundInfluenceMap() const { return m_groundInfluenceMap; }
 	const std::vector<std::vector<float>> & getAirInfluenceMap() const { return m_airInfluenceMap; }
+	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
 
     void drawSquadInformation();
 };

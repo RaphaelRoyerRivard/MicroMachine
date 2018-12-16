@@ -45,7 +45,7 @@ public:
     TechTree(CCBot & bot);
     void onStart();
 
-    const TypeData & getData(const UnitType & type) const;
+    const TypeData & getData(const UnitType & type);
     const TypeData & getData(const CCUpgrade & type) const;
-    const TypeData & getData(const MetaType & type) const;
+    const TypeData & getData(const MetaType & type);
 };

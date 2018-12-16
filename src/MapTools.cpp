@@ -342,6 +342,11 @@ void MapTools::drawLine(const CCPosition & p1, const CCPosition & p2, const CCCo
 #endif
 }
 
+void MapTools::drawTile(const CCTilePosition& tilePosition, const CCColor & color) const
+{
+	drawTile(tilePosition.x, tilePosition.y, color);
+}
+
 void MapTools::drawTile(int tileX, int tileY, const CCColor & color) const
 {
     CCPositionType px = Util::TileToPosition((float)tileX) + Util::TileToPosition(0.1f);

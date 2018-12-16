@@ -49,6 +49,7 @@ BotConfig::BotConfig()
 	DrawUnitID = false;
 	DrawProfilingInfo = false;
 	DrawInfluenceMaps = false;
+	DrawBlockedTiles = false;
 	DrawRepairStation = false;
 	DrawDamageHealthRatio = false;
 
@@ -204,6 +205,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawUnitID", debug, DrawUnitID);
 			JSONTools::ReadBool("DrawProfilingInfo", debug, DrawProfilingInfo);
 			JSONTools::ReadBool("DrawInfluenceMaps", debug, DrawInfluenceMaps);
+			JSONTools::ReadBool("DrawBlockedTiles", debug, DrawBlockedTiles);
 			JSONTools::ReadBool("DrawRepairStation", debug, DrawRepairStation);
 			JSONTools::ReadBool("DrawDamageHealthRatio", debug, DrawDamageHealthRatio);
 		}

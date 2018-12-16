@@ -18,6 +18,8 @@ const float MainAttackMaxRegroupDuration = 100; //Max number of frames allowed f
 const float MainAttackRegroupCooldown = 200;	//Min number of frames required to wait between regroup orders
 const float MainAttackMinRetreatDuration = 50;	//Max number of frames allowed for a regroup order
 
+const size_t BLOCKED_TILES_UPDATE_FREQUENCY = 24;
+
 CombatCommander::CombatCommander(CCBot & bot)
     : m_bot(bot)
     , m_squadData(bot)
@@ -134,7 +136,7 @@ void CombatCommander::increaseTotalDamage(float damageDealt, sc2::UNIT_TYPEID un
 	}
 	if (totalDamage.find(unittype) == totalDamage.end())
 	{
-		totalDamage.insert(std::pair<sc2::UNIT_TYPEID, float>(unittype, 0));
+		totalDamage.insert_or_assign(unittype, 0);
 	}
 	totalDamage.at(unittype) += damageDealt;
 }
@@ -147,7 +149,7 @@ void CombatCommander::increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID
 	}
 	if (totalhealthLoss.find(unittype) == totalhealthLoss.end())
 	{
-		totalhealthLoss.insert(std::pair<sc2::UNIT_TYPEID, float>(unittype, 0));
+		totalhealthLoss.insert_or_assign(unittype, 0);
 	}
 	totalhealthLoss.at(unittype) += healthLoss;
 }
@@ -163,16 +165,20 @@ void CombatCommander::initInfluenceMaps()
 	const size_t mapHeight = m_bot.Map().height();
 	m_groundInfluenceMap.resize(mapWidth);
 	m_airInfluenceMap.resize(mapWidth);
+	m_blockedTiles.resize(mapWidth);
 	for(size_t x = 0; x < mapWidth; ++x)
 	{
 		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
 		auto& airInfluenceMapRow = m_airInfluenceMap[x];
+		auto& blockedTilesRow = m_blockedTiles[x];
 		groundInfluenceMapRow.resize(mapHeight);
 		airInfluenceMapRow.resize(mapHeight);
+		blockedTilesRow.resize(mapHeight);
 		for (size_t y = 0; y < mapHeight; ++y)
 		{
 			groundInfluenceMapRow[y] = 0;
 			airInfluenceMapRow[y] = 0;
+			blockedTilesRow[y] = false;
 		}
 	}
 }
@@ -181,14 +187,18 @@ void CombatCommander::resetInfluenceMaps()
 {
 	const size_t mapWidth = m_bot.Map().width();
 	const size_t mapHeight = m_bot.Map().height();
+	const bool resetBlockedTiles = m_bot.GetGameLoop() % BLOCKED_TILES_UPDATE_FREQUENCY == 0;
 	for (size_t x = 0; x < mapWidth; ++x)
 	{
 		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
 		auto& airInfluenceMapRow = m_airInfluenceMap[x];
+		auto& blockedTilesRow = m_blockedTiles[x];
 		for (size_t y = 0; y < mapHeight; ++y)
 		{
 			groundInfluenceMapRow[y] = 0;
 			airInfluenceMapRow[y] = 0;
+			if(resetBlockedTiles)
+				blockedTilesRow[y] = false;
 		}
 	}
 }
@@ -210,10 +220,17 @@ void CombatCommander::updateInfluenceMaps()
 		drawInfluenceMaps();
 		m_bot.StopProfiling("0.10.4.0.4      drawInfluenceMaps");
 	}
+	if (m_bot.Config().DrawBlockedTiles)
+	{
+		m_bot.StartProfiling("0.10.4.0.5      drawBlockedTiles");
+		drawBlockedTiles();
+		m_bot.StopProfiling("0.10.4.0.5      drawBlockedTiles");
+	}
 }
 
 void CombatCommander::updateInfluenceMapsWithUnits()
 {
+	const bool updateBlockedTiles = m_bot.GetGameLoop() % BLOCKED_TILES_UPDATE_FREQUENCY == 0;
 	for (auto& enemyUnit : m_bot.GetKnownEnemyUnits())
 	{
 		auto& enemyUnitType = enemyUnit.getType();
@@ -222,9 +239,25 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 			updateGroundInfluenceMapForUnit(enemyUnit);
 			updateAirInfluenceMapForUnit(enemyUnit);
 		}
-		else
+		if(updateBlockedTiles && enemyUnitType.isBuilding() && !enemyUnit.isFlying() && enemyUnit.getUnitPtr()->unit_type != sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
 		{
-			//TODO ground units cannot move through non flying buildings
+			updateBlockedTilesWithUnit(enemyUnit);
+		}
+	}
+	if(updateBlockedTiles)
+	{
+		for (auto& allyUnitPair : m_bot.GetAllyUnits())
+		{
+			auto& allyUnit = allyUnitPair.second;
+			if (allyUnit.getType().isBuilding() && !allyUnit.isFlying() && allyUnit.getUnitPtr()->unit_type != sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
+			{
+				updateBlockedTilesWithUnit(allyUnit);
+			}
+		}
+		for (auto& neutralUnitPair : m_bot.GetNeutralUnits())
+		{
+			auto& neutralUnit = neutralUnitPair.second;
+			updateBlockedTilesWithUnit(neutralUnit);
 		}
 	}
 }
@@ -371,6 +404,39 @@ void CombatCommander::updateInfluenceMap(const float dps, const float range, con
 	}
 }
 
+void CombatCommander::updateBlockedTilesWithUnit(const Unit& unit)
+{
+	const CCTilePosition centerTile = Util::GetTilePosition(unit.getPosition());
+	const int size = floor(unit.getUnitPtr()->radius * 2);
+	const int flooredHalfSize = floor(size / 2.f);
+	const int ceiledHalfSize = ceil(size / 2.f);
+	int minX = centerTile.x - flooredHalfSize;
+	const int maxX = centerTile.x + ceiledHalfSize;
+	int minY = centerTile.y - flooredHalfSize;
+	const int maxY = centerTile.y + ceiledHalfSize;
+
+	//special cases
+	if (unit.getType().isAttackingBuilding())
+	{
+		//attacking buildings have a smaller radius, so we must increase the min to cover more tiles
+		minX = centerTile.x - ceiledHalfSize;
+		minY = centerTile.y - ceiledHalfSize;
+	}
+	else if (unit.getType().isMineral())
+	{
+		//minerals are rectangles instead of squares
+		minY = centerTile.y;
+	}
+
+	for(int x = minX; x < maxX; ++x)
+	{
+		for(int y = minY; y < maxY; ++y)
+		{
+			m_blockedTiles[x][y] = true;
+		}
+	}
+}
+
 void CombatCommander::drawInfluenceMaps()
 {
 	const size_t mapWidth = m_bot.Map().width();
@@ -385,6 +451,21 @@ void CombatCommander::drawInfluenceMaps()
 				m_bot.Map().drawTile(x, y, CCColor(255, 255 - std::min(255.f, std::max(0.f, groundInfluenceMapRow[y] * 5)), 0));
 			if (airInfluenceMapRow[y] > 0.f)
 				m_bot.Map().drawCircle(CCPosition(x + 0.5f, y + 0.5f), 0.5f, CCColor(255, 255 - std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5)), 0));
+		}
+	}
+}
+
+void CombatCommander::drawBlockedTiles()
+{
+	const size_t mapWidth = m_bot.Map().width();
+	const size_t mapHeight = m_bot.Map().height();
+	for (size_t x = 0; x < mapWidth; ++x)
+	{
+		auto& blockedTilesRow = m_blockedTiles[x];
+		for (size_t y = 0; y < mapHeight; ++y)
+		{
+			if (blockedTilesRow[y])
+				m_bot.Map().drawTile(x, y, sc2::Colors::Red);
 		}
 	}
 }

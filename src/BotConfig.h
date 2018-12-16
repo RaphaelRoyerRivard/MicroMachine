@@ -59,6 +59,7 @@ public:
 	bool DrawUnitID;
 	bool DrawProfilingInfo;
 	bool DrawInfluenceMaps;
+	bool DrawBlockedTiles;
 	bool DrawRepairStation;
 	bool DrawDamageHealthRatio;
     

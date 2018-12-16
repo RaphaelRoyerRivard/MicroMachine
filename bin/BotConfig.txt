@@ -23,7 +23,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "FractureLE.SC2Map",
+        "MapFile"                   : "PortAleksanderLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -96,6 +96,7 @@
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : false,
         "DrawInfluenceMaps"         : false,
+        "DrawBlockedTiles"          : true,
 		"DrawRepairStation"			: true,
 		"DrawDamageHealthRatio"		: true
     },
