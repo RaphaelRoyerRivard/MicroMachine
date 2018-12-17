@@ -25,8 +25,15 @@ void BuildingManager::onFirstFrame()
 	std::list<CCTilePosition> checkedTiles;
 	FindRampTiles(rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
 	FindMainRamp(rampTiles);
-	auto tilesToBlock = FindRampTilesToPlaceBuilding(rampTiles);
-	PlaceSupplyDepots(tilesToBlock);
+
+	//Prevents crash when running in Release, will still crash in Debug. 
+#if !_DEBUG
+	if(rampTiles.size() > 0)
+#endif
+	{
+		auto tilesToBlock = FindRampTilesToPlaceBuilding(rampTiles);
+		PlaceSupplyDepots(tilesToBlock);
+	}
 }
 
 // gets called every frame from GameCommander
@@ -93,6 +100,27 @@ void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::l
 			int downHeight = m_bot.Map().terrainHeight(currentTile.x - 1, currentTile.y);
 			int rightHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y + 1);
 			int leftHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y - 1);
+
+			if (tileHeight != 5)
+			{
+				auto b = 1;
+			}
+			if (topHeight != 5)
+			{
+				auto b = 1;
+			}
+			if (downHeight != 5)
+			{
+				auto b = 1;
+			}
+			if (rightHeight != 5)
+			{
+				auto b = 1;
+			}
+			if (leftHeight != 5)
+			{
+				auto b = 1;
+			}
 
 			//Ramps tiles are 1 lower
 			if (topHeight + 1 == tileHeight || downHeight + 1 == tileHeight || rightHeight + 1 == tileHeight || leftHeight + 1 == tileHeight)
