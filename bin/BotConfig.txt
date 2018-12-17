@@ -93,7 +93,7 @@
         "DrawFSMStateInfo"          : false,
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
-        "DrawUnitID"            	: true,
+        "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : false,
         "DrawInfluenceMaps"         : false,
 		"DrawRepairStation"			: true,
