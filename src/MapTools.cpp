@@ -342,16 +342,18 @@ void MapTools::drawLine(const CCPosition & p1, const CCPosition & p2, const CCCo
 #endif
 }
 
-void MapTools::drawTile(const CCTilePosition& tilePosition, const CCColor & color) const
+void MapTools::drawTile(const CCTilePosition& tilePosition, const CCColor & color, float size) const
 {
-	drawTile(tilePosition.x, tilePosition.y, color);
+	drawTile(tilePosition.x, tilePosition.y, color, size);
 }
 
-void MapTools::drawTile(int tileX, int tileY, const CCColor & color) const
+void MapTools::drawTile(int tileX, int tileY, const CCColor & color, float size) const
 {
-    CCPositionType px = Util::TileToPosition((float)tileX) + Util::TileToPosition(0.1f);
-    CCPositionType py = Util::TileToPosition((float)tileY) + Util::TileToPosition(0.1f);
-    CCPositionType d  = Util::TileToPosition(0.8f);
+	size = std::min(1.f, std::max(0.f, size));
+	const float margin = (1.f - size) / 2;
+    CCPositionType px = Util::TileToPosition((float)tileX) + Util::TileToPosition(margin);
+    CCPositionType py = Util::TileToPosition((float)tileY) + Util::TileToPosition(margin);
+    CCPositionType d  = Util::TileToPosition(size);
 
     drawLine(px,     py,     px + d, py,     color);
     drawLine(px + d, py,     px + d, py + d, color);
