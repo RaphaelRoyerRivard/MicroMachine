@@ -1256,7 +1256,6 @@ CCPosition CombatCommander::getMainAttackLocation()
 	if(!m_bot.Strategy().shouldFocusBuildings())
 	{
 		m_bot.Actions()->SendChat("Looks like you lost your main base, time to conceed? :)");
-		m_bot.Actions()->SendChat("Entering Derp mode... sorry for the glitches to come");
 		m_bot.Strategy().setFocusBuildings(true);
 	}
 
