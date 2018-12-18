@@ -645,6 +645,9 @@ void MapTools::draw() const
                 if (isWalkable(x, y) && !isBuildable(x, y)) { color = CCColor(255, 255, 0); }
                 if (isBuildable(x, y) && !isDepotBuildableTile(x, y)) { color = CCColor(127, 255, 255); }
                 drawTile(x, y, color);
+				std::string terrainHeight(16, '\0');
+				std::snprintf(&terrainHeight[0], terrainHeight.size(), "%.2f", m_bot.Map().terrainHeight(x, y));
+				m_bot.Map().drawText(CCPosition(x, y), terrainHeight, m_bot.Observation()->IsPathable(CCPosition(x, y)) ? sc2::Colors::Green : sc2::Colors::Red);
             }
         }
     }

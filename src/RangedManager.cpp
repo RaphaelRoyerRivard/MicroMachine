@@ -33,6 +33,8 @@ const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_COOLDOWN = 314;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 80;
+const float CLIFF_MIN_HEIGHT_DIFFERENCE = 1.f;
+const float CLIFF_MAX_HEIGHT_DIFFERENCE = 2.5f;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
@@ -217,38 +219,11 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	CCPosition goal = m_order.getPosition();
 
-	UnitType unitType(rangedUnit->unit_type, m_bot);
-	bool unitShouldHeal = false;
-	if (unitType.shouldRepair())
+	const bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
+	if (unitShouldHeal)
 	{
-		auto it = unitsBeingRepaired.find(rangedUnit);
-		if (it != unitsBeingRepaired.end())
-		{
-			if (rangedUnit->health != rangedUnit->health_max)
-			{
-				unitShouldHeal = true;
-			}
-			else
-			{
-				unitsBeingRepaired.erase(rangedUnit);
-			}
-		}
-		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE)
-		{
-			unitShouldHeal = true;
-			unitsBeingRepaired.insert(rangedUnit);
-		}
+		goal = isReaper ? CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f : Util::GetPosition(m_bot.Bases().getClosestBasePosition(rangedUnit));
 	}
-
-	// if the reaper is damaged, go to center of the map
-	const bool reaperShouldHeal = isReaper && rangedUnit->health / rangedUnit->health_max < 0.66f;
-	if (reaperShouldHeal)
-	{
-		goal = CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f;
-		unitShouldHeal = true;
-	}
-	else if (unitShouldHeal)
-		goal = Util::GetPosition(m_bot.Bases().getClosestBasePosition(rangedUnit));
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
 
@@ -432,7 +407,7 @@ bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit) const
 	return m_bot.GetGameLoop() >= availableFrame;
 }
 
-void RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats)
+void RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats) const
 {
 	//TODO consider detectors
 	if (!threats.empty() && banshee->cloak == sc2::Unit::NotCloaked && banshee->energy > 50.f)
@@ -443,6 +418,36 @@ void RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Uni
 	}
 	/*else if(threats.empty() && banshee->cloak == sc2::Unit::Cloaked)
 	Micro::SmartAbility(banshee, sc2::ABILITY_ID::BEHAVIOR_CLOAKOFF, m_bot);*/
+}
+
+bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
+{
+	UnitType unitType(rangedUnit->unit_type, m_bot);
+	if (unitType.isRepairable())
+	{
+		const auto it = unitsBeingRepaired.find(rangedUnit);
+		//If unit is being repaired
+		if (it != unitsBeingRepaired.end())
+		{
+			//and is not fully repaired
+			if (rangedUnit->health != rangedUnit->health_max)
+			{
+				return true;
+			}
+			else
+			{
+				unitsBeingRepaired.erase(rangedUnit);
+			}
+		}
+		//if unit is damaged enough to go back for repair
+		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE)
+		{
+			unitsBeingRepaired.insert(rangedUnit);
+			return true;
+		}
+	}
+
+	return rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.66f;
 }
 
 bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target)
@@ -1119,12 +1124,15 @@ bool RangedManager::IsNeighborNodeValid(int x, int y, IMNode* currentNode, const
 			if (rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_REAPER)
 				return false;	// unwalkable tile check
 
-			const CCTilePosition furtherTile(currentNode->position.x + 2 * x, currentNode->position.y + 2 * y);
+			if (!m_bot.Map().isWalkable(currentNode->position))
+				return false;	// maybe the reaper is already on an unpathable tile
+
+			const CCTilePosition furtherTile(neighborPosition.x + x, neighborPosition.y + y);
 			if (!m_bot.Map().isWalkable(furtherTile))
 				return false;	// unwalkable next tile check
 
 			const float heightDiff = abs(m_bot.Map().terrainHeight(currentNode->position.x, currentNode->position.y) - m_bot.Map().terrainHeight(furtherTile.x, furtherTile.y));
-			if (heightDiff < 1.f || heightDiff > 10.f)
+			if (heightDiff < CLIFF_MIN_HEIGHT_DIFFERENCE || heightDiff > CLIFF_MAX_HEIGHT_DIFFERENCE)
 				return false;	// unjumpable cliff check
 
 			// TODO neighbor tile will need to have the furtherTile position, while also using cost of both tiles
@@ -1141,7 +1149,7 @@ CCPosition RangedManager::GetCommandPositionFromPath(IMNode* currentNode, const 
 	{
 		const CCPosition currentPosition = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
 		if (m_bot.Config().DrawHarassInfo)
-			m_bot.Map().drawCircle(currentPosition, 1.f, sc2::Colors::Teal);
+			m_bot.Map().drawTile(Util::GetTilePosition(currentPosition), sc2::Colors::Teal, 0.2f);
 		//we want to retun a node close to the current position
 		if (Util::DistSq(currentPosition, rangedUnit->pos) <= 3.f * 3.f && returnPos == CCPosition(0, 0))
 			returnPos = currentPosition;
@@ -1152,13 +1160,14 @@ CCPosition RangedManager::GetCommandPositionFromPath(IMNode* currentNode, const 
 		std::cout << "returnPos is null" << std::endl;
 	else if(rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
 	{
+		//We need to click far enough to jump cliffs
 		const float squareDistance = Util::DistSq(rangedUnit->pos, returnPos);
 		const float terrainHeightDiff = abs(m_bot.Map().terrainHeight(rangedUnit->pos.x, rangedUnit->pos.y) - m_bot.Map().terrainHeight(returnPos.x, returnPos.y));
-		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > 2.5f)
+		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > CLIFF_MIN_HEIGHT_DIFFERENCE)
 			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
 	}
 	if (m_bot.Config().DrawHarassInfo)
-		m_bot.Map().drawCircle(returnPos, 0.8f, sc2::Colors::Purple);
+		m_bot.Map().drawTile(Util::GetTilePosition(returnPos), sc2::Colors::Purple, 0.3f);
 	return returnPos;
 }
 

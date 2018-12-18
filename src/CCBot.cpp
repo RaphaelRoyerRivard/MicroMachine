@@ -720,7 +720,7 @@ void CCBot::drawProfilingInfo()
 				queue.pop_back();
 			}
 		}
-		m_map.drawTextScreen(0.45f, 0.01f, profilingInfo);
+		m_map.drawTextScreen(0.79f, 0.1f, profilingInfo);
 	}
 }
 
