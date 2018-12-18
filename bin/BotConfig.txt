@@ -23,7 +23,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "AutomatonLE.SC2Map",
+        "MapFile"                   : "ParasiteLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -75,7 +75,7 @@
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
         "DrawBaseLocationInfo"      : false,
-        "DrawStartingRamp"		    : true,
+        "DrawStartingRamp"		    : false,
         "DrawWall"		   			: false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,

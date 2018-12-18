@@ -25,8 +25,15 @@ void BuildingManager::onFirstFrame()
 	std::list<CCTilePosition> checkedTiles;
 	FindRampTiles(rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
 	FindMainRamp(rampTiles);
-	auto tilesToBlock = FindRampTilesToPlaceBuilding(rampTiles);
-	PlaceSupplyDepots(tilesToBlock);
+
+	//Prevents crash when running in Release, will still crash in Debug. 
+#if !_DEBUG
+	if(rampTiles.size() > 0)
+#endif
+	{
+		auto tilesToBlock = FindRampTilesToPlaceBuilding(rampTiles);
+		PlaceSupplyDepots(tilesToBlock);
+	}
 }
 
 // gets called every frame from GameCommander
@@ -87,15 +94,20 @@ void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::l
 		}
 		else
 		{
-			int tileHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y);
+			float tileHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y);
 
-			int topHeight = m_bot.Map().terrainHeight(currentTile.x + 1, currentTile.y);
-			int downHeight = m_bot.Map().terrainHeight(currentTile.x - 1, currentTile.y);
-			int rightHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y + 1);
-			int leftHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y - 1);
+			float topHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x + 1, currentTile.y);
+			float downHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x - 1, currentTile.y);
+			float rightHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x, currentTile.y + 1);
+			float leftHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x, currentTile.y - 1);
+
+			bool topIsLower = (isgreaterequal(topHeightDiff, 0.5f) && isgreaterequal(1.f, topHeightDiff));
+			bool downIsLower = (isgreaterequal(downHeightDiff, 0.5f) && isgreaterequal(1.f, downHeightDiff));
+			bool rightIsLower = (isgreaterequal(rightHeightDiff, 0.5f) && isgreaterequal(1.f, rightHeightDiff));
+			bool leftIsLower = (isgreaterequal(leftHeightDiff, 0.5f) && isgreaterequal(1.f, leftHeightDiff));
 
 			//Ramps tiles are 1 lower
-			if (topHeight + 1 == tileHeight || downHeight + 1 == tileHeight || rightHeight + 1 == tileHeight || leftHeight + 1 == tileHeight)
+			if (topIsLower || downIsLower || rightIsLower || leftIsLower)
 			{
 				rampTiles.push_back(currentTile);
 			}
