@@ -1402,8 +1402,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 	if (target->cloak == sc2::Unit::CloakedDetected)
 		invisModifier = 2.f;
 	else if (target->is_burrowed &&
-		(target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED ||
-		target->unit_type != sc2::UNIT_TYPEID::ZERG_BANELINGBURROWED ||
+		(target->unit_type != sc2::UNIT_TYPEID::ZERG_BANELINGBURROWED ||
 		target->unit_type != sc2::UNIT_TYPEID::ZERG_ROACHBURROWED))
 		invisModifier = 2.f;
 	

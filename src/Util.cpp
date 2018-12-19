@@ -363,6 +363,10 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 		if (where != sc2::Weapon::TargetType::Air)
 			range = 4.f;
 	}
+	else if(unitType == sc2::UNIT_TYPEID::PROTOSS_CARRIER)
+	{
+		range = 8.f;
+	}
 
 	return range;
 }
@@ -582,6 +586,10 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	{
 		if (where != sc2::Weapon::TargetType::Air)
 			dps = 13.7f;
+	}
+	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_CARRIER)
+	{
+		dps = 37.4f;
 	}
 
     return dps;
