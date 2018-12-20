@@ -185,6 +185,11 @@ void BaseLocationManager::onFrame()
 {   
     drawBaseLocations();
 
+	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
+	{
+		FixNullPlayerStartingBaseLocation();
+	}
+
     // reset the player occupation information for each location
     for (auto & baseLocation : m_baseLocationData)
     {
@@ -334,30 +339,34 @@ const std::vector<const BaseLocation *> & BaseLocationManager::getStartingBaseLo
 
 const BaseLocation * BaseLocationManager::getPlayerStartingBaseLocation(int player) const
 {
-	const BaseLocation * startBase = m_playerStartingBaseLocations.at(player);
-	if (player == Players::Self && startBase == nullptr)
+    return m_playerStartingBaseLocations.at(player);
+}
+
+void BaseLocationManager::FixNullPlayerStartingBaseLocation()
+{
+	const BaseLocation * startBase = m_playerStartingBaseLocations.at(Players::Self);
+	if (startBase == nullptr)
 	{
 		m_bot.Actions()->SendChat("[ERROR] Invalid setup detected. 0x0000001");
-		for (auto & baselocation : getBaseLocations())
+		for (auto & baseLocation : m_baseLocationData)
 		{
-			if (baselocation->isPlayerStartLocation(Players::Self))
+			if (baseLocation.isPlayerStartLocation(Players::Self))
 			{
 				m_bot.Actions()->SendChat("[FIXED] Error was fixed. 0x0000001 : 0x0000000");
-				m_playerStartingBaseLocations[Players::Self] = baselocation;
-				return baselocation;
+				m_playerStartingBaseLocations[Players::Self] = &baseLocation;
+				return;
 			}
 		}
-		for (auto & baselocation : getBaseLocations())
+		for (auto & baseLocation : m_baseLocationData)
 		{
-			if (baselocation->isOccupiedByPlayer(Players::Self))
+			if (baseLocation.isOccupiedByPlayer(Players::Self))
 			{
 				m_bot.Actions()->SendChat("[FIXED] Error was fixed. 0x0000001 : 0x0000001");
-				m_playerStartingBaseLocations[Players::Self] = baselocation;
-				return baselocation;
+				m_playerStartingBaseLocations[Players::Self] = &baseLocation;
+				return;
 			}
 		}
 	}
-    return startBase;
 }
 
 const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocations(int player) const
