@@ -77,9 +77,6 @@ void ProductionManager::onStart()
 
 void ProductionManager::onFrame()
 {
-	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
-		return;
-
 	m_bot.StartProfiling("1.0 lowPriorityChecks");
 	lowPriorityChecks();
 	m_bot.StopProfiling("1.0 lowPriorityChecks");
@@ -231,7 +228,7 @@ void ProductionManager::manageBuildOrderQueue()
 			// is a building (doesn't include addons, because no travel time) and we can make it soon
 			if (m_bot.Data(currentItem.type).isBuilding && !m_bot.Data(currentItem.type).isAddon && !currentItem.type.getUnitType().isMorphedBuilding() && meetsReservedResourcesWithExtra(currentItem.type))
 			{
-				Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
+				Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
 				CCTilePosition targetLocation = m_bot.Buildings().getBuildingLocation(b);
 				if (targetLocation != CCTilePosition(0, 0))
 				{

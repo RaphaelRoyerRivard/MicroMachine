@@ -114,6 +114,10 @@ void BaseLocationManager::onStart()
             m_playerStartingBaseLocations[Players::Enemy] = &baseLocation;
         }
     }
+	if (m_playerStartingBaseLocations[Players::Self] == nullptr)//Player start base location not found
+	{
+		m_bot.Actions()->SendChat("[ERROR] Invalid setup detected. 0x0000000");
+	}
 
 	//Sorting base locations from closest to opponent's starting base to farthest
 	struct SortClosestToOpponentStartingLocation
@@ -330,7 +334,19 @@ const std::vector<const BaseLocation *> & BaseLocationManager::getStartingBaseLo
 
 const BaseLocation * BaseLocationManager::getPlayerStartingBaseLocation(int player) const
 {
-    return m_playerStartingBaseLocations.at(player);
+	const BaseLocation * startBase = m_playerStartingBaseLocations.at(player);
+	if (player == Players::Self && startBase == nullptr)
+	{
+		m_bot.Actions()->SendChat("[ERROR] Invalid setup detected. 0x0000001");
+		/*for (auto unit : m_bot.GetAllyUnits())
+		{
+			if (unit.second.getType().isResourceDepot())
+			{
+				m_playerStartingBaseLocations[Players::Self] = nullptr;
+			}
+		}*/
+	}
+    return startBase;
 }
 
 const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocations(int player) const

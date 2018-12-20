@@ -38,6 +38,8 @@ class CCBot
     BotConfig               m_config;
     TechTree                m_techTree;
     GameCommander           m_gameCommander;
+	CCPosition				m_startLocation;
+	CCTilePosition			m_buildingArea;
 	std::map<sc2::UNIT_TYPEID, int> m_unitCount;
 	std::map<sc2::UNIT_TYPEID, int> m_unitCompletedCount;
 	std::map<sc2::Tag, Unit> m_allyUnits;
@@ -45,7 +47,7 @@ class CCBot
 	std::map<sc2::Tag, std::pair<CCPosition, uint32_t>> m_lastSeenPosUnits;
 	std::vector<Unit>       m_allUnits;
 	std::vector<Unit>       m_knownEnemyUnits;
-    std::vector<CCPosition> m_baseLocations;
+    std::vector<CCPosition> m_enemyBaseLocations;
 	CCRace selfRace;
 	std::map<std::string, Profiler> m_profilingTimes;
 	std::mutex m_command_mutex;
@@ -98,6 +100,7 @@ public:
     CCRace GetPlayerRace(int player) const;
 	CCRace GetSelfRace() const;
     CCPosition GetStartLocation() const;
+	CCTilePosition GetBuildingArea() const;
 
     int GetCurrentFrame() const;
     int GetMinerals() const;
@@ -111,7 +114,7 @@ public:
 	std::map<sc2::Tag, Unit> CCBot::GetAllyUnits(sc2::UNIT_TYPEID type);
 	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
-    const std::vector<CCPosition> & GetStartLocations() const;
+    const std::vector<CCPosition> & GetEnemyStartLocations() const;
 	void StartProfiling(const std::string & profilerName);
 	void StopProfiling(const std::string & profilerName);
 	std::mutex & GetCommandMutex();

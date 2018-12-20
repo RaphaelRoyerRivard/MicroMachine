@@ -38,9 +38,10 @@ void CCBot::OnGameStart() //full start
 #ifdef SC2API
     for (auto & loc : Observation()->GetGameInfo().enemy_start_locations)
     {
-        m_baseLocations.push_back(loc);
+        m_enemyBaseLocations.push_back(loc);
     }
-    m_baseLocations.push_back(Observation()->GetStartLocation());
+	m_startLocation = Observation()->GetStartLocation();
+	m_buildingArea = Util::GetTilePosition(m_startLocation);
 #else
     for (auto & loc : BWAPI::Broodwar->getStartLocations())
     {
@@ -540,15 +541,20 @@ const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
 CCPosition CCBot::GetStartLocation() const
 {
 #ifdef SC2API
-    return Observation()->GetStartLocation();
+    return m_startLocation;
 #else
     return BWAPI::Position(BWAPI::Broodwar->self()->getStartLocation());
 #endif
 }
 
-const std::vector<CCPosition> & CCBot::GetStartLocations() const
+CCTilePosition CCBot::GetBuildingArea() const
 {
-    return m_baseLocations;
+	return m_buildingArea;
+}
+
+const std::vector<CCPosition> & CCBot::GetEnemyStartLocations() const
+{
+    return m_enemyBaseLocations;
 }
 
 #ifdef SC2API
