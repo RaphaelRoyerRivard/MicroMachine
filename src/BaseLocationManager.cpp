@@ -338,13 +338,24 @@ const BaseLocation * BaseLocationManager::getPlayerStartingBaseLocation(int play
 	if (player == Players::Self && startBase == nullptr)
 	{
 		m_bot.Actions()->SendChat("[ERROR] Invalid setup detected. 0x0000001");
-		/*for (auto unit : m_bot.GetAllyUnits())
+		for (auto & baselocation : getBaseLocations())
 		{
-			if (unit.second.getType().isResourceDepot())
+			if (baselocation->isPlayerStartLocation(Players::Self))
 			{
-				m_playerStartingBaseLocations[Players::Self] = nullptr;
+				m_bot.Actions()->SendChat("[FIXED] Error was fixed. 0x0000001 : 0x0000000");
+				m_playerStartingBaseLocations[Players::Self] = baselocation;
+				return baselocation;
 			}
-		}*/
+		}
+		for (auto & baselocation : getBaseLocations())
+		{
+			if (baselocation->isOccupiedByPlayer(Players::Self))
+			{
+				m_bot.Actions()->SendChat("[FIXED] Error was fixed. 0x0000001 : 0x0000001");
+				m_playerStartingBaseLocations[Players::Self] = baselocation;
+				return baselocation;
+			}
+		}
 	}
     return startBase;
 }
