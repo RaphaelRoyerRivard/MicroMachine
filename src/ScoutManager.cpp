@@ -184,5 +184,5 @@ bool ScoutManager::enemyWorkerInRadiusOf(const CCPosition & pos) const
 CCPosition ScoutManager::getFleePosition() const
 {
     // TODO: make this follow the perimeter of the enemy base again, but for now just use home base as flee direction
-    return m_bot.GetStartLocation();
+    return Util::GetPosition(m_bot.Bases().getClosestBasePosition(m_scoutUnit.getUnitPtr()));
 }

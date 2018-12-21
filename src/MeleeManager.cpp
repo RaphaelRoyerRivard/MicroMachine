@@ -38,7 +38,7 @@ void MeleeManager::executeMicro()
             // run away if we meet the retreat critereon
             if (meleeUnitShouldRetreat(meleeUnit, m_targets))
             {
-                CCPosition fleeTo(m_bot.GetStartLocation());
+                CCPosition fleeTo(Util::GetPosition(m_bot.Bases().getClosestBasePosition(meleeUnit.getUnitPtr())));
 
                 meleeUnit.move(fleeTo);
             }

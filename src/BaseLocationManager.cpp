@@ -446,7 +446,9 @@ CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
 
 CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player) const
 {
-	CCTilePosition closestBase;
+	const int mapWidth = m_bot.Map().width();
+	const int mapHeight = m_bot.Map().height();
+	CCTilePosition closestBase(mapWidth / 2.f, mapHeight / 2.f);
 	float minDistance = 0.f;
 	for (auto & base : m_baseLocationData)
 	{
