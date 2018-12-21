@@ -21,6 +21,7 @@ const float HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE = 10.f;
 const float HARASS_FRIENDLY_ATTRACTION_INTENSITY = 1.5f;
 const float HARASS_FRIENDLY_REPULSION_MIN_DISTANCE = 5.f;
 const float HARASS_FRIENDLY_REPULSION_INTENSITY = 1.f;
+const float HARASS_MIN_RANGE_DIFFERENCE_FOR_TARGET = 2.f;
 const float HARASS_THREAT_MIN_DISTANCE_TO_TARGET = 2.f;
 const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
@@ -1320,6 +1321,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     {
         BOT_ASSERT(target, "null target unit in getTarget");
 
+		// We don't want to target an enemy in the fog (sometimes it could be good, but often it isn't)
 		if (target->last_seen_game_loop != m_bot.GetGameLoop())
 			continue;
 
@@ -1327,25 +1329,26 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		{
 			const float unitRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 			const float targetRange = Util::GetAttackRangeForTarget(target, rangedUnit, m_bot);
-			if (unitRange > targetRange + 2.f)
+			// If the target has too much range, we don't even consider it
+			if (unitRange < targetRange + HARASS_MIN_RANGE_DIFFERENCE_FOR_TARGET)
+				continue;
+			// We do not want to target units surrounded by ranged units with our harass units 
+			// TODO change this so we can check if there is a safe spot around the unit with the influence map
+			bool threatTooClose = false;
+			for (auto otherTarget : targets)
 			{
-				// We do not want to target melee units surrounded by ranged units with our harass units 
-				bool threatTooClose = false;
-				for (auto otherTarget : targets)
-				{
-					if (otherTarget == target)
-						continue;
-
-					const float otherTargetRange = Util::GetAttackRangeForTarget(otherTarget, rangedUnit, m_bot);
-					if (otherTargetRange + 2.f > unitRange && Util::DistSq(otherTarget->pos, target->pos) < HARASS_THREAT_MIN_DISTANCE_TO_TARGET * HARASS_THREAT_MIN_DISTANCE_TO_TARGET)
-					{
-						threatTooClose = true;
-						break;
-					}
-				}
-				if (threatTooClose)
+				if (otherTarget == target)
 					continue;
+
+				const float otherTargetRange = Util::GetAttackRangeForTarget(otherTarget, rangedUnit, m_bot);
+				if (otherTargetRange + HARASS_MIN_RANGE_DIFFERENCE_FOR_TARGET > unitRange && Util::DistSq(otherTarget->pos, target->pos) < HARASS_THREAT_MIN_DISTANCE_TO_TARGET * HARASS_THREAT_MIN_DISTANCE_TO_TARGET)
+				{
+					threatTooClose = true;
+					break;
+				}
 			}
+			if (threatTooClose)
+				continue;
 		}
 
         const float priority = getAttackPriority(rangedUnit, target);
@@ -1384,7 +1387,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 
 	if (m_harassMode)
 	{
-		if (targetRange + 2.f > attackerRange)
+		if (targetRange + HARASS_MIN_RANGE_DIFFERENCE_FOR_TARGET > attackerRange)
 			return 0.f;
 	}
 
@@ -1401,9 +1404,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 	float invisModifier = 1.f;
 	if (target->cloak == sc2::Unit::CloakedDetected)
 		invisModifier = 2.f;
-	else if (target->is_burrowed &&
-		(target->unit_type != sc2::UNIT_TYPEID::ZERG_BANELINGBURROWED ||
-		target->unit_type != sc2::UNIT_TYPEID::ZERG_ROACHBURROWED))
+	else if (target->is_burrowed && target->unit_type != sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED)
 		invisModifier = 2.f;
 	
 	Unit targetUnit(target, m_bot);
@@ -1415,12 +1416,13 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
             //We manually reduce the dps of the bunker because it only serve as a shield, units will spawn out of it when destroyed
 			targetDps = 5.f;
         }
-        float workerBonus = targetUnit.getType().isWorker() ? m_harassMode ? 2.f : 1.5f : 1.f;   //workers are important to kill
-		float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;	//targets that cannot hit our unit are less prioritized
-        return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus * nonThreateningModifier * invisModifier;
+        const float workerBonus = targetUnit.getType().isWorker() ? m_harassMode ? 2.f : 1.5f : 1.f;	//workers are important to kill
+		const float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;								//targets that cannot hit our unit are less prioritized
+		const float minionModifier = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR ? 0.1f : 1.f;	//units that can be respawned should be less prioritized
+        return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier;
     }
 
-	return (healthValue + distanceValue * 50) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
+	return (distanceValue * 50 - healthValue) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
 }
 
 // according to http://wiki.teamliquid.net/starcraft2/Range
