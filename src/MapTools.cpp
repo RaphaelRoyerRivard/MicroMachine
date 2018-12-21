@@ -349,6 +349,9 @@ void MapTools::drawTile(const CCTilePosition& tilePosition, const CCColor & colo
 
 void MapTools::drawTile(int tileX, int tileY, const CCColor & color, float size) const
 {
+	if (!isInCameraFrustum(tileX, tileY))
+		return;
+
 	size = std::min(1.f, std::max(0.f, size));
 	const float margin = (1.f - size) / 2;
     CCPositionType px = Util::TileToPosition((float)tileX) + Util::TileToPosition(margin);
@@ -384,30 +387,20 @@ void MapTools::drawBox(const CCPosition & tl, const CCPosition & br, const CCCol
 
 void MapTools::drawCircle(const CCPosition & pos, CCPositionType radius, const CCColor & color) const
 {
-#ifdef SC2API
-    m_bot.Debug()->DebugSphereOut(sc2::Point3D(pos.x, pos.y, m_maxZ), radius, color);
-#else
-    BWAPI::Broodwar->drawCircleMap(pos, radius, color);
-#endif
+	drawCircle(pos.x, pos.y, radius, color);
 }
 
 void MapTools::drawCircle(CCPositionType x, CCPositionType y, CCPositionType radius, const CCColor & color) const
 {
-#ifdef SC2API
-    m_bot.Debug()->DebugSphereOut(sc2::Point3D(x, y, m_maxZ), radius, color);
-#else
-    BWAPI::Broodwar->drawCircleMap(BWAPI::Position(x, y), radius, color);
-#endif
+	if(isInCameraFrustum(x, y))
+		m_bot.Debug()->DebugSphereOut(sc2::Point3D(x, y, m_maxZ), radius, color);
 }
 
 
 void MapTools::drawText(const CCPosition & pos, const std::string & str, const CCColor & color) const
 {
-#ifdef SC2API
-    m_bot.Debug()->DebugTextOut(str, sc2::Point3D(pos.x, pos.y, m_maxZ), color);
-#else
-    BWAPI::Broodwar->drawTextMap(pos, str.c_str());
-#endif
+	if(isInCameraFrustum(pos.x, pos.y))
+		m_bot.Debug()->DebugTextOut(str, sc2::Point3D(pos.x, pos.y, m_maxZ), color);
 }
 
 void MapTools::drawTextScreen(float xPerc, float yPerc, const std::string & str, const CCColor & color) const
@@ -557,6 +550,12 @@ bool MapTools::canWalk(int tileX, int tileY)
 
     return true;
 #endif
+}
+
+bool MapTools::isInCameraFrustum(int x, int y) const
+{
+	const CCPosition camera = m_bot.Observation()->GetCameraPos();
+	return x >= camera.x - 17 && x <= camera.x + 17 && y >= camera.y - 12 && y <= camera.y + 12;
 }
 
 bool MapTools::canBuild(int tileX, int tileY) 
