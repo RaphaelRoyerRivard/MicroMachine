@@ -83,7 +83,7 @@ void CCBot::OnStep()
 {
 	StartProfiling("0 OnStep");	//Do not remove
 	m_gameLoop = Observation()->GetGameLoop();
-
+	
 	StartProfiling("0.1 checkKeyState");
 	checkKeyState();
 	StopProfiling("0.1 checkKeyState");
@@ -328,7 +328,7 @@ uint32_t CCBot::GetGameLoop() const
 	return m_gameLoop;
 }
 
-CCRace CCBot::GetPlayerRace(int player) const
+const CCRace CCBot::GetPlayerRace(int player) const
 {
 #ifdef SC2API
 	if (player == Players::Self)
@@ -366,7 +366,7 @@ CCRace CCBot::GetPlayerRace(int player) const
 #endif
 }
 
-CCRace CCBot::GetSelfRace() const
+const CCRace CCBot::GetSelfRace() const
 {
 	return selfRace;
 }
@@ -538,7 +538,7 @@ const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
 	return m_knownEnemyUnits;
 }
 
-CCPosition CCBot::GetStartLocation() const
+const CCPosition CCBot::GetStartLocation() const
 {
 #ifdef SC2API
     return m_startLocation;
@@ -547,7 +547,7 @@ CCPosition CCBot::GetStartLocation() const
 #endif
 }
 
-CCTilePosition CCBot::GetBuildingArea() const
+const CCTilePosition CCBot::GetBuildingArea() const
 {
 	return m_buildingArea;
 }

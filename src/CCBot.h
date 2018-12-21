@@ -97,10 +97,10 @@ public:
     const TypeData & Data(const MetaType & type) const;
     const TypeData & Data(const Unit & unit) const;
 	uint32_t GetGameLoop() const;
-    CCRace GetPlayerRace(int player) const;
-	CCRace GetSelfRace() const;
-    CCPosition GetStartLocation() const;
-	CCTilePosition GetBuildingArea() const;
+    const CCRace GetPlayerRace(int player) const;
+	const CCRace GetSelfRace() const;
+    const CCPosition GetStartLocation() const;
+	const CCTilePosition GetBuildingArea() const;
 
     int GetCurrentFrame() const;
     int GetMinerals() const;

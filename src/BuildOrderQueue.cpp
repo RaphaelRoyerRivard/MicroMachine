@@ -43,8 +43,6 @@ int BuildOrderQueue::getCountOfType(const MetaType & type)
 	int count = 0;
 	for (auto item : m_queue)
 	{
-		auto a = item.type.getName();
-		auto b = type.getName();
 		if (item.type.getUnitType() == type.getUnitType())
 		{
 			count++;

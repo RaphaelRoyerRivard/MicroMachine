@@ -245,6 +245,10 @@ void ProductionManager::manageBuildOrderQueue()
 						break;
 					}
 				}
+				else
+				{
+					m_bot.Actions()->SendChat("[Warning] Invalid build location. 0x0000002");
+				}
 			}
 		}
 		              

@@ -86,11 +86,13 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     // if this base location position is near our own resource depot, it's our start location
     for (auto & unit : m_bot.GetAllyUnits())
     {
-        if (unit.second.getType().isResourceDepot() && containsPosition(unit.second.getPosition()))
+		CCPosition pos = unit.second.getPosition();
+        if (unit.second.getType().isResourceDepot() && containsPosition(pos))
         {
             m_isPlayerStartLocation[Players::Self] = true;
             m_isStartLocation = true;
             m_isPlayerOccupying[Players::Self] = true;
+			m_depotPosition = Util::GetTilePosition(pos);
             break;
         }
     }
