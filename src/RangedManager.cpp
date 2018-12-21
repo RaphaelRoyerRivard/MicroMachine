@@ -223,13 +223,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
 	if (unitShouldHeal)
 	{
-		goal = isReaper ? CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f : Util::GetPosition(m_bot.Bases().getClosestBasePosition(rangedUnit));
+		goal = isReaper ? CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f : Util::GetPosition(m_bot.Bases().getClosestBasePosition(rangedUnit, Players::Self, true));
 	}
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
 
 	// check if the viking should morph
-	if(isViking && ExecuteVikingMorphLogic(rangedUnit, squaredDistanceToGoal, target))
+	if(isViking && ExecuteVikingMorphLogic(rangedUnit, squaredDistanceToGoal, target, unitShouldHeal))
 	{
 		return;
 	}
@@ -451,10 +451,17 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 	return rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.66f;
 }
 
-bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target)
+bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal)
 {
 	bool morph = false;
-	if (squaredDistanceToGoal < 7.f * 7.f && !target)
+	if(unitShouldHeal && viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+	{
+		m_bot.GetCommandMutex().lock();
+		Micro::SmartAbility(viking, sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE, m_bot);
+		m_bot.GetCommandMutex().unlock();
+		morph = true;
+	}
+	else if (squaredDistanceToGoal < 7.f * 7.f && !target)
 	{
 		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 		{

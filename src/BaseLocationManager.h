@@ -33,6 +33,6 @@ public:
 	const BaseLocation* getNextExpansion(int player, bool checkBuildable = false) const;
 	CCTilePosition getNextExpansionPosition(int player, bool checkBuildable = false) const;
 	CCTilePosition getBasePosition(int player, int index) const;
-	CCTilePosition getClosestBasePosition(const sc2::Unit* unit, int player = Players::Self) const;
+	CCTilePosition getClosestBasePosition(const sc2::Unit* unit, int player = Players::Self, bool shiftTowardsResourceDepot = false) const;
 
 };

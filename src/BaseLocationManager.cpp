@@ -444,7 +444,7 @@ CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
 	return position;
 }
 
-CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player) const
+CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player, bool shiftTowardsResourceDepot) const
 {
 	const int mapWidth = m_bot.Map().width();
 	const int mapHeight = m_bot.Map().height();
@@ -459,7 +459,16 @@ CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit
 		if (minDistance == 0.f || dist < minDistance)
 		{
 			minDistance = dist;
-			closestBase = Util::GetTilePosition(base.getPosition());
+			if (shiftTowardsResourceDepot)
+			{
+				CCPosition vectorTowardsBase = Util::GetPosition(base.getDepotPosition()) - base.getPosition();
+				Util::Normalize(vectorTowardsBase);
+				closestBase = Util::GetTilePosition(base.getPosition() + vectorTowardsBase);
+			}
+			else
+			{
+				closestBase = Util::GetTilePosition(base.getPosition());
+			}
 		}
 	}
 	return closestBase;
