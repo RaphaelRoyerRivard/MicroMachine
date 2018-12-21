@@ -14,6 +14,7 @@ class BaseLocationManager
     std::map<int, const BaseLocation *>             m_playerStartingBaseLocations;
     std::map<int, std::set<const BaseLocation *>>   m_occupiedBaseLocations;
     std::vector<std::vector<BaseLocation *>>        m_tileBaseLocations;
+	bool m_hasPrintedError;
 
 public:
 
