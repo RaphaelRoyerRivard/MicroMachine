@@ -138,7 +138,6 @@ void BuildingManager::FindMainRamp(std::list<CCTilePosition> &rampTiles)
 			mainRamp.push_back(tile);
 		}
 	}
-	auto a = 1;
 }
 
 bool BuildingManager::isBeingBuilt(UnitType type) const

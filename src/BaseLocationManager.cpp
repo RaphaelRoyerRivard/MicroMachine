@@ -14,7 +14,6 @@ void BaseLocationManager::onStart()
     m_tileBaseLocations = std::vector<std::vector<BaseLocation *>>(m_bot.Map().width(), std::vector<BaseLocation *>(m_bot.Map().height(), nullptr));
     m_playerStartingBaseLocations[Players::Self]  = nullptr;
     m_playerStartingBaseLocations[Players::Enemy] = nullptr;
-	m_hasPrintedError = false;
     
     // a BaseLocation will be anything where there are minerals to mine
     // so we will first look over all minerals and cluster them based on some distance
@@ -117,7 +116,7 @@ void BaseLocationManager::onStart()
     }
 	if (m_playerStartingBaseLocations[Players::Self] == nullptr)//Player start base location not found
 	{
-		m_bot.Actions()->SendChat("[ERROR] Invalid setup detected. 0x0000000");
+		Util::DisplayError("Invalid setup detected.", "0x0000000", m_bot);
 	}
 
 	//Sorting base locations from closest to opponent's starting base to farthest
@@ -348,11 +347,7 @@ void BaseLocationManager::FixNullPlayerStartingBaseLocation()
 	const BaseLocation * startBase = m_playerStartingBaseLocations.at(Players::Self);
 	if (startBase == nullptr)
 	{
-		if(!m_hasPrintedError)
-		{
-			m_bot.Actions()->SendChat("[ERROR] Invalid setup detected. 0x0000001");
-			m_hasPrintedError = true;
-		}
+		Util::DisplayError("Invalid setup detected.", "0x0000001", m_bot);
 		for (auto & baseLocation : m_baseLocationData)
 		{
 			if (baseLocation.isPlayerStartLocation(Players::Self))

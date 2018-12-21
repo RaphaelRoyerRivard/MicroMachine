@@ -83,6 +83,10 @@ void CCBot::OnStep()
 {
 	StartProfiling("0 OnStep");	//Do not remove
 	m_gameLoop = Observation()->GetGameLoop();
+	if (m_gameLoop % Util::DELAY_BETWEEN_ERROR == 0)
+	{
+		Util::ClearDisplayedErrors();
+	}
 	
 	StartProfiling("0.1 checkKeyState");
 	checkKeyState();

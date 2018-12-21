@@ -8,6 +8,9 @@ class Unit;
 
 namespace Util
 {
+	static const int DELAY_BETWEEN_ERROR = 120;
+	static std::vector<std::string> displayedError;
+
     struct IsUnit 
     {
         sc2::UNIT_TYPEID m_type;
@@ -81,6 +84,8 @@ namespace Util
     CCPosition      GetPosition(const CCTilePosition & tile);
     std::string     GetStringFromRace(const CCRace & race);
     bool            UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & m_bot);
+	void			DisplayError(std::string error, std::string errorCode, CCBot & m_bot, bool isCritical = false);
+	void			ClearDisplayedErrors();
     UnitType        GetTownHall(const CCRace & race, CCBot & bot);
     UnitType        GetRefinery(const CCRace & race, CCBot & bot);
 	UnitType        GetSupplyProvider(const CCRace & race, CCBot & bot);
