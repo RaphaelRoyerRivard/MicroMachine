@@ -196,11 +196,18 @@ std::list<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::lis
 			}
 		}
 	}
-	BOT_ASSERT(tilesToBlock.size() == 3, "Unusual ramp detected");
-
+	if(tilesToBlock.size() != 3)
+	{
+		Util::DisplayError("Unusual ramp detected, tiles to block = " + std::to_string(tilesToBlock.size()), "0x00000003", m_bot, false);
+		return {};
+	}
 	CCTilePosition arrayTiles[3];
 	std::copy(tilesToBlock.begin(), tilesToBlock.end(), arrayTiles);
-	BOT_ASSERT((abs(arrayTiles[0].x - arrayTiles[2].x) == 1) && (abs(arrayTiles[0].y - arrayTiles[2].y) == 1), "Ramp tiles are wrong.");
+	if(abs(arrayTiles[0].x - arrayTiles[2].x) != 1 || abs(arrayTiles[0].y - arrayTiles[2].y) != 1)
+	{
+		Util::DisplayError("Ramp tiles are wrong.", "0x00000004", m_bot, false);
+		return {};
+	}
 	return tilesToBlock;
 }
 
