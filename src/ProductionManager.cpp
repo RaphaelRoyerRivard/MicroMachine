@@ -77,9 +77,6 @@ void ProductionManager::onStart()
 
 void ProductionManager::onFrame()
 {
-	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
-		return;
-
 	m_bot.StartProfiling("1.0 lowPriorityChecks");
 	lowPriorityChecks();
 	m_bot.StopProfiling("1.0 lowPriorityChecks");
@@ -231,11 +228,9 @@ void ProductionManager::manageBuildOrderQueue()
 			// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 			if (m_bot.Data(currentItem.type).isBuilding && !m_bot.Data(currentItem.type).isAddon && !currentItem.type.getUnitType().isMorphedBuilding() && meetsReservedResourcesWithExtra(currentItem.type))
 			{
-				Building b(currentItem.type.getUnitType(), Util::GetTilePosition(m_bot.GetStartLocation()));
-				
+				Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
 				//Get building location
-				CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, false);
-
+				const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, false);
 				if (targetLocation != CCTilePosition(0, 0))
 				{
 					Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
@@ -250,6 +245,10 @@ void ProductionManager::manageBuildOrderQueue()
 						// don't actually loop around in here
 						break;
 					}
+				}
+				else
+				{
+					Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
 				}
 			}
 		}

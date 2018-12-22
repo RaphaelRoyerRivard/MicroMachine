@@ -1,0 +1,10 @@
+{
+	"Bots": {
+		"MicroMachine": {
+			"Race": "Terran",
+			"Type": "BinaryCpp",
+			"RootPath": "./",
+			"FileName": "MicroMachine.exe"
+		}
+	}
+}

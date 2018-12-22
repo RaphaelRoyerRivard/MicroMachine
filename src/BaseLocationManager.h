@@ -28,6 +28,7 @@ public:
     const std::vector<const BaseLocation *> & getStartingBaseLocations() const;
     const std::set<const BaseLocation *> & getOccupiedBaseLocations(int player) const;
     const BaseLocation * getPlayerStartingBaseLocation(int player) const;
+	void FixNullPlayerStartingBaseLocation();
 	int BaseLocationManager::getBaseCount(int player, bool isCompleted = false) const;
 
 	const BaseLocation* getNextExpansion(int player, bool checkBuildable = false) const;

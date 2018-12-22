@@ -962,3 +962,23 @@ bool Util::UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & 
 #endif
     return false;
 }
+
+void Util::DisplayError(std::string error, std::string errorCode, CCBot & m_bot, bool isCritical)
+{
+	auto it = find(displayedError.begin(), displayedError.end(), errorCode);
+	if (it != displayedError.end())
+	{
+		return;
+	}
+
+	std::stringstream ss;
+	ss << (isCritical ? "[CRITICAL ERROR]" : "[ERROR]") << " : " << error << " | " << errorCode;
+
+	m_bot.Actions()->SendChat(ss.str());
+	displayedError.push_back(errorCode);
+}
+
+void Util::ClearDisplayedErrors()
+{
+	displayedError.clear();
+}

@@ -4,7 +4,7 @@
 #include <sstream>
 #include <iostream>
 
-const int NearBaseLocationTileDistance = 35;
+const int NearBaseLocationTileDistance = 30;
 
 BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & resources)
     : m_bot(bot)
@@ -72,24 +72,27 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     // from the center of its recourses to every other tile on the map
     m_distanceMap = m_bot.Map().getDistanceMap(m_centerOfResources);
 
-    // check to see if this is a start location for the map
-    for (auto & pos : m_bot.GetStartLocations())
+    // check to see if this is a start location for the map, only need to check enemy locations.
+    for (auto & pos : m_bot.GetEnemyStartLocations())
     {
         if (containsPosition(pos))
         {
             m_isStartLocation = true;
             m_depotPosition = Util::GetTilePosition(pos);
+			break;
         }
     }
     
     // if this base location position is near our own resource depot, it's our start location
-    for (auto & unit : m_bot.GetUnits())
+    for (auto & unit : m_bot.GetAllyUnits())
     {
-        if (unit.getPlayer() == Players::Self && unit.getType().isResourceDepot() && containsPosition(unit.getPosition()))
+		CCPosition pos = unit.second.getPosition();
+        if (unit.second.getType().isResourceDepot() && containsPosition(pos))
         {
             m_isPlayerStartLocation[Players::Self] = true;
             m_isStartLocation = true;
             m_isPlayerOccupying[Players::Self] = true;
+			m_depotPosition = Util::GetTilePosition(pos);
             break;
         }
     }

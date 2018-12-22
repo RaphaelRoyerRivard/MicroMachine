@@ -38,9 +38,10 @@ void CCBot::OnGameStart() //full start
 #ifdef SC2API
     for (auto & loc : Observation()->GetGameInfo().enemy_start_locations)
     {
-        m_baseLocations.push_back(loc);
+        m_enemyBaseLocations.push_back(loc);
     }
-    m_baseLocations.push_back(Observation()->GetStartLocation());
+	m_startLocation = Observation()->GetStartLocation();
+	m_buildingArea = Util::GetTilePosition(m_startLocation);
 #else
     for (auto & loc : BWAPI::Broodwar->getStartLocations())
     {
@@ -82,7 +83,11 @@ void CCBot::OnStep()
 {
 	StartProfiling("0 OnStep");	//Do not remove
 	m_gameLoop = Observation()->GetGameLoop();
-
+	if (m_gameLoop % Util::DELAY_BETWEEN_ERROR == 0)
+	{
+		Util::ClearDisplayedErrors();
+	}
+	
 	StartProfiling("0.1 checkKeyState");
 	checkKeyState();
 	StopProfiling("0.1 checkKeyState");
@@ -417,7 +422,7 @@ uint32_t CCBot::GetGameLoop() const
 	return m_gameLoop;
 }
 
-CCRace CCBot::GetPlayerRace(int player) const
+const CCRace CCBot::GetPlayerRace(int player) const
 {
 #ifdef SC2API
 	if (player == Players::Self)
@@ -455,7 +460,7 @@ CCRace CCBot::GetPlayerRace(int player) const
 #endif
 }
 
-CCRace CCBot::GetSelfRace() const
+const CCRace CCBot::GetSelfRace() const
 {
 	return selfRace;
 }
@@ -632,18 +637,23 @@ std::map<sc2::Tag, Unit> & CCBot::GetNeutralUnits()
 	return m_neutralUnits;
 }
 
-CCPosition CCBot::GetStartLocation() const
+const CCPosition CCBot::GetStartLocation() const
 {
 #ifdef SC2API
-    return Observation()->GetStartLocation();
+    return m_startLocation;
 #else
     return BWAPI::Position(BWAPI::Broodwar->self()->getStartLocation());
 #endif
 }
 
-const std::vector<CCPosition> & CCBot::GetStartLocations() const
+const CCTilePosition CCBot::GetBuildingArea() const
 {
-    return m_baseLocations;
+	return m_buildingArea;
+}
+
+const std::vector<CCPosition> & CCBot::GetEnemyStartLocations() const
+{
+    return m_enemyBaseLocations;
 }
 
 #ifdef SC2API

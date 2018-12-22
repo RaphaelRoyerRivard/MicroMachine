@@ -13,7 +13,7 @@ void BaseLocationManager::onStart()
 {
     m_tileBaseLocations = std::vector<std::vector<BaseLocation *>>(m_bot.Map().width(), std::vector<BaseLocation *>(m_bot.Map().height(), nullptr));
     m_playerStartingBaseLocations[Players::Self]  = nullptr;
-    m_playerStartingBaseLocations[Players::Enemy] = nullptr; 
+    m_playerStartingBaseLocations[Players::Enemy] = nullptr;
     
     // a BaseLocation will be anything where there are minerals to mine
     // so we will first look over all minerals and cluster them based on some distance
@@ -114,6 +114,10 @@ void BaseLocationManager::onStart()
             m_playerStartingBaseLocations[Players::Enemy] = &baseLocation;
         }
     }
+	if (m_playerStartingBaseLocations[Players::Self] == nullptr)//Player start base location not found
+	{
+		Util::DisplayError("Invalid setup detected.", "0x0000000", m_bot);
+	}
 
 	//Sorting base locations from closest to opponent's starting base to farthest
 	struct SortClosestToOpponentStartingLocation
@@ -180,6 +184,11 @@ void BaseLocationManager::onStart()
 void BaseLocationManager::onFrame()
 {   
     drawBaseLocations();
+
+	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
+	{
+		FixNullPlayerStartingBaseLocation();
+	}
 
     // reset the player occupation information for each location
     for (auto & baseLocation : m_baseLocationData)
@@ -331,6 +340,33 @@ const std::vector<const BaseLocation *> & BaseLocationManager::getStartingBaseLo
 const BaseLocation * BaseLocationManager::getPlayerStartingBaseLocation(int player) const
 {
     return m_playerStartingBaseLocations.at(player);
+}
+
+void BaseLocationManager::FixNullPlayerStartingBaseLocation()
+{
+	const BaseLocation * startBase = m_playerStartingBaseLocations.at(Players::Self);
+	if (startBase == nullptr)
+	{
+		Util::DisplayError("Invalid setup detected.", "0x0000001", m_bot);
+		for (auto & baseLocation : m_baseLocationData)
+		{
+			if (baseLocation.isPlayerStartLocation(Players::Self))
+			{
+				m_bot.Actions()->SendChat("[FIXED] Error was fixed. 0x0000001 : 0x0000000");
+				m_playerStartingBaseLocations[Players::Self] = &baseLocation;
+				return;
+			}
+		}
+		for (auto & baseLocation : m_baseLocationData)
+		{
+			if (baseLocation.isOccupiedByPlayer(Players::Self))
+			{
+				m_bot.Actions()->SendChat("[FIXED] Error was fixed. 0x0000001 : 0x0000001");
+				m_playerStartingBaseLocations[Players::Self] = &baseLocation;
+				return;
+			}
+		}
+	}
 }
 
 const std::set<const BaseLocation *> & BaseLocationManager::getOccupiedBaseLocations(int player) const
