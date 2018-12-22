@@ -431,8 +431,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{//Addon
 						if (factoryAddonCount < 1)
 						{
-							toBuild = MetaTypeEnum::FactoryTechLab;
-							hasPicked = true;
+							// Commented because it will be added automatically as when we need to do the upgrade (and we might want to wait to build hellions instead)
+							//toBuild = MetaTypeEnum::FactoryTechLab;
+							//hasPicked = true;
 						}
 						else if (starportCount > starportAddonCount)
 						{
@@ -466,13 +467,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				if (!m_queue.contains(MetaTypeEnum::InfernalPreIgniter) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::InfernalPreIgniter) == startedUpgrades.end())
+				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
+				if (hellionCount >= 2 && !m_queue.contains(MetaTypeEnum::InfernalPreIgniter) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::InfernalPreIgniter) == startedUpgrades.end())
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::InfernalPreIgniter, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::InfernalPreIgniter);
 				}
 
-				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
 				const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), true, true);
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true);
 				if(hellionCount + bansheeCount + vikingCount >= 5)

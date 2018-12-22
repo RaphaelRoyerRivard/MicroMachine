@@ -1167,9 +1167,10 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & woker, const Squad & defen
 	if (woker.isValid() && 
 		m_squadData.canAssignUnitToSquad(woker, defenseSquad) &&
 		!closestEnemy.isFlying() &&
+		(defenseSquad.getName() == "ScoutDefense" ||  // do not check distances if it is to protect against a scout
 		Util::DistSq(woker, pos) < 15.f * 15.f &&	// worker should not get too far from base
 		(Util::DistSq(woker, closestEnemy) < 7.f * 7.f ||	// worker can fight only units close to it
-		(closestEnemy.getType().isBuilding() && Util::DistSq(closestEnemy, pos) < 12.f * 12.f)))	// worker can fight buildings somewhat close to the base
+		(closestEnemy.getType().isBuilding() && Util::DistSq(closestEnemy, pos) < 12.f * 12.f))))	// worker can fight buildings somewhat close to the base
 		return true;
 	return false;
 }
