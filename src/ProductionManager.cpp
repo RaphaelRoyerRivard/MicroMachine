@@ -247,7 +247,7 @@ void ProductionManager::manageBuildOrderQueue()
 				}
 				else
 				{
-					Util::DisplayError("Invalid build location.", "0x0000002", m_bot);
+					Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
 				}
 			}
 		}
