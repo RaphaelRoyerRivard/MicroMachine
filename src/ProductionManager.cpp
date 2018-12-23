@@ -306,7 +306,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		}
 
 		// Logic for building Command Centers
-		if (baseCount <= productionScore)
+		//if (baseCount <= productionScore)
 		{
 			if (!m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
 			{
@@ -405,11 +405,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 
-				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Viking))
+				if (m_bot.Strategy().shouldProduceAntiAir())
 				{
-					if (vikingCount < 2 * bansheeCount)
+					if (!m_queue.contains(MetaTypeEnum::Viking) && vikingCount < 2 * bansheeCount)
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+					}
+
+					if (!m_queue.contains(MetaTypeEnum::HiSecAutoTracking) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::HiSecAutoTracking) == startedUpgrades.end())
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HiSecAutoTracking, 0, false));
+						startedUpgrades.push_back(MetaTypeEnum::HiSecAutoTracking);
 					}
 				}
 				break;
@@ -494,11 +500,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 
-				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Viking))
+				if (m_bot.Strategy().shouldProduceAntiAir())
 				{
-					if (vikingCount < 2 * bansheeCount)
+					if (!m_queue.contains(MetaTypeEnum::Viking) && vikingCount < 2 * bansheeCount)
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+					}
+
+					if (!m_queue.contains(MetaTypeEnum::HiSecAutoTracking) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::HiSecAutoTracking) == startedUpgrades.end())
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HiSecAutoTracking, 0, false));
+						startedUpgrades.push_back(MetaTypeEnum::HiSecAutoTracking);
 					}
 				}
 

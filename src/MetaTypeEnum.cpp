@@ -51,6 +51,8 @@ MetaType MetaTypeEnum::Stimpack;
 MetaType MetaTypeEnum::InfernalPreIgniter;
 MetaType MetaTypeEnum::BansheeCloak;
 MetaType MetaTypeEnum::HyperflightRotors;
+MetaType MetaTypeEnum::HiSecAutoTracking;
+
 //PROTOSS
 	//Buildings
 	//Units
@@ -143,7 +145,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::InfernalPreIgniter = MetaType("HighCapacityBarrels", m_bot);
 	MetaTypeEnum::BansheeCloak = MetaType("BansheeCloak", m_bot);
 	MetaTypeEnum::HyperflightRotors = MetaType("BansheeSpeed", m_bot);
-
+	MetaTypeEnum::HiSecAutoTracking = MetaType("HiSecAutoTracking", m_bot);
 	
 	//PROTOSS
 		//Buildings

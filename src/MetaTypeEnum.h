@@ -56,6 +56,7 @@ class MetaTypeEnum
 		static MetaType InfernalPreIgniter;
 		static MetaType BansheeCloak;
 		static MetaType HyperflightRotors;
+		static MetaType HiSecAutoTracking;
 
 		//PROTOSS
 			//Buildings

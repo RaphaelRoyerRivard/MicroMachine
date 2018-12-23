@@ -223,7 +223,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
 	if (unitShouldHeal)
 	{
-		goal = isReaper ? CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f : Util::GetPosition(m_bot.Bases().getClosestBasePosition(rangedUnit, Players::Self, true));
+		goal = isReaper ? CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f : Util::GetPosition(m_bot.Bases().getClosestBasePosition(rangedUnit, Players::Self, false));
 	}
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
