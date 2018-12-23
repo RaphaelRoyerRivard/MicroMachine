@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
 	{
 		bool loadSettings = false;
 		JSONTools::ReadBool("LoadSettings", j["SC2API"], loadSettings);
-		CCBot bot;
+		CCBot bot(botVersion);
 		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings);
 
 		return 0;
