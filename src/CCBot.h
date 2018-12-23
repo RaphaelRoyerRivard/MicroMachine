@@ -77,7 +77,7 @@ class CCBot
 
 public:
 
-    CCBot();
+	CCBot(std::string botVersion = "");
 
 #ifdef SC2API
 	void OnGameFullStart() override;

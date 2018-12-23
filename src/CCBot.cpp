@@ -1,16 +1,18 @@
 #include "CCBot.h"
 #include "Util.h"
 
-CCBot::CCBot()
-    : m_map(*this)
-    , m_bases(*this)
-    , m_unitInfo(*this)
-    , m_workers(*this)
+CCBot::CCBot(std::string botVersion)
+	: m_map(*this)
+	, m_bases(*this)
+	, m_unitInfo(*this)
+	, m_workers(*this)
 	, m_buildings(*this)
-    , m_gameCommander(*this)
-    , m_strategy(*this)
-    , m_techTree(*this)
+	, m_gameCommander(*this)
+	, m_strategy(*this)
+	, m_techTree(*this)
 {
+	if(botVersion != "")
+		Actions()->SendChat(botVersion);
 }
 
 void CCBot::OnGameFullStart() {}//end?

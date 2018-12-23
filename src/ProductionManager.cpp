@@ -24,6 +24,8 @@ void ProductionManager::setBuildOrder(const BuildOrder & buildOrder)
 void ProductionManager::onStart()
 {
     setBuildOrder(m_bot.Strategy().getOpeningBookBuildOrder());
+	if (m_queue.isEmpty())
+		Util::DisplayError("Initial build order is empty.", "0x00000003", m_bot, true);
 	supplyProvider = Util::GetSupplyProvider(m_bot.GetSelfRace(), m_bot);
 	supplyProviderType = MetaType(supplyProvider, m_bot);
 
