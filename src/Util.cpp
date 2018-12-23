@@ -637,7 +637,7 @@ float Util::getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCB
 	const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 	const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
 	const sc2::GameInfo gameInfo = m_bot.Observation()->GetGameInfo();
-	const float heightBonus = Util::TerainHeight(gameInfo, threat->pos) > Util::TerainHeight(gameInfo, unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
+	const float heightBonus = unit->is_flying ? 0.f : Util::TerainHeight(gameInfo, threat->pos) > Util::TerainHeight(gameInfo, unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
 	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + HARASS_THREAT_RANGE_BUFFER;
 	return threatRange;
 }

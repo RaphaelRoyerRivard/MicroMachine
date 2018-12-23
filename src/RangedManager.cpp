@@ -1320,8 +1320,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 {
     BOT_ASSERT(rangedUnit, "null ranged unit in getTarget");
 
-    float highestPriority = 0.f;
-    const sc2::Unit * bestTarget = nullptr;
+	std::multiset<std::pair<float, const sc2::Unit *>> targetPriorities;
 
     // for each possible target
     for (auto target : targets)
@@ -1332,13 +1331,17 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		if (target->last_seen_game_loop != m_bot.GetGameLoop())
 			continue;
 
-		if(m_harassMode)
+		float priority = getAttackPriority(rangedUnit, target);
+		if(priority > 0.f)
+			targetPriorities.insert(std::pair<float, const sc2::Unit*>(priority, target));
+    }
+
+	if (m_harassMode)
+	{
+		for(auto it = targetPriorities.rbegin(); it != targetPriorities.rend(); ++it)
 		{
+			const sc2::Unit* target = it->second;
 			const float unitRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
-			const float targetRange = Util::GetAttackRangeForTarget(target, rangedUnit, m_bot);
-			// If the target has too much range, we don't even consider it
-			if (unitRange < targetRange + HARASS_MIN_RANGE_DIFFERENCE_FOR_TARGET)
-				continue;
 			// We do not want to target units surrounded by ranged units with our harass units 
 			// TODO change this so we can check if there is a safe spot around the unit with the influence map
 			bool threatTooClose = false;
@@ -1354,21 +1357,15 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 					break;
 				}
 			}
-			if (threatTooClose)
-				continue;
+			if (!threatTooClose)
+				return target;
 		}
+		return nullptr;
+	}
 
-        const float priority = getAttackPriority(rangedUnit, target);
-
-        // if it's a higher priority, set it
-        if (priority > highestPriority)
-        {
-            highestPriority = priority;
-            bestTarget = target;
-        }
-    }
-
-    return bestTarget;
+	if (targetPriorities.empty())
+		return nullptr;
+    return (*(--targetPriorities.end())).second;	//return last target because it's the one with the highest priority
 }
 
 float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const
@@ -1424,7 +1421,11 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 			targetDps = 5.f;
         }
         const float workerBonus = targetUnit.getType().isWorker() ? m_harassMode ? 2.f : 1.5f : 1.f;	//workers are important to kill
-		const float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;								//targets that cannot hit our unit are less prioritized
+		float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;								//targets that cannot hit our unit are less prioritized
+		if(targetUnit.getType().isAttackingBuilding())
+		{
+			nonThreateningModifier = targetDps == 0.f ? 1.f : 0.5f;		//for buildings, we prefer targetting them with units that will not get attacked back
+		}
 		const float minionModifier = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR ? 0.1f : 1.f;	//units that can be respawned should be less prioritized
         return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier;
     }
