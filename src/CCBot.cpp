@@ -337,22 +337,13 @@ uint32_t CCBot::GetGameLoop() const
 const CCRace CCBot::GetPlayerRace(int player) const
 {
 #ifdef SC2API
-	if (player == Players::Self)
-	{
-		for (auto & playerInfo : Observation()->GetGameInfo().player_info)
-		{
-			if (playerInfo.player_id != player)
-			{
-				return playerInfo.race_actual;
-			}
-		}
-		BOT_ASSERT(false, "Didn't find player to get their race");
-	}
-
-    auto ourID = Observation()->GetPlayerID();
+	const bool playerSelf = player == Players::Self;
+    const auto ourID = Observation()->GetPlayerID();
     for (auto & playerInfo : Observation()->GetGameInfo().player_info)
     {
-        if (playerInfo.player_id != ourID)
+		const bool isOurID = playerInfo.player_id == ourID;
+        if ((playerSelf && isOurID) ||
+			(!playerSelf && !isOurID))
         {
             return playerInfo.race_requested;
         }
