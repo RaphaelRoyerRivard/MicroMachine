@@ -769,6 +769,7 @@ void CombatCommander::updateDefenseBuildings()
 void CombatCommander::updateDefenseSquads()
 {
 	bool workerRushed = false;
+	bool earlyRushed = false;
     // for each of our occupied regions
     const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
     for (const BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
@@ -802,7 +803,7 @@ void CombatCommander::updateDefenseSquads()
             if (myBaseLocation->containsPosition(unit.getPosition()))
             {
                 //we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
-                if (unit.getType().isWorker())
+                if (!workerRushed && unit.getType().isWorker())
                 {
 					if (firstWorker)
 					{
@@ -811,6 +812,10 @@ void CombatCommander::updateDefenseSquads()
 					}
 					workerRushed = true;
                 }
+				else if(!earlyRushed && m_bot.GetGameLoop() < 7320)	// first 5 minutes
+				{
+					earlyRushed = true;
+				}
 
 				const float enemyDistance = Util::DistSq(unit.getPosition(), basePosition);
 				if(!closestEnemy.isValid() || enemyDistance < minEnemyDistance)
@@ -878,7 +883,7 @@ void CombatCommander::updateDefenseSquads()
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
 
 						//Remove builder and gas jobs.
-						for (auto worker : m_bot.Workers().getWorkers())
+						for (auto & worker : m_bot.Workers().getWorkers())
 						{
 							if (m_bot.Workers().getWorkerData().getWorkerJob(worker) != WorkerJobs::Scout)
 							{
@@ -938,6 +943,7 @@ void CombatCommander::updateDefenseSquads()
     }
 
 	m_bot.Strategy().setIsWorkerRushed(workerRushed);
+	m_bot.Strategy().setIsEarlyRushed(earlyRushed);
 
     // for each of our defense squads, if there aren't any enemy units near the position, clear the squad
 	auto enemies = m_bot.UnitInfo().getUnits(Players::Enemy);

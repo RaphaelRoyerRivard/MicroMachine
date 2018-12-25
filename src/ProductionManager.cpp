@@ -407,6 +407,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 
+				if (m_bot.Strategy().isEarlyRushed() && !m_queue.contains(MetaTypeEnum::Hellion))
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
+				}
+
 				if (m_bot.Strategy().shouldProduceAntiAir())
 				{
 					if (!m_queue.contains(MetaTypeEnum::Viking) && vikingCount < 2 * bansheeCount)
