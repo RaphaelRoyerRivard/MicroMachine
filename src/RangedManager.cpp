@@ -1201,7 +1201,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 
 	if (targetPriorities.empty())
 		return nullptr;
-    return (*(--targetPriorities.end())).second;	//return last target because it's the one with the highest priority
+	return (*targetPriorities.rbegin()).second;		//return last target because it's the one with the highest priority
 }
 
 float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const

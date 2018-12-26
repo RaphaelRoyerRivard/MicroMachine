@@ -1258,13 +1258,13 @@ CCPosition CombatCommander::getMainAttackLocation()
                 }
             }
         }
-    }
 
-	if(!m_bot.Strategy().shouldFocusBuildings())
-	{
-		m_bot.Actions()->SendChat("Looks like you lost your main base, time to conceed? :)");
-		m_bot.Strategy().setFocusBuildings(true);
-	}
+		if (!m_bot.Strategy().shouldFocusBuildings())
+		{
+			m_bot.Actions()->SendChat("Looks like you lost your main base, time to conceed? :)");
+			m_bot.Strategy().setFocusBuildings(true);
+		}
+    }
 
 	CCPosition harassSquadCenter = m_squadData.getSquad("Harass").calcCenter();
 	float lowestDistance = -1.f;
