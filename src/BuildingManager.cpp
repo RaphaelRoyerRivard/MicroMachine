@@ -261,12 +261,11 @@ void BuildingManager::PlaceSupplyDepots(std::list<CCTilePosition> tilesToBlock)
 			}
 		}
 		BOT_ASSERT(false, "Can't find possible position for a wall build. This shouldn't happen.");
+		//TODO: Check remove the buildingTiles and try again in a different order. To try again, pop front tilesToBlock and push back the front.
 	}
 	wallBuilding = buildingTiles;
 	for (auto building : buildingTiles)
 	{
-		//TODO No longer queue the supply depot, add positions to a list and use them when building. Also remove code for "proxy" supply depot
-		//m_bot.Buildings().addBuildingTask(MetaTypeEnum::SupplyDepot.getUnitType(), CCTilePosition(building.x + 1, building.y + 1), true);
 		nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(CCTilePosition(building.x + 1, building.y + 1));
 	}
 }

@@ -81,6 +81,7 @@ void ProductionManager::onFrame()
 {
 	m_bot.StartProfiling("1.0 lowPriorityChecks");
 	lowPriorityChecks();
+	validateUpgradesProgress();
 	m_bot.StopProfiling("1.0 lowPriorityChecks");
 	m_bot.StartProfiling("2.0 manageBuildOrderQueue");
     manageBuildOrderQueue();
@@ -1345,6 +1346,37 @@ MetaType ProductionManager::queueUpgrade(const MetaType & type)
 	return {};
 }
 
+void ProductionManager::validateUpgradesProgress()
+{
+	std::vector<MetaType> toRemove;
+	for (std::pair<const MetaType, Unit> & upgrade : incompletUpgrades)
+	{
+		bool found = false;
+		for (auto & order : upgrade.second.getUnitPtr()->orders)
+		{
+			float progress = order.progress;
+			if (order.ability_id == m_bot.Data(upgrade.first.getUpgrade()).buildAbility)
+			{
+				found = true;
+				if (progress > 0.98f)//About to finish, lets consider it done.
+				{
+					toRemove.push_back(upgrade.first);
+				}
+			}
+		}
+		if (!found)
+		{
+			toRemove.push_back(upgrade.first);
+			startedUpgrades.remove(upgrade.first);
+			//TODO refund ressources?
+		}
+	}
+	for (auto & remove : toRemove)
+	{
+		incompletUpgrades.erase(remove);
+	}
+}
+
 Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const
 {
     if (units.empty())
@@ -1407,6 +1439,13 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
     else if (item.type.isUpgrade())
     {
 		Micro::SmartAbility(producer.getUnitPtr(), m_bot.Data(item.type.getUpgrade()).buildAbility, m_bot);
+
+		auto it = incompletUpgrades.find(item.type);
+		if (it != incompletUpgrades.end())
+		{
+			Util::DisplayError("Trying to start and already started upgrade.", "0x00000006", m_bot);
+		}
+		incompletUpgrades.insert(std::make_pair(item.type, producer));
     }
 }
 
@@ -1433,16 +1472,19 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 	{
 		// check to see if one of the unit's available abilities matches the build ability type
 		sc2::AbilityID MetaTypeAbility = m_bot.Data(type).buildAbility;
-		if (type.isUpgrade())//TODO Not safe, is a fix for upgrades having the wrong ID
-		{
-			return true;
-		}
 		for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
 		{
 			if (available_ability.ability_id == MetaTypeAbility)
 			{
 				return true;
 			}
+		}
+		if (type.isUpgrade())//TODO Not safe, is a fix for upgrades having the wrong ID
+		{
+			std::ostringstream oss;
+			oss << "Unit can't create upgrade, but should be able. ID: " << MetaTypeAbility << " UnitType: " << producer.getType().getName();
+			Util::DisplayError(oss.str(), "0x00000005", m_bot);
+			return true;
 		}
 	}
 

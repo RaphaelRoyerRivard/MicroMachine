@@ -43,6 +43,7 @@ public:
 
     std::vector<UnitType>   whatBuilds;
 
+	bool operator < (const MetaType & mt) const;
 	bool operator == (const MetaType & mt) const;
 
 #ifndef SC2API
