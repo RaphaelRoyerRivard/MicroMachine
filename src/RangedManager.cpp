@@ -224,7 +224,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
 	if (unitShouldHeal)
 	{
-		goal = isReaper ? CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f : Util::GetPosition(m_bot.Bases().getClosestBasePosition(rangedUnit, Players::Self, false));
+		goal = isReaper ? CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
 	}
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
@@ -455,12 +455,15 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal)
 {
 	bool morph = false;
-	if(unitShouldHeal && viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+	if(unitShouldHeal)
 	{
-		m_bot.GetCommandMutex().lock();
-		Micro::SmartAbility(viking, sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE, m_bot);
-		m_bot.GetCommandMutex().unlock();
-		morph = true;
+		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+		{
+			m_bot.GetCommandMutex().lock();
+			Micro::SmartAbility(viking, sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE, m_bot);
+			m_bot.GetCommandMutex().unlock();
+			morph = true;
+		}
 	}
 	else if (squaredDistanceToGoal < 7.f * 7.f && !target)
 	{

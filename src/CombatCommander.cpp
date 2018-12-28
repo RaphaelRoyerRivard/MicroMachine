@@ -500,9 +500,7 @@ void CombatCommander::updateIdleSquad()
 	{
 		const BaseLocation * nextExpansion = m_bot.Bases().getNextExpansion(Players::Self);
 
-		CCPosition idlePosition = CCPosition(nextExpansion->getDepotPosition().x, nextExpansion->getDepotPosition().y);
-		idlePosition.x += nextExpansion->getDepotPosition().x - nextExpansion->getCenterOfMinerals().x;
-		idlePosition.y += nextExpansion->getDepotPosition().y - nextExpansion->getCenterOfMinerals().y;
+		const CCPosition idlePosition = Util::GetPosition(nextExpansion ? nextExpansion->getCenterOfMinerals() : m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getCenterOfMinerals());
 
 		SquadOrder idleOrder(SquadOrderTypes::Attack, idlePosition, DefaultOrderRadius, "Prepare for battle");
 		m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
@@ -772,7 +770,7 @@ void CombatCommander::updateDefenseSquads()
 	bool earlyRushed = false;
     // for each of our occupied regions
     const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-    for (const BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+    for (BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
     {
         // don't defend inside the enemy region, this will end badly when we are stealing gas or cannon rushing
         if (myBaseLocation == enemyBaseLocation)
@@ -860,6 +858,8 @@ void CombatCommander::updateDefenseSquads()
         std::stringstream squadName;
         squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
 
+		myBaseLocation->setIsUnderAttack(!enemyUnitsInRegion.empty());
+
         // if there's nothing in this region to worry about
         if (enemyUnitsInRegion.empty())
         {
@@ -897,15 +897,13 @@ void CombatCommander::updateDefenseSquads()
             // and return, nothing to defend here
             continue;
         }
-        else
+
+        // if we don't have a squad assigned to this region already, create one
+        if (!m_squadData.squadExists(squadName.str()))
         {
-            // if we don't have a squad assigned to this region already, create one
-            if (!m_squadData.squadExists(squadName.str()))
-            {
-				//SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
-				SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
-				m_squadData.addSquad(squadName.str(), Squad(squadName.str(), defendRegion, BaseDefensePriority, m_bot));
-            }
+			//SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
+			SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
+			m_squadData.addSquad(squadName.str(), Squad(squadName.str(), defendRegion, BaseDefensePriority, m_bot));
         }
 
         // assign units to the squad

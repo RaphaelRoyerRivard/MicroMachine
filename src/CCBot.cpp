@@ -7,8 +7,9 @@ CCBot::CCBot(std::string botVersion)
 	, m_unitInfo(*this)
 	, m_workers(*this)
 	, m_buildings(*this)
-	, m_gameCommander(*this)
 	, m_strategy(*this)
+	, m_repairStations(*this)
+	, m_gameCommander(*this)
 	, m_techTree(*this)
 {
 	if(botVersion != "")
@@ -77,7 +78,7 @@ void CCBot::OnGameStart() //full start
     m_bases.onStart();
     m_workers.onStart();
 	m_buildings.onStart();
-
+	m_repairStations.onStart();
     m_gameCommander.onStart();
 	StartProfiling("0 Starcraft II");
 }
@@ -127,6 +128,10 @@ void CCBot::OnStep()
 	StartProfiling("0.9 m_strategy.onFrame");
     m_strategy.onFrame();
 	StopProfiling("0.9 m_strategy.onFrame");
+
+	StartProfiling("0.11 m_repairStations.onFrame");
+	m_repairStations.onFrame();
+	StopProfiling("0.11 m_repairStations.onFrame");
 
 	StartProfiling("0.10 m_gameCommander.onFrame");
 	m_gameCommander.onFrame();
@@ -262,7 +267,7 @@ void CCBot::setUnits()
 	m_unitCount.clear();
 	m_unitCompletedCount.clear();
 #ifdef SC2API
-	bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
+	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
     for (auto unitptr : Observation()->GetUnits())
     {
 		Unit unit(unitptr, *this);
@@ -273,10 +278,43 @@ void CCBot::setUnits()
 		if (unitptr->alliance == sc2::Unit::Self || unitptr->alliance == sc2::Unit::Ally)
 		{
 			m_allyUnits.insert_or_assign(unitptr->tag, unit);
-			m_unitCount[unit.getAPIUnitType()]++;
-			if (unit.isCompleted())
+			bool isMorphingResourceDepot = false;
+			if (unit.getType().isResourceDepot())
 			{
-				m_unitCompletedCount[unit.getAPIUnitType()]++;
+				for(auto& order : unit.getUnitPtr()->orders)
+				{
+					sc2::UnitTypeID morphType = 0;
+					switch(uint32_t(order.ability_id))
+					{
+					case uint32_t(sc2::ABILITY_ID::MORPH_ORBITALCOMMAND):
+						morphType = sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND;
+						break;
+					case uint32_t(sc2::ABILITY_ID::MORPH_PLANETARYFORTRESS):
+						morphType = sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS;
+						break;
+					case uint32_t(sc2::ABILITY_ID::MORPH_LAIR):
+						morphType = sc2::UNIT_TYPEID::ZERG_LAIR;
+						break;
+					case uint32_t(sc2::ABILITY_ID::MORPH_HIVE):
+						morphType = sc2::UNIT_TYPEID::ZERG_HIVE;
+						break;
+					default:
+						break;
+					}
+					if(morphType != 0)
+					{
+						isMorphingResourceDepot = true;
+						++m_unitCount[morphType];
+					}
+				}
+			}
+			if (!isMorphingResourceDepot)
+			{
+				++m_unitCount[unit.getAPIUnitType()];
+				if (unit.isCompleted())
+				{
+					m_unitCompletedCount[unit.getAPIUnitType()]++;
+				}
 			}
 			if (unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 			{
