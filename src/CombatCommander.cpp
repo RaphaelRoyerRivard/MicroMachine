@@ -500,9 +500,7 @@ void CombatCommander::updateIdleSquad()
 	{
 		const BaseLocation * nextExpansion = m_bot.Bases().getNextExpansion(Players::Self);
 
-		CCPosition idlePosition = CCPosition(nextExpansion->getDepotPosition().x, nextExpansion->getDepotPosition().y);
-		idlePosition.x += nextExpansion->getDepotPosition().x - nextExpansion->getCenterOfMinerals().x;
-		idlePosition.y += nextExpansion->getDepotPosition().y - nextExpansion->getCenterOfMinerals().y;
+		const CCPosition idlePosition = Util::GetPosition(nextExpansion ? nextExpansion->getCenterOfMinerals() : m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getCenterOfMinerals());
 
 		SquadOrder idleOrder(SquadOrderTypes::Attack, idlePosition, DefaultOrderRadius, "Prepare for battle");
 		m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));

@@ -455,12 +455,15 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal)
 {
 	bool morph = false;
-	if(unitShouldHeal && viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+	if(unitShouldHeal)
 	{
-		m_bot.GetCommandMutex().lock();
-		Micro::SmartAbility(viking, sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE, m_bot);
-		m_bot.GetCommandMutex().unlock();
-		morph = true;
+		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+		{
+			m_bot.GetCommandMutex().lock();
+			Micro::SmartAbility(viking, sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE, m_bot);
+			m_bot.GetCommandMutex().unlock();
+			morph = true;
+		}
 	}
 	else if (squaredDistanceToGoal < 7.f * 7.f && !target)
 	{
