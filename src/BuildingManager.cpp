@@ -155,9 +155,9 @@ void BuildingManager::FindMainRamp(std::list<CCTilePosition> &rampTiles)
 	}
 }
 
-std::list<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles)
+std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles)
 {
-	std::list<CCTilePosition> tilesToBlock;
+	std::vector<CCTilePosition> tilesToBlock;
 	for (auto & tile : rampTiles)
 	{
 		CCTilePosition below = CCTilePosition(tile.x - 1, tile.y);
@@ -201,9 +201,16 @@ std::list<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::lis
 		Util::DisplayError("Unusual ramp detected, tiles to block = " + std::to_string(tilesToBlock.size()), "0x00000003", m_bot, false);
 		return {};
 	}
-	CCTilePosition arrayTiles[3];
-	std::copy(tilesToBlock.begin(), tilesToBlock.end(), arrayTiles);
-	if(abs(arrayTiles[0].x - arrayTiles[2].x) != 1 || abs(arrayTiles[0].y - arrayTiles[2].y) != 1)
+	
+	int swap = 0;
+	while((abs(tilesToBlock.at(0).x - tilesToBlock.at(2).x) != 1 || abs(tilesToBlock.at(0).y - tilesToBlock.at(2).y) != 1)
+		&& swap < tilesToBlock.size() - 1)
+	{
+		//Move front to back
+		std::rotate(tilesToBlock.begin(), tilesToBlock.begin() + 1, tilesToBlock.end());
+		swap++;
+	}
+	if (swap == tilesToBlock.size() - 1)
 	{
 		Util::DisplayError("Ramp tiles are wrong.", "0x00000004", m_bot, false);
 		return {};
@@ -211,7 +218,7 @@ std::list<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::lis
 	return tilesToBlock;
 }
 
-void BuildingManager::PlaceSupplyDepots(std::list<CCTilePosition> tilesToBlock)
+void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock)
 {
 	std::list<CCTilePosition> buildingTiles;
 	for (auto tile : tilesToBlock)
