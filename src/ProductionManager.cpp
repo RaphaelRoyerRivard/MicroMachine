@@ -290,31 +290,28 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	if (m_bot.GetSelfRace() == sc2::Race::Terran)
 	{
 		// Logic for building Orbital Commands and Refineries
-		if(m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_bot.Buildings().isBeingBuilt(MetaTypeEnum::CommandCenter.getUnitType()) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
+		const size_t ccCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), false, true);
+		const size_t completedCCCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), true, true);
+		if(completedCCCount > 0)
 		{
-			const auto orbitalCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::OrbitalCommand.getUnitType(), false, true);
-			if (orbitalCount < 3)
+			if (!m_queue.contains(MetaTypeEnum::OrbitalCommand) && !m_queue.contains(MetaTypeEnum::PlanetaryFortress))
 			{
-				m_queue.queueAsHighestPriority(MetaTypeEnum::OrbitalCommand, false);
+				const size_t orbitalCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::OrbitalCommand.getUnitType(), false, true);
+				if (orbitalCount < 3)
+				{
+					m_queue.queueAsHighestPriority(MetaTypeEnum::OrbitalCommand, false);
+				}
+				else
+				{
+					m_queue.queueAsHighestPriority(MetaTypeEnum::PlanetaryFortress, false);
+				}
+				m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
+				m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
 			}
-			else
-			{
-				m_queue.queueAsHighestPriority(MetaTypeEnum::PlanetaryFortress, false);
-			}
-
-			m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
-			m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
-			m_ccShouldBeInQueue = false;
 		}
-
-		// Logic for building Command Centers
-		//if (baseCount <= productionScore)
+		else if (ccCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter))
 		{
-			if (!m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
-			{
-				m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
-				m_ccShouldBeInQueue = true;
-			}
+			m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
 		}
 
 		// Strategy base logic
