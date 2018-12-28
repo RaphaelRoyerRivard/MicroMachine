@@ -188,6 +188,9 @@
     <ClCompile Include="..\src\UnitState.cpp">
       <Filter>micro</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\RepairStationManager.cpp">
+      <Filter>global</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CCBot.h" />
@@ -403,6 +406,9 @@
     <ClInclude Include="..\src\StackWalker.h" />
     <ClInclude Include="..\src\UnitState.h">
       <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\RepairStationManager.h">
+      <Filter>global</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

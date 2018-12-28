@@ -13,6 +13,7 @@
 #include "TechTree.h"
 #include "MetaType.h"
 #include "Unit.h"
+#include "RepairStationManager.h"
 
 #ifdef SC2API
 class CCBot : public sc2::Agent 
@@ -34,7 +35,8 @@ class CCBot
     UnitInfoManager         m_unitInfo;
     WorkerManager           m_workers;
 	BuildingManager			m_buildings;
-    StrategyManager         m_strategy;
+	StrategyManager         m_strategy;
+	RepairStationManager    m_repairStations;
     BotConfig               m_config;
     TechTree                m_techTree;
     GameCommander           m_gameCommander;
@@ -104,7 +106,8 @@ public:
 		  GameCommander & Commander();
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;
-    StrategyManager & Strategy();
+	StrategyManager & Strategy();
+	RepairStationManager & RepairStations() { return m_repairStations; }
     const TypeData & Data(const UnitType & type);
     const TypeData & Data(const CCUpgrade & type) const;
     const TypeData & Data(const MetaType & type);

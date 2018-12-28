@@ -7,8 +7,9 @@ CCBot::CCBot(std::string botVersion)
 	, m_unitInfo(*this)
 	, m_workers(*this)
 	, m_buildings(*this)
-	, m_gameCommander(*this)
 	, m_strategy(*this)
+	, m_repairStations(*this)
+	, m_gameCommander(*this)
 	, m_techTree(*this)
 {
 	if(botVersion != "")
@@ -77,7 +78,7 @@ void CCBot::OnGameStart() //full start
     m_bases.onStart();
     m_workers.onStart();
 	m_buildings.onStart();
-
+	m_repairStations.onStart();
     m_gameCommander.onStart();
 }
 
@@ -125,6 +126,10 @@ void CCBot::OnStep()
 	StartProfiling("0.9 m_strategy.onFrame");
     m_strategy.onFrame();
 	StopProfiling("0.9 m_strategy.onFrame");
+
+	StartProfiling("0.11 m_repairStations.onFrame");
+	m_repairStations.onFrame();
+	StopProfiling("0.11 m_repairStations.onFrame");
 
 	StartProfiling("0.10 m_gameCommander.onFrame");
 	m_gameCommander.onFrame();
