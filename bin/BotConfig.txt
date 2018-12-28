@@ -23,8 +23,8 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "ParasiteLE.SC2Map",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "DarknessSanctuaryLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -92,14 +92,14 @@
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
-        "DrawHarassInfo"            : true,
+        "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
-        "DrawProfilingInfo"         : true,
+        "DrawProfilingInfo"         : false,
         "DrawInfluenceMaps"         : false,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
-		"DrawDamageHealthRatio"		: true
+		"DrawDamageHealthRatio"		: false
     },
     
     "Modules" :
