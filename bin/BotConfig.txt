@@ -41,7 +41,7 @@
         "KiteWithRangedUnits"       : true,
         "MaxTargetDistance"         : 20,
         "MaxWorkerRepairDistance"   : 20,
-        "ScoutHarassEnemy"          : true,
+        "ScoutHarassEnemy"          : false,
         "EnableMultiThreading"      : false
     },
     
@@ -92,10 +92,10 @@
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
-        "DrawHarassInfo"            : true,
+        "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
-        "DrawProfilingInfo"         : true,
+        "DrawProfilingInfo"         : false,
         "DrawInfluenceMaps"         : false,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,

@@ -145,7 +145,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 		if (currentlyHasRequirement(currentItem.type))
 		{
-			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location
+			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location, remove pre-movement
 
 			//Build supply depot at ramp against protoss
 			if (m_bot.Observation()->GetFoodCap() <= 15 && currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
@@ -172,7 +172,7 @@ void ProductionManager::manageBuildOrderQueue()
 				}
 			}
 
-			//TODO TEMP build barrack away from the ramp to protect it from worker rush
+			//TODO: TEMP build barrack away from the ramp to protect it from worker rush
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
 				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks))
 			{
@@ -1355,7 +1355,7 @@ void ProductionManager::validateUpgradesProgress()
 			if (order.ability_id == m_bot.Data(upgrade.first.getUpgrade()).buildAbility)
 			{
 				found = true;
-				if (progress > 0.98f)//About to finish, lets consider it done.
+				if (progress > 0.95f)//About to finish, lets consider it done.
 				{
 					toRemove.push_back(upgrade.first);
 				}
@@ -1365,7 +1365,6 @@ void ProductionManager::validateUpgradesProgress()
 		{
 			toRemove.push_back(upgrade.first);
 			startedUpgrades.remove(upgrade.first);
-			//TODO refund ressources?
 		}
 	}
 	for (auto & remove : toRemove)
@@ -1440,7 +1439,7 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		auto it = incompletUpgrades.find(item.type);
 		if (it != incompletUpgrades.end())
 		{
-			Util::DisplayError("Trying to start and already started upgrade.", "0x00000006", m_bot);
+			Util::DisplayError("Trying to start an already started upgrade.", "0x00000006", m_bot);
 		}
 		incompletUpgrades.insert(std::make_pair(item.type, producer));
     }
@@ -1597,6 +1596,10 @@ void ProductionManager::drawProductionInformation()
 	for (auto & underConstruction : m_bot.Buildings().getBuildings())
 	{
 		ss << underConstruction.type.getName() << "\n";
+	}
+	for (auto & incompletUpgrade : incompletUpgrades)
+	{
+		ss << incompletUpgrade.first.getName() << "\n";
 	}
 	m_bot.Map().drawTextScreen(0.01f, 0.4f, ss.str(), CCColor(255, 255, 0));	
 }
