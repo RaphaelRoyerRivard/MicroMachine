@@ -145,7 +145,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 		if (currentlyHasRequirement(currentItem.type))
 		{
-			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location
+			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location, remove pre-movement
 
 			//Build supply depot at ramp against protoss
 			if (m_bot.Observation()->GetFoodCap() <= 15 && currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
@@ -172,7 +172,7 @@ void ProductionManager::manageBuildOrderQueue()
 				}
 			}
 
-			//TODO TEMP build barrack away from the ramp to protect it from worker rush
+			//TODO: TEMP build barrack away from the ramp to protect it from worker rush
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
 				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks))
 			{
@@ -373,12 +373,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::BansheeCloak, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::BansheeCloak);
+					Util::Log(__FUNCTION__, "Queue BansheeCloak");
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::HyperflightRotors) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::HyperflightRotors) == startedUpgrades.end())
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HyperflightRotors, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::HyperflightRotors);
+					Util::Log(__FUNCTION__, "Queue HyperFlightRotors");
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
@@ -392,6 +394,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (bansheeCount + vikingCount >= 5)
 				{
 					auto metaTypeShipArmor = queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
+					Util::Log(__FUNCTION__, "queue " + metaTypeShipArmor.getName());
 				}
 
 				/*int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
@@ -421,6 +424,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HiSecAutoTracking, 0, false));
 						startedUpgrades.push_back(MetaTypeEnum::HiSecAutoTracking);
+						Util::Log(__FUNCTION__, "queue HiSecAutoTracking");
 					}
 				}
 				break;
@@ -483,6 +487,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::InfernalPreIgniter, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::InfernalPreIgniter);
+					Util::Log(__FUNCTION__, "queue InfernalPreIgniter");
 				}
 
 				const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), true, true);
@@ -516,6 +521,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HiSecAutoTracking, 0, false));
 						startedUpgrades.push_back(MetaTypeEnum::HiSecAutoTracking);
+						Util::Log(__FUNCTION__, "queue HiSecAutoTracking");
 					}
 				}
 
@@ -1355,9 +1361,10 @@ void ProductionManager::validateUpgradesProgress()
 			if (order.ability_id == m_bot.Data(upgrade.first.getUpgrade()).buildAbility)
 			{
 				found = true;
-				if (progress > 0.98f)//About to finish, lets consider it done.
+				if (progress > 0.95f)//About to finish, lets consider it done.
 				{
 					toRemove.push_back(upgrade.first);
+					Util::Log(__FUNCTION__, "upgrade finished " + upgrade.first.getName());
 				}
 			}
 		}
@@ -1365,7 +1372,7 @@ void ProductionManager::validateUpgradesProgress()
 		{
 			toRemove.push_back(upgrade.first);
 			startedUpgrades.remove(upgrade.first);
-			//TODO refund ressources?
+			Util::Log(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName());
 		}
 	}
 	for (auto & remove : toRemove)
@@ -1440,9 +1447,10 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		auto it = incompletUpgrades.find(item.type);
 		if (it != incompletUpgrades.end())
 		{
-			Util::DisplayError("Trying to start and already started upgrade.", "0x00000006", m_bot);
+			Util::DisplayError("Trying to start an already started upgrade.", "0x00000006", m_bot);
 		}
 		incompletUpgrades.insert(std::make_pair(item.type, producer));
+		Util::Log(__FUNCTION__, "upgrade starting " + item.type.getName());
     }
 }
 
@@ -1597,6 +1605,10 @@ void ProductionManager::drawProductionInformation()
 	for (auto & underConstruction : m_bot.Buildings().getBuildings())
 	{
 		ss << underConstruction.type.getName() << "\n";
+	}
+	for (auto & incompletUpgrade : incompletUpgrades)
+	{
+		ss << incompletUpgrade.first.getName() << "\n";
 	}
 	m_bot.Map().drawTextScreen(0.01f, 0.4f, ss.str(), CCColor(255, 255, 0));	
 }

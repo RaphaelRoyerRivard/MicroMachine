@@ -80,6 +80,8 @@ void CCBot::OnGameStart() //full start
 	m_buildings.onStart();
 	m_repairStations.onStart();
     m_gameCommander.onStart();
+
+	Util::CreateLog(*this);
 	StartProfiling("0 Starcraft II");
 }
 

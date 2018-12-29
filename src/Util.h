@@ -10,6 +10,7 @@ namespace Util
 {
 	static const int DELAY_BETWEEN_ERROR = 120;
 	static std::vector<std::string> displayedError;
+	static std::ofstream file;
 
     struct IsUnit 
     {
@@ -72,20 +73,16 @@ namespace Util
     bool    Pathable(const sc2::GameInfo& info, const sc2::Point2D& point);
 
 
-
-
-
-
-
-
-
     CCRace          GetRaceFromString(const std::string & str);
     CCTilePosition  GetTilePosition(const CCPosition & pos);
     CCPosition      GetPosition(const CCTilePosition & tile);
     std::string     GetStringFromRace(const CCRace & race);
     bool            UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & m_bot);
-	void			DisplayError(std::string error, std::string errorCode, CCBot & m_bot, bool isCritical = false);
+	void			DisplayError(const std::string & error, const std::string & errorCode, CCBot & m_bot, bool isCritical = false);
 	void			ClearDisplayedErrors();
+	void			CreateLog(CCBot & m_bot);
+	void			Log(const std::string & function);
+	void			Log(const std::string & function, const std::string & message);
     UnitType        GetTownHall(const CCRace & race, CCBot & bot);
     UnitType        GetRefinery(const CCRace & race, CCBot & bot);
 	UnitType        GetSupplyProvider(const CCRace & race, CCBot & bot);
