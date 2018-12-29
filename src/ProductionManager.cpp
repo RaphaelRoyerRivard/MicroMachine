@@ -373,12 +373,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::BansheeCloak, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::BansheeCloak);
+					Util::Log(__FUNCTION__, "Queue BansheeCloak");
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::HyperflightRotors) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::HyperflightRotors) == startedUpgrades.end())
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HyperflightRotors, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::HyperflightRotors);
+					Util::Log(__FUNCTION__, "Queue HyperFlightRotors");
 				}
 
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
@@ -392,6 +394,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (bansheeCount + vikingCount >= 5)
 				{
 					auto metaTypeShipArmor = queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
+					Util::Log(__FUNCTION__, "queue " + metaTypeShipArmor.getName());
 				}
 
 				/*int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
@@ -421,6 +424,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HiSecAutoTracking, 0, false));
 						startedUpgrades.push_back(MetaTypeEnum::HiSecAutoTracking);
+						Util::Log(__FUNCTION__, "queue HiSecAutoTracking");
 					}
 				}
 				break;
@@ -483,6 +487,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::InfernalPreIgniter, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::InfernalPreIgniter);
+					Util::Log(__FUNCTION__, "queue InfernalPreIgniter");
 				}
 
 				const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), true, true);
@@ -516,6 +521,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HiSecAutoTracking, 0, false));
 						startedUpgrades.push_back(MetaTypeEnum::HiSecAutoTracking);
+						Util::Log(__FUNCTION__, "queue HiSecAutoTracking");
 					}
 				}
 
@@ -1358,6 +1364,7 @@ void ProductionManager::validateUpgradesProgress()
 				if (progress > 0.95f)//About to finish, lets consider it done.
 				{
 					toRemove.push_back(upgrade.first);
+					Util::Log(__FUNCTION__, "upgrade finished " + upgrade.first.getName());
 				}
 			}
 		}
@@ -1365,6 +1372,7 @@ void ProductionManager::validateUpgradesProgress()
 		{
 			toRemove.push_back(upgrade.first);
 			startedUpgrades.remove(upgrade.first);
+			Util::Log(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName());
 		}
 	}
 	for (auto & remove : toRemove)
@@ -1442,6 +1450,7 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 			Util::DisplayError("Trying to start an already started upgrade.", "0x00000006", m_bot);
 		}
 		incompletUpgrades.insert(std::make_pair(item.type, producer));
+		Util::Log(__FUNCTION__, "upgrade starting " + item.type.getName());
     }
 }
 

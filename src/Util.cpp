@@ -1,6 +1,5 @@
 #include "Util.h"
 #include "CCBot.h"
-#include <iostream>
 
 const float EPSILON = 1e-5;
 
@@ -963,7 +962,7 @@ bool Util::UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & 
     return false;
 }
 
-void Util::DisplayError(std::string error, std::string errorCode, CCBot & m_bot, bool isCritical)
+void Util::DisplayError(const std::string & error, const std::string & errorCode, CCBot & m_bot, bool isCritical)
 {
 	auto it = find(displayedError.begin(), displayedError.end(), errorCode);
 	if (it != displayedError.end())
@@ -981,4 +980,30 @@ void Util::DisplayError(std::string error, std::string errorCode, CCBot & m_bot,
 void Util::ClearDisplayedErrors()
 {
 	displayedError.clear();
+}
+
+void Util::CreateLog(CCBot & m_bot)
+{
+	time_t now = time(0);
+	char buf[80];
+	strftime(buf, sizeof(buf), "./Log/%Y-%m-%d--%H-%M-%S.log", localtime(&now));
+	file.open(buf);
+
+	std::stringstream races;
+	races << Util::GetStringFromRace(m_bot.GetPlayerRace(Players::Self)) << " VS " << Util::GetStringFromRace(m_bot.GetPlayerRace(Players::Enemy));
+	Util::Log(races.str());
+}
+
+void Util::Log(const std::string & function)
+{
+#if _DEBUG
+	file << function << std::endl;
+#endif
+}
+
+void Util::Log(const std::string & function, const std::string & message)
+{
+#if _DEBUG
+	file << function << " | " << message << std::endl;
+#endif
 }

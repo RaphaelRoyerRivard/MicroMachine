@@ -41,7 +41,7 @@
         "KiteWithRangedUnits"       : true,
         "MaxTargetDistance"         : 20,
         "MaxWorkerRepairDistance"   : 20,
-        "ScoutHarassEnemy"          : false,
+        "ScoutHarassEnemy"          : true,
         "EnableMultiThreading"      : false
     },
     
