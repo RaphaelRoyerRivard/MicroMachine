@@ -80,11 +80,13 @@ void CCBot::OnGameStart() //full start
 	m_buildings.onStart();
 	m_repairStations.onStart();
     m_gameCommander.onStart();
+	StartProfiling("0 Starcraft II");
 }
 
 void CCBot::OnStep()
 {
-	StartProfiling("0 OnStep");	//Do not remove
+	StopProfiling("0 Starcraft II");
+	StartProfiling("0.0 OnStep");	//Do not remove
 	m_gameLoop = Observation()->GetGameLoop();
 	if (m_gameLoop % Util::DELAY_BETWEEN_ERROR == 0)
 	{
@@ -135,7 +137,7 @@ void CCBot::OnStep()
 	m_gameCommander.onFrame();
 	StopProfiling("0.10 m_gameCommander.onFrame");
 
-	StopProfiling("0 OnStep");	//Do not remove
+	StopProfiling("0.0 OnStep");	//Do not remove
 
 #ifdef SC2API
 	if (Config().AllowDebug)
@@ -144,6 +146,7 @@ void CCBot::OnStep()
 		Debug()->SendDebug();
 	}
 #endif
+	StartProfiling("0 Starcraft II");
 }
 
 #pragma optimize( "checkKeyState", off )
