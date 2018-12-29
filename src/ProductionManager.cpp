@@ -841,21 +841,22 @@ void ProductionManager::lowPriorityChecks()
 
 bool ProductionManager::currentlyHasRequirement(MetaType currentItem)
 {
-	auto requiredUnits = m_bot.Data(currentItem).requiredUnits;
+ 	auto requiredUnits = m_bot.Data(currentItem).requiredUnits;
 	if (requiredUnits.empty())
 	{
 		return true;
 	}
 
+	/*sc2::UNIT_TYPEID type = currentItem.getUnitType().getAPIUnitType();
+	if (currentItem.getUnitType().isResourceDepot())
+	{
+		if (m_bot.Bases().getBaseCount(Players::Self) > 0)
+			return true;
+		return false;
+	}*/
+
 	for (auto & required : m_bot.Data(currentItem).requiredUnits)
 	{
-		sc2::UNIT_TYPEID type = currentItem.getUnitType().getAPIUnitType();
-		if (currentItem.getUnitType().isResourceDepot())
-		{
-			if (m_bot.Bases().getBaseCount(Players::Self) > 0)
-				continue;
-			return false;
-		}
 		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, true, true) <= 0)
 		{
 			//Only for terran because all their bases are used for the same prerequirements. Not the case for zergs.
@@ -1471,6 +1472,7 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 	// quick check if the unit can't do anything it certainly can't build the thing we want
 	if (available_abilities.abilities.empty())
 	{
+		Util::DisplayError("This shouldn't happen.", "0x10000000", m_bot, true);
 		return false;
 	}
 	else
@@ -1492,7 +1494,7 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 			return true;
 		}
 	}
-
+	
 	return false;
 #else
 	bool canMake = meetsReservedResources(type);

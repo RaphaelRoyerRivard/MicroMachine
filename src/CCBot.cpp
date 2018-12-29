@@ -68,6 +68,8 @@ void CCBot::OnGameStart() //full start
 
 	//Initialize list of MetaType
 	MetaTypeEnum::Initialize(*this);
+	Util::SetAllowDebug(Config().AllowDebug);
+	Util::CreateLog(*this);
 	selfRace = GetPlayerRace(Players::Self);
     
     setUnits();
@@ -81,7 +83,6 @@ void CCBot::OnGameStart() //full start
 	m_repairStations.onStart();
     m_gameCommander.onStart();
 
-	Util::CreateLog(*this);
 	StartProfiling("0 Starcraft II");
 }
 
