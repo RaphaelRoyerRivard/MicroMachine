@@ -68,6 +68,8 @@ void CCBot::OnGameStart() //full start
 
 	//Initialize list of MetaType
 	MetaTypeEnum::Initialize(*this);
+	Util::SetAllowDebug(Config().AllowDebug);
+	Util::CreateLog(*this);
 	selfRace = GetPlayerRace(Players::Self);
     
     setUnits();
@@ -81,7 +83,6 @@ void CCBot::OnGameStart() //full start
 	m_repairStations.onStart();
     m_gameCommander.onStart();
 
-	Util::CreateLog(*this);
 	StartProfiling("0 Starcraft II");
 }
 
@@ -436,7 +437,9 @@ void CCBot::clearDeadUnits()
 	{
 		auto& unit = pair.second;
 		// Remove dead unit or old snapshot
-		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot && m_map.isVisible(unit.getPosition()) && unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
+		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
+			&& m_map.isVisible(unit.getPosition())
+			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
 			unitsToRemove.push_back(unit.getUnitPtr()->tag);
 	}
 	// Remove dead enemy units
@@ -451,7 +454,9 @@ void CCBot::clearDeadUnits()
 	for (auto& pair : m_neutralUnits)
 	{
 		auto& unit = pair.second;
-		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot && m_map.isVisible(unit.getPosition()) && unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
+		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
+			&& m_map.isVisible(unit.getPosition())
+			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
 			unitsToRemove.push_back(unit.getUnitPtr()->tag);
 	}
 	// Remove dead neutral units

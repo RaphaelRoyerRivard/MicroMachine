@@ -220,8 +220,7 @@ bool Unit::isAddonTraining() const
 {
 	BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API
-	return m_unit->orders.size() > 1;
-	
+	return m_unit->orders.size() > 1;	
 #else
 	return false;
 #endif

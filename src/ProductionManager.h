@@ -24,7 +24,9 @@ class ProductionManager
 	UnitType workerType;
 	MetaType workerMetatype;
 
-	MetaType queueUpgrade(const MetaType & type);
+	void queueUpgrade(const MetaType & type);
+	bool	isTechStarted(const MetaType & type);
+	void queueTech(const MetaType & type);
 	void	validateUpgradesProgress();
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
     bool    canMakeNow(const Unit & producer, const MetaType & type);

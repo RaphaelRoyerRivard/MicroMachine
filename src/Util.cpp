@@ -3,6 +3,11 @@
 
 const float EPSILON = 1e-5;
 
+void Util::SetAllowDebug(bool _allowDebug)
+{
+	allowDebug = _allowDebug;
+}
+
 std::string Util::GetStringFromRace(const CCRace & race)
 {
 #ifdef SC2API
@@ -973,7 +978,12 @@ void Util::DisplayError(const std::string & error, const std::string & errorCode
 	std::stringstream ss;
 	ss << (isCritical ? "[CRITICAL ERROR]" : "[ERROR]") << " : " << error << " | " << errorCode;
 
-	m_bot.Actions()->SendChat(ss.str());
+	if (allowDebug || isCritical)//Not tournament or critical
+	{
+		m_bot.Actions()->SendChat(ss.str());
+	}
+
+	Util::Log(ss.str(), true);
 	displayedError.push_back(errorCode);
 }
 
@@ -991,19 +1001,21 @@ void Util::CreateLog(CCBot & m_bot)
 
 	std::stringstream races;
 	races << Util::GetStringFromRace(m_bot.GetPlayerRace(Players::Self)) << " VS " << Util::GetStringFromRace(m_bot.GetPlayerRace(Players::Enemy));
-	Util::Log(races.str());
+	Util::Log(races.str(), true);
 }
 
-void Util::Log(const std::string & function)
+void Util::Log(const std::string & function, bool force)
 {
-#if _DEBUG
-	file << function << std::endl;
-#endif
+	if (allowDebug || force)
+	{
+		file << function << std::endl;
+	}
 }
 
-void Util::Log(const std::string & function, const std::string & message)
+void Util::Log(const std::string & function, const std::string & message, bool force)
 {
-#if _DEBUG
-	file << function << " | " << message << std::endl;
-#endif
+	if (allowDebug || force)
+	{
+		file << function << " | " << message << std::endl;
+	}
 }
