@@ -733,7 +733,7 @@ void CCBot::drawProfilingInfo()
 {
 	if (m_config.DrawProfilingInfo)
 	{
-		const std::string stepString = "0 OnStep";
+		const std::string stepString = "0.0 OnStep";
 		long long stepTime = 0;
 		const auto it = m_profilingTimes.find(stepString);
 		if(it != m_profilingTimes.end())
