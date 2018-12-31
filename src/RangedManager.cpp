@@ -330,6 +330,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		const float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
 		if (dist < threatRange + 0.5f)
 		{
+			if(isHellion && threat && threat->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
+			{
+				Util::Log(__FUNCTION__, "Threat is too close to HELLION for using potential fields.");
+			}
 			useInfluenceMap = true;
 			break;
 		}
@@ -374,6 +378,12 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			if (m_bot.Config().DrawHarassInfo)
 				m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
 
+			if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
+			{
+				std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used potential fields to move to (" +
+					std::to_string(pathableTile.x) + ", " + std::to_string(pathableTile.y) + ")";
+				Util::Log(__FUNCTION__, str);
+			}
 			m_bot.GetCommandMutex().lock();
 			Micro::SmartAttackMove(rangedUnit, pathableTile, m_bot);
 			m_bot.GetCommandMutex().unlock();
@@ -383,11 +393,21 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			}
 			return;
 		}
+		if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
+		{
+			Util::Log(__FUNCTION__, "HELLION failed to use potential fields.");
+		}
 	}
 
 	// If close to an unpathable position or in danger
 	// Use influence map to find safest path
 	const CCPosition moveTo = FindOptimalPathToSafety(rangedUnit, goal);
+	if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
+	{
+		std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used influence maps to move to (" +
+			std::to_string(moveTo.x) + ", " + std::to_string(moveTo.y) + ")";
+		Util::Log(__FUNCTION__, str);
+	}
 	m_bot.GetCommandMutex().lock();
 	Micro::SmartMove(rangedUnit, moveTo, m_bot);
 	m_bot.GetCommandMutex().unlock();
@@ -405,6 +425,8 @@ bool RangedManager::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
 
 bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit) const
 {
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
+		return false;
 	const uint32_t availableFrame = nextPathFindingFrameForUnit.find(rangedUnit) != nextPathFindingFrameForUnit.end() ? nextPathFindingFrameForUnit.at(rangedUnit) : m_bot.GetGameLoop();
 	return m_bot.GetGameLoop() >= availableFrame;
 }
@@ -1259,7 +1281,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
             //We manually reduce the dps of the bunker because it only serve as a shield, units will spawn out of it when destroyed
 			targetDps = 5.f;
         }
-        const float workerBonus = targetUnit.getType().isWorker() ? m_harassMode ? 2.f : 1.5f : 1.f;	//workers are important to kill
+        const float workerBonus = targetUnit.getType().isWorker() && attacker->unit_type != sc2::UNIT_TYPEID::TERRAN_HELLION ? m_harassMode ? 2.f : 1.5f : 1.f;	//workers are important to kill
 		float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;								//targets that cannot hit our unit are less prioritized
 		if(targetUnit.getType().isAttackingBuilding())
 		{
