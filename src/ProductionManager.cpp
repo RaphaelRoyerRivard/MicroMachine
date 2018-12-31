@@ -457,7 +457,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					if (!hasPicked)
 					{//Building
 						const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-						if (factoryCount < baseCount)
+						if (factoryCount + 1 < baseCount)
 						{
 							toBuild = MetaTypeEnum::Factory;
 							hasPicked = true;
