@@ -16,15 +16,15 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.0.3",
+        "BotVersion"                : "1.1.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "DarknessSanctuaryLE.SC2Map",
+        "EnemyRace"                 : "Zerg",
+        "MapFile"                   : "BlueshiftLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -98,7 +98,7 @@
         "DrawProfilingInfo"         : false,
         "DrawInfluenceMaps"         : false,
         "DrawBlockedTiles"          : false,
-		"DrawRepairStation"			: false,
+		"DrawRepairStation"			: true,
 		"DrawDamageHealthRatio"		: false
     },
     
