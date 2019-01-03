@@ -3,7 +3,6 @@
 #include "Common.h"
 #include "Squad.h"
 #include "SquadData.h"
-#include "UnitState.h"
 
 class CCBot;
 
@@ -15,13 +14,10 @@ class CombatCommander
 
     SquadData       m_squadData;
     std::vector<Unit>  m_combatUnits;
-	std::map<CCUnitID, UnitState> m_unitStates;
 	std::map<Unit, std::pair<CCPosition, uint32_t>> m_invisibleSighting;
 	std::vector<std::vector<float>> m_groundInfluenceMap;
 	std::vector<std::vector<float>> m_airInfluenceMap;
 	std::vector<std::vector<bool>> m_blockedTiles;
-	std::map<sc2::UNIT_TYPEID, float> totalDamage;
-	std::map<sc2::UNIT_TYPEID, float> totalhealthLoss;
 	
     bool            m_initialized;
     bool            m_attackStarted;
@@ -34,8 +30,6 @@ class CombatCommander
 	void            updateHarassSquads();
 	void            updateAttackSquads();
     void            updateIdleSquad();
-	void			checkUnitsState();
-	void			UpdateTotalHealthLoss();
     bool            isSquadUpdateFrame();
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);
@@ -60,7 +54,6 @@ class CombatCommander
 	void			updateBlockedTilesWithUnit(const Unit& unit);
 	void			drawInfluenceMaps();
 	void			drawBlockedTiles();
-	void			drawDamageHealthRatio();
 
 public:
 
@@ -70,8 +63,6 @@ public:
     void onStart();
     void onFrame(const std::vector<Unit> & combatUnits);
 	void lowPriorityCheck();
-	void increaseTotalDamage(float damageDealt, sc2::UNIT_TYPEID unittype);
-	void increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID unittype);
 
 	std::map<Unit, std::pair<CCPosition, uint32_t>> & GetInvisibleSighting();
 

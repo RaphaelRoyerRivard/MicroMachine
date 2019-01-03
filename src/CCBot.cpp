@@ -9,6 +9,7 @@ CCBot::CCBot(std::string botVersion)
 	, m_buildings(*this)
 	, m_strategy(*this)
 	, m_repairStations(*this)
+	, m_combatAnalyzer(*this)
 	, m_gameCommander(*this)
 	, m_techTree(*this)
 {
@@ -81,6 +82,7 @@ void CCBot::OnGameStart() //full start
     m_workers.onStart();
 	m_buildings.onStart();
 	m_repairStations.onStart();
+	m_combatAnalyzer.onStart();
     m_gameCommander.onStart();
 
 	StartProfiling("0 Starcraft II");
@@ -135,6 +137,10 @@ void CCBot::OnStep()
 	StartProfiling("0.11 m_repairStations.onFrame");
 	m_repairStations.onFrame();
 	StopProfiling("0.11 m_repairStations.onFrame");
+
+	StartProfiling("0.12 m_combatAnalyzer.onFrame");
+	m_combatAnalyzer.onFrame();
+	StopProfiling("0.12 m_combatAnalyzer.onFrame");
 
 	StartProfiling("0.10 m_gameCommander.onFrame");
 	m_gameCommander.onFrame();
@@ -524,6 +530,11 @@ StrategyManager & CCBot::Strategy()
 const BaseLocationManager & CCBot::Bases() const
 {
     return m_bases;
+}
+
+CombatAnalyzer & CCBot::CombatAnalyzer()
+{
+	return m_combatAnalyzer;
 }
 
 GameCommander & CCBot::Commander()
