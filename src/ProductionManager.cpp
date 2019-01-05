@@ -129,10 +129,26 @@ void ProductionManager::manageBuildOrderQueue()
 	m_bot.StartProfiling("2.2   checkQueue");
     // the current item to be used
     BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
+	int highestPriority = currentItem.priority;
+	int lowestMineralReq = -1;
+	int lowestGasReq = -1;
 
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
     {
+		//Get the lowest price for any top priority item in the queue.
+		if (currentItem.priority == highestPriority)
+		{
+			if (lowestMineralReq == -1 || lowestMineralReq < m_bot.Data(currentItem.type).mineralCost)
+			{
+				lowestMineralReq = m_bot.Data(currentItem.type).mineralCost;
+			}
+			if (lowestGasReq == -1 || lowestGasReq < m_bot.Data(currentItem.type).gasCost)
+			{
+				lowestGasReq = m_bot.Data(currentItem.type).gasCost;
+			}
+		}
+
 		//check if we have the prerequirements.
 		if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
 		{
@@ -148,7 +164,7 @@ void ProductionManager::manageBuildOrderQueue()
 			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location, remove pre-movement
 
 			//Build supply depot at ramp against protoss
-			if (m_bot.Observation()->GetFoodCap() <= 15 && currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
+			/*if (m_bot.Observation()->GetFoodCap() <= 15 && currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
 				m_bot.GetGameLoop() > 5 && getFreeMinerals() > 30)
 			{
 				const CCPosition centerMap(m_bot.Map().width() / 2, m_bot.Map().height() / 2);
@@ -170,7 +186,7 @@ void ProductionManager::manageBuildOrderQueue()
 						rampSupplyDepotWorker.move(centerMap);
 					}
 				}
-			}
+			}*/
 
 			//TODO: TEMP build barrack away from the ramp to protect it from worker rush
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
@@ -214,7 +230,7 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 
 			// if we can make the current item
-			if (meetsReservedResources(currentItem.type))
+			if (meetsReservedResources(currentItem.type, lowestMineralReq, lowestGasReq))
 			{
 				Unit producer = getProducer(currentItem.type);
 				if (canMakeNow(producer, currentItem.type))
@@ -229,7 +245,7 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 
 			// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
-			if (m_bot.Data(currentItem.type).isBuilding && !m_bot.Data(currentItem.type).isAddon && !currentItem.type.getUnitType().isMorphedBuilding() && meetsReservedResourcesWithExtra(currentItem.type))
+			if (m_bot.Data(currentItem.type).isBuilding && !m_bot.Data(currentItem.type).isAddon && !currentItem.type.getUnitType().isMorphedBuilding() && meetsReservedResourcesWithExtra(currentItem.type, lowestMineralReq, lowestGasReq))
 			{
 				Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
 				//Get building location
@@ -1593,16 +1609,16 @@ int ProductionManager::getExtraGas()
 }
 
 // return whether or not we meet resources, including building reserves
-bool ProductionManager::meetsReservedResources(const MetaType & type)
+bool ProductionManager::meetsReservedResources(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
 {
-    return (m_bot.Data(type).mineralCost <= getFreeMinerals()) && (m_bot.Data(type).gasCost <= getFreeGas());
+    return (m_bot.Data(type).mineralCost <= getFreeMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= getFreeGas() - additionalReservedGas);
 }
 
 // return whether or not we meet resources, including building reserves
-bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type)
+bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
 {
 	assert("Addons cannot use extra ressources", m_bot.Data(type).isAddon);
-	return (m_bot.Data(type).mineralCost <= getFreeMinerals() + getExtraMinerals()) && (m_bot.Data(type).gasCost <= getFreeGas() + getExtraGas());
+	return (m_bot.Data(type).mineralCost <= getFreeMinerals() + getExtraMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= getFreeGas() + getExtraGas() - additionalReservedGas);
 }
 
 void ProductionManager::drawProductionInformation()
