@@ -132,6 +132,15 @@ void ProductionManager::manageBuildOrderQueue()
 	int highestPriority = currentItem.priority;
 	int lowestMineralReq = -1;
 	int lowestGasReq = -1;
+	int additionalReservedMineral = 0;
+	int additionalReservedGas = 0;
+
+	//Dont reserve ressources for worker or less important things
+	if (highestPriority <= 2)//2 == scv priority
+	{
+		lowestMineralReq = 0;
+		lowestGasReq = 0;
+	}
 
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
@@ -139,14 +148,26 @@ void ProductionManager::manageBuildOrderQueue()
 		//Get the lowest price for any top priority item in the queue.
 		if (currentItem.priority == highestPriority)
 		{
-			if (lowestMineralReq == -1 || lowestMineralReq < m_bot.Data(currentItem.type).mineralCost)
+			if (lowestMineralReq == -1 || lowestMineralReq > m_bot.Data(currentItem.type).mineralCost)
 			{
 				lowestMineralReq = m_bot.Data(currentItem.type).mineralCost;
 			}
-			if (lowestGasReq == -1 || lowestGasReq < m_bot.Data(currentItem.type).gasCost)
+			if (lowestGasReq == -1 || lowestGasReq > m_bot.Data(currentItem.type).gasCost)
 			{
 				lowestGasReq = m_bot.Data(currentItem.type).gasCost;
 			}
+		}
+
+		//If we currently have a high priority, do not reserve ressources. Otherwise reserve ressources
+		if (highestPriority == currentItem.priority)
+		{
+			additionalReservedMineral = 0;
+			additionalReservedGas = 0;
+		}
+		else
+		{
+			additionalReservedMineral = lowestMineralReq;
+			additionalReservedGas = lowestGasReq;
 		}
 
 		//check if we have the prerequirements.
@@ -190,7 +211,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 			//TODO: TEMP build barrack away from the ramp to protect it from worker rush
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
-				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks))
+				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks, additionalReservedMineral, additionalReservedGas))
 			{
 				firstBarrackBuilt = true;
 
@@ -230,7 +251,7 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 
 			// if we can make the current item
-			if (meetsReservedResources(currentItem.type, lowestMineralReq, lowestGasReq))
+			if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 			{
 				Unit producer = getProducer(currentItem.type);
 				if (canMakeNow(producer, currentItem.type))
@@ -245,7 +266,10 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 
 			// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
-			if (m_bot.Data(currentItem.type).isBuilding && !m_bot.Data(currentItem.type).isAddon && !currentItem.type.getUnitType().isMorphedBuilding() && meetsReservedResourcesWithExtra(currentItem.type, lowestMineralReq, lowestGasReq))
+			if (m_bot.Data(currentItem.type).isBuilding
+				&& !m_bot.Data(currentItem.type).isAddon
+				&& !currentItem.type.getUnitType().isMorphedBuilding()
+				&& meetsReservedResourcesWithExtra(currentItem.type, additionalReservedMineral, additionalReservedGas))
 			{
 				Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
 				//Get building location
@@ -322,7 +346,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueAsHighestPriority(MetaTypeEnum::PlanetaryFortress, false);
 				}
-				m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
 				m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
 			}
 		}
