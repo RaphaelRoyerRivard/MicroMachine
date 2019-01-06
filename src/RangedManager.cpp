@@ -401,15 +401,16 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	// If close to an unpathable position or in danger
 	// Use influence map to find safest path
-	const CCPosition moveTo = FindOptimalPathToSafety(rangedUnit, goal);
+	CCPosition safeTile = FindOptimalPathToSafety(rangedUnit, goal);
+	//safeTile = AttenuateZigzag(rangedUnit, threats, safeTile, summedFleeVec);	//if we decomment this, we must not break in the threat check loop
 	if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 	{
 		std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used influence maps to move to (" +
-			std::to_string(moveTo.x) + ", " + std::to_string(moveTo.y) + ")";
+			std::to_string(safeTile.x) + ", " + std::to_string(safeTile.y) + ")";
 		Util::Log(__FUNCTION__, str);
 	}
 	m_bot.GetCommandMutex().lock();
-	Micro::SmartMove(rangedUnit, moveTo, m_bot);
+	Micro::SmartMove(rangedUnit, safeTile, m_bot);
 	m_bot.GetCommandMutex().unlock();
 	if (isReaper)
 	{
@@ -1059,6 +1060,26 @@ float RangedManager::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * u
 {
 	const auto & influenceMap = unit->is_flying ? m_bot.Commander().Combat().getAirInfluenceMap() : m_bot.Commander().Combat().getGroundInfluenceMap();
 	return influenceMap[tile.x][tile.y];
+}
+
+CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const
+{
+	float variance;
+	const CCPosition threatsCenter = Util::CalcCenter(threats, variance);
+	if (variance < 15)
+	{
+		const CCPosition vectorTowardsSafeTile = safeTile - rangedUnit->pos;
+		summedFleeVec = Util::Normalized(summedFleeVec) * Util::GetNorm(vectorTowardsSafeTile);
+		const CCPosition newFleeVector = (vectorTowardsSafeTile + summedFleeVec) / 2.f;
+		const CCPosition newFleePosition = rangedUnit->pos + newFleeVector;
+		if (m_bot.Observation()->IsPathable(newFleePosition))
+		{
+			if (m_bot.Config().DrawHarassInfo)
+				m_bot.Map().drawCircle(safeTile, 0.2f, sc2::Colors::Purple);
+			return newFleePosition;
+		}
+	}
+	return safeTile;
 }
 
 void RangedManager::AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets) {

@@ -47,6 +47,7 @@ private:
 	bool ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange) const;
 	bool ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit) const;
 	float GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit) const;
+	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	float getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const;
 	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);
 	void UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets);
