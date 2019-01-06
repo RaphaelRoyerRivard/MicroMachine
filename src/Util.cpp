@@ -1004,17 +1004,17 @@ void Util::CreateLog(CCBot & m_bot)
 	Util::Log(races.str(), true);
 }
 
-void Util::Log(const std::string & function, bool force)
+void Util::Log(const std::string & function, bool alwaysLog)
 {
-	if (allowDebug || force)
+	if (allowDebug || alwaysLog)
 	{
 		file << function << std::endl;
 	}
 }
 
-void Util::Log(const std::string & function, const std::string & message, bool force)
+void Util::Log(const std::string & function, const std::string & message, bool alwaysLog)
 {
-	if (allowDebug || force)
+	if (allowDebug || alwaysLog)
 	{
 		file << function << " | " << message << std::endl;
 	}

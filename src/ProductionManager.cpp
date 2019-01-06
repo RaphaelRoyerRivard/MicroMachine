@@ -134,6 +134,7 @@ void ProductionManager::manageBuildOrderQueue()
 	int lowestGasReq = -1;
 	int additionalReservedMineral = 0;
 	int additionalReservedGas = 0;
+	bool isSupplyCap = false;
 
 	//Dont reserve ressources for worker or less important things
 	if (highestPriority <= 2)//2 == scv priority
@@ -248,12 +249,25 @@ void ProductionManager::manageBuildOrderQueue()
 
 					break;
 				}				
-			}
+			}			
 
 			// if we can make the current item
 			if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 			{
 				Unit producer = getProducer(currentItem.type);
+
+				// build supply if we need some (SupplyBlock)
+				if (producer.isValid()
+					&& m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+				{
+					supplyBlockedFrames++;
+#if _DEBUG
+					Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
+#else
+					Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", true);
+#endif
+				}
+
 				if (canMakeNow(producer, currentItem.type))
 				{
 					// create it and remove it from the _queue
@@ -323,7 +337,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	// build supply if we need some
 	const auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
-	if(m_bot.GetCurrentSupply() + 1.75 * getUnitTrainingBuildings(m_bot.GetSelfRace()).size() + baseCount > supplyWithAdditionalSupplyDepot && !m_queue.contains(supplyProviderType) && supplyWithAdditionalSupplyDepot < 200 && !m_bot.Strategy().isWorkerRushed())
+	if(m_bot.GetCurrentSupply() + 1.65 * getUnitTrainingBuildings(m_bot.GetSelfRace()).size() + baseCount > supplyWithAdditionalSupplyDepot
+		&& !m_queue.contains(supplyProviderType)
+		&& supplyWithAdditionalSupplyDepot < 200
+		&& !m_bot.Strategy().isWorkerRushed())
 	{
 		m_queue.queueAsHighestPriority(supplyProviderType, false);
 	}
@@ -797,12 +814,6 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 	if (typeData.gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
     {
 		m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
-    }
-
-    // build supply if we need some
-    if (typeData.supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply() && !m_bot.Buildings().isBeingBuilt(supplyProvider))
-    {
-        m_queue.queueAsHighestPriority(supplyProviderType, true);
     }
 }
 

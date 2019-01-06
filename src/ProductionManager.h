@@ -24,9 +24,9 @@ class ProductionManager
 	UnitType workerType;
 	MetaType workerMetatype;
 
-	void queueUpgrade(const MetaType & type);
+	void	queueUpgrade(const MetaType & type);
 	bool	isTechStarted(const MetaType & type);
-	void queueTech(const MetaType & type);
+	void	queueTech(const MetaType & type);
 	void	validateUpgradesProgress();
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
     bool    canMakeNow(const Unit & producer, const MetaType & type);
@@ -48,6 +48,7 @@ class ProductionManager
 	bool	hasProducer(const MetaType& metaType, bool checkInQueue);
 
 public:
+	int supplyBlockedFrames = 0;
 
     ProductionManager(CCBot & bot);
 
