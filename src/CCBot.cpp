@@ -10,6 +10,8 @@ CCBot::CCBot(std::string botVersion)
 	, m_gameCommander(*this)
 	, m_strategy(*this)
 	, m_techTree(*this)
+	, m_conceedNextFrame(false)
+	, m_conceed(false)
 {
 	if(botVersion != "")
 		Actions()->SendChat(botVersion);
@@ -101,6 +103,8 @@ void CCBot::OnStep()
 	StartProfiling("0.3 clearDeadUnits");
 	clearDeadUnits();
 	StopProfiling("0.3 clearDeadUnits");
+
+	checkForConceed();
 
 	StartProfiling("0.4 m_map.onFrame");
 	m_map.onFrame();
@@ -326,6 +330,16 @@ void CCBot::clearDeadUnits()
 	{
 		m_enemyUnits.erase(tag);
 		std::cout << "Dead enemy unit removed from map" << std::endl;
+	}
+}
+
+void CCBot::checkForConceed()
+{
+	m_conceed = m_conceedNextFrame;
+	if(m_allyUnits.size() == 1)
+	{
+		Actions()->SendChat("GG");
+		m_conceedNextFrame = true;
 	}
 }
 

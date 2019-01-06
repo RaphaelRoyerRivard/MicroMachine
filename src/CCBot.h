@@ -51,10 +51,13 @@ class CCBot
 	CCRace selfRace;
 	std::map<std::string, Profiler> m_profilingTimes;
 	std::mutex m_command_mutex;
+	bool m_conceedNextFrame;
+	bool m_conceed;
 
 	void checkKeyState();
 	void setUnits();
 	void clearDeadUnits();
+	void checkForConceed();
 	void drawProfilingInfo();
 
 #ifdef SC2API
@@ -118,4 +121,5 @@ public:
 	void StartProfiling(const std::string & profilerName);
 	void StopProfiling(const std::string & profilerName);
 	std::mutex & GetCommandMutex();
+	bool shouldConceed() const { return m_conceed; }
 };
