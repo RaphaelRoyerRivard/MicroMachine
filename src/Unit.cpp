@@ -498,3 +498,12 @@ bool Unit::isConstructingAnything() const
 	return m_unit->isConstructing();
 #endif
 }
+
+bool Unit::isCounterToUnit(const Unit& unit) const
+{
+	const bool canAttack = unit.isFlying() ? Util::CanUnitAttackAir(m_unit, *m_bot) : Util::CanUnitAttackGround(m_unit, *m_bot);
+	if (!canAttack)
+		return false;
+	const bool isAttacked = isFlying() ? Util::CanUnitAttackAir(unit.getUnitPtr(), *m_bot) : Util::CanUnitAttackGround(unit.getUnitPtr(), *m_bot);
+	return !isAttacked;
+}

@@ -4,8 +4,10 @@
 #include "Squad.h"
 #include "SquadData.h"
 #include "UnitState.h"
+#include "BaseLocation.h"
 
 class CCBot;
+struct RegionArmyInformation;
 
 class CombatCommander
 {

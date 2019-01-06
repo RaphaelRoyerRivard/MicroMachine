@@ -64,6 +64,7 @@ public:
 	bool isAddonTraining() const;
     bool isConstructing(const UnitType & type) const;
 	bool isConstructingAnything() const;
+	bool isCounterToUnit(const Unit& unit) const;
 	sc2::Tag getAddonTag() const;
 
     void stop           () const;
