@@ -884,12 +884,10 @@ void CombatCommander::updateDefenseSquads()
 
 		auto region = RegionArmyInformation(myBaseLocation, m_bot);
 
-        CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotPosition());
+        const CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotPosition());
 
-        // start off assuming all enemy units in region are just workers
-		int numDefendersPerEnemyUnit = 2; // 2 might be too much if we consider them workers...
-		int numDefendersPerEnemyResourceDepot = 6; // This is a minimum
-		int numDefendersPerEnemyCanon = 4; // This is a minimum
+		const int numDefendersPerEnemyResourceDepot = 6; // This is a minimum
+		const int numDefendersPerEnemyCanon = 4; // This is a minimum
 
 		// calculate how many units are flying / ground units
 		int numEnemyFlyingInRegion = 0;
@@ -955,19 +953,17 @@ void CombatCommander::updateDefenseSquads()
             }
         }
 
+		std::stringstream squadName;
+		squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
+
+		myBaseLocation->setIsUnderAttack(!region.enemyUnits.empty());
+
 		if(!region.enemyUnits.empty())
 		{
 			region.calcEnemyPower();
 			regions.push_back(region);
 		}
-
-        std::stringstream squadName;
-        squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
-
-		myBaseLocation->setIsUnderAttack(!region.enemyUnits.empty());
-
-        // if there's nothing in this region to worry about
-        if (region.enemyUnits.empty())
+		else
         {
             // if a defense squad for this region exists, remove it
             if (m_squadData.squadExists(squadName.str()))
@@ -1007,8 +1003,7 @@ void CombatCommander::updateDefenseSquads()
         // if we don't have a squad assigned to this region already, create one
         if (!m_squadData.squadExists(squadName.str()))
         {
-			//SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
-			SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
+			const SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
 			m_squadData.addSquad(squadName.str(), Squad(squadName.str(), defendRegion, BaseDefensePriority, m_bot));
         }
 
@@ -1017,11 +1012,7 @@ void CombatCommander::updateDefenseSquads()
         {
             Squad & defenseSquad = m_squadData.getSquad(squadName.str());
 
-            // figure out how many units we need on defense
-            int flyingDefendersNeeded = numDefendersPerEnemyUnit * numEnemyFlyingInRegion;
-            int groundDefensersNeeded = numDefendersPerEnemyUnit * numEnemyGroundInRegion;
-
-            updateDefenseSquadUnits(defenseSquad, flyingDefendersNeeded, groundDefensersNeeded, closestEnemy);
+            updateDefenseSquadUnits(defenseSquad, numEnemyFlyingInRegion > 0, numEnemyGroundInRegion > 0, closestEnemy);
         }
         else
         {
@@ -1046,13 +1037,19 @@ void CombatCommander::updateDefenseSquads()
 		}
     }
 
-	if(false)	//TODO remove that
+	// If we have at least one region under attack
 	if(!regions.empty())
 	{
+		// We sort them (the one with the strongest enemy force is first)
 		regions.sort();
 
+		// We check each of our units to determine how useful they would be for defending each of our attacked regions
 		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
 		{
+			if (unit.getType().isWorker() || unit.getType().isBuilding())
+				continue;	// We don't want to consider our workers and defensive buildings (they will automatically defend their region)
+
+			// We check how useful our unit would be for anti ground and anti air for each of our regions
 			for (auto & region : regions)
 			{
 				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
@@ -1061,6 +1058,7 @@ void CombatCommander::updateDefenseSquads()
 				float maxAirDps = 0.f;
 				for (auto & enemyUnit : region.enemyUnits)
 				{
+					// We check if our unit is immune to the enemy unit (as soon as one enemy unit can attack our unit, we stop checking)
 					if (immune)
 					{
 						if (unit.isFlying())
@@ -1072,6 +1070,7 @@ void CombatCommander::updateDefenseSquads()
 							immune = !Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot);
 						}
 					}
+					// We check the max ground and air dps that our unit would do in that region
 					const float dps = Util::GetDpsForTarget(unit.getUnitPtr(), enemyUnit.getUnitPtr(), m_bot);
 					if (enemyUnit.isFlying())
 					{
@@ -1088,11 +1087,13 @@ void CombatCommander::updateDefenseSquads()
 						}
 					}
 				}
+				// If our unit would have a valid ground target, we calculate the score (usefulness in that region) and add it to the list
 				if (maxGroundDps > 0.f)
 				{
 					float regionScore = immune * 100 + maxGroundDps - distance;
 					region.unitGroundScores.insert_or_assign(unit.getUnitPtr(), regionScore);
 				}
+				// If our unit would have a valid air target, we calculate the score (usefulness in that region) and add it to the list
 				if (maxAirDps > 0.f)
 				{
 					float regionScore = immune * 100 + maxAirDps - distance;
@@ -1101,10 +1102,12 @@ void CombatCommander::updateDefenseSquads()
 			}
 		}
 
-		while (true)
+		while (true)	// The conditions to exit are if enough units are protecting our regions enough or if 
 		{
 			// We take the region that needs the most support
 			auto & region = *regions.begin();
+
+			// No need to continue of the first region does not need more support
 			if (!region.needsMoreSupport())
 				break;
 
@@ -1142,46 +1145,11 @@ void CombatCommander::updateDefenseSquads()
 
 	m_bot.Strategy().setIsWorkerRushed(workerRushed);
 	m_bot.Strategy().setIsEarlyRushed(earlyRushed);
-
-    // for each of our defense squads, if there aren't any enemy units near the position, clear the squad
-	auto enemies = m_bot.UnitInfo().getUnits(Players::Enemy);
-    for (const auto & kv : m_squadData.getSquads())
-    {
-        const Squad & squad = kv.second;
-        const SquadOrder & order = squad.getSquadOrder();
-
-        if (order.getType() != SquadOrderTypes::Defend)
-        {
-            continue;
-        }
-
-        bool enemyUnitInRange = false;
-        for (auto & unit : enemies)
-        {
-            if (Util::DistSq(unit, order.getPosition()) < order.getRadius() * order.getRadius())
-            {
-                enemyUnitInRange = true;
-                break;
-            }
-        }
-
-        if (!enemyUnitInRange)
-        {
-            m_squadData.getSquad(squad.getName()).clear();
-        }
-    }
 }
 
-void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, size_t flyingDefendersNeeded, size_t groundDefendersNeeded, Unit & closestEnemy)
+void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy)
 {
     auto & squadUnits = defenseSquad.getUnits();
-
-    // if there's nothing left to defend, clear the squad
-    if (flyingDefendersNeeded == 0 && groundDefendersNeeded == 0)
-    {
-        defenseSquad.clear();
-        return;
-    }
 
     for (auto & unit : squadUnits)
     {
@@ -1197,13 +1165,13 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, size_t flyin
 		}
         else if (unit.isAlive())
         {
-			bool isUseful = (flyingDefendersNeeded > 0 && unit.canAttackAir()) || (groundDefendersNeeded > 0 && unit.canAttackGround());
+			bool isUseful = (flyingDefendersNeeded && unit.canAttackAir()) || (groundDefendersNeeded && unit.canAttackGround());
 			if(!isUseful)
 				defenseSquad.removeUnit(unit);
         }
     }
 
-	if (flyingDefendersNeeded > 0)
+	if (flyingDefendersNeeded)
 	{
 		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "air");
 
@@ -1214,7 +1182,7 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, size_t flyin
 		}
 	}
 
-	if (groundDefendersNeeded > 0)
+	if (groundDefendersNeeded)
 	{
 		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "ground");
 

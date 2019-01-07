@@ -47,7 +47,7 @@ class CombatCommander
     CCPosition      getMainAttackLocation();
 	CCPosition		exploreMap();
 
-    void            updateDefenseSquadUnits(Squad & defenseSquad, size_t flyingDefendersNeeded, size_t groundDefendersNeeded, Unit & closestEnemy);
+    void            updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy);
     bool            shouldWeStartAttacking();
 
 	void			initInfluenceMaps();

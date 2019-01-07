@@ -332,7 +332,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		{
 			if(isHellion && threat && threat->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 			{
-				Util::Log(__FUNCTION__, "Threat is too close to HELLION for using potential fields.");
+				Util::Log(__FUNCTION__, "Threat is too close to HELLION for using potential fields.", false);
 			}
 			useInfluenceMap = true;
 			break;
@@ -382,7 +382,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			{
 				std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used potential fields to move to (" +
 					std::to_string(pathableTile.x) + ", " + std::to_string(pathableTile.y) + ")";
-				Util::Log(__FUNCTION__, str);
+				Util::Log(__FUNCTION__, str, false);
 			}
 			m_bot.GetCommandMutex().lock();
 			Micro::SmartAttackMove(rangedUnit, pathableTile, m_bot);
@@ -395,7 +395,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 		if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 		{
-			Util::Log(__FUNCTION__, "HELLION failed to use potential fields.");
+			Util::Log(__FUNCTION__, "HELLION failed to use potential fields.", false);
 		}
 	}
 
@@ -407,7 +407,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used influence maps to move to (" +
 			std::to_string(safeTile.x) + ", " + std::to_string(safeTile.y) + ")";
-		Util::Log(__FUNCTION__, str);
+		Util::Log(__FUNCTION__, str, false);
 	}
 	m_bot.GetCommandMutex().lock();
 	Micro::SmartMove(rangedUnit, safeTile, m_bot);
