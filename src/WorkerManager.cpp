@@ -267,7 +267,7 @@ void WorkerManager::handleRepairWorkers()
 						continue;
 
 					CCTilePosition position = unit.getTilePosition();
-					int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
+					float distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
 					if (distance < REPAIR_STATION_SIZE)
 					{
 						unitsToRepair.push_back(unit);
