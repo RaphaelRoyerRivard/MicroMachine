@@ -9,8 +9,11 @@ class CCBot;
 
 class CombatAnalyzer {
 	CCBot & m_bot;
+	float overallDamage;
+	float overallRatio;
 
 	std::map<CCUnitID, UnitState> m_unitStates;
+	std::map<sc2::UNIT_TYPEID, float> ratio;
 	std::map<sc2::UNIT_TYPEID, float> totalDamage;
 	std::map<sc2::UNIT_TYPEID, float> totalhealthLoss;
 	std::map<sc2::Tag, Unit> enemies;
@@ -24,5 +27,7 @@ public:
 	void UpdateTotalHealthLoss();
 	void increaseTotalDamage(float damageDealt, sc2::UNIT_TYPEID unittype);
 	void increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID unittype);
+	float GetRatio(sc2::UNIT_TYPEID type);
+	void UpdateRatio();
 	void checkUnitsState();
 };

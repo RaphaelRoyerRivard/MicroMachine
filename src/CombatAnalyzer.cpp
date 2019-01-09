@@ -18,11 +18,12 @@ void CombatAnalyzer::onFrame()
 	checkUnitsState();
 	m_bot.StopProfiling("0.10.4.4    checkUnitsState");
 	UpdateTotalHealthLoss();
+	UpdateRatio();
 
 	drawDamageHealthRatio();
 
 	//Handle enemy units
-	auto currentEnemies = m_bot.GetEnemyUnits();
+	/*auto currentEnemies = m_bot.GetEnemyUnits();
 	for (auto enemy : currentEnemies)
 	{
 		if (enemies.find(enemy.first) == enemies.end())
@@ -45,7 +46,7 @@ void CombatAnalyzer::onFrame()
 			auto b = 2;
 		}
 	}
-	auto a = 1;
+	auto a = 1;*/
 	//previousFrameEnemies = m_bot.GetEnemyUnits();
 	//auto b = m_bot.GetKnownEnemyUnits();
 }
@@ -85,16 +86,20 @@ void CombatAnalyzer::increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID 
 	totalhealthLoss.at(unittype) += healthLoss;
 }
 
-void CombatAnalyzer::drawDamageHealthRatio()
+float CombatAnalyzer::GetRatio(sc2::UNIT_TYPEID type)
 {
-	if (!m_bot.Config().DrawDamageHealthRatio)
+	if (ratio.find(type) != ratio.end())
 	{
-		return;
+		return ratio[type];
 	}
+	return std::numeric_limits<float>::max();
+}
 
+void CombatAnalyzer::UpdateRatio()
+{
 	float overrallDamage = 0;
 	float overrallhealthLoss = 0;
-	std::stringstream ss;
+
 	std::vector<std::pair<sc2::UNIT_TYPEID, std::string>> checkedTypes = {
 		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_REAPER, "Reaper"),
 		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_BANSHEE, "Banshee"),
@@ -107,20 +112,32 @@ void CombatAnalyzer::drawDamageHealthRatio()
 		{
 			if (totalhealthLoss.find(type.first) != totalhealthLoss.end())
 			{
-				float ratio = totalhealthLoss.at(type.first) > 0 ? totalDamage.at(type.first) / totalhealthLoss.at(type.first) : 0;
-				ss << type.second << ": " << ratio << "\n";
-
+				ratio[type.first] = totalhealthLoss.at(type.first) > 0 ? totalDamage.at(type.first) / totalhealthLoss.at(type.first) : 0;
 				overrallhealthLoss += totalhealthLoss.at(type.first);
 			}
 			else
 			{
-				ss << type.second << ": " << totalDamage.at(type.first) << "\n";
+				ratio[type.first] = totalDamage.at(type.first);
 			}
 			overrallDamage += totalDamage.at(type.first);
 		}
 	}
-	float overrallRatio = overrallhealthLoss > 0 ? overrallDamage / overrallhealthLoss : 0;
-	ss << "Overrall: " << overrallRatio << "\n";
+	overallRatio = overrallhealthLoss > 0 ? overrallDamage / overrallhealthLoss : 0;
+}
+
+void CombatAnalyzer::drawDamageHealthRatio()
+{
+	if (!m_bot.Config().DrawDamageHealthRatio)
+	{
+		return;
+	}
+
+	std::stringstream ss;
+	for (auto unitRatio : ratio)
+	{
+		ss << UnitTypeToName(unitRatio.first) << ": " << unitRatio.second << "\n";
+	}
+	ss << "Overrall: " << overallRatio << "\n";
 
 	m_bot.Map().drawTextScreen(0.68f, 0.68f, std::string("Damage HealhLoss Ratio : \n") + ss.str().c_str());
 }

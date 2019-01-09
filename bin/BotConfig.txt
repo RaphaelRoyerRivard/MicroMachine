@@ -24,7 +24,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "BlueshiftLE.SC2Map",
+        "MapFile"                   : "DarknessSanctuaryLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -98,8 +98,8 @@
         "DrawProfilingInfo"         : false,
         "DrawInfluenceMaps"         : false,
         "DrawBlockedTiles"          : false,
-		"DrawRepairStation"			: true,
-		"DrawDamageHealthRatio"		: false
+		"DrawRepairStation"			: false,
+		"DrawDamageHealthRatio"		: true
     },
     
     "Modules" :
