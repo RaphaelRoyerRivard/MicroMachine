@@ -88,7 +88,9 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		m_bot.StartProfiling("0.10.4.2.1    updateDefenseBuildings");
 		updateDefenseBuildings();
 		m_bot.StopProfiling("0.10.4.2.1    updateDefenseBuildings");
+		m_bot.StartProfiling("0.10.4.2.2    updateDefenseSquads");
         updateDefenseSquads();
+		m_bot.StopProfiling("0.10.4.2.2    updateDefenseSquads");
 		updateHarassSquads();
 		updateAttackSquads();
         updateBackupSquads();
@@ -777,6 +779,8 @@ struct RegionArmyInformation
 	float groundEnemyPower;
 	float antiAirAllyPower;
 	float antiGroundAllyPower;
+	Squad* squad;
+	Unit closestEnemyUnit;
 
 	RegionArmyInformation(BaseLocation* baseLocation, CCBot& bot)
 		: baseLocation(baseLocation)
@@ -785,6 +789,8 @@ struct RegionArmyInformation
 		, groundEnemyPower(0)
 		, antiAirAllyPower(0)
 		, antiGroundAllyPower(0)
+		, squad(nullptr)
+		, closestEnemyUnit({})
 	{}
 
 	void calcEnemyPower()
@@ -797,6 +803,20 @@ struct RegionArmyInformation
 				airEnemyPower += Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
 			else
 				groundEnemyPower += Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
+		}
+	}
+
+	void calcClosestEnemy()
+	{
+		float minDist = 0.f;
+		for(auto & enemyUnit : enemyUnits)
+		{
+			const float dist = Util::DistSq(enemyUnit, baseLocation->getPosition());
+			if(!closestEnemyUnit.isValid() || dist < minDist)
+			{
+				minDist = dist;
+				closestEnemyUnit = enemyUnit;
+			}
 		}
 	}
 
@@ -868,6 +888,20 @@ struct RegionArmyInformation
 
 void CombatCommander::updateDefenseSquads()
 {
+	// reset defense squads
+	for (const auto & kv : m_squadData.getSquads())
+	{
+		const Squad & squad = kv.second;
+		const SquadOrder & order = squad.getSquadOrder();
+
+		if (order.getType() != SquadOrderTypes::Defend)
+		{
+			continue;
+		}
+
+		m_squadData.getSquad(squad.getName()).clear();
+	}
+
 	bool workerRushed = false;
 	bool earlyRushed = false;
 	// TODO instead of separing by bases, we should separate by clusters
@@ -882,6 +916,7 @@ void CombatCommander::updateDefenseSquads()
             continue;
         }
 
+		m_bot.StartProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		auto region = RegionArmyInformation(myBaseLocation, m_bot);
 
         const CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotPosition());
@@ -957,14 +992,10 @@ void CombatCommander::updateDefenseSquads()
 		squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
 
 		myBaseLocation->setIsUnderAttack(!region.enemyUnits.empty());
-
-		if(!region.enemyUnits.empty())
-		{
-			region.calcEnemyPower();
-			regions.push_back(region);
-		}
-		else
+		m_bot.StopProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
+		if(region.enemyUnits.empty())
         {
+			m_bot.StartProfiling("0.10.4.2.2.3      clearRegion");
             // if a defense squad for this region exists, remove it
             if (m_squadData.squadExists(squadName.str()))
             {
@@ -995,11 +1026,13 @@ void CombatCommander::updateDefenseSquads()
 					}
 				}
 			}
+			m_bot.StopProfiling("0.10.4.2.2.3      clearRegion");
 
             // and return, nothing to defend here
             continue;
         }
 
+		m_bot.StartProfiling("0.10.4.2.2.3      createSquad");
         // if we don't have a squad assigned to this region already, create one
         if (!m_squadData.squadExists(squadName.str()))
         {
@@ -1011,18 +1044,27 @@ void CombatCommander::updateDefenseSquads()
         if (m_squadData.squadExists(squadName.str()))
         {
             Squad & defenseSquad = m_squadData.getSquad(squadName.str());
-
-            updateDefenseSquadUnits(defenseSquad, numEnemyFlyingInRegion > 0, numEnemyGroundInRegion > 0, closestEnemy);
+			region.squad = &defenseSquad;
+			if (!region.squad)
+				Util::Log(__FUNCTION__, "Squad should not be null", false);
+            //updateDefenseSquadUnits(defenseSquad, numEnemyFlyingInRegion > 0, numEnemyGroundInRegion > 0, closestEnemy);
         }
         else
         {
             BOT_ASSERT(false, "Squad should have existed: %s", squadName.str().c_str());
         }
+		m_bot.StopProfiling("0.10.4.2.2.3      createSquad");
+
+		m_bot.StartProfiling("0.10.4.2.2.4      calculateRegionInformation");
+		region.calcEnemyPower();
+		region.calcClosestEnemy();
+		regions.push_back(region);
+		m_bot.StopProfiling("0.10.4.2.2.4      calculateRegionInformation");
 
 		//Protect our SCVs and lift our base
 		if(Util::IsTerran(m_bot.GetSelfRace()))
 		{
-			Unit base = m_bot.Buildings().getClosestResourceDepot(basePosition);
+			const Unit& base = myBaseLocation->getResourceDepot();
 			if (base.isValid())
 			{
 				if(base.getUnitPtr()->cargo_space_taken == 0 && m_bot.Workers().getNumWorkers() > 0)
@@ -1040,6 +1082,7 @@ void CombatCommander::updateDefenseSquads()
 	// If we have at least one region under attack
 	if(!regions.empty())
 	{
+		m_bot.StartProfiling("0.10.4.2.2.5      calculateRegionsScores");
 		// We sort them (the one with the strongest enemy force is first)
 		regions.sort();
 
@@ -1052,6 +1095,9 @@ void CombatCommander::updateDefenseSquads()
 			// We check how useful our unit would be for anti ground and anti air for each of our regions
 			for (auto & region : regions)
 			{
+				if(!region.squad)
+					Util::Log(__FUNCTION__, "Squad should not be null", false);
+				
 				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
 				bool immune = true;
 				float maxGroundDps = 0.f;
@@ -1101,46 +1147,76 @@ void CombatCommander::updateDefenseSquads()
 				}
 			}
 		}
+		m_bot.StopProfiling("0.10.4.2.2.5      calculateRegionsScores");
 
+		m_bot.StartProfiling("0.10.4.2.2.6      affectUnits");
 		while (true)	// The conditions to exit are if enough units are protecting our regions enough or if 
 		{
 			// We take the region that needs the most support
 			auto & region = *regions.begin();
+			if (!region.squad)
+				Util::Log(__FUNCTION__, "Squad should not be null", false);
 
-			// No need to continue of the first region does not need more support
+			// BREAK CONDITION 1: No need to continue of the first region does not need more support
 			if (!region.needsMoreSupport())
 				break;
 
 			// We find the unit that is the most interested to defend that region
 			float bestScore = 0.f;
-			const sc2::Unit* unit = nullptr;
+			Unit unit;
+			const sc2::Unit* unitptr = nullptr;
 			auto& scores = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded() ? region.unitGroundScores : region.unitAirScores;
 			for (auto & scorePair : scores)
 			{
-				if (!unit || scorePair.second > bestScore)
+				if (!unitptr || scorePair.second > bestScore)
 				{
 					bestScore = scorePair.second;
-					unit = scorePair.first;
+					unitptr = scorePair.first;
 				}
 			}
 
-			// If we have no more unit to defend we have finished
-			if (!unit)
-				break;	//TODO in that case, we should keep our units together instead of spreading them through our different bases
+			// If we have a unit that can defend
+			if (unitptr)
+			{
+				unit = Unit(unitptr, m_bot);
+			}
+			// If we have no more unit to defend we check for the workers
+			else
+			{
+				unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit);
+			}
 
-			// We affect that unit to the region
-			region.affectAllyUnit(unit);
+			// BREAK CONDITION 2: If we also have no more worker to defend we have finished
+			if (!unit.isValid())
+			{
+				//TODO should check other bases in case there are units left
+				break;	//TODO in that case, we should restart to keep our units together instead of spreading them through our different bases
+			}
+
+			// Assign it to the squad
+			if(m_squadData.canAssignUnitToSquad(unit, *region.squad))
+			{
+				//TODO maybe check distance
+
+				// We affect that unit to the region
+				region.affectAllyUnit(unit.getUnitPtr());
+				m_squadData.assignUnitToSquad(unit.getUnitPtr(), *region.squad);	// we cannot give a reference of the Unit because it doesn't have a big scope
+			}
 
 			// We remove that unit from the score maps of all regions
-			for (auto & regionToRemoveUnit : regions)
+			if (unitptr)
 			{
-				regionToRemoveUnit.unitGroundScores.erase(unit);
-				regionToRemoveUnit.unitAirScores.erase(unit);
+				for (auto & regionToRemoveUnit : regions)
+				{
+					regionToRemoveUnit.unitGroundScores.erase(unitptr);
+					regionToRemoveUnit.unitAirScores.erase(unitptr);
+				}
 			}
 
 			// We sort the regions so the one that needs the most support comes back first
 			regions.sort();
 		}
+		m_bot.StopProfiling("0.10.4.2.2.6      affectUnits");
 	}
 
 	m_bot.Strategy().setIsWorkerRushed(workerRushed);
@@ -1427,7 +1503,7 @@ CCPosition CombatCommander::getMainAttackLocation()
 
 		if (!m_bot.Strategy().shouldFocusBuildings())
 		{
-			m_bot.Actions()->SendChat("Looks like you lost your main base, time to conceed? :)");
+			m_bot.Actions()->SendChat("Looks like you lost your main base, time to concede? :)");
 			m_bot.Strategy().setFocusBuildings(true);
 		}
     }
