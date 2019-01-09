@@ -431,6 +431,11 @@ void WorkerManager::lowPriorityChecks()
 	//Dispatch workers to bases missing some
 	for (auto & base : bases)
 	{
+		if (base->isUnderAttack)
+		{
+			continue;
+		}
+
 		auto depot = getDepotAtBasePosition(base->getPosition());
 		if (depot.isBeingConstructed())
 		{
