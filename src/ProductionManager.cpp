@@ -1375,7 +1375,7 @@ void ProductionManager::queueUpgrade(const MetaType & type)
 						{
 							m_queue.queueAsLowestPriority(potentialUpgrade, false);
 							startedUpgrades.push_back(potentialUpgrade);
-							Util::Log(__FUNCTION__, "queue " + potentialUpgrade.getName());
+							Util::DebugLog(__FUNCTION__, "queue " + potentialUpgrade.getName());
 							return;
 						}
 					}
@@ -1400,7 +1400,7 @@ void ProductionManager::queueTech(const MetaType & type)
 {
 	m_queue.queueItem(BuildOrderItem(type, 0, false));
 	startedUpgrades.push_back(type);
-	Util::Log(__FUNCTION__, "Queue " + type.getName());
+	Util::DebugLog(__FUNCTION__, "Queue " + type.getName());
 }
 
 void ProductionManager::validateUpgradesProgress()
@@ -1437,14 +1437,14 @@ void ProductionManager::validateUpgradesProgress()
 			if (progress > 0.95f)//About to finish, lets consider it done.
 			{
 				toRemove.push_back(upgrade.first);
-				Util::Log(__FUNCTION__, "upgrade finished " + upgrade.first.getName());
+				Util::DebugLog(__FUNCTION__, "upgrade finished " + upgrade.first.getName());
 			}
 		}
 		else
 		{
 			toRemove.push_back(upgrade.first);
 			startedUpgrades.remove(upgrade.first);
-			Util::Log(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName());
+			Util::DebugLog(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName());
 		}
 	}
 	for (auto & remove : toRemove)
@@ -1522,7 +1522,7 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 			Util::DisplayError("Trying to start an already started upgrade.", "0x00000006", m_bot);
 		}
 		incompletUpgrades.insert(std::make_pair(item.type, producer));
-		Util::Log(__FUNCTION__, "upgrade starting " + item.type.getName());
+		Util::DebugLog(__FUNCTION__, "upgrade starting " + item.type.getName());
     }
 }
 

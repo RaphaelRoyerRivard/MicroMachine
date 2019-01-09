@@ -3,6 +3,7 @@
 #include "sc2api/sc2_api.h"
 #include "Common.h"
 #include "UnitState.h"
+#include "Unit.h"
 
 class CCBot;
 
@@ -12,6 +13,8 @@ class CombatAnalyzer {
 	std::map<CCUnitID, UnitState> m_unitStates;
 	std::map<sc2::UNIT_TYPEID, float> totalDamage;
 	std::map<sc2::UNIT_TYPEID, float> totalhealthLoss;
+	std::map<sc2::Tag, Unit> enemies;
+	std::map<sc2::Tag, Unit> deadEnemies;
 
 	void drawDamageHealthRatio();
 public:

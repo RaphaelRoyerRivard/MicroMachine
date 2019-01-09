@@ -13,12 +13,41 @@ void CombatAnalyzer::onStart()
 
 void CombatAnalyzer::onFrame()
 {
+	//Handle our units
 	m_bot.StartProfiling("0.10.4.4    checkUnitsState");
 	checkUnitsState();
 	m_bot.StopProfiling("0.10.4.4    checkUnitsState");
 	UpdateTotalHealthLoss();
 
 	drawDamageHealthRatio();
+
+	//Handle enemy units
+	auto currentEnemies = m_bot.GetEnemyUnits();
+	for (auto enemy : currentEnemies)
+	{
+		if (enemies.find(enemy.first) == enemies.end())
+		{
+			enemies[enemy.first] = enemy.second;
+		}
+	}
+	for (auto enemy : enemies)
+	{
+		if (!enemy.second.isValid() || !enemy.second.isAlive())
+		{
+			deadEnemies[enemy.first] = enemy.second;
+			enemies.erase(enemy.first);
+		}
+	}
+	for (auto enemy : currentEnemies)
+	{
+		if (deadEnemies.find(enemy.first) != deadEnemies.end())
+		{
+			auto b = 2;
+		}
+	}
+	auto a = 1;
+	//previousFrameEnemies = m_bot.GetEnemyUnits();
+	//auto b = m_bot.GetKnownEnemyUnits();
 }
 
 void CombatAnalyzer::UpdateTotalHealthLoss()

@@ -83,8 +83,10 @@ namespace Util
 	void			DisplayError(const std::string & error, const std::string & errorCode, CCBot & m_bot, bool isCritical = false);
 	void			ClearDisplayedErrors();
 	void			CreateLog(CCBot & m_bot);
-	void			Log(const std::string & function, bool force = false);
-	void			Log(const std::string & function, const std::string & message, bool force = false);
+	void			DebugLog(const std::string & function);
+	void			DebugLog(const std::string & function, const std::string & message);
+	void			Log(const std::string & function);
+	void			Log(const std::string & function, const std::string & message);
     UnitType        GetTownHall(const CCRace & race, CCBot & bot);
     UnitType        GetRefinery(const CCRace & race, CCBot & bot);
 	UnitType        GetSupplyProvider(const CCRace & race, CCBot & bot);
