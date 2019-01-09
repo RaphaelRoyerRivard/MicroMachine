@@ -182,14 +182,19 @@ void BaseLocationManager::onStart()
 }
 
 void BaseLocationManager::onFrame()
-{   
+{
+	m_bot.StartProfiling("0.6.0   drawBaseLocations");
     drawBaseLocations();
+	m_bot.StopProfiling("0.6.0   drawBaseLocations");
 
 	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
 	{
+		m_bot.StartProfiling("0.6.1   FixNullPlayerStartingBaseLocation");
 		FixNullPlayerStartingBaseLocation();
+		m_bot.StopProfiling("0.6.1   FixNullPlayerStartingBaseLocation");
 	}
 
+	m_bot.StartProfiling("0.6.2   resetBaseLocations");
     // reset the player occupation information for each location
     for (auto & baseLocation : m_baseLocationData)
     {
@@ -197,7 +202,9 @@ void BaseLocationManager::onFrame()
 		baseLocation.setResourceDepot({});
         baseLocation.setPlayerOccupying(Players::Enemy, false);
     }
+	m_bot.StopProfiling("0.6.2   resetBaseLocations");
 
+	m_bot.StartProfiling("0.6.3   updateBaseLocations");
     // for each unit on the map, update which base location it may be occupying
     for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
     {
@@ -213,7 +220,9 @@ void BaseLocationManager::onFrame()
 			baseLocation->setResourceDepot(unit);
         }
     }
+	m_bot.StopProfiling("0.6.3   updateBaseLocations");
 
+	m_bot.StartProfiling("0.6.4   updateEnemyBaseLocations");
     // update enemy base occupations
     for (const auto & kv : m_bot.UnitInfo().getUnitInfoMap(Players::Enemy))
     {
@@ -231,6 +240,7 @@ void BaseLocationManager::onFrame()
             baseLocation->setPlayerOccupying(Players::Enemy, true);
         }
     }
+	m_bot.StopProfiling("0.6.4   updateEnemyBaseLocations");
 
     // update the starting locations of the enemy player
     // this will happen one of two ways:
@@ -238,6 +248,7 @@ void BaseLocationManager::onFrame()
     // 1. we've seen the enemy base directly, so the baselocation will know
     if (m_playerStartingBaseLocations[Players::Enemy] == nullptr)
     {
+		m_bot.StartProfiling("0.6.5   updateEnemyStartingBaseLocation");
         for (auto & baseLocation : m_baseLocationData)
         {
             if (baseLocation.isPlayerStartLocation(Players::Enemy))
@@ -245,11 +256,13 @@ void BaseLocationManager::onFrame()
                 m_playerStartingBaseLocations[Players::Enemy] = &baseLocation;
             }
         }
+		m_bot.StopProfiling("0.6.5   updateEnemyStartingBaseLocation");
     }
 
     // 2. we've explored every other start location and haven't seen the enemy yet
     if (m_playerStartingBaseLocations[Players::Enemy] == nullptr)
     {
+		m_bot.StartProfiling("0.6.6   updateEnemyStartingBaseLocation2");
         int numStartLocations = (int)getStartingBaseLocations().size();
         int numExploredLocations = 0;
         BaseLocation * unexplored = nullptr;
@@ -277,8 +290,10 @@ void BaseLocationManager::onFrame()
             m_playerStartingBaseLocations[Players::Enemy] = unexplored;
             unexplored->setPlayerOccupying(Players::Enemy, true);
         }
+		m_bot.StopProfiling("0.6.6   updateEnemyStartingBaseLocation2");
     }
 
+	m_bot.StartProfiling("0.6.7   setOccupiedBaseLocations");
     // update the occupied base locations for each player
     m_occupiedBaseLocations[Players::Self] = std::set<BaseLocation *>();
     m_occupiedBaseLocations[Players::Enemy] = std::set<BaseLocation *>();
@@ -294,6 +309,7 @@ void BaseLocationManager::onFrame()
             m_occupiedBaseLocations[Players::Enemy].insert(&baseLocation);
         }
     }
+	m_bot.StopProfiling("0.6.7   setOccupiedBaseLocations");
 
     // draw the debug information for each base location
     

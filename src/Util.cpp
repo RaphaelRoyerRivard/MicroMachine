@@ -134,6 +134,32 @@ CCPosition Util::CalcCenter(const std::vector<const sc2::Unit*> & units)
 	return CCPosition(cx / units.size(), cy / units.size());
 }
 
+CCPosition Util::CalcCenter(const std::vector<const sc2::Unit *> & units, float& varianceOut)
+{
+	if (units.empty())
+	{
+		return {};
+	}
+
+	CCPosition center(0.f, 0.f);
+
+	for (auto & unit : units)
+	{
+		BOT_ASSERT(unit, "Unit pointer was null");
+		center += unit->pos;
+	}
+
+	center /= units.size();
+
+	varianceOut = 0.f;
+	for (auto & unit : units)
+	{
+		varianceOut += DistSq(center, unit->pos);
+	}
+
+	return center;
+}
+
 CCPosition Util::CalcCenter(const std::vector<Unit> & units)
 {
     if (units.empty())
@@ -282,16 +308,21 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 	return unitPower;
 }
 
+float Util::GetNorm(const sc2::Point2D& point)
+{
+	return sqrt(pow(point.x, 2) + pow(point.y, 2));
+}
+
 void Util::Normalize(sc2::Point2D& point)
 {
-    float norm = sqrt(pow(point.x, 2) + pow(point.y, 2));
+	const float norm = GetNorm(point);
 	if(norm > EPSILON)
 		point /= norm;
 }
 
 sc2::Point2D Util::Normalized(const sc2::Point2D& point)
 {
-    float norm = sqrt(pow(point.x, 2) + pow(point.y, 2));
+	const float norm = GetNorm(point);
 	if(norm > EPSILON)
 		return sc2::Point2D(point.x / norm, point.y / norm);
     return sc2::Point2D(point.x, point.y);

@@ -425,12 +425,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				if (isTechStarted(MetaTypeEnum::BansheeCloak))
+				if (!isTechStarted(MetaTypeEnum::BansheeCloak))
 				{
 					queueTech(MetaTypeEnum::BansheeCloak);
 				}
 
-				if (isTechStarted(MetaTypeEnum::HyperflightRotors))
+				if (!isTechStarted(MetaTypeEnum::HyperflightRotors))
 				{
 					queueTech(MetaTypeEnum::HyperflightRotors);
 				}
@@ -471,7 +471,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
 
-					if (isTechStarted(MetaTypeEnum::HiSecAutoTracking))
+					if (!isTechStarted(MetaTypeEnum::HiSecAutoTracking))
 					{
 						queueTech(MetaTypeEnum::HiSecAutoTracking);
 					}
@@ -513,7 +513,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					if (!hasPicked)
 					{//Building
 						const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-						if (factoryCount < baseCount)
+						if (factoryCount + 1 < baseCount)
 						{
 							toBuild = MetaTypeEnum::Factory;
 							hasPicked = true;
@@ -531,8 +531,18 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
+				if (!isTechStarted(MetaTypeEnum::BansheeCloak))
+				{
+					queueTech(MetaTypeEnum::BansheeCloak);
+				}
+
+				if (!isTechStarted(MetaTypeEnum::HyperflightRotors))
+				{
+					queueTech(MetaTypeEnum::HyperflightRotors);
+				}
+
 				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
-				if (hellionCount >= 2 && isTechStarted(MetaTypeEnum::InfernalPreIgniter))
+				if (hellionCount >= 2 && !isTechStarted(MetaTypeEnum::InfernalPreIgniter))
 				{
 					queueTech(MetaTypeEnum::InfernalPreIgniter);
 				}
@@ -566,7 +576,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
 
-					if (isTechStarted(MetaTypeEnum::HiSecAutoTracking))
+					if (!isTechStarted(MetaTypeEnum::HiSecAutoTracking))
 					{
 						queueTech(MetaTypeEnum::HiSecAutoTracking);
 					}
@@ -1027,7 +1037,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 			typeName == "Medivac" ||
 			typeName == "Liberator")
 		{
-			for (auto unit : m_bot.UnitInfo().getUnits(Players::Self))
+			for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
 			{
 				// reasons a unit can not train the desired type
 				if (!unit.isValid()) { continue; }
@@ -1393,7 +1403,7 @@ void ProductionManager::queueUpgrade(const MetaType & type)
 
 bool ProductionManager::isTechStarted(const MetaType & type)
 {
-	return !m_queue.contains(type) && std::find(startedUpgrades.begin(), startedUpgrades.end(), type) == startedUpgrades.end();
+	return m_queue.contains(type) || std::find(startedUpgrades.begin(), startedUpgrades.end(), type) != startedUpgrades.end();
 }
 
 void ProductionManager::queueTech(const MetaType & type)
@@ -1414,21 +1424,14 @@ void ProductionManager::validateUpgradesProgress()
 	for (std::pair<const MetaType, Unit> & upgrade : incompletUpgrades)
 	{
 		bool found = false;
-		float progress = upgrade.second.getUnitPtr()->build_progress;
-		if (progress > 0)
+		float progress = 0.f;
+		for (auto & order : upgrade.second.getUnitPtr()->orders)
 		{
-			found = true;
-		}
-		else
-		{
-			for (auto & order : upgrade.second.getUnitPtr()->orders)
+			if (order.ability_id == m_bot.Data(upgrade.first.getUpgrade()).buildAbility)
 			{
-				if (order.ability_id == m_bot.Data(upgrade.first.getUpgrade()).buildAbility)
-				{
-					found = true;
-					progress = order.progress;
-					break;
-				}
+				found = true;
+				progress = order.progress;
+				break;
 			}
 		}
 

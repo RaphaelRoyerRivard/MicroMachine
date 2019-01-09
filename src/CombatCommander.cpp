@@ -532,6 +532,7 @@ void CombatCommander::updateHarassSquads()
 		if ((unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER
 			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION
 			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
+			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT
 			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
 		{
@@ -732,10 +733,113 @@ void CombatCommander::updateDefenseBuildings()
 	}
 }
 
+struct RegionArmyInformation
+{
+	BaseLocation* baseLocation;
+	CCBot& bot;
+	std::vector<Unit> enemyUnits;
+	std::vector<const sc2::Unit*> affectedAllyUnits;
+	std::unordered_map<const sc2::Unit*, float> unitGroundScores;
+	std::unordered_map<const sc2::Unit*, float> unitAirScores;
+	float airEnemyPower;
+	float groundEnemyPower;
+	float antiAirAllyPower;
+	float antiGroundAllyPower;
+
+	RegionArmyInformation(BaseLocation* baseLocation, CCBot& bot)
+		: baseLocation(baseLocation)
+		, bot(bot)
+		, airEnemyPower(0)
+		, groundEnemyPower(0)
+		, antiAirAllyPower(0)
+		, antiGroundAllyPower(0)
+	{}
+
+	void calcEnemyPower()
+	{
+		airEnemyPower = 0;
+		groundEnemyPower = 0;
+		for(auto& unit : enemyUnits)
+		{
+			if (unit.isFlying())
+				airEnemyPower += Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
+			else
+				groundEnemyPower += Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
+		}
+	}
+
+	void affectAllyUnit(const sc2::Unit* unit)
+	{
+		affectedAllyUnits.push_back(unit);
+		const float power = Util::GetUnitPower(unit, nullptr, bot);
+		const bool canAttackGround = Util::CanUnitAttackGround(unit, bot);
+		const bool canAttackAir = Util::CanUnitAttackAir(unit, bot);
+		if(canAttackGround)
+		{
+			if(canAttackAir)
+			{
+				if(airEnemyPower - antiAirAllyPower > groundEnemyPower - antiGroundAllyPower)
+				{
+					antiAirAllyPower += power;
+				}
+				else
+				{
+					antiGroundAllyPower += power;
+				}
+			}
+			else
+			{
+				antiGroundAllyPower += power;
+			}
+		}
+		else
+		{
+			antiAirAllyPower += power;
+		}
+	}
+
+	float antiGroundPowerNeeded() const
+	{
+		return groundEnemyPower * 1.5f - antiGroundAllyPower;
+	}
+
+	float antiAirPowerNeeded() const
+	{
+		return airEnemyPower * 1.5f - antiAirAllyPower;
+	}
+
+	bool needsMoreAntiGround() const
+	{
+		return antiGroundPowerNeeded() > 0;
+	}
+
+	bool needsMoreAntiAir() const
+	{
+		return antiAirPowerNeeded() > 0;
+	}
+
+	bool needsMoreSupport() const
+	{
+		return needsMoreAntiGround() || needsMoreAntiAir();
+	}
+
+	float getTotalPowerNeeded() const
+	{
+		return antiGroundPowerNeeded() + antiAirPowerNeeded();
+	}
+
+	bool operator<(const RegionArmyInformation& ref) const
+	{
+		return getTotalPowerNeeded() > ref.getTotalPowerNeeded();	// greater is used to have a decreasing order
+	}
+};
+
 void CombatCommander::updateDefenseSquads()
 {
 	bool workerRushed = false;
 	bool earlyRushed = false;
+	// TODO instead of separing by bases, we should separate by clusters
+	std::list<RegionArmyInformation> regions;
     // for each of our occupied regions
     const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
     for (BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
@@ -746,6 +850,8 @@ void CombatCommander::updateDefenseSquads()
             continue;
         }
 
+		auto region = RegionArmyInformation(myBaseLocation, m_bot);
+
         CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotPosition());
 
         // start off assuming all enemy units in region are just workers
@@ -753,8 +859,9 @@ void CombatCommander::updateDefenseSquads()
 		int numDefendersPerEnemyResourceDepot = 6; // This is a minimum
 		int numDefendersPerEnemyCanon = 4; // This is a minimum
 
-        // all of the enemy units in this region
-        std::vector<Unit> enemyUnitsInRegion;
+		// calculate how many units are flying / ground units
+		int numEnemyFlyingInRegion = 0;
+		int numEnemyGroundInRegion = 0;
 		float minEnemyDistance = 0;
 		Unit closestEnemy;
         bool firstWorker = true;
@@ -789,47 +896,46 @@ void CombatCommander::updateDefenseSquads()
 					minEnemyDistance = enemyDistance;
 					closestEnemy = unit;
 				}
-                enemyUnitsInRegion.push_back(unit);
+
+				if (unit.isFlying())
+				{
+					numEnemyFlyingInRegion++;
+				}
+				else
+				{
+					// Canon rush dangerous
+					if (unit.getType().isAttackingBuilding())
+					{
+						numEnemyGroundInRegion += numDefendersPerEnemyCanon;
+					}
+					// Hatcheries are tanky
+					else if (unit.getType().isResourceDepot())
+					{
+						numEnemyGroundInRegion += numDefendersPerEnemyResourceDepot;
+					}
+					else
+					{
+						numEnemyGroundInRegion++;
+					}
+				}
+
+				region.enemyUnits.push_back(unit);
             }
         }
 
-        // calculate how many units are flying / ground units
-        int numEnemyFlyingInRegion = 0;
-        int numEnemyGroundInRegion = 0;
-        for (auto & unit : enemyUnitsInRegion)
-        {
-            BOT_ASSERT(unit.isValid(), "null enemy unit in region");
-
-            if (unit.isFlying())
-            {
-                numEnemyFlyingInRegion++;
-            }
-            else
-            {
-				// Canon rush dangerous
-				if (unit.getType().isAttackingBuilding())
-				{
-					numEnemyGroundInRegion += numDefendersPerEnemyCanon;
-				}
-				// Hatcheries are tanky
-				else if (unit.getType().isResourceDepot())
-				{
-					numEnemyGroundInRegion += numDefendersPerEnemyResourceDepot;
-				}
-                else
-                {
-                    numEnemyGroundInRegion++;
-                }
-            }
-        }
+		if(!region.enemyUnits.empty())
+		{
+			region.calcEnemyPower();
+			regions.push_back(region);
+		}
 
         std::stringstream squadName;
         squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
 
-		myBaseLocation->setIsUnderAttack(!enemyUnitsInRegion.empty());
+		myBaseLocation->setIsUnderAttack(!region.enemyUnits.empty());
 
         // if there's nothing in this region to worry about
-        if (enemyUnitsInRegion.empty())
+        if (region.enemyUnits.empty())
         {
             // if a defense squad for this region exists, remove it
             if (m_squadData.squadExists(squadName.str()))
@@ -907,6 +1013,100 @@ void CombatCommander::updateDefenseSquads()
 			}
 		}
     }
+
+	if(false)	//TODO remove that
+	if(!regions.empty())
+	{
+		regions.sort();
+
+		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
+		{
+			for (auto & region : regions)
+			{
+				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
+				bool immune = true;
+				float maxGroundDps = 0.f;
+				float maxAirDps = 0.f;
+				for (auto & enemyUnit : region.enemyUnits)
+				{
+					if (immune)
+					{
+						if (unit.isFlying())
+						{
+							immune = !Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot);
+						}
+						else
+						{
+							immune = !Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot);
+						}
+					}
+					const float dps = Util::GetDpsForTarget(unit.getUnitPtr(), enemyUnit.getUnitPtr(), m_bot);
+					if (enemyUnit.isFlying())
+					{
+						if (dps > maxAirDps)
+						{
+							maxAirDps = dps;
+						}
+					}
+					else
+					{
+						if (dps > maxGroundDps)
+						{
+							maxGroundDps = dps;
+						}
+					}
+				}
+				if (maxGroundDps > 0.f)
+				{
+					float regionScore = immune * 100 + maxGroundDps - distance;
+					region.unitGroundScores.insert_or_assign(unit.getUnitPtr(), regionScore);
+				}
+				if (maxAirDps > 0.f)
+				{
+					float regionScore = immune * 100 + maxAirDps - distance;
+					region.unitAirScores.insert_or_assign(unit.getUnitPtr(), regionScore);
+				}
+			}
+		}
+
+		while (true)
+		{
+			// We take the region that needs the most support
+			auto & region = *regions.begin();
+			if (!region.needsMoreSupport())
+				break;
+
+			// We find the unit that is the most interested to defend that region
+			float bestScore = 0.f;
+			const sc2::Unit* unit = nullptr;
+			auto& scores = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded() ? region.unitGroundScores : region.unitAirScores;
+			for (auto & scorePair : scores)
+			{
+				if (!unit || scorePair.second > bestScore)
+				{
+					bestScore = scorePair.second;
+					unit = scorePair.first;
+				}
+			}
+
+			// If we have no more unit to defend we have finished
+			if (!unit)
+				break;	//TODO in that case, we should keep our units together instead of spreading them through our different bases
+
+			// We affect that unit to the region
+			region.affectAllyUnit(unit);
+
+			// We remove that unit from the score maps of all regions
+			for (auto & regionToRemoveUnit : regions)
+			{
+				regionToRemoveUnit.unitGroundScores.erase(unit);
+				regionToRemoveUnit.unitAirScores.erase(unit);
+			}
+
+			// We sort the regions so the one that needs the most support comes back first
+			regions.sort();
+		}
+	}
 
 	m_bot.Strategy().setIsWorkerRushed(workerRushed);
 	m_bot.Strategy().setIsEarlyRushed(earlyRushed);

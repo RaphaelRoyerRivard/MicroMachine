@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.0.3",
+        "BotVersion"                : "1.1.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,7 +24,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "DarknessSanctuaryLE.SC2Map",
+        "MapFile"                   : "BlueshiftLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -98,8 +98,8 @@
         "DrawProfilingInfo"         : false,
         "DrawInfluenceMaps"         : false,
         "DrawBlockedTiles"          : false,
-		"DrawRepairStation"			: false,
-		"DrawDamageHealthRatio"		: true
+		"DrawRepairStation"			: true,
+		"DrawDamageHealthRatio"		: false
     },
     
     "Modules" :
