@@ -164,6 +164,6 @@ static void RunBot(int argc, char *argv[], CCBot *Agent, sc2::Race race, bool lo
     coordinator.JoinGame();
     coordinator.SetTimeoutMS(10000);
     std::cout << " Successfully joined game" << std::endl;
-    while (coordinator.Update() && !Agent->shouldConceed()) {
+    while (coordinator.Update() && !Agent->shouldConcede()) {
     }
 }

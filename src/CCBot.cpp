@@ -11,8 +11,8 @@ CCBot::CCBot(std::string botVersion)
 	, m_repairStations(*this)
 	, m_gameCommander(*this)
 	, m_techTree(*this)
-	, m_conceedNextFrame(false)
-	, m_conceed(false)
+	, m_concedeNextFrame(false)
+	, m_concede(false)
 {
 	if(botVersion != "")
 		Actions()->SendChat(botVersion);
@@ -110,7 +110,7 @@ void CCBot::OnStep()
 	clearDeadUnits();
 	StopProfiling("0.3 clearDeadUnits");
 
-	checkForConceed();
+	checkForconcede();
 
 	StartProfiling("0.4 m_map.onFrame");
 	m_map.onFrame();
@@ -471,13 +471,13 @@ void CCBot::clearDeadUnits()
 	}
 }
 
-void CCBot::checkForConceed()
+void CCBot::checkForconcede()
 {
-	m_conceed = m_conceedNextFrame;
+	m_concede = m_concedeNextFrame;
 	if(m_allyUnits.size() == 1)
 	{
 		Actions()->SendChat("GG");
-		m_conceedNextFrame = true;
+		m_concedeNextFrame = true;
 	}
 }
 
