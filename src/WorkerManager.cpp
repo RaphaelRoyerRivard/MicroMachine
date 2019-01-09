@@ -254,7 +254,6 @@ void WorkerManager::handleRepairWorkers()
 		for (auto & base : bases)
 		{
 			std::vector<Unit> unitsToRepair;
-			CCTilePosition repairStationLocation = base->getCenterOfMinerals();
 
 			//Get all units to repair
 			for (auto & tagUnit : m_bot.GetAllyUnits())
@@ -266,9 +265,8 @@ void WorkerManager::handleRepairWorkers()
 					if (!unit.getType().isRepairable())
 						continue;
 
-					CCTilePosition position = unit.getTilePosition();
-					float distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
-					if (distance < REPAIR_STATION_SIZE)
+					const float distanceSquare = Util::DistSq(unit, base->getPosition());
+					if (distanceSquare < REPAIR_STATION_SIZE * REPAIR_STATION_SIZE)
 					{
 						unitsToRepair.push_back(unit);
 					}
@@ -290,9 +288,8 @@ void WorkerManager::handleRepairWorkers()
 
 					if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || WorkerJobs::Repair)
 					{
-						CCTilePosition position = worker.getTilePosition();
-						int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
-						if (distance < REPAIR_STATION_WORKER_ZONE_SIZE)
+						const float distanceSquare = Util::DistSq(worker, base->getPosition());
+						if (distanceSquare < REPAIR_STATION_WORKER_ZONE_SIZE * REPAIR_STATION_WORKER_ZONE_SIZE)
 						{
 							setRepairWorker(worker, *it);
 							repairWorkers++;
