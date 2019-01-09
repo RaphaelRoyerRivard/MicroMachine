@@ -246,7 +246,7 @@ void WorkerManager::handleRepairWorkers()
 
 	//Repair station (RepairStation)
 	int MAX_REPAIR_WORKER = 6;
-	int REPAIR_STATION_SIZE = 10;
+	int REPAIR_STATION_SIZE = 3;
 	int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
 	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
 	{
@@ -431,7 +431,7 @@ void WorkerManager::lowPriorityChecks()
 	//Dispatch workers to bases missing some
 	for (auto & base : bases)
 	{
-		if (base->isUnderAttack)
+		if (base->isUnderAttack())
 		{
 			continue;
 		}
