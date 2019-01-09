@@ -246,7 +246,7 @@ void WorkerManager::handleRepairWorkers()
 
 	//Repair station (RepairStation)
 	int MAX_REPAIR_WORKER = 6;
-	int REPAIR_STATION_SIZE = 3;
+	float REPAIR_STATION_SIZE = 2.5f;
 	int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
 	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
 	{
