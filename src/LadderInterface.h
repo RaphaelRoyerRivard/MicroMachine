@@ -126,7 +126,7 @@ static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_op
     }
 }
 
-static void RunBot(int argc, char *argv[], sc2::Agent *Agent, sc2::Race race, bool loadSettings)
+static void RunBot(int argc, char *argv[], CCBot *Agent, sc2::Race race, bool loadSettings)
 {
     ConnectionOptions Options;
     ParseArguments(argc, argv, Options);
@@ -164,6 +164,6 @@ static void RunBot(int argc, char *argv[], sc2::Agent *Agent, sc2::Race race, bo
     coordinator.JoinGame();
     coordinator.SetTimeoutMS(10000);
     std::cout << " Successfully joined game" << std::endl;
-    while (coordinator.Update()) {
+    while (coordinator.Update() && !Agent->shouldConcede()) {
     }
 }

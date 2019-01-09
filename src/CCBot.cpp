@@ -12,6 +12,8 @@ CCBot::CCBot(std::string botVersion)
 	, m_combatAnalyzer(*this)
 	, m_gameCommander(*this)
 	, m_techTree(*this)
+	, m_concedeNextFrame(false)
+	, m_concede(false)
 {
 	if(botVersion != "")
 		Actions()->SendChat(botVersion);
@@ -109,6 +111,8 @@ void CCBot::OnStep()
 	StartProfiling("0.3 clearDeadUnits");
 	clearDeadUnits();
 	StopProfiling("0.3 clearDeadUnits");
+
+	checkForconcede();
 
 	StartProfiling("0.4 m_map.onFrame");
 	m_map.onFrame();
@@ -470,6 +474,16 @@ void CCBot::clearDeadUnits()
 	{
 		m_neutralUnits.erase(tag);
 		//std::cout << "Dead neutral unit removed from map" << std::endl;	//happens too often
+	}
+}
+
+void CCBot::checkForconcede()
+{
+	m_concede = m_concedeNextFrame;
+	if(m_allyUnits.size() == 1)
+	{
+		Actions()->SendChat("GG");
+		m_concedeNextFrame = true;
 	}
 }
 

@@ -519,7 +519,7 @@ const SquadOrder & Squad::getSquadOrder()	const
 
 void Squad::addUnit(const Unit & unit)
 {
-    m_units.push_back(unit);
+	m_units.push_back(unit);
 }
 
 void Squad::removeUnit(const Unit & unit)

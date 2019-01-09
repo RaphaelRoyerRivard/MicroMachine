@@ -553,7 +553,7 @@ float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetT
 		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
 		for (auto & weapon : unitTypeData.weapons)
 		{
-			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == targetType)
+			if (weapon.type == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Any || weapon.type == targetType)
 			{
 				float weaponDps = weapon.damage_;
 				weaponDps *= weapon.attacks / weapon.speed;

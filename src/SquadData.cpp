@@ -149,6 +149,22 @@ Squad * SquadData::getUnitSquad(const Unit & unit)
     return nullptr;
 }
 
+void SquadData::assignUnitToSquad(const sc2::Unit* unitptr, Squad & squad)
+{
+	const Unit unit(unitptr, m_bot);
+
+	BOT_ASSERT(canAssignUnitToSquad(unit, squad), "We shouldn't be re-assigning this unit!");
+
+	Squad * previousSquad = getUnitSquad(unit);
+
+	if (previousSquad)
+	{
+		previousSquad->removeUnit(unit);
+	}
+
+	squad.addUnit(unit);
+}
+
 void SquadData::assignUnitToSquad(const Unit & unit, Squad & squad)
 {
     BOT_ASSERT(canAssignUnitToSquad(unit, squad), "We shouldn't be re-assigning this unit!");

@@ -264,7 +264,7 @@ void ProductionManager::manageBuildOrderQueue()
 #if _DEBUG
 					Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
 #else
-					Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", true);
+					Util::Log(__FUNCTION__, "Supply blocked | 0x00000007");
 #endif
 				}
 
