@@ -1014,7 +1014,7 @@ void Util::DisplayError(const std::string & error, const std::string & errorCode
 		m_bot.Actions()->SendChat(ss.str());
 	}
 
-	Util::Log(ss.str(), true);
+	Util::Log(ss.str());
 	displayedError.push_back(errorCode);
 }
 
@@ -1032,21 +1032,31 @@ void Util::CreateLog(CCBot & m_bot)
 
 	std::stringstream races;
 	races << Util::GetStringFromRace(m_bot.GetPlayerRace(Players::Self)) << " VS " << Util::GetStringFromRace(m_bot.GetPlayerRace(Players::Enemy));
-	Util::Log(races.str(), true);
+	Util::Log(races.str());
 }
 
-void Util::Log(const std::string & function, bool force)
+void Util::DebugLog(const std::string & function)
 {
-	if (allowDebug || force)
+	if (allowDebug)
 	{
 		file << function << std::endl;
 	}
 }
 
-void Util::Log(const std::string & function, const std::string & message, bool force)
+void Util::DebugLog(const std::string & function, const std::string & message)
 {
-	if (allowDebug || force)
+	if (allowDebug)
 	{
 		file << function << " | " << message << std::endl;
 	}
+}
+
+void Util::Log(const std::string & function)
+{
+	file << function << std::endl;
+}
+
+void Util::Log(const std::string & function, const std::string & message)
+{
+	file << function << " | " << message << std::endl;
 }

@@ -129,10 +129,48 @@ void ProductionManager::manageBuildOrderQueue()
 	m_bot.StartProfiling("2.2   checkQueue");
     // the current item to be used
     BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
+	int highestPriority = currentItem.priority;
+	int lowestMineralReq = -1;
+	int lowestGasReq = -1;
+	int additionalReservedMineral = 0;
+	int additionalReservedGas = 0;
+	bool isSupplyCap = false;
+
+	//Dont reserve ressources for worker or less important things
+	if (highestPriority <= 2)//2 == scv priority
+	{
+		lowestMineralReq = 0;
+		lowestGasReq = 0;
+	}
 
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
     {
+		//Get the lowest price for any top priority item in the queue.
+		if (currentItem.priority == highestPriority)
+		{
+			if (lowestMineralReq == -1 || lowestMineralReq > m_bot.Data(currentItem.type).mineralCost)
+			{
+				lowestMineralReq = m_bot.Data(currentItem.type).mineralCost;
+			}
+			if (lowestGasReq == -1 || lowestGasReq > m_bot.Data(currentItem.type).gasCost)
+			{
+				lowestGasReq = m_bot.Data(currentItem.type).gasCost;
+			}
+		}
+
+		//If we currently have a high priority, do not reserve ressources. Otherwise reserve ressources
+		if (highestPriority == currentItem.priority)
+		{
+			additionalReservedMineral = 0;
+			additionalReservedGas = 0;
+		}
+		else
+		{
+			additionalReservedMineral = lowestMineralReq;
+			additionalReservedGas = lowestGasReq;
+		}
+
 		//check if we have the prerequirements.
 		if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
 		{
@@ -148,7 +186,7 @@ void ProductionManager::manageBuildOrderQueue()
 			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location, remove pre-movement
 
 			//Build supply depot at ramp against protoss
-			if (m_bot.Observation()->GetFoodCap() <= 15 && currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
+			/*if (m_bot.Observation()->GetFoodCap() <= 15 && currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
 				m_bot.GetGameLoop() > 5 && getFreeMinerals() > 30)
 			{
 				const CCPosition centerMap(m_bot.Map().width() / 2, m_bot.Map().height() / 2);
@@ -170,11 +208,11 @@ void ProductionManager::manageBuildOrderQueue()
 						rampSupplyDepotWorker.move(centerMap);
 					}
 				}
-			}
+			}*/
 
 			//TODO: TEMP build barrack away from the ramp to protect it from worker rush
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
-				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks))
+				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks, additionalReservedMineral, additionalReservedGas))
 			{
 				firstBarrackBuilt = true;
 
@@ -211,12 +249,25 @@ void ProductionManager::manageBuildOrderQueue()
 
 					break;
 				}				
-			}
+			}			
 
 			// if we can make the current item
-			if (meetsReservedResources(currentItem.type))
+			if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 			{
 				Unit producer = getProducer(currentItem.type);
+
+				// build supply if we need some (SupplyBlock)
+				if (producer.isValid()
+					&& m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+				{
+					supplyBlockedFrames++;
+#if _DEBUG
+					Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
+#else
+					Util::Log(__FUNCTION__, "Supply blocked | 0x00000007");
+#endif
+				}
+
 				if (canMakeNow(producer, currentItem.type))
 				{
 					// create it and remove it from the _queue
@@ -229,7 +280,10 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 
 			// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
-			if (m_bot.Data(currentItem.type).isBuilding && !m_bot.Data(currentItem.type).isAddon && !currentItem.type.getUnitType().isMorphedBuilding() && meetsReservedResourcesWithExtra(currentItem.type))
+			if (m_bot.Data(currentItem.type).isBuilding
+				&& !m_bot.Data(currentItem.type).isAddon
+				&& !currentItem.type.getUnitType().isMorphedBuilding()
+				&& meetsReservedResourcesWithExtra(currentItem.type, additionalReservedMineral, additionalReservedGas))
 			{
 				Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
 				//Get building location
@@ -283,7 +337,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	// build supply if we need some
 	const auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
-	if(m_bot.GetCurrentSupply() + 1.75 * getUnitTrainingBuildings(m_bot.GetSelfRace()).size() + baseCount > supplyWithAdditionalSupplyDepot && !m_queue.contains(supplyProviderType) && supplyWithAdditionalSupplyDepot < 200 && !m_bot.Strategy().isWorkerRushed())
+	if(m_bot.GetCurrentSupply() + 1.65 * getUnitTrainingBuildings(m_bot.GetSelfRace()).size() + baseCount > supplyWithAdditionalSupplyDepot
+		&& !m_queue.contains(supplyProviderType)
+		&& supplyWithAdditionalSupplyDepot < 200
+		&& !m_bot.Strategy().isWorkerRushed())
 	{
 		m_queue.queueAsHighestPriority(supplyProviderType, false);
 	}
@@ -306,7 +363,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueAsHighestPriority(MetaTypeEnum::PlanetaryFortress, false);
 				}
-				m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
 				m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
 			}
 		}
@@ -379,7 +435,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					queueTech(MetaTypeEnum::HyperflightRotors);
 				}
 
-				if (!m_queue.contains(MetaTypeEnum::Reaper))
+				if (!m_queue.contains(MetaTypeEnum::Reaper) && m_bot.CombatAnalyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 3)
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
@@ -768,12 +824,6 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 	if (typeData.gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
     {
 		m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
-    }
-
-    // build supply if we need some
-    if (typeData.supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply() && !m_bot.Buildings().isBeingBuilt(supplyProvider))
-    {
-        m_queue.queueAsHighestPriority(supplyProviderType, true);
     }
 }
 
@@ -1335,7 +1385,7 @@ void ProductionManager::queueUpgrade(const MetaType & type)
 						{
 							m_queue.queueAsLowestPriority(potentialUpgrade, false);
 							startedUpgrades.push_back(potentialUpgrade);
-							Util::Log(__FUNCTION__, "queue " + potentialUpgrade.getName());
+							Util::DebugLog(__FUNCTION__, "queue " + potentialUpgrade.getName());
 							return;
 						}
 					}
@@ -1360,7 +1410,7 @@ void ProductionManager::queueTech(const MetaType & type)
 {
 	m_queue.queueItem(BuildOrderItem(type, 0, false));
 	startedUpgrades.push_back(type);
-	Util::Log(__FUNCTION__, "Queue " + type.getName());
+	Util::DebugLog(__FUNCTION__, "Queue " + type.getName());
 }
 
 void ProductionManager::validateUpgradesProgress()
@@ -1390,14 +1440,14 @@ void ProductionManager::validateUpgradesProgress()
 			if (progress > 0.95f)//About to finish, lets consider it done.
 			{
 				toRemove.push_back(upgrade.first);
-				Util::Log(__FUNCTION__, "upgrade finished " + upgrade.first.getName());
+				Util::DebugLog(__FUNCTION__, "upgrade finished " + upgrade.first.getName());
 			}
 		}
 		else
 		{
 			toRemove.push_back(upgrade.first);
 			startedUpgrades.remove(upgrade.first);
-			Util::Log(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName());
+			Util::DebugLog(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName());
 		}
 	}
 	for (auto & remove : toRemove)
@@ -1475,7 +1525,7 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 			Util::DisplayError("Trying to start an already started upgrade.", "0x00000006", m_bot);
 		}
 		incompletUpgrades.insert(std::make_pair(item.type, producer));
-		Util::Log(__FUNCTION__, "upgrade starting " + item.type.getName());
+		Util::DebugLog(__FUNCTION__, "upgrade starting " + item.type.getName());
     }
 }
 
@@ -1596,16 +1646,16 @@ int ProductionManager::getExtraGas()
 }
 
 // return whether or not we meet resources, including building reserves
-bool ProductionManager::meetsReservedResources(const MetaType & type)
+bool ProductionManager::meetsReservedResources(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
 {
-    return (m_bot.Data(type).mineralCost <= getFreeMinerals()) && (m_bot.Data(type).gasCost <= getFreeGas());
+    return (m_bot.Data(type).mineralCost <= getFreeMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= getFreeGas() - additionalReservedGas);
 }
 
 // return whether or not we meet resources, including building reserves
-bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type)
+bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
 {
 	assert("Addons cannot use extra ressources", m_bot.Data(type).isAddon);
-	return (m_bot.Data(type).mineralCost <= getFreeMinerals() + getExtraMinerals()) && (m_bot.Data(type).gasCost <= getFreeGas() + getExtraGas());
+	return (m_bot.Data(type).mineralCost <= getFreeMinerals() + getExtraMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= getFreeGas() + getExtraGas() - additionalReservedGas);
 }
 
 void ProductionManager::drawProductionInformation()

@@ -339,6 +339,7 @@ int UnitType::supplyRequired() const
 int UnitType::mineralPrice() const
 {
 #ifdef SC2API
+	BOT_ASSERT(m_type != 0, "Invalid type id");
     return (int)m_bot->Observation()->GetUnitTypeData()[m_type].mineral_cost;
 #else
     return m_type.mineralPrice();
@@ -348,6 +349,7 @@ int UnitType::mineralPrice() const
 int UnitType::gasPrice() const
 {
 #ifdef SC2API
+	BOT_ASSERT(m_type != 0, "Invalid type id");
     return (int)m_bot->Observation()->GetUnitTypeData()[m_type].vespene_cost;
 #else
     return m_type.gasPrice();

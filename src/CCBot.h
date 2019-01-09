@@ -8,6 +8,7 @@
 #include "WorkerManager.h"
 #include "BuildingManager.h"
 #include "BotConfig.h"
+#include "CombatAnalyzer.h"
 #include "GameCommander.h"
 #include "StrategyManager.h"
 #include "TechTree.h"
@@ -39,6 +40,7 @@ class CCBot
 	RepairStationManager    m_repairStations;
     BotConfig               m_config;
     TechTree                m_techTree;
+	CombatAnalyzer			m_combatAnalyzer;
     GameCommander           m_gameCommander;
 	CCPosition				m_startLocation;
 	CCTilePosition			m_buildingArea;
@@ -106,6 +108,7 @@ public:
           WorkerManager & Workers();
 		  BuildingManager & Buildings();
     const BaseLocationManager & Bases() const;
+		  CombatAnalyzer & CombatAnalyzer();
 		  GameCommander & Commander();
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;

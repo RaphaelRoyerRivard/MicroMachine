@@ -24,9 +24,9 @@ class ProductionManager
 	UnitType workerType;
 	MetaType workerMetatype;
 
-	void queueUpgrade(const MetaType & type);
+	void	queueUpgrade(const MetaType & type);
 	bool	isTechStarted(const MetaType & type);
-	void queueTech(const MetaType & type);
+	void	queueTech(const MetaType & type);
 	void	validateUpgradesProgress();
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
     bool    canMakeNow(const Unit & producer, const MetaType & type);
@@ -48,6 +48,7 @@ class ProductionManager
 	bool	hasProducer(const MetaType& metaType, bool checkInQueue);
 
 public:
+	int supplyBlockedFrames = 0;
 
     ProductionManager(CCBot & bot);
 
@@ -61,7 +62,7 @@ public:
 	int getProductionBuildingsAddonsCount() const;
 	float getProductionScore() const;
 	float getProductionScoreInQueue();
-	bool meetsReservedResources(const MetaType & type);
-	bool meetsReservedResourcesWithExtra(const MetaType & type);
+	bool meetsReservedResources(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
+	bool meetsReservedResourcesWithExtra(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
 };

@@ -437,15 +437,18 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 					sc2::UNIT_TYPEID type = b.type.getAPIUnitType();
 					switch (type)
 					{
+						//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
 						case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
 						case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 						{
 							m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y - 1, 3, 1);
 						}
-						case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+						//Reserve tiles for addon
+						/*case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 						{
 							m_buildingPlacer.reserveTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, 2, 2);
-						}
+						}*/
 					}
 				}
 			}

@@ -276,7 +276,7 @@ bool Unit::isAlive() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API
-    return m_unit->is_alive;
+	return m_unit->is_alive;
 #else
     return m_unit->getHitPoints() > 0;
 #endif
