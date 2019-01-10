@@ -56,7 +56,6 @@ void CombatAnalyzer::UpdateTotalHealthLoss()
 	for (auto unitstate : m_unitStates)
 	{
 		increaseTotalHealthLoss(unitstate.second.GetDamageTaken(), unitstate.second.GetType());
-		increaseTotalHealthLoss(unitstate.second.GetDamageTaken(), (sc2::UNIT_TYPEID)0);
 	}
 }
 
@@ -66,11 +65,16 @@ void CombatAnalyzer::increaseTotalDamage(float damageDealt, sc2::UNIT_TYPEID uni
 	{
 		return;
 	}
-	if (totalDamage.find(unittype) == totalDamage.end())
+	for(int i = 0; i < 2; ++i)
 	{
-		totalDamage.insert_or_assign(unittype, 0);
+		if (totalDamage.find(unittype) == totalDamage.end())
+		{
+			totalDamage.insert_or_assign(unittype, 0);
+		}
+		totalDamage.at(unittype) += damageDealt;
+		// for total
+		unittype = sc2::UNIT_TYPEID(0);
 	}
-	totalDamage.at(unittype) += damageDealt;
 }
 
 void CombatAnalyzer::increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID unittype)
@@ -79,11 +83,16 @@ void CombatAnalyzer::increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID 
 	{
 		return;
 	}
-	if (totalhealthLoss.find(unittype) == totalhealthLoss.end())
+	for (int i = 0; i < 2; ++i)
 	{
-		totalhealthLoss.insert_or_assign(unittype, 0);
+		if (totalhealthLoss.find(unittype) == totalhealthLoss.end())
+		{
+			totalhealthLoss.insert_or_assign(unittype, 0);
+		}
+		totalhealthLoss.at(unittype) += healthLoss;
+		// for total
+		unittype = sc2::UNIT_TYPEID(0);
 	}
-	totalhealthLoss.at(unittype) += healthLoss;
 }
 
 float CombatAnalyzer::GetRatio(sc2::UNIT_TYPEID type)
