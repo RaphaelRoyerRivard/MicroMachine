@@ -24,7 +24,7 @@ const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
-const int REAPER_KD8_CHARGE_COOLDOWN = 314;
+const int REAPER_KD8_CHARGE_COOLDOWN = 342;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 80;
 const float CLIFF_MIN_HEIGHT_DIFFERENCE = 1.f;
@@ -154,6 +154,8 @@ int RangedManager::getAttackDuration(const sc2::Unit* unit) const
 
 void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
 {
+	FlagActionsAsFinished();
+
 	if (m_bot.Config().EnableMultiThreading)
 	{
 		std::list<std::thread*> threads;
@@ -195,11 +197,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 	if (ShouldSkipFrame(rangedUnit))
 		return;
-
-	// Reset the priority of the action because it is finished
-	auto & lastAction = unitActions[rangedUnit];
-	lastAction.prioritized = false;
-	lastAction.shouldExecute = false;
 
 	m_bot.StartProfiling("0.10.4.1.5.0        getTarget");
 	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
@@ -586,8 +583,14 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			continue;
 		}
+		auto & unitAction = unitActions[unit];
 		// Ignore units that are executing a prioritized action
-		if(unitActions[unit].prioritized)
+		if(unitAction.prioritized)
+		{
+			continue;
+		}
+		// Ignore units that are currently executing an action
+		if(unitAction.executed && !unitAction.finished)
 		{
 			continue;
 		}
@@ -626,6 +629,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
 	}
 
+	m_harassMode = true;
+
 	// If we can beat the enemy
 	if (unitsPower >= targetsPower)
 	{
@@ -635,15 +640,14 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			const auto unit = unitAndTarget.first;
 			const auto unitTarget = unitAndTarget.second;
 			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, false);
-			const float unitRange = Util::GetAttackRangeForTarget(unit, target, m_bot);
-			const bool canAttackNow = unitRange * unitRange <= Util::DistSq(unit->pos, target->pos) && rangedUnit->weapon_cooldown <= 0.f;
+			const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
+			const bool canAttackNow = unitRange * unitRange <= Util::DistSq(unit->pos, unitTarget->pos) && rangedUnit->weapon_cooldown <= 0.f;
 			const int attackDuration = canAttackNow ? getAttackDuration(unit) : 0;
 			// Attack the target
 			PlanAction(unit, action, attackDuration);
 		}
 		return true;
 	}
-	m_harassMode = true;
 	return false;
 }
 
@@ -1217,22 +1221,51 @@ bool RangedManager::PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction act
 	}
 
 	// If the unit is performing a priorized action
-	if(currentAction.prioritized) // && !action.prioritized)
+	if(currentAction.prioritized)
 	{
 		Util::DisplayError("Unit is trying to overwrite its prioritized action", "", m_bot);
 		return false;
 	}
 
 	// The current action is not yet finished and the new one is not prioritized
-	if(!action.prioritized && currentAction.shouldExecute)
+	if(currentAction.executed && !currentAction.finished && !action.prioritized)
 	{
 		return false;
 	}
 
-	action.shouldExecute = true;
 	action.duration = actionDuration;
 	unitActions.insert_or_assign(rangedUnit, action);
 	return true;
+}
+
+void RangedManager::FlagActionsAsFinished()
+{
+	sc2::Units deadUnits;
+	for (auto & unitAction : unitActions)
+	{
+		const auto rangedUnit = unitAction.first;
+		auto & action = unitAction.second;
+
+		// If the unit is dead, we will need to remove it from the map
+		if(!rangedUnit->is_alive)
+		{
+			deadUnits.push_back(rangedUnit);
+			continue;
+		}
+
+		// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
+		if (ShouldSkipFrame(rangedUnit))
+			continue;
+
+		// Reset the priority of the action because it is finished
+		action.prioritized = false;
+		action.finished = true;
+	}
+
+	for(auto deadUnit : deadUnits)
+	{
+		unitActions.erase(deadUnit);
+	}
 }
 
 void RangedManager::ExecuteActions()
@@ -1242,7 +1275,13 @@ void RangedManager::ExecuteActions()
 		const auto rangedUnit = unitAction.first;
 		auto & action = unitAction.second;
 
-		if (!action.shouldExecute)
+		if(m_bot.Config().DrawRangedUnitActions)
+		{
+			const std::string actionString = MicroActionTypeAccronyms[action.microActionType] + (action.prioritized ? "!" : "");
+			m_bot.Map().drawText(rangedUnit->pos, actionString, sc2::Colors::Teal);
+		}
+
+		if (action.executed)
 			continue;
 
 		m_bot.GetCommandMutex().lock();
@@ -1269,7 +1308,7 @@ void RangedManager::ExecuteActions()
 		case MicroActionType::Stop:
 			Micro::SmartStop(rangedUnit, m_bot);
 			break;
-		case MicroActionType::Smart:
+		case MicroActionType::RightClick:
 			Micro::SmartRightClick(rangedUnit, action.target, m_bot);
 			break;
 		default:
@@ -1279,7 +1318,7 @@ void RangedManager::ExecuteActions()
 		}
 		m_bot.GetCommandMutex().unlock();
 
-		action.shouldExecute = false;
+		action.executed = true;
 		if (action.duration > 0)
 		{
 			nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + action.duration;

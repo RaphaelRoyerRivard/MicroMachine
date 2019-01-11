@@ -39,14 +39,14 @@ MicroActionType Micro::SmartRightClick(const sc2::Unit * unit, const sc2::Unit *
 {
     BOT_ASSERT(unit != nullptr, "Unit is null");
     bot.Actions()->UnitCommand(unit, sc2::ABILITY_ID::SMART, target);
-	return MicroActionType::Smart;
+	return MicroActionType::RightClick;
 }
 
 MicroActionType Micro::SmartRepair(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
     BOT_ASSERT(unit != nullptr, "Unit is null");
     bot.Actions()->UnitCommand(unit, sc2::ABILITY_ID::SMART, target);
-	return MicroActionType::Smart;
+	return MicroActionType::RightClick;
 }
 
 MicroActionType Micro::SmartKiteTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCBot & bot, std::unordered_map<sc2::Tag, KitingFiniteStateMachine*> &state)

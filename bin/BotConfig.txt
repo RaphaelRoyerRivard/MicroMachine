@@ -99,7 +99,8 @@
         "DrawInfluenceMaps"         : false,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
-		"DrawDamageHealthRatio"		: true
+		"DrawDamageHealthRatio"		: true,
+        "DrawRangedUnitActions"     : true
     },
     
     "Modules" :

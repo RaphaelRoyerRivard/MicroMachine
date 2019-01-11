@@ -13,13 +13,15 @@ enum MicroActionType
 	AttackUnit,
 	AttackMove,
 	Move,
-	Smart,
+	RightClick,
 	Ability,
 	AbilityPosition,
 	AbilityTarget,
 	FSMKite,
 	FSMFocusFire,
 };
+
+const std::string MicroActionTypeAccronyms[] = {"S", "AU", "AM", "M", "RC", "A", "AP", "AT", "K", "FF"};
 
 namespace Micro
 {   

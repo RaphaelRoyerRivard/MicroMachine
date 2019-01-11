@@ -14,7 +14,8 @@ struct RangedUnitAction
 		, position(CCPosition())
 		, abilityID(0)
 		, prioritized(false)
-		, shouldExecute(false)
+		, executed(true)
+		, finished(true)
 		, duration(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, bool prioritize)
@@ -23,7 +24,8 @@ struct RangedUnitAction
 		, position(CCPosition())
 		, abilityID(0)
 		, prioritized(prioritize)
-		, shouldExecute(false)
+		, executed(false)
+		, finished(false)
 		, duration(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize)
@@ -32,7 +34,8 @@ struct RangedUnitAction
 		, position(CCPosition())
 		, abilityID(0)
 		, prioritized(prioritize)
-		, shouldExecute(false)
+		, executed(false)
+		, finished(false)
 		, duration(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, CCPosition position, bool prioritize)
@@ -41,7 +44,8 @@ struct RangedUnitAction
 		, position(position)
 		, abilityID(0)
 		, prioritized(prioritize)
-		, shouldExecute(false)
+		, executed(false)
+		, finished(false)
 		, duration(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize)
@@ -50,7 +54,8 @@ struct RangedUnitAction
 		, position(CCPosition())
 		, abilityID(abilityID)
 		, prioritized(prioritize)
-		, shouldExecute(false)
+		, executed(false)
+		, finished(false)
 		, duration(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize)
@@ -59,7 +64,8 @@ struct RangedUnitAction
 		, position(position)
 		, abilityID(abilityID)
 		, prioritized(prioritize)
-		, shouldExecute(false)
+		, executed(false)
+		, finished(false)
 		, duration(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize)
@@ -68,7 +74,8 @@ struct RangedUnitAction
 		, position(CCPosition())
 		, abilityID(abilityID)
 		, prioritized(prioritize)
-		, shouldExecute(false)
+		, executed(false)
+		, finished(false)
 		, duration(0)
 	{}
 	RangedUnitAction(const RangedUnitAction& rangedUnitAction) = default;
@@ -77,7 +84,8 @@ struct RangedUnitAction
 	CCPosition position;
 	sc2::AbilityID abilityID;
 	bool prioritized;
-	bool shouldExecute;
+	bool executed;
+	bool finished;
 	int duration;
 
 	RangedUnitAction& operator=(const RangedUnitAction&) = default;
@@ -141,5 +149,6 @@ private:
 	float getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const;
 	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);
 	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action, int actionDuration);
+	void FlagActionsAsFinished();
 	void ExecuteActions();
 };
