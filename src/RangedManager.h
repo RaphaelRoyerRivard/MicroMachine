@@ -18,7 +18,7 @@ struct RangedUnitAction
 		, finished(true)
 		, duration(0)
 	{}
-	RangedUnitAction(MicroActionType microActionType, bool prioritize)
+	RangedUnitAction(MicroActionType microActionType, bool prioritize, int duration)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(CCPosition())
@@ -26,9 +26,9 @@ struct RangedUnitAction
 		, prioritized(prioritize)
 		, executed(false)
 		, finished(false)
-		, duration(0)
+		, duration(duration)
 	{}
-	RangedUnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize)
+	RangedUnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration)
 		: microActionType(microActionType)
 		, target(target)
 		, position(CCPosition())
@@ -36,9 +36,9 @@ struct RangedUnitAction
 		, prioritized(prioritize)
 		, executed(false)
 		, finished(false)
-		, duration(0)
+		, duration(duration)
 	{}
-	RangedUnitAction(MicroActionType microActionType, CCPosition position, bool prioritize)
+	RangedUnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(position)
@@ -46,9 +46,9 @@ struct RangedUnitAction
 		, prioritized(prioritize)
 		, executed(false)
 		, finished(false)
-		, duration(0)
+		, duration(duration)
 	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize)
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(CCPosition())
@@ -56,9 +56,9 @@ struct RangedUnitAction
 		, prioritized(prioritize)
 		, executed(false)
 		, finished(false)
-		, duration(0)
+		, duration(duration)
 	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize)
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(position)
@@ -66,9 +66,9 @@ struct RangedUnitAction
 		, prioritized(prioritize)
 		, executed(false)
 		, finished(false)
-		, duration(0)
+		, duration(duration)
 	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize)
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration)
 		: microActionType(microActionType)
 		, target(target)
 		, position(CCPosition())
@@ -76,7 +76,7 @@ struct RangedUnitAction
 		, prioritized(prioritize)
 		, executed(false)
 		, finished(false)
-		, duration(0)
+		, duration(duration)
 	{}
 	RangedUnitAction(const RangedUnitAction& rangedUnitAction) = default;
 	MicroActionType microActionType;
@@ -148,7 +148,7 @@ private:
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	float getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const;
 	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);
-	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action, int actionDuration);
+	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
 	void FlagActionsAsFinished();
 	void ExecuteActions();
 };

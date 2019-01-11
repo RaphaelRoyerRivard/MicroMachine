@@ -112,7 +112,7 @@ void CCBot::OnStep()
 	clearDeadUnits();
 	StopProfiling("0.3 clearDeadUnits");
 
-	checkForconcede();
+	checkForConcede();
 
 	StartProfiling("0.4 m_map.onFrame");
 	m_map.onFrame();
@@ -149,6 +149,8 @@ void CCBot::OnStep()
 	StartProfiling("0.10 m_gameCommander.onFrame");
 	m_gameCommander.onFrame();
 	StopProfiling("0.10 m_gameCommander.onFrame");
+
+	updatePreviousFrameEnemyUnitPos();
 
 	StopProfiling("0.0 OnStep");	//Do not remove
 
@@ -331,7 +333,11 @@ void CCBot::setUnits()
 			}
 			if (unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 			{
-				m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+				uint32_t & spawnFrame = m_KD8ChargesSpawnFrame[unitptr->tag];
+				if (spawnFrame == 0)
+					spawnFrame = GetGameLoop();
+				else if(GetGameLoop() - spawnFrame > 18)	// Will consider our KD8 Charges to be dangerous only after 0.75s
+					m_enemyUnits.insert_or_assign(unitptr->tag, unit);
 			}
 		}
 		else if (unitptr->alliance == sc2::Unit::Enemy)
@@ -430,9 +436,14 @@ void CCBot::clearDeadUnits()
 	// Find dead ally units
 	for (auto& pair : m_allyUnits)
 	{
+		auto tag = pair.first;
 		auto& unit = pair.second;
 		if (!unit.isAlive())
-			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+		{
+			unitsToRemove.push_back(tag);
+			if (unit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+				m_KD8ChargesSpawnFrame.erase(tag);
+		}
 	}
 	// Remove dead ally units
 	for (auto tag : unitsToRemove)
@@ -477,7 +488,16 @@ void CCBot::clearDeadUnits()
 	}
 }
 
-void CCBot::checkForconcede()
+void CCBot::updatePreviousFrameEnemyUnitPos()
+{
+	m_previousFrameEnemyPos.clear();
+	for (auto & unit : UnitInfo().getUnits(Players::Enemy))
+	{
+		m_previousFrameEnemyPos.insert_or_assign(unit.getUnitPtr()->tag, unit.getPosition());
+	}
+}
+
+void CCBot::checkForConcede()
 {
 	m_concede = m_concedeNextFrame;
 	if(m_allyUnits.size() == 1)
