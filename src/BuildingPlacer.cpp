@@ -12,7 +12,7 @@ BuildingPlacer::BuildingPlacer(CCBot & bot)
 
 void BuildingPlacer::onStart()
 {
-    m_reserveMap = std::vector< std::vector<bool> >(m_bot.Map().width(), std::vector<bool>(m_bot.Map().height(), false));
+    m_reserveMap = std::vector< std::vector<bool> >(m_bot.Map().totalWidth(), std::vector<bool>(m_bot.Map().totalHeight(), false));
 
 	auto bases = m_bot.Bases().getBaseLocations();
 	for (auto baseLocation : bases)
@@ -83,7 +83,9 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     // TODO: recalculate start and end positions for addons
 
     // if this rectangle doesn't fit on the map we can't build here
-    if (startx < 0 || starty < 0 || endx > m_bot.Map().width() || endx < bx + width || endy > m_bot.Map().height())
+	const CCPosition mapMin = m_bot.Map().mapMin();
+	const CCPosition mapMax = m_bot.Map().mapMax();
+    if (startx < mapMin.x || starty < mapMin.y || endx >= mapMax.x || endy >= mapMax.y || endx < bx + width)
     {
         return false;
     }
@@ -178,17 +180,17 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 		{
 			buildLocation.x = 0;
 		}
-		else if (buildLocation.y < 0)
+		if (buildLocation.y < 0)
 		{
 			buildLocation.y = 0;
 		}
-		if (buildLocation.x > m_bot.Map().width())
+		if (buildLocation.x >= m_bot.Map().mapMax().x)
 		{
-			buildLocation.x = m_bot.Map().width();
+			buildLocation.x = m_bot.Map().mapMax().x - 1;
 		}
-		else if (buildLocation.y > m_bot.Map().height())
+		if (buildLocation.y >= m_bot.Map().mapMax().y)
 		{
-			buildLocation.y = m_bot.Map().height();
+			buildLocation.y = m_bot.Map().mapMax().y - 1;
 		}
 
 		if (offset == 25)//Did not find any walkable space within 25 tiles in all directions

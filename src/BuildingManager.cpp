@@ -121,7 +121,7 @@ void BuildingManager::FindMainRamp(std::list<CCTilePosition> &rampTiles)
 	CCTilePosition mainRampTile;
 	for (auto & tile : rampTiles)
 	{
-		int distance = Util::DistSq(Util::GetPosition(tile), CCPosition(m_bot.Map().width() / 2, m_bot.Map().height() / 2));
+		int distance = Util::DistSq(Util::GetPosition(tile), m_bot.Map().center());
 		if (distance < minDistance)
 		{
 			minDistance = distance;

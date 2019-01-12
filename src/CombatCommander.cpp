@@ -131,8 +131,8 @@ bool CombatCommander::shouldWeStartAttacking()
 
 void CombatCommander::initInfluenceMaps()
 {
-	const size_t mapWidth = m_bot.Map().width();
-	const size_t mapHeight = m_bot.Map().height();
+	const size_t mapWidth = m_bot.Map().totalWidth();
+	const size_t mapHeight = m_bot.Map().totalHeight();
 	m_groundInfluenceMap.resize(mapWidth);
 	m_airInfluenceMap.resize(mapWidth);
 	m_blockedTiles.resize(mapWidth);
@@ -155,8 +155,8 @@ void CombatCommander::initInfluenceMaps()
 
 void CombatCommander::resetInfluenceMaps()
 {
-	const size_t mapWidth = m_bot.Map().width();
-	const size_t mapHeight = m_bot.Map().height();
+	const size_t mapWidth = m_bot.Map().totalWidth();
+	const size_t mapHeight = m_bot.Map().totalHeight();
 	const bool resetBlockedTiles = m_bot.GetGameLoop() % BLOCKED_TILES_UPDATE_FREQUENCY == 0;
 	for (size_t x = 0; x < mapWidth; ++x)
 	{
@@ -353,11 +353,13 @@ void CombatCommander::updateInfluenceMap(const float dps, const float range, con
 	const float fmaxX = ceil(position.x + totalRange);
 	const float fminY = floor(position.y - totalRange);
 	const float fmaxY = ceil(position.y + totalRange);
-	const float maxMapX = m_bot.Map().width() - 1.f;
-	const float maxMapY = m_bot.Map().height() - 1.f;
-	const int minX = std::max(0.f, fminX);
+	const float minMapX = m_bot.Map().mapMin().x;
+	const float minMapY = m_bot.Map().mapMin().y;
+	const float maxMapX = m_bot.Map().mapMax().x;
+	const float maxMapY = m_bot.Map().mapMax().y;
+	const int minX = std::max(minMapX, fminX);
 	const int maxX = std::min(maxMapX, fmaxX);
-	const int minY = std::max(0.f, fminY);
+	const int minY = std::max(minMapY, fminY);
 	const int maxY = std::min(maxMapY, fmaxY);
 	auto& influenceMap = ground ? m_groundInfluenceMap : m_airInfluenceMap;
 	//loop for a square of size equal to the diameter of the influence circle
@@ -409,8 +411,8 @@ void CombatCommander::updateBlockedTilesWithUnit(const Unit& unit)
 
 void CombatCommander::drawInfluenceMaps()
 {
-	const size_t mapWidth = m_bot.Map().width();
-	const size_t mapHeight = m_bot.Map().height();
+	const size_t mapWidth = m_bot.Map().totalWidth();
+	const size_t mapHeight = m_bot.Map().totalHeight();
 	for (size_t x = 0; x < mapWidth; ++x)
 	{
 		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
@@ -427,8 +429,8 @@ void CombatCommander::drawInfluenceMaps()
 
 void CombatCommander::drawBlockedTiles()
 {
-	const size_t mapWidth = m_bot.Map().width();
-	const size_t mapHeight = m_bot.Map().height();
+	const size_t mapWidth = m_bot.Map().totalWidth();
+	const size_t mapHeight = m_bot.Map().totalHeight();
 	for (size_t x = 0; x < mapWidth; ++x)
 	{
 		auto& blockedTilesRow = m_blockedTiles[x];

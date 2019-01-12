@@ -333,11 +333,17 @@ void CCBot::setUnits()
 			}
 			if (unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 			{
-				uint32_t & spawnFrame = m_KD8ChargesSpawnFrame[unitptr->tag];
-				if (spawnFrame == 0)
-					spawnFrame = GetGameLoop();
-				else if(GetGameLoop() - spawnFrame > 18)	// Will consider our KD8 Charges to be dangerous only after 0.75s
-					m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+				auto it = m_KD8ChargesSpawnFrame.find(unitptr->tag);
+				if (it == m_KD8ChargesSpawnFrame.end())
+				{
+					m_KD8ChargesSpawnFrame.insert_or_assign(unitptr->tag, GetGameLoop());
+				}
+				else
+				{
+					uint32_t & spawnFrame = it->second;
+					if (GetGameLoop() - spawnFrame > 12)	// Will consider our KD8 Charges to be dangerous only after 0.5s
+						m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+				}
 			}
 		}
 		else if (unitptr->alliance == sc2::Unit::Enemy)

@@ -122,7 +122,7 @@ private:
 	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	bool ShouldSkipFrame(const sc2::Unit * rangedUnit) const;
 	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit) const;
-	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats);
+	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee);
 	bool ShouldUnitHeal(const sc2::Unit * rangedUnit);
 	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal);
 	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float squaredDistanceToGoal, bool unitShouldHeal);

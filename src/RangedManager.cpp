@@ -206,17 +206,12 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	sc2::Units threats = Util::getThreats(rangedUnit, rangedUnitTargets, m_bot);
 	m_bot.StopProfiling("0.10.4.1.5.1        getThreats");
 
-	if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, threats))
-	{
-		return;
-	}
-
 	CCPosition goal = m_order.getPosition();
 
 	const bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
 	if (unitShouldHeal)
 	{
-		goal = isReaper ? CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
+		goal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
 	}
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
@@ -379,6 +374,12 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
+	// Banshee in danger should cloak itself
+	if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit))
+	{
+		return;
+	}
+
 	// If close to an unpathable position or in danger
 	// Use influence map to find safest path
 	CCPosition safeTile = FindOptimalPathToSafety(rangedUnit, goal);
@@ -407,10 +408,11 @@ bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit) const
 	return m_bot.GetGameLoop() >= availableFrame;
 }
 
-bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats)
+bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee)
 {
 	//TODO consider detectors
-	if (!threats.empty() && banshee->cloak == sc2::Unit::NotCloaked && banshee->energy > 50.f)
+	// Cloak if the amount of energy is rather high or HP is low
+	if (banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || banshee->health / banshee->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE))
 	{
 		const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::BEHAVIOR_CLOAKON, true, 0);
 		PlanAction(banshee, action);
@@ -642,6 +644,12 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			const auto unit = unitAndTarget.first;
 			const auto unitTarget = unitAndTarget.second;
+
+			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit))
+			{
+				continue;
+			}
+
 			const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 			const bool canAttackNow = unitRange * unitRange <= Util::DistSq(unit->pos, unitTarget->pos) && rangedUnit->weapon_cooldown <= 0.f;
 			const int attackDuration = canAttackNow ? getAttackDuration(unit) : 0;
@@ -794,8 +802,8 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 
 	if (!rangedUnit->is_flying)
 	{
-		const int mapWidth = m_bot.Map().width();
-		const int mapHeight = m_bot.Map().height();
+		const CCPosition mapMin = m_bot.Map().mapMin();
+		const CCPosition mapMax = m_bot.Map().mapMax();
 		bool canMoveAtInitialDistanceOrFarther = true;
 
 		// Check if we can move in the direction of the vector
@@ -805,7 +813,7 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 			++moveDistance;
 			moveTo = rangedUnit->pos + directionVector * moveDistance;
 			// If moveTo is out of the map, stop checking farther and switch to influence map navigation
-			if (mapWidth < moveTo.x || moveTo.x < 0 || mapHeight < moveTo.y || moveTo.y < 0)
+			if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
 			{
 				canMoveAtInitialDistanceOrFarther = false;
 				break;
@@ -986,8 +994,9 @@ bool RangedManager::IsNeighborNodeValid(int x, int y, IMNode* currentNode, const
 	if (currentNode->parent && neighborPosition == currentNode->parent->position)
 		return false;	// parent tile check
 
-	// TODO some tiles at the edges of the screen cannot be used
-	if (neighborPosition.x < 0 || neighborPosition.y < 0 || neighborPosition.x >= m_bot.Map().width() || neighborPosition.y >= m_bot.Map().height())
+	const CCPosition mapMin = m_bot.Map().mapMin();
+	const CCPosition mapMax = m_bot.Map().mapMax();
+	if (neighborPosition.x < mapMin.x || neighborPosition.y < mapMin.y || neighborPosition.x >= mapMax.x || neighborPosition.y >= mapMax.y)
 		return false;	// out of bounds check
 
 	if (!rangedUnit->is_flying)

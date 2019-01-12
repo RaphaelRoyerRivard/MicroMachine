@@ -35,23 +35,27 @@ MapTools::MapTools(CCBot & bot)
 void MapTools::onStart()
 {
 #ifdef SC2API
-    m_width  = m_bot.Observation()->GetGameInfo().width;
-    m_height = m_bot.Observation()->GetGameInfo().height;
+	m_totalWidth = m_bot.Observation()->GetGameInfo().width;
+	m_totalHeight = m_bot.Observation()->GetGameInfo().height;
+	m_min = m_bot.Observation()->GetGameInfo().playable_min;
+	m_max = m_bot.Observation()->GetGameInfo().playable_max;
+	m_width = m_max.x - m_min.x;
+	m_height = m_max.y - m_min.y;
 #else
     m_width  = BWAPI::Broodwar->mapWidth();
     m_height = BWAPI::Broodwar->mapHeight();
 #endif
 
-    m_walkable       = vvb(m_width, std::vector<bool>(m_height, true));
-    m_buildable      = vvb(m_width, std::vector<bool>(m_height, false));
-    m_depotBuildable = vvb(m_width, std::vector<bool>(m_height, false));
-    m_sectorNumber   = vvi(m_width, std::vector<int>(m_height, 0));
-    m_terrainHeight  = vvf(m_width, std::vector<float>(m_height, 0.0f));
+    m_walkable       = vvb(m_totalWidth, std::vector<bool>(m_totalHeight, true));
+    m_buildable      = vvb(m_totalWidth, std::vector<bool>(m_totalHeight, false));
+    m_depotBuildable = vvb(m_totalWidth, std::vector<bool>(m_totalHeight, false));
+    m_sectorNumber   = vvi(m_totalWidth, std::vector<int>(m_totalHeight, 0));
+    m_terrainHeight  = vvf(m_totalWidth, std::vector<float>(m_totalHeight, 0.0f));
 
     // Set the boolean grid data from the Map
-    for (int x(0); x < m_width; ++x)
+    for (int x = m_min.x; x < m_max.x; ++x)
     {
-        for (int y(0); y < m_height; ++y)
+        for (int y = m_min.y; y < m_max.y; ++y)
         {
             m_buildable[x][y]       = canBuild(x, y);
             m_depotBuildable[x][y]  = canBuild(x, y);
@@ -160,9 +164,9 @@ void MapTools::computeConnectivity()
     int sectorNumber = 0;
 
     // for every tile on the map, do a connected flood fill using BFS
-    for (int x=0; x<m_width; ++x)
+    for (int x = m_min.x; x < m_max.x; ++x)
     {
-        for (int y=0; y<m_height; ++y)
+        for (int y = m_min.y; y < m_max.y; ++y)
         {
             // if the sector is not currently 0, or the map isn't walkable here, then we can skip this tile
             if (getSectorNumber(x, y) != 0 || !isWalkable(x, y))
@@ -311,7 +315,7 @@ int MapTools::getSectorNumber(int x, int y) const
 
 bool MapTools::isValidTile(int tileX, int tileY) const
 {
-    return tileX >= 0 && tileY >= 0 && tileX < m_width && tileY < m_height;
+    return tileX >= m_min.x && tileY >= m_min.y && tileX < m_max.x && tileY < m_max.y;
 }
 
 bool MapTools::isValidTile(const CCTilePosition & tile) const
@@ -462,9 +466,9 @@ bool MapTools::isBuildable(const CCTilePosition & tile) const
 void MapTools::printMap()
 {
     std::stringstream ss;
-    for (int y(0); y < m_height; ++y)
+    for (int y = m_min.y; y < m_max.y; ++y)
     {
-        for (int x(0); x < m_width; ++x)
+        for (int x = m_min.x; x < m_max.x; ++x)
         {
             ss << isWalkable(x, y);
         }
@@ -507,16 +511,6 @@ bool MapTools::isWalkable(const CCPosition & pos) const
     return isWalkable(Util::GetTilePosition(pos));
 }
 
-int MapTools::width() const
-{
-    return m_width;
-}
-
-int MapTools::height() const
-{
-    return m_height;
-}
-
 const std::vector<CCTilePosition> & MapTools::getClosestTilesTo(const CCTilePosition & pos) const
 {
     return getDistanceMap(pos).getSortedTiles();
@@ -527,7 +521,7 @@ bool MapTools::canWalk(int tileX, int tileY)
 #ifdef SC2API
     auto & info = m_bot.Observation()->GetGameInfo();
     sc2::Point2DI pointI(tileX, tileY);
-    if (pointI.x < 0 || pointI.x >= info.width || pointI.y < 0 || pointI.y >= info.width)
+    if (pointI.x < m_min.x || pointI.x >= m_max.x || pointI.y < m_min.y || pointI.y >= m_max.y)
     {
         return false;
     }
@@ -563,7 +557,7 @@ bool MapTools::canBuild(int tileX, int tileY)
 #ifdef SC2API
     auto & info = m_bot.Observation()->GetGameInfo();
     sc2::Point2DI pointI(tileX, tileY);
-    if (pointI.x < 0 || pointI.x >= info.width || pointI.y < 0 || pointI.y >= info.width)
+    if (pointI.x < m_min.x || pointI.x >= m_max.x || pointI.y < m_min.y || pointI.y >= m_max.y)
     {
         return false;
     }
@@ -582,7 +576,7 @@ float MapTools::terrainHeight(const CCPosition & point) const
 #ifdef SC2API
     auto & info = m_bot.Observation()->GetGameInfo();
     sc2::Point2DI pointI((int)point.x, (int)point.y);
-    if (pointI.x < 0 || pointI.x >= info.width || pointI.y < 0 || pointI.y >= info.width)
+	if (pointI.x < m_min.x || pointI.x >= m_max.x || pointI.y < m_min.y || pointI.y >= m_max.y)
     {
         return 0.0f;
     }
