@@ -353,7 +353,8 @@ void CCBot::setUnits()
 					const float dist = Util::Dist(unitptr->pos, lastSeenPair.first);
 					const float speed = Util::getSpeedOfUnit(unitptr, *this);
 					const float realSpeed = dist * 16.f;	// Magic number calculated from real values
-					if (realSpeed > speed + 1.f)
+					const bool creep = Observation()->HasCreep(unitptr->pos) == Observation()->HasCreep(lastSeenPair.first);
+					if (creep && realSpeed > speed + 1.f)
 					{
 						// This is a Speedling!!!
 						m_strategy.setEnemyHasMetabolicBoost(true);
@@ -375,7 +376,10 @@ void CCBot::setUnits()
 						break;
 					default:
 						m_strategy.setShouldProduceAntiAir(true);
-						Actions()->SendChat("Producing air units eh? Have you met my Vikings?");
+						if(unit.getType().isBuilding())
+							Actions()->SendChat("Lifting your buildings won't save them forever.");
+						else
+							Actions()->SendChat("Producing air units eh? Have you met my Vikings?");
 					}
 				}
 
@@ -393,6 +397,21 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_HIVE:
 						m_strategy.setShouldProduceAntiAir(true);
 						Actions()->SendChat("You are finally ready to produce air units :o took you long enough");
+					default:
+						break;
+					}
+				}
+			}
+			if(!m_strategy.enemyHasInvisible())
+			{
+				// If the opponent has built a building that can produce invis units, we should produce Anti Invis units
+				if (unit.getType().isBuilding())
+				{
+					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
+					{
+					case sc2::UNIT_TYPEID::PROTOSS_DARKSHRINE:
+						m_strategy.setEnemyHasInvisible(true);
+						Actions()->SendChat("Planning on striking me with cloaked units?");
 					default:
 						break;
 					}

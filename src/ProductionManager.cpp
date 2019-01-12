@@ -852,7 +852,7 @@ void ProductionManager::lowPriorityChecks()
 
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
-	if (m_bot.Strategy().shouldProduceAntiAir())
+	if (m_bot.Strategy().shouldProduceAntiAir() || m_bot.Strategy().enemyHasInvisible())
 	{
 		auto engeneeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
 		if (engeneeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
