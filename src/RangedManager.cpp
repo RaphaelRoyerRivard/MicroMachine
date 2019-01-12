@@ -1235,13 +1235,14 @@ bool RangedManager::PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction act
 	// If the unit is already performing the same action, we do nothing
 	if (currentAction == action)
 	{
+		// Just reset the priority
+		currentAction.prioritized = action.prioritized;
 		return false;
 	}
 
 	// If the unit is performing a priorized action
-	if(currentAction.prioritized)
+	if(currentAction.prioritized && !action.prioritized)
 	{
-		Util::DisplayError("Unit is trying to overwrite its prioritized action", "", m_bot);
 		return false;
 	}
 
@@ -1273,7 +1274,6 @@ void RangedManager::FlagActionsAsFinished()
 		// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 		if (ShouldSkipFrame(rangedUnit))
 			continue;
-
 		// Reset the priority of the action because it is finished
 		action.prioritized = false;
 		action.finished = true;
@@ -1298,7 +1298,8 @@ void RangedManager::ExecuteActions()
 			m_bot.Map().drawText(rangedUnit->pos, actionString, sc2::Colors::Teal);
 		}
 
-		if (action.executed && m_bot.GetGameLoop() - action.executionFrame < ACTION_REEXECUTION_FREQUENCY)
+		// If the action has already been executed and it is not time to reexecute it
+		if (action.executed && (action.duration >= ACTION_REEXECUTION_FREQUENCY || m_bot.GetGameLoop() - action.executionFrame < ACTION_REEXECUTION_FREQUENCY))
 			continue;
 
 		m_bot.GetCommandMutex().lock();
