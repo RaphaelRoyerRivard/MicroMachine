@@ -631,15 +631,15 @@ void CombatCommander::updateScoutDefenseSquad()
         if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
         {
             enemyUnitsInRegion.push_back(unit);
+			if (enemyUnitsInRegion.size() > 1)
+				break;
         }
     }
 
-    // if there's an enemy worker in our region then assign someone to chase him
-    bool assignScoutDefender = !enemyUnitsInRegion.empty();
-
-    // if our current squad is empty and we should assign a worker, do it
-    if (assignScoutDefender)
+    // if there's an enemy worker in our region
+    if (enemyUnitsInRegion.size() == 1)
     {
+		// and there is an injured worker in the squad, remove it
 		if (!scoutDefenseSquad.isEmpty())
 		{
 			auto & units = scoutDefenseSquad.getUnits();
@@ -653,19 +653,17 @@ void CombatCommander::updateScoutDefenseSquad()
 			}
 		}
 
+		// if our the squad is empty, assign a worker
 		if(scoutDefenseSquad.isEmpty())
 		{
 			// the enemy worker that is attacking us
 			Unit enemyWorkerUnit = *enemyUnitsInRegion.begin();
 			BOT_ASSERT(enemyWorkerUnit.isValid(), "null enemy worker unit");
 
-			if (enemyWorkerUnit.isValid())
+			Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit);
+			if (workerDefender.isValid())
 			{
-				Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit);
-				if (workerDefender.isValid())
-				{
-					m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
-				}
+				m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
 			}
 		}
     }
@@ -676,7 +674,6 @@ void CombatCommander::updateScoutDefenseSquad()
         {
             BOT_ASSERT(unit.isValid(), "null unit in scoutDefenseSquad");
 
-            unit.stop();
             if (unit.getType().isWorker())
             {
                 m_bot.Workers().finishedWithWorker(unit);
@@ -864,7 +861,7 @@ void CombatCommander::updateDefenseSquads()
 		const Squad & squad = kv.second;
 		const SquadOrder & order = squad.getSquadOrder();
 
-		if (order.getType() != SquadOrderTypes::Defend)
+		if (order.getType() != SquadOrderTypes::Defend || squad.getName() == "ScoutDefense")
 		{
 			continue;
 		}
