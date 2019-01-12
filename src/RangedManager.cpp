@@ -30,6 +30,7 @@ const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 80;
 const float CLIFF_MIN_HEIGHT_DIFFERENCE = 1.f;
 const float CLIFF_MAX_HEIGHT_DIFFERENCE = 2.5f;
+const int ACTION_REEXECUTION_FREQUENCY = 50;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 { }
@@ -1297,7 +1298,7 @@ void RangedManager::ExecuteActions()
 			m_bot.Map().drawText(rangedUnit->pos, actionString, sc2::Colors::Teal);
 		}
 
-		if (action.executed)
+		if (action.executed && m_bot.GetGameLoop() - action.executionFrame < ACTION_REEXECUTION_FREQUENCY)
 			continue;
 
 		m_bot.GetCommandMutex().lock();
@@ -1335,6 +1336,7 @@ void RangedManager::ExecuteActions()
 		m_bot.GetCommandMutex().unlock();
 
 		action.executed = true;
+		action.executionFrame = m_bot.GetGameLoop();
 		if (action.duration > 0)
 		{
 			nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + action.duration;

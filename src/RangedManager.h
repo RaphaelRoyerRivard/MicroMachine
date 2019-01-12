@@ -17,6 +17,7 @@ struct RangedUnitAction
 		, executed(true)
 		, finished(true)
 		, duration(0)
+		, executionFrame(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, bool prioritize, int duration)
 		: microActionType(microActionType)
@@ -27,6 +28,7 @@ struct RangedUnitAction
 		, executed(false)
 		, finished(false)
 		, duration(duration)
+		, executionFrame(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration)
 		: microActionType(microActionType)
@@ -37,6 +39,7 @@ struct RangedUnitAction
 		, executed(false)
 		, finished(false)
 		, duration(duration)
+		, executionFrame(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration)
 		: microActionType(microActionType)
@@ -47,6 +50,7 @@ struct RangedUnitAction
 		, executed(false)
 		, finished(false)
 		, duration(duration)
+		, executionFrame(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration)
 		: microActionType(microActionType)
@@ -57,6 +61,7 @@ struct RangedUnitAction
 		, executed(false)
 		, finished(false)
 		, duration(duration)
+		, executionFrame(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration)
 		: microActionType(microActionType)
@@ -67,6 +72,7 @@ struct RangedUnitAction
 		, executed(false)
 		, finished(false)
 		, duration(duration)
+		, executionFrame(0)
 	{}
 	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration)
 		: microActionType(microActionType)
@@ -77,6 +83,7 @@ struct RangedUnitAction
 		, executed(false)
 		, finished(false)
 		, duration(duration)
+		, executionFrame(0)
 	{}
 	RangedUnitAction(const RangedUnitAction& rangedUnitAction) = default;
 	MicroActionType microActionType;
@@ -87,6 +94,7 @@ struct RangedUnitAction
 	bool executed;
 	bool finished;
 	int duration;
+	uint32_t executionFrame;
 
 	RangedUnitAction& operator=(const RangedUnitAction&) = default;
 
