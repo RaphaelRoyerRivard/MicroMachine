@@ -209,10 +209,27 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	CCPosition goal = m_order.getPosition();
 
-	const bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
+	bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
 	if (unitShouldHeal)
 	{
 		goal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
+	}
+
+	// If our unit is targeted by an enemy Cyclone's Lock-On ability, it should back until the effect wears off
+	for(const auto buff : rangedUnit->buffs)
+	{
+		if(buff == sc2::BUFF_ID::LOCKON)
+		{
+			// Banshee in danger should cloak itself
+			if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, true))
+			{
+				return;
+			}
+
+			goal = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getPosition();
+			unitShouldHeal = true;
+			break;
+		}
 	}
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
@@ -375,8 +392,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
-	// Banshee in danger should cloak itself
-	if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit))
+	// Banshee in danger should cloak itself if low on hp
+	if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
 	{
 		return;
 	}
@@ -409,11 +426,11 @@ bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit) const
 	return m_bot.GetGameLoop() >= availableFrame;
 }
 
-bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee)
+bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger)
 {
 	//TODO consider detectors
 	// Cloak if the amount of energy is rather high or HP is low
-	if (banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || banshee->health / banshee->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE))
+	if (banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f))
 	{
 		const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::BEHAVIOR_CLOAKON, true, 0);
 		PlanAction(banshee, action);
@@ -646,7 +663,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			const auto unit = unitAndTarget.first;
 			const auto unitTarget = unitAndTarget.second;
 
-			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit))
+			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, false))
 			{
 				continue;
 			}

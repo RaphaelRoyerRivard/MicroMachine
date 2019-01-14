@@ -341,7 +341,7 @@ void CCBot::setUnits()
 				else
 				{
 					uint32_t & spawnFrame = it->second;
-					if (GetGameLoop() - spawnFrame > 12)	// Will consider our KD8 Charges to be dangerous only after 0.5s
+					if (GetGameLoop() - spawnFrame > 10)	// Will consider our KD8 Charges to be dangerous only after a few frames
 						m_enemyUnits.insert_or_assign(unitptr->tag, unit);
 				}
 			}

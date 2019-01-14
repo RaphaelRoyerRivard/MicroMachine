@@ -391,7 +391,7 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	else if (unitType == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 	{
 		if (where != sc2::Weapon::TargetType::Air)
-			range = 3.0f;
+			range = 2.0f;
 	}
 	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT)
 	{
