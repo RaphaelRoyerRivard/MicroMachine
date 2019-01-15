@@ -1001,10 +1001,10 @@ void CombatCommander::updateDefenseSquads()
         }
 
 		m_bot.StartProfiling("0.10.4.2.2.3      createSquad");
+		const SquadOrder defendRegion(SquadOrderTypes::Defend, closestEnemy.getPosition(), DefaultOrderRadius, "Defend Region!");
         // if we don't have a squad assigned to this region already, create one
         if (!m_squadData.squadExists(squadName.str()))
         {
-			const SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
 			m_squadData.addSquad(squadName.str(), Squad(squadName.str(), defendRegion, BaseDefensePriority, m_bot));
         }
 
@@ -1012,6 +1012,7 @@ void CombatCommander::updateDefenseSquads()
         if (m_squadData.squadExists(squadName.str()))
         {
             Squad & defenseSquad = m_squadData.getSquad(squadName.str());
+			defenseSquad.setSquadOrder(defendRegion);
 			region.squad = &defenseSquad;
         }
         else
@@ -1143,7 +1144,7 @@ void CombatCommander::updateDefenseSquads()
 							if (squadOrder.getType() == SquadOrderTypes::Attack || squadOrder.getType() == SquadOrderTypes::Harass)
 							{
 								// If the unit is closer to its squad order objective than the base to defend, we won't send back that unit to defend
-								if (Util::DistSq(scoredUnit, squadOrder.getPosition()) < Util::DistSq(scoredUnit, region.baseLocation->getPosition()))
+								if (Util::DistSq(scoredUnit, squadOrder.getPosition()) < Util::DistSq(scoredUnit, region.squad->getSquadOrder().getPosition()))
 								{
 									continue;
 								}
