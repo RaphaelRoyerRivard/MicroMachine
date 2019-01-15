@@ -156,8 +156,11 @@ int RangedManager::getAttackDuration(const sc2::Unit* unit) const
 
 void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
 {
+	m_bot.StartProfiling("0.10.4.1.5.0        FlagActionsAsFinished");
 	FlagActionsAsFinished();
+	m_bot.StopProfiling("0.10.4.1.5.0        FlagActionsAsFinished");
 
+	m_bot.StartProfiling("0.10.4.1.5.1        HarassLogicForUnit");
 	if (m_bot.Config().EnableMultiThreading)
 	{
 		std::list<std::thread*> threads;
@@ -179,8 +182,11 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 			HarassLogicForUnit(rangedUnit, rangedUnits, rangedUnitTargets);
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1        HarassLogicForUnit");
 
+	m_bot.StartProfiling("0.10.4.1.5.2        ExecuteActions");
 	ExecuteActions();
+	m_bot.StopProfiling("0.10.4.1.5.2        ExecuteActions");
 }
 
 void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
@@ -200,21 +206,24 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (ShouldSkipFrame(rangedUnit))
 		return;
 
-	m_bot.StartProfiling("0.10.4.1.5.0        getTarget");
+	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
 	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
-	m_bot.StopProfiling("0.10.4.1.5.0        getTarget");
-	m_bot.StartProfiling("0.10.4.1.5.1        getThreats");
+	m_bot.StopProfiling("0.10.4.1.5.1.0          getTarget");
+	m_bot.StartProfiling("0.10.4.1.5.1.1          getThreats");
 	sc2::Units threats = Util::getThreats(rangedUnit, rangedUnitTargets, m_bot);
-	m_bot.StopProfiling("0.10.4.1.5.1        getThreats");
+	m_bot.StopProfiling("0.10.4.1.5.1.1          getThreats");
 
 	CCPosition goal = m_order.getPosition();
 
+	m_bot.StartProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 	bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
 	if (unitShouldHeal)
 	{
 		goal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
+	m_bot.StartProfiling("0.10.4.1.5.1.3          CheckBuffs");
 	// If our unit is targeted by an enemy Cyclone's Lock-On ability, it should back until the effect wears off
 	for(const auto buff : rangedUnit->buffs)
 	{
@@ -223,6 +232,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			// Banshee in danger should cloak itself
 			if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, true))
 			{
+				m_bot.StopProfiling("0.10.4.1.5.1.3          CheckBuffs");
 				return;
 			}
 
@@ -231,6 +241,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			break;
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.3          CheckBuffs");
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
 
@@ -257,27 +268,28 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			m_bot.Map().drawLine(rangedUnit->pos, target->pos, targetInAttackRange ? sc2::Colors::Green : sc2::Colors::Yellow);
 	}
 
-	m_bot.StartProfiling("0.10.4.1.5.2        ShouldAttackTarget");
+	m_bot.StartProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 	if(targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
 	{
 		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, false, getAttackDuration(rangedUnit));
 		PlanAction(rangedUnit, action);
-		m_bot.StopProfiling("0.10.4.1.5.2        ShouldAttackTarget");
+		m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 
 		m_bot.CombatAnalyzer().increaseTotalDamage(Util::GetDpsForTarget(rangedUnit, target, m_bot), rangedUnit->unit_type);
 		return;
 	}
-	m_bot.StopProfiling("0.10.4.1.5.2        ShouldAttackTarget");
+	m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 
-	m_bot.StartProfiling("0.10.4.1.5.3        ThreatFighting");
+	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
 	if (!unitShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
 	{
-		m_bot.StopProfiling("0.10.4.1.5.3        ThreatFighting");
+		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 		return;
 	}
-	m_bot.StopProfiling("0.10.4.1.5.3        ThreatFighting");
+	m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 
+	m_bot.StartProfiling("0.10.4.1.5.1.6          KD8Charge");
 	// Check if unit can use KD8Charge
 	if(CanUseKD8Charge(rangedUnit))
 	{
@@ -293,10 +305,14 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			}
 		}
 		if (usedKD8Charge)
+		{
+			m_bot.StopProfiling("0.10.4.1.5.1.6          KD8Charge");
 			return;
+		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.6          KD8Charge");
 
-	m_bot.StartProfiling("0.10.4.1.5.4        OffensivePathFinding");
+	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 	if (AllowUnitToPathFind(rangedUnit))
 	{
 		const CCPosition pathFindEndPos = target && !unitShouldHeal ? target->pos : goal;
@@ -306,7 +322,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 			const auto action = RangedUnitAction(MicroActionType::Move, closePositionInPath, unitShouldHeal, actionDuration);
 			PlanAction(rangedUnit, action);
-			m_bot.StopProfiling("0.10.4.1.5.4        OffensivePathFinding");
+			m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 			return;
 		}
 		else
@@ -314,8 +330,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
 		}
 	}
-	m_bot.StopProfiling("0.10.4.1.5.4        OffensivePathFinding");
+	m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 
+	m_bot.StartProfiling("0.10.4.1.5.1.8          PotentialFields");
 	bool useInfluenceMap = false;
 	CCPosition summedFleeVec(0, 0);
 	// add normalied * 1.5 vector of potential threats
@@ -364,7 +381,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		// We move only if the vector is long enough
 		const float vecLen = std::sqrt(std::pow(dirVec.x, 2) + std::pow(dirVec.y, 2));
 		if (vecLen < 0.5f)
+		{
+			m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 			return;
+		}
 
 		// Normalize the final direction vector so it's easier to work with
 		Util::Normalize(dirVec);
@@ -384,6 +404,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			}
 			const auto action = RangedUnitAction(MicroActionType::Move, pathableTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 			PlanAction(rangedUnit, action);
+			m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 			return;
 		}
 		if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
@@ -391,6 +412,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			Util::DebugLog(__FUNCTION__, "HELLION failed to use potential fields.");
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 
 	// Banshee in danger should cloak itself if low on hp
 	if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
@@ -398,6 +420,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 
+	m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
 	// If close to an unpathable position or in danger
 	// Use influence map to find safest path
 	CCPosition safeTile = FindOptimalPathToSafety(rangedUnit, goal);
@@ -410,6 +433,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 	PlanAction(rangedUnit, action);
+	m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
 }
 
 bool RangedManager::ShouldSkipFrame(const sc2::Unit * rangedUnit) const

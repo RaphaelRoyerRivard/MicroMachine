@@ -385,7 +385,7 @@ void CCBot::setUnits()
 						if(unit.getType().isBuilding())
 							Actions()->SendChat("Lifting your buildings won't save them forever.");
 						else
-							Actions()->SendChat("Producing air units eh? Have you met my Vikings?");
+							Actions()->SendChat("What!? Air units? I'm not ready! :s");
 					}
 				}
 

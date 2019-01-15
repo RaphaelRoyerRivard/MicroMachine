@@ -533,14 +533,15 @@ void CombatCommander::updateHarassSquads()
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
 
 		// put high mobility units in the harass squad
-		if ((unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER
-			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION
-			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
-			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT
-			|| unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
+		const sc2::UnitTypeID unitTypeId = unit.getType().getAPIUnitType();
+		if ((unitTypeId == sc2::UNIT_TYPEID::TERRAN_REAPER
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
 		{
-			if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_HELLION)
+			if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION)
 				idleHellions.push_back(&unit);
 			/*else if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 				idleBanshees.push_back(&unit);*/
@@ -1031,14 +1032,14 @@ void CombatCommander::updateDefenseSquads()
 			const Unit& base = myBaseLocation->getResourceDepot();
 			if (base.isValid())
 			{
-				if(base.getUnitPtr()->cargo_space_taken == 0 && m_bot.Workers().getNumWorkers() > 0)
+				if (base.getUnitPtr()->cargo_space_taken == 0 && m_bot.Workers().getNumWorkers() > 0)
 				{
 					// Hide our last SCVs (should be 5, but is higher because some workers may end up dying on the way)
-					if(m_bot.Workers().getNumWorkers() <= 7)
+					if (m_bot.Workers().getNumWorkers() <= 7)
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
 				}
-				else if(!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
-					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);	//TODO do not lift if we actually have no combat unit nor in production (otherwise it's BM)
+				else if (!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
+					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 			}
 		}
     }
@@ -1098,13 +1099,13 @@ void CombatCommander::updateDefenseSquads()
 				// If our unit would have a valid ground target, we calculate the score (usefulness in that region) and add it to the list
 				if (maxGroundDps > 0.f)
 				{
-					float regionScore = immune * 100 + maxGroundDps - distance;
+					float regionScore = immune * 50 + maxGroundDps - distance;
 					region.unitGroundScores.insert_or_assign(unit.getUnitPtr(), regionScore);
 				}
 				// If our unit would have a valid air target, we calculate the score (usefulness in that region) and add it to the list
 				if (maxAirDps > 0.f)
 				{
-					float regionScore = immune * 100 + maxAirDps - distance;
+					float regionScore = immune * 50 + maxAirDps - distance;
 					region.unitAirScores.insert_or_assign(unit.getUnitPtr(), regionScore);
 				}
 			}
@@ -1114,53 +1115,84 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.StartProfiling("0.10.4.2.2.6      affectUnits");
 		while (true)	// The conditions to exit are if enough units are protecting our regions enough or if 
 		{
-			// We take the region that needs the most support
-			auto & region = *regions.begin();
-
-			// BREAK CONDITION 1: No need to continue of the first region does not need more support
-			if (!region.needsMoreSupport())
-				break;
-
-			// We find the unit that is the most interested to defend that region
-			float bestScore = 0.f;
 			Unit unit;
 			const sc2::Unit* unitptr = nullptr;
-			auto& scores = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded() ? region.unitGroundScores : region.unitAirScores;
-			for (auto & scorePair : scores)
+
+			// We take the region that needs the most support
+			auto regionIterator = regions.begin();
+
+			do
 			{
-				if (!unitptr || scorePair.second > bestScore)
+				auto & region = *regionIterator;
+				const bool needsMoreSupport = region.needsMoreSupport();
+
+				// We find the unit that is the most interested to defend that region
+				float bestScore = 0.f;
+				auto& scores = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded() ? region.unitGroundScores : region.unitAirScores;
+				for (auto & scorePair : scores)
 				{
-					bestScore = scorePair.second;
-					unitptr = scorePair.first;
+					// If the base already has enough defense
+					if (!needsMoreSupport)
+					{
+						// We check if the unit is in an offensive squad
+						const auto scoredUnit = Unit(scorePair.first, m_bot);
+						const auto squad = m_squadData.getUnitSquad(scoredUnit);
+						if (squad)
+						{
+							const auto & squadOrder = squad->getSquadOrder();
+							if (squadOrder.getType() == SquadOrderTypes::Attack || squadOrder.getType() == SquadOrderTypes::Harass)
+							{
+								// If the unit is closer to its squad order objective than the base to defend, we won't send back that unit to defend
+								if (Util::DistSq(scoredUnit, squadOrder.getPosition()) < Util::DistSq(scoredUnit, region.baseLocation->getPosition()))
+								{
+									continue;
+								}
+							}
+						}
+					}
+					if (!unitptr || scorePair.second > bestScore)
+					{
+						bestScore = scorePair.second;
+						unitptr = scorePair.first;
+					}
 				}
-			}
 
-			// If we have a unit that can defend
-			if (unitptr)
-			{
-				unit = Unit(unitptr, m_bot);
-			}
-			// If we have no more unit to defend we check for the workers
-			else
-			{
-				unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit);
-			}
+				// If we have a unit that can defend
+				if (unitptr)
+				{
+					unit = Unit(unitptr, m_bot);
+				}
+				// If we have no more unit to defend we check for the workers
+				else
+				{
+					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit);
+				}
 
-			// BREAK CONDITION 2: If we also have no more worker to defend we have finished
-			if (!unit.isValid())
+				if (!unit.isValid())
+				{
+					++regionIterator;
+					if (regionIterator == regions.end())
+						break;
+				}
+			} while (!unit.isValid());
+
+			// BREAK CONDITION : there is no more unit to be affected to the defense squads
+			if(!unit.isValid())
 			{
-				//TODO should check other bases in case there are units left
-				break;	//TODO in that case, we should restart to keep our units together instead of spreading them through our different bases
+				break;
 			}
 
 			// Assign it to the squad
-			if(m_squadData.canAssignUnitToSquad(unit, *region.squad))
+			auto & squad = *regionIterator->squad;
+			if(m_squadData.canAssignUnitToSquad(unit, squad))
 			{
-				//TODO maybe check distance
-
 				// We affect that unit to the region
-				region.affectAllyUnit(unit.getUnitPtr());
-				m_squadData.assignUnitToSquad(unit.getUnitPtr(), *region.squad);	// we cannot give a reference of the Unit because it doesn't have a big scope
+				regionIterator->affectAllyUnit(unit.getUnitPtr());
+				m_squadData.assignUnitToSquad(unit.getUnitPtr(), squad);	// we cannot give a reference of the Unit because it doesn't have a big scope
+			}
+			else
+			{
+				Util::Log(__FUNCTION__, "Cannot assign unit of type " + unit.getType().getName() + " to squad " + squad.getName());
 			}
 
 			// We remove that unit from the score maps of all regions

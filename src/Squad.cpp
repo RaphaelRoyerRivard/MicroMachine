@@ -384,7 +384,12 @@ void Squad::setSquadOrder(const SquadOrder & so)
 
 bool Squad::containsUnit(const Unit & unit) const
 {
-    return std::find(m_units.begin(), m_units.end(), unit) != m_units.end();
+	for(const auto & squadUnit : m_units)
+	{
+		if (squadUnit.getUnitPtr()->tag == unit.getUnitPtr()->tag)
+			return true;
+	}
+	return false;
 }
 
 void Squad::clear()
