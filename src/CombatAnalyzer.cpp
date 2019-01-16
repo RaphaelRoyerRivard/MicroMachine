@@ -181,24 +181,43 @@ void CombatAnalyzer::checkUnitsState()
 		UnitState & state = it->second;
 		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
 		m_bot.StopProfiling("0.10.4.4.2.2        updateState");
-		/*if (state.WasAttacked())
+		if (state.WasAttacked())
 		{
-		m_bot.StartProfiling("0.10.4.4.2.3        checkForInvis");
-		auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
-		if (threats.empty() && state.HadRecentTreats())
-		{
-		//Invisible unit detected
-		m_bot.Strategy().setEnemyHasInvisible(true);
-		m_invisibleSighting[unit] = std::pair<CCPosition, uint32_t>(unit.getPosition(), m_bot.GetGameLoop());
+			m_bot.StartProfiling("0.10.4.4.2.3        checkForRangeUpgrade");
+			const auto & influenceMap = unit.isFlying() ? m_bot.Commander().Combat().getAirInfluenceMap() : m_bot.Commander().Combat().getGroundInfluenceMap();
+			const float influence = influenceMap.at(floor(unit.getPosition().x)).at(floor(unit.getPosition().y));
+			if(influence == 0.f)
+			{
+				if (unit.isFlying() && !m_bot.Strategy().enemyHasHiSecAutoTracking())
+				{
+					for (const auto & enemyMissileTurret : m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
+					{
+						if (Util::DistSq(unit, enemyMissileTurret) < 10 * 10)
+						{
+							m_bot.Strategy().setEnemyHasHiSecAutoTracking(true);
+							Util::Log(__FUNCTION__, unit.getType().getName() + " got hit near by a missile turret at a distance of " + std::to_string(Util::Dist(unit, enemyMissileTurret)));
+							m_bot.Actions()->SendChat("Is that a range upgrade on your missile turrets? I ain't gonna fall for it again!");
+							break;
+						}
+					}
+				}
+				//TODO detect invis
+			}
+			/*auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
+			if (threats.empty() && state.HadRecentTreats())
+			{
+				//Invisible unit detected
+				m_bot.Strategy().setEnemyHasInvisible(true);
+				m_invisibleSighting[unit] = std::pair<CCPosition, uint32_t>(unit.getPosition(), m_bot.GetGameLoop());
+			}*/
+			m_bot.StopProfiling("0.10.4.4.2.3        checkForRangeUpgrade");
 		}
-		m_bot.StopProfiling("0.10.4.4.2.3        checkForInvis");
-		}
-		else if (m_bot.GetGameLoop() % 5)
+		/*else if (m_bot.GetGameLoop() % 5)
 		{
-		m_bot.StartProfiling("0.10.4.4.2.4        updateThreats");
-		auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
-		state.UpdateThreat(!threats.empty());
-		m_bot.StopProfiling("0.10.4.4.2.4        updateThreats");
+			m_bot.StartProfiling("0.10.4.4.2.4        updateThreats");
+			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
+			state.UpdateThreat(!threats.empty());
+			m_bot.StopProfiling("0.10.4.4.2.4        updateThreats");
 		}*/
 	}
 	m_bot.StopProfiling("0.10.4.4.2      updateStates");

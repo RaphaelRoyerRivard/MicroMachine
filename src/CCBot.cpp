@@ -433,6 +433,7 @@ void CCBot::setUnits()
     }
 
 	m_knownEnemyUnits.clear();
+	m_knownEnemyUnitsPerType.clear();
 	for(auto& enemyUnitPair : m_enemyUnits)
 	{
 		bool ignoreEnemyUnit = false;
@@ -444,8 +445,11 @@ void CCBot::setUnits()
 		// If mobile unit is not seen for too long (around 4s), ignore it
 		else if (!enemyUnit.getType().isBuilding() && enemyUnitPtr->last_seen_game_loop + 100 < GetGameLoop())
 			ignoreEnemyUnit = true;
-		if(!ignoreEnemyUnit)
+		if (!ignoreEnemyUnit)
+		{
 			m_knownEnemyUnits.push_back(enemyUnit);
+			m_knownEnemyUnitsPerType[enemyUnitPtr->unit_type].push_back(enemyUnit);
+		}
 	}
 #else
     for (auto & unit : BWAPI::Broodwar->getAllUnits())
@@ -741,6 +745,11 @@ const std::vector<Unit> & CCBot::GetUnits() const
 const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
 {
 	return m_knownEnemyUnits;
+}
+
+const std::vector<Unit> & CCBot::GetKnownEnemyUnits(sc2::UnitTypeID type) const
+{
+	return m_knownEnemyUnitsPerType.at(type);
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetNeutralUnits()

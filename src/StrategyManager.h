@@ -46,6 +46,7 @@ class StrategyManager
 	bool m_shouldProduceAntiAir = false;
 	bool m_enemyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
+	bool m_enemyHasHiSecAutoTracking = false;
 	bool m_enemyHasFlyingCombatUnit = false;
 	bool m_focusBuildings = false;
 	bool m_bansheeCloakCompleted = false;
@@ -80,6 +81,8 @@ public:
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
+	bool enemyHasHiSecAutoTracking() const { return m_enemyHasHiSecAutoTracking; }
+	void setEnemyHasHiSecAutoTracking(bool enemyHasHiSecAutoTracking) { m_enemyHasHiSecAutoTracking = enemyHasHiSecAutoTracking; }
 	bool shouldFocusBuildings() const { return m_focusBuildings; }
 	void setFocusBuildings(bool focusBuildings) { m_focusBuildings = focusBuildings; }
 	bool isBansheeCloakCompleted() const { return m_bansheeCloakCompleted; }

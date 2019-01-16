@@ -31,10 +31,11 @@ namespace Util
     float GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
 	float GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot);
     float GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot);
-    float GetMaxAttackRange(sc2::UnitTypeData unitTypeData);
+    float GetMaxAttackRange(sc2::UnitTypeData unitTypeData, CCBot & bot);
 	float GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	float GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot);
 	float GetAirAttackRange(const sc2::Unit * unit, CCBot & bot);
+	float GetAttackRangeBonus(const sc2::UnitTypeID unitType, CCBot & bot);
     float GetArmor(const sc2::Unit * unit, CCBot & bot);
 	float GetGroundDps(const sc2::Unit * unit, CCBot & bot);
 	float GetAirDps(const sc2::Unit * unit, CCBot & bot);
