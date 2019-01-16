@@ -334,6 +334,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
+	const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
 
 	const int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 
@@ -367,7 +368,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 			}
 		}
-		else if (ccCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter))
+		// We want to wait for our first Banshee to build our second CC, otherwise we might have difficulty defending it
+		else if (ccCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) && bansheeCount > 0)
 		{
 			m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
 		}
@@ -431,7 +433,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					queueTech(MetaTypeEnum::BansheeCloak);
 				}
 
-				if (!isTechStarted(MetaTypeEnum::HyperflightRotors))
+				if (!isTechStarted(MetaTypeEnum::HyperflightRotors) && bansheeCount > 0)
 				{
 					queueTech(MetaTypeEnum::HyperflightRotors);
 				}
@@ -441,7 +443,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
 
-				const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 
 				if (bansheeCount + vikingCount >= 5)
