@@ -2,10 +2,107 @@
 
 #include "Common.h"
 #include "MicroManager.h"
-#include "UCTCDAction.h"
 
 struct IMNode;
 class CCBot;
+
+struct RangedUnitAction
+{
+	RangedUnitAction()
+		: microActionType()
+		, target(nullptr)
+		, position(CCPosition())
+		, abilityID(0)
+		, prioritized(false)
+		, executed(true)
+		, finished(true)
+		, duration(0)
+		, executionFrame(0)
+	{}
+	RangedUnitAction(MicroActionType microActionType, bool prioritize, int duration)
+		: microActionType(microActionType)
+		, target(nullptr)
+		, position(CCPosition())
+		, abilityID(0)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+	{}
+	RangedUnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration)
+		: microActionType(microActionType)
+		, target(target)
+		, position(CCPosition())
+		, abilityID(0)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+	{}
+	RangedUnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration)
+		: microActionType(microActionType)
+		, target(nullptr)
+		, position(position)
+		, abilityID(0)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+	{}
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration)
+		: microActionType(microActionType)
+		, target(nullptr)
+		, position(CCPosition())
+		, abilityID(abilityID)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+	{}
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration)
+		: microActionType(microActionType)
+		, target(nullptr)
+		, position(position)
+		, abilityID(abilityID)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+	{}
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration)
+		: microActionType(microActionType)
+		, target(target)
+		, position(CCPosition())
+		, abilityID(abilityID)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+	{}
+	RangedUnitAction(const RangedUnitAction& rangedUnitAction) = default;
+	MicroActionType microActionType;
+	const sc2::Unit* target;
+	CCPosition position;
+	sc2::AbilityID abilityID;
+	bool prioritized;
+	bool executed;
+	bool finished;
+	int duration;
+	uint32_t executionFrame;
+
+	RangedUnitAction& operator=(const RangedUnitAction&) = default;
+
+	bool operator==(const RangedUnitAction& rangedUnitAction)
+	{
+		return microActionType == rangedUnitAction.microActionType && target == rangedUnitAction.target && position == rangedUnitAction.position && abilityID == rangedUnitAction.abilityID;
+	}
+};
 
 class RangedManager : public MicroManager
 {
@@ -18,16 +115,25 @@ public:
 	bool isTargetRanged(const sc2::Unit * target);
 
 private:
+	std::map<const sc2::Unit *, RangedUnitAction> unitActions;
+	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
+	std::map<const sc2::Unit *, uint32_t> nextAvailableKD8ChargeFrameForReaper;
+	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
+	std::set<const sc2::Unit *> unitsBeingRepaired;
+	bool isCommandDone = false;
+	bool m_harassMode = false;
+
 	void RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	void setNextCommandFrameAfterAttack(const sc2::Unit* unit);
+	int getAttackDuration(const sc2::Unit* unit) const;
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	bool ShouldSkipFrame(const sc2::Unit * rangedUnit) const;
 	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit) const;
-	void ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats) const;
+	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger);
 	bool ShouldUnitHeal(const sc2::Unit * rangedUnit);
 	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal);
-	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float squaredDistanceToGoal);
+	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float squaredDistanceToGoal, bool unitShouldHeal);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;
 	CCPosition GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange) const;
 	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats);
@@ -50,14 +156,7 @@ private:
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	float getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const;
 	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);
-	void UCTCD(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets);
-	void AlphaBetaPruning(std::vector<const sc2::Unit *> rangedUnits, std::vector<const sc2::Unit *> rangedUnitTargets);
-    std::vector<const sc2::Unit *> lastUnitCommand;
-    std::map<const sc2::Unit *, UCTCDAction> command_for_unit;
-	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
-	std::map<const sc2::Unit *, uint32_t> nextAvailableKD8ChargeFrameForReaper;
-	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
-	std::set<const sc2::Unit *> unitsBeingRepaired;
-    bool isCommandDone = false;
-	bool m_harassMode = false;
+	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
+	void FlagActionsAsFinished();
+	void ExecuteActions();
 };

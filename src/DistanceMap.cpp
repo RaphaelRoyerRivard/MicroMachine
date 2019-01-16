@@ -41,8 +41,8 @@ const std::vector<CCTilePosition> & DistanceMap::getSortedTiles() const
 void DistanceMap::computeDistanceMap(CCBot & m_bot, const CCTilePosition & startTile)
 {
     m_startTile = startTile;
-    m_width = m_bot.Map().width();
-    m_height = m_bot.Map().height();
+    m_width = m_bot.Map().totalWidth();
+    m_height = m_bot.Map().totalHeight();
     m_dist = std::vector<std::vector<int>>(m_width, std::vector<int>(m_height, -1));
     m_sortedTiles.reserve(m_width * m_height);
 

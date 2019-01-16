@@ -382,7 +382,7 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	if (unitType == sc2::UNIT_TYPEID::ZERG_BANELING || unitType == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
 	{
 		if(where != sc2::Weapon::TargetType::Air)
-			range = 2.2f;
+			range = 2.2f - 0.375;	// The explosion radius is 2.2 starting from the center. After being used, the radius of the unit is added so we must substract it here.
 	}
 	else if (unitType == sc2::UNIT_TYPEID::TERRAN_BUNKER)
 	{
@@ -391,7 +391,7 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	else if (unitType == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 	{
 		if (where != sc2::Weapon::TargetType::Air)
-			range = 3.0f;
+			range = 2.0f;
 	}
 	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT)
 	{
@@ -495,10 +495,14 @@ float Util::GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot)
 
 	const sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
-	float maxRange = GetMaxAttackRange(unitTypeData);
+	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Any);
+
+	if(maxRange == 0.f)
+		maxRange = GetMaxAttackRange(unitTypeData);
 
 	if (maxRange > 0.f)
 		maxRange += unit->radius;
+
 	return maxRange;
 }
 

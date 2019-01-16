@@ -226,21 +226,23 @@ void ProductionManager::manageBuildOrderQueue()
 					auto basePosition = baseLocation->getDepotPosition();
 					auto point = supplyDepot.getTilePosition();
 					CCTilePosition target = CCTilePosition(basePosition.x + (basePosition.x - point.x), basePosition.y + (basePosition.y - point.y));
-					if (target.x < 0)
+					const CCPosition mapMin = m_bot.Map().mapMin();
+					const CCPosition mapMax = m_bot.Map().mapMax();
+					if (target.x < mapMin.x)
 					{
-						target.x = 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+						target.x = mapMin.x;
 					}
-					else if (target.x > m_bot.Map().width())
+					else if (target.x >= mapMax.x)
 					{
-						target.x = m_bot.Map().width() - 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+						target.x = mapMax.x - 1;
 					}
-					if (target.y < 0)
+					if (target.y < mapMin.y)
 					{
-						target.y = 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+						target.y = mapMin.y;
 					}
-					else if (target.y > m_bot.Map().height())
+					else if (target.y >= mapMax.y)
 					{
-						target.y = m_bot.Map().height() - 5;//5 instead of 0, since there is always a border we can't walk to on the edge of the map
+						target.y = mapMax.y - 1;
 					}
 
 					Unit producer = getProducer(currentItem.type);
@@ -851,7 +853,7 @@ void ProductionManager::lowPriorityChecks()
 
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
-	if (m_bot.Strategy().shouldProduceAntiAir())
+	if (m_bot.Strategy().shouldProduceAntiAir() || m_bot.Strategy().enemyHasInvisible())
 	{
 		auto engeneeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
 		if (engeneeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))

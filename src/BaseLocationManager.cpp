@@ -11,7 +11,7 @@ BaseLocationManager::BaseLocationManager(CCBot & bot)
 
 void BaseLocationManager::onStart()
 {
-    m_tileBaseLocations = std::vector<std::vector<BaseLocation *>>(m_bot.Map().width(), std::vector<BaseLocation *>(m_bot.Map().height(), nullptr));
+    m_tileBaseLocations = std::vector<std::vector<BaseLocation *>>(m_bot.Map().totalWidth(), std::vector<BaseLocation *>(m_bot.Map().totalHeight(), nullptr));
     m_playerStartingBaseLocations[Players::Self]  = nullptr;
     m_playerStartingBaseLocations[Players::Enemy] = nullptr;
     
@@ -158,9 +158,11 @@ void BaseLocationManager::onStart()
     sort(m_baseLocationPtrs.begin(), m_baseLocationPtrs.end(), SortClosestToOpponentStartingLocation(m_startingBaseLocations));
 
     // construct the map of tile positions to base locations
-    for (int x=0; x < m_bot.Map().width(); ++x)
+	const CCPosition mapMin = m_bot.Map().mapMin();
+	const CCPosition mapMax = m_bot.Map().mapMax();
+    for (int x = mapMin.x; x < mapMax.x; ++x)
     {
-        for (int y=0; y < m_bot.Map().height(); ++y)
+        for (int y = mapMin.y; y < mapMax.y; ++y)
         {
             for (auto & baseLocation : m_baseLocationData)
             {
@@ -500,9 +502,7 @@ CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
 
 CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player, bool shiftTowardsResourceDepot) const
 {
-	const int mapWidth = m_bot.Map().width();
-	const int mapHeight = m_bot.Map().height();
-	CCTilePosition closestBase(mapWidth / 2.f, mapHeight / 2.f);
+	CCTilePosition closestBase = Util::GetTilePosition(m_bot.Map().center());
 	float minDistance = 0.f;
 	for (auto & base : m_baseLocationData)
 	{

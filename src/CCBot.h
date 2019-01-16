@@ -50,6 +50,8 @@ class CCBot
 	std::map<sc2::Tag, Unit> m_enemyUnits;
 	std::map<sc2::Tag, Unit> m_neutralUnits;
 	std::map<sc2::Tag, std::pair<CCPosition, uint32_t>> m_lastSeenPosUnits;
+	std::map<sc2::Tag, CCPosition> m_previousFrameEnemyPos;
+	std::map<sc2::Tag, uint32_t> m_KD8ChargesSpawnFrame;
 	std::vector<Unit>       m_allUnits;
 	std::vector<Unit>       m_knownEnemyUnits;
     std::vector<CCPosition> m_enemyBaseLocations;
@@ -74,7 +76,8 @@ class CCBot
 	void checkKeyState();
 	void setUnits();
 	void clearDeadUnits();
-	void checkForconcede();
+	void updatePreviousFrameEnemyUnitPos();
+	void checkForConcede();
 	void drawProfilingInfo();
 
 #ifdef SC2API
@@ -137,6 +140,7 @@ public:
 	std::map<sc2::Tag, Unit> & GetEnemyUnits();
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
 	std::map<sc2::Tag, Unit> & GetNeutralUnits();
+	std::map<sc2::Tag, CCPosition> & GetPreviousFrameEnemyPos() { return m_previousFrameEnemyPos; }
     const std::vector<CCPosition> & GetStartLocations() const;
     const std::vector<CCPosition> & GetEnemyStartLocations() const;
 	void StartProfiling(const std::string & profilerName);

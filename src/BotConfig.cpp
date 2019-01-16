@@ -52,6 +52,7 @@ BotConfig::BotConfig()
 	DrawBlockedTiles = false;
 	DrawRepairStation = false;
 	DrawDamageHealthRatio = false;
+	DrawRangedUnitActions = false;
 
     KiteWithRangedUnits = true;
     ScoutHarassEnemy = true;
@@ -208,6 +209,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawBlockedTiles", debug, DrawBlockedTiles);
 			JSONTools::ReadBool("DrawRepairStation", debug, DrawRepairStation);
 			JSONTools::ReadBool("DrawDamageHealthRatio", debug, DrawDamageHealthRatio);
+			JSONTools::ReadBool("DrawRangedUnitActions", debug, DrawRangedUnitActions);
 		}
     }
 

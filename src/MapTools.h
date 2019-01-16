@@ -9,8 +9,12 @@ class CCBot;
 class MapTools
 {
     CCBot & m_bot;
-    int     m_width;
-    int     m_height;
+	int     m_totalWidth;
+	int     m_totalHeight;
+	int     m_width;
+	int     m_height;
+	CCPosition m_min;
+	CCPosition m_max;
     float   m_maxZ;
     int     m_frame;
     
@@ -43,8 +47,13 @@ public:
     void    onFrame();
     void    draw() const;
 
-    int     width() const;
-    int     height() const;
+	int     totalWidth() const { return m_totalWidth; }
+	int     totalHeight() const { return m_totalHeight; }
+	int     width() const { return m_width; }
+	int     height() const { return m_height; }
+	CCPosition mapMin() const { return m_min; }
+	CCPosition mapMax() const { return m_max; }
+	CCPosition center() const { return CCPosition(m_totalWidth / 2.f, m_totalHeight / 2.f); }
 	float	terrainHeight(CCTilePosition tile) const;
     float   terrainHeight(float x, float y) const;
 

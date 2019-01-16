@@ -112,7 +112,7 @@ void CCBot::OnStep()
 	clearDeadUnits();
 	StopProfiling("0.3 clearDeadUnits");
 
-	checkForconcede();
+	checkForConcede();
 
 	StartProfiling("0.4 m_map.onFrame");
 	m_map.onFrame();
@@ -149,6 +149,8 @@ void CCBot::OnStep()
 	StartProfiling("0.10 m_gameCommander.onFrame");
 	m_gameCommander.onFrame();
 	StopProfiling("0.10 m_gameCommander.onFrame");
+
+	updatePreviousFrameEnemyUnitPos();
 
 	StopProfiling("0.0 OnStep");	//Do not remove
 
@@ -331,7 +333,17 @@ void CCBot::setUnits()
 			}
 			if (unitptr->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 			{
-				m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+				auto it = m_KD8ChargesSpawnFrame.find(unitptr->tag);
+				if (it == m_KD8ChargesSpawnFrame.end())
+				{
+					m_KD8ChargesSpawnFrame.insert_or_assign(unitptr->tag, GetGameLoop());
+				}
+				else
+				{
+					uint32_t & spawnFrame = it->second;
+					if (GetGameLoop() - spawnFrame > 10)	// Will consider our KD8 Charges to be dangerous only after a few frames
+						m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+				}
 			}
 		}
 		else if (unitptr->alliance == sc2::Unit::Enemy)
@@ -347,7 +359,8 @@ void CCBot::setUnits()
 					const float dist = Util::Dist(unitptr->pos, lastSeenPair.first);
 					const float speed = Util::getSpeedOfUnit(unitptr, *this);
 					const float realSpeed = dist * 16.f;	// Magic number calculated from real values
-					if (realSpeed > speed + 1.f)
+					const bool creep = Observation()->HasCreep(unitptr->pos) == Observation()->HasCreep(lastSeenPair.first);
+					if (creep && realSpeed > speed + 1.f)
 					{
 						// This is a Speedling!!!
 						m_strategy.setEnemyHasMetabolicBoost(true);
@@ -369,7 +382,10 @@ void CCBot::setUnits()
 						break;
 					default:
 						m_strategy.setShouldProduceAntiAir(true);
-						Actions()->SendChat("Producing air units eh? Have you met my Vikings?");
+						if(unit.getType().isBuilding())
+							Actions()->SendChat("Lifting your buildings won't save them forever.");
+						else
+							Actions()->SendChat("What!? Air units? I'm not ready! :s");
 					}
 				}
 
@@ -387,6 +403,21 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_HIVE:
 						m_strategy.setShouldProduceAntiAir(true);
 						Actions()->SendChat("You are finally ready to produce air units :o took you long enough");
+					default:
+						break;
+					}
+				}
+			}
+			if(!m_strategy.enemyHasInvisible())
+			{
+				// If the opponent has built a building that can produce invis units, we should produce Anti Invis units
+				if (unit.getType().isBuilding())
+				{
+					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
+					{
+					case sc2::UNIT_TYPEID::PROTOSS_DARKSHRINE:
+						m_strategy.setEnemyHasInvisible(true);
+						Actions()->SendChat("Planning on striking me with cloaked units?");
 					default:
 						break;
 					}
@@ -430,9 +461,14 @@ void CCBot::clearDeadUnits()
 	// Find dead ally units
 	for (auto& pair : m_allyUnits)
 	{
+		auto tag = pair.first;
 		auto& unit = pair.second;
 		if (!unit.isAlive())
-			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+		{
+			unitsToRemove.push_back(tag);
+			if (unit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+				m_KD8ChargesSpawnFrame.erase(tag);
+		}
 	}
 	// Remove dead ally units
 	for (auto tag : unitsToRemove)
@@ -477,7 +513,16 @@ void CCBot::clearDeadUnits()
 	}
 }
 
-void CCBot::checkForconcede()
+void CCBot::updatePreviousFrameEnemyUnitPos()
+{
+	m_previousFrameEnemyPos.clear();
+	for (auto & unit : UnitInfo().getUnits(Players::Enemy))
+	{
+		m_previousFrameEnemyPos.insert_or_assign(unit.getUnitPtr()->tag, unit.getPosition());
+	}
+}
+
+void CCBot::checkForConcede()
 {
 	m_concede = m_concedeNextFrame;
 	if(m_allyUnits.size() == 1)
