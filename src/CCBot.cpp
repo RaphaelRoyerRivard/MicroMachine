@@ -747,9 +747,9 @@ const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
 	return m_knownEnemyUnits;
 }
 
-const std::vector<Unit> & CCBot::GetKnownEnemyUnits(sc2::UnitTypeID type) const
+const std::vector<Unit> & CCBot::GetKnownEnemyUnits(sc2::UnitTypeID type)
 {
-	return m_knownEnemyUnitsPerType.at(type);
+	return m_knownEnemyUnitsPerType[type];
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetNeutralUnits()

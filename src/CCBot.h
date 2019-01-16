@@ -140,7 +140,7 @@ public:
 	std::map<sc2::Tag, Unit> GetAllyUnits(sc2::UNIT_TYPEID type);
 	std::map<sc2::Tag, Unit> & GetEnemyUnits();
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
-	const std::vector<Unit> & GetKnownEnemyUnits(sc2::UnitTypeID type) const;
+	const std::vector<Unit> & GetKnownEnemyUnits(sc2::UnitTypeID type);
 	std::map<sc2::Tag, Unit> & GetNeutralUnits();
 	std::map<sc2::Tag, CCPosition> & GetPreviousFrameEnemyPos() { return m_previousFrameEnemyPos; }
     const std::vector<CCPosition> & GetStartLocations() const;
