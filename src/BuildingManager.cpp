@@ -370,6 +370,7 @@ void BuildingManager::validateWorkersAndBuildings()
         if (!b.buildingUnit.isValid())
         {
             toRemove.push_back(b);
+			Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.");
         }
     }
 
@@ -381,10 +382,10 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 {
     // for each building that doesn't have a builder, assign one
     for (Building & b : m_buildings)
-    {
-        if (b.status != BuildingStatus::Unassigned)//b.buildingUnit.isBeingConstructed()//|| b.underConstruction)
+    {		
+		if (b.status != BuildingStatus::Unassigned)//b.buildingUnit.isBeingConstructed()//|| b.underConstruction)
         {
-            continue;
+			continue;
         }
 
         BOT_ASSERT(!b.builderUnit.isValid(), "Error: Tried to assign a builder to a building that already had one ");
@@ -442,7 +443,8 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 						case sc2::UNIT_TYPEID::TERRAN_FACTORY:
 						case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 						{
-							m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y - 1, 3, 1);
+							m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y - 1, 3, 1);//Reserve below
+							m_buildingPlacer.reserveTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, 2, 2);//Reserve addon
 						}
 						//Reserve tiles for addon
 						/*case sc2::UNIT_TYPEID::TERRAN_STARPORT:
@@ -574,102 +576,119 @@ void BuildingManager::constructAssignedBuildings()
 // STEP 4: UPDATE DATA STRUCTURES FOR BUILDINGS STARTING CONSTRUCTION
 void BuildingManager::checkForStartedConstruction()
 {
-	// for each building unit which is being constructed
-	for (auto buildingStarted : m_bot.UnitInfo().getUnits(Players::Self))
+// for each building unit which is being constructed
+for (auto buildingStarted : m_bot.UnitInfo().getUnits(Players::Self))
+{
+	// filter out units which aren't buildings under construction
+	if (!buildingStarted.getType().isBuilding() || !buildingStarted.isBeingConstructed())
 	{
-		// filter out units which aren't buildings under construction
-		if (!buildingStarted.getType().isBuilding() || !buildingStarted.isBeingConstructed())
+		continue;
+	}
+
+	// check all our building status objects to see if we have a match and if we do, update it
+
+	for (auto & b : m_buildings)
+	{
+		if (b.status != BuildingStatus::Assigned)
 		{
 			continue;
 		}
+		auto type = b.type;
 
-		// check all our building status objects to see if we have a match and if we do, update it
+		// check if the positions match
+		int addonOffset = (type.isAddon() ? 3 : 0);
+		int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
+		int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
 
-		for (auto & b : m_buildings)
+		if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
 		{
-			if (b.status != BuildingStatus::Assigned)
+			if (b.buildingUnit.isValid())
 			{
+				std::cout << "Building mis-match somehow\n";
 				continue;
 			}
-			auto type = b.type;
 
-			// check if the positions match
-			int addonOffset = (type.isAddon() ? 3 : 0);
-			int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
-			int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
+			// the resources should now be spent, so unreserve them
+			m_reservedMinerals -= buildingStarted.getType().mineralPrice();
+			m_reservedGas -= buildingStarted.getType().gasPrice();
 
-			if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
+			// flag it as started and set the buildingUnit
+			b.underConstruction = true;
+			b.buildingUnit = buildingStarted;
+			m_buildingsProgress[buildingStarted.getTag()] = 0;
+
+			// if we are zerg, the buildingUnit now becomes nullptr since it's destroyed
+			if (Util::IsZerg(m_bot.GetSelfRace()))
 			{
-				if (b.buildingUnit.isValid())
-				{
-					std::cout << "Building mis-match somehow\n";
-					continue;
-				}
+				b.builderUnit = Unit();
+			}
+			else if (Util::IsProtoss(m_bot.GetSelfRace()))
+			{
+				m_bot.Workers().finishedWithWorker(b.builderUnit);
+				b.builderUnit = Unit();
+			}
 
-				// the resources should now be spent, so unreserve them
-				m_reservedMinerals -= buildingStarted.getType().mineralPrice();
-				m_reservedGas -= buildingStarted.getType().gasPrice();
+			// put it in the under construction vector
+			b.status = BuildingStatus::UnderConstruction;
 
-                // flag it as started and set the buildingUnit
-                b.underConstruction = true;
-                b.buildingUnit = buildingStarted;
+			//Check for invalid data
+			if (type.tileWidth() > 5 || type.tileHeight() > 5 || type.tileWidth() < 1 || type.tileHeight() < 1)
+			{
+				std::cout << "Invalid size for free space " << type.tileWidth() << " x " << type.tileHeight() << "\n";
+			}
+			else
+			{
+				// free this space
+				m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
+			}
 
-                // if we are zerg, the buildingUnit now becomes nullptr since it's destroyed
-                if (Util::IsZerg(m_bot.GetSelfRace()))
-                {
-                    b.builderUnit = Unit();
-                }
-                else if (Util::IsProtoss(m_bot.GetSelfRace()))
-                {
-                    m_bot.Workers().finishedWithWorker(b.builderUnit);
-                    b.builderUnit = Unit();
-                }
-
-                // put it in the under construction vector
-                b.status = BuildingStatus::UnderConstruction;
-
-				//Check for invalid data
-				if (type.tileWidth() > 5 || type.tileHeight() > 5 || type.tileWidth() < 1 || type.tileHeight() < 1)
-				{
-					std::cout << "Invalid size for free space " << type.tileWidth() << " x " << type.tileHeight() << "\n";
-				}
-				else
-				{
-					// free this space
-					m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
-				}
-
-                // only one building will match
-                break;
-            }
-        }
-    }
+			// only one building will match
+			break;
+		}
+	}
+}
 }
 
 // STEP 5: IF WE ARE TERRAN, THIS MATTERS, SO: LOL
-void BuildingManager::checkForDeadTerranBuilders() 
+void BuildingManager::checkForDeadTerranBuilders()
 {
-    if (!Util::IsTerran(m_bot.GetSelfRace()))
-        return;
+	if (!Util::IsTerran(m_bot.GetSelfRace()))
+		return;
 
-    // for each of our buildings under construction
-    for (auto & b : m_buildings)
-    {
+	// for each of our buildings under construction
+	for (auto & b : m_buildings)
+	{
 		if (b.type.isAddon())
 		{
 			continue;
 		}
 
+		//If the building isn't started
+		if (!b.buildingUnit.isValid())
+		{
+			continue;
+		}
+
 		// if the building has a builder that died or that is not a builder anymore because of a bug
-		if (b.builderUnit.isValid() && (!b.builderUnit.isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(b.builderUnit) != WorkerJobs::Build))
+		if (!b.builderUnit.isValid())
+		{
+			Util::DebugLog(__FUNCTION__, "BuilderUnit is invalid");
+			continue;
+		}
+
+		auto workerJob = m_bot.Workers().getWorkerData().getWorkerJob(b.builderUnit);
+		if ((!b.builderUnit.isAlive() ||
+			(workerJob != WorkerJobs::Build && b.buildingUnit.getUnitPtr()->build_progress != 1.0f)))
 		{
 			// grab the worker unit from WorkerManager which is closest to this final position
-			Unit builderUnit = m_bot.Workers().getBuilder(b, true);
-			if (builderUnit.isValid())
+			Unit newBuilderUnit = m_bot.Workers().getBuilder(b, true);
+			if (!newBuilderUnit.isValid())
 			{
-				b.builderUnit = builderUnit;
-				b.status = BuildingStatus::Assigned;
+				Util::DebugLog(__FUNCTION__, "Worker is invalid");
+				continue;
 			}
+			b.builderUnit = newBuilderUnit;
+			b.status = BuildingStatus::Assigned;
 		}
     }
 }
@@ -1009,6 +1028,7 @@ void BuildingManager::removeBuildings(const std::vector<Building> & toRemove)
 
         if (it != m_buildings.end())
         {
+			m_buildingsProgress.erase(it->buildingUnit.getTag());
             m_buildings.erase(it);
         }
     }

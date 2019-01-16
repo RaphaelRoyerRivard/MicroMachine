@@ -13,6 +13,7 @@ class BuildingManager
     BuildingPlacer  m_buildingPlacer;
     std::vector<Building> m_buildings; //under construction
 	std::vector<Building> m_previousBuildings; //previous under construction
+	std::map<sc2::Tag, float> m_buildingsProgress;
 	std::vector<Unit> m_baseBuildings;
 	std::vector<Unit> m_finishedBaseBuildings;
 	std::vector<Unit> m_previousBaseBuildings; //Base buildings last frame, useful to find dead buildings
