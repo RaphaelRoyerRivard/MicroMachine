@@ -687,7 +687,7 @@ void CombatCommander::updateScoutDefenseSquad()
 
 void CombatCommander::updateDefenseBuildings()
 {
-	int SUPPLYDEPOT_DISTANCE = 4;
+	int SUPPLYDEPOT_DISTANCE = 5;
 
 	auto enemies = m_bot.GetEnemyUnits();
 	auto buildings = m_bot.Buildings().getFinishedBuildings();

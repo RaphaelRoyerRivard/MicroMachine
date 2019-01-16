@@ -363,7 +363,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueAsHighestPriority(MetaTypeEnum::PlanetaryFortress, false);
 				}
-				m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
 			}
 		}
 		else if (ccCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter))

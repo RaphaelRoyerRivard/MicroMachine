@@ -68,7 +68,7 @@ void WorkerManager::handleMineralWorkers()
 		return;
 	}
 
-	if (!m_isFirstFrame || true)//TODO Disable split. might cause the long distance mining issue. Gotta test without this code.
+	if (!m_isFirstFrame || true)///TODO Disable split. might cause the long distance mining issue. Gotta test without this code.
 	{
 		return;
 	}
@@ -254,21 +254,24 @@ void WorkerManager::handleRepairWorkers()
 		for (auto & base : bases)
 		{
 			std::vector<Unit> unitsToRepair;
-			CCTilePosition repairStationLocation = base->getCenterOfMinerals();
 
 			//Get all units to repair
 			for (auto & tagUnit : m_bot.GetAllyUnits())
 			{
 				Unit unit = tagUnit.second;
+				if (unit.getUnitPtr()->build_progress != 1.0f)
+				{
+					continue;
+				}
+
 				float healthPercentage = unit.getHitPointsPercentage();
 				if (healthPercentage < 100 && !unit.isBeingConstructed())
 				{
 					if (!unit.getType().isRepairable())
 						continue;
 
-					CCTilePosition position = unit.getTilePosition();
-					int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
-					if (distance < REPAIR_STATION_SIZE)
+					const float distanceSquare = Util::DistSq(unit, base->getPosition());
+					if (distanceSquare < REPAIR_STATION_SIZE * REPAIR_STATION_SIZE)
 					{
 						unitsToRepair.push_back(unit);
 					}
@@ -288,11 +291,10 @@ void WorkerManager::handleRepairWorkers()
 						break;
 					}
 
-					if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || WorkerJobs::Repair)
+					if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || workerData.getWorkerJob(worker) == WorkerJobs::Repair)
 					{
-						CCTilePosition position = worker.getTilePosition();
-						int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
-						if (distance < REPAIR_STATION_WORKER_ZONE_SIZE)
+						const float distanceSquare = Util::DistSq(worker, base->getPosition());
+						if (distanceSquare < REPAIR_STATION_WORKER_ZONE_SIZE * REPAIR_STATION_WORKER_ZONE_SIZE)
 						{
 							setRepairWorker(worker, *it);
 							repairWorkers++;
@@ -360,12 +362,12 @@ void WorkerManager::repairCombatBuildings()
 				}
 				break;
 			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
-				//TODO Doesn't use the gas workers
+				///TODO Doesn't use the gas workers
 				if (building.getHitPoints() > repairAt * building.getUnitPtr()->health_max)
 				{
 					continue;
 				}
-				for (auto & worker : workers)//TODO order by closest to the target base location
+				for (auto & worker : workers)///TODO order by closest to the target base location
 				{
 					auto depot = m_workerData.getWorkerDepot(worker);
 					if (depot.isValid() && depot.getID() == building.getID())
@@ -413,7 +415,7 @@ void WorkerManager::lowPriorityChecks()
 		if (workerCount > optimalWorkers)
 		{
 			int extra = workerCount - optimalWorkers;
-			for (auto & worker : workers)//TODO order by closest to the target base location
+			for (auto & worker : workers)///TODO order by closest to the target base location
 			{
 				if (m_bot.Workers().isFree(worker) && m_workerData.getWorkerDepot(worker).getID() == depot.getID())
 				{
@@ -448,7 +450,7 @@ void WorkerManager::lowPriorityChecks()
 		{
 			int needed = optimalWorkers - workerCount;
 			int moved = 0;
-			for (int i = 0; i < dispatchedWorkers.size(); i++)//TODO order by closest again
+			for (int i = 0; i < dispatchedWorkers.size(); i++)///TODO order by closest again
 			{
 				m_workerData.setWorkerJob(dispatchedWorkers[i], WorkerJobs::Minerals, depot, true);
 				moved++;
@@ -491,6 +493,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID w
         {
 			if (!isReturningCargo(worker))
 			{
+				///TODO: Maybe it should by ground distance?
 				double dist = Util::DistSq(worker.getPosition(), pos);
 				if (!closestMineralWorker.isValid() || dist < closestDist)
 				{
