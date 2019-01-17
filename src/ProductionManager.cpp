@@ -475,7 +475,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (m_bot.Strategy().shouldProduceAntiAir())
 				{
-					if (!m_queue.contains(MetaTypeEnum::Viking) && vikingCount < 2 * bansheeCount)
+					if (vikingCount < 2 * bansheeCount && !m_queue.contains(MetaTypeEnum::Viking))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
@@ -483,6 +483,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					if (!isTechStarted(MetaTypeEnum::HiSecAutoTracking) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HISECAUTOTRACKING))
 					{
 						queueTech(MetaTypeEnum::HiSecAutoTracking);
+					}
+				}
+				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings())
+				{
+					if (vikingCount < 1 && !m_queue.contains(MetaTypeEnum::Viking))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
 				}
 				break;

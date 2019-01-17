@@ -378,11 +378,31 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
 						break;
 					default:
-						m_strategy.setShouldProduceAntiAir(true);
-						if(unit.getType().isBuilding())
-							Actions()->SendChat("Lifting your buildings won't save them forever.");
+						if (unit.getType().isBuilding() && !m_strategy.enemyOnlyHasFlyingBuildings())
+						{
+							bool enemyHasGroundUnit = false;
+							for(auto & knownEnemyTypes : m_knownEnemyUnitsPerType)
+							{
+								if(!knownEnemyTypes.second.empty())
+								{
+									if(!knownEnemyTypes.second[0].isFlying())
+									{
+										enemyHasGroundUnit = true;
+										break;
+									}
+								}
+							}
+							if(!enemyHasGroundUnit)
+							{
+								m_strategy.setEnemyOnlyHasFlyingBuildings(true);
+								Actions()->SendChat("Lifting your buildings won't save them for long.");
+							}
+						}
 						else
+						{
+							m_strategy.setShouldProduceAntiAir(true);
 							Actions()->SendChat("What!? Air units? I'm not ready! :s");
+						}
 					}
 				}
 
