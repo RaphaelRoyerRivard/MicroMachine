@@ -28,6 +28,7 @@ const int REAPER_KD8_CHARGE_COOLDOWN = 342;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 80;
+const float VIKING_LANDING_DISTANCE_FROM_GOAL = 10.f;
 const float CLIFF_MIN_HEIGHT_DIFFERENCE = 1.f;
 const float CLIFF_MAX_HEIGHT_DIFFERENCE = 2.5f;
 const int ACTION_REEXECUTION_FREQUENCY = 50;
@@ -230,7 +231,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if(buff == sc2::BUFF_ID::LOCKON)
 		{
 			// Banshee in danger should cloak itself
-			if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, true))
+			if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, true))
 			{
 				m_bot.StopProfiling("0.10.4.1.5.1.3          CheckBuffs");
 				return;
@@ -347,7 +348,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		{
 			if(isHellion && threat && threat->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 			{
-				Util::DebugLog(__FUNCTION__, "Threat is too close to HELLION for using potential fields.");
+				//Util::DebugLog(__FUNCTION__, "Threat is too close to HELLION for using potential fields.", m_bot);
 			}
 			useInfluenceMap = true;
 			break;
@@ -400,7 +401,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			{
 				std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used potential fields to move to (" +
 					std::to_string(pathableTile.x) + ", " + std::to_string(pathableTile.y) + ")";
-				Util::DebugLog(__FUNCTION__, str);
+				//Util::DebugLog(__FUNCTION__, str, bot);
 			}
 			const auto action = RangedUnitAction(MicroActionType::Move, pathableTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 			PlanAction(rangedUnit, action);
@@ -409,13 +410,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 		if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 		{
-			Util::DebugLog(__FUNCTION__, "HELLION failed to use potential fields.");
+			//Util::DebugLog(__FUNCTION__, "HELLION failed to use potential fields.", bot);
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 
 	// Banshee in danger should cloak itself if low on hp
-	if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
+	if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
 	{
 		return;
 	}
@@ -429,7 +430,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used influence maps to move to (" +
 			std::to_string(safeTile.x) + ", " + std::to_string(safeTile.y) + ")";
-		Util::DebugLog(__FUNCTION__, str);
+		//Util::DebugLog(__FUNCTION__, str, bot);
 	}
 	const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 	PlanAction(rangedUnit, action);
@@ -452,6 +453,9 @@ bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit) const
 
 bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger)
 {
+	if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
+		return false;
+
 	//TODO consider detectors
 	// Cloak if the amount of energy is rather high or HP is low
 	if (banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f))
@@ -507,7 +511,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squa
 			morph = true;
 		}
 	}
-	else if (squaredDistanceToGoal < 7.f * 7.f && !target)
+	else if (squaredDistanceToGoal < VIKING_LANDING_DISTANCE_FROM_GOAL * VIKING_LANDING_DISTANCE_FROM_GOAL && !target)
 	{
 		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 		{
@@ -687,7 +691,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			const auto unit = unitAndTarget.first;
 			const auto unitTarget = unitAndTarget.second;
 
-			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, false))
+			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ExecuteBansheeCloakLogic(rangedUnit, false))
 			{
 				continue;
 			}
@@ -1372,7 +1376,7 @@ void RangedManager::ExecuteActions()
 			break;
 		default:
 			const int type = action.microActionType;
-			Util::DebugLog(__FUNCTION__, "Unknown MicroActionType: " + std::to_string(type));
+			Util::Log(__FUNCTION__, "Unknown MicroActionType: " + std::to_string(type), m_bot);
 			break;
 		}
 		m_bot.GetCommandMutex().unlock();

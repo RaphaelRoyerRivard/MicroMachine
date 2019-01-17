@@ -1003,11 +1003,11 @@ sc2::Point2DI Util::ConvertWorldToCamera(const sc2::GameInfo& game_info, const s
 
 // checks where a given unit can make a given unit type now
 // this is done by iterating its legal abilities for the build command to make the unit
-bool Util::UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & m_bot)
+bool Util::UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & bot)
 {
 #ifdef SC2API
     BOT_ASSERT(unit.isValid(), "Unit pointer was null");
-    sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(unit.getUnitPtr());
+    sc2::AvailableAbilities available_abilities = bot.Query()->GetAbilitiesForUnit(unit.getUnitPtr());
     
     // quick check if the unit can't do anything it certainly can't build the thing we want
     if (available_abilities.abilities.empty()) 
@@ -1017,7 +1017,7 @@ bool Util::UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & 
     else 
     {
         // check to see if one of the unit's available abilities matches the build ability type
-        sc2::AbilityID MetaTypeAbility = m_bot.Data(type).buildAbility;
+        sc2::AbilityID MetaTypeAbility = bot.Data(type).buildAbility;
         for (const sc2::AvailableAbility & available_ability : available_abilities.abilities) 
         {
             if (available_ability.ability_id == MetaTypeAbility)
@@ -1032,7 +1032,7 @@ bool Util::UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & 
     return false;
 }
 
-void Util::DisplayError(const std::string & error, const std::string & errorCode, CCBot & m_bot, bool isCritical)
+void Util::DisplayError(const std::string & error, const std::string & errorCode, CCBot & bot, bool isCritical)
 {
 	auto it = find(displayedError.begin(), displayedError.end(), errorCode);
 	if (it != displayedError.end())
@@ -1045,10 +1045,10 @@ void Util::DisplayError(const std::string & error, const std::string & errorCode
 
 	if (allowDebug || isCritical)//Not tournament or critical
 	{
-		m_bot.Actions()->SendChat(ss.str());
+		bot.Actions()->SendChat(ss.str());
 	}
 
-	Util::Log(ss.str());
+	Util::Log(ss.str(), bot);
 	displayedError.push_back(errorCode);
 }
 
@@ -1057,7 +1057,7 @@ void Util::ClearDisplayedErrors()
 	displayedError.clear();
 }
 
-void Util::CreateLog(CCBot & m_bot)
+void Util::CreateLog(CCBot & bot)
 {
 	time_t now = time(0);
 	char buf[80];
@@ -1065,32 +1065,32 @@ void Util::CreateLog(CCBot & m_bot)
 	file.open(buf);
 
 	std::stringstream races;
-	races << Util::GetStringFromRace(m_bot.GetPlayerRace(Players::Self)) << " VS " << Util::GetStringFromRace(m_bot.GetPlayerRace(Players::Enemy));
-	Util::Log(races.str());
+	races << Util::GetStringFromRace(bot.GetPlayerRace(Players::Self)) << " VS " << Util::GetStringFromRace(bot.GetPlayerRace(Players::Enemy));
+	Util::Log(races.str(), bot);
 }
 
-void Util::DebugLog(const std::string & function)
+void Util::DebugLog(const std::string & function, CCBot & bot)
 {
 	if (allowDebug)
 	{
-		file << function << std::endl;
+		file << bot.GetGameLoop() << ": " << function << std::endl;
 	}
 }
 
-void Util::DebugLog(const std::string & function, const std::string & message)
+void Util::DebugLog(const std::string & function, const std::string & message, CCBot & bot)
 {
 	if (allowDebug)
 	{
-		file << function << " | " << message << std::endl;
+		file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 	}
 }
 
-void Util::Log(const std::string & function)
+void Util::Log(const std::string & function, CCBot & bot)
 {
-	file << function << std::endl;
+	file << bot.GetGameLoop() << ": " << function << std::endl;
 }
 
-void Util::Log(const std::string & function, const std::string & message)
+void Util::Log(const std::string & function, const std::string & message, CCBot & bot)
 {
-	file << function << " | " << message << std::endl;
+	file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 }

@@ -195,7 +195,7 @@ void CombatAnalyzer::checkUnitsState()
 						if (Util::DistSq(unit, enemyMissileTurret) < 10 * 10)
 						{
 							m_bot.Strategy().setEnemyHasHiSecAutoTracking(true);
-							Util::Log(__FUNCTION__, unit.getType().getName() + " got hit near by a missile turret at a distance of " + std::to_string(Util::Dist(unit, enemyMissileTurret)));
+							Util::Log(__FUNCTION__, unit.getType().getName() + " got hit near by a missile turret at a distance of " + std::to_string(Util::Dist(unit, enemyMissileTurret)), m_bot);
 							m_bot.Actions()->SendChat("Is that a range upgrade on your missile turrets? I ain't gonna fall for it again!");
 							break;
 						}

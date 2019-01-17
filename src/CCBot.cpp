@@ -26,10 +26,7 @@ void CCBot::OnUnitCreated(const sc2::Unit*) {}
 void CCBot::OnUnitIdle(const sc2::Unit*) {}
 void CCBot::OnUpgradeCompleted(sc2::UpgradeID upgrade)
 {
-	if(upgrade == sc2::UPGRADE_ID::BANSHEECLOAK)
-	{
-		m_strategy.setBansheeCloakCompleted(true);
-	}
+	m_strategy.setUpgradeCompleted(upgrade);
 }
 void CCBot::OnBuildingConstructionComplete(const sc2::Unit*) {}
 void CCBot::OnNydusDetected() {}

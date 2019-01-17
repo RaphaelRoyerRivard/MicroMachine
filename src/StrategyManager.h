@@ -49,7 +49,7 @@ class StrategyManager
 	bool m_enemyHasHiSecAutoTracking = false;
 	bool m_enemyHasFlyingCombatUnit = false;
 	bool m_focusBuildings = false;
-	bool m_bansheeCloakCompleted = false;
+	std::set<sc2::UPGRADE_ID> m_completedUpgrades;
 
     bool  shouldExpandNow() const;
     const UnitPairVector getProtossBuildOrderGoal() const;
@@ -85,6 +85,6 @@ public:
 	void setEnemyHasHiSecAutoTracking(bool enemyHasHiSecAutoTracking) { m_enemyHasHiSecAutoTracking = enemyHasHiSecAutoTracking; }
 	bool shouldFocusBuildings() const { return m_focusBuildings; }
 	void setFocusBuildings(bool focusBuildings) { m_focusBuildings = focusBuildings; }
-	bool isBansheeCloakCompleted() const { return m_bansheeCloakCompleted; }
-	void setBansheeCloakCompleted(bool bansheeCloakCompleted) { m_bansheeCloakCompleted = bansheeCloakCompleted; }
+	bool isUpgradeCompleted(sc2::UPGRADE_ID upgradeId) const { return m_completedUpgrades.find(upgradeId) != m_completedUpgrades.end(); }
+	void setUpgradeCompleted(sc2::UPGRADE_ID upgradeId) { m_completedUpgrades.insert(upgradeId); }
 };

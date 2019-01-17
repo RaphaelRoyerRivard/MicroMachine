@@ -370,7 +370,7 @@ void BuildingManager::validateWorkersAndBuildings()
         if (!b.buildingUnit.isValid())
         {
             toRemove.push_back(b);
-			Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.");
+			Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
         }
     }
 
@@ -672,7 +672,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 		// if the building has a builder that died or that is not a builder anymore because of a bug
 		if (!b.builderUnit.isValid())
 		{
-			Util::DebugLog(__FUNCTION__, "BuilderUnit is invalid");
+			Util::DebugLog(__FUNCTION__, "BuilderUnit is invalid", m_bot);
 			continue;
 		}
 
@@ -684,7 +684,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 			Unit newBuilderUnit = m_bot.Workers().getBuilder(b, true);
 			if (!newBuilderUnit.isValid())
 			{
-				Util::DebugLog(__FUNCTION__, "Worker is invalid");
+				Util::DebugLog(__FUNCTION__, "Worker is invalid", m_bot);
 				continue;
 			}
 			b.builderUnit = newBuilderUnit;
