@@ -134,6 +134,28 @@ void WorkerManager::handleMineralWorkers()
 
 void WorkerManager::handleGasWorkers()
 {
+	int mineral = m_bot.GetMinerals();
+	int gas = m_bot.GetGas();
+
+	if (mineral < 2 * gas && gas > 500)
+	{
+		if (gas > 1000)
+		{
+			gasWorkersTarget = 1;
+		}
+		else if (gas > 500)
+		{
+			gasWorkersTarget = 2;
+		}
+	}
+	else
+	{
+		gasWorkersTarget = 3;
+	}
+
+	int mineralWorkerCount = getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
+	int gasWorkerCount = getWorkerData().getWorkerJobCount(WorkerJobs::Gas);
+
     // for each unit we have
     for (auto & building : m_bot.Buildings().getFinishedBuildings())
     {
@@ -143,20 +165,51 @@ void WorkerManager::handleGasWorkers()
             // get the number of workers currently assigned to it
             int numAssigned = m_workerData.getNumAssignedWorkers(building);
 
-            // if it's less than we want it to be, fill 'er up
-            for (int i=0; i<(3-numAssigned); ++i)
-            {
-				if (getWorkerData().getWorkerJobCount(WorkerJobs::Minerals) <= getWorkerData().getWorkerJobCount(WorkerJobs::Gas))
-					break;
+			if (numAssigned < gasWorkersTarget)
+			{
+				// if it's less than we want it to be, fill 'er up
+				for (int i = 0; i<(gasWorkersTarget - numAssigned); ++i)
+				{
+					if (mineralWorkerCount * 2 <= gasWorkerCount)
+						break;
 
-                auto gasWorker = getGasWorker(building);
-                if (gasWorker.isValid())
-                {
-                    m_workerData.setWorkerJob(gasWorker, WorkerJobs::Gas, building);
-                }
-            }
+					auto mineralWorker = getMineralWorker(building);
+					if (mineralWorker.isValid())
+					{
+						m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, building);
+					}
+				}
+			}
+			else if (numAssigned > gasWorkersTarget)
+			{
+				// if it's less than we want it to be, fill 'er up
+				for (int i = 0; i<(numAssigned - gasWorkersTarget); ++i)
+				{
+					auto gasWorker = getGasWorker(building);
+					if (gasWorker.isValid())
+					{
+ 						m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
+					}
+				}
+			}
         }
     }
+	for (auto & worker : m_bot.Workers().getWorkers())
+	{
+		auto & reorderedGasWorker = m_workerData.m_reorderedGasWorker;
+		auto it = reorderedGasWorker.find(worker);
+		if (it != reorderedGasWorker.end())
+		{
+			if (--reorderedGasWorker[worker].second > 0)//If order hasn't changed
+			{
+				worker.rightClick(reorderedGasWorker[worker].first);
+			}
+			else
+			{
+				reorderedGasWorker.erase(it);
+			}
+		}
+	}
 }
 
 void WorkerManager::handleIdleWorkers()
@@ -511,6 +564,44 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, float minH
     return getClosestMineralWorkerTo(pos, CCUnitID{}, minHpPercentage);
 }
 
+Unit WorkerManager::getClosestGasWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage) const
+{
+	Unit closestMineralWorker;
+	double closestDist = std::numeric_limits<double>::max();
+
+	// for each of our workers
+	for (auto & worker : m_workerData.getWorkers())
+	{
+		if (!worker.isValid() || worker.getID() == workerToIgnore) { continue; }
+		const sc2::Unit* workerPtr = worker.getUnitPtr();
+		if (workerPtr->health < minHpPercentage * workerPtr->health_max)
+		{
+			continue;
+		}
+
+		// if it is a mineral worker, Idle or None
+		if (m_workerData.getWorkerJob(worker) == WorkerJobs::Gas)
+		{
+			if (!isReturningCargo(worker))
+			{
+				///TODO: Maybe it should by ground distance?
+				double dist = Util::DistSq(worker.getPosition(), pos);
+				if (!closestMineralWorker.isValid() || dist < closestDist)
+				{
+					closestMineralWorker = worker;
+					closestDist = dist;
+				}
+			}
+		}
+	}
+	return closestMineralWorker;
+}
+
+Unit WorkerManager::getClosestGasWorkerTo(const CCPosition & pos, float minHpPercentage) const
+{
+	return getClosestGasWorkerTo(pos, CCUnitID{}, minHpPercentage);
+}
+
 Unit WorkerManager::getClosest(const Unit unit, const std::list<Unit> units) const
 {
 	Unit currentClosest;
@@ -656,9 +747,14 @@ void WorkerManager::finishedWithWorker(const Unit & unit)
     }
 }
 
-Unit WorkerManager::getGasWorker(Unit refinery) const
+Unit WorkerManager::getMineralWorker(Unit refinery) const
 {
     return getClosestMineralWorkerTo(refinery.getPosition());
+}
+
+Unit WorkerManager::getGasWorker(Unit refinery) const
+{
+	return m_workerData.getAssignedWorkersRefinery(refinery)[0];
 }
 
 Unit WorkerManager::getDepotAtBasePosition(CCPosition basePosition) const

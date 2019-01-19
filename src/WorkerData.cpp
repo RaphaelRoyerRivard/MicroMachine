@@ -36,10 +36,19 @@ void WorkerData::updateAllWorkerData()
     for (auto worker : getWorkers())
     {
         // if it's idle
-        if (getWorkerJob(worker) == WorkerJobs::None)
+		auto job = getWorkerJob(worker);
+        if (job == WorkerJobs::None)
         {
             setWorkerJob(worker, WorkerJobs::Idle);
         }
+		else if (job == WorkerJobs::Build)//Handle refinery builder
+		{
+			auto orders = worker.getUnitPtr()->orders;
+			if (!orders.empty() && orders[0].ability_id == 3666)//3666 = HARVEST_GATHER
+			{
+				worker.stop();
+			}
+		}
 
         // TODO: If it's a gas worker whose refinery has been destroyed, set to minerals
     }
@@ -77,7 +86,12 @@ void WorkerData::updateWorker(const Unit & unit)
 
 void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool mineralWorkerTargetJobUnit)
 {
-    clearPreviousJob(unit);
+	if (getWorkerJob(unit) == WorkerJobs::Gas)
+	{
+		m_reorderedGasWorker[unit] = std::pair<Unit, int>(jobUnit, 90);
+	}
+
+	clearPreviousJob(unit);
     m_workerJobMap[unit] = job;
     m_workerJobCount[job]++;
 
@@ -122,7 +136,8 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool min
         // increase the count of workers assigned to this refinery
         m_refineryWorkerCount[jobUnit] += 1;
         m_workerRefineryMap[unit] = jobUnit;
-
+		m_refineryWorkerMap[jobUnit].push_back(unit);
+		
         // right click the refinery to start harvesting
         unit.rightClick(jobUnit);
     }
@@ -140,6 +155,10 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool min
     {
 
     }
+	else if (job == WorkerJobs::Idle)
+	{
+		unit.stop();
+	}
 }
 
 void WorkerData::clearPreviousJob(const Unit & unit)
@@ -157,6 +176,13 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     {
         m_refineryWorkerCount[m_workerRefineryMap[unit]]--;
         m_workerRefineryMap.erase(unit);
+		for (auto refinery : m_refineryWorkerMap)
+		{
+			auto it = std::find(refinery.second.begin(), refinery.second.end(), unit);
+			if (it != refinery.second.end()) {
+				refinery.second.erase(it);
+			}
+		}
     }
     else if (previousJob == WorkerJobs::Build)
     {
@@ -288,6 +314,33 @@ int WorkerData::getNumAssignedWorkers(const Unit & unit)
 
     // when all else fails, return 0
     return 0;
+}
+
+std::vector<Unit> WorkerData::getAssignedWorkersRefinery(const Unit & unit)
+{
+	if (unit.getType().isResourceDepot())
+	{
+		auto it = m_refineryWorkerMap.find(unit);
+		auto a = it->second;
+		// if there is an entry, return it
+		if (it != m_refineryWorkerMap.end())
+		{
+			return it->second;
+		}
+	}
+	else if (unit.getType().isRefinery())
+	{
+		auto it = m_refineryWorkerMap.find(unit);
+
+		// if there is an entry, return it
+		if (it != m_refineryWorkerMap.end())
+		{
+			return it->second;
+		}
+	}
+
+	// when all else fails, return 0
+	return std::vector<Unit>();
 }
 
 const char * WorkerData::getJobCode(const Unit & unit)
