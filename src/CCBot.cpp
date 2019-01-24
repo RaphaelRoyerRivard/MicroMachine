@@ -276,6 +276,7 @@ void CCBot::checkKeyState()
 void CCBot::setUnits()
 {
     m_allUnits.clear();
+	m_allyUnitsPerType.clear();
 	m_unitCount.clear();
 	m_unitCompletedCount.clear();
 #ifdef SC2API
@@ -290,6 +291,7 @@ void CCBot::setUnits()
 		if (unitptr->alliance == sc2::Unit::Self || unitptr->alliance == sc2::Unit::Ally)
 		{
 			m_allyUnits.insert_or_assign(unitptr->tag, unit);
+			m_allyUnitsPerType[unitptr->unit_type].push_back(unit);
 			bool isMorphingResourceDepot = false;
 			if (unit.getType().isResourceDepot())
 			{
@@ -733,17 +735,9 @@ std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()
 	return m_allyUnits;
 }
 
-std::map<sc2::Tag, Unit> CCBot::GetAllyUnits(sc2::UNIT_TYPEID type)
+const std::vector<Unit> & CCBot::GetAllyUnits(sc2::UNIT_TYPEID type)
 {
-	std::map<sc2::Tag, Unit> units;
-	for (auto unit : m_allyUnits)
-	{
-		if (unit.second.getAPIUnitType() == type)
-		{
-			units.insert(unit);
-		}
-	}
-	return units;
+	return m_allyUnitsPerType[type];
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits()

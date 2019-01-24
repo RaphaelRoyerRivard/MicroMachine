@@ -217,11 +217,11 @@ void ProductionManager::manageBuildOrderQueue()
 				firstBarrackBuilt = true;
 
 				auto baseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-				auto supplyDepots = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT);
+				auto & supplyDepots = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT);
 				
-				if (supplyDepots.begin() != supplyDepots.end())//If we have a depot
+				if (!supplyDepots.empty())//If we have a depot
 				{
-					auto supplyDepot = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT).begin()->second;
+					auto & supplyDepot = supplyDepots[0];
 
 					auto basePosition = baseLocation->getDepotPosition();
 					auto point = supplyDepot.getTilePosition();
@@ -251,63 +251,86 @@ void ProductionManager::manageBuildOrderQueue()
 
 					break;
 				}				
-			}			
+			}
 
-			// if we can make the current item
-			if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
+			bool idleProductionBuilding = false;
+			if(currentItem.type.isBuilding())
 			{
-				Unit producer = getProducer(currentItem.type);
-
-				// build supply if we need some (SupplyBlock)
-				if (producer.isValid()
-					&& m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+				auto productionBuildingTypes = getProductionBuildingTypes();
+				const sc2::UnitTypeID itemType = currentItem.type.getUnitType().getAPIUnitType();
+				if(std::find(productionBuildingTypes.begin(), productionBuildingTypes.end(), itemType) != productionBuildingTypes.end())
 				{
-					supplyBlockedFrames++;
-#if _DEBUG
-					Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
-#else
-					Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", m_bot);
-#endif
-				}
-
-				if (canMakeNow(producer, currentItem.type))
-				{
-					// create it and remove it from the _queue
-					create(producer, currentItem);
-					m_queue.removeCurrentHighestPriorityItem();
-
-					// don't actually loop around in here
-					break;
+					auto & productionBuildings = m_bot.GetAllyUnits(itemType);
+					for(auto & productionBuilding : productionBuildings)
+					{
+						auto & orders = productionBuilding.getUnitPtr()->orders;
+						if(orders.empty() || orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+						{
+							idleProductionBuilding = true;
+							break;
+						}
+					}
 				}
 			}
 
-			// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
-			if (m_bot.Data(currentItem.type).isBuilding
-				&& !m_bot.Data(currentItem.type).isAddon
-				&& !currentItem.type.getUnitType().isMorphedBuilding()
-				&& meetsReservedResourcesWithExtra(currentItem.type, additionalReservedMineral, additionalReservedGas))
+			if (!idleProductionBuilding)
 			{
-				Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
-				//Get building location
-				const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, false);
-				if (targetLocation != CCTilePosition(0, 0))
+				// if we can make the current item
+				if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 				{
-					Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
-					if (worker.isValid())
-					{
-						worker.move(targetLocation);
+					Unit producer = getProducer(currentItem.type);
 
+					// build supply if we need some (SupplyBlock)
+					if (producer.isValid()
+						&& m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+					{
+						supplyBlockedFrames++;
+#if _DEBUG
+						Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
+#else
+						Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", m_bot);
+#endif
+					}
+
+					if (canMakeNow(producer, currentItem.type))
+					{
 						// create it and remove it from the _queue
-						create(worker, currentItem);
+						create(producer, currentItem);
 						m_queue.removeCurrentHighestPriorityItem();
 
 						// don't actually loop around in here
 						break;
 					}
 				}
-				else
+
+				// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
+				if (m_bot.Data(currentItem.type).isBuilding
+					&& !m_bot.Data(currentItem.type).isAddon
+					&& !currentItem.type.getUnitType().isMorphedBuilding()
+					&& meetsReservedResourcesWithExtra(currentItem.type, additionalReservedMineral, additionalReservedGas))
 				{
-					Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
+					Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
+					//Get building location
+					const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, false);
+					if (targetLocation != CCTilePosition(0, 0))
+					{
+						Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
+						if (worker.isValid())
+						{
+							worker.move(targetLocation);
+
+							// create it and remove it from the _queue
+							create(worker, currentItem);
+							m_queue.removeCurrentHighestPriorityItem();
+
+							// don't actually loop around in here
+							break;
+						}
+					}
+					else
+					{
+						Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
+					}
 				}
 			}
 		}
@@ -966,33 +989,37 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
     return getClosestUnitToPosition(candidateProducers, closestTo);
 }
 
-int ProductionManager::getProductionBuildingsCount() const
+std::vector<sc2::UNIT_TYPEID> ProductionManager::getProductionBuildingTypes() const
 {
 	switch (m_bot.GetSelfRace())
 	{
-		case CCRace::Terran:
-		{
-
-			return m_bot.Buildings().getBuildingCountOfType({
-				sc2::UNIT_TYPEID::TERRAN_BARRACKS, 
-				sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, 
-				sc2::UNIT_TYPEID::TERRAN_FACTORY, 
-				sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING, 
-				sc2::UNIT_TYPEID::TERRAN_STARPORT, 
-				sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING });
-		}
-		case CCRace::Protoss:
-		{
-			//TODO
-			return 0;
-		}
-		case CCRace::Zerg:
-		{
-			//TODO
-			return 0;
-		}
+	case CCRace::Terran:
+	{
+		return {sc2::UNIT_TYPEID::TERRAN_BARRACKS,
+			sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING,
+			sc2::UNIT_TYPEID::TERRAN_FACTORY,
+			sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING,
+			sc2::UNIT_TYPEID::TERRAN_STARPORT,
+			sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
 	}
-	return 0;
+	case CCRace::Protoss:
+	{
+		//TODO
+		return {};
+	}
+	case CCRace::Zerg:
+	{
+		//TODO
+		return {};
+	}
+	}
+	return {};
+}
+
+int ProductionManager::getProductionBuildingsCount() const
+{
+	auto productionBuildingTypes = getProductionBuildingTypes();
+	return m_bot.Buildings().getBuildingCountOfType(productionBuildingTypes);
 }
 
 int ProductionManager::getProductionBuildingsAddonsCount() const
@@ -1001,14 +1028,14 @@ int ProductionManager::getProductionBuildingsAddonsCount() const
 	{
 		case CCRace::Terran:
 		{
-
-			return m_bot.Buildings().getBuildingCountOfType({
+			std::vector<sc2::UNIT_TYPEID> addonTypes = {
 				sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR,
 				sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB,
 				sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR,
 				sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB,
 				sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB });
+				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB };
+			return m_bot.Buildings().getBuildingCountOfType(addonTypes);
 		}
 		case CCRace::Protoss:
 		{
@@ -1036,15 +1063,18 @@ float ProductionManager::getProductionScore() const
 			score += m_bot.Buildings().getBuildingCountOfType({
 				sc2::UNIT_TYPEID::TERRAN_STARPORT }) * 0.5f;
 
-			score += m_bot.Buildings().getBuildingCountOfType({
+			std::vector<sc2::UNIT_TYPEID> barracksAddonTypes = {
 				sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB }) * 0.25f;
-			score += m_bot.Buildings().getBuildingCountOfType({
+				sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB };
+			score += m_bot.Buildings().getBuildingCountOfType(barracksAddonTypes) * 0.25f;
+			std::vector<sc2::UNIT_TYPEID> factoryAddonTypes = {
 				sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB }) * 0.25f;
-			score += m_bot.Buildings().getBuildingCountOfType({
+				sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB };
+			score += m_bot.Buildings().getBuildingCountOfType(factoryAddonTypes) * 0.25f;
+			std::vector<sc2::UNIT_TYPEID> starportAddonTypes = {
 				sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB }) * 0.5f;
+				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB };
+			score += m_bot.Buildings().getBuildingCountOfType(starportAddonTypes) * 0.5f;
 			break;
 		}
 		case CCRace::Protoss:

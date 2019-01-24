@@ -63,7 +63,7 @@ public:
     CCTilePosition      getBuildingLocation(const Building & b);
 	CCTilePosition		getNextBuildingLocation(const Building & b, bool removeLocation);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
-	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b, bool isCompleted = false) const;
+	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);
 	const sc2::Unit *	getClosestMineral(const sc2::Unit * unit) const;
 

@@ -1007,7 +1007,7 @@ int BuildingManager::getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isC
 	return count;
 }
 
-int BuildingManager::getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b, bool isCompleted) const
+int BuildingManager::getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted) const
 {
 	int count = 0;
 	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))

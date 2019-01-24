@@ -56,6 +56,7 @@ class CCBot
 	std::vector<Unit>       m_knownEnemyUnits;
     std::vector<CCPosition> m_enemyBaseLocations;
 	std::map<sc2::UNIT_TYPEID, std::vector<Unit>> m_knownEnemyUnitsPerType;
+	std::map<sc2::UNIT_TYPEID, std::vector<Unit>> m_allyUnitsPerType;
 	CCRace selfRace;
 	std::map<std::string, Profiler> m_profilingTimes;
 	std::mutex m_command_mutex;
@@ -137,7 +138,7 @@ public:
     const std::vector<Unit> & GetUnits() const;
 	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false) const;
 	std::map<sc2::Tag, Unit> & GetAllyUnits();
-	std::map<sc2::Tag, Unit> GetAllyUnits(sc2::UNIT_TYPEID type);
+	const std::vector<Unit> & GetAllyUnits(sc2::UNIT_TYPEID type);
 	std::map<sc2::Tag, Unit> & GetEnemyUnits();
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
 	const std::vector<Unit> & GetKnownEnemyUnits(sc2::UnitTypeID type);
