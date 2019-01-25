@@ -482,7 +482,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 
-				if ((m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasMetabolicBoost()) && !m_queue.contains(MetaTypeEnum::Hellion))
+				if ((m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
 				}

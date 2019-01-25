@@ -46,6 +46,7 @@ class StrategyManager
 	bool m_shouldProduceAntiAir = false;
 	bool m_enemyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
+	bool m_enemyHasMassZerglings = false;
 	bool m_enemyHasHiSecAutoTracking = false;
 	bool m_enemyOnlyHasFlyingBuildings = false;
 	bool m_focusBuildings = false;
@@ -81,6 +82,8 @@ public:
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
+	bool enemyHasMassZerglings() const { return m_enemyHasMassZerglings; }
+	void setEnemyHasMassZerglings(bool enemyHasMassZerglings) { m_enemyHasMassZerglings = enemyHasMassZerglings; }
 	bool enemyHasHiSecAutoTracking() const { return m_enemyHasHiSecAutoTracking; }
 	void setEnemyHasHiSecAutoTracking(bool enemyHasHiSecAutoTracking) { m_enemyHasHiSecAutoTracking = enemyHasHiSecAutoTracking; }
 	bool enemyOnlyHasFlyingBuildings() const { return m_enemyOnlyHasFlyingBuildings; }
