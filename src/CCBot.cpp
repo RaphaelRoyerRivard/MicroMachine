@@ -471,7 +471,7 @@ void CCBot::setUnits()
 		}
 	}
 
-	m_strategy.setEnemyHasMassZerglings(m_knownEnemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 15);
+	m_strategy.setEnemyHasMassZerglings(m_knownEnemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
 #else
     for (auto & unit : BWAPI::Broodwar->getAllUnits())
     {
