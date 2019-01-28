@@ -283,7 +283,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
-	if (!unitShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
+	if (ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats, unitShouldHeal))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 		return;
@@ -607,7 +607,7 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 	return dirVec;
 }
 
-bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats)
+bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats, bool unitShouldHeal)
 {
 	if (threats.empty())
 		return false;
@@ -667,6 +667,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		// If the unit has a target, add it to the close units and calculate its power 
 		if(unitTarget)
 		{
+			// If the unit is not alone and should heal, we should let it flee
+			if (unit != rangedUnit && unitShouldHeal)
+				return false;
+
 			closeUnits.push_back(unit);
 			closeUnitsTarget.insert_or_assign(unit, unitTarget);
 			unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
