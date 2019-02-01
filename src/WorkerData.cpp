@@ -44,9 +44,10 @@ void WorkerData::updateAllWorkerData()
 		else if (job == WorkerJobs::Build)//Handle refinery builder
 		{
 			auto orders = worker.getUnitPtr()->orders;
-			if (!orders.empty() && orders[0].ability_id == 3666)//3666 = HARVEST_GATHER
+			if (!orders.empty() && !m_bot.Workers().isReturningCargo(worker) && orders[0].ability_id == 3666)//3666 = HARVEST_GATHER
 			{
 				worker.stop();
+				setWorkerJob(worker, WorkerJobs::Idle);
 			}
 		}
 
@@ -86,9 +87,10 @@ void WorkerData::updateWorker(const Unit & unit)
 
 void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool mineralWorkerTargetJobUnit)
 {
+	const int spamOrderDuring = 300;
 	if (getWorkerJob(unit) == WorkerJobs::Gas)
 	{
-		m_reorderedGasWorker[unit] = std::pair<Unit, int>(jobUnit, 90);
+		m_reorderedGasWorker[unit] = std::pair<Unit, int>(jobUnit, spamOrderDuring);
 	}
 
 	clearPreviousJob(unit);
@@ -176,7 +178,7 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     {
         m_refineryWorkerCount[m_workerRefineryMap[unit]]--;
         m_workerRefineryMap.erase(unit);
-		for (auto refinery : m_refineryWorkerMap)
+		for (auto & refinery : m_refineryWorkerMap)
 		{
 			auto it = std::find(refinery.second.begin(), refinery.second.end(), unit);
 			if (it != refinery.second.end()) {
@@ -321,7 +323,6 @@ std::vector<Unit> WorkerData::getAssignedWorkersRefinery(const Unit & unit)
 	if (unit.getType().isResourceDepot())
 	{
 		auto it = m_refineryWorkerMap.find(unit);
-		auto a = it->second;
 		// if there is an entry, return it
 		if (it != m_refineryWorkerMap.end())
 		{

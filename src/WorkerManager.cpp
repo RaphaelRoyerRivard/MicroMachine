@@ -136,25 +136,80 @@ void WorkerManager::handleGasWorkers()
 {
 	int mineral = m_bot.GetMinerals();
 	int gas = m_bot.GetGas();
+	int numMineralWorker = getNumMineralWorkers();
+	int numGasWorker = getNumGasWorkers();
+	int numRefinery = m_bot.Buildings().getBuildingCountOfType(Util::GetRefinery(m_bot.GetSelfRace(), m_bot).getAPIUnitType(), true);
+	const int ressourceTreshold = 300;
 
-	if (mineral < 2 * gas && gas > 500)
+	switch (gasWorkersTarget)
 	{
-		if (gas > 1000)
-		{
-			gasWorkersTarget = 1;
-		}
-		else if (gas > 500)
-		{
-			gasWorkersTarget = 2;
-		}
+		case 0:
+			if (numMineralWorker < numGasWorker + numRefinery)
+			{
+
+			}
+			else if (mineral > gas)
+			{
+				gasWorkersTarget = 1;
+			}
+			break;
+		case 1:
+			if (numMineralWorker < 6)//If few mineral workers
+			{
+				gasWorkersTarget = 0;
+			}
+			else if (numMineralWorker < numGasWorker + numRefinery)
+			{
+				gasWorkersTarget = 0;
+			}
+			else if (gas > mineral * 5 && mineral + gas > ressourceTreshold)
+			{
+				gasWorkersTarget = 0;
+			}
+			else if (mineral > gas * 1.5f)
+			{
+				gasWorkersTarget = 2;
+			}
+			break;
+		case 2:
+			if (numMineralWorker < 6)//If few mineral workers
+			{
+				gasWorkersTarget = 0;
+			}
+			else if (numMineralWorker < numGasWorker + numRefinery)
+			{
+				gasWorkersTarget = 1;
+			}
+			else if (gas > mineral * 3 && mineral + gas > ressourceTreshold)
+			{
+				gasWorkersTarget = 1;
+			}
+			else if (mineral > gas * 2)
+			{
+				gasWorkersTarget = 3;
+			}
+			break;
+		case 3:
+			if (numMineralWorker < 6)//If few mineral workers
+			{
+				gasWorkersTarget = 0;
+			}
+			else if (numMineralWorker < numGasWorker + numRefinery)
+			{
+				gasWorkersTarget = 2;
+			}
+			else if (gas > mineral * 2 && mineral + gas > ressourceTreshold)
+			{
+				gasWorkersTarget = 2;
+			}
+			break;
+		default:
+			gasWorkersTarget = 3;
 	}
-	else
+	if (m_bot.Strategy().isWorkerRushed())
 	{
 		gasWorkersTarget = 3;
 	}
-
-	int mineralWorkerCount = getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
-	int gasWorkerCount = getWorkerData().getWorkerJobCount(WorkerJobs::Gas);
 
     // for each unit we have
     for (auto & building : m_bot.Buildings().getFinishedBuildings())
@@ -170,8 +225,8 @@ void WorkerManager::handleGasWorkers()
 				// if it's less than we want it to be, fill 'er up
 				for (int i = 0; i<(gasWorkersTarget - numAssigned); ++i)
 				{
-					if (mineralWorkerCount * 2 <= gasWorkerCount)
-						break;
+					/*if (numMineralWorker * 2 <= gasWorkerCount)
+						break;*/
 
 					auto mineralWorker = getMineralWorker(building);
 					if (mineralWorker.isValid())
@@ -188,12 +243,18 @@ void WorkerManager::handleGasWorkers()
 					auto gasWorker = getGasWorker(building);
 					if (gasWorker.isValid())
 					{
+						if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
+						{
+							Util::DisplayError(__FUNCTION__, "Worker assigned to a refinery is not a gas worker.", m_bot);
+						}
  						m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
 					}
 				}
 			}
         }
     }
+
+	//Spam order in case worker is in Refinery
 	for (auto & worker : m_bot.Workers().getWorkers())
 	{
 		auto & reorderedGasWorker = m_workerData.m_reorderedGasWorker;
@@ -202,6 +263,7 @@ void WorkerManager::handleGasWorkers()
 		{
 			if (--reorderedGasWorker[worker].second > 0)//If order hasn't changed
 			{
+				std::cout << reorderedGasWorker[worker].second << std::endl;
 				worker.rightClick(reorderedGasWorker[worker].first);
 			}
 			else
@@ -245,7 +307,7 @@ void WorkerManager::handleIdleWorkers()
 			}
 			else
 			{
-				setMineralWorker(worker);
+ 				setMineralWorker(worker);
 			}
 		}
     }

@@ -492,8 +492,20 @@ bool Unit::isConstructingAnything() const
 {
 #ifdef SC2API
 	BOT_ASSERT(isValid(), "Cannot check if unit is constructing because unit ptr is null");
+	if (getUnitPtr()->orders.size() > 0)
+	{
+		auto tag = getTag();
+		for (auto & b : m_bot->Buildings().getBuildings())
+		{
+			if (b.builderUnit.getTag() == tag)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 
-	return (getUnitPtr()->orders.size() > 0);
+	return false;
 #else
 	return m_unit->isConstructing();
 #endif
