@@ -263,7 +263,6 @@ void WorkerManager::handleGasWorkers()
 		{
 			if (--reorderedGasWorker[worker].second > 0)//If order hasn't changed
 			{
-				std::cout << reorderedGasWorker[worker].second << std::endl;
 				worker.rightClick(reorderedGasWorker[worker].first);
 			}
 			else
@@ -984,6 +983,11 @@ bool WorkerManager::isReturningCargo(Unit worker) const
 		}
 	}
 	return false;
+}
+
+bool WorkerManager::canHandleMoreRefinery() const
+{
+	return gasWorkersTarget >= 3;
 }
 
 int WorkerManager::getNumMineralWorkers()

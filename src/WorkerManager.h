@@ -50,7 +50,8 @@ public:
     bool isWorkerScout(Unit worker) const;
     bool isFree(Unit worker) const;
     bool isBuilder(Unit worker) const;
-	bool WorkerManager::isReturningCargo(Unit worker) const;
+	bool isReturningCargo(Unit worker) const;
+	bool canHandleMoreRefinery() const;
 
     Unit getBuilder(Building & b, bool setJobAsBuilder = true) const;
 	Unit getMineralWorker(Unit refinery) const;
