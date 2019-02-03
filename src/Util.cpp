@@ -2,6 +2,291 @@
 #include "CCBot.h"
 
 const float EPSILON = 1e-5;
+const float CLIFF_MIN_HEIGHT_DIFFERENCE = 1.f;
+const float CLIFF_MAX_HEIGHT_DIFFERENCE = 2.5f;
+const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
+const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
+const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
+const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
+
+// Influence Map Node
+struct Util::PathFinding::IMNode {
+	IMNode() :
+		position(CCTilePosition(0, 0)),
+		parent(nullptr),
+		cost(0.f),
+		heuristic(0.f)
+	{
+	}
+	IMNode(CCTilePosition position) :
+		position(position),
+		parent(nullptr),
+		cost(0.f),
+		heuristic(0.f)
+	{
+	}
+	IMNode(CCTilePosition position, IMNode* parent, float heuristic) :
+		position(position),
+		parent(parent),
+		cost(0.f),
+		heuristic(heuristic)
+	{
+	}
+	IMNode(CCTilePosition position, IMNode* parent, float cost, float heuristic) :
+		position(position),
+		parent(parent),
+		cost(cost),
+		heuristic(heuristic)
+	{
+	}
+	CCTilePosition position;
+	IMNode* parent;
+	float cost;
+	float heuristic;
+
+	float getTotalCost() const
+	{
+		return cost + heuristic;
+	}
+
+	bool isValid() const
+	{
+		return position != CCTilePosition(0, 0);
+	}
+
+	bool operator<(const IMNode& rhs) const
+	{
+		return getTotalCost() < rhs.getTotalCost();
+	}
+
+	bool operator<=(const IMNode& rhs) const
+	{
+		return getTotalCost() <= rhs.getTotalCost();
+	}
+
+	bool operator==(const IMNode& rhs) const
+	{
+		return position == rhs.position;
+	}
+};
+
+Util::PathFinding::IMNode* getLowestCostNode(std::set<Util::PathFinding::IMNode*> & set)
+{
+	Util::PathFinding::IMNode* lowestCostNode = nullptr;
+	for (const auto node : set)
+	{
+		if (!lowestCostNode || *node < *lowestCostNode)
+			lowestCostNode = node;
+	}
+	return lowestCostNode;
+}
+
+bool Util::PathFinding::SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost)
+{
+	for (auto n : set)
+	{
+		if (*n == *node)
+		{
+			return !mustHaveLowerCost || *n <= *node;
+		}
+	}
+	return false;
+}
+
+bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot)
+{
+	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, false, bot);
+	return pathPosition != CCPosition(0, 0);
+}
+
+CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot)
+{
+	return FindOptimalPath(rangedUnit, goal, maxRange, true, bot);
+}
+
+CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot)
+{
+	return FindOptimalPath(rangedUnit, goal, 0.f, true, bot);
+}
+
+CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool considerEnemyInfluence, CCBot & bot)
+{
+	CCPosition returnPos;
+	std::set<IMNode*> opened;
+	std::set<IMNode*> closed;
+
+	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
+	const bool flee = considerEnemyInfluence && maxRange == 0.f;
+	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
+	const auto start = new IMNode(startPosition);
+	opened.insert(start);
+
+	while (!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE)
+	{
+		IMNode* currentNode = getLowestCostNode(opened);
+		opened.erase(currentNode);
+		closed.insert(currentNode);
+
+		bool shouldTriggerExit = false;
+		if (flee)
+		{
+			shouldTriggerExit = !HasInfluenceOnTile(currentNode, rangedUnit, bot);
+		}
+		else
+		{
+			if (!considerEnemyInfluence)
+			{
+				shouldTriggerExit = HasInfluenceOnTile(currentNode, rangedUnit, bot);
+			}
+			if (!shouldTriggerExit)
+			{
+				shouldTriggerExit = ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange, bot);
+			}
+		}
+		if (shouldTriggerExit)
+		{
+			if (considerEnemyInfluence)
+			{
+				returnPos = GetCommandPositionFromPath(currentNode, rangedUnit, bot);
+			}
+			else if(!HasInfluenceOnTile(currentNode, rangedUnit, bot))
+			{
+				returnPos = GetPosition(currentNode->position);
+			}
+			break;
+		}
+
+		// Find neighbors
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
+			{
+				if (!IsNeighborNodeValid(x, y, currentNode, rangedUnit, bot))
+					continue;
+
+				const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
+
+				const bool isDiagonal = abs(x + y) != 1;
+				const float creepCost = !rangedUnit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
+				const float influenceOnTile = considerEnemyInfluence ? GetInfluenceOnTile(neighborPosition, rangedUnit, bot) : 0.f;
+				const float nodeCost = (influenceOnTile + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * (isDiagonal ? sqrt(2) : 1);
+				const float totalCost = currentNode->cost + nodeCost;
+				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
+				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
+
+				if (SetContainsNode(closed, neighbor, false))
+					continue;	// already explored check
+
+				if (SetContainsNode(opened, neighbor, true))
+					continue;	// node already opened and of lower cost
+
+				opened.insert(neighbor);
+			}
+		}
+	}
+	for (auto node : opened)
+		delete node;
+	for (auto node : closed)
+		delete node;
+	return returnPos;
+}
+
+bool Util::PathFinding::IsNeighborNodeValid(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot)
+{
+	if (x == 0 && y == 0)
+		return false;	// same tile check
+
+	const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
+
+	if (currentNode->parent && neighborPosition == currentNode->parent->position)
+		return false;	// parent tile check
+
+	const CCPosition mapMin = bot.Map().mapMin();
+	const CCPosition mapMax = bot.Map().mapMax();
+	if (neighborPosition.x < mapMin.x || neighborPosition.y < mapMin.y || neighborPosition.x >= mapMax.x || neighborPosition.y >= mapMax.y)
+		return false;	// out of bounds check
+
+	if (!rangedUnit->is_flying)
+	{
+		if (bot.Commander().Combat().getBlockedTiles()[neighborPosition.x][neighborPosition.y])
+			return false;	// tile is blocked
+
+							// TODO check if the unit can pass between 2 blocked tiles (this will need a change in the blocked tiles map to have types of block)
+							// All units can pass between 2 command structures, medium units and small units can pass between a command structure and another building 
+							// while only small units can pass between non command buildings (where "between" means when 2 buildings have their corners touching diagonaly)
+
+		if (!bot.Map().isWalkable(neighborPosition))
+		{
+			if (rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_REAPER)
+				return false;	// unwalkable tile check
+
+			if (!bot.Map().isWalkable(currentNode->position))
+				return false;	// maybe the reaper is already on an unpathable tile
+
+			const CCTilePosition furtherTile(neighborPosition.x + x, neighborPosition.y + y);
+			if (!bot.Map().isWalkable(furtherTile))
+				return false;	// unwalkable next tile check
+
+			const float heightDiff = abs(bot.Map().terrainHeight(currentNode->position.x, currentNode->position.y) - bot.Map().terrainHeight(furtherTile.x, furtherTile.y));
+			if (heightDiff < CLIFF_MIN_HEIGHT_DIFFERENCE || heightDiff > CLIFF_MAX_HEIGHT_DIFFERENCE)
+				return false;	// unjumpable cliff check
+
+								// TODO neighbor tile will need to have the furtherTile position, while also using cost of both tiles
+		}
+	}
+
+	return true;
+}
+
+CCPosition Util::PathFinding::GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot)
+{
+	CCPosition returnPos;
+	do
+	{
+		const CCPosition currentPosition = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+		if (bot.Config().DrawHarassInfo)
+			bot.Map().drawTile(Util::GetTilePosition(currentPosition), sc2::Colors::Teal, 0.2f);
+		//we want to retun a node close to the current position
+		if (Util::DistSq(currentPosition, rangedUnit->pos) <= 3.f * 3.f && returnPos == CCPosition(0, 0))
+			returnPos = currentPosition;
+		currentNode = currentNode->parent;
+	} while (currentNode != nullptr);
+
+	if (returnPos == CCPosition(0, 0))
+		std::cout << "returnPos is null" << std::endl;
+	else if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+	{
+		//We need to click far enough to jump cliffs
+		const float squareDistance = Util::DistSq(rangedUnit->pos, returnPos);
+		const float terrainHeightDiff = abs(bot.Map().terrainHeight(rangedUnit->pos.x, rangedUnit->pos.y) - bot.Map().terrainHeight(returnPos.x, returnPos.y));
+		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > CLIFF_MIN_HEIGHT_DIFFERENCE)
+			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
+	}
+	if (bot.Config().DrawHarassInfo)
+		bot.Map().drawTile(Util::GetTilePosition(returnPos), sc2::Colors::Purple, 0.3f);
+	return returnPos;
+}
+
+float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to)
+{
+	return Util::Dist(from, to) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER;
+}
+
+bool Util::PathFinding::ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot)
+{
+	return !HasInfluenceOnTile(node, unit, bot) && Util::Dist(Util::GetPosition(node->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
+}
+
+bool Util::PathFinding::HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
+{
+	return GetInfluenceOnTile(node->position, unit, bot) != 0.f;
+}
+
+float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
+{
+	const auto & influenceMap = unit->is_flying ? bot.Commander().Combat().getAirInfluenceMap() : bot.Commander().Combat().getGroundInfluenceMap();
+	return influenceMap[tile.x][tile.y];
+}
 
 void Util::SetAllowDebug(bool _allowDebug)
 {
@@ -475,7 +760,7 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	for (auto & weapon : unitTypeData.weapons)
 	{
 		// can attack target with a weapon
-		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
+		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
 			maxRange = weapon.range;
 	}
 
@@ -613,7 +898,7 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
 		sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
         for (auto & weapon : unitTypeData.weapons)
         {
-            if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
+            if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
             {
                 float weaponDps = weapon.damage_;
                 for (auto & damageBonus : weapon.damage_bonus)
