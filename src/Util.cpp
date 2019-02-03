@@ -11,6 +11,13 @@ const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 
 // Influence Map Node
 struct Util::PathFinding::IMNode {
+	IMNode() :
+		position(CCTilePosition(0, 0)),
+		parent(nullptr),
+		cost(0.f),
+		heuristic(0.f)
+	{
+	}
 	IMNode(CCTilePosition position) :
 		position(position),
 		parent(nullptr),
@@ -42,6 +49,11 @@ struct Util::PathFinding::IMNode {
 		return cost + heuristic;
 	}
 
+	bool isValid() const
+	{
+		return position != CCTilePosition(0, 0);
+	}
+
 	bool operator<(const IMNode& rhs) const
 	{
 		return getTotalCost() < rhs.getTotalCost();
@@ -59,7 +71,6 @@ struct Util::PathFinding::IMNode {
 };
 
 Util::PathFinding::IMNode* getLowestCostNode(std::set<Util::PathFinding::IMNode*> & set)
-//IMNode* Util::PathFinding::getLowestCostNode(std::set<IMNode*> & set)
 {
 	Util::PathFinding::IMNode* lowestCostNode = nullptr;
 	for (const auto node : set)
@@ -82,24 +93,30 @@ bool Util::PathFinding::SetContainsNode(const std::set<IMNode*> & set, IMNode* n
 	return false;
 }
 
+bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot)
+{
+	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, false, bot);
+	return pathPosition != CCPosition(0, 0);
+}
+
 CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot)
 {
-	return FindOptimalPath(rangedUnit, goal, maxRange, bot);
+	return FindOptimalPath(rangedUnit, goal, maxRange, true, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot)
 {
-	return FindOptimalPath(rangedUnit, goal, 0.f, bot);
+	return FindOptimalPath(rangedUnit, goal, 0.f, true, bot);
 }
 
-CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool considerEnemyInfluence, CCBot & bot)
 {
 	CCPosition returnPos;
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
 	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
-	const bool flee = maxRange == 0.f;
+	const bool flee = considerEnemyInfluence && maxRange == 0.f;
 	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
@@ -110,10 +127,32 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPo
 		opened.erase(currentNode);
 		closed.insert(currentNode);
 
-		const bool shouldTriggerExit = flee ? ShouldTriggerExit(currentNode, rangedUnit, bot) : ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange, bot);
+		bool shouldTriggerExit = false;
+		if (flee)
+		{
+			shouldTriggerExit = !HasInfluenceOnTile(currentNode, rangedUnit, bot);
+		}
+		else
+		{
+			if (!considerEnemyInfluence)
+			{
+				shouldTriggerExit = HasInfluenceOnTile(currentNode, rangedUnit, bot);
+			}
+			if (!shouldTriggerExit)
+			{
+				shouldTriggerExit = ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange, bot);
+			}
+		}
 		if (shouldTriggerExit)
 		{
-			returnPos = GetCommandPositionFromPath(currentNode, rangedUnit, bot);
+			if (considerEnemyInfluence)
+			{
+				returnPos = GetCommandPositionFromPath(currentNode, rangedUnit, bot);
+			}
+			else if(!HasInfluenceOnTile(currentNode, rangedUnit, bot))
+			{
+				returnPos = GetPosition(currentNode->position);
+			}
 			break;
 		}
 
@@ -129,7 +168,8 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPo
 
 				const bool isDiagonal = abs(x + y) != 1;
 				const float creepCost = !rangedUnit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
-				const float nodeCost = (GetInfluenceOnTile(neighborPosition, rangedUnit, bot) + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * (isDiagonal ? sqrt(2) : 1);
+				const float influenceOnTile = considerEnemyInfluence ? GetInfluenceOnTile(neighborPosition, rangedUnit, bot) : 0.f;
+				const float nodeCost = (influenceOnTile + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * (isDiagonal ? sqrt(2) : 1);
 				const float totalCost = currentNode->cost + nodeCost;
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
 				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
@@ -234,12 +274,12 @@ float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCT
 
 bool Util::PathFinding::ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot)
 {
-	return GetInfluenceOnTile(node->position, unit, bot) == 0.f && Util::Dist(Util::GetPosition(node->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
+	return !HasInfluenceOnTile(node, unit, bot) && Util::Dist(Util::GetPosition(node->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
 }
 
-bool Util::PathFinding::ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
+bool Util::PathFinding::HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
 {
-	return GetInfluenceOnTile(node->position, unit, bot) == 0.f;
+	return GetInfluenceOnTile(node->position, unit, bot) != 0.f;
 }
 
 float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
@@ -716,7 +756,7 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	for (auto & weapon : unitTypeData.weapons)
 	{
 		// can attack target with a weapon
-		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
+		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
 			maxRange = weapon.range;
 	}
 
@@ -854,7 +894,7 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
 		sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
         for (auto & weapon : unitTypeData.weapons)
         {
-            if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
+            if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
             {
                 float weaponDps = weapon.damage_;
                 for (auto & damageBonus : weapon.damage_bonus)

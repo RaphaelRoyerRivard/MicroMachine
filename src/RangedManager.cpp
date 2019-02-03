@@ -887,55 +887,6 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 	return true;
 }
 
-// Influence Map Node
-struct IMNode {
-	IMNode(CCTilePosition position) :
-		position(position),
-		parent(nullptr),
-		cost(0.f),
-		heuristic(0.f)
-	{
-	}
-	IMNode(CCTilePosition position, IMNode* parent, float heuristic) :
-		position(position),
-		parent(parent),
-		cost(0.f),
-		heuristic(heuristic)
-	{
-	}
-	IMNode(CCTilePosition position, IMNode* parent, float cost, float heuristic) :
-		position(position),
-		parent(parent),
-		cost(cost),
-		heuristic(heuristic)
-	{
-	}
-	CCTilePosition position;
-	IMNode* parent;
-	float cost;
-	float heuristic;
-
-	float getTotalCost() const
-	{
-		return cost + heuristic;
-	}
-
-	bool operator<(const IMNode& rhs) const
-	{
-		return getTotalCost() < rhs.getTotalCost();
-	}
-
-	bool operator<=(const IMNode& rhs) const
-	{
-		return getTotalCost() <= rhs.getTotalCost();
-	}
-
-	bool operator==(const IMNode& rhs) const
-	{
-		return position == rhs.position;
-	}
-};
-
 CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const
 {
 	float variance;

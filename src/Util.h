@@ -24,18 +24,17 @@ namespace Util
 	namespace PathFinding
 	{
 		struct IMNode;
-		//Util::PathFinding::IMNode* getLowestCostNode(std::set<Util::PathFinding::IMNode*> & set);
-		//IMNode* getLowestCostNode(std::set<IMNode*> & set);
 		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
 
+		bool IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
-		CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot);
+		CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool considerEnemyInfluence, CCBot & bot);
 		bool IsNeighborNodeValid(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		CCPosition GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to);
 		bool ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot);
-		bool ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
+		bool HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		float GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
 	}
 
