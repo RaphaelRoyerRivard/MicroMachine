@@ -225,9 +225,6 @@ void WorkerManager::handleGasWorkers()
 				// if it's less than we want it to be, fill 'er up
 				for (int i = 0; i<(gasWorkersTarget - numAssigned); ++i)
 				{
-					/*if (numMineralWorker * 2 <= gasWorkerCount)
-						break;*/
-
 					auto mineralWorker = getMineralWorker(building);
 					if (mineralWorker.isValid())
 					{
@@ -263,7 +260,25 @@ void WorkerManager::handleGasWorkers()
 		{
 			if (--reorderedGasWorker[worker].second > 0)//If order hasn't changed
 			{
-				worker.rightClick(reorderedGasWorker[worker].first);
+				if (reorderedGasWorker[worker].first.isValid())
+				{
+					worker.rightClick(reorderedGasWorker[worker].first);
+				}
+				else
+				{//If no target unit, we stop
+					worker.stop();
+					auto orders = worker.getUnitPtr()->orders;
+					if (orders[0].target_pos.x == 0 && orders[0].target_pos.y == 0)
+					{
+						reorderedGasWorker[worker].second = 0;
+					}
+					else
+					{
+						auto a = 1;
+						//TODO if this break point is ever hit, remove else clause. If it is never hit, might not need to spam stop.
+						//TODO This break point should hit when the worker stops inside the refinery
+					}
+				}
 			}
 			else
 			{
