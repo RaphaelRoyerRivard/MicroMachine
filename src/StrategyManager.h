@@ -46,9 +46,11 @@ class StrategyManager
 	bool m_shouldProduceAntiAir = false;
 	bool m_enemyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
-	bool m_enemyHasFlyingCombatUnit = false;
+	bool m_enemyHasMassZerglings = false;
+	bool m_enemyHasHiSecAutoTracking = false;
+	bool m_enemyOnlyHasFlyingBuildings = false;
 	bool m_focusBuildings = false;
-	bool m_bansheeCloakCompleted = false;
+	std::set<sc2::UPGRADE_ID> m_completedUpgrades;
 
     bool  shouldExpandNow() const;
     const UnitPairVector getProtossBuildOrderGoal() const;
@@ -80,8 +82,14 @@ public:
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
+	bool enemyHasMassZerglings() const { return m_enemyHasMassZerglings; }
+	void setEnemyHasMassZerglings(bool enemyHasMassZerglings) { m_enemyHasMassZerglings = enemyHasMassZerglings; }
+	bool enemyHasHiSecAutoTracking() const { return m_enemyHasHiSecAutoTracking; }
+	void setEnemyHasHiSecAutoTracking(bool enemyHasHiSecAutoTracking) { m_enemyHasHiSecAutoTracking = enemyHasHiSecAutoTracking; }
+	bool enemyOnlyHasFlyingBuildings() const { return m_enemyOnlyHasFlyingBuildings; }
+	void setEnemyOnlyHasFlyingBuildings(bool enemyOnlyHasFlyingBuildings) { m_enemyOnlyHasFlyingBuildings = enemyOnlyHasFlyingBuildings; }
 	bool shouldFocusBuildings() const { return m_focusBuildings; }
 	void setFocusBuildings(bool focusBuildings) { m_focusBuildings = focusBuildings; }
-	bool isBansheeCloakCompleted() const { return m_bansheeCloakCompleted; }
-	void setBansheeCloakCompleted(bool bansheeCloakCompleted) { m_bansheeCloakCompleted = bansheeCloakCompleted; }
+	bool isUpgradeCompleted(sc2::UPGRADE_ID upgradeId) const { return m_completedUpgrades.find(upgradeId) != m_completedUpgrades.end(); }
+	void setUpgradeCompleted(sc2::UPGRADE_ID upgradeId) { m_completedUpgrades.insert(upgradeId); }
 };

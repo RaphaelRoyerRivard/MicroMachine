@@ -269,7 +269,7 @@ bool UnitType::isCreepTumor() const
 CCPositionType UnitType::getAttackRange() const
 {
 #ifdef SC2API
-    return Util::GetMaxAttackRange(m_bot->Observation()->GetUnitTypeData()[m_type]);
+    return Util::GetMaxAttackRange(m_bot->Observation()->GetUnitTypeData()[m_type], *m_bot);
 #else
     // TODO: this is ground weapon range right now
     return m_type.groundWeapon().maxRange();

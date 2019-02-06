@@ -217,11 +217,11 @@ void ProductionManager::manageBuildOrderQueue()
 				firstBarrackBuilt = true;
 
 				auto baseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-				auto supplyDepots = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT);
+				auto & supplyDepots = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT);
 				
-				if (supplyDepots.begin() != supplyDepots.end())//If we have a depot
+				if (!supplyDepots.empty())//If we have a depot
 				{
-					auto supplyDepot = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT).begin()->second;
+					auto & supplyDepot = supplyDepots[0];
 
 					auto basePosition = baseLocation->getDepotPosition();
 					auto point = supplyDepot.getTilePosition();
@@ -251,63 +251,86 @@ void ProductionManager::manageBuildOrderQueue()
 
 					break;
 				}				
-			}			
+			}
 
-			// if we can make the current item
-			if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
+			bool idleProductionBuilding = false;
+			if(currentItem.type.isBuilding())
 			{
-				Unit producer = getProducer(currentItem.type);
-
-				// build supply if we need some (SupplyBlock)
-				if (producer.isValid()
-					&& m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+				auto productionBuildingTypes = getProductionBuildingTypes();
+				const sc2::UnitTypeID itemType = currentItem.type.getUnitType().getAPIUnitType();
+				if(std::find(productionBuildingTypes.begin(), productionBuildingTypes.end(), itemType) != productionBuildingTypes.end())
 				{
-					supplyBlockedFrames++;
-#if _DEBUG
-					Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
-#else
-					Util::Log(__FUNCTION__, "Supply blocked | 0x00000007");
-#endif
-				}
-
-				if (canMakeNow(producer, currentItem.type))
-				{
-					// create it and remove it from the _queue
-					create(producer, currentItem);
-					m_queue.removeCurrentHighestPriorityItem();
-
-					// don't actually loop around in here
-					break;
+					auto & productionBuildings = m_bot.GetAllyUnits(itemType);
+					for(auto & productionBuilding : productionBuildings)
+					{
+						auto & orders = productionBuilding.getUnitPtr()->orders;
+						if(orders.empty() || orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+						{
+							idleProductionBuilding = true;
+							break;
+						}
+					}
 				}
 			}
 
-			// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
-			if (m_bot.Data(currentItem.type).isBuilding
-				&& !m_bot.Data(currentItem.type).isAddon
-				&& !currentItem.type.getUnitType().isMorphedBuilding()
-				&& meetsReservedResourcesWithExtra(currentItem.type, additionalReservedMineral, additionalReservedGas))
+			if (!idleProductionBuilding)
 			{
-				Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
-				//Get building location
-				const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, false);
-				if (targetLocation != CCTilePosition(0, 0))
+				// if we can make the current item
+				if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 				{
-					Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
-					if (worker.isValid())
-					{
-						worker.move(targetLocation);
+					Unit producer = getProducer(currentItem.type);
 
+					// build supply if we need some (SupplyBlock)
+					if (producer.isValid()
+						&& m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+					{
+						supplyBlockedFrames++;
+#if _DEBUG
+						Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
+#else
+						Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", m_bot);
+#endif
+					}
+
+					if (canMakeNow(producer, currentItem.type))
+					{
 						// create it and remove it from the _queue
-						create(worker, currentItem);
+						create(producer, currentItem);
 						m_queue.removeCurrentHighestPriorityItem();
 
 						// don't actually loop around in here
 						break;
 					}
 				}
-				else
+
+				// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
+				if (m_bot.Data(currentItem.type).isBuilding
+					&& !m_bot.Data(currentItem.type).isAddon
+					&& !currentItem.type.getUnitType().isMorphedBuilding()
+					&& meetsReservedResourcesWithExtra(currentItem.type, additionalReservedMineral, additionalReservedGas))
 				{
-					Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
+					Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
+					//Get building location
+					const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, false);
+					if (targetLocation != CCTilePosition(0, 0))
+					{
+						Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
+						if (worker.isValid())
+						{
+							worker.move(targetLocation);
+
+							// create it and remove it from the _queue
+							create(worker, currentItem);
+							m_queue.removeCurrentHighestPriorityItem();
+
+							// don't actually loop around in here
+							break;
+						}
+					}
+					else
+					{
+						Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
+					}
 				}
 			}
 		}
@@ -334,6 +357,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
+	const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
 
 	const int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 
@@ -367,7 +391,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 			}
 		}
-		else if (ccCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter))
+		// We want to wait for our first Banshee to build our second CC, otherwise we might have difficulty defending it **COMMENTED**
+		else if (ccCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) /*&& bansheeCount > 0*/)
 		{
 			m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
 		}
@@ -377,21 +402,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
 			{
-				/*if (!m_queue.contains(MetaTypeEnum::Starport))
-				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::Starport, false);
-				}
-				if (!m_queue.contains(MetaTypeEnum::StarportTechLab))
-				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::StarportTechLab, false);
-				}*/
 				//if (productionScore < (float)baseCount)
 				{
-					bool hasPicked = false;
-					MetaType toBuild;
 					const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 					if (productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
+						bool hasPicked = false;
+						MetaType toBuild;
 						const int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) +
 							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
 						if (starportCount > starportAddonCount)
@@ -405,43 +422,48 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
 						}
 					}
-					if(!hasPicked)
-					{//Building
-						const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-						if (barracksCount < 1)
-						{
-							toBuild = MetaTypeEnum::Barracks;
-							hasPicked = true;
-						}
-						else if (starportCount < baseCount * 2)
-						{
-							toBuild = MetaTypeEnum::Starport;
-							hasPicked = true;
-						}
+					//Building
+					bool hasPicked = false;
+					MetaType toBuild;
+					const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
+					const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
+					if (barracksCount < 1)
+					{
+						toBuild = MetaTypeEnum::Barracks;
+						hasPicked = true;
+					}
+					else if (m_bot.Strategy().enemyHasMetabolicBoost() && factoryCount * 2 < baseCount)
+					{
+						toBuild = MetaTypeEnum::Factory;
+						hasPicked = true;
+					}
+					else if (starportCount < baseCount * (m_bot.Strategy().enemyHasMetabolicBoost() ? 1 : 2))
+					{
+						toBuild = MetaTypeEnum::Starport;
+						hasPicked = true;
+					}
 
-						if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
-						{
-							m_queue.queueAsLowestPriority(toBuild, false);
-						}
+					if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
+					{
+						m_queue.queueAsLowestPriority(toBuild, false);
 					}
 				}
 
-				if (!isTechStarted(MetaTypeEnum::BansheeCloak))
+				if (!isTechStarted(MetaTypeEnum::BansheeCloak) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
 				{
 					queueTech(MetaTypeEnum::BansheeCloak);
 				}
 
-				if (!isTechStarted(MetaTypeEnum::HyperflightRotors))
+				if (!isTechStarted(MetaTypeEnum::HyperflightRotors) && bansheeCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
 				{
 					queueTech(MetaTypeEnum::HyperflightRotors);
 				}
 
-				if (!m_queue.contains(MetaTypeEnum::Reaper) && m_bot.CombatAnalyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 3)
+				if (!m_bot.Strategy().enemyHasMetabolicBoost() && !m_queue.contains(MetaTypeEnum::Reaper) && m_bot.CombatAnalyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 3)
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
 
-				const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 
 				if (bansheeCount + vikingCount >= 5)
@@ -460,188 +482,41 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 
-				if (m_bot.Strategy().isEarlyRushed() && !m_queue.contains(MetaTypeEnum::Hellion))
+				if ((m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
 				}
 
-				if (m_bot.Strategy().shouldProduceAntiAir())
+				if(m_bot.Strategy().enemyHasMetabolicBoost())
 				{
-					if (!m_queue.contains(MetaTypeEnum::Viking) && vikingCount < 2 * bansheeCount)
+					const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
+					if (hellionCount >= 2 && !isTechStarted(MetaTypeEnum::InfernalPreIgniter) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HIGHCAPACITYBARRELS))
 					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+						queueTech(MetaTypeEnum::InfernalPreIgniter);
 					}
-
-					if (!isTechStarted(MetaTypeEnum::HiSecAutoTracking))
-					{
-						queueTech(MetaTypeEnum::HiSecAutoTracking);
-					}
-				}
-				break;
-			}
-			case StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING :
-			{
-				// the strategy does not use the barracks, so we remove the barracks score
-				//const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-				//if (productionScore - 0.25f * barracksCount < (float)baseCount)
-				{
-					bool hasPicked = false;
-					MetaType toBuild;
-					const int factoryAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true) +
-						m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryReactor.getUnitType(), false, true);
-					const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-					const int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) +
-						m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
-					if (factoryAddonCount < 1 || starportCount > starportAddonCount)
-					{//Addon
-						if (factoryAddonCount < 1)
-						{
-							// Commented because it will be added automatically as when we need to do the upgrade (and we might want to wait to build hellions instead)
-							//toBuild = MetaTypeEnum::FactoryTechLab;
-							//hasPicked = true;
-						}
-						else if (starportCount > starportAddonCount)
-						{
-							toBuild = MetaTypeEnum::StarportTechLab;
-							hasPicked = true;
-						}
-
-						if (hasPicked && !m_queue.contains(toBuild))
-						{
-							m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
-						}
-					}
-					if (!hasPicked)
-					{//Building
-						const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-						if (factoryCount + 1 < baseCount)
-						{
-							toBuild = MetaTypeEnum::Factory;
-							hasPicked = true;
-						}
-						else if (starportCount < baseCount)
-						{
-							toBuild = MetaTypeEnum::Starport;
-							hasPicked = true;
-						}
-
-						if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
-						{
-							m_queue.queueAsLowestPriority(toBuild, false);
-						}
-					}
-				}
-
-				if (!isTechStarted(MetaTypeEnum::BansheeCloak))
-				{
-					queueTech(MetaTypeEnum::BansheeCloak);
-				}
-
-				if (!isTechStarted(MetaTypeEnum::HyperflightRotors))
-				{
-					queueTech(MetaTypeEnum::HyperflightRotors);
-				}
-
-				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
-				if (hellionCount >= 2 && !isTechStarted(MetaTypeEnum::InfernalPreIgniter))
-				{
-					queueTech(MetaTypeEnum::InfernalPreIgniter);
-				}
-
-				const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), true, true);
-				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true);
-				if (hellionCount + bansheeCount + vikingCount >= 5)
-				{
-					queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
-				}
-				
-				if (!m_queue.contains(MetaTypeEnum::Hellion))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
-				}
-
-				/*if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Marine))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
-				}*/
-
-				if (!m_queue.contains(MetaTypeEnum::Banshee))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 
 				if (m_bot.Strategy().shouldProduceAntiAir())
 				{
-					if (!m_queue.contains(MetaTypeEnum::Viking) && vikingCount < 2 * bansheeCount)
+					if (vikingCount < 2 * bansheeCount && !m_queue.contains(MetaTypeEnum::Viking))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
 
-					if (!isTechStarted(MetaTypeEnum::HiSecAutoTracking))
+					if (!isTechStarted(MetaTypeEnum::HiSecAutoTracking) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HISECAUTOTRACKING))
 					{
 						queueTech(MetaTypeEnum::HiSecAutoTracking);
 					}
 				}
-
+				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings())
+				{
+					if (vikingCount < 1 && !m_queue.contains(MetaTypeEnum::Viking))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+					}
+				}
 				break;
 			}
-			/*case StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER:
-			{
-				if (productionScore < (float)baseCount)
-				{
-					bool hasPicked = false;
-					MetaType toBuild;
-					if (productionBuildingAddonCount < productionBuildingCount)
-					{//Addon
-						int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-						int barracksAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true) + 
-							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
-						if (barracksCount > barracksAddonCount)
-						{
-							toBuild = MetaTypeEnum::BarracksTechLab;
-							hasPicked = true;
-						}
-
-						if (hasPicked && !m_queue.contains(toBuild))
-						{
-							m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
-						}
-					}
-					if (!hasPicked)
-					{//Building
-						int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-						if (barracksCount < baseCount * 2)
-						{
-							toBuild = MetaTypeEnum::Barracks;
-							hasPicked = true;
-						}
-
-						if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
-						{
-							m_queue.queueAsLowestPriority(toBuild, false);
-						}
-					}
-				}
-
-				if (std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::Stimpack) == startedUpgrades.end() && !m_queue.contains(MetaTypeEnum::Stimpack))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Stimpack, 0, false));
-					startedUpgrades.push_back(MetaTypeEnum::Stimpack);
-				}
-
-				int marinesCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marine.getUnitType(), false, true);
-				int maraudersCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), false, true);
-				if (!m_queue.contains(MetaTypeEnum::Marine) && marinesCount < maraudersCount * 2 + 1)
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
-				}
-
-				if (!m_queue.contains(MetaTypeEnum::Marauder))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marauder, 0, false));
-				}
-				break;
-			}*/
 			case StrategyPostBuildOrder::WORKER_RUSH_DEFENSE:
 			{
 				if (!m_queue.contains(MetaTypeEnum::Reaper))
@@ -655,79 +530,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				return;
 			}
-			/*case StrategyPostBuildOrder::TERRAN_ANTI_AIR:
-			{
-				bool hasPicked = false;
-				MetaType toBuild;
-				const int barrackTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true);
-				const int barrackReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
-				const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-				const int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) + 
-					m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
-				if (barrackTechlabCount + barrackReactorCount < 1 || starportCount > starportAddonCount)
-				{//Addon
-					if (barrackTechlabCount + barrackReactorCount < 1)
-					{
-						toBuild = MetaTypeEnum::BarracksReactor;
-						hasPicked = true;
-					}
-					else if (starportCount > starportAddonCount)
-					{
-						toBuild = MetaTypeEnum::StarportTechLab;
-						hasPicked = true;
-					}
-
-					if (hasPicked && !m_queue.contains(toBuild))
-					{
-						m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
-					}
-				}
-				if (!hasPicked)
-				{//Building
-					int barrackCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-					if (barrackCount < baseCount)
-					{
-						toBuild = MetaTypeEnum::Barracks;
-						hasPicked = true;
-					}
-					else if (starportCount < baseCount)
-					{
-						toBuild = MetaTypeEnum::Starport;
-						hasPicked = true;
-					}
-
-					if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
-					{
-						m_queue.queueAsLowestPriority(toBuild, false);
-					}
-				}
-
-				if (!m_queue.contains(MetaTypeEnum::Marine))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
-				}
-
-				int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
-				int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
-				if (vikingCount < 2 * bansheeCount)
-				{
-					if (!m_queue.contains(MetaTypeEnum::Viking))
-					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
-					}
-				}
-				else
-				{
-					if (!m_queue.contains(MetaTypeEnum::Banshee))
-					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
-					}
-				}
-
-				auto infantryUpgrade = queueUpgrade(MetaTypeEnum::TerranInfantryWeaponsLevel1);
-				auto vehiculeUpgrade = queueUpgrade(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
-				break;
-			}*/
 			case StrategyPostBuildOrder::NO_STRATEGY:
 				break;
 			default:
@@ -1187,33 +989,37 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
     return getClosestUnitToPosition(candidateProducers, closestTo);
 }
 
-int ProductionManager::getProductionBuildingsCount() const
+std::vector<sc2::UNIT_TYPEID> ProductionManager::getProductionBuildingTypes() const
 {
 	switch (m_bot.GetSelfRace())
 	{
-		case CCRace::Terran:
-		{
-
-			return m_bot.Buildings().getBuildingCountOfType({
-				sc2::UNIT_TYPEID::TERRAN_BARRACKS, 
-				sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, 
-				sc2::UNIT_TYPEID::TERRAN_FACTORY, 
-				sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING, 
-				sc2::UNIT_TYPEID::TERRAN_STARPORT, 
-				sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING });
-		}
-		case CCRace::Protoss:
-		{
-			//TODO
-			return 0;
-		}
-		case CCRace::Zerg:
-		{
-			//TODO
-			return 0;
-		}
+	case CCRace::Terran:
+	{
+		return {sc2::UNIT_TYPEID::TERRAN_BARRACKS,
+			sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING,
+			sc2::UNIT_TYPEID::TERRAN_FACTORY,
+			sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING,
+			sc2::UNIT_TYPEID::TERRAN_STARPORT,
+			sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
 	}
-	return 0;
+	case CCRace::Protoss:
+	{
+		//TODO
+		return {};
+	}
+	case CCRace::Zerg:
+	{
+		//TODO
+		return {};
+	}
+	}
+	return {};
+}
+
+int ProductionManager::getProductionBuildingsCount() const
+{
+	auto productionBuildingTypes = getProductionBuildingTypes();
+	return m_bot.Buildings().getBuildingCountOfType(productionBuildingTypes);
 }
 
 int ProductionManager::getProductionBuildingsAddonsCount() const
@@ -1222,14 +1028,14 @@ int ProductionManager::getProductionBuildingsAddonsCount() const
 	{
 		case CCRace::Terran:
 		{
-
-			return m_bot.Buildings().getBuildingCountOfType({
+			std::vector<sc2::UNIT_TYPEID> addonTypes = {
 				sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR,
 				sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB,
 				sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR,
 				sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB,
 				sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB });
+				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB };
+			return m_bot.Buildings().getBuildingCountOfType(addonTypes);
 		}
 		case CCRace::Protoss:
 		{
@@ -1257,15 +1063,18 @@ float ProductionManager::getProductionScore() const
 			score += m_bot.Buildings().getBuildingCountOfType({
 				sc2::UNIT_TYPEID::TERRAN_STARPORT }) * 0.5f;
 
-			score += m_bot.Buildings().getBuildingCountOfType({
+			std::vector<sc2::UNIT_TYPEID> barracksAddonTypes = {
 				sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB }) * 0.25f;
-			score += m_bot.Buildings().getBuildingCountOfType({
+				sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB };
+			score += m_bot.Buildings().getBuildingCountOfType(barracksAddonTypes) * 0.25f;
+			std::vector<sc2::UNIT_TYPEID> factoryAddonTypes = {
 				sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB }) * 0.25f;
-			score += m_bot.Buildings().getBuildingCountOfType({
+				sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB };
+			score += m_bot.Buildings().getBuildingCountOfType(factoryAddonTypes) * 0.25f;
+			std::vector<sc2::UNIT_TYPEID> starportAddonTypes = {
 				sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB }) * 0.5f;
+				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB };
+			score += m_bot.Buildings().getBuildingCountOfType(starportAddonTypes) * 0.5f;
 			break;
 		}
 		case CCRace::Protoss:
@@ -1386,7 +1195,7 @@ void ProductionManager::queueUpgrade(const MetaType & type)
 						{
 							m_queue.queueAsLowestPriority(potentialUpgrade, false);
 							startedUpgrades.push_back(potentialUpgrade);
-							Util::DebugLog(__FUNCTION__, "queue " + potentialUpgrade.getName());
+							Util::DebugLog(__FUNCTION__, "queue " + potentialUpgrade.getName(), m_bot);
 							return;
 						}
 					}
@@ -1411,7 +1220,7 @@ void ProductionManager::queueTech(const MetaType & type)
 {
 	m_queue.queueItem(BuildOrderItem(type, 0, false));
 	startedUpgrades.push_back(type);
-	Util::DebugLog(__FUNCTION__, "Queue " + type.getName());
+	Util::DebugLog(__FUNCTION__, "Queue " + type.getName(), m_bot);
 }
 
 void ProductionManager::validateUpgradesProgress()
@@ -1441,14 +1250,14 @@ void ProductionManager::validateUpgradesProgress()
 			if (progress > 0.95f)//About to finish, lets consider it done.
 			{
 				toRemove.push_back(upgrade.first);
-				Util::DebugLog(__FUNCTION__, "upgrade finished " + upgrade.first.getName());
+				Util::DebugLog(__FUNCTION__, "upgrade finished " + upgrade.first.getName(), m_bot);
 			}
 		}
 		else
 		{
 			toRemove.push_back(upgrade.first);
 			startedUpgrades.remove(upgrade.first);
-			Util::DebugLog(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName());
+			Util::DebugLog(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName(), m_bot);
 		}
 	}
 	for (auto & remove : toRemove)
@@ -1526,7 +1335,7 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 			Util::DisplayError("Trying to start an already started upgrade.", "0x00000006", m_bot);
 		}
 		incompletUpgrades.insert(std::make_pair(item.type, producer));
-		Util::DebugLog(__FUNCTION__, "upgrade starting " + item.type.getName());
+		Util::DebugLog(__FUNCTION__, "upgrade starting " + item.type.getName(), m_bot);
     }
 }
 

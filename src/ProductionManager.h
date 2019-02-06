@@ -58,6 +58,7 @@ public:
     void    drawProductionInformation();
 
     Unit getProducer(const MetaType & type, CCPosition closestTo = CCPosition(0, 0)) const;
+	std::vector<sc2::UNIT_TYPEID> getProductionBuildingTypes() const;
 	int getProductionBuildingsCount() const;
 	int getProductionBuildingsAddonsCount() const;
 	float getProductionScore() const;

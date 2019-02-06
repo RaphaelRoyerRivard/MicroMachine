@@ -3,7 +3,6 @@
 #include "Common.h"
 #include "MicroManager.h"
 
-struct IMNode;
 class CCBot;
 
 struct RangedUnitAction
@@ -136,7 +135,7 @@ private:
 	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float squaredDistanceToGoal, bool unitShouldHeal);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;
 	CCPosition GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange) const;
-	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats);
+	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats, bool unitShouldHeal);
 	bool CanUseKD8Charge(const sc2::Unit * rangedUnit) const;
 	bool ExecuteKD8ChargeLogic(const sc2::Unit * rangedUnit, const sc2::Unit * threat);
 	CCPosition GetFleeVectorFromThreat(const sc2::Unit * rangedUnit, const sc2::Unit * threat, CCPosition fleeVec, float distance, float threatRange) const;
@@ -144,15 +143,6 @@ private:
 	CCPosition GetRepulsionVectorFromFriendlyReapers(const sc2::Unit * reaper, sc2::Units & rangedUnits) const;
 	CCPosition GetAttractionVectorToFriendlyHellions(const sc2::Unit * hellion, sc2::Units & rangedUnits) const;
 	bool MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const;
-	CCPosition FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const;
-	CCPosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal) const;
-	CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const;
-	bool IsNeighborNodeValid(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit) const;
-	CCPosition GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit) const;
-	float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to) const;
-	bool ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange) const;
-	bool ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit) const;
-	float GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit) const;
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	float getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const;
 	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);

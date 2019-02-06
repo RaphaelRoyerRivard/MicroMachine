@@ -26,10 +26,7 @@ void CCBot::OnUnitCreated(const sc2::Unit*) {}
 void CCBot::OnUnitIdle(const sc2::Unit*) {}
 void CCBot::OnUpgradeCompleted(sc2::UpgradeID upgrade)
 {
-	if(upgrade == sc2::UPGRADE_ID::BANSHEECLOAK)
-	{
-		m_strategy.setBansheeCloakCompleted(true);
-	}
+	m_strategy.setUpgradeCompleted(upgrade);
 }
 void CCBot::OnBuildingConstructionComplete(const sc2::Unit*) {}
 void CCBot::OnNydusDetected() {}
@@ -279,6 +276,7 @@ void CCBot::checkKeyState()
 void CCBot::setUnits()
 {
     m_allUnits.clear();
+	m_allyUnitsPerType.clear();
 	m_unitCount.clear();
 	m_unitCompletedCount.clear();
 #ifdef SC2API
@@ -293,6 +291,7 @@ void CCBot::setUnits()
 		if (unitptr->alliance == sc2::Unit::Self || unitptr->alliance == sc2::Unit::Ally)
 		{
 			m_allyUnits.insert_or_assign(unitptr->tag, unit);
+			m_allyUnitsPerType[unitptr->unit_type].push_back(unit);
 			bool isMorphingResourceDepot = false;
 			if (unit.getType().isResourceDepot())
 			{
@@ -381,11 +380,31 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
 						break;
 					default:
-						m_strategy.setShouldProduceAntiAir(true);
-						if(unit.getType().isBuilding())
-							Actions()->SendChat("Lifting your buildings won't save them forever.");
+						if (unit.getType().isBuilding() && !m_strategy.enemyOnlyHasFlyingBuildings())
+						{
+							bool enemyHasGroundUnit = false;
+							for(auto & knownEnemyTypes : m_knownEnemyUnitsPerType)
+							{
+								if(!knownEnemyTypes.second.empty())
+								{
+									if(!knownEnemyTypes.second[0].isFlying())
+									{
+										enemyHasGroundUnit = true;
+										break;
+									}
+								}
+							}
+							if(!enemyHasGroundUnit)
+							{
+								m_strategy.setEnemyOnlyHasFlyingBuildings(true);
+								Actions()->SendChat("Lifting your buildings won't save them for long.");
+							}
+						}
 						else
+						{
+							m_strategy.setShouldProduceAntiAir(true);
 							Actions()->SendChat("What!? Air units? I'm not ready! :s");
+						}
 					}
 				}
 
@@ -433,6 +452,7 @@ void CCBot::setUnits()
     }
 
 	m_knownEnemyUnits.clear();
+	m_knownEnemyUnitsPerType.clear();
 	for(auto& enemyUnitPair : m_enemyUnits)
 	{
 		bool ignoreEnemyUnit = false;
@@ -444,9 +464,14 @@ void CCBot::setUnits()
 		// If mobile unit is not seen for too long (around 4s), ignore it
 		else if (!enemyUnit.getType().isBuilding() && enemyUnitPtr->last_seen_game_loop + 100 < GetGameLoop())
 			ignoreEnemyUnit = true;
-		if(!ignoreEnemyUnit)
+		if (!ignoreEnemyUnit)
+		{
 			m_knownEnemyUnits.push_back(enemyUnit);
+			m_knownEnemyUnitsPerType[enemyUnitPtr->unit_type].push_back(enemyUnit);
+		}
 	}
+
+	m_strategy.setEnemyHasMassZerglings(m_knownEnemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
 #else
     for (auto & unit : BWAPI::Broodwar->getAllUnits())
     {
@@ -712,17 +737,9 @@ std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()
 	return m_allyUnits;
 }
 
-std::map<sc2::Tag, Unit> CCBot::GetAllyUnits(sc2::UNIT_TYPEID type)
+const std::vector<Unit> & CCBot::GetAllyUnits(sc2::UNIT_TYPEID type)
 {
-	std::map<sc2::Tag, Unit> units;
-	for (auto unit : m_allyUnits)
-	{
-		if (unit.second.getAPIUnitType() == type)
-		{
-			units.insert(unit);
-		}
-	}
-	return units;
+	return m_allyUnitsPerType[type];
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits()
@@ -741,6 +758,11 @@ const std::vector<Unit> & CCBot::GetUnits() const
 const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
 {
 	return m_knownEnemyUnits;
+}
+
+const std::vector<Unit> & CCBot::GetKnownEnemyUnits(sc2::UnitTypeID type)
+{
+	return m_knownEnemyUnitsPerType[type];
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetNeutralUnits()

@@ -19,17 +19,12 @@ const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
-const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
-const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
-const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
-const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_COOLDOWN = 342;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 80;
-const float CLIFF_MIN_HEIGHT_DIFFERENCE = 1.f;
-const float CLIFF_MAX_HEIGHT_DIFFERENCE = 2.5f;
+const float VIKING_LANDING_DISTANCE_FROM_GOAL = 10.f;
 const int ACTION_REEXECUTION_FREQUENCY = 50;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
@@ -230,7 +225,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if(buff == sc2::BUFF_ID::LOCKON)
 		{
 			// Banshee in danger should cloak itself
-			if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, true))
+			if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, true))
 			{
 				m_bot.StopProfiling("0.10.4.1.5.1.3          CheckBuffs");
 				return;
@@ -282,7 +277,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
-	if (!unitShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
+	if (ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats, unitShouldHeal))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 		return;
@@ -316,7 +311,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (AllowUnitToPathFind(rangedUnit))
 	{
 		const CCPosition pathFindEndPos = target && !unitShouldHeal ? target->pos : goal;
-		CCPosition closePositionInPath = FindOptimalPathToTarget(rangedUnit, pathFindEndPos, target ? unitAttackRange : 3.f);
+		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, target ? unitAttackRange : 3.f, m_bot);
 		if (closePositionInPath != CCPosition())
 		{
 			const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
@@ -347,7 +342,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		{
 			if(isHellion && threat && threat->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 			{
-				Util::DebugLog(__FUNCTION__, "Threat is too close to HELLION for using potential fields.");
+				//Util::DebugLog(__FUNCTION__, "Threat is too close to HELLION for using potential fields.", m_bot);
 			}
 			useInfluenceMap = true;
 			break;
@@ -400,7 +395,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			{
 				std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used potential fields to move to (" +
 					std::to_string(pathableTile.x) + ", " + std::to_string(pathableTile.y) + ")";
-				Util::DebugLog(__FUNCTION__, str);
+				//Util::DebugLog(__FUNCTION__, str, bot);
 			}
 			const auto action = RangedUnitAction(MicroActionType::Move, pathableTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 			PlanAction(rangedUnit, action);
@@ -409,13 +404,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 		if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 		{
-			Util::DebugLog(__FUNCTION__, "HELLION failed to use potential fields.");
+			//Util::DebugLog(__FUNCTION__, "HELLION failed to use potential fields.", bot);
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 
 	// Banshee in danger should cloak itself if low on hp
-	if (isBanshee && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
+	if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
 	{
 		return;
 	}
@@ -423,13 +418,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
 	// If close to an unpathable position or in danger
 	// Use influence map to find safest path
-	CCPosition safeTile = FindOptimalPathToSafety(rangedUnit, goal);
+	CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, m_bot);
 	//safeTile = AttenuateZigzag(rangedUnit, threats, safeTile, summedFleeVec);	//if we decomment this, we must not break in the threat check loop
 	if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 	{
 		std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used influence maps to move to (" +
 			std::to_string(safeTile.x) + ", " + std::to_string(safeTile.y) + ")";
-		Util::DebugLog(__FUNCTION__, str);
+		//Util::DebugLog(__FUNCTION__, str, bot);
 	}
 	const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 	PlanAction(rangedUnit, action);
@@ -452,6 +447,9 @@ bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit) const
 
 bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger)
 {
+	if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
+		return false;
+
 	//TODO consider detectors
 	// Cloak if the amount of energy is rather high or HP is low
 	if (banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f))
@@ -507,7 +505,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squa
 			morph = true;
 		}
 	}
-	else if (squaredDistanceToGoal < 7.f * 7.f && !target)
+	else if (squaredDistanceToGoal < VIKING_LANDING_DISTANCE_FROM_GOAL * VIKING_LANDING_DISTANCE_FROM_GOAL && !target)
 	{
 		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 		{
@@ -603,7 +601,7 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 	return dirVec;
 }
 
-bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats)
+bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats, bool unitShouldHeal)
 {
 	if (threats.empty())
 		return false;
@@ -663,6 +661,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		// If the unit has a target, add it to the close units and calculate its power 
 		if(unitTarget)
 		{
+			// If the unit is not alone and should heal, we should let it flee
+			if (unit != rangedUnit && unitShouldHeal)
+				return false;
+
 			closeUnits.push_back(unit);
 			closeUnitsTarget.insert_or_assign(unit, unitTarget);
 			unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
@@ -687,7 +689,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			const auto unit = unitAndTarget.first;
 			const auto unitTarget = unitAndTarget.second;
 
-			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && m_bot.Strategy().isBansheeCloakCompleted() && ExecuteBansheeCloakLogic(rangedUnit, false))
+			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ExecuteBansheeCloakLogic(rangedUnit, false))
 			{
 				continue;
 			}
@@ -883,244 +885,6 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 	}
 	outPathableTile = moveTo;
 	return true;
-}
-
-// Influence Map Node
-struct IMNode {
-	IMNode(CCTilePosition position) :
-		position(position),
-		parent(nullptr),
-		cost(0.f),
-		heuristic(0.f)
-	{
-	}
-	IMNode(CCTilePosition position, IMNode* parent, float heuristic) :
-		position(position),
-		parent(parent),
-		cost(0.f),
-		heuristic(heuristic)
-	{
-	}
-	IMNode(CCTilePosition position, IMNode* parent, float cost, float heuristic) :
-		position(position),
-		parent(parent),
-		cost(cost),
-		heuristic(heuristic)
-	{
-	}
-	CCTilePosition position;
-	IMNode* parent;
-	float cost;
-	float heuristic;
-
-	float getTotalCost() const
-	{
-		return cost + heuristic;
-	}
-
-	bool operator<(const IMNode& rhs) const
-	{
-		return getTotalCost() < rhs.getTotalCost();
-	}
-
-	bool operator<=(const IMNode& rhs) const
-	{
-		return getTotalCost() <= rhs.getTotalCost();
-	}
-
-	bool operator==(const IMNode& rhs) const
-	{
-		return position == rhs.position;
-	}
-};
-
-IMNode* getLowestCostNode(std::set<IMNode*> & set)
-{
-	IMNode* lowestCostNode = nullptr;
-	for (const auto node : set)
-	{
-		if (!lowestCostNode || *node < *lowestCostNode)
-			lowestCostNode = node;
-	}
-	return lowestCostNode;
-}
-
-bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost)
-{
-	for (auto n : set)
-	{
-		if (*n == *node)
-		{
-			return !mustHaveLowerCost || *n <= *node;
-		}
-	}
-	return false;
-}
-
-CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const
-{
-	return FindOptimalPath(rangedUnit, goal, maxRange);
-}
-
-CCPosition RangedManager::FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal) const
-{
-	return FindOptimalPath(rangedUnit, goal, 0.f);
-}
-
-CCPosition RangedManager::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const
-{
-	CCPosition returnPos;
-	std::set<IMNode*> opened;
-	std::set<IMNode*> closed;
-
-	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
-	const bool flee = maxRange == 0.f;
-	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
-	const auto start = new IMNode(startPosition);
-	opened.insert(start);
-
-	while (!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE)
-	{
-		IMNode* currentNode = getLowestCostNode(opened);
-		opened.erase(currentNode);
-		closed.insert(currentNode);
-
-		const bool shouldTriggerExit = flee ? ShouldTriggerExit(currentNode, rangedUnit) : ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange);
-		if (shouldTriggerExit)
-		{
-			returnPos = GetCommandPositionFromPath(currentNode, rangedUnit);
-			break;
-		}
-
-		// Find neighbors
-		for (int x = -1; x <= 1; ++x)
-		{
-			for (int y = -1; y <= 1; ++y)
-			{
-				if (!IsNeighborNodeValid(x, y, currentNode, rangedUnit))
-					continue;
-
-				const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
-
-				const bool isDiagonal = abs(x + y) != 1;
-				const float creepCost = !rangedUnit->is_flying && m_bot.Observation()->HasCreep(Util::GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
-				const float nodeCost = (GetInfluenceOnTile(neighborPosition, rangedUnit) + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * (isDiagonal ? sqrt(2) : 1);
-				const float totalCost = currentNode->cost + nodeCost;
-				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
-				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
-
-				if (SetContainsNode(closed, neighbor, false))
-					continue;	// already explored check
-
-				if (SetContainsNode(opened, neighbor, true))
-					continue;	// node already opened and of lower cost
-
-				opened.insert(neighbor);
-			}
-		}
-	}
-	for (auto node : opened)
-		delete node;
-	for (auto node : closed)
-		delete node;
-	return returnPos;
-}
-
-bool RangedManager::IsNeighborNodeValid(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit) const
-{
-	if (x == 0 && y == 0)
-		return false;	// same tile check
-
-	const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
-
-	if (currentNode->parent && neighborPosition == currentNode->parent->position)
-		return false;	// parent tile check
-
-	const CCPosition mapMin = m_bot.Map().mapMin();
-	const CCPosition mapMax = m_bot.Map().mapMax();
-	if (neighborPosition.x < mapMin.x || neighborPosition.y < mapMin.y || neighborPosition.x >= mapMax.x || neighborPosition.y >= mapMax.y)
-		return false;	// out of bounds check
-
-	if (!rangedUnit->is_flying)
-	{
-		if (m_bot.Commander().Combat().getBlockedTiles()[neighborPosition.x][neighborPosition.y])
-			return false;	// tile is blocked
-
-		// TODO check if the unit can pass between 2 blocked tiles (this will need a change in the blocked tiles map to have types of block)
-		// All units can pass between 2 command structures, medium units and small units can pass between a command structure and another building 
-		// while only small units can pass between non command buildings (where "between" means when 2 buildings have their corners touching diagonaly)
-
-		if (!m_bot.Map().isWalkable(neighborPosition))
-		{
-			if (rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_REAPER)
-				return false;	// unwalkable tile check
-
-			if (!m_bot.Map().isWalkable(currentNode->position))
-				return false;	// maybe the reaper is already on an unpathable tile
-
-			const CCTilePosition furtherTile(neighborPosition.x + x, neighborPosition.y + y);
-			if (!m_bot.Map().isWalkable(furtherTile))
-				return false;	// unwalkable next tile check
-
-			const float heightDiff = abs(m_bot.Map().terrainHeight(currentNode->position.x, currentNode->position.y) - m_bot.Map().terrainHeight(furtherTile.x, furtherTile.y));
-			if (heightDiff < CLIFF_MIN_HEIGHT_DIFFERENCE || heightDiff > CLIFF_MAX_HEIGHT_DIFFERENCE)
-				return false;	// unjumpable cliff check
-
-			// TODO neighbor tile will need to have the furtherTile position, while also using cost of both tiles
-		}
-	}
-
-	return true;
-}
-
-CCPosition RangedManager::GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit) const
-{
-	CCPosition returnPos;
-	do
-	{
-		const CCPosition currentPosition = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
-		if (m_bot.Config().DrawHarassInfo)
-			m_bot.Map().drawTile(Util::GetTilePosition(currentPosition), sc2::Colors::Teal, 0.2f);
-		//we want to retun a node close to the current position
-		if (Util::DistSq(currentPosition, rangedUnit->pos) <= 3.f * 3.f && returnPos == CCPosition(0, 0))
-			returnPos = currentPosition;
-		currentNode = currentNode->parent;
-	} while (currentNode != nullptr);
-
-	if (returnPos == CCPosition(0, 0))
-		std::cout << "returnPos is null" << std::endl;
-	else if(rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
-	{
-		//We need to click far enough to jump cliffs
-		const float squareDistance = Util::DistSq(rangedUnit->pos, returnPos);
-		const float terrainHeightDiff = abs(m_bot.Map().terrainHeight(rangedUnit->pos.x, rangedUnit->pos.y) - m_bot.Map().terrainHeight(returnPos.x, returnPos.y));
-		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > CLIFF_MIN_HEIGHT_DIFFERENCE)
-			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
-	}
-	if (m_bot.Config().DrawHarassInfo)
-		m_bot.Map().drawTile(Util::GetTilePosition(returnPos), sc2::Colors::Purple, 0.3f);
-	return returnPos;
-}
-
-float RangedManager::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to) const
-{
-	return Util::Dist(from, to) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER;
-}
-
-bool RangedManager::ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange) const
-{
-	return GetInfluenceOnTile(node->position, unit) == 0.f && Util::Dist(Util::GetPosition(node->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
-}
-
-bool RangedManager::ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit) const
-{
-	return GetInfluenceOnTile(node->position, unit) == 0.f;
-}
-
-float RangedManager::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit) const
-{
-	const auto & influenceMap = unit->is_flying ? m_bot.Commander().Combat().getAirInfluenceMap() : m_bot.Commander().Combat().getGroundInfluenceMap();
-	return influenceMap[tile.x][tile.y];
 }
 
 CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const
@@ -1372,7 +1136,7 @@ void RangedManager::ExecuteActions()
 			break;
 		default:
 			const int type = action.microActionType;
-			Util::DebugLog(__FUNCTION__, "Unknown MicroActionType: " + std::to_string(type));
+			Util::Log(__FUNCTION__, "Unknown MicroActionType: " + std::to_string(type), m_bot);
 			break;
 		}
 		m_bot.GetCommandMutex().unlock();

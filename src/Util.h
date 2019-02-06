@@ -21,7 +21,25 @@ namespace Util
         bool operator()(const sc2::Unit * unit, const sc2::ObservationInterface*);
     };
 
+	namespace PathFinding
+	{
+		struct IMNode;
+		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
+
+		bool IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
+		CCPosition FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot);
+		CCPosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
+		CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool considerEnemyInfluence, CCBot & bot);
+		bool IsNeighborNodeValid(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
+		CCPosition GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
+		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to);
+		bool ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot);
+		bool HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
+		float GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
+	}
+
 	void SetAllowDebug(bool _allowDebug);
+
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);
 
@@ -31,10 +49,11 @@ namespace Util
     float GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
 	float GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot);
     float GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot);
-    float GetMaxAttackRange(sc2::UnitTypeData unitTypeData);
+    float GetMaxAttackRange(sc2::UnitTypeData unitTypeData, CCBot & bot);
 	float GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	float GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot);
 	float GetAirAttackRange(const sc2::Unit * unit, CCBot & bot);
+	float GetAttackRangeBonus(const sc2::UnitTypeID unitType, CCBot & bot);
     float GetArmor(const sc2::Unit * unit, CCBot & bot);
 	float GetGroundDps(const sc2::Unit * unit, CCBot & bot);
 	float GetAirDps(const sc2::Unit * unit, CCBot & bot);
@@ -81,14 +100,14 @@ namespace Util
     CCTilePosition  GetTilePosition(const CCPosition & pos);
     CCPosition      GetPosition(const CCTilePosition & tile);
     std::string     GetStringFromRace(const CCRace & race);
-    bool            UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & m_bot);
-	void			DisplayError(const std::string & error, const std::string & errorCode, CCBot & m_bot, bool isCritical = false);
+    bool            UnitCanMetaTypeNow(const Unit & unit, const UnitType & type, CCBot & bot);
+	void			DisplayError(const std::string & error, const std::string & errorCode, CCBot & bot, bool isCritical = false);
 	void			ClearDisplayedErrors();
-	void			CreateLog(CCBot & m_bot);
-	void			DebugLog(const std::string & function);
-	void			DebugLog(const std::string & function, const std::string & message);
-	void			Log(const std::string & function);
-	void			Log(const std::string & function, const std::string & message);
+	void			CreateLog(CCBot & bot);
+	void			DebugLog(const std::string & function, CCBot & bot);
+	void			DebugLog(const std::string & function, const std::string & message, CCBot & bot);
+	void			Log(const std::string & function, CCBot & bot);
+	void			Log(const std::string & function, const std::string & message, CCBot & bot);
     UnitType        GetTownHall(const CCRace & race, CCBot & bot);
     UnitType        GetRefinery(const CCRace & race, CCBot & bot);
 	UnitType        GetSupplyProvider(const CCRace & race, CCBot & bot);

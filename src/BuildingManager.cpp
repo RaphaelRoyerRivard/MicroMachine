@@ -370,7 +370,7 @@ void BuildingManager::validateWorkersAndBuildings()
         if (!b.buildingUnit.isValid())
         {
             toRemove.push_back(b);
-			Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.");
+			Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
         }
     }
 
@@ -416,11 +416,19 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 			{
 				continue;
 			}
-
+			
 			b.finalPosition = testLocation;
 
 			// grab the worker unit from WorkerManager which is closest to this final position
-			Unit builderUnit = m_bot.Workers().getBuilder(b, true);
+			Unit builderUnit = m_bot.Workers().getBuilder(b, false);
+			m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
+			//Test if worker path is safe
+			if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+			{
+				continue;
+			}
+			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
+			m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
 			b.builderUnit = builderUnit;
 
 			if (!b.builderUnit.isValid())
@@ -671,7 +679,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 		// if the building has a builder that died or that is not a builder anymore because of a bug
 		if (!b.builderUnit.isValid())
 		{
-			Util::DebugLog(__FUNCTION__, "BuilderUnit is invalid");
+			Util::DebugLog(__FUNCTION__, "BuilderUnit is invalid", m_bot);
 			continue;
 		}
 
@@ -682,16 +690,20 @@ void BuildingManager::checkForDeadTerranBuilders()
 			if (m_buildingsNewWorker.find(tag) == m_buildingsNewWorker.end() || !m_buildingsNewWorker[tag].isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(m_buildingsNewWorker[tag]) != WorkerJobs::Build)
 			{
 				// grab the worker unit from WorkerManager which is closest to this final position
-				Unit newBuilderUnit = m_bot.Workers().getBuilder(b, true);
+				Unit newBuilderUnit = m_bot.Workers().getBuilder(b, false);
 				if (!newBuilderUnit.isValid())
 				{
-					Util::DebugLog(__FUNCTION__, "Worker is invalid");
+					Util::DebugLog(__FUNCTION__, "Worker is invalid", m_bot);
 					continue;
 				}
+				if (!Util::PathFinding::IsPathToGoalSafe(newBuilderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+				{
+					continue;
+				}
+				m_bot.Workers().getWorkerData().setWorkerJob(newBuilderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
 				b.builderUnit = newBuilderUnit;
 				b.status = BuildingStatus::Assigned;
 				m_buildingsNewWorker[tag] = newBuilderUnit;
-
 			}
 		}
 		m_buildingsProgress[tag] = progress;
@@ -1012,7 +1024,7 @@ int BuildingManager::getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isC
 	return count;
 }
 
-int BuildingManager::getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> b, bool isCompleted) const
+int BuildingManager::getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted) const
 {
 	int count = 0;
 	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))

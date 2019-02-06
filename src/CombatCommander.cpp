@@ -1045,6 +1045,9 @@ void CombatCommander::updateDefenseSquads()
 		}
     }
 
+	m_bot.Strategy().setIsWorkerRushed(workerRushed);
+	m_bot.Strategy().setIsEarlyRushed(earlyRushed);
+
 	// If we have at least one region under attack
 	if(!regions.empty())
 	{
@@ -1193,7 +1196,7 @@ void CombatCommander::updateDefenseSquads()
 			}
 			else
 			{
-				Util::Log(__FUNCTION__, "Cannot assign unit of type " + unit.getType().getName() + " to squad " + squad.getName());
+				Util::Log(__FUNCTION__, "Cannot assign unit of type " + unit.getType().getName() + " to squad " + squad.getName(), m_bot);
 			}
 
 			// We remove that unit from the score maps of all regions
@@ -1211,9 +1214,6 @@ void CombatCommander::updateDefenseSquads()
 		}
 		m_bot.StopProfiling("0.10.4.2.2.6      affectUnits");
 	}
-
-	m_bot.Strategy().setIsWorkerRushed(workerRushed);
-	m_bot.Strategy().setIsEarlyRushed(earlyRushed);
 }
 
 void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy)
@@ -1330,7 +1330,8 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & woker, const Squad & defen
 		!closestEnemy.isFlying() &&
 		(defenseSquad.getName() == "ScoutDefense" ||  // do not check distances if it is to protect against a scout
 		Util::DistSq(woker, pos) < 15.f * 15.f &&	// worker should not get too far from base
-		(Util::DistSq(woker, closestEnemy) < 7.f * 7.f ||	// worker can fight only units close to it
+		(m_bot.Strategy().isWorkerRushed() ||		// do not check min distance if worker rushed
+		Util::DistSq(woker, closestEnemy) < 7.f * 7.f ||	// worker can fight only units close to it
 		(closestEnemy.getType().isBuilding() && Util::DistSq(closestEnemy, pos) < 12.f * 12.f))))	// worker can fight buildings somewhat close to the base
 		return true;
 	return false;

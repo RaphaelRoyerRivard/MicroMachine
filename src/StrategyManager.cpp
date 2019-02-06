@@ -49,20 +49,10 @@ const Strategy & StrategyManager::getCurrentStrategy() const
 
 const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 {
-	//return StrategyPostBuildOrder::TERRAN_REAPER;
-	/*if (m_shouldProduceAntiAir)
-	{
-		return StrategyPostBuildOrder::TERRAN_ANTI_AIR;
-	}*/
-	if (m_enemyHasMetabolicBoost)
-	{
-		return StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING;
-	}
 	if (m_bot.Strategy().isWorkerRushed())
 	{
 		return StrategyPostBuildOrder::WORKER_RUSH_DEFENSE;
 	}
-	//return StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER;
 	return StrategyPostBuildOrder::TERRAN_REAPER;
 }
 
