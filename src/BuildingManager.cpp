@@ -416,11 +416,19 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 			{
 				continue;
 			}
-
+			
 			b.finalPosition = testLocation;
 
 			// grab the worker unit from WorkerManager which is closest to this final position
-			Unit builderUnit = m_bot.Workers().getBuilder(b, true);
+			Unit builderUnit = m_bot.Workers().getBuilder(b, false);
+			m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
+			//Test if worker path is safe
+			if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+			{
+				continue;
+			}
+			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
+			m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
 			b.builderUnit = builderUnit;
 
 			if (!b.builderUnit.isValid())
@@ -504,7 +512,6 @@ void BuildingManager::constructAssignedBuildings()
             {
                 // TODO: in here is where we would check to see if the builder died on the way
                 //       or if things are taking too long, or the build location is no longer valid
-                // If the building has been started and no more worker are on it.
 
                 b.builderUnit.rightClick(b.buildingUnit);
 				b.status = BuildingStatus::UnderConstruction;
@@ -576,77 +583,77 @@ void BuildingManager::constructAssignedBuildings()
 // STEP 4: UPDATE DATA STRUCTURES FOR BUILDINGS STARTING CONSTRUCTION
 void BuildingManager::checkForStartedConstruction()
 {
-// for each building unit which is being constructed
-for (auto buildingStarted : m_bot.UnitInfo().getUnits(Players::Self))
-{
-	// filter out units which aren't buildings under construction
-	if (!buildingStarted.getType().isBuilding() || !buildingStarted.isBeingConstructed())
+	// for each building unit which is being constructed
+	for (auto buildingStarted : m_bot.UnitInfo().getUnits(Players::Self))
 	{
-		continue;
-	}
-
-	// check all our building status objects to see if we have a match and if we do, update it
-
-	for (auto & b : m_buildings)
-	{
-		if (b.status != BuildingStatus::Assigned)
+		// filter out units which aren't buildings under construction
+		if (!buildingStarted.getType().isBuilding() || !buildingStarted.isBeingConstructed())
 		{
 			continue;
 		}
-		auto type = b.type;
 
-		// check if the positions match
-		int addonOffset = (type.isAddon() ? 3 : 0);
-		int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
-		int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
+		// check all our building status objects to see if we have a match and if we do, update it
 
-		if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
+		for (auto & b : m_buildings)
 		{
-			if (b.buildingUnit.isValid())
+			if (b.status != BuildingStatus::Assigned)
 			{
-				std::cout << "Building mis-match somehow\n";
 				continue;
 			}
+			auto type = b.type;
 
-			// the resources should now be spent, so unreserve them
-			m_reservedMinerals -= buildingStarted.getType().mineralPrice();
-			m_reservedGas -= buildingStarted.getType().gasPrice();
+			// check if the positions match
+			int addonOffset = (type.isAddon() ? 3 : 0);
+			int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
+			int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
 
-			// flag it as started and set the buildingUnit
-			b.underConstruction = true;
-			b.buildingUnit = buildingStarted;
-			m_buildingsProgress[buildingStarted.getTag()] = 0;
-
-			// if we are zerg, the buildingUnit now becomes nullptr since it's destroyed
-			if (Util::IsZerg(m_bot.GetSelfRace()))
+			if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
 			{
-				b.builderUnit = Unit();
-			}
-			else if (Util::IsProtoss(m_bot.GetSelfRace()))
-			{
-				m_bot.Workers().finishedWithWorker(b.builderUnit);
-				b.builderUnit = Unit();
-			}
+				if (b.buildingUnit.isValid())
+				{
+					std::cout << "Building mis-match somehow\n";
+					continue;
+				}
 
-			// put it in the under construction vector
-			b.status = BuildingStatus::UnderConstruction;
+				// the resources should now be spent, so unreserve them
+				m_reservedMinerals -= buildingStarted.getType().mineralPrice();
+				m_reservedGas -= buildingStarted.getType().gasPrice();
 
-			//Check for invalid data
-			if (type.tileWidth() > 5 || type.tileHeight() > 5 || type.tileWidth() < 1 || type.tileHeight() < 1)
-			{
-				std::cout << "Invalid size for free space " << type.tileWidth() << " x " << type.tileHeight() << "\n";
-			}
-			else
-			{
-				// free this space
-				m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
-			}
+				// flag it as started and set the buildingUnit
+				b.underConstruction = true;
+				b.buildingUnit = buildingStarted;
+				m_buildingsProgress[buildingStarted.getTag()] = 0;
 
-			// only one building will match
-			break;
+				// if we are zerg, the buildingUnit now becomes nullptr since it's destroyed
+				if (Util::IsZerg(m_bot.GetSelfRace()))
+				{
+					b.builderUnit = Unit();
+				}
+				else if (Util::IsProtoss(m_bot.GetSelfRace()))
+				{
+					m_bot.Workers().finishedWithWorker(b.builderUnit);
+					b.builderUnit = Unit();
+				}
+
+				// put it in the under construction vector
+				b.status = BuildingStatus::UnderConstruction;
+
+				//Check for invalid data
+				if (type.tileWidth() > 5 || type.tileHeight() > 5 || type.tileWidth() < 1 || type.tileHeight() < 1)
+				{
+					std::cout << "Invalid size for free space " << type.tileWidth() << " x " << type.tileHeight() << "\n";
+				}
+				else
+				{
+					// free this space
+					m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
+				}
+
+				// only one building will match
+				break;
+			}
 		}
 	}
-}
 }
 
 // STEP 5: IF WE ARE TERRAN, THIS MATTERS, SO: LOL
@@ -676,20 +683,30 @@ void BuildingManager::checkForDeadTerranBuilders()
 			continue;
 		}
 
-		auto workerJob = m_bot.Workers().getWorkerData().getWorkerJob(b.builderUnit);
-		if ((!b.builderUnit.isAlive() ||
-			(workerJob != WorkerJobs::Build && b.buildingUnit.getUnitPtr()->build_progress != 1.0f)))
+		auto progress = b.buildingUnit.getUnitPtr()->build_progress;
+		auto tag = b.buildingUnit.getTag();
+		if (progress <= m_buildingsProgress[tag])
 		{
-			// grab the worker unit from WorkerManager which is closest to this final position
-			Unit newBuilderUnit = m_bot.Workers().getBuilder(b, true);
-			if (!newBuilderUnit.isValid())
+			if (m_buildingsNewWorker.find(tag) == m_buildingsNewWorker.end() || !m_buildingsNewWorker[tag].isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(m_buildingsNewWorker[tag]) != WorkerJobs::Build)
 			{
-				Util::DebugLog(__FUNCTION__, "Worker is invalid", m_bot);
-				continue;
+				// grab the worker unit from WorkerManager which is closest to this final position
+				Unit newBuilderUnit = m_bot.Workers().getBuilder(b, false);
+				if (!newBuilderUnit.isValid())
+				{
+					Util::DebugLog(__FUNCTION__, "Worker is invalid", m_bot);
+					continue;
+				}
+				if (!Util::PathFinding::IsPathToGoalSafe(newBuilderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+				{
+					continue;
+				}
+				m_bot.Workers().getWorkerData().setWorkerJob(newBuilderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
+				b.builderUnit = newBuilderUnit;
+				b.status = BuildingStatus::Assigned;
+				m_buildingsNewWorker[tag] = newBuilderUnit;
 			}
-			b.builderUnit = newBuilderUnit;
-			b.status = BuildingStatus::Assigned;
 		}
+		m_buildingsProgress[tag] = progress;
     }
 }
 
@@ -1030,6 +1047,7 @@ void BuildingManager::removeBuildings(const std::vector<Building> & toRemove)
         {
 			m_buildingsProgress.erase(it->buildingUnit.getTag());
             m_buildings.erase(it);
+			m_buildingsNewWorker.erase(b.buildingUnit.getTag());
         }
     }
 }

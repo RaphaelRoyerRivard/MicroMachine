@@ -640,7 +640,7 @@ void ProductionManager::lowPriorityChecks()
 	// build a refinery if we are missing one
 	//TODO doesn't handle extra hatcheries, doesn't handle rich geyser
 	auto refinery = Util::GetRefinery(m_bot.GetSelfRace(), m_bot);
-	if (!m_queue.contains(MetaType(refinery, m_bot)))
+	if (m_bot.Workers().canHandleMoreRefinery() && !m_queue.contains(MetaType(refinery, m_bot)))
 	{
 		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
 		{
@@ -648,7 +648,7 @@ void ProductionManager::lowPriorityChecks()
 			auto geyserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true);
 			if (geyserCount < baseCount * 2)
 			{
-				m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), false);
+				m_queue.queueAsLowestPriority(MetaType(refinery, m_bot), false);
 			}
 		}
 	}

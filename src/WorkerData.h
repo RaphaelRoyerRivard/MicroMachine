@@ -20,6 +20,7 @@ class WorkerData
     std::map<Unit, int>     m_refineryWorkerCount;
     std::map<Unit, int>     m_depotWorkerCount;
     std::map<Unit, Unit>    m_workerRefineryMap;
+	std::map<Unit, std::vector<Unit>> m_refineryWorkerMap;
     std::map<Unit, Unit>    m_workerDepotMap;
     std::map<Unit, std::set<Unit>>    m_workerRepairing;
     std::map<Unit, Unit>    m_workerRepairTarget;
@@ -29,6 +30,7 @@ class WorkerData
     void GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & worker, Unit & bestMineral, double & bestDist) const;
 
 public:
+	std::map<Unit, std::pair<Unit, int>> m_reorderedGasWorker;
 
     WorkerData(CCBot & bot);
 
@@ -40,6 +42,7 @@ public:
     size_t  getNumWorkers() const;
     int     getWorkerJobCount(int job) const;
     int     getNumAssignedWorkers(const Unit & unit);
+	std::vector<Unit> getAssignedWorkersRefinery(const Unit & unit);
     int     getWorkerJob(const Unit & unit) const;
 	int		getCountWorkerAtDepot(Unit & depot) const;
     Unit    getMineralToMine(const Unit & unit) const;
