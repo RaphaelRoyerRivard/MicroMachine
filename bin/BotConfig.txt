@@ -74,7 +74,7 @@
 		"AllowKeyControl"			: true,
 		
         "DrawGameInfo"              : false, 
-        "DrawProductionInfo"        : false, 
+        "DrawProductionInfo"        : true, 
         "DrawBaseLocationInfo"      : false,
         "DrawStartingRamp"		    : false,
         "DrawWall"		   			: false,
@@ -95,7 +95,7 @@
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
-        "DrawProfilingInfo"         : false,
+        "DrawProfilingInfo"         : true,
         "DrawInfluenceMaps"         : true,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
