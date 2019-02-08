@@ -687,6 +687,10 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		range = 8.f;
 	}
+	else if(unitType == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED)
+	{
+		range = 5.f;
+	}
 
 	return range;
 }
@@ -941,9 +945,13 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 		if (where != sc2::Weapon::TargetType::Air)
 			dps = 13.7f;
 	}
-	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_CARRIER)
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_CARRIER)
 	{
 		dps = 37.4f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED)
+	{
+		dps = 50.f;	//DPS is not really relevant since it's a single powerful attack
 	}
 
     return dps;
