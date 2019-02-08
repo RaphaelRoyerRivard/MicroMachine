@@ -125,6 +125,7 @@ void BotConfig::readConfigFile()
         JSONTools::ReadBool("WeakestEnemy", micro, WeakestEnemy);
 		JSONTools::ReadBool("HighestPriority", micro, HighestPriority);
 		JSONTools::ReadBool("EnableMultiThreading", micro, EnableMultiThreading);
+		JSONTools::ReadBool("TournamentMode", micro, TournamentMode);
     }
 
     if (j.count("UCTConsideringDurations") && j["UCTConsideringDurations"].is_object())

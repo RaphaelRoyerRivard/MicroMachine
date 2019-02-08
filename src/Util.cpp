@@ -121,7 +121,7 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPo
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
 
-	while (!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE)
+	while (!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE * (bot.Config().TournamentMode ? 3 : 1))
 	{
 		IMNode* currentNode = getLowestCostNode(opened);
 		opened.erase(currentNode);

@@ -92,6 +92,7 @@ public:
     bool WeakestEnemy;
     bool HighestPriority;
 	bool EnableMultiThreading;
+	bool TournamentMode;
     
     int WorkersPerRefinery;
     int BuildingSpacing;

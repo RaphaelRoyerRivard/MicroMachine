@@ -42,7 +42,8 @@
         "MaxTargetDistance"         : 20,
         "MaxWorkerRepairDistance"   : 20,
         "ScoutHarassEnemy"          : true,
-        "EnableMultiThreading"      : false
+        "EnableMultiThreading"      : false,
+        "TournamentMode"            : false
     },
     
     "UCTConsideringDurations" :
