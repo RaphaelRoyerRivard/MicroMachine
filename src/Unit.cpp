@@ -497,7 +497,7 @@ bool Unit::isConstructingAnything() const
 		auto tag = getTag();
 		for (auto & b : m_bot->Buildings().getBuildings())
 		{
-			if (b.builderUnit.getTag() == tag)
+			if (b.builderUnit.isValid() && b.builderUnit.getTag() == tag)
 			{
 				return true;
 			}

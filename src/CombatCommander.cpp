@@ -76,10 +76,6 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	updateInfluenceMaps();
 	m_bot.StopProfiling("0.10.4.0    updateInfluenceMaps");
 
-	m_bot.StartProfiling("0.10.4.1    m_squadData.onFrame");
-    m_squadData.onFrame();
-	m_bot.StopProfiling("0.10.4.1    m_squadData.onFrame");
-
 	m_bot.StartProfiling("0.10.4.2    updateSquads");
     if (isSquadUpdateFrame())
     {
@@ -96,6 +92,10 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
         updateBackupSquads();
     }
 	m_bot.StopProfiling("0.10.4.2    updateSquads");
+
+	m_bot.StartProfiling("0.10.4.1    m_squadData.onFrame");
+	m_squadData.onFrame();
+	m_bot.StopProfiling("0.10.4.1    m_squadData.onFrame");
 
 	m_bot.StartProfiling("0.10.4.3    lowPriorityCheck");
 	lowPriorityCheck();

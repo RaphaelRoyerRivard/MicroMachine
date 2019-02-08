@@ -159,7 +159,7 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool min
     }
 	else if (job == WorkerJobs::Idle)
 	{
-		unit.stop();
+		//unit.stop();
 	}
 }
 
