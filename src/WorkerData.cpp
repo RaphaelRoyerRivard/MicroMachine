@@ -87,7 +87,7 @@ void WorkerData::updateWorker(const Unit & unit)
 
 void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool mineralWorkerTargetJobUnit)
 {
-	const int spamOrderDuring = 25;//1 second is 24.4 frames
+	const int spamOrderDuring = 75 * 5;//1 second is 24.4 frames * 5
 	if (getWorkerJob(unit) == WorkerJobs::Gas)
 	{
 		m_reorderedGasWorker[unit] = std::pair<Unit, int>(jobUnit, spamOrderDuring);
