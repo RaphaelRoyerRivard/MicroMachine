@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
     coordinator.StartGame(mapString);
 
     // Step forward the game simulation.
-    while (coordinator.Update() && !bot.shouldConcede())
+    while (coordinator.Update())
     {
     }
     return 0;

@@ -12,7 +12,6 @@ CCBot::CCBot(std::string botVersion)
 	, m_combatAnalyzer(*this)
 	, m_gameCommander(*this)
 	, m_techTree(*this)
-	, m_concedeNextFrame(false)
 	, m_concede(false)
 {
 	if(botVersion != "")
@@ -555,11 +554,10 @@ void CCBot::updatePreviousFrameEnemyUnitPos()
 
 void CCBot::checkForConcede()
 {
-	m_concede = m_concedeNextFrame;
-	if(m_allyUnits.size() == 1)
+	if(!m_concede && m_allyUnits.size() == 1)
 	{
-		Actions()->SendChat("GG");
-		m_concedeNextFrame = true;
+		m_concede = true;
+		Actions()->SendChat("Pineapple");
 	}
 }
 

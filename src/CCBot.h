@@ -60,7 +60,6 @@ class CCBot
 	CCRace selfRace;
 	std::map<std::string, Profiler> m_profilingTimes;
 	std::mutex m_command_mutex;
-	bool m_concedeNextFrame;
 	bool m_concede;
 
 	//KeyState
