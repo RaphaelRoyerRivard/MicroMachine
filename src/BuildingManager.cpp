@@ -421,10 +421,15 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 
 			// grab the worker unit from WorkerManager which is closest to this final position
 			Unit builderUnit = m_bot.Workers().getBuilder(b, false);
-			m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
 			//Test if worker path is safe
-			if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+			if (!builderUnit.isValid())
 			{
+				continue;
+			}
+			m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
+			if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+			{
+				m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 				continue;
 			}
 			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
