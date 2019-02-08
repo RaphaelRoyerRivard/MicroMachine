@@ -10,6 +10,7 @@ class WorkerManager
     CCBot & m_bot;
 	bool m_isFirstFrame = true;
 	int gasWorkersTarget = 3;
+	std::list<Unit> buildingAutomaticallyRepaired;
 
     mutable WorkerData  m_workerData;
     Unit m_previousClosestWorker;
