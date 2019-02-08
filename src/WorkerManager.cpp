@@ -260,7 +260,7 @@ void WorkerManager::handleGasWorkers()
 		{
 			if (--(reorderedGasWorker[worker].second) > 0)//If order hasn't changed
 			{
-				if (reorderedGasWorker[worker].second % 5 != 0)
+				if (reorderedGasWorker[worker].second % 15 != 0)
 				{
 					continue;
 				}
