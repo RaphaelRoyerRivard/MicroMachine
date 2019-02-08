@@ -36,10 +36,6 @@ class ProductionManager
     void    manageBuildOrderQueue();
 	void	putImportantBuildOrderItemsInQueue();
 	void	QueueDeadBuildings();
-    int     getFreeMinerals();
-    int     getFreeGas();
-	int     getExtraMinerals();
-	int     getExtraGas();
 
 	void	fixBuildOrderDeadlock(BuildOrderItem & item);
 	void	lowPriorityChecks();
@@ -63,6 +59,10 @@ public:
 	int getProductionBuildingsAddonsCount() const;
 	float getProductionScore() const;
 	float getProductionScoreInQueue();
+	int getFreeMinerals();
+	int getFreeGas();
+	int getExtraMinerals();
+	int getExtraGas();
 	bool meetsReservedResources(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
 	bool meetsReservedResourcesWithExtra(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);

@@ -372,6 +372,11 @@ void WorkerManager::handleRepairWorkers()
         }*/
     }
 
+	if (m_bot.Commander().Production().getFreeMinerals() < 100)//Stop repairing if not enough minerals
+	{
+		return;
+	}
+
 	//Repair station (RepairStation)
 	int MAX_REPAIR_WORKER = 6;
 	int REPAIR_STATION_SIZE = 3;
@@ -434,6 +439,34 @@ void WorkerManager::handleRepairWorkers()
 						}
 					}
 				}
+			}
+		}
+	}
+	
+	//Repair low health buildings
+	const float minHealth = 30.f;
+	const float maxHealth = 100.f;
+	for (auto & building : m_bot.Buildings().getBaseBuildings())
+	{
+		auto percentage = building.getHitPointsPercentage();
+		//Skip building being repaired
+		if (std::find(buildingAutomaticallyRepaired.begin(), buildingAutomaticallyRepaired.end(), building) != buildingAutomaticallyRepaired.end())
+		{
+			if (percentage >= maxHealth)
+			{
+				buildingAutomaticallyRepaired.remove(building);
+			}
+			continue;
+		}
+
+		if (building.isCompleted() && percentage <= minHealth)
+		{
+			auto position = building.getPosition();
+			auto worker = getClosestMineralWorkerTo(position);
+			if (Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), position, m_bot))
+			{
+				setRepairWorker(worker, building);
+				buildingAutomaticallyRepaired.push_back(building);
 			}
 		}
 	}
