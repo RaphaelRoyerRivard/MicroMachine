@@ -260,6 +260,11 @@ void WorkerManager::handleGasWorkers()
 		{
 			if (--(reorderedGasWorker[worker].second) > 0)//If order hasn't changed
 			{
+				if (reorderedGasWorker[worker].second % 15 != 0)
+				{
+					continue;
+				}
+
 				if (it->first.isValid())
 				{
 					worker.rightClick(it->first);

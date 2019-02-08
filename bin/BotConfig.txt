@@ -23,8 +23,8 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Terran",
-        "MapFile"                   : "ParaSiteLE.SC2Map",
+        "EnemyRace"                 : "Zerg",
+        "MapFile"                   : "KairosJunctionLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -74,7 +74,7 @@
 		"AllowKeyControl"			: true,
 		
         "DrawGameInfo"              : false, 
-        "DrawProductionInfo"        : true, 
+        "DrawProductionInfo"        : false, 
         "DrawBaseLocationInfo"      : false,
         "DrawStartingRamp"		    : false,
         "DrawWall"		   			: false,
