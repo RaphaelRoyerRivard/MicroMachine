@@ -258,25 +258,19 @@ void WorkerManager::handleGasWorkers()
 		auto it = reorderedGasWorker.find(worker);
 		if (it != reorderedGasWorker.end())
 		{
-			if (--reorderedGasWorker[worker].second > 0)//If order hasn't changed
+			if (--(reorderedGasWorker[worker].second) > 0)//If order hasn't changed
 			{
-				if (reorderedGasWorker[worker].first.isValid())
+				if (it->first.isValid())
 				{
-					worker.rightClick(reorderedGasWorker[worker].first);
+					worker.rightClick(it->first);
 				}
 				else
 				{//If no target unit, we stop
 					worker.stop();
 					auto orders = worker.getUnitPtr()->orders;
-					if (orders[0].target_pos.x == 0 && orders[0].target_pos.y == 0)
+					if (!orders.empty() && orders[0].target_pos.x == 0 && orders[0].target_pos.y == 0)
 					{
 						reorderedGasWorker[worker].second = 0;
-					}
-					else
-					{
-						auto a = 1;
-						//TODO if this break point is ever hit, remove else clause. If it is never hit, might not need to spam stop.
-						//TODO This break point should hit when the worker stops inside the refinery
 					}
 				}
 			}
