@@ -5,6 +5,7 @@
 
 BaseLocationManager::BaseLocationManager(CCBot & bot)
     : m_bot(bot)
+	, m_areBaseLocationPtrsSorted(false)
 {
     
 }
@@ -118,44 +119,6 @@ void BaseLocationManager::onStart()
 	{
 		Util::DisplayError("Invalid setup detected.", "0x0000000", m_bot);
 	}
-
-	//Sorting base locations from closest to opponent's starting base to farthest
-	struct SortClosestToOpponentStartingLocation
-	{
-		const std::vector<const BaseLocation *> & startingBaseLocations;
-
-		SortClosestToOpponentStartingLocation(const std::vector<const BaseLocation *> & bases) : startingBaseLocations(bases) { }
-
-		inline bool operator() (const BaseLocation * baseLocationPtr1, const BaseLocation * baseLocationPtr2)
-		{
-			float dist1 = 0.f, dist2 = 0.f;
-
-			for (const BaseLocation* startingBaseLocation : startingBaseLocations)
-			{
-				//TODO not sure why first starting base location in the vector is not a player base (should be opponent's but is set to false)
-				if (!startingBaseLocation->isPlayerStartLocation(Players::Self))
-				{
-					// get the tile position of the bases
-					auto tile1 = baseLocationPtr1->getPosition();
-					auto tile2 = baseLocationPtr2->getPosition();
-
-					// the base's distance from opponent starting base
-					int dist1 = startingBaseLocation->getGroundDistance(tile1);
-					int dist2 = startingBaseLocation->getGroundDistance(tile2);
-
-					if (dist1 < 0)
-						dist1 = INT_MAX;
-					if (dist2 < 0)
-						dist2 = INT_MAX;
-
-					break;
-				}
-			}
-
-			return dist1 < dist2;
-		}
-	};
-    sort(m_baseLocationPtrs.begin(), m_baseLocationPtrs.end(), SortClosestToOpponentStartingLocation(m_startingBaseLocations));
 
     // construct the map of tile positions to base locations
 	const CCPosition mapMin = m_bot.Map().mapMin();
@@ -312,6 +275,11 @@ void BaseLocationManager::onFrame()
         }
     }
 	m_bot.StopProfiling("0.6.7   setOccupiedBaseLocations");
+
+	if(!m_areBaseLocationPtrsSorted && m_playerStartingBaseLocations[Players::Enemy] != nullptr)
+	{
+		sortBaseLocationPtrs();
+	}
 
     // draw the debug information for each base location
     
@@ -524,4 +492,33 @@ CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit
 		}
 	}
 	return closestBase;
+}
+
+void BaseLocationManager::sortBaseLocationPtrs()
+{
+	//Sorting base locations from closest to opponent's starting base to farthest
+	std::vector<const BaseLocation *> sortedBaseLocationPtrs;
+	std::map<const BaseLocation *, float> baseLocationDistances;
+	const BaseLocation * enemyStartingBaseLocation = m_playerStartingBaseLocations[Players::Enemy];
+	for(const auto baseLocation : m_baseLocationPtrs)
+	{
+		baseLocationDistances.insert_or_assign(baseLocation, Util::DistSq(enemyStartingBaseLocation->getPosition(), baseLocation->getPosition()));
+	}
+	while(!baseLocationDistances.empty())
+	{
+		float smallestDistance = 0.f;
+		const BaseLocation * baseLocation = nullptr;
+		for(const auto baseLocationDistancePair : baseLocationDistances)
+		{
+			if(!baseLocation || baseLocationDistancePair.second < smallestDistance)
+			{
+				smallestDistance = baseLocationDistancePair.second;
+				baseLocation = baseLocationDistancePair.first;
+			}
+		}
+		sortedBaseLocationPtrs.push_back(baseLocation);
+		baseLocationDistances.erase(baseLocation);
+	}
+	m_baseLocationPtrs = sortedBaseLocationPtrs;
+	m_areBaseLocationPtrsSorted = true;
 }

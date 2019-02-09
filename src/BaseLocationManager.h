@@ -8,12 +8,15 @@ class BaseLocationManager
 {
     CCBot & m_bot;
 
+	bool m_areBaseLocationPtrsSorted;
     std::vector<BaseLocation>                       m_baseLocationData;
     std::vector<const BaseLocation *>               m_baseLocationPtrs;
     std::vector<const BaseLocation *>               m_startingBaseLocations;
     std::map<int, const BaseLocation *>             m_playerStartingBaseLocations;
     std::map<int, std::set<BaseLocation *>>			m_occupiedBaseLocations;
     std::vector<std::vector<BaseLocation *>>        m_tileBaseLocations;
+
+	void sortBaseLocationPtrs();
 
 public:
 
