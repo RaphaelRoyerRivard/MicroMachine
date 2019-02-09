@@ -24,11 +24,13 @@ class CombatCommander
     bool            m_initialized;
     bool            m_attackStarted;
 	int				m_currentBaseExplorationIndex;
+	int				m_currentBaseScoutingIndex;
 
     void            updateScoutDefenseSquad();
 	void            updateDefenseBuildings();
     void            updateDefenseSquads();
     void            updateBackupSquads();
+	void            updateScoutSquad();
 	void            updateHarassSquads();
 	void            updateAttackSquads();
     void            updateIdleSquad();
@@ -40,6 +42,7 @@ class CombatCommander
 
     CCPosition      getMainAttackLocation();
 	CCPosition		exploreMap();
+	CCPosition		GetNextBaseLocationToScout();
 
     void            updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy);
     bool            shouldWeStartAttacking();
