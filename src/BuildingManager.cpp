@@ -366,7 +366,7 @@ void BuildingManager::validateWorkersAndBuildings()
 		{
 			case BuildingStatus::Assigned:
 			{
-				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive())
+				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive())//If the worker died on the way to start the building construction
 				{
 					auto position = b.finalPosition;
 					m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight());
@@ -383,6 +383,9 @@ void BuildingManager::validateWorkersAndBuildings()
 							m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
 						}
 					}
+
+					m_reservedMinerals -= b.type.mineralPrice();
+					m_reservedGas -= b.type.gasPrice();
 
 					toRemove.push_back(b);
 					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);

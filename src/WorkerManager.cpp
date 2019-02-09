@@ -154,11 +154,11 @@ void WorkerManager::handleGasWorkers()
 			}
 			break;
 		case 1:
-			if (numMineralWorker < 6)//If few mineral workers
+			if (numMineralWorker + numRefinery < 6)//If few mineral workers
 			{
 				gasWorkersTarget = 0;
 			}
-			else if (numMineralWorker < numGasWorker + numRefinery)
+			else if (numMineralWorker + numRefinery < numGasWorker)
 			{
 				gasWorkersTarget = 0;
 			}
@@ -172,11 +172,11 @@ void WorkerManager::handleGasWorkers()
 			}
 			break;
 		case 2:
-			if (numMineralWorker < 6)//If few mineral workers
+			if (numMineralWorker + numRefinery < 6)//If few mineral workers
 			{
 				gasWorkersTarget = 0;
 			}
-			else if (numMineralWorker < numGasWorker + numRefinery)
+			else if (numMineralWorker + numRefinery < numGasWorker)
 			{
 				gasWorkersTarget = 1;
 			}
@@ -190,11 +190,7 @@ void WorkerManager::handleGasWorkers()
 			}
 			break;
 		case 3:
-			if (numMineralWorker < 6)//If few mineral workers
-			{
-				gasWorkersTarget = 0;
-			}
-			else if (numMineralWorker < numGasWorker + numRefinery)
+			if (numMineralWorker + numRefinery < numGasWorker)
 			{
 				gasWorkersTarget = 2;
 			}
