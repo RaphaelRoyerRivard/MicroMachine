@@ -144,7 +144,7 @@ void WorkerManager::handleGasWorkers()
 	switch (gasWorkersTarget)
 	{
 		case 0:
-			if (numMineralWorker < numGasWorker + numRefinery)
+			if (numMineralWorker + numRefinery < 6)
 			{
 
 			}

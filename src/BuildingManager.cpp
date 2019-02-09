@@ -362,16 +362,57 @@ void BuildingManager::validateWorkersAndBuildings()
     // find any buildings which have become obsolete
     for (auto & b : m_buildings)
     {
+		switch (b.status)
+		{
+			case BuildingStatus::Assigned:
+			{
+				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive())
+				{
+					auto position = b.finalPosition;
+					m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight());
+
+					//Free oposite of reserved tiles in assignWorkersToUnassignedBuildings
+					switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
+					{
+						//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
+						case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+						case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+						{
+							m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
+							m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
+						}
+					}
+
+					toRemove.push_back(b);
+					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
+				}
+				break;
+			}
+			case BuildingStatus::Size:
+			{
+				break;
+			}
+			case BuildingStatus::Unassigned:
+			{
+				break;
+			}
+			case BuildingStatus::UnderConstruction:
+			{
+				if (!b.buildingUnit.isValid())
+				{
+					toRemove.push_back(b);
+					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
+				}
+				break;
+			}
+		}
         if (b.status != BuildingStatus::UnderConstruction)
         {
             continue;
         }
 
-        if (!b.buildingUnit.isValid())
-        {
-            toRemove.push_back(b);
-			Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
-        }
+        
     }
 
     removeBuildings(toRemove);
@@ -1050,9 +1091,12 @@ void BuildingManager::removeBuildings(const std::vector<Building> & toRemove)
 
         if (it != m_buildings.end())
         {
-			m_buildingsProgress.erase(it->buildingUnit.getTag());
+			if (it->buildingUnit.isValid())
+			{
+				m_buildingsProgress.erase(it->buildingUnit.getTag());
+				m_buildingsNewWorker.erase(b.buildingUnit.getTag());
+			}
             m_buildings.erase(it);
-			m_buildingsNewWorker.erase(b.buildingUnit.getTag());
         }
     }
 }
