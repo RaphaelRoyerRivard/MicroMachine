@@ -6,13 +6,15 @@ const size_t IdlePriority = 0;
 const size_t BackupPriority = 1;
 const size_t HarassPriority = 2;
 const size_t AttackPriority = 2;
-const size_t BaseDefensePriority = 3;
-const size_t ScoutDefensePriority = 4;
-const size_t DropPriority = 4;
+const size_t ScoutPriority = 3;
+const size_t BaseDefensePriority = 4;
+const size_t ScoutDefensePriority = 5;
+const size_t DropPriority = 5;
 
 const float DefaultOrderRadius = 25;			//Order radius is the threat awareness range of units in the squad
 const float MainAttackOrderRadius = 15;
 const float HarassOrderRadius = 15;
+const float ScoutOrderRadius = 6;				//Small number to prevent the scout from targeting far units instead of going to the next base location
 const float MainAttackMaxDistance = 20;			//Distance from the center of the Main Attack Squad for a unit to be considered in it
 const float MainAttackMaxRegroupDuration = 100; //Max number of frames allowed for a regroup order
 const float MainAttackRegroupCooldown = 200;	//Min number of frames required to wait between regroup orders
@@ -26,6 +28,7 @@ CombatCommander::CombatCommander(CCBot & bot)
     , m_initialized(false)
     , m_attackStarted(false)
 	, m_currentBaseExplorationIndex(0)
+	, m_currentBaseScoutingIndex(0)
 {
 
 }
@@ -54,6 +57,9 @@ void CombatCommander::onStart()
 	// the -5 is to prevent enemy workers (during worker rush) to get outside the base defense range
     SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, m_bot.GetStartLocation(), DefaultOrderRadius - 5, "Chase scout");
     m_squadData.addSquad("ScoutDefense", Squad("ScoutDefense", enemyScoutDefense, ScoutDefensePriority, m_bot));
+
+	SquadOrder scoutOrder(SquadOrderTypes::Scout, CCPosition(), ScoutOrderRadius, "Scouting for new bases");
+	m_squadData.addSquad("Scout", Squad("Scout", scoutOrder, ScoutPriority, m_bot));
 
 	initInfluenceMaps();
 }
@@ -87,6 +93,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		m_bot.StartProfiling("0.10.4.2.2    updateDefenseSquads");
         updateDefenseSquads();
 		m_bot.StopProfiling("0.10.4.2.2    updateDefenseSquads");
+		//updateScoutSquad();
 		updateHarassSquads();
 		updateAttackSquads();
         updateBackupSquads();
@@ -521,6 +528,52 @@ void CombatCommander::updateBackupSquads()
 
         ++backupNo;
     }
+}
+
+void CombatCommander::updateScoutSquad()
+{
+	if (m_bot.GetCurrentFrame() < 6000)	//around 4 min
+		return;
+
+	Squad & scoutSquad = m_squadData.getSquad("Scout");
+	if (scoutSquad.getUnits().empty())
+	{
+		Unit bestCandidate;
+		float distanceFromBase = 0.f;
+		for (auto & unit : m_combatUnits)
+		{
+			BOT_ASSERT(unit.isValid(), "null unit in combat units");
+			if (unit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+			{
+				const auto base = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+				if(base)
+				{
+					const float dist = Util::DistSq(unit, base->getPosition());
+					if (!bestCandidate.isValid() || dist < distanceFromBase)
+					{
+						if (m_squadData.canAssignUnitToSquad(unit, scoutSquad))
+						{
+							bestCandidate = unit;
+							distanceFromBase = dist;
+						}
+					}
+				}
+			}
+		}
+		if(bestCandidate.isValid())
+		{
+			m_squadData.assignUnitToSquad(bestCandidate, scoutSquad);
+		}
+	}
+
+	if (scoutSquad.getUnits().empty())
+	{
+		return;
+	}
+
+	//TODO the squad order should be Scout, but in that case it should be supported by the RangedManager
+	const SquadOrder scoutOrder(SquadOrderTypes::Harass, GetNextBaseLocationToScout(), ScoutOrderRadius, "Scout");
+	scoutSquad.setSquadOrder(scoutOrder);
 }
 
 void CombatCommander::updateHarassSquads()
@@ -1452,4 +1505,21 @@ CCPosition CombatCommander::exploreMap()
 	if (m_bot.GetCurrentFrame() % 25 == 0)
 		std::cout << m_bot.GetCurrentFrame() << ": Explore map, base index " << m_currentBaseExplorationIndex << std::endl;
 	return basePosition;
+}
+
+CCPosition CombatCommander::GetNextBaseLocationToScout()
+{
+	const auto & baseLocations = m_bot.Bases().getBaseLocations();
+	auto & squad = m_squadData.getSquad("Scout");
+	if (!squad.getUnits().empty())
+	{
+		const auto & scoutUnit = squad.getUnits()[0];
+		if (baseLocations[m_currentBaseScoutingIndex]->isOccupiedByPlayer(Players::Enemy) ||
+			baseLocations[m_currentBaseScoutingIndex]->isOccupiedByPlayer(Players::Self) ||
+			Util::DistSq(scoutUnit, baseLocations[m_currentBaseScoutingIndex]->getPosition()) < 3.f * 3.f)
+		{
+			m_currentBaseScoutingIndex = (m_currentBaseScoutingIndex + 1) % m_bot.Bases().getBaseLocations().size();
+		}
+	}
+	return baseLocations[m_currentBaseScoutingIndex]->getPosition();
 }
