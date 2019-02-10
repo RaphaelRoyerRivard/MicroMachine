@@ -439,6 +439,18 @@ std::set<Unit> WorkerData::getWorkerRepairingThatTarget(const Unit & unit)
     }
 }
 
+int WorkerData::getWorkerRepairingTargetCount(const Unit & unit)
+{
+	auto it = m_workerRepairing.find(unit);
+
+	// if there is an entry, return it
+	if (it != m_workerRepairing.end())
+	{
+		return it->second.size();
+	}
+	return 0;
+}
+
 void WorkerData::WorkerStoppedRepairing(const Unit & unit)
 {
     auto target = getWorkerRepairTarget(unit);

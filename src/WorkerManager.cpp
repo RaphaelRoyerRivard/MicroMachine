@@ -342,6 +342,8 @@ void WorkerManager::handleIdleWorkers()
 
 void WorkerManager::handleRepairWorkers()
 {
+	const int REPAIR_STATION_MIN_MINERAL = 25;//Also affects the automatic building repairing
+
     // Only terran worker can repair
     if (!Util::IsTerran(m_bot.GetSelfRace()))
         return;
@@ -386,15 +388,31 @@ void WorkerManager::handleRepairWorkers()
         }*/
     }
 
-	if (m_bot.Commander().Production().getFreeMinerals() < 100)//Stop repairing if not enough minerals
+	int mineral = m_bot.Commander().Production().getFreeMinerals();
+	int gas = m_bot.Commander().Production().getFreeGas();
+
+	if (mineral < REPAIR_STATION_MIN_MINERAL)//Stop repairing if not enough minerals
 	{
 		return;
 	}
 
 	//Repair station (RepairStation)
-	int MAX_REPAIR_WORKER = 6;
-	int REPAIR_STATION_SIZE = 3;
-	int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
+	const int MIN_GAS_TO_REPAIR = 5;
+	const int MAX_REPAIR_WORKER = 5;
+	const int FULL_REPAIR_MINERAL = 100;
+	const int FULL_REPAIR_GAS = 50;
+	const int REPAIR_STATION_SIZE = 3;
+	const int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
+	int currentMaxRepairWorker = std::min(MAX_REPAIR_WORKER, (int)floor(MAX_REPAIR_WORKER * (mineral / (float)FULL_REPAIR_MINERAL)));
+	/* Chart of repair worker based on minerals
+	0: 25 mineral-
+	1: 25 mineral+
+	2: 40 mineral+
+	3: 60 mineral+
+	4: 80 mineral+
+	5: 100 mineral+
+	*/
+
 	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
 	{
 		auto bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
@@ -414,7 +432,11 @@ void WorkerManager::handleRepairWorkers()
 				float healthPercentage = unit.getHitPointsPercentage();
 				if (healthPercentage < 100 && !unit.isBeingConstructed())
 				{
+					//Is repairable
 					if (!unit.getType().isRepairable())
+						continue;
+					//Check if we have the required gas to repair it
+					if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
 						continue;
 
 					const float distanceSquare = Util::DistSq(unit, base->getPosition());
@@ -433,7 +455,7 @@ void WorkerManager::handleRepairWorkers()
 				for (auto & worker : getWorkers())
 				{
 					auto it = unitsToRepair.begin();
-					if (repairWorkers >= MAX_REPAIR_WORKER)
+					if (repairWorkers >= currentMaxRepairWorker)
 					{
 						break;
 					}
@@ -457,23 +479,24 @@ void WorkerManager::handleRepairWorkers()
 		}
 	}
 	
-	//Repair low health buildings
-	const float minHealth = 30.f;
-	const float maxHealth = 100.f;
+	//Automatically repair low health buildings, maximum 1 worker
+	const float MIN_HEALTH = 30.f;
+	const float MAX_HEALTH = 100.f;
+	const int MAX_WORKER_PER_BUILDING = 1;
 	for (auto & building : m_bot.Buildings().getBaseBuildings())
 	{
 		auto percentage = building.getHitPointsPercentage();
 		//Skip building being repaired
 		if (std::find(buildingAutomaticallyRepaired.begin(), buildingAutomaticallyRepaired.end(), building) != buildingAutomaticallyRepaired.end())
 		{
-			if (percentage >= maxHealth)
+			if (percentage >= MAX_HEALTH)
 			{
 				buildingAutomaticallyRepaired.remove(building);
 			}
 			continue;
 		}
 
-		if (building.isCompleted() && percentage <= minHealth)
+		if (building.isCompleted() && percentage <= MIN_HEALTH && m_workerData.getWorkerRepairingTargetCount(building) < MAX_WORKER_PER_BUILDING)
 		{
 			auto position = building.getPosition();
 			auto worker = getClosestMineralWorkerTo(position);
