@@ -62,7 +62,7 @@ void RangedManager::setTargets(const std::vector<Unit> & targets)
         if (!targetPtr) { continue; }
         if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_EGG) { continue; }
         if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_LARVA) { continue; }
-		if (filterPassiveBuildings && target.getType().isBuilding() && !target.getType().isCombatUnit()) { continue; }
+		if (filterPassiveBuildings && target.getType().isBuilding() && !target.getType().isCombatUnit() && target.getUnitPtr()->unit_type != sc2::UNIT_TYPEID::ZERG_CREEPTUMOR) { continue; }
 
         rangedUnitTargets.push_back(target);
     }
@@ -151,9 +151,9 @@ int RangedManager::getAttackDuration(const sc2::Unit* unit) const
 
 void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
 {
-	m_bot.StartProfiling("0.10.4.1.5.0        FlagActionsAsFinished");
-	FlagActionsAsFinished();
-	m_bot.StopProfiling("0.10.4.1.5.0        FlagActionsAsFinished");
+	m_bot.StartProfiling("0.10.4.1.5.0        CleanActions");
+	CleanActions(rangedUnits);
+	m_bot.StopProfiling("0.10.4.1.5.0        CleanActions");
 
 	m_bot.StartProfiling("0.10.4.1.5.1        HarassLogicForUnit");
 	if (m_bot.Config().EnableMultiThreading)
@@ -1061,9 +1061,9 @@ bool RangedManager::PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction act
 	return true;
 }
 
-void RangedManager::FlagActionsAsFinished()
+void RangedManager::CleanActions(sc2::Units &rangedUnits)
 {
-	sc2::Units deadUnits;
+	sc2::Units unitsToClear;
 	for (auto & unitAction : unitActions)
 	{
 		const auto rangedUnit = unitAction.first;
@@ -1072,7 +1072,14 @@ void RangedManager::FlagActionsAsFinished()
 		// If the unit is dead, we will need to remove it from the map
 		if(!rangedUnit->is_alive)
 		{
-			deadUnits.push_back(rangedUnit);
+			unitsToClear.push_back(rangedUnit);
+			continue;
+		}
+
+		// If the unit is no longer in this squad
+		if(!Util::Contains(rangedUnit, rangedUnits))
+		{
+			unitsToClear.push_back(rangedUnit);
 			continue;
 		}
 
@@ -1084,9 +1091,9 @@ void RangedManager::FlagActionsAsFinished()
 		action.finished = true;
 	}
 
-	for(auto deadUnit : deadUnits)
+	for(auto unit : unitsToClear)
 	{
-		unitActions.erase(deadUnit);
+		unitActions.erase(unit);
 	}
 }
 

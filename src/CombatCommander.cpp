@@ -93,7 +93,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		m_bot.StartProfiling("0.10.4.2.2    updateDefenseSquads");
         updateDefenseSquads();
 		m_bot.StopProfiling("0.10.4.2.2    updateDefenseSquads");
-		//updateScoutSquad();
+		updateScoutSquad();
 		updateHarassSquads();
 		updateAttackSquads();
         updateBackupSquads();
@@ -532,7 +532,7 @@ void CombatCommander::updateBackupSquads()
 
 void CombatCommander::updateScoutSquad()
 {
-	if (m_bot.GetCurrentFrame() < 6000)	//around 4 min
+	if (m_bot.GetCurrentFrame() < 5856)	//around 4:00
 		return;
 
 	Squad & scoutSquad = m_squadData.getSquad("Scout");
@@ -1517,16 +1517,43 @@ CCPosition CombatCommander::exploreMap()
 CCPosition CombatCommander::GetNextBaseLocationToScout()
 {
 	const auto & baseLocations = m_bot.Bases().getBaseLocations();
+
+	if(baseLocations.size() == m_visitedBaseLocations.size())
+	{
+		m_visitedBaseLocations.clear();
+	}
+
+	CCPosition targetBasePosition;
 	auto & squad = m_squadData.getSquad("Scout");
 	if (!squad.getUnits().empty())
 	{
+		float minDistance = 0.f;
 		const auto & scoutUnit = squad.getUnits()[0];
-		if (baseLocations[m_currentBaseScoutingIndex]->isOccupiedByPlayer(Players::Enemy) ||
-			baseLocations[m_currentBaseScoutingIndex]->isOccupiedByPlayer(Players::Self) ||
-			Util::DistSq(scoutUnit, baseLocations[m_currentBaseScoutingIndex]->getPosition()) < 3.f * 3.f)
+		for(auto baseLocation : baseLocations)
 		{
-			m_currentBaseScoutingIndex = (m_currentBaseScoutingIndex + 1) % m_bot.Bases().getBaseLocations().size();
+			const bool visited = Util::Contains(baseLocation, m_visitedBaseLocations);
+			if(visited)
+			{
+				continue;
+			}
+			if (baseLocation->isOccupiedByPlayer(Players::Enemy) ||
+				baseLocation->isOccupiedByPlayer(Players::Self) ||
+				Util::DistSq(scoutUnit, baseLocation->getPosition()) < 5.f * 5.f)
+			{
+				m_visitedBaseLocations.push_back(baseLocation);
+				continue;
+			}
+			const float distance = Util::DistSq(scoutUnit, baseLocation->getPosition());
+			if(targetBasePosition == CCPosition() || distance < minDistance)
+			{
+				minDistance = distance;
+				targetBasePosition = baseLocation->getPosition();
+			}
 		}
 	}
-	return baseLocations[m_currentBaseScoutingIndex]->getPosition();
+	if(targetBasePosition == CCPosition())
+	{
+		targetBasePosition = getMainAttackLocation();
+	}
+	return targetBasePosition;
 }

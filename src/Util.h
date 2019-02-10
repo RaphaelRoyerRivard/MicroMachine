@@ -39,6 +39,11 @@ namespace Util
 	}
 
 	void SetAllowDebug(bool _allowDebug);
+	
+	template< typename O, typename S>
+	bool Contains(O object, S structure) { return std::find(structure.begin(), structure.end(), object) != structure.end(); }
+	template< typename O, typename S>
+	typename S::iterator Find(O object, S structure) { return std::find(structure.begin(), structure.end(), object); }
 
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);
