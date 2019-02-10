@@ -245,7 +245,7 @@ void WorkerManager::handleGasWorkers()
 						break;
 					}
 
-					auto gasWorker = getGasWorker(building);
+					auto gasWorker = getGasWorker(building, true);
 					if (gasWorker.isValid())
 					{
 						if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
@@ -262,7 +262,7 @@ void WorkerManager::handleGasWorkers()
     }
 
 	//Spam order in case worker is in Refinery
-	auto reorderedGasWorker = m_workerData.m_reorderedGasWorker;
+	auto & reorderedGasWorker = m_workerData.getReorderedGasWorkers();
 	if (reorderedGasWorker.size() > 0)
 	{
 		for (auto & worker : m_bot.Workers().getWorkers())
@@ -270,24 +270,25 @@ void WorkerManager::handleGasWorkers()
 			auto it = reorderedGasWorker.find(worker);
 			if (it != reorderedGasWorker.end())
 			{
-				if (--(reorderedGasWorker[worker].second) > 0)//If order hasn't changed
+				if (reorderedGasWorker[worker].second > 0)//If order hasn't changed
 				{
-					if (reorderedGasWorker[worker].second % 15 != 0)
+					auto frame = reorderedGasWorker[worker].second--;
+					if (frame % 15)
 					{
 						continue;
 					}
 
-					if (it->first.isValid())
+					auto target = it->first;
+					if (target.isValid() && target.getPosition().x != 0 && target.getPosition().y != 0)
 					{
 						worker.rightClick(it->first);
 					}
 					else
 					{//If no target unit, we stop
-						worker.stop();
 						auto orders = worker.getUnitPtr()->orders;
-						if (!orders.empty() && orders[0].target_pos.x == 0 && orders[0].target_pos.y == 0)
+						if (orders.size() == 1 && orders[0].target_pos.x == 0 && orders[0].target_pos.y == 0)
 						{
-							reorderedGasWorker[worker].second = 0;
+							worker.stop();
 						}
 					}
 				}
@@ -875,9 +876,20 @@ Unit WorkerManager::getMineralWorker(Unit refinery) const
     return getClosestMineralWorkerTo(refinery.getPosition());
 }
 
-Unit WorkerManager::getGasWorker(Unit refinery) const
+Unit WorkerManager::getGasWorker(Unit refinery, bool checkReturningCargo) const
 {
-	return m_workerData.getAssignedWorkersRefinery(refinery)[0];
+	auto workers = m_workerData.getAssignedWorkersRefinery(refinery);
+	if (checkReturningCargo)
+	{
+		for (auto & worker : workers)
+		{
+			if (!isReturningCargo(worker))
+			{
+				return worker;
+			}
+		}
+	}
+	return workers[0];
 }
 
 int WorkerManager::getGasWorkersTarget() const

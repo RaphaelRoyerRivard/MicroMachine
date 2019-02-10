@@ -402,6 +402,11 @@ Unit WorkerData::getWorkerRepairTarget(const Unit & unit) const
     }
 }
 
+std::map<Unit, std::pair<Unit, int>> & WorkerData::getReorderedGasWorkers()
+{
+	return m_reorderedGasWorker;
+}
+
 const std::set<Unit> WorkerData::getWorkerRepairingThatTargetC(const Unit & unit) const
 {
     auto it = m_workerRepairing.find(unit);

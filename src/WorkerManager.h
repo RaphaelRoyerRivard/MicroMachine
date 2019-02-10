@@ -54,7 +54,7 @@ public:
 
     Unit getBuilder(Building & b, bool setJobAsBuilder = true) const;
 	Unit getMineralWorker(Unit refinery) const;
-	Unit getGasWorker(Unit refinery) const;
+	Unit getGasWorker(Unit refinery, bool checkReturningCargo = false) const;
 	int  getGasWorkersTarget() const;
 	Unit getDepotAtBasePosition(CCPosition basePosition) const;
 	int  getWorkerCountAtBasePosition(CCPosition basePosition) const;
