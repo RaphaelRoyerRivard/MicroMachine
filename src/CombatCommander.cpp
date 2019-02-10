@@ -946,6 +946,7 @@ void CombatCommander::updateDefenseSquads()
 		const int numDefendersPerEnemyCanon = 4; // This is a minimum
 
 		// calculate how many units are flying / ground units
+		bool unitOtherThanWorker = false;
 		int numEnemyFlyingInRegion = 0;
 		int numEnemyGroundInRegion = 0;
 		float minEnemyDistance = 0;
@@ -962,7 +963,7 @@ void CombatCommander::updateDefenseSquads()
             if (myBaseLocation->containsPosition(unit.getPosition()))
             {
                 //we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
-                if (!workerRushed && unit.getType().isWorker())
+                if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392)	// first 3 minutes
                 {
 					if (firstWorker)
 					{
@@ -974,6 +975,12 @@ void CombatCommander::updateDefenseSquads()
 				else if(!earlyRushed && m_bot.GetGameLoop() < 7320)	// first 5 minutes
 				{
 					earlyRushed = true;
+				}
+
+				if(!unit.getType().isWorker())
+				{
+					unitOtherThanWorker = true;
+					workerRushed = false;
 				}
 
 				const float enemyDistance = Util::DistSq(unit.getPosition(), basePosition);
