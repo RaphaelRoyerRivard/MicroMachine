@@ -484,6 +484,29 @@ void CombatCommander::updateIdleSquad()
 		SquadOrder idleOrder(SquadOrderTypes::Attack, idlePosition, DefaultOrderRadius, "Prepare for battle");
 		m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 	}
+
+	if (m_bot.GetCurrentFrame() % 24 == 0)	// Every second
+	{
+		for (auto & combatUnit : idleSquad.getUnits())
+		{
+			const BaseLocation* closestBase = nullptr;
+			float minDistance = 0.f;
+			for (auto baseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+			{
+				const float distance = Util::DistSq(combatUnit, baseLocation->getPosition());
+				if(!closestBase || distance < minDistance)
+				{
+					closestBase = baseLocation;
+					minDistance = distance;
+				}
+			}
+
+			if(closestBase != nullptr && minDistance > 5.f * 5.f)
+			{
+				Micro::SmartMove(combatUnit.getUnitPtr(), closestBase->getPosition(), m_bot);
+			}
+		}
+	}
 }
 
 void CombatCommander::updateBackupSquads()
