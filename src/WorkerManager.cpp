@@ -215,9 +215,8 @@ void WorkerManager::handleGasWorkers()
 				// if it's less than we want it to be, fill 'er up
 				for (int i = 0; i<(gasWorkersTarget - numAssigned); ++i)
 				{
-
 					auto mineralWorker = getMineralWorker(building);
-					if (mineralWorker.isValid())
+					if (mineralWorker.isValid() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), building.getPosition(), m_bot))
 					{
 						m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, building);
 					}
