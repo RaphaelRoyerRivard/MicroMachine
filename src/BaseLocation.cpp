@@ -136,7 +136,35 @@ const CCTilePosition & BaseLocation::getTurretPosition() const
 // TODO: calculate the actual depot position
 const CCTilePosition & BaseLocation::getDepotPosition() const
 {
-    return m_depotPosition;
+	    return m_depotPosition;
+}
+
+const Unit & BaseLocation::getDepot() const
+{
+	Unit depot = Unit();
+	for (auto & building : m_bot.Buildings().getBaseBuildings())
+	{
+		if (building.getTilePosition() == getDepotPosition())
+		{
+			depot = building;
+			break;
+		}
+	}
+	return depot;
+}
+
+int BaseLocation::getOptimalMineralWorkerCount() const
+{
+	const int minimumMineral = 50;//at 50, its basically empty.
+	int optimalWorkers = 0;
+	for (auto & mineral : getMinerals())
+	{
+		if (mineral.getUnitPtr()->mineral_contents > minimumMineral)
+		{
+			optimalWorkers += 2;
+		}
+	}
+	return optimalWorkers;
 }
 
 void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)

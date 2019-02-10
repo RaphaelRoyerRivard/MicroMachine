@@ -144,21 +144,13 @@ void WorkerManager::handleGasWorkers()
 	switch (gasWorkersTarget)
 	{
 		case 0:
-			if (numMineralWorker + numRefinery < 6)
-			{
-
-			}
-			else if (mineral > gas)
+			if (mineral > gas)
 			{
 				gasWorkersTarget = 1;
 			}
 			break;
 		case 1:
-			if (numMineralWorker < 6)//If few mineral workers
-			{
-				gasWorkersTarget = 0;
-			}
-			else if (numMineralWorker < numGasWorker + numRefinery)
+			if (numMineralWorker < numGasWorker + numRefinery)
 			{
 				gasWorkersTarget = 0;
 			}
@@ -172,11 +164,7 @@ void WorkerManager::handleGasWorkers()
 			}
 			break;
 		case 2:
-			if (numMineralWorker + numRefinery < 6)//If few mineral workers
-			{
-				gasWorkersTarget = 0;
-			}
-			else if (numMineralWorker < numGasWorker + numRefinery)
+			if (numMineralWorker < numGasWorker + numRefinery)
 			{
 				gasWorkersTarget = 1;
 			}
@@ -190,11 +178,7 @@ void WorkerManager::handleGasWorkers()
 			}
 			break;
 		case 3:
-			if (numMineralWorker < 6)//If few mineral workes
-			{
-				gasWorkersTarget = 0;
-			}
-			else if (numMineralWorker + numRefinery < numGasWorker)
+			if (numMineralWorker + numRefinery < numGasWorker)
 			{
 				gasWorkersTarget = 2;
 			}
@@ -205,6 +189,11 @@ void WorkerManager::handleGasWorkers()
 			break;
 		default:
 			gasWorkersTarget = 3;
+	}
+
+	if (numMineralWorker + numRefinery < 6)
+	{
+		gasWorkersTarget = 0;
 	}
 	if (m_bot.Strategy().isWorkerRushed())
 	{
@@ -219,6 +208,7 @@ void WorkerManager::handleGasWorkers()
         {
             // get the number of workers currently assigned to it
             int numAssigned = m_workerData.getNumAssignedWorkers(building);
+			auto base = m_bot.Bases().getBaseContainingPosition(building.getPosition(), Players::Self);
 
 			if (numAssigned < gasWorkersTarget)
 			{
@@ -226,7 +216,7 @@ void WorkerManager::handleGasWorkers()
 				for (int i = 0; i<(gasWorkersTarget - numAssigned); ++i)
 				{
 					auto mineralWorker = getMineralWorker(building);
-					if (mineralWorker.isValid())
+					if (mineralWorker.isValid() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), building.getPosition(), m_bot))
 					{
 						m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, building);
 					}
@@ -234,10 +224,28 @@ void WorkerManager::handleGasWorkers()
 			}
 			else if (numAssigned > gasWorkersTarget)
 			{
-				// if it's less than we want it to be, fill 'er up
+				int mineralWorkerRoom = 26;//Number of free spaces for mineral workers
+				if (base != nullptr)
+				{
+					auto depot = base->getDepot();
+					if (depot.isValid())
+					{
+						int mineralWorkersCount = m_workerData.getNumAssignedWorkers(depot);
+						int optimalWorkersCount = base->getOptimalMineralWorkerCount();
+						mineralWorkerRoom = optimalWorkersCount - mineralWorkersCount;
+					}
+				}
+
+				// if it's more than we want it to be, empty it up
 				for (int i = 0; i<(numAssigned - gasWorkersTarget); ++i)
 				{
-					auto gasWorker = getGasWorker(building);
+					//check if we have room for more mineral workers
+					if (mineralWorkerRoom <= 0)
+					{
+						break;
+					}
+
+					auto gasWorker = getGasWorker(building, true);
 					if (gasWorker.isValid())
 					{
 						if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
@@ -246,42 +254,48 @@ void WorkerManager::handleGasWorkers()
 						}
  						m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
 					}
+
+					mineralWorkerRoom--;
 				}
 			}
         }
     }
 
 	//Spam order in case worker is in Refinery
-	for (auto & worker : m_bot.Workers().getWorkers())
+	auto & reorderedGasWorker = m_workerData.getReorderedGasWorkers();
+	if (reorderedGasWorker.size() > 0)
 	{
-		auto & reorderedGasWorker = m_workerData.m_reorderedGasWorker;
-		auto it = reorderedGasWorker.find(worker);
-		if (it != reorderedGasWorker.end())
+		for (auto & worker : m_bot.Workers().getWorkers())
 		{
-			if (--(reorderedGasWorker[worker].second) > 0)//If order hasn't changed
+			auto it = reorderedGasWorker.find(worker);
+			if (it != reorderedGasWorker.end())
 			{
-				if (reorderedGasWorker[worker].second % 15 != 0)
+				if (reorderedGasWorker[worker].second > 0)//If order hasn't changed
 				{
-					continue;
-				}
-
-				if (it->first.isValid())
-				{
-					worker.rightClick(it->first);
-				}
-				else
-				{//If no target unit, we stop
-					worker.stop();
-					auto orders = worker.getUnitPtr()->orders;
-					if (!orders.empty() && orders[0].target_pos.x == 0 && orders[0].target_pos.y == 0)
+					auto frame = reorderedGasWorker[worker].second--;
+					if (frame % 15)
 					{
-						reorderedGasWorker[worker].second = 0;
+						continue;
+					}
+
+					auto target = it->first;
+					if (target.isValid() && target.getPosition().x != 0 && target.getPosition().y != 0)
+					{
+						worker.rightClick(it->first);
+					}
+					else
+					{//If no target unit, we stop
+						auto orders = worker.getUnitPtr()->orders;
+						if (orders.size() == 1 && orders[0].target_pos.x == 0 && orders[0].target_pos.y == 0)
+						{
+							worker.stop();
+						}
 					}
 				}
-			}
-			else
-			{
-				reorderedGasWorker.erase(it);
+				else
+				{
+					reorderedGasWorker.erase(it);
+				}
 			}
 		}
 	}
@@ -328,6 +342,8 @@ void WorkerManager::handleIdleWorkers()
 
 void WorkerManager::handleRepairWorkers()
 {
+	const int REPAIR_STATION_MIN_MINERAL = 25;//Also affects the automatic building repairing
+
     // Only terran worker can repair
     if (!Util::IsTerran(m_bot.GetSelfRace()))
         return;
@@ -372,15 +388,31 @@ void WorkerManager::handleRepairWorkers()
         }*/
     }
 
-	if (m_bot.Commander().Production().getFreeMinerals() < 100)//Stop repairing if not enough minerals
+	int mineral = m_bot.Commander().Production().getFreeMinerals();
+	int gas = m_bot.Commander().Production().getFreeGas();
+
+	if (mineral < REPAIR_STATION_MIN_MINERAL)//Stop repairing if not enough minerals
 	{
 		return;
 	}
 
 	//Repair station (RepairStation)
-	int MAX_REPAIR_WORKER = 6;
-	int REPAIR_STATION_SIZE = 3;
-	int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
+	const int MIN_GAS_TO_REPAIR = 5;
+	const int MAX_REPAIR_WORKER = 5;
+	const int FULL_REPAIR_MINERAL = 100;
+	const int FULL_REPAIR_GAS = 50;
+	const int REPAIR_STATION_SIZE = 3;
+	const int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
+	int currentMaxRepairWorker = std::min(MAX_REPAIR_WORKER, (int)floor(MAX_REPAIR_WORKER * (mineral / (float)FULL_REPAIR_MINERAL)));
+	/* Chart of repair worker based on minerals
+	0: 25 mineral-
+	1: 25 mineral+
+	2: 40 mineral+
+	3: 60 mineral+
+	4: 80 mineral+
+	5: 100 mineral+
+	*/
+
 	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
 	{
 		auto bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
@@ -400,7 +432,11 @@ void WorkerManager::handleRepairWorkers()
 				float healthPercentage = unit.getHitPointsPercentage();
 				if (healthPercentage < 100 && !unit.isBeingConstructed())
 				{
+					//Is repairable
 					if (!unit.getType().isRepairable())
+						continue;
+					//Check if we have the required gas to repair it
+					if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
 						continue;
 
 					const float distanceSquare = Util::DistSq(unit, base->getPosition());
@@ -419,7 +455,7 @@ void WorkerManager::handleRepairWorkers()
 				for (auto & worker : getWorkers())
 				{
 					auto it = unitsToRepair.begin();
-					if (repairWorkers >= MAX_REPAIR_WORKER)
+					if (repairWorkers >= currentMaxRepairWorker)
 					{
 						break;
 					}
@@ -443,23 +479,24 @@ void WorkerManager::handleRepairWorkers()
 		}
 	}
 	
-	//Repair low health buildings
-	const float minHealth = 30.f;
-	const float maxHealth = 100.f;
+	//Automatically repair low health buildings, maximum 1 worker
+	const float MIN_HEALTH = 30.f;
+	const float MAX_HEALTH = 100.f;
+	const int MAX_WORKER_PER_BUILDING = 1;
 	for (auto & building : m_bot.Buildings().getBaseBuildings())
 	{
 		auto percentage = building.getHitPointsPercentage();
 		//Skip building being repaired
 		if (std::find(buildingAutomaticallyRepaired.begin(), buildingAutomaticallyRepaired.end(), building) != buildingAutomaticallyRepaired.end())
 		{
-			if (percentage >= maxHealth)
+			if (percentage >= MAX_HEALTH)
 			{
 				buildingAutomaticallyRepaired.remove(building);
 			}
 			continue;
 		}
 
-		if (building.isCompleted() && percentage <= minHealth)
+		if (building.isCompleted() && percentage <= MIN_HEALTH && m_workerData.getWorkerRepairingTargetCount(building) < MAX_WORKER_PER_BUILDING)
 		{
 			auto position = building.getPosition();
 			auto worker = getClosestMineralWorkerTo(position);
@@ -530,6 +567,11 @@ void WorkerManager::repairCombatBuildings()
 				}
 				for (auto & worker : workers)///TODO order by closest to the target base location
 				{
+					if (worker.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MULE)
+					{
+						continue;
+					}
+
 					auto depot = m_workerData.getWorkerDepot(worker);
 					if (depot.isValid() && depot.getID() == building.getID())
 					{
@@ -561,16 +603,8 @@ void WorkerManager::lowPriorityChecks()
 	for (auto & base : bases)
 	{
 		//calculate optimal worker count
-		int optimalWorkers = 0;
-		auto minerals = base->getMinerals();
-		for(auto mineral : minerals)
-		{
-			if (mineral.getUnitPtr()->mineral_contents > 50)//at 50, its basically empty. We can transfer the workers.
-			{
-				optimalWorkers += 2;
-			}
-		}
-
+		
+		int optimalWorkers = base->getOptimalMineralWorkerCount();
 		auto depot = getDepotAtBasePosition(base->getPosition());
 		int workerCount = m_workerData.getNumAssignedWorkers(depot);
 		if (workerCount > optimalWorkers)
@@ -578,6 +612,11 @@ void WorkerManager::lowPriorityChecks()
 			int extra = workerCount - optimalWorkers;
 			for (auto & worker : workers)///TODO order by closest to the target base location
 			{
+				if (worker.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MULE)
+				{
+					continue;
+				}
+
 				if (m_bot.Workers().isFree(worker) && m_workerData.getWorkerDepot(worker).getID() == depot.getID())
 				{
 					dispatchedWorkers.push_back(worker);
@@ -860,9 +899,25 @@ Unit WorkerManager::getMineralWorker(Unit refinery) const
     return getClosestMineralWorkerTo(refinery.getPosition());
 }
 
-Unit WorkerManager::getGasWorker(Unit refinery) const
+Unit WorkerManager::getGasWorker(Unit refinery, bool checkReturningCargo) const
 {
-	return m_workerData.getAssignedWorkersRefinery(refinery)[0];
+	auto workers = m_workerData.getAssignedWorkersRefinery(refinery);
+	if (checkReturningCargo)
+	{
+		for (auto & worker : workers)
+		{
+			if (!isReturningCargo(worker))
+			{
+				return worker;
+			}
+		}
+	}
+	return workers[0];
+}
+
+int WorkerManager::getGasWorkersTarget() const
+{
+	return gasWorkersTarget;
 }
 
 Unit WorkerManager::getDepotAtBasePosition(CCPosition basePosition) const
@@ -886,16 +941,6 @@ Unit WorkerManager::getDepotAtBasePosition(CCPosition basePosition) const
 int WorkerManager::getWorkerCountAtBasePosition(CCPosition basePosition) const
 {
 	return m_bot.Workers().getWorkerData().getCountWorkerAtDepot(getDepotAtBasePosition(basePosition));
-}
-
-void WorkerManager::setBuildingWorker(Unit worker)
-{
-	m_workerData.setWorkerJob(worker, WorkerJobs::Build);
-}
-
-void WorkerManager::setBuildingWorker(Unit worker, Building & b)
-{
-    m_workerData.setWorkerJob(worker, WorkerJobs::Build, b.buildingUnit);
 }
 
 // gets a builder for BuildingManager to use
@@ -935,6 +980,7 @@ void WorkerManager::drawResourceDebugInfo()
     for (auto & worker : m_workerData.getWorkers())
     {
         if (!worker.isValid()) { continue; }
+		if (worker.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MULE) { continue; }
 
         if (worker.isIdle())
         {

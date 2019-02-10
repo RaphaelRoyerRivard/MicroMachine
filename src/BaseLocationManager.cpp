@@ -494,6 +494,21 @@ CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit
 	return closestBase;
 }
 
+const BaseLocation* BaseLocationManager::getBaseContainingPosition(const CCPosition position, int player) const
+{
+	for (auto & base : m_baseLocationData)
+	{
+		if (!base.isOccupiedByPlayer(player))
+			continue;
+
+		if (base.containsPosition(position))
+		{
+			return &base;
+		}
+	}
+	return nullptr;
+}
+
 void BaseLocationManager::sortBaseLocationPtrs()
 {
 	//Sorting base locations from closest to opponent's starting base to farthest

@@ -24,13 +24,13 @@ class WorkerData
     std::map<Unit, Unit>    m_workerDepotMap;
     std::map<Unit, std::set<Unit>>    m_workerRepairing;
     std::map<Unit, Unit>    m_workerRepairTarget;
+	std::map<Unit, std::pair<Unit, int>> m_reorderedGasWorker;
 
     void clearPreviousJob(const Unit & unit);
     std::set<Unit> getWorkerRepairingThatTarget(const Unit & unit);
     void GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & worker, Unit & bestMineral, double & bestDist) const;
 
 public:
-	std::map<Unit, std::pair<Unit, int>> m_reorderedGasWorker;
 
     WorkerData(CCBot & bot);
 
@@ -49,7 +49,9 @@ public:
     Unit    getWorkerDepot(const Unit & unit) const;
     const char * getJobCode(const Unit & unit);
     const std::set<Unit> & getWorkers() const;
-    Unit getWorkerRepairTarget(const Unit & unit) const; 
+    Unit getWorkerRepairTarget(const Unit & unit) const;
+	int getWorkerRepairingTargetCount(const Unit & unit);
+	std::map<Unit, std::pair<Unit, int>> & getReorderedGasWorkers();
     const std::set<Unit> getWorkerRepairingThatTargetC(const Unit & unit) const;
     void WorkerStoppedRepairing(const Unit & unit);
 };

@@ -109,8 +109,11 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool min
         m_depots.insert(jobUnit);
 
         // increase the worker count of this depot
-        m_workerDepotMap[unit] = jobUnit;
-        m_depotWorkerCount[jobUnit]++;
+		if (unit.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_MULE)
+		{
+			m_workerDepotMap[unit] = jobUnit;
+			m_depotWorkerCount[jobUnit]++;
+		}
 
         // find the mineral to mine and mine it
 		Unit mineralToMine;
@@ -158,8 +161,8 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool min
 
     }
 	else if (job == WorkerJobs::Idle)
-	{
-		//unit.stop();
+	{//Must not call stop().
+
 	}
 }
 
@@ -171,8 +174,12 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     if (previousJob == WorkerJobs::Minerals)
     {
         // remove one worker from the count of the depot this worker was assigned to
-        m_depotWorkerCount[m_workerDepotMap[unit]]--;
-        m_workerDepotMap.erase(unit);
+		// increase the worker count of this depot
+		if (unit.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_MULE)
+		{
+			m_depotWorkerCount[m_workerDepotMap[unit]]--;
+			m_workerDepotMap.erase(unit);
+		}
     }
     else if (previousJob == WorkerJobs::Gas)
     {
@@ -395,6 +402,11 @@ Unit WorkerData::getWorkerRepairTarget(const Unit & unit) const
     }
 }
 
+std::map<Unit, std::pair<Unit, int>> & WorkerData::getReorderedGasWorkers()
+{
+	return m_reorderedGasWorker;
+}
+
 const std::set<Unit> WorkerData::getWorkerRepairingThatTargetC(const Unit & unit) const
 {
     auto it = m_workerRepairing.find(unit);
@@ -425,6 +437,18 @@ std::set<Unit> WorkerData::getWorkerRepairingThatTarget(const Unit & unit)
         auto emptySet = std::set<Unit>();
         return emptySet;
     }
+}
+
+int WorkerData::getWorkerRepairingTargetCount(const Unit & unit)
+{
+	auto it = m_workerRepairing.find(unit);
+
+	// if there is an entry, return it
+	if (it != m_workerRepairing.end())
+	{
+		return it->second.size();
+	}
+	return 0;
 }
 
 void WorkerData::WorkerStoppedRepairing(const Unit & unit)
