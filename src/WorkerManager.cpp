@@ -463,7 +463,7 @@ void WorkerManager::handleRepairWorkers()
 		{
 			auto position = building.getPosition();
 			auto worker = getClosestMineralWorkerTo(position);
-			if (Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), position, m_bot))
+			if (worker.isValid() && Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), position, m_bot))
 			{
 				setRepairWorker(worker, building);
 				buildingAutomaticallyRepaired.push_back(building);
