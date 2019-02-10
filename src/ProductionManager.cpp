@@ -1483,7 +1483,8 @@ void ProductionManager::drawProductionInformation()
 
 	ss.str(std::string());
 	ss << "Free Mineral:     " << getFreeMinerals() << "\n";
-	ss << "Free Gas:         " << getFreeGas() << "\n\n";
+	ss << "Free Gas:         " << getFreeGas() << "\n";
+	ss << "Gas Worker Target:" << m_bot.Workers().getGasWorkersTarget();
 	m_bot.Map().drawTextScreen(0.75f, 0.05f, ss.str(), CCColor(255, 255, 0));
 
 	ss.str(std::string());

@@ -38,8 +38,6 @@ public:
     void drawWorkerInformation();
     void setScoutWorker(Unit worker);
     void setCombatWorker(Unit worker);
-	void setBuildingWorker(Unit worker);
-    void setBuildingWorker(Unit worker, Building & b);
     void setRepairWorker(Unit worker,const Unit & unitToRepair);
     void stopRepairing(Unit worker);
 
@@ -57,6 +55,7 @@ public:
     Unit getBuilder(Building & b, bool setJobAsBuilder = true) const;
 	Unit getMineralWorker(Unit refinery) const;
 	Unit getGasWorker(Unit refinery) const;
+	int  getGasWorkersTarget() const;
 	Unit getDepotAtBasePosition(CCPosition basePosition) const;
 	int  getWorkerCountAtBasePosition(CCPosition basePosition) const;
     Unit getClosestDepot(Unit worker) const;

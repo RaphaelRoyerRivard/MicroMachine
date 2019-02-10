@@ -379,6 +379,26 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 
         CCPosition geyserPos(geyser.getPosition());
 
+		//Check if refinery is already assigned to a building task (m_building)
+		auto assigned = false;
+		for (auto & refinery : m_bot.Buildings().getBuildings())
+		{
+			if (!refinery.type.isGeyser())
+			{
+				continue;
+			}
+
+			if (Util::GetTilePosition(geyserPos) == refinery.finalPosition)
+			{
+				assigned = true;
+				break;
+			}
+		}
+		if (assigned)
+		{
+			continue;
+		}
+
 		for (auto & unit : units)
 		{
 			// check to see if it's next to one of our depots

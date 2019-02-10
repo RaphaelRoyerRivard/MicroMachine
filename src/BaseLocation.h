@@ -49,6 +49,8 @@ public:
     bool containsPosition(const CCPosition & pos) const;
 	const CCTilePosition & getTurretPosition() const;
     const CCTilePosition & getDepotPosition() const;
+	const Unit & getDepot() const;
+	int getOptimalMineralWorkerCount() const;
     const CCPosition & getPosition() const;
     const std::vector<Unit> & getGeysers() const;
     const std::vector<Unit> & getMinerals() const;
