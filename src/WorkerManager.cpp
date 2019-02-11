@@ -68,7 +68,7 @@ void WorkerManager::handleMineralWorkers()
 		return;
 	}
 
-	if (!m_isFirstFrame || true)///TODO Disable split. might cause the long distance mining issue. Gotta test without this code.
+	/*if (!m_isFirstFrame || true)///TODO Disable split. might cause the long distance mining issue. Gotta test without this code.
 	{
 		return;
 	}
@@ -129,7 +129,7 @@ void WorkerManager::handleMineralWorkers()
 
 		mineralWorker.rightClick(closestMineral);
 	}
-	m_bot.StopProfiling("0.7.2.3     orderedMineralWorkers");
+	m_bot.StopProfiling("0.7.2.3     orderedMineralWorkers");*/
 }
 
 void WorkerManager::handleGasWorkers()
@@ -599,13 +599,12 @@ void WorkerManager::lowPriorityChecks()
 	auto workers = getWorkers();
 	WorkerData workerData = m_bot.Workers().getWorkerData();
 	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
-	std::vector<Unit> dispatchedWorkers;
+	std::list<Unit> dispatchedWorkers;
 	for (auto & base : bases)
 	{
-		//calculate optimal worker count
-		
+		auto basePosition = base->getPosition();
 		int optimalWorkers = base->getOptimalMineralWorkerCount();
-		auto depot = getDepotAtBasePosition(base->getPosition());
+		auto depot = getDepotAtBasePosition(basePosition);
 		int workerCount = m_workerData.getNumAssignedWorkers(depot);
 		if (workerCount > optimalWorkers)
 		{
@@ -648,11 +647,19 @@ void WorkerManager::lowPriorityChecks()
 		int optimalWorkers = base->getMinerals().size() * 2;
 		if (workerCount < optimalWorkers)
 		{
+			std::vector<Unit> toRemove;
 			int needed = optimalWorkers - workerCount;
 			int moved = 0;
-			for (int i = 0; i < dispatchedWorkers.size(); i++)///TODO order by closest again
+			for (auto it = dispatchedWorkers.begin(); it != dispatchedWorkers.end(); it++)
 			{
-				m_workerData.setWorkerJob(dispatchedWorkers[i], WorkerJobs::Minerals, depot, true);
+				//Dont move workers if its not safe
+				if (!Util::PathFinding::IsPathToGoalSafe(it->getUnitPtr(), base->getPosition(), m_bot))
+				{
+					continue;
+				}
+
+				m_workerData.setWorkerJob(*it, WorkerJobs::Minerals, depot, true);
+				toRemove.push_back(*it);
 				moved++;
 				if (moved >= needed)
 				{
@@ -660,10 +667,14 @@ void WorkerManager::lowPriorityChecks()
 				}
 			}
 
-			//remove dispatched workers
-			for (int i = 0; i < moved; i++)
+			//remove already dispatched workers
+			for (auto worker : toRemove)
 			{
-				dispatchedWorkers.erase(dispatchedWorkers.begin());
+				auto it = find(dispatchedWorkers.begin(), dispatchedWorkers.end(), worker);
+				if (it != dispatchedWorkers.end())
+				{
+					dispatchedWorkers.erase(it);
+				}
 			}
 			if (dispatchedWorkers.empty())
 			{
