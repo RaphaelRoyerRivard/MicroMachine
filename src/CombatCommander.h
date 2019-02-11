@@ -25,6 +25,7 @@ class CombatCommander
     bool            m_attackStarted;
 	int				m_currentBaseExplorationIndex;
 	int				m_currentBaseScoutingIndex;
+	std::vector<const BaseLocation*> m_visitedBaseLocations;
 
     void            updateScoutDefenseSquad();
 	void            updateDefenseBuildings();
@@ -40,7 +41,6 @@ class CombatCommander
     Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy);
 	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy);
 
-    CCPosition      getMainAttackLocation();
 	CCPosition		exploreMap();
 	CCPosition		GetNextBaseLocationToScout();
 
@@ -75,6 +75,7 @@ public:
 	const std::vector<std::vector<float>> & getAirInfluenceMap() const { return m_airInfluenceMap; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
 
+	CCPosition getMainAttackLocation();
     void drawSquadInformation();
 };
 

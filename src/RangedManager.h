@@ -147,6 +147,6 @@ private:
 	float getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const;
 	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);
 	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
-	void FlagActionsAsFinished();
+	void CleanActions(sc2::Units &rangedUnits);
 	void ExecuteActions();
 };

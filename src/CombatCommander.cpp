@@ -93,7 +93,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		m_bot.StartProfiling("0.10.4.2.2    updateDefenseSquads");
         updateDefenseSquads();
 		m_bot.StopProfiling("0.10.4.2.2    updateDefenseSquads");
-		//updateScoutSquad();
+		updateScoutSquad();
 		updateHarassSquads();
 		updateAttackSquads();
         updateBackupSquads();
@@ -484,6 +484,29 @@ void CombatCommander::updateIdleSquad()
 		SquadOrder idleOrder(SquadOrderTypes::Attack, idlePosition, DefaultOrderRadius, "Prepare for battle");
 		m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 	}
+
+	if (m_bot.GetCurrentFrame() % 24 == 0)	// Every second
+	{
+		for (auto & combatUnit : idleSquad.getUnits())
+		{
+			const BaseLocation* closestBase = nullptr;
+			float minDistance = 0.f;
+			for (auto baseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+			{
+				const float distance = Util::DistSq(combatUnit, baseLocation->getPosition());
+				if(!closestBase || distance < minDistance)
+				{
+					closestBase = baseLocation;
+					minDistance = distance;
+				}
+			}
+
+			if(closestBase != nullptr && minDistance > 5.f * 5.f)
+			{
+				Micro::SmartMove(combatUnit.getUnitPtr(), closestBase->getPosition(), m_bot);
+			}
+		}
+	}
 }
 
 void CombatCommander::updateBackupSquads()
@@ -532,7 +555,7 @@ void CombatCommander::updateBackupSquads()
 
 void CombatCommander::updateScoutSquad()
 {
-	if (m_bot.GetCurrentFrame() < 6000)	//around 4 min
+	if (m_bot.GetCurrentFrame() < 5856)	//around 4:00
 		return;
 
 	Squad & scoutSquad = m_squadData.getSquad("Scout");
@@ -946,6 +969,7 @@ void CombatCommander::updateDefenseSquads()
 		const int numDefendersPerEnemyCanon = 4; // This is a minimum
 
 		// calculate how many units are flying / ground units
+		bool unitOtherThanWorker = false;
 		int numEnemyFlyingInRegion = 0;
 		int numEnemyGroundInRegion = 0;
 		float minEnemyDistance = 0;
@@ -962,7 +986,7 @@ void CombatCommander::updateDefenseSquads()
             if (myBaseLocation->containsPosition(unit.getPosition()))
             {
                 //we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
-                if (!workerRushed && unit.getType().isWorker())
+                if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392)	// first 3 minutes
                 {
 					if (firstWorker)
 					{
@@ -974,6 +998,12 @@ void CombatCommander::updateDefenseSquads()
 				else if(!earlyRushed && m_bot.GetGameLoop() < 7320)	// first 5 minutes
 				{
 					earlyRushed = true;
+				}
+
+				if(!unit.getType().isWorker())
+				{
+					unitOtherThanWorker = true;
+					workerRushed = false;
 				}
 
 				const float enemyDistance = Util::DistSq(unit.getPosition(), basePosition);
@@ -1510,16 +1540,43 @@ CCPosition CombatCommander::exploreMap()
 CCPosition CombatCommander::GetNextBaseLocationToScout()
 {
 	const auto & baseLocations = m_bot.Bases().getBaseLocations();
+
+	if(baseLocations.size() == m_visitedBaseLocations.size())
+	{
+		m_visitedBaseLocations.clear();
+	}
+
+	CCPosition targetBasePosition;
 	auto & squad = m_squadData.getSquad("Scout");
 	if (!squad.getUnits().empty())
 	{
+		float minDistance = 0.f;
 		const auto & scoutUnit = squad.getUnits()[0];
-		if (baseLocations[m_currentBaseScoutingIndex]->isOccupiedByPlayer(Players::Enemy) ||
-			baseLocations[m_currentBaseScoutingIndex]->isOccupiedByPlayer(Players::Self) ||
-			Util::DistSq(scoutUnit, baseLocations[m_currentBaseScoutingIndex]->getPosition()) < 3.f * 3.f)
+		for(auto baseLocation : baseLocations)
 		{
-			m_currentBaseScoutingIndex = (m_currentBaseScoutingIndex + 1) % m_bot.Bases().getBaseLocations().size();
+			const bool visited = Util::Contains(baseLocation, m_visitedBaseLocations);
+			if(visited)
+			{
+				continue;
+			}
+			if (baseLocation->isOccupiedByPlayer(Players::Enemy) ||
+				baseLocation->isOccupiedByPlayer(Players::Self) ||
+				Util::DistSq(scoutUnit, baseLocation->getPosition()) < 5.f * 5.f)
+			{
+				m_visitedBaseLocations.push_back(baseLocation);
+				continue;
+			}
+			const float distance = Util::DistSq(scoutUnit, baseLocation->getPosition());
+			if(targetBasePosition == CCPosition() || distance < minDistance)
+			{
+				minDistance = distance;
+				targetBasePosition = baseLocation->getPosition();
+			}
 		}
 	}
-	return baseLocations[m_currentBaseScoutingIndex]->getPosition();
+	if(targetBasePosition == CCPosition())
+	{
+		targetBasePosition = getMainAttackLocation();
+	}
+	return targetBasePosition;
 }
