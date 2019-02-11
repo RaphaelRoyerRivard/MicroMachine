@@ -227,7 +227,7 @@ void WorkerManager::handleGasWorkers()
 				int mineralWorkerRoom = 26;//Number of free spaces for mineral workers
 				if (base != nullptr)
 				{
-					auto depot = base->getDepot();
+					auto & depot = base->getResourceDepot();
 					if (depot.isValid())
 					{
 						int mineralWorkersCount = m_workerData.getNumAssignedWorkers(depot);
@@ -511,7 +511,7 @@ void WorkerManager::handleRepairWorkers()
 
 void WorkerManager::repairCombatBuildings()
 {
-	const float repairAt = 0.9; //90% health
+	const float repairAt = 0.9f; //90% health
 	const int maxReparator = 5; //Turret and bunkers only
 
 	if (m_bot.GetSelfRace() != CCRace::Terran)
