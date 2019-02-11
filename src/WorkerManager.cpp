@@ -591,7 +591,7 @@ void WorkerManager::lowPriorityChecks()
 		return;
 	}
 
-	//Worker split between bases
+	//Worker split between bases (transfer worker)
 	if (m_bot.Bases().getBaseCount(Players::Self, true) <= 1)
 	{//No point trying to split workers
 		return;
@@ -716,6 +716,40 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID w
     }
 	return closestMineralWorker;
 }
+
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, std::vector<CCUnitID> workerToIgnore, float minHpPercentage) const
+{
+	Unit closestMineralWorker;
+	double closestDist = std::numeric_limits<double>::max();
+
+	// for each of our workers
+	for (auto & worker : m_workerData.getWorkers())
+	{
+		if (!worker.isValid() || std::find(workerToIgnore.begin(), workerToIgnore.end(), worker.getID()) != workerToIgnore.end()) { continue; }
+		const sc2::Unit* workerPtr = worker.getUnitPtr();
+		if (workerPtr->health < minHpPercentage * workerPtr->health_max)
+		{
+			continue;
+		}
+
+		// if it is a mineral worker, Idle or None
+		if (isFree(worker))
+		{
+			if (!isReturningCargo(worker))
+			{
+				///TODO: Maybe it should by ground distance?
+				double dist = Util::DistSq(worker.getPosition(), pos);
+				if (!closestMineralWorker.isValid() || dist < closestDist)
+				{
+					closestMineralWorker = worker;
+					closestDist = dist;
+				}
+			}
+		}
+	}
+	return closestMineralWorker;
+}
+
 
 Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage) const
 {
@@ -959,7 +993,30 @@ int WorkerManager::getWorkerCountAtBasePosition(CCPosition basePosition) const
 // set 'setJobAsBuilder' to false if we just want to see which worker will build a building
 Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
 {
-    Unit builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition));
+	bool isValid;
+	std::vector<CCUnitID> invalidWorkers;
+	Unit builderWorker;
+	
+	do
+	{
+		isValid = true;
+		builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0);
+		if (!builderWorker.isValid())//If no worker left to check
+		{
+			break;
+		}
+
+		//Check if worker is already building something else
+		for (auto building : m_bot.Buildings().getBuildings())
+		{
+			if (building.builderUnit.isValid() && building.builderUnit.getID() == builderWorker.getID())
+			{
+				invalidWorkers.push_back(builderWorker.getID());
+				isValid = false;
+				break;
+			}
+		}
+	} while (!isValid);
 
     // if the worker exists (one may not have been found in rare cases)
     if (builderWorker.isValid() && setJobAsBuilder && m_workerData.getWorkerJob(builderWorker) != WorkerJobs::Build)

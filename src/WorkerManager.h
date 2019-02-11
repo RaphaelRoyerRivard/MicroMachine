@@ -61,6 +61,7 @@ public:
     Unit getClosestDepot(Unit worker) const;
 	Unit getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f) const;
 	Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f) const;
+	Unit getClosestMineralWorkerTo(const CCPosition & pos, std::vector<CCUnitID> workerToIgnore, float minHpPercentage) const;
 	Unit getClosestGasWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f) const;
 	Unit getClosestGasWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f) const;
 	Unit getClosest(const Unit unit, const std::list<Unit> units) const;
