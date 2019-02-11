@@ -150,11 +150,11 @@ void WorkerManager::handleGasWorkers()
 			}
 			break;
 		case 1:
-			if (numMineralWorker < numGasWorker + numRefinery)
+			/*if (numMineralWorker < numGasWorker + numRefinery)
 			{
 				gasWorkersTarget = 0;
 			}
-			else if (gas > mineral * 5 && mineral + gas > ressourceTreshold)
+			else */if (gas > mineral * 5 && mineral + gas > ressourceTreshold)
 			{
 				gasWorkersTarget = 0;
 			}
@@ -164,11 +164,11 @@ void WorkerManager::handleGasWorkers()
 			}
 			break;
 		case 2:
-			if (numMineralWorker < numGasWorker + numRefinery)
+			/*if (numMineralWorker < numGasWorker + numRefinery)
 			{
 				gasWorkersTarget = 1;
 			}
-			else if (gas > mineral * 3 && mineral + gas > ressourceTreshold)
+			else */if (gas > mineral * 3 && mineral + gas > ressourceTreshold)
 			{
 				gasWorkersTarget = 1;
 			}
@@ -178,11 +178,11 @@ void WorkerManager::handleGasWorkers()
 			}
 			break;
 		case 3:
-			if (numMineralWorker + numRefinery < numGasWorker)
+			/*if (numMineralWorker + numRefinery < numGasWorker)
 			{
 				gasWorkersTarget = 2;
 			}
-			else if (gas > mineral * 2 && mineral + gas > ressourceTreshold)
+			else */if (gas > mineral * 2 && mineral + gas > ressourceTreshold)
 			{
 				gasWorkersTarget = 2;
 			}
