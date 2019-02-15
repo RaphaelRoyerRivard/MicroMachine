@@ -13,7 +13,7 @@ class BuildingPlacer
     std::vector< std::vector<bool> > m_reserveMap;
 
     // queries for various BuildingPlacer data
-    bool buildable(const UnitType type, int x, int y) const;
+    bool buildable(const UnitType type, int x, int y, bool ignoreReservedTiles = false) const;
     bool isReserved(int x, int y) const;
     bool tileOverlapsBaseLocation(int x, int y, UnitType type) const;
 
@@ -25,7 +25,7 @@ public:
     void onStart();
 
     // determines whether we can build at a given location
-    bool canBuildHere(int bx, int by, const Building & b) const;
+    bool canBuildHere(int bx, int by, const Building & b, bool ignoreReservedTiles = false) const;
     bool canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved = false) const;
 
     // returns a build location near a building's desired location

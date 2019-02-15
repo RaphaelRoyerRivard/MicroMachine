@@ -44,7 +44,9 @@ void BuildingManager::onFrame()
 		firstFrame = false;
 		onFirstFrame();
 	}
-
+	m_bot.StartProfiling("0.8.0 lowPriorityChecks");
+	lowPriorityChecks();
+	m_bot.StopProfiling("0.8.0 lowPriorityChecks");
 	m_bot.StartProfiling("0.8.1 updateBaseBuildings");
 	updateBaseBuildings();
 	m_bot.StopProfiling("0.8.1 updateBaseBuildings");
@@ -73,6 +75,35 @@ void BuildingManager::onFrame()
     drawBuildingInformation();
 	drawStartingRamp();
 	drawWall();
+}
+
+void BuildingManager::lowPriorityChecks()
+{
+	auto frame = m_bot.GetGameLoop();
+	if (frame % 24)
+	{
+		return;
+	}
+
+	//Validate buildings are not on creep, does NOT validate if there is an enemy building in the way
+	std::vector<Building> toRemove;
+	for (auto & building : m_buildings)
+	{
+		auto position = building.finalPosition;
+		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building, true))
+		{
+			auto it = find(m_buildings.begin(), m_buildings.end(), building);
+			if (it != m_buildings.end())
+			{
+				auto remove = CancelBuilding(building);
+				if (remove.finalPosition != CCTilePosition(0,0))
+				{
+					toRemove.push_back(remove);
+				}
+			}
+		}
+	}
+	removeBuildings(toRemove);
 }
 
 void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile)
@@ -368,26 +399,8 @@ void BuildingManager::validateWorkersAndBuildings()
 			{
 				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive())//If the worker died on the way to start the building construction
 				{
-					auto position = b.finalPosition;
-					m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight());
-
-					//Free oposite of reserved tiles in assignWorkersToUnassignedBuildings
-					switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
-					{
-						//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
-						case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
-						case sc2::UNIT_TYPEID::TERRAN_FACTORY:
-						case sc2::UNIT_TYPEID::TERRAN_STARPORT:
-						{
-							m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
-							m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
-						}
-					}
-
-					m_reservedMinerals -= b.type.mineralPrice();
-					m_reservedGas -= b.type.gasPrice();
-
-					toRemove.push_back(b);
+					auto remove = CancelBuilding(b);
+					toRemove.push_back(remove);
 					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
 				}
 				break;
@@ -1130,6 +1143,35 @@ void BuildingManager::removeBuildings(const std::vector<Building> & toRemove)
             m_buildings.erase(it);
         }
     }
+}
+
+Building BuildingManager::CancelBuilding(Building b)
+{
+	auto it = find(m_buildings.begin(), m_buildings.end(), b);
+	if (it != m_buildings.end())
+	{
+		auto position = b.finalPosition;
+		m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight());
+
+		//Free oposite of reserved tiles in assignWorkersToUnassignedBuildings
+		switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
+		{
+			//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
+		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+		case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+		{
+			m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
+			m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
+		}
+		}
+
+		m_reservedMinerals -= b.type.mineralPrice();
+		m_reservedGas -= b.type.gasPrice();
+
+		return b;
+	}
+	return Building();
 }
 
 void BuildingManager::updateBaseBuildings()

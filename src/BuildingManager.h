@@ -28,6 +28,7 @@ class BuildingManager
 
     bool            isBuildingPositionExplored(const Building & b) const;
 	void			castBuildingsAbilities();
+	Building		CancelBuilding(Building b);
 	void			updateBaseBuildings();
 
     void            validateWorkersAndBuildings();		    // STEP 1
@@ -46,6 +47,7 @@ public:
     void                onStart();
 	void				onFirstFrame();
     void                onFrame();
+	void				lowPriorityChecks();
 	void				FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile);
 	void				FindMainRamp(std::list<CCTilePosition> &rampTiles);
 	std::vector<CCTilePosition> FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles);
