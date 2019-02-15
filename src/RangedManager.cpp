@@ -353,7 +353,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	if(!useInfluenceMap)
 	{
-		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange);
+		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange, unitShouldHeal);
 
 		// Sum up the threats vector with the direction vector
 		if (!threats.empty())
@@ -577,11 +577,10 @@ bool RangedManager::ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::
 	return !inRangeOfThreat || isCloseThreatFaster;
 }
 
-CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange) const
+CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange, bool unitShouldHeal) const
 {
 	CCPosition dirVec(0.f, 0.f);
-	const bool reaperShouldHeal = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.66f;
-	if (target && !reaperShouldHeal)
+	if (target && !unitShouldHeal)
 	{
 		// if not in range of target, add normalized vector towards target
 		if (!targetInAttackRange)
@@ -634,6 +633,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			continue;
 		}
+		//TODO decide if we want only synchronized units or also desynchronized ones
 		// Ignore units that are currently executing an action
 		if(unitAction.executed && !unitAction.finished)
 		{
