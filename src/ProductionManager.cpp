@@ -539,7 +539,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		}
 	}
 	
-	if (!m_queue.contains(workerMetatype) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))//check queue
+	if (!m_queue.contains(workerMetatype))//check queue
 	{
 		const int maxWorkersPerBase = 27;//21 mineral (to prepare for the next expansion), 6 gas
 		const int maxWorkers = maxWorkersPerBase * 3;//maximum of 3 bases.
@@ -693,7 +693,7 @@ void ProductionManager::lowPriorityChecks()
 	}
 }
 
-bool ProductionManager::currentlyHasRequirement(MetaType currentItem)
+bool ProductionManager::currentlyHasRequirement(MetaType currentItem) const
 {
  	auto requiredUnits = m_bot.Data(currentItem).requiredUnits;
 	if (requiredUnits.empty())
@@ -701,16 +701,9 @@ bool ProductionManager::currentlyHasRequirement(MetaType currentItem)
 		return true;
 	}
 
-	/*sc2::UNIT_TYPEID type = currentItem.getUnitType().getAPIUnitType();
-	if (currentItem.getUnitType().isResourceDepot())
-	{
-		if (m_bot.Bases().getBaseCount(Players::Self) > 0)
-			return true;
-		return false;
-	}*/
-
 	for (auto & required : m_bot.Data(currentItem).requiredUnits)
 	{
+		
 		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, true, true) <= 0)
 		{
 			//Only for terran because all their bases are used for the same prerequirements. Not the case for zergs.

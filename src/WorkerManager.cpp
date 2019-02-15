@@ -1112,7 +1112,7 @@ void WorkerManager::drawWorkerInformation()
 
     m_bot.Map().drawTextScreen(0.75f, 0.2f, ss.str());
 }
-
+ 
 bool WorkerManager::isFree(Unit worker) const
 {
 	if (worker.getType().isMule())
