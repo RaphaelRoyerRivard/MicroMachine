@@ -191,7 +191,7 @@ void WorkerManager::handleGasWorkers()
 			gasWorkersTarget = 3;
 	}
 
-	if (numMineralWorker + numRefinery < 6)
+	if (numMineralWorker < 6 + numRefinery)
 	{
 		gasWorkersTarget = 0;
 	}
@@ -567,11 +567,6 @@ void WorkerManager::repairCombatBuildings()
 				}
 				for (auto & worker : workers)///TODO order by closest to the target base location
 				{
-					if (worker.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MULE)
-					{
-						continue;
-					}
-
 					auto depot = m_workerData.getWorkerDepot(worker);
 					if (depot.isValid() && depot.getID() == building.getID())
 					{
@@ -611,11 +606,6 @@ void WorkerManager::lowPriorityChecks()
 			int extra = workerCount - optimalWorkers;
 			for (auto & worker : workers)///TODO order by closest to the target base location
 			{
-				if (worker.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MULE)
-				{
-					continue;
-				}
-
 				if (m_bot.Workers().isFree(worker) && m_workerData.getWorkerDepot(worker).getID() == depot.getID())
 				{
 					dispatchedWorkers.push_back(worker);
@@ -1112,7 +1102,7 @@ void WorkerManager::drawWorkerInformation()
 
     m_bot.Map().drawTextScreen(0.75f, 0.2f, ss.str());
 }
-
+ 
 bool WorkerManager::isFree(Unit worker) const
 {
 	if (worker.getType().isMule())

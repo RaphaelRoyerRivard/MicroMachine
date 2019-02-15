@@ -33,7 +33,7 @@ void BuildingPlacer::onStart()
 }
 
 // makes final checks to see if a building can be built at a certain location
-bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b) const
+bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b, bool ignoreReservedTiles) const
 {
 	//TODO: Unused, it is outdated, check canBuildHereWithSpace instead
 	BOT_ASSERT(true, "Unused, it is outdated, check canBuildHereWithSpace instead");
@@ -43,7 +43,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b) const
     {
         for (int y = by; y < by + b.type.tileHeight(); y++)
         {
-            if (!buildable(b.type, x, y) || m_reserveMap[x][y])
+            if (!buildable(b.type, x, y, ignoreReservedTiles) || (!ignoreReservedTiles && m_reserveMap[x][y]))
             {
                 return false;
             }
@@ -51,7 +51,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b) const
     }
 
     // if it overlaps a base location return false
-    if (tileOverlapsBaseLocation(bx, by, b.type))
+    if (!ignoreReservedTiles && tileOverlapsBaseLocation(bx, by, b.type))
     {
         return false;
     }
@@ -259,11 +259,11 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
     return false;
 }
 
-bool BuildingPlacer::buildable(const UnitType type, int x, int y) const
+bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreReservedTiles) const
 {
     // TODO: doesnt take units on the map into account
-	bool isBuildable = m_bot.Map().isBuildable(x, y);
-	bool canBuildAtPosition = type.isAddon() || m_bot.Map().canBuildTypeAtPosition(x, y, type);
+	bool isBuildable = m_bot.Map().isBuildable(x, y) || ignoreReservedTiles;
+	bool canBuildAtPosition = type.isAddon() || m_bot.Map().canBuildTypeAtPosition(x, y, type) || ignoreReservedTiles;
 	bool isOkWithCreep = Util::IsZerg(m_bot.GetSelfRace()) || !m_bot.Observation()->HasCreep(CCPosition(x, y));
 	return isBuildable && canBuildAtPosition && isOkWithCreep;	//Replaced !m_bot.Map().canBuildTypeAtPosition(x, y, b.type)) with isBuildable.
 }
