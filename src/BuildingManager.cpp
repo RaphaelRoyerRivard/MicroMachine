@@ -452,7 +452,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 		{
 			m_bot.StartProfiling("0.8.3.1 getBuildingLocation");
 			// grab a worker unit from WorkerManager which is closest to this final position
-			CCTilePosition testLocation = getNextBuildingLocation(b, true);
+			CCTilePosition testLocation = getNextBuildingLocation(b, false);
 			m_bot.StopProfiling("0.8.3.1 getBuildingLocation");
 
 			// Don't test the location if the building is already started
@@ -473,10 +473,42 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 			m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
 			if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
 			{
+				//Not safe, pick another location
 				m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
-				continue;
+				testLocation = getNextBuildingLocation(b, true);
+				if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
+				{
+					continue;
+				}
+
+				b.finalPosition = testLocation;
+
+				// grab the worker unit from WorkerManager which is closest to this final position
+				Unit builderUnit = m_bot.Workers().getBuilder(b, false);
+				//Test if worker path is safe
+				if (!builderUnit.isValid())
+				{
+					continue;
+				}
 			}
-			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
+			else
+			{
+				m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
+				//path  is safe, we can remove it from the list
+				auto & positions = nextBuildingPosition.find(b.type);// .pop_front();
+				if (positions != nextBuildingPosition.end())
+				{
+					for (auto & position : positions->second)
+					{
+						if (position == testLocation)
+						{
+							positions->second.remove(testLocation);
+							break;
+						}
+					}
+				}
+			}
+
 			m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
 			b.builderUnit = builderUnit;
 
@@ -1007,30 +1039,26 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 	return buildingLocation;
 }
 
-CCTilePosition BuildingManager::getNextBuildingLocation(const Building & b, bool removeLocation)
+CCTilePosition BuildingManager::getNextBuildingLocation(const Building & b, bool ignoreNextBuildingPosition)
 {
-	CCTilePosition location;
-	std::map<UnitType, std::list<CCTilePosition>>::iterator it = nextBuildingPosition.find(b.type);
-	if (it != nextBuildingPosition.end())
+	if (!ignoreNextBuildingPosition)
 	{
-		if (!it->second.empty())
+		std::map<UnitType, std::list<CCTilePosition>>::iterator it = nextBuildingPosition.find(b.type);
+		if (it != nextBuildingPosition.end())
 		{
-			location = it->second.front();
-			if (removeLocation)
+			CCTilePosition location;
+			if (!it->second.empty())
 			{
-				it->second.pop_front();
+				location = it->second.front();
 			}
-		}
-		else
-		{
-			location = getBuildingLocation(b);
+			else
+			{
+				location = getBuildingLocation(b);
+			}
+			return location;
 		}
 	}
-	else
-	{
-		location = getBuildingLocation(b);
-	}
-	return location;
+	return getBuildingLocation(b);
 }
 
 Unit BuildingManager::getClosestResourceDepot(CCPosition position)

@@ -62,7 +62,7 @@ public:
 	std::vector<Unit>	getFinishedBuildings();
 	std::vector<Unit>	getPreviousBaseBuildings();
     CCTilePosition      getBuildingLocation(const Building & b);
-	CCTilePosition		getNextBuildingLocation(const Building & b, bool removeLocation);
+	CCTilePosition		getNextBuildingLocation(const Building & b, bool ignoreNextBuildingPosition);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);
