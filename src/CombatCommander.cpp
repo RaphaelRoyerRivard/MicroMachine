@@ -464,7 +464,7 @@ void CombatCommander::updateIdleSquad()
 	if (idleSquad.getUnits().empty())
 		return;
 
-	if (idleSquad.needsToRetreat())
+	/*if (idleSquad.needsToRetreat())
 	{
 		SquadOrder retreatOrder(SquadOrderTypes::Retreat, getMainAttackLocation(), DefaultOrderRadius, "Retreat!!");
 		idleSquad.setSquadOrder(retreatOrder);
@@ -483,7 +483,7 @@ void CombatCommander::updateIdleSquad()
 
 		SquadOrder idleOrder(SquadOrderTypes::Attack, idlePosition, DefaultOrderRadius, "Prepare for battle");
 		m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
-	}
+	}*/
 
 	if (m_bot.GetCurrentFrame() % 24 == 0)	// Every second
 	{
