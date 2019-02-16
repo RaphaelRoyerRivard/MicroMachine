@@ -2,8 +2,6 @@
 
 #include "Common.h"
 #include "sc2api/sc2_api.h"
-#include "FocusFireFiniteStateMachine.h"
-#include "KitingFiniteStateMachine.h"
 
 class CCBot;
 
