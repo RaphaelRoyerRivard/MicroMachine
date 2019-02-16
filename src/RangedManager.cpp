@@ -136,11 +136,6 @@ void RangedManager::RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedU
 	}
 }
 
-void RangedManager::setNextCommandFrameAfterAttack(const sc2::Unit* unit)
-{
-	nextCommandFrameForUnit[unit] = m_bot.GetGameLoop() + getAttackDuration(unit);
-}
-
 int RangedManager::getAttackDuration(const sc2::Unit* unit) const
 {
 	int attackFrameCount = 2;
@@ -663,7 +658,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			// If the unit is not alone and should heal, we should let it flee
 			if (unit != rangedUnit && unitShouldHeal)
+			{
+				m_harassMode = true;
 				return false;
+			}
 
 			closeUnits.push_back(unit);
 			closeUnitsTarget.insert_or_assign(unit, unitTarget);
