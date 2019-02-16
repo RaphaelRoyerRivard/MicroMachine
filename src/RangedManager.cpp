@@ -2,7 +2,6 @@
 #include "Util.h"
 #include "CCBot.h"
 #include "BehaviorTreeBuilder.h"
-#include "RangedActions.h"
 #include <algorithm>
 #include <string>
 #include <thread>
@@ -94,46 +93,8 @@ void RangedManager::executeMicro()
 	}
     else 
 	{
-		RunBehaviorTree(rangedUnits, rangedUnitTargets);
+		BOT_ASSERT(false, "Ranged micro is not harass mode");
     }
-}
-
-void RangedManager::RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
-{
-	// use good-ol' BT
-	for (auto rangedUnit : rangedUnits)
-	{
-		BOT_ASSERT(rangedUnit, "ranged unit is null");
-
-		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
-		const bool isEnemyInSightCondition = !rangedUnitTargets.empty() && target != nullptr &&
-			Util::DistSq(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance * m_bot.Config().MaxTargetDistance;
-
-		ConditionAction isEnemyInSight(isEnemyInSightCondition);
-		ConditionAction isEnemyRanged(target != nullptr && isTargetRanged(target));
-
-		FocusFireAction focusFireAction(rangedUnit, target, &rangedUnitTargets, m_bot, m_focusFireStates, &rangedUnits, m_unitHealth);
-		KiteAction kiteAction(rangedUnit, target, m_bot, m_kittingStates);
-		GoToObjectiveAction goToObjectiveAction(rangedUnit, m_order.getPosition(), m_bot);
-
-		BehaviorTree* bt = BehaviorTreeBuilder()
-			.selector()
-			.sequence()
-			.condition(&isEnemyInSight).end()
-			.selector()
-			.sequence()
-			.condition(&isEnemyRanged).end()
-			.action(&focusFireAction).end()
-			.end()
-			.action(&kiteAction).end()
-			.end()
-			.end()
-			.action(&goToObjectiveAction).end()
-			.end()
-			.end();
-
-		bt->tick();
-	}
 }
 
 int RangedManager::getAttackDuration(const sc2::Unit* unit) const

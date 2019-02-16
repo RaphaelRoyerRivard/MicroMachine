@@ -122,7 +122,6 @@ private:
 	bool isCommandDone = false;
 	bool m_harassMode = false;
 
-	void RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	int getAttackDuration(const sc2::Unit* unit) const;
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
