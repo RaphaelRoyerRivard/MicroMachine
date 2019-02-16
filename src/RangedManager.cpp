@@ -633,6 +633,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	// Calculate enemy power
 	for (auto threat : threats)
 	{
+		if(threat->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+		{
+			continue;
+		}
 		const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
 		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
 	}
@@ -654,6 +658,25 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			}
 
 			const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
+
+			// If the unit is standing on effect influence, get it out of it before fighting
+			if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), rangedUnit, m_bot) > 0.f)
+			{
+				CCPosition movePosition = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, unitRange, false, true, m_bot);
+				if(movePosition != CCPosition())
+				{
+					const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
+					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, actionDuration);
+					// Attack the target
+					PlanAction(unit, action);
+					continue;
+				}
+				else
+				{
+					Util::DisplayError("Could not find an escape path towards target", "", m_bot);
+				}
+			}
+
 			const bool canAttackNow = unitRange * unitRange <= Util::DistSq(unit->pos, unitTarget->pos) && rangedUnit->weapon_cooldown <= 0.f;
 			const int attackDuration = canAttackNow ? getAttackDuration(unit) : 0;
 			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, false, attackDuration);
@@ -667,9 +690,13 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 
 bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * rangedUnit, const sc2::Unit * threat)
 {
+	if (threat->is_flying)
+		return false;
+
 	const auto it = m_bot.GetPreviousFrameEnemyPos().find(threat->tag);
 	if (it == m_bot.GetPreviousFrameEnemyPos().end())
 		return false;
+
 	const auto previousFrameEnemyPos = it->second;
 	const auto threatDirectionVector = Util::Normalized(threat->pos - previousFrameEnemyPos);
 	const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);

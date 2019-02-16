@@ -19,6 +19,8 @@ class CombatCommander
 	std::map<Unit, std::pair<CCPosition, uint32_t>> m_invisibleSighting;
 	std::vector<std::vector<float>> m_groundInfluenceMap;
 	std::vector<std::vector<float>> m_airInfluenceMap;
+	std::vector<std::vector<float>> m_groundEffectInfluenceMap;
+	std::vector<std::vector<float>> m_airEffectInfluenceMap;
 	std::vector<std::vector<bool>> m_blockedTiles;
 	
     bool            m_initialized;
@@ -55,7 +57,7 @@ class CombatCommander
 	void			updateGroundInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateAirInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
-	void			updateInfluenceMap(const float dps, const float range, const float speed, const CCPosition & position, const bool ground);
+	void			updateInfluenceMap(const float dps, const float range, const float speed, const CCPosition & position, const bool ground, const bool effect);
 	void			updateBlockedTilesWithUnit(const Unit& unit);
 	void			drawInfluenceMaps();
 	void			drawBlockedTiles();
@@ -73,6 +75,8 @@ public:
 
 	const std::vector<std::vector<float>> & getGroundInfluenceMap() const { return m_groundInfluenceMap; }
 	const std::vector<std::vector<float>> & getAirInfluenceMap() const { return m_airInfluenceMap; }
+	const std::vector<std::vector<float>> & getGroundEffectInfluenceMap() const { return m_groundEffectInfluenceMap; }
+	const std::vector<std::vector<float>> & getAirEffectInfluenceMap() const { return m_airEffectInfluenceMap; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
 
 	CCPosition getMainAttackLocation();

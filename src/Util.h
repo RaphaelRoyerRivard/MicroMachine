@@ -29,13 +29,14 @@ namespace Util
 		bool IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
-		CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool considerEnemyInfluence, CCBot & bot);
+		CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, CCBot & bot);
 		bool IsNeighborNodeValid(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		CCPosition GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to);
-		bool ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot);
 		bool HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		float GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
+		bool HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
+		float GetEffectInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
 	}
 
 	void SetAllowDebug(bool _allowDebug);

@@ -185,7 +185,9 @@ void CombatAnalyzer::checkUnitsState()
 		{
 			m_bot.StartProfiling("0.10.4.4.2.3        checkForRangeUpgrade");
 			const auto & influenceMap = unit.isFlying() ? m_bot.Commander().Combat().getAirInfluenceMap() : m_bot.Commander().Combat().getGroundInfluenceMap();
-			const float influence = influenceMap.at(floor(unit.getPosition().x)).at(floor(unit.getPosition().y));
+			const auto & effectInfluenceMap = unit.isFlying() ? m_bot.Commander().Combat().getAirEffectInfluenceMap() : m_bot.Commander().Combat().getGroundEffectInfluenceMap();
+			const CCTilePosition tilePosition = Util::GetTilePosition(unit.getPosition());
+			const float influence = influenceMap.at(tilePosition.x).at(tilePosition.y) + effectInfluenceMap.at(tilePosition.x).at(tilePosition.y);
 			if(influence == 0.f)
 			{
 				if (unit.isFlying() && !m_bot.Strategy().enemyHasHiSecAutoTracking())
