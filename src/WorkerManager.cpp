@@ -1174,3 +1174,13 @@ WorkerData & WorkerManager::getWorkerData() const
 {
 	return m_workerData;
 }
+
+uint32_t WorkerManager::getFrameOfLastFailedPathfindingForWorker(sc2::Tag workerTag)
+{
+	return m_lastFailedPathfinding[workerTag];
+}
+
+void WorkerManager::setFrameOfLastFailedPathfindingForWorker(sc2::Tag workerTag)
+{
+	m_lastFailedPathfinding[workerTag] = m_bot.GetCurrentFrame();
+}
