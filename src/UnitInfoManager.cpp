@@ -195,47 +195,39 @@ size_t UnitInfoManager::getUnitTypeCount(CCPlayer player, UnitType type, bool co
 			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT:
 			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED, completed);
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
 			case sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, completed);
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_FACTORY:
 			case sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_FACTORY, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING, completed);
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 			case sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_STARPORT, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING, completed);
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER:
 			case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING, completed);
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:
 			case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING, completed);
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_HELLION:
 			case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_HELLION, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_HELLIONTANK, completed);
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_LIBERATOR:
 			case sc2::UNIT_TYPEID::TERRAN_LIBERATORAG:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_LIBERATORAG, completed);
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_SIEGETANK:
 			case sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, completed);
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_THOR:
 			case sc2::UNIT_TYPEID::TERRAN_THORAP:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_THOR, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_THORAP, completed);
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_WIDOWMINE:
 			case sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_WIDOWMINE, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED, completed);
-				break;
+			case sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT:
+			case sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
+				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, completed);
 			default:
 				return m_bot.GetUnitCount(typeID, completed);
 		}
