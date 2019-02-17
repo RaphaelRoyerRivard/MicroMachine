@@ -8,7 +8,7 @@ const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
 const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
-const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 24;
+const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 
 // Influence Map Node
 struct Util::PathFinding::IMNode {
@@ -96,14 +96,14 @@ bool Util::PathFinding::SetContainsNode(const std::set<IMNode*> & set, IMNode* n
 
 bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot)
 {
-	if (bot.GetCurrentFrame() - bot.Workers().getFrameOfLastFailedPathfindingForWorker(rangedUnit->tag) < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
+	if (bot.GetCurrentFrame() - bot.Workers().getFrameOfLastFailedPathfindingForWorkerAndPosition(rangedUnit->tag, goal) < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
 		return false;
 
 	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, true, false, bot);
 	const bool success = pathPosition != CCPosition(0, 0);
 	if(!success)
 	{
-		bot.Workers().setFrameOfLastFailedPathfindingForWorker(rangedUnit->tag);
+		bot.Workers().setFrameOfLastFailedPathfindingForWorkerAndPosition(rangedUnit->tag, goal);
 	}
 	return success;
 }

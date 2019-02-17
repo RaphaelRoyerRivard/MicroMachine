@@ -1175,12 +1175,27 @@ WorkerData & WorkerManager::getWorkerData() const
 	return m_workerData;
 }
 
-uint32_t WorkerManager::getFrameOfLastFailedPathfindingForWorker(sc2::Tag workerTag)
+uint32_t WorkerManager::getFrameOfLastFailedPathfindingForWorkerAndPosition(sc2::Tag workerTag, CCPosition position)
 {
-	return m_lastFailedPathfinding[workerTag];
+	auto & positionFrames = m_lastFailedPathfinding[workerTag];
+	for(auto & pair : positionFrames)
+	{
+		if (pair.first == position)
+			return pair.second;
+	}
+	return 0;
 }
 
-void WorkerManager::setFrameOfLastFailedPathfindingForWorker(sc2::Tag workerTag)
+void WorkerManager::setFrameOfLastFailedPathfindingForWorkerAndPosition(sc2::Tag workerTag, CCPosition position)
 {
-	m_lastFailedPathfinding[workerTag] = m_bot.GetCurrentFrame();
+	auto & positionFrames = m_lastFailedPathfinding[workerTag];
+	for (auto & pair : positionFrames)
+	{
+		if (pair.first == position)
+		{
+			pair.second = m_bot.GetCurrentFrame();
+			return;
+		}
+	}
+	m_lastFailedPathfinding[workerTag].push_back(std::pair<CCPosition, uint32_t>(position, m_bot.GetCurrentFrame()));
 }
