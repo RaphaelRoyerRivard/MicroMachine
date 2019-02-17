@@ -1178,15 +1178,15 @@ void CombatCommander::updateDefenseSquads()
 		regions.sort();
 
 		// We check each of our units to determine how useful they would be for defending each of our attacked regions
-		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
+		for (auto & unitPair : m_bot.GetAllyUnits())
 		{
+			auto & unit = unitPair.second;
 			if (unit.getType().isWorker() || unit.getType().isBuilding())
 				continue;	// We don't want to consider our workers and defensive buildings (they will automatically defend their region)
 
 			// We check how useful our unit would be for anti ground and anti air for each of our regions
 			for (auto & region : regions)
 			{
-				
 				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
 				bool immune = true;
 				float maxGroundDps = 0.f;
@@ -1239,22 +1239,37 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.StopProfiling("0.10.4.2.2.5      calculateRegionsScores");
 
 		m_bot.StartProfiling("0.10.4.2.2.6      affectUnits");
-		while (true)	// The conditions to exit are if enough units are protecting our regions enough or if 
+		while (true)
 		{
 			Unit unit;
 			const sc2::Unit* unitptr = nullptr;
 
 			// We take the region that needs the most support
 			auto regionIterator = regions.begin();
+			bool stopCheckingForGroundSupport = false;
+			bool stopCheckingForAirSupport = false;
 
 			do
 			{
 				auto & region = *regionIterator;
-				const bool needsMoreSupport = region.needsMoreSupport();
 
 				// We find the unit that is the most interested to defend that region
 				float bestScore = 0.f;
-				auto& scores = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded() ? region.unitGroundScores : region.unitAirScores;
+				bool checkForGroundSupport;
+				if(region.groundEnemyPower > 0.f && (stopCheckingForAirSupport || region.airEnemyPower == 0.f))
+				{
+					checkForGroundSupport = true;
+				}
+				else if(region.airEnemyPower > 0.f && (stopCheckingForGroundSupport || region.groundEnemyPower == 0.f))
+				{
+					checkForGroundSupport = false;
+				}
+				else
+				{
+					checkForGroundSupport = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded();
+				}
+				const bool needsMoreSupport = checkForGroundSupport ? region.needsMoreAntiGround() : region.needsMoreAntiAir();
+				auto& scores = checkForGroundSupport ? region.unitGroundScores : region.unitAirScores;
 				for (auto & scorePair : scores)
 				{
 					// If the base already has enough defense
@@ -1294,11 +1309,29 @@ void CombatCommander::updateDefenseSquads()
 					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit);
 				}
 
+				// If no support is available
 				if (!unit.isValid())
 				{
+					// If we were checking for ground support, stop checking for ground support
+					if(checkForGroundSupport && !stopCheckingForGroundSupport)
+					{
+						stopCheckingForGroundSupport = true;
+						continue;	// Continue to check if the same region needs the other type of support
+					}
+					// If we were checking for air support, stop checking for air support
+					if(!checkForGroundSupport && !stopCheckingForAirSupport)
+					{
+						stopCheckingForAirSupport = true;
+						continue;	// Continue to check if the same region needs the other type of support
+					}
+					// Otherwise, check next region
 					++regionIterator;
+					// If this was the last region, exit
 					if (regionIterator == regions.end())
 						break;
+					// Reset the support checks because it will now be for another region
+					stopCheckingForGroundSupport = false;
+					stopCheckingForAirSupport = false;
 				}
 			} while (!unit.isValid());
 
@@ -1335,6 +1368,11 @@ void CombatCommander::updateDefenseSquads()
 			regions.sort();
 		}
 		m_bot.StopProfiling("0.10.4.2.2.6      affectUnits");
+		auto& idleSquad = m_squadData.getSquad("Idle");
+		if(!idleSquad.getUnits().empty())
+		{
+			Util::DisplayError("Units are still in the Idle squad when they should be defending.", "", m_bot);
+		}
 	}
 }
 
