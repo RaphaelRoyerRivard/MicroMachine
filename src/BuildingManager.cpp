@@ -497,9 +497,9 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 				b.finalPosition = testLocation;
 
 				// grab the worker unit from WorkerManager which is closest to this final position
-				Unit builderUnit = m_bot.Workers().getBuilder(b, false);
+				builderUnit = m_bot.Workers().getBuilder(b, false);
 				//Test if worker path is safe
-				if (!builderUnit.isValid())
+				if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
 				{
 					continue;
 				}
