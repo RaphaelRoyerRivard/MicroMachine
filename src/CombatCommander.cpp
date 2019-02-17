@@ -1368,11 +1368,6 @@ void CombatCommander::updateDefenseSquads()
 			regions.sort();
 		}
 		m_bot.StopProfiling("0.10.4.2.2.6      affectUnits");
-		auto& idleSquad = m_squadData.getSquad("Idle");
-		if(!idleSquad.getUnits().empty())
-		{
-			Util::DisplayError("Units are still in the Idle squad when they should be defending.", "", m_bot);
-		}
 	}
 }
 
