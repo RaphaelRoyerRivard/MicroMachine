@@ -8,6 +8,7 @@ const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
 const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
+const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 
 // Influence Map Node
 struct Util::PathFinding::IMNode {
@@ -95,28 +96,36 @@ bool Util::PathFinding::SetContainsNode(const std::set<IMNode*> & set, IMNode* n
 
 bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot)
 {
-	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, false, bot);
-	return pathPosition != CCPosition(0, 0);
+	if (bot.GetCurrentFrame() - bot.Workers().getFrameOfLastFailedPathfindingForWorkerAndPosition(rangedUnit->tag, goal) < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
+		return false;
+
+	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, true, false, bot);
+	const bool success = pathPosition != CCPosition(0, 0);
+	if(!success)
+	{
+		bot.Workers().setFrameOfLastFailedPathfindingForWorkerAndPosition(rangedUnit->tag, goal);
+	}
+	return success;
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot)
 {
-	return FindOptimalPath(rangedUnit, goal, maxRange, true, bot);
+	return FindOptimalPath(rangedUnit, goal, maxRange, false, false, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot)
 {
-	return FindOptimalPath(rangedUnit, goal, 0.f, true, bot);
+	return FindOptimalPath(rangedUnit, goal, 0.f, false, false, bot);
 }
 
-CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool considerEnemyInfluence, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, CCBot & bot)
 {
 	CCPosition returnPos;
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
 	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
-	const bool flee = considerEnemyInfluence && maxRange == 0.f;
+	const bool flee = !exitOnInfluence && maxRange == 0.f;
 	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
@@ -130,26 +139,28 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPo
 		bool shouldTriggerExit = false;
 		if (flee)
 		{
-			shouldTriggerExit = !HasInfluenceOnTile(currentNode, rangedUnit, bot);
+			shouldTriggerExit = !HasInfluenceOnTile(currentNode, rangedUnit, bot) && !HasEffectInfluenceOnTile(currentNode, rangedUnit, bot);
 		}
 		else
 		{
-			if (!considerEnemyInfluence)
+			if (exitOnInfluence)
 			{
-				shouldTriggerExit = HasInfluenceOnTile(currentNode, rangedUnit, bot);
+				shouldTriggerExit = HasInfluenceOnTile(currentNode, rangedUnit, bot) || HasEffectInfluenceOnTile(currentNode, rangedUnit, bot);
 			}
 			if (!shouldTriggerExit)
 			{
-				shouldTriggerExit = ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange, bot);
+				shouldTriggerExit = (considerOnlyEffects || !HasInfluenceOnTile(currentNode, rangedUnit, bot)) &&
+					!HasEffectInfluenceOnTile(currentNode, rangedUnit, bot) &&
+					Util::Dist(Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
 			}
 		}
 		if (shouldTriggerExit)
 		{
-			if (considerEnemyInfluence)
+			if (!exitOnInfluence)
 			{
 				returnPos = GetCommandPositionFromPath(currentNode, rangedUnit, bot);
 			}
-			else if(!HasInfluenceOnTile(currentNode, rangedUnit, bot))
+			else if(!HasInfluenceOnTile(currentNode, rangedUnit, bot) && !HasEffectInfluenceOnTile(currentNode, rangedUnit, bot))
 			{
 				returnPos = GetPosition(currentNode->position);
 			}
@@ -168,7 +179,7 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPo
 
 				const bool isDiagonal = abs(x + y) != 1;
 				const float creepCost = !rangedUnit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
-				const float influenceOnTile = considerEnemyInfluence ? GetInfluenceOnTile(neighborPosition, rangedUnit, bot) : 0.f;
+				const float influenceOnTile = exitOnInfluence ? 0.f : GetEffectInfluenceOnTile(neighborPosition, rangedUnit, bot) + (considerOnlyEffects ? 0.f :GetInfluenceOnTile(neighborPosition, rangedUnit, bot));
 				const float nodeCost = (influenceOnTile + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * (isDiagonal ? sqrt(2) : 1);
 				const float totalCost = currentNode->cost + nodeCost;
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
@@ -272,11 +283,6 @@ float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCT
 	return Util::Dist(from, to) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER;
 }
 
-bool Util::PathFinding::ShouldTriggerExit(const IMNode* node, const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot)
-{
-	return !HasInfluenceOnTile(node, unit, bot) && Util::Dist(Util::GetPosition(node->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
-}
-
 bool Util::PathFinding::HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
 {
 	return GetInfluenceOnTile(node->position, unit, bot) != 0.f;
@@ -286,6 +292,17 @@ float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit
 {
 	const auto & influenceMap = unit->is_flying ? bot.Commander().Combat().getAirInfluenceMap() : bot.Commander().Combat().getGroundInfluenceMap();
 	return influenceMap[tile.x][tile.y];
+}
+
+bool Util::PathFinding::HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
+{
+	return GetEffectInfluenceOnTile(node->position, unit, bot) != 0.f;
+}
+
+float Util::PathFinding::GetEffectInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
+{
+	const auto & effectInfluenceMap = unit->is_flying ? bot.Commander().Combat().getAirEffectInfluenceMap() : bot.Commander().Combat().getGroundEffectInfluenceMap();
+	return effectInfluenceMap[tile.x][tile.y];
 }
 
 void Util::SetAllowDebug(bool _allowDebug)

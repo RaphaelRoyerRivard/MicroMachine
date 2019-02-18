@@ -139,20 +139,6 @@ const CCTilePosition & BaseLocation::getDepotPosition() const
 	    return m_depotPosition;
 }
 
-const Unit & BaseLocation::getDepot() const
-{
-	Unit depot = Unit();
-	for (auto & building : m_bot.Buildings().getBaseBuildings())
-	{
-		if (building.getTilePosition() == getDepotPosition())
-		{
-			depot = building;
-			break;
-		}
-	}
-	return depot;
-}
-
 int BaseLocation::getOptimalMineralWorkerCount() const
 {
 	const int minimumMineral = 50;//at 50, its basically empty.

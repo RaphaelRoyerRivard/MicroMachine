@@ -897,6 +897,10 @@ void CCBot::drawProfilingInfo()
 				if (time * 4 > stepTime)
 				{
 					profilingInfo += "!!";
+					if(GetCurrentFrame() % 25 == 0 && stepTime > 10000)	// >10ms
+					{
+						Util::DebugLog(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * time) + "ms", *this);
+					}
 				}
 			}
 

@@ -49,38 +49,6 @@ MicroActionType Micro::SmartRepair(const sc2::Unit * unit, const sc2::Unit * tar
 	return MicroActionType::RightClick;
 }
 
-MicroActionType Micro::SmartKiteTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCBot & bot, std::unordered_map<sc2::Tag, KitingFiniteStateMachine*> &state)
-{
-    BOT_ASSERT(rangedUnit != nullptr, "RangedUnit is null");
-    BOT_ASSERT(target != nullptr, "Target is null");
-
-    KitingFiniteStateMachine* stateMachine;
-    if (state.find(rangedUnit->tag) == state.end()) {
-        stateMachine = new KitingFiniteStateMachine(rangedUnit, target);
-    }
-    else
-        stateMachine = state[rangedUnit->tag];
-
-    stateMachine->update(target, &bot);
-    state.insert_or_assign(rangedUnit->tag, stateMachine);
-	return MicroActionType::FSMKite;
-}
-
-MicroActionType Micro::SmartFocusFire(const sc2::Unit * rangedUnit, const sc2::Unit * target, const std::vector<const sc2::Unit *> * targets, CCBot & bot, std::unordered_map<sc2::Tag, FocusFireFiniteStateMachine*> &state, const std::vector<const sc2::Unit *> * units, std::unordered_map<sc2::Tag, float> &unitHealth)
-{
-    BOT_ASSERT(rangedUnit != nullptr, "RangedUnit is null");
-    BOT_ASSERT(target != nullptr, "Target is null");
-
-    FocusFireFiniteStateMachine* stateMachine;
-    if (state.find(rangedUnit->tag) == state.end())
-        stateMachine = new FocusFireFiniteStateMachine(rangedUnit, target, targets, &bot);
-    else stateMachine = state[rangedUnit->tag];
-    
-    stateMachine->update(target, targets, units, &unitHealth, &bot);
-    state.insert_or_assign(rangedUnit->tag, stateMachine);
-	return MicroActionType::FSMFocusFire;
-}
-
 MicroActionType Micro::SmartAbility(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot)
 {
 	BOT_ASSERT(unit != nullptr, "Unit using smart ability is null");

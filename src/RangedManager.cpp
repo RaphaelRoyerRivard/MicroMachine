@@ -2,7 +2,6 @@
 #include "Util.h"
 #include "CCBot.h"
 #include "BehaviorTreeBuilder.h"
-#include "RangedActions.h"
 #include <algorithm>
 #include <string>
 #include <thread>
@@ -94,51 +93,8 @@ void RangedManager::executeMicro()
 	}
     else 
 	{
-		RunBehaviorTree(rangedUnits, rangedUnitTargets);
+		BOT_ASSERT(false, "Ranged micro is not harass mode");
     }
-}
-
-void RangedManager::RunBehaviorTree(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
-{
-	// use good-ol' BT
-	for (auto rangedUnit : rangedUnits)
-	{
-		BOT_ASSERT(rangedUnit, "ranged unit is null");
-
-		const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
-		const bool isEnemyInSightCondition = !rangedUnitTargets.empty() && target != nullptr &&
-			Util::DistSq(rangedUnit->pos, target->pos) <= m_bot.Config().MaxTargetDistance * m_bot.Config().MaxTargetDistance;
-
-		ConditionAction isEnemyInSight(isEnemyInSightCondition);
-		ConditionAction isEnemyRanged(target != nullptr && isTargetRanged(target));
-
-		FocusFireAction focusFireAction(rangedUnit, target, &rangedUnitTargets, m_bot, m_focusFireStates, &rangedUnits, m_unitHealth);
-		KiteAction kiteAction(rangedUnit, target, m_bot, m_kittingStates);
-		GoToObjectiveAction goToObjectiveAction(rangedUnit, m_order.getPosition(), m_bot);
-
-		BehaviorTree* bt = BehaviorTreeBuilder()
-			.selector()
-			.sequence()
-			.condition(&isEnemyInSight).end()
-			.selector()
-			.sequence()
-			.condition(&isEnemyRanged).end()
-			.action(&focusFireAction).end()
-			.end()
-			.action(&kiteAction).end()
-			.end()
-			.end()
-			.action(&goToObjectiveAction).end()
-			.end()
-			.end();
-
-		bt->tick();
-	}
-}
-
-void RangedManager::setNextCommandFrameAfterAttack(const sc2::Unit* unit)
-{
-	nextCommandFrameForUnit[unit] = m_bot.GetGameLoop() + getAttackDuration(unit);
 }
 
 int RangedManager::getAttackDuration(const sc2::Unit* unit) const
@@ -353,7 +309,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	if(!useInfluenceMap)
 	{
-		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange);
+		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange, unitShouldHeal);
 
 		// Sum up the threats vector with the direction vector
 		if (!threats.empty())
@@ -577,11 +533,10 @@ bool RangedManager::ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::
 	return !inRangeOfThreat || isCloseThreatFaster;
 }
 
-CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange) const
+CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange, bool unitShouldHeal) const
 {
 	CCPosition dirVec(0.f, 0.f);
-	const bool reaperShouldHeal = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.66f;
-	if (target && !reaperShouldHeal)
+	if (target && !unitShouldHeal)
 	{
 		// if not in range of target, add normalized vector towards target
 		if (!targetInAttackRange)
@@ -634,6 +589,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			continue;
 		}
+		//TODO decide if we want only synchronized units or also desynchronized ones
 		// Ignore units that are currently executing an action
 		if(unitAction.executed && !unitAction.finished)
 		{
@@ -663,7 +619,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			// If the unit is not alone and should heal, we should let it flee
 			if (unit != rangedUnit && unitShouldHeal)
+			{
+				m_harassMode = true;
 				return false;
+			}
 
 			closeUnits.push_back(unit);
 			closeUnitsTarget.insert_or_assign(unit, unitTarget);
@@ -674,6 +633,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	// Calculate enemy power
 	for (auto threat : threats)
 	{
+		if(threat->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+		{
+			continue;
+		}
 		const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
 		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
 	}
@@ -695,6 +658,25 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			}
 
 			const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
+
+			// If the unit is standing on effect influence, get it out of it before fighting
+			if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), rangedUnit, m_bot) > 0.f)
+			{
+				CCPosition movePosition = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, unitRange, false, true, m_bot);
+				if(movePosition != CCPosition())
+				{
+					const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
+					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, actionDuration);
+					// Attack the target
+					PlanAction(unit, action);
+					continue;
+				}
+				else
+				{
+					Util::DisplayError("Could not find an escape path towards target", "", m_bot);
+				}
+			}
+
 			const bool canAttackNow = unitRange * unitRange <= Util::DistSq(unit->pos, unitTarget->pos) && rangedUnit->weapon_cooldown <= 0.f;
 			const int attackDuration = canAttackNow ? getAttackDuration(unit) : 0;
 			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, false, attackDuration);
@@ -708,9 +690,13 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 
 bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * rangedUnit, const sc2::Unit * threat)
 {
+	if (threat->is_flying)
+		return false;
+
 	const auto it = m_bot.GetPreviousFrameEnemyPos().find(threat->tag);
 	if (it == m_bot.GetPreviousFrameEnemyPos().end())
 		return false;
+
 	const auto previousFrameEnemyPos = it->second;
 	const auto threatDirectionVector = Util::Normalized(threat->pos - previousFrameEnemyPos);
 	const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);

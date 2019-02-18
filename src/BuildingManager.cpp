@@ -690,6 +690,11 @@ void BuildingManager::checkForStartedConstruction()
 			{
 				continue;
 			}
+			if (b.buildingUnit.isValid())
+			{
+				std::cout << "Building mis-match somehow\n";
+				continue;
+			}
 			auto type = b.type;
 
 			// check if the positions match
@@ -699,12 +704,6 @@ void BuildingManager::checkForStartedConstruction()
 
 			if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
 			{
-				if (b.buildingUnit.isValid())
-				{
-					std::cout << "Building mis-match somehow\n";
-					continue;
-				}
-
 				// the resources should now be spent, so unreserve them
 				m_bot.FreeMinerals(buildingStarted.getType().mineralPrice());
 				m_bot.FreeGas(buildingStarted.getType().gasPrice());

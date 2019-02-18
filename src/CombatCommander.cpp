@@ -142,19 +142,27 @@ void CombatCommander::initInfluenceMaps()
 	const size_t mapHeight = m_bot.Map().totalHeight();
 	m_groundInfluenceMap.resize(mapWidth);
 	m_airInfluenceMap.resize(mapWidth);
+	m_groundEffectInfluenceMap.resize(mapWidth);
+	m_airEffectInfluenceMap.resize(mapWidth);
 	m_blockedTiles.resize(mapWidth);
 	for(size_t x = 0; x < mapWidth; ++x)
 	{
 		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
 		auto& airInfluenceMapRow = m_airInfluenceMap[x];
+		auto& groundEffectInfluenceMapRow = m_groundEffectInfluenceMap[x];
+		auto& airEffectInfluenceMapRow = m_airEffectInfluenceMap[x];
 		auto& blockedTilesRow = m_blockedTiles[x];
 		groundInfluenceMapRow.resize(mapHeight);
 		airInfluenceMapRow.resize(mapHeight);
+		groundEffectInfluenceMapRow.resize(mapHeight);
+		airEffectInfluenceMapRow.resize(mapHeight);
 		blockedTilesRow.resize(mapHeight);
 		for (size_t y = 0; y < mapHeight; ++y)
 		{
 			groundInfluenceMapRow[y] = 0;
 			airInfluenceMapRow[y] = 0;
+			groundEffectInfluenceMapRow[y] = 0;
+			airEffectInfluenceMapRow[y] = 0;
 			blockedTilesRow[y] = false;
 		}
 	}
@@ -169,11 +177,15 @@ void CombatCommander::resetInfluenceMaps()
 	{
 		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
 		auto& airInfluenceMapRow = m_airInfluenceMap[x];
+		auto& groundEffectInfluenceMapRow = m_groundEffectInfluenceMap[x];
+		auto& airEffectInfluenceMapRow = m_airEffectInfluenceMap[x];
 		auto& blockedTilesRow = m_blockedTiles[x];
 		for (size_t y = 0; y < mapHeight; ++y)
 		{
 			groundInfluenceMapRow[y] = 0;
 			airInfluenceMapRow[y] = 0;
+			groundEffectInfluenceMapRow[y] = 0;
+			airEffectInfluenceMapRow[y] = 0;
 			if(resetBlockedTiles)
 				blockedTilesRow[y] = false;
 		}
@@ -213,8 +225,17 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 		auto& enemyUnitType = enemyUnit.getType();
 		if (enemyUnitType.isCombatUnit() || enemyUnitType.isWorker() || (enemyUnitType.isAttackingBuilding() && enemyUnit.getUnitPtr()->build_progress >= 1.f))
 		{
-			updateGroundInfluenceMapForUnit(enemyUnit);
-			updateAirInfluenceMapForUnit(enemyUnit);
+			if(enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+			{
+				const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
+				const float radius = Util::GetSpecialCaseRange(enemyUnit.getAPIUnitType(), sc2::Weapon::TargetType::Ground);
+				updateInfluenceMap(dps, radius, 1.f, enemyUnit.getPosition(), true, true);
+			}
+			else
+			{
+				updateGroundInfluenceMapForUnit(enemyUnit);
+				updateAirInfluenceMapForUnit(enemyUnit);
+			}
 		}
 		if(updateBlockedTiles && enemyUnitType.isBuilding() && !enemyUnit.isFlying() && enemyUnit.getUnitPtr()->unit_type != sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
 		{
@@ -323,9 +344,9 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 		for(auto & pos : effect.positions)
 		{
 			if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Air)
-				updateInfluenceMap(dps, radius, 1.f, pos, false);
+				updateInfluenceMap(dps, radius, 1.f, pos, false, true);
 			if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Ground)
-				updateInfluenceMap(dps, radius, 1.f, pos, true);
+				updateInfluenceMap(dps, radius, 1.f, pos, true, true);
 		}
 	}
 }
@@ -349,10 +370,10 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	if (range == 0.f)
 		return;
 	const float speed = std::max(1.f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
-	updateInfluenceMap(dps, range, speed, enemyUnit.getPosition(), ground);
+	updateInfluenceMap(dps, range, speed, enemyUnit.getPosition(), ground, false);
 }
 
-void CombatCommander::updateInfluenceMap(const float dps, const float range, const float speed, const CCPosition & position, const bool ground)
+void CombatCommander::updateInfluenceMap(const float dps, const float range, const float speed, const CCPosition & position, const bool ground, const bool effect)
 {
 	const float totalRange = range + speed;
 
@@ -368,7 +389,7 @@ void CombatCommander::updateInfluenceMap(const float dps, const float range, con
 	const int maxX = std::min(maxMapX, fmaxX);
 	const int minY = std::max(minMapY, fminY);
 	const int maxY = std::min(maxMapY, fmaxY);
-	auto& influenceMap = ground ? m_groundInfluenceMap : m_airInfluenceMap;
+	auto& influenceMap = ground ? (effect ? m_groundEffectInfluenceMap : m_groundInfluenceMap) : (effect ? m_airEffectInfluenceMap : m_airInfluenceMap);
 	//loop for a square of size equal to the diameter of the influence circle
 	for (int x = minX; x < maxX; ++x)
 	{
@@ -424,12 +445,30 @@ void CombatCommander::drawInfluenceMaps()
 	{
 		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
 		auto& airInfluenceMapRow = m_airInfluenceMap[x];
+		auto& groundEffectInfluenceMapRow = m_groundEffectInfluenceMap[x];
+		auto& airEffectInfluenceMapRow = m_airEffectInfluenceMap[x];
 		for (size_t y = 0; y < mapHeight; ++y)
 		{
 			if (groundInfluenceMapRow[y] > 0.f)
-				m_bot.Map().drawTile(x, y, CCColor(255, 255 - std::min(255.f, std::max(0.f, groundInfluenceMapRow[y] * 5)), 0));
+			{
+				const float value = std::min(255.f, std::max(0.f, groundInfluenceMapRow[y] * 5));
+				m_bot.Map().drawTile(x, y, CCColor(255, 255 - value, 0));	//yellow to red
+			}
 			if (airInfluenceMapRow[y] > 0.f)
-				m_bot.Map().drawTile(x, y, CCColor(255, 255 - std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5)), 0), 0.5f);
+			{
+				const float value = std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5));
+				m_bot.Map().drawTile(x, y, CCColor(255, 255 - value, 0), 0.5f);	//yellow to red
+			}
+			if (groundEffectInfluenceMapRow[y] > 0.f)
+			{
+				const float value = std::min(255.f, std::max(0.f, groundEffectInfluenceMapRow[y] * 5));
+				m_bot.Map().drawTile(x, y, CCColor(255 - value, value, 255), 0.7f);	//cyan to purple
+			}
+			if (airEffectInfluenceMapRow[y] > 0.f)
+			{
+				const float value = std::min(255.f, std::max(0.f, airEffectInfluenceMapRow[y] * 5));
+				m_bot.Map().drawTile(x, y, CCColor(255 - value, value, 255), 0.4f);	//cyan to purple
+			}
 		}
 	}
 }
@@ -464,7 +503,7 @@ void CombatCommander::updateIdleSquad()
 	if (idleSquad.getUnits().empty())
 		return;
 
-	if (idleSquad.needsToRetreat())
+	/*if (idleSquad.needsToRetreat())
 	{
 		SquadOrder retreatOrder(SquadOrderTypes::Retreat, getMainAttackLocation(), DefaultOrderRadius, "Retreat!!");
 		idleSquad.setSquadOrder(retreatOrder);
@@ -483,7 +522,7 @@ void CombatCommander::updateIdleSquad()
 
 		SquadOrder idleOrder(SquadOrderTypes::Attack, idlePosition, DefaultOrderRadius, "Prepare for battle");
 		m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
-	}
+	}*/
 
 	if (m_bot.GetCurrentFrame() % 24 == 0)	// Every second
 	{
@@ -1139,15 +1178,15 @@ void CombatCommander::updateDefenseSquads()
 		regions.sort();
 
 		// We check each of our units to determine how useful they would be for defending each of our attacked regions
-		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
+		for (auto & unitPair : m_bot.GetAllyUnits())
 		{
+			auto & unit = unitPair.second;
 			if (unit.getType().isWorker() || unit.getType().isBuilding())
 				continue;	// We don't want to consider our workers and defensive buildings (they will automatically defend their region)
 
 			// We check how useful our unit would be for anti ground and anti air for each of our regions
 			for (auto & region : regions)
 			{
-				
 				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
 				bool immune = true;
 				float maxGroundDps = 0.f;
@@ -1200,22 +1239,37 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.StopProfiling("0.10.4.2.2.5      calculateRegionsScores");
 
 		m_bot.StartProfiling("0.10.4.2.2.6      affectUnits");
-		while (true)	// The conditions to exit are if enough units are protecting our regions enough or if 
+		while (true)
 		{
 			Unit unit;
 			const sc2::Unit* unitptr = nullptr;
 
 			// We take the region that needs the most support
 			auto regionIterator = regions.begin();
+			bool stopCheckingForGroundSupport = false;
+			bool stopCheckingForAirSupport = false;
 
 			do
 			{
 				auto & region = *regionIterator;
-				const bool needsMoreSupport = region.needsMoreSupport();
 
 				// We find the unit that is the most interested to defend that region
 				float bestScore = 0.f;
-				auto& scores = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded() ? region.unitGroundScores : region.unitAirScores;
+				bool checkForGroundSupport;
+				if(region.groundEnemyPower > 0.f && (stopCheckingForAirSupport || region.airEnemyPower == 0.f))
+				{
+					checkForGroundSupport = true;
+				}
+				else if(region.airEnemyPower > 0.f && (stopCheckingForGroundSupport || region.groundEnemyPower == 0.f))
+				{
+					checkForGroundSupport = false;
+				}
+				else
+				{
+					checkForGroundSupport = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded();
+				}
+				const bool needsMoreSupport = checkForGroundSupport ? region.needsMoreAntiGround() : region.needsMoreAntiAir();
+				auto& scores = checkForGroundSupport ? region.unitGroundScores : region.unitAirScores;
 				for (auto & scorePair : scores)
 				{
 					// If the base already has enough defense
@@ -1255,11 +1309,29 @@ void CombatCommander::updateDefenseSquads()
 					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit);
 				}
 
+				// If no support is available
 				if (!unit.isValid())
 				{
+					// If we were checking for ground support, stop checking for ground support
+					if(checkForGroundSupport && !stopCheckingForGroundSupport)
+					{
+						stopCheckingForGroundSupport = true;
+						continue;	// Continue to check if the same region needs the other type of support
+					}
+					// If we were checking for air support, stop checking for air support
+					if(!checkForGroundSupport && !stopCheckingForAirSupport)
+					{
+						stopCheckingForAirSupport = true;
+						continue;	// Continue to check if the same region needs the other type of support
+					}
+					// Otherwise, check next region
 					++regionIterator;
+					// If this was the last region, exit
 					if (regionIterator == regions.end())
 						break;
+					// Reset the support checks because it will now be for another region
+					stopCheckingForGroundSupport = false;
+					stopCheckingForAirSupport = false;
 				}
 			} while (!unit.isValid());
 

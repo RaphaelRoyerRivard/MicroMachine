@@ -227,7 +227,7 @@ void WorkerManager::handleGasWorkers()
 				int mineralWorkerRoom = 26;//Number of free spaces for mineral workers
 				if (base != nullptr)
 				{
-					auto depot = base->getDepot();
+					auto & depot = base->getResourceDepot();
 					if (depot.isValid())
 					{
 						int mineralWorkersCount = m_workerData.getNumAssignedWorkers(depot);
@@ -518,7 +518,7 @@ void WorkerManager::handleRepairWorkers()
 
 void WorkerManager::repairCombatBuildings()
 {
-	const float repairAt = 0.9; //90% health
+	const float repairAt = 0.9f; //90% health
 	const int maxReparator = 5; //Turret and bunkers only
 
 	if (m_bot.GetSelfRace() != CCRace::Terran)
@@ -1004,6 +1004,7 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
 		}
 
 		//Check if worker is already building something else
+		//TODO This shouldn't be needed (shouldn't happen), right?
 		for (auto building : m_bot.Buildings().getBuildings())
 		{
 			if (building.builderUnit.isValid() && building.builderUnit.getID() == builderWorker.getID())
@@ -1180,4 +1181,29 @@ std::set<Unit> WorkerManager::getWorkers() const
 WorkerData & WorkerManager::getWorkerData() const
 {
 	return m_workerData;
+}
+
+uint32_t WorkerManager::getFrameOfLastFailedPathfindingForWorkerAndPosition(sc2::Tag workerTag, CCPosition position)
+{
+	auto & positionFrames = m_lastFailedPathfinding[workerTag];
+	for(auto & pair : positionFrames)
+	{
+		if (pair.first == position)
+			return pair.second;
+	}
+	return 0;
+}
+
+void WorkerManager::setFrameOfLastFailedPathfindingForWorkerAndPosition(sc2::Tag workerTag, CCPosition position)
+{
+	auto & positionFrames = m_lastFailedPathfinding[workerTag];
+	for (auto & pair : positionFrames)
+	{
+		if (pair.first == position)
+		{
+			pair.second = m_bot.GetCurrentFrame();
+			return;
+		}
+	}
+	m_lastFailedPathfinding[workerTag].push_back(std::pair<CCPosition, uint32_t>(position, m_bot.GetCurrentFrame()));
 }

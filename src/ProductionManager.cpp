@@ -498,7 +498,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (m_bot.Strategy().shouldProduceAntiAir())
 				{
-					if (vikingCount < 2 * bansheeCount && !m_queue.contains(MetaTypeEnum::Viking))
+					if (vikingCount < bansheeCount && !m_queue.contains(MetaTypeEnum::Viking))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
@@ -1349,7 +1349,7 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 	// quick check if the unit can't do anything it certainly can't build the thing we want
 	if (available_abilities.abilities.empty())
 	{
-		Util::DisplayError("This shouldn't happen.", "0x10000000", m_bot, true);
+		Util::DisplayError("Producer of type " + producer.getType().getName() + " cannot activate its ability to produce " + type.getName(), "0x10000000", m_bot, true);
 		return false;
 	}
 	else

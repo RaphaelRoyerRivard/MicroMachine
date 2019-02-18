@@ -3,12 +3,9 @@
 #include "Common.h"
 #include "SquadOrder.h"
 #include "Unit.h"
-#include "FocusFireFiniteStateMachine.h"
-#include "KitingFiniteStateMachine.h"
 #include "Micro.h"
 
 class CCBot;
-class AlphaBetaUnit;
 
 class MicroManager
 {
@@ -36,9 +33,4 @@ public:
 	float getAverageTargetsSpeed() const;
     float getSquadPower() const;
     float getTargetsPower(const std::vector<Unit>& units) const;
-
-    std::unordered_map<sc2::Tag, FocusFireFiniteStateMachine*> m_focusFireStates;
-    std::unordered_map<sc2::Tag, KitingFiniteStateMachine*> m_kittingStates;
-    std::unordered_map<sc2::Tag, float> m_unitHealth;
-    std::unordered_map<sc2::Tag, AlphaBetaUnit *> m_units_actions;
 };
