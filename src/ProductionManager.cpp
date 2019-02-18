@@ -1405,16 +1405,6 @@ bool ProductionManager::detectBuildOrderDeadlock()
     return false;
 }
 
-int ProductionManager::getFreeMinerals()
-{
-    return m_bot.GetMinerals() - m_bot.Buildings().getReservedMinerals();
-}
-
-int ProductionManager::getFreeGas()
-{
-    return m_bot.GetGas() - m_bot.Buildings().getReservedGas();
-}
-
 int ProductionManager::getExtraMinerals()
 {
 	int extraMinerals = 0;
@@ -1451,14 +1441,14 @@ int ProductionManager::getExtraGas()
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResources(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
 {
-    return (m_bot.Data(type).mineralCost <= getFreeMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= getFreeGas() - additionalReservedGas);
+    return (m_bot.Data(type).mineralCost <= m_bot.GetFreeMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= m_bot.GetFreeGas() - additionalReservedGas);
 }
 
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
 {
 	assert("Addons cannot use extra ressources", m_bot.Data(type).isAddon);
-	return (m_bot.Data(type).mineralCost <= getFreeMinerals() + getExtraMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= getFreeGas() + getExtraGas() - additionalReservedGas);
+	return (m_bot.Data(type).mineralCost <= m_bot.GetFreeMinerals() + getExtraMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= m_bot.GetFreeGas() + getExtraGas() - additionalReservedGas);
 }
 
 void ProductionManager::drawProductionInformation()
@@ -1475,8 +1465,8 @@ void ProductionManager::drawProductionInformation()
 	m_bot.Map().drawTextScreen(0.01f, 0.01f, ss.str(), CCColor(255, 255, 0));
 
 	ss.str(std::string());
-	ss << "Free Mineral:     " << getFreeMinerals() << "\n";
-	ss << "Free Gas:         " << getFreeGas() << "\n";
+	ss << "Free Mineral:     " << m_bot.GetFreeMinerals() << "\n";
+	ss << "Free Gas:         " << m_bot.GetFreeGas() << "\n";
 	ss << "Gas Worker Target:" << m_bot.Workers().getGasWorkersTarget();
 	m_bot.Map().drawTextScreen(0.75f, 0.05f, ss.str(), CCColor(255, 255, 0));
 

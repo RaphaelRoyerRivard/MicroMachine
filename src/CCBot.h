@@ -44,6 +44,8 @@ class CCBot
     GameCommander           m_gameCommander;
 	CCPosition				m_startLocation;
 	CCTilePosition			m_buildingArea;
+	int						m_reservedMinerals = 0;				// minerals reserved for planned buildings
+	int						m_reservedGas = 0;					// gas reserved for planned buildings
 	std::map<sc2::UNIT_TYPEID, int> m_unitCount;
 	std::map<sc2::UNIT_TYPEID, int> m_unitCompletedCount;
 	std::map<sc2::Tag, Unit> m_allyUnits;
@@ -133,6 +135,14 @@ public:
     int GetCurrentSupply() const;
     int GetMaxSupply() const;
     int GetGas() const;
+	int GetReservedMinerals();
+	int GetReservedGas();
+	void ReserveMinerals(int reservedMinerals);
+	void ReserveGas(int reservedGas);
+	void FreeMinerals(int freedMinerals);
+	void FreeGas(int freedGas);
+	int GetFreeMinerals();
+	int GetFreeGas();
     Unit GetUnit(const CCUnitID & tag) const;
     const std::vector<Unit> & GetUnits() const;
 	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false) const;

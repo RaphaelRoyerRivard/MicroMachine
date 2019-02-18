@@ -59,8 +59,6 @@ public:
 	int getProductionBuildingsAddonsCount() const;
 	float getProductionScore() const;
 	float getProductionScoreInQueue();
-	int getFreeMinerals();
-	int getFreeGas();
 	int getExtraMinerals();
 	int getExtraGas();
 	bool meetsReservedResources(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);

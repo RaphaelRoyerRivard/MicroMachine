@@ -245,6 +245,8 @@
     <ClInclude Include="..\src\CombatAnalyzer.h">
       <Filter>global</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\Behavior.h" />
+    <ClInclude Include="..\src\BehaviorTreeBuilder.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CommandCenter.rc" />

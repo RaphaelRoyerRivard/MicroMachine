@@ -348,6 +348,9 @@ void WorkerManager::handleRepairWorkers()
     if (!Util::IsTerran(m_bot.GetSelfRace()))
         return;
 
+	int mineral = m_bot.GetFreeMinerals();
+	int gas = m_bot.GetFreeGas();
+
     for (auto & worker : m_workerData.getWorkers())
     {
         if (!worker.isValid()) { continue; }
@@ -355,11 +358,18 @@ void WorkerManager::handleRepairWorkers()
         if (m_workerData.getWorkerJob(worker) == WorkerJobs::Repair)
         {
             Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
+			auto type = repairedUnit.getType();
             if (!worker.isAlive())
             {
                 // We inform the manager that we are no longer repairing
                 stopRepairing(worker);
             }
+			// We do not try to repair if we don't have the required ressources
+			else if ((type.mineralPrice() > 0 && mineral == 0) || (type.gasPrice() > 0 && gas == 0))
+			{
+				// We inform the manager that we are no longer repairing
+				stopRepairing(worker);
+			}
             // We do not try to repair dead units
             else if (!repairedUnit.isAlive() || repairedUnit.getHitPoints() + std::numeric_limits<float>::epsilon() >= repairedUnit.getUnitPtr()->health_max)
             {
@@ -387,9 +397,6 @@ void WorkerManager::handleRepairWorkers()
             }
         }*/
     }
-
-	int mineral = m_bot.Commander().Production().getFreeMinerals();
-	int gas = m_bot.Commander().Production().getFreeGas();
 
 	if (mineral < REPAIR_STATION_MIN_MINERAL)//Stop repairing if not enough minerals
 	{
@@ -997,6 +1004,7 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
 		}
 
 		//Check if worker is already building something else
+		//TODO This shouldn't be needed (shouldn't happen), right?
 		for (auto building : m_bot.Buildings().getBuildings())
 		{
 			if (building.builderUnit.isValid() && building.builderUnit.getID() == builderWorker.getID())
