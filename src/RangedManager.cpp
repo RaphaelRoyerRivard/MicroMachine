@@ -617,8 +617,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		// If the unit has a target, add it to the close units and calculate its power 
 		if(unitTarget)
 		{
-			// If the unit is not alone and should heal, we should let it flee
-			if (unit != rangedUnit && unitShouldHeal)
+			// If the unit should heal and is not alone or it is alone against multiple enemies, don't fight and let it back to heal
+			if (unitShouldHeal && (unit != rangedUnit || threats.size() > 1))
 			{
 				m_harassMode = true;
 				return false;

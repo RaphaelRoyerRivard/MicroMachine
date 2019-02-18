@@ -977,7 +977,7 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 }
 
 // get threats to our harass unit
-const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot)
+std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot)
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
@@ -992,7 +992,8 @@ const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, co
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
 		//But this is not working so well for melee units, we keep every units in a radius of min threat range
 		const float threatRange = getThreatRange(unit, targetUnit, bot);
-		if (Util::DistSq(unit->pos, targetUnit->pos) < threatRange * threatRange)
+		const float units_radius = unit->radius + targetUnit->radius;
+		if (Util::DistSq(unit->pos, targetUnit->pos) + units_radius * units_radius < threatRange * threatRange)
 			threats.push_back(targetUnit);
 	}
 
@@ -1000,7 +1001,7 @@ const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, co
 }
 
 // get threats to our harass unit
-const std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot)
+std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot)
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
