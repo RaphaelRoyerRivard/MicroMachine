@@ -23,8 +23,6 @@ class BuildingManager
 	std::map<UnitType, std::list<CCTilePosition>> nextBuildingPosition;
 
     bool            m_debugMode;
-    int             m_reservedMinerals;				// minerals reserved for planned buildings
-    int             m_reservedGas;					// gas reserved for planned buildings
 
     bool            isBuildingPositionExplored(const Building & b) const;
 	void			castBuildingsAbilities();
@@ -69,9 +67,6 @@ public:
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);
 	const sc2::Unit *	getClosestMineral(const sc2::Unit * unit) const;
-
-    int                 getReservedMinerals();
-    int                 getReservedGas();
 
     bool                isBeingBuilt(UnitType type) const;
 	int					countBeingBuilt(UnitType type) const;

@@ -710,6 +710,46 @@ int CCBot::GetGas() const
 #endif
 }
 
+int CCBot::GetReservedMinerals()
+{
+	return m_reservedMinerals;
+}
+
+int CCBot::GetReservedGas()
+{
+	return m_reservedGas;
+}
+
+void CCBot::ReserveMinerals(int reservedMinerals)
+{
+	m_reservedMinerals += reservedMinerals;
+}
+
+void CCBot::ReserveGas(int reservedGas)
+{
+	m_reservedGas += reservedGas;
+}
+
+void CCBot::FreeMinerals(int freedMinerals)
+{
+	m_reservedMinerals -= freedMinerals;
+}
+
+void CCBot::FreeGas(int freedGas)
+{
+	m_reservedGas -= freedGas;
+}
+
+int CCBot::GetFreeMinerals()
+{
+	return GetMinerals() - GetReservedMinerals();
+}
+
+int CCBot::GetFreeGas()
+{
+	return GetGas() - GetReservedGas();
+}
+
 Unit CCBot::GetUnit(const CCUnitID & tag) const
 {
 #ifdef SC2API

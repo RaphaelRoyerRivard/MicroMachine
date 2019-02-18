@@ -8,8 +8,6 @@ BuildingManager::BuildingManager(CCBot & bot)
     : m_bot(bot)
     , m_buildingPlacer(bot)
     , m_debugMode(false)
-    , m_reservedMinerals(0)
-    , m_reservedGas(0)
 {
 
 }
@@ -426,9 +424,7 @@ void BuildingManager::validateWorkersAndBuildings()
         if (b.status != BuildingStatus::UnderConstruction)
         {
             continue;
-        }
-
-        
+        }   
     }
 
     removeBuildings(toRemove);
@@ -710,8 +706,8 @@ void BuildingManager::checkForStartedConstruction()
 				}
 
 				// the resources should now be spent, so unreserve them
-				m_reservedMinerals -= buildingStarted.getType().mineralPrice();
-				m_reservedGas -= buildingStarted.getType().gasPrice();
+				m_bot.FreeMinerals(buildingStarted.getType().mineralPrice());
+				m_bot.FreeGas(buildingStarted.getType().gasPrice());
 
 				// flag it as started and set the buildingUnit
 				b.underConstruction = true;
@@ -849,8 +845,8 @@ void BuildingManager::checkForCompletedBuildings()
 // add a new building to be constructed
 void BuildingManager::addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition)
 {
-    m_reservedMinerals += m_bot.Data(type).mineralCost;
-    m_reservedGas += m_bot.Data(type).gasCost;
+    m_bot.ReserveMinerals(m_bot.Data(type).mineralCost);
+    m_bot.ReserveGas(m_bot.Data(type).gasCost);
 	
     Building b(type, desiredPosition);
     b.status = BuildingStatus::Unassigned;
@@ -880,16 +876,6 @@ bool BuildingManager::isBuildingPositionExplored(const Building & b) const
 char BuildingManager::getBuildingWorkerCode(const Building & b) const
 {
     return b.builderUnit.isValid() ? 'W' : 'X';
-}
-
-int BuildingManager::getReservedMinerals()
-{
-    return m_reservedMinerals;
-}
-
-int BuildingManager::getReservedGas()
-{
-    return m_reservedGas;
 }
 
 void BuildingManager::drawBuildingInformation()
@@ -1166,8 +1152,8 @@ Building BuildingManager::CancelBuilding(Building b)
 		}
 		}
 
-		m_reservedMinerals -= b.type.mineralPrice();
-		m_reservedGas -= b.type.gasPrice();
+		m_bot.FreeMinerals(b.type.mineralPrice());
+		m_bot.FreeGas(b.type.gasPrice());
 
 		return b;
 	}
