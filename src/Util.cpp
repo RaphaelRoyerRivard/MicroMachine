@@ -172,15 +172,14 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPo
 		{
 			for (int y = -1; y <= 1; ++y)
 			{
-				if (!IsNeighborNodeValid(x, y, currentNode, rangedUnit, bot))
+				const CCTilePosition neighborPosition = GetNeighborNodePosition(x, y, currentNode, rangedUnit, bot);
+				if (neighborPosition == CCTilePosition())
 					continue;
 
-				const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
-
-				const bool isDiagonal = abs(x + y) != 1;
+				const float neighborDistance = Dist(currentNode->position, neighborPosition);
 				const float creepCost = !rangedUnit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
-				const float influenceOnTile = exitOnInfluence ? 0.f : GetEffectInfluenceOnTile(neighborPosition, rangedUnit, bot) + (considerOnlyEffects ? 0.f :GetInfluenceOnTile(neighborPosition, rangedUnit, bot));
-				const float nodeCost = (influenceOnTile + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * (isDiagonal ? sqrt(2) : 1);
+				const float influenceOnTile = exitOnInfluence ? 0.f : GetEffectInfluenceOnTile(neighborPosition, rangedUnit, bot) + (considerOnlyEffects ? 0.f : GetInfluenceOnTile(neighborPosition, rangedUnit, bot));
+				const float nodeCost = (influenceOnTile + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
 				const float totalCost = currentNode->cost + nodeCost;
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
 				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
@@ -202,51 +201,54 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPo
 	return returnPos;
 }
 
-bool Util::PathFinding::IsNeighborNodeValid(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot)
+CCTilePosition Util::PathFinding::GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot)
 {
 	if (x == 0 && y == 0)
-		return false;	// same tile check
+		return {};	// same tile check
 
 	const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
 
 	if (currentNode->parent && neighborPosition == currentNode->parent->position)
-		return false;	// parent tile check
+		return {};	// parent tile check
 
 	const CCPosition mapMin = bot.Map().mapMin();
 	const CCPosition mapMax = bot.Map().mapMax();
 	if (neighborPosition.x < mapMin.x || neighborPosition.y < mapMin.y || neighborPosition.x >= mapMax.x || neighborPosition.y >= mapMax.y)
-		return false;	// out of bounds check
+		return {};	// out of bounds check
 
 	if (!rangedUnit->is_flying)
 	{
 		if (bot.Commander().Combat().getBlockedTiles()[neighborPosition.x][neighborPosition.y])
-			return false;	// tile is blocked
+			return {};	// tile is blocked
 
-							// TODO check if the unit can pass between 2 blocked tiles (this will need a change in the blocked tiles map to have types of block)
-							// All units can pass between 2 command structures, medium units and small units can pass between a command structure and another building 
-							// while only small units can pass between non command buildings (where "between" means when 2 buildings have their corners touching diagonaly)
+		// TODO check if the unit can pass between 2 blocked tiles (this will need a change in the blocked tiles map to have types of block)
+		// All units can pass between 2 command structures, medium units and small units can pass between a command structure and another building 
+		// while only small units can pass between non command buildings (where "between" means when 2 buildings have their corners touching diagonaly)
 
 		if (!bot.Map().isWalkable(neighborPosition))
 		{
 			if (rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_REAPER)
-				return false;	// unwalkable tile check
+				return {};	// unwalkable tile check
 
 			if (!bot.Map().isWalkable(currentNode->position))
-				return false;	// maybe the reaper is already on an unpathable tile
+				return {};	// maybe the reaper is already on an unpathable tile
+
+			if (abs(x + y) != 1)
+				return {};	// cannot jump diagonaly over an unpathable tile (we kind of can, but certain cliffs don't allow it)
 
 			const CCTilePosition furtherTile(neighborPosition.x + x, neighborPosition.y + y);
 			if (!bot.Map().isWalkable(furtherTile))
-				return false;	// unwalkable next tile check
+				return {};	// unwalkable next tile check
 
 			const float heightDiff = abs(bot.Map().terrainHeight(currentNode->position.x, currentNode->position.y) - bot.Map().terrainHeight(furtherTile.x, furtherTile.y));
 			if (heightDiff < CLIFF_MIN_HEIGHT_DIFFERENCE || heightDiff > CLIFF_MAX_HEIGHT_DIFFERENCE)
-				return false;	// unjumpable cliff check
+				return {};	// unjumpable cliff check
 
-								// TODO neighbor tile will need to have the furtherTile position, while also using cost of both tiles
+			return furtherTile;
 		}
 	}
 
-	return true;
+	return neighborPosition;
 }
 
 CCPosition Util::PathFinding::GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot)
