@@ -992,7 +992,8 @@ std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const st
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
 		//But this is not working so well for melee units, we keep every units in a radius of min threat range
 		const float threatRange = getThreatRange(unit, targetUnit, bot);
-		if (Util::DistSq(unit->pos, targetUnit->pos) < threatRange * threatRange)
+		const float units_radius = unit->radius + targetUnit->radius;
+		if (Util::DistSq(unit->pos, targetUnit->pos) - units_radius * units_radius < threatRange * threatRange)
 			threats.push_back(targetUnit);
 	}
 
