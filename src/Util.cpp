@@ -1065,6 +1065,32 @@ float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * zergBonus;
 }
 
+bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
+{
+	std::vector<sc2::UnitTypeID> detectorTypes = {
+		sc2::UNIT_TYPEID::TERRAN_MISSILETURRET,
+		sc2::UNIT_TYPEID::TERRAN_RAVEN,
+		sc2::UNIT_TYPEID::PROTOSS_OBSERVER,
+		sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON,
+		sc2::UNIT_TYPEID::ZERG_SPORECRAWLER,
+		sc2::UNIT_TYPEID::ZERG_OVERSEER
+	};
+	for(const auto detectorType : detectorTypes)
+	{
+		auto & detectors = bot.GetKnownEnemyUnits(detectorType);
+		for(const auto & detector : detectors)
+		{
+			const float distance = Util::DistSq(detector, position);
+			const float detectionRange = detector.getUnitPtr()->detect_range;
+			if(distance <= detectionRange * detectionRange)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 bool Util::IsTerran(const CCRace & race)
 {
 #ifdef SC2API

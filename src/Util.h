@@ -72,6 +72,8 @@ namespace Util
 	float getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCBot & m_bot);
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
 	float getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
+
+	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
     
     std::string     GetStringFromRace(const sc2::Race & race);
     sc2::Race       GetRaceFromString(const std::string & race);

@@ -406,9 +406,8 @@ bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inD
 	if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
 		return false;
 
-	//TODO consider detectors
 	// Cloak if the amount of energy is rather high or HP is low
-	if (banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f))
+	if (banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f) && !Util::IsPositionUnderDetection(banshee->pos, m_bot))
 	{
 		const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::BEHAVIOR_CLOAKON, true, 0);
 		PlanAction(banshee, action);
