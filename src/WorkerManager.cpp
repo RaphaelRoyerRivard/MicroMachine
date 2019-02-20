@@ -598,6 +598,7 @@ void WorkerManager::lowPriorityChecks()
 	{//No point trying to split workers
 		return;
 	}
+	bool needTransfer = false;
 	auto workers = getWorkers();
 	WorkerData workerData = m_bot.Workers().getWorkerData();
 	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
@@ -624,58 +625,65 @@ void WorkerManager::lowPriorityChecks()
 				}
 			}
 		}
+		else if (workerCount < optimalWorkers)
+		{
+			needTransfer = true;
+		}
 	}
 
 	//Dispatch workers to bases missing some
-	for (auto & base : bases)
+	if (needTransfer)
 	{
-		if (base->isUnderAttack())
+		for (auto & base : bases)
 		{
-			continue;
-		}
-
-		auto depot = getDepotAtBasePosition(base->getPosition());
-		if (depot.isBeingConstructed())
-		{
-			continue;
-		}
-
-		int workerCount = m_workerData.getNumAssignedWorkers(depot);
-		int optimalWorkers = base->getMinerals().size() * 2;
-		if (workerCount < optimalWorkers)
-		{
-			std::vector<Unit> toRemove;
-			int needed = optimalWorkers - workerCount;
-			int moved = 0;
-			for (auto it = dispatchedWorkers.begin(); it != dispatchedWorkers.end(); it++)
+			if (base->isUnderAttack())
 			{
-				//Dont move workers if its not safe
-				if (!Util::PathFinding::IsPathToGoalSafe(it->getUnitPtr(), base->getPosition(), m_bot))
+				continue;
+			}
+
+			auto depot = getDepotAtBasePosition(base->getPosition());
+			if (depot.isBeingConstructed())
+			{
+				continue;
+			}
+
+			int workerCount = m_workerData.getNumAssignedWorkers(depot);
+			int optimalWorkers = base->getMinerals().size() * 2;
+			if (workerCount < optimalWorkers)
+			{
+				std::vector<Unit> toRemove;
+				int needed = optimalWorkers - workerCount;
+				int moved = 0;
+				for (auto it = dispatchedWorkers.begin(); it != dispatchedWorkers.end(); it++)
 				{
-					continue;
+					//Dont move workers if its not safe
+					if (!Util::PathFinding::IsPathToGoalSafe(it->getUnitPtr(), base->getPosition(), m_bot))
+					{
+						continue;
+					}
+
+					m_workerData.setWorkerJob(*it, WorkerJobs::Minerals, depot, true);
+					toRemove.push_back(*it);
+					moved++;
+					if (moved >= needed)
+					{
+						break;
+					}
 				}
 
-				m_workerData.setWorkerJob(*it, WorkerJobs::Minerals, depot, true);
-				toRemove.push_back(*it);
-				moved++;
-				if (moved >= needed)
+				//remove already dispatched workers
+				for (auto worker : toRemove)
+				{
+					auto it = find(dispatchedWorkers.begin(), dispatchedWorkers.end(), worker);
+					if (it != dispatchedWorkers.end())
+					{
+						dispatchedWorkers.erase(it);
+					}
+				}
+				if (dispatchedWorkers.empty())
 				{
 					break;
 				}
-			}
-
-			//remove already dispatched workers
-			for (auto worker : toRemove)
-			{
-				auto it = find(dispatchedWorkers.begin(), dispatchedWorkers.end(), worker);
-				if (it != dispatchedWorkers.end())
-				{
-					dispatchedWorkers.erase(it);
-				}
-			}
-			if (dispatchedWorkers.empty())
-			{
-				break;
 			}
 		}
 	}
