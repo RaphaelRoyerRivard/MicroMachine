@@ -24,8 +24,29 @@ namespace Util
 	namespace PathFinding
 	{
 		struct IMNode;
-		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
 
+		struct SafePathResult
+		{
+			CCPosition m_position;
+			uint32_t m_frame;
+			bool m_result;
+
+			SafePathResult()
+				: m_position(CCPosition())
+				, m_frame(0)
+				, m_result(true)
+			{}
+
+			SafePathResult(CCPosition position, uint32_t frame, bool result)
+				: m_position(position)
+				, m_frame(frame)
+				, m_result(result)
+			{}
+		};
+
+		static std::map<sc2::Tag, std::vector<SafePathResult>> m_lastPathFindingResultsForUnit;
+
+		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
 		bool IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);

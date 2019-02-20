@@ -11,7 +11,8 @@ const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 
 // Influence Map Node
-struct Util::PathFinding::IMNode {
+struct Util::PathFinding::IMNode
+{
 	IMNode() :
 		position(CCTilePosition(0, 0)),
 		parent(nullptr),
@@ -96,14 +97,38 @@ bool Util::PathFinding::SetContainsNode(const std::set<IMNode*> & set, IMNode* n
 
 bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot)
 {
-	if (bot.GetCurrentFrame() - bot.Workers().getFrameOfLastFailedPathfindingForWorkerAndPosition(rangedUnit->tag, goal) < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
+	if (!rangedUnit)
+	{
+		Util::DisplayError("null unit received in Util::PathFinding::IsPathToGoalSafe", "", bot);
 		return false;
+	}
+
+	int foundIndex = -1;
+	auto & safePathResults = m_lastPathFindingResultsForUnit[rangedUnit->tag];
+	SafePathResult releventResult;
+	for(int i=0; i<safePathResults.size(); ++i)
+	{
+		auto & safePathResult = safePathResults[i];
+		if(safePathResult.m_position == goal)
+		{
+			releventResult = safePathResult;
+			foundIndex = i;
+			break;
+		}
+	}
+	if(bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
+		return releventResult.m_result;
 
 	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, true, false, bot);
 	const bool success = pathPosition != CCPosition(0, 0);
-	if(!success)
+	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
+	if(foundIndex >= 0)
 	{
-		bot.Workers().setFrameOfLastFailedPathfindingForWorkerAndPosition(rangedUnit->tag, goal);
+		m_lastPathFindingResultsForUnit[rangedUnit->tag][foundIndex] = safePathResult;
+	}
+	else
+	{
+		m_lastPathFindingResultsForUnit[rangedUnit->tag].push_back(safePathResult);
 	}
 	return success;
 }

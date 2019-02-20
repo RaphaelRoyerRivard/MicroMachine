@@ -11,7 +11,6 @@ class WorkerManager
 	bool m_isFirstFrame = true;
 	int gasWorkersTarget = 3;
 	std::list<Unit> buildingAutomaticallyRepaired;
-	std::map<sc2::Tag, std::vector<std::pair<CCPosition, uint32_t>>> m_lastFailedPathfinding;
 
     mutable WorkerData  m_workerData;
     Unit m_previousClosestWorker;
@@ -67,8 +66,5 @@ public:
 	Unit getClosestGasWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f) const;
 	Unit getClosest(const Unit unit, const std::list<Unit> units) const;
 	//std::list<Unit> WorkerManager::orderByDistance(const std::list<Unit> units, CCPosition pos, bool closestFirst);
-
-	uint32_t getFrameOfLastFailedPathfindingForWorkerAndPosition(sc2::Tag workerTag, CCPosition position);
-	void setFrameOfLastFailedPathfindingForWorkerAndPosition(sc2::Tag workerTag, CCPosition position);
 };
 
