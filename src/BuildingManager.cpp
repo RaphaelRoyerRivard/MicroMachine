@@ -413,7 +413,7 @@ void BuildingManager::validateWorkersAndBuildings()
 			}
 			case BuildingStatus::UnderConstruction:
 			{
-				if (!b.buildingUnit.isValid())
+				if (!b.buildingUnit.isValid() || !b.buildingUnit.isAlive())
 				{
 					toRemove.push_back(b);
 					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
