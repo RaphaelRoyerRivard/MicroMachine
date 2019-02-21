@@ -816,7 +816,7 @@ void CombatCommander::updateDefenseBuildings()
 				{
 					CCTilePosition enemyPosition = enemy.second.getTilePosition();
 					CCTilePosition buildingPosition = building.getTilePosition();
-					int distance = abs(enemyPosition.x - buildingPosition.x) + abs(enemyPosition.y - buildingPosition.y);
+					int distance = Util::DistSq(enemyPosition, buildingPosition);
 					if (distance < SUPPLYDEPOT_DISTANCE)
 					{//Raise
 						building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
@@ -831,7 +831,7 @@ void CombatCommander::updateDefenseBuildings()
 					{
 						CCTilePosition enemyPosition = enemy.second.getTilePosition();
 						CCTilePosition buildingPosition = building.getTilePosition();
-						int distance = abs(enemyPosition.x - buildingPosition.x) + abs(enemyPosition.y - buildingPosition.y);
+						int distance = Util::DistSq(enemyPosition, buildingPosition);
 						if (distance < SUPPLYDEPOT_DISTANCE)
 						{
 							canLower = false;

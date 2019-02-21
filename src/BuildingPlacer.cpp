@@ -130,10 +130,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 	int offset = 1;
 	int direction = 0;
 	auto buildLocation = b.desiredPosition;
-	if (false)
-	{
-		buildLocation = CCTilePosition(55, 170);
-	}
+
 	while(!m_bot.Map().isWalkable(buildLocation) || m_bot.Map().getClosestTilesTo(buildLocation).size() < 10)
 	{
 		switch (direction)
@@ -173,7 +170,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 				offset++;
 				break;
 			default:
-				printf("Should never happen [BuildingPlacer::getBuildLocationNear]");
+				Util::DisplayError("Should never happen [BuildingPlacer::getBuildLocationNear]", "0x00000008", m_bot, false);
 				break;
 		}
 		if (buildLocation.x < 0)

@@ -625,7 +625,7 @@ void WorkerManager::lowPriorityChecks()
 				}
 			}
 		}
-		else if (workerCount < optimalWorkers)
+		else
 		{
 			needTransfer = true;
 		}

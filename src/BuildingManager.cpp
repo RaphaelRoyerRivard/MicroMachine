@@ -692,7 +692,8 @@ void BuildingManager::checkForStartedConstruction()
 			}
 			if (b.buildingUnit.isValid())
 			{
-				std::cout << "Building mis-match somehow\n";
+				std::cout << "Replaced dead worker or Building mis-match somehow\n";
+				b.status = BuildingStatus::UnderConstruction;
 				continue;
 			}
 			auto type = b.type;
@@ -761,6 +762,11 @@ void BuildingManager::checkForDeadTerranBuilders()
 
 		//If the building isn't started
 		if (!b.buildingUnit.isValid())
+		{
+			continue;
+		}
+
+		if (b.status != BuildingStatus::UnderConstruction)
 		{
 			continue;
 		}
