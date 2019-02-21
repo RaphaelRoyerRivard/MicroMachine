@@ -479,7 +479,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 			{
 				continue;
 			}
-			m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
+			/*m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
 			if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
 			{
 				//Not safe, pick another location
@@ -501,7 +501,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 				}
 			}
 			else
-			{
+			{*/
 				m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 				//path  is safe, we can remove it from the list
 				auto & positions = nextBuildingPosition.find(b.type);// .pop_front();
@@ -516,7 +516,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 						}
 					}
 				}
-			}
+			//}
 
 			m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
 			b.builderUnit = builderUnit;
