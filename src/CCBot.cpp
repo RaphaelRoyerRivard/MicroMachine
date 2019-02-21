@@ -890,9 +890,9 @@ void CCBot::drawProfilingInfo()
 			auto& queue = profiler.queue;
 			const size_t queueCount = queue.size();
 			const long long time = profiler.total / queueCount;
-			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * time);
 			if (key != stepString && time * 10 > stepTime)
 			{
+				profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * time);
 				profilingInfo += " !";
 				if (time * 4 > stepTime)
 				{
@@ -911,7 +911,7 @@ void CCBot::drawProfilingInfo()
 				queue.pop_back();
 			}
 		}
-		m_map.drawTextScreen(0.79f, 0.1f, profilingInfo);
+		m_map.drawTextScreen(0.72f, 0.1f, profilingInfo);
 	}
 }
 

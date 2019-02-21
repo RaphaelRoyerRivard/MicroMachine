@@ -801,7 +801,10 @@ void BuildingManager::checkForDeadTerranBuilders()
 				m_buildingsNewWorker[tag] = newBuilderUnit;
 			}
 		}
-		m_buildingsProgress[tag] = progress;
+		else
+		{
+			m_buildingsProgress[tag] = progress;
+		}
     }
 }
 

@@ -175,19 +175,22 @@ void CombatCommander::resetInfluenceMaps()
 	const bool resetBlockedTiles = m_bot.GetGameLoop() % BLOCKED_TILES_UPDATE_FREQUENCY == 0;
 	for (size_t x = 0; x < mapWidth; ++x)
 	{
-		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
-		auto& airInfluenceMapRow = m_airInfluenceMap[x];
-		auto& groundEffectInfluenceMapRow = m_groundEffectInfluenceMap[x];
-		auto& airEffectInfluenceMapRow = m_airEffectInfluenceMap[x];
-		auto& blockedTilesRow = m_blockedTiles[x];
-		for (size_t y = 0; y < mapHeight; ++y)
+		std::vector<float> & groundInfluenceMap = m_groundInfluenceMap[x];
+		std::vector<float> & airInfluenceMap = m_airInfluenceMap[x];
+		std::vector<float> & groundEffectInfluenceMap = m_groundEffectInfluenceMap[x];
+		std::vector<float> & airEffectInfluenceMap = m_airEffectInfluenceMap[x];
+		std::fill(groundInfluenceMap.begin(), groundInfluenceMap.end(), 0.f);
+		std::fill(airInfluenceMap.begin(), airInfluenceMap.end(), 0.f);
+		std::fill(groundEffectInfluenceMap.begin(), groundEffectInfluenceMap.end(), 0.f);
+		std::fill(airEffectInfluenceMap.begin(), airEffectInfluenceMap.end(), 0.f);
+
+		if (resetBlockedTiles)
 		{
-			groundInfluenceMapRow[y] = 0;
-			airInfluenceMapRow[y] = 0;
-			groundEffectInfluenceMapRow[y] = 0;
-			airEffectInfluenceMapRow[y] = 0;
-			if(resetBlockedTiles)
+			auto& blockedTilesRow = m_blockedTiles[x];
+			for (size_t y = 0; y < mapHeight; ++y)
+			{
 				blockedTilesRow[y] = false;
+			}
 		}
 	}
 }
@@ -490,6 +493,7 @@ void CombatCommander::drawBlockedTiles()
 
 void CombatCommander::updateIdleSquad()
 {
+	return;
     Squad & idleSquad = m_squadData.getSquad("Idle");
     for (auto & unit : m_combatUnits)
     {

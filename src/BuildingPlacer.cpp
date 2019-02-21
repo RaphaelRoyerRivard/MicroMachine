@@ -127,6 +127,7 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
 CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved) const
 {
 	//If the space is not walkable, look arround for a walkable space. The result may not be the most optimal location.
+	const int MAX_OFFSET = 5;
 	int offset = 1;
 	int direction = 0;
 	auto buildLocation = b.desiredPosition;
@@ -190,7 +191,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 			buildLocation.y = m_bot.Map().mapMax().y - 1;
 		}
 
-		if (offset == 25)//Did not find any walkable space within 25 tiles in all directions
+		if (offset == MAX_OFFSET)//Did not find any walkable space within 25 tiles in all directions
 		{
 			buildLocation = b.desiredPosition;//Avoids crashing, but this won't work well.
 		}
