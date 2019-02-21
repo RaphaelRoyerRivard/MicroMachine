@@ -406,9 +406,8 @@ bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inD
 	if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
 		return false;
 
-	//TODO consider detectors
 	// Cloak if the amount of energy is rather high or HP is low
-	if (banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f))
+	if (banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f) && !Util::IsPositionUnderDetection(banshee->pos, m_bot))
 	{
 		const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::BEHAVIOR_CLOAKON, true, 0);
 		PlanAction(banshee, action);
@@ -617,8 +616,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		// If the unit has a target, add it to the close units and calculate its power 
 		if(unitTarget)
 		{
-			// If the unit is not alone and should heal, we should let it flee
-			if (unit != rangedUnit && unitShouldHeal)
+			// If the unit should heal and is not alone or it is alone against multiple enemies, don't fight and let it back to heal
+			if (unitShouldHeal && (unit != rangedUnit || threats.size() > 1))
 			{
 				m_harassMode = true;
 				return false;

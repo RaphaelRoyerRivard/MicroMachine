@@ -3,6 +3,7 @@
 #include "CCBot.h"
 #include "Util.h"
 #include "Building.h"
+#include "Util.h"
 
 WorkerManager::WorkerManager(CCBot & bot)
     : m_bot         (bot)
@@ -1189,29 +1190,4 @@ std::set<Unit> WorkerManager::getWorkers() const
 WorkerData & WorkerManager::getWorkerData() const
 {
 	return m_workerData;
-}
-
-uint32_t WorkerManager::getFrameOfLastFailedPathfindingForWorkerAndPosition(sc2::Tag workerTag, CCPosition position)
-{
-	auto & positionFrames = m_lastFailedPathfinding[workerTag];
-	for(auto & pair : positionFrames)
-	{
-		if (pair.first == position)
-			return pair.second;
-	}
-	return 0;
-}
-
-void WorkerManager::setFrameOfLastFailedPathfindingForWorkerAndPosition(sc2::Tag workerTag, CCPosition position)
-{
-	auto & positionFrames = m_lastFailedPathfinding[workerTag];
-	for (auto & pair : positionFrames)
-	{
-		if (pair.first == position)
-		{
-			pair.second = m_bot.GetCurrentFrame();
-			return;
-		}
-	}
-	m_lastFailedPathfinding[workerTag].push_back(std::pair<CCPosition, uint32_t>(position, m_bot.GetCurrentFrame()));
 }
