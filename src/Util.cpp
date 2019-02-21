@@ -104,9 +104,9 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPositio
 	}
 
 	int foundIndex = -1;
-	auto & safePathResults = m_lastPathFindingResultsForUnit[rangedUnit->tag];
 	SafePathResult releventResult;
-	for(int i=0; i<safePathResults.size(); ++i)
+	auto & safePathResults = m_lastPathFindingResultsForUnit[rangedUnit->tag];
+	for (size_t i = 0; i < safePathResults.size(); ++i)
 	{
 		auto & safePathResult = safePathResults[i];
 		if(safePathResult.m_position == goal)
@@ -116,7 +116,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPositio
 			break;
 		}
 	}
-	if(bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
+	if(foundIndex >= 0 && bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
 		return releventResult.m_result;
 
 	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, true, false, bot);
