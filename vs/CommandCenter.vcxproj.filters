@@ -76,60 +76,6 @@
     <ClCompile Include="..\src\SquadOrder.cpp">
       <Filter>micro</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaAction.cpp">
-      <Filter>micro\ABCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaConsideringDurations.cpp">
-      <Filter>micro\ABCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaMove.cpp">
-      <Filter>micro\ABCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaPlayer.cpp">
-      <Filter>micro\ABCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaState.cpp">
-      <Filter>micro\ABCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaUnit.cpp">
-      <Filter>micro\ABCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaValue.cpp">
-      <Filter>micro\ABCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AttackFSMState.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\DonePullBackTransition.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\FiniteStateMachine.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\FireClosestFSMState.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\FleeFSMState.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\FocusFireFiniteStateMachine.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\KitingFiniteStateMachine.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PullBackFSMState.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ShouldAttackTransition.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ShouldFleeTransition.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ShouldPullBackTransition.cpp">
-      <Filter>micro\BT + FSM</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\CombatCommander.cpp">
       <Filter>micro</Filter>
     </ClCompile>
@@ -160,33 +106,87 @@
     <ClCompile Include="..\src\Micro.cpp">
       <Filter>micro</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\UCTCDUnit.cpp">
-      <Filter>micro\UCTCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDAction.cpp">
-      <Filter>micro\UCTCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDPlayer.cpp">
-      <Filter>micro\UCTCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDMove.cpp">
-      <Filter>micro\UCTCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDState.cpp">
-      <Filter>micro\UCTCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDNode.cpp">
-      <Filter>micro\UCTCD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTConsideringDurations.cpp">
-      <Filter>micro\UCTCD</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\MetaTypeEnum.cpp">
       <Filter>macro</Filter>
     </ClCompile>
     <ClCompile Include="..\src\StackWalker.cpp" />
     <ClCompile Include="..\src\UnitState.cpp">
       <Filter>micro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaAction.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaConsideringDurations.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaMove.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaPlayer.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaState.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaUnit.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AlphaBetaValue.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AttackFSMState.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\DonePullBackTransition.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FiniteStateMachine.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FireClosestFSMState.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FleeFSMState.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FocusFireFiniteStateMachine.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\KitingFiniteStateMachine.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PullBackFSMState.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ShouldAttackTransition.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ShouldFleeTransition.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ShouldPullBackTransition.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDAction.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDMove.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDNode.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDPlayer.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDState.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTCDUnit.cpp">
+      <Filter>micro\old</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UCTConsideringDurations.cpp">
+      <Filter>micro\old</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -271,66 +271,6 @@
     <ClInclude Include="..\src\SquadOrder.h">
       <Filter>micro</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaAction.h">
-      <Filter>micro\ABCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaConsideringDurations.h">
-      <Filter>micro\ABCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaMove.h">
-      <Filter>micro\ABCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaPlayer.h">
-      <Filter>micro\ABCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaState.h">
-      <Filter>micro\ABCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaUnit.h">
-      <Filter>micro\ABCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaValue.h">
-      <Filter>micro\ABCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AttackFSMState.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\DonePullBackTransition.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FiniteStateMachine.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FireClosestFSMState.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FleeFSMState.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FocusFireFiniteStateMachine.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FocusFireFSM.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\KitingFiniteStateMachine.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\KitingFSM.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\PullBackFSMState.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ShouldAttackTransition.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ShouldFleeTransition.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ShouldPullBackTransition.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\Condition.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -358,44 +298,8 @@
     <ClInclude Include="..\src\Util.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\RangedActions.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\BehaviorTreeBuilder.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\Behavior.h">
-      <Filter>micro\BT + FSM</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\Micro.h">
       <Filter>micro</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaTimeOut.h">
-      <Filter>micro\ABCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDUnit.h">
-      <Filter>micro\UCTCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDAction.h">
-      <Filter>micro\UCTCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDPlayer.h">
-      <Filter>micro\UCTCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDMove.h">
-      <Filter>micro\UCTCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDState.h">
-      <Filter>micro\UCTCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDNode.h">
-      <Filter>micro\UCTCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTConsideringDurations.h">
-      <Filter>micro\UCTCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDTimeOut.h">
-      <Filter>micro\UCTCD</Filter>
     </ClInclude>
     <ClInclude Include="..\src\MetaTypeEnum.h">
       <Filter>macro</Filter>
@@ -403,6 +307,102 @@
     <ClInclude Include="..\src\StackWalker.h" />
     <ClInclude Include="..\src\UnitState.h">
       <Filter>micro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaAction.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaConsideringDurations.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaMove.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaPlayer.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaState.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaTimeOut.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaUnit.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AlphaBetaValue.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AttackFSMState.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Behavior.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BehaviorTreeBuilder.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\DonePullBackTransition.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FiniteStateMachine.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FireClosestFSMState.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FleeFSMState.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FocusFireFiniteStateMachine.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FocusFireFSM.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\KitingFiniteStateMachine.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\KitingFSM.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\PullBackFSMState.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\RangedActions.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ShouldAttackTransition.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ShouldFleeTransition.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ShouldPullBackTransition.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDAction.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDMove.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDNode.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDPlayer.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDState.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDTimeOut.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTCDUnit.h">
+      <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UCTConsideringDurations.h">
+      <Filter>micro\old</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -421,17 +421,11 @@
     <Filter Include="micro">
       <UniqueIdentifier>{bb028065-b2d8-40a2-81df-55cfdc801e54}</UniqueIdentifier>
     </Filter>
-    <Filter Include="micro\ABCD">
-      <UniqueIdentifier>{661075e6-4dda-4a43-b45b-ff17bfc0acf8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="util">
       <UniqueIdentifier>{db91aa47-c051-43b3-a492-87f9619e4100}</UniqueIdentifier>
     </Filter>
-    <Filter Include="micro\BT + FSM">
-      <UniqueIdentifier>{92529348-57a7-4d79-9afe-8a5bc5f0fb4c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="micro\UCTCD">
-      <UniqueIdentifier>{1baf6e7b-a203-4ff0-81d6-cfb7c998b0fc}</UniqueIdentifier>
+    <Filter Include="micro\old">
+      <UniqueIdentifier>{47be531e-0ec1-4c76-964f-b04d04a0bd73}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
