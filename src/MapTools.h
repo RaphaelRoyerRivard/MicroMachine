@@ -44,10 +44,12 @@ public:
 
     int     width() const;
     int     height() const;
+	float	terrainHeight(CCTilePosition tile) const;
     float   terrainHeight(float x, float y) const;
 
     void    drawLine(CCPositionType x1, CCPositionType y1, CCPositionType x2, CCPositionType y2, const CCColor & color = CCColor(255, 255, 255)) const;
     void    drawLine(const CCPosition & p1, const CCPosition & p2, const CCColor & color = CCColor(255, 255, 255)) const;
+	void	drawTile(const CCTilePosition& tilePosition, const CCColor & color = CCColor(255, 255, 255)) const;
     void    drawTile(int tileX, int tileY, const CCColor & color = CCColor(255, 255, 255)) const;
     void    drawBox(CCPositionType x1, CCPositionType y1, CCPositionType x2, CCPositionType y2, const CCColor & color = CCColor(255, 255, 255)) const;
     void    drawBox(const CCPosition & tl, const CCPosition & br, const CCColor & color = CCColor(255, 255, 255)) const;

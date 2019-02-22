@@ -24,7 +24,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "FractureLE.SC2Map",
+        "MapFile"                   : "PortAleksanderLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -77,8 +77,10 @@
         "DrawProductionInfo"        : true, 
         "DrawBaseLocationInfo"      : false,
         "DrawStartingRamp"		    : true,
+        "DrawWall"		   			: false,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
+        "DrawBuildableSectors"      : false,
         "DrawScoutInfo"             : false,
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
@@ -90,11 +92,14 @@
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawFSMStateInfo"          : false,
-        "DrawHarassInfo"            : true,
+        "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
-        "DrawProfilingInfo"         : true,
-        "DrawInfluenceMaps"         : true
+        "DrawProfilingInfo"         : false,
+        "DrawInfluenceMaps"         : false,
+        "DrawBlockedTiles"          : true,
+		"DrawRepairStation"			: true,
+		"DrawDamageHealthRatio"		: true
     },
     
     "Modules" :

@@ -25,6 +25,8 @@ void BuildingManager::onFirstFrame()
 	std::list<CCTilePosition> checkedTiles;
 	FindRampTiles(rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
 	FindMainRamp(rampTiles);
+	auto tilesToBlock = FindRampTilesToPlaceBuilding(rampTiles);
+	PlaceSupplyDepots(tilesToBlock);
 }
 
 // gets called every frame from GameCommander
@@ -63,6 +65,7 @@ void BuildingManager::onFrame()
 
     drawBuildingInformation();
 	drawStartingRamp();
+	drawWall();
 }
 
 void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile)
@@ -138,6 +141,141 @@ void BuildingManager::FindMainRamp(std::list<CCTilePosition> &rampTiles)
 			mainRamp.push_back(tile);
 		}
 	}
+}
+
+std::list<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles)
+{
+	std::list<CCTilePosition> tilesToBlock;
+	for (auto & tile : rampTiles)
+	{
+		CCTilePosition below = CCTilePosition(tile.x - 1, tile.y);
+		CCTilePosition above = CCTilePosition(tile.x + 1, tile.y);
+		CCTilePosition left = CCTilePosition(tile.x, tile.y - 1);
+		CCTilePosition right = CCTilePosition(tile.x, tile.y + 1);
+		if (m_bot.Map().isBuildable(below) && m_bot.Map().isWalkable(below) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(below))
+		{//we need to block this tile
+			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), below) == tilesToBlock.end())
+			{
+				tilesToBlock.push_back(below);
+			}
+		}
+		
+		if (m_bot.Map().isBuildable(above) && m_bot.Map().isWalkable(above) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(above))
+		{//we need to block this tile
+			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), above) == tilesToBlock.end())
+			{
+				tilesToBlock.push_back(above);
+			}
+		}
+
+		if (m_bot.Map().isBuildable(left) && m_bot.Map().isWalkable(left) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(left))
+		{//we need to block this tile
+			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), left) == tilesToBlock.end())
+			{
+				tilesToBlock.push_back(left);
+			}
+		}
+
+		if (m_bot.Map().isBuildable(right) && m_bot.Map().isWalkable(right) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(right))
+		{//we need to block this tile
+			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), right) == tilesToBlock.end())
+			{
+				tilesToBlock.push_back(right);
+			}
+		}
+	}
+	BOT_ASSERT(tilesToBlock.size() == 3, "Unusual ramp detected");
+
+	CCTilePosition arrayTiles[3];
+	std::copy(tilesToBlock.begin(), tilesToBlock.end(), arrayTiles);
+	BOT_ASSERT((abs(arrayTiles[0].x - arrayTiles[2].x) == 1) && (abs(arrayTiles[0].y - arrayTiles[2].y) == 1), "Ramp tiles are wrong.");
+	return tilesToBlock;
+}
+
+void BuildingManager::PlaceSupplyDepots(std::list<CCTilePosition> tilesToBlock)
+{
+	std::list<CCTilePosition> buildingTiles;
+	for (auto tile : tilesToBlock)
+	{
+		if (m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y - 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y - 1)))
+		{
+			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x - 1, tile.y - 1)))
+			{
+				buildingTiles.push_back(CCTilePosition(tile.x - 1, tile.y - 1));
+				continue;
+			}
+		}
+		if (m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y - 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y - 1)))
+		{
+			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x, tile.y - 1)))
+			{
+				buildingTiles.push_back(CCTilePosition(tile.x, tile.y - 1));
+				continue;
+			}
+		}
+		if (m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y + 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y + 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y)))
+		{
+			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x - 1, tile.y)))
+			{
+				buildingTiles.push_back(CCTilePosition(tile.x - 1, tile.y));
+				continue;
+			}
+		}
+		if (m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y + 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y + 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)))
+		{
+			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x, tile.y)))
+			{
+				buildingTiles.push_back(CCTilePosition(tile.x, tile.y));
+				continue;
+			}
+		}
+		BOT_ASSERT(false, "Can't find possible position for a wall build. This shouldn't happen.");
+	}
+	wallBuilding = buildingTiles;
+	for (auto building : buildingTiles)
+	{
+		//TODO No longer queue the supply depot, add positions to a list and use them when building. Also remove code for "proxy" supply depot
+		//m_bot.Buildings().addBuildingTask(MetaTypeEnum::SupplyDepot.getUnitType(), CCTilePosition(building.x + 1, building.y + 1), true);
+		nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(CCTilePosition(building.x + 1, building.y + 1));
+	}
+}
+
+bool BuildingManager::ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile)
+{
+	std::list<CCTilePosition> possibleTiles;
+	possibleTiles.push_back(CCTilePosition(possibleTile.x, possibleTile.y));
+	possibleTiles.push_back(CCTilePosition(possibleTile.x + 1, possibleTile.y));
+	possibleTiles.push_back(CCTilePosition(possibleTile.x, possibleTile.y + 1));
+	possibleTiles.push_back(CCTilePosition(possibleTile.x + 1, possibleTile.y + 1));
+
+	for (auto tile : buildingTiles)
+	{//(std::find(my_list.begin(), my_list.end(), my_var) != my_list.end())
+		std::list<CCTilePosition> tiles;
+		tiles.push_back(CCTilePosition(tile.x, tile.y));
+		tiles.push_back(CCTilePosition(tile.x + 1, tile.y));
+		tiles.push_back(CCTilePosition(tile.x, tile.y + 1));
+		tiles.push_back(CCTilePosition(tile.x + 1, tile.y + 1));
+		for (auto t : tiles)
+		{
+			if (std::find(possibleTiles.begin(), possibleTiles.end(), t) != possibleTiles.end())
+			{
+				return false;
+			}
+		}
+	}
+	return true;
 }
 
 bool BuildingManager::isBeingBuilt(UnitType type) const
@@ -244,7 +382,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 		{
 			m_bot.StartProfiling("0.8.3.1 getBuildingLocation");
 			// grab a worker unit from WorkerManager which is closest to this final position
-			CCTilePosition testLocation = getBuildingLocation(b);
+			CCTilePosition testLocation = getNextBuildingLocation(b, true);
 			m_bot.StopProfiling("0.8.3.1 getBuildingLocation");
 
 			// Don't test the location if the building is already started
@@ -665,6 +803,20 @@ void BuildingManager::drawStartingRamp()
 	}
 }
 
+void BuildingManager::drawWall()
+{
+	if (!m_bot.Config().DrawWall)
+	{
+		return;
+	}
+
+	for (auto building : wallBuilding)
+	{
+		m_bot.Map().drawTile(building.x, building.y, CCColor(255, 0, 0));
+		break;
+	}
+}
+
 std::vector<Building> BuildingManager::getBuildings()
 {
 	return m_buildings;
@@ -740,6 +892,32 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 		m_bot.StopProfiling("0.8.3.1.3 getBuildLocationNear");
 	}
 	return buildingLocation;
+}
+
+CCTilePosition BuildingManager::getNextBuildingLocation(const Building & b, bool removeLocation)
+{
+	CCTilePosition location;
+	std::map<UnitType, std::list<CCTilePosition>>::iterator it = nextBuildingPosition.find(b.type);
+	if (it != nextBuildingPosition.end())
+	{
+		if (!it->second.empty())
+		{
+			location = it->second.front();
+			if (removeLocation)
+			{
+				it->second.pop_front();
+			}
+		}
+		else
+		{
+			location = getBuildingLocation(b);
+		}
+	}
+	else
+	{
+		location = getBuildingLocation(b);
+	}
+	return location;
 }
 
 Unit BuildingManager::getClosestResourceDepot(CCPosition position)
@@ -849,7 +1027,6 @@ const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) con
 	}
 	return mineralField;
 }
-
 
 void BuildingManager::castBuildingsAbilities()
 {

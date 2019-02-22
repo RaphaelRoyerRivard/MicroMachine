@@ -88,6 +88,18 @@ CCTilePosition Unit::getTilePosition() const
 #endif
 }
 
+float Unit::getHitPointsPercentage() const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+#ifdef SC2API
+	if (m_unit->health == 0)
+	{
+		return 0;
+	}
+	return m_unit->health / m_unit->health_max * 100.f;
+#endif
+}
+
 CCHealth Unit::getHitPoints() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");

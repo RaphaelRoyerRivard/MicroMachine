@@ -38,6 +38,7 @@ public:
     bool DrawTileInfo;
     bool DrawBaseLocationInfo;
     bool DrawWalkableSectors;
+	bool DrawBuildableSectors;
     bool DrawResourceInfo;
     bool DrawProductionInfo;
     bool DrawScoutInfo;
@@ -46,6 +47,7 @@ public:
     bool DrawReservedBuildingTiles;
     bool DrawBuildingInfo;
 	bool DrawStartingRamp;
+	bool DrawWall;
     bool DrawEnemyUnitInfo;
     bool DrawLastSeenTileInfo;
     bool DrawUnitTargetInfo;
@@ -57,6 +59,9 @@ public:
 	bool DrawUnitID;
 	bool DrawProfilingInfo;
 	bool DrawInfluenceMaps;
+	bool DrawBlockedTiles;
+	bool DrawRepairStation;
+	bool DrawDamageHealthRatio;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;

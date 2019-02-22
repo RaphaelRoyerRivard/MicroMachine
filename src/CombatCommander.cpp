@@ -18,6 +18,8 @@ const float MainAttackMaxRegroupDuration = 100; //Max number of frames allowed f
 const float MainAttackRegroupCooldown = 200;	//Min number of frames required to wait between regroup orders
 const float MainAttackMinRetreatDuration = 50;	//Max number of frames allowed for a regroup order
 
+const size_t BLOCKED_TILES_UPDATE_FREQUENCY = 24;
+
 CombatCommander::CombatCommander(CCBot & bot)
     : m_bot(bot)
     , m_squadData(bot)
@@ -83,6 +85,9 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
     {
         updateIdleSquad();
         updateScoutDefenseSquad();
+		m_bot.StartProfiling("0.10.4.2.1    updateDefenseBuildings");
+		updateDefenseBuildings();
+		m_bot.StopProfiling("0.10.4.2.1    updateDefenseBuildings");
         updateDefenseSquads();
 		updateHarassSquads();
 		updateAttackSquads();
@@ -93,9 +98,12 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	m_bot.StartProfiling("0.10.4.3    lowPriorityCheck");
 	lowPriorityCheck();
 	m_bot.StopProfiling("0.10.4.3    lowPriorityCheck");
-	/*m_bot.StartProfiling("0.10.4.4    checkUnitsState");
+	m_bot.StartProfiling("0.10.4.4    checkUnitsState");
 	checkUnitsState();
-	m_bot.StopProfiling("0.10.4.4    checkUnitsState");*/
+	m_bot.StopProfiling("0.10.4.4    checkUnitsState");
+	UpdateTotalHealthLoss();
+
+	drawDamageHealthRatio();
 }
 
 void CombatCommander::lowPriorityCheck()
@@ -120,6 +128,32 @@ void CombatCommander::lowPriorityCheck()
 	}
 }
 
+void CombatCommander::increaseTotalDamage(float damageDealt, sc2::UNIT_TYPEID unittype)
+{
+	if (damageDealt <= 0)
+	{
+		return;
+	}
+	if (totalDamage.find(unittype) == totalDamage.end())
+	{
+		totalDamage.insert_or_assign(unittype, 0);
+	}
+	totalDamage.at(unittype) += damageDealt;
+}
+
+void CombatCommander::increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID unittype)
+{
+	if (healthLoss <= 0)
+	{
+		return;
+	}
+	if (totalhealthLoss.find(unittype) == totalhealthLoss.end())
+	{
+		totalhealthLoss.insert_or_assign(unittype, 0);
+	}
+	totalhealthLoss.at(unittype) += healthLoss;
+}
+
 bool CombatCommander::shouldWeStartAttacking()
 {
     return m_bot.Strategy().getCurrentStrategy().m_attackCondition.eval();
@@ -131,16 +165,20 @@ void CombatCommander::initInfluenceMaps()
 	const size_t mapHeight = m_bot.Map().height();
 	m_groundInfluenceMap.resize(mapWidth);
 	m_airInfluenceMap.resize(mapWidth);
+	m_blockedTiles.resize(mapWidth);
 	for(size_t x = 0; x < mapWidth; ++x)
 	{
 		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
 		auto& airInfluenceMapRow = m_airInfluenceMap[x];
+		auto& blockedTilesRow = m_blockedTiles[x];
 		groundInfluenceMapRow.resize(mapHeight);
 		airInfluenceMapRow.resize(mapHeight);
+		blockedTilesRow.resize(mapHeight);
 		for (size_t y = 0; y < mapHeight; ++y)
 		{
 			groundInfluenceMapRow[y] = 0;
 			airInfluenceMapRow[y] = 0;
+			blockedTilesRow[y] = false;
 		}
 	}
 }
@@ -149,14 +187,18 @@ void CombatCommander::resetInfluenceMaps()
 {
 	const size_t mapWidth = m_bot.Map().width();
 	const size_t mapHeight = m_bot.Map().height();
+	const bool resetBlockedTiles = m_bot.GetGameLoop() % BLOCKED_TILES_UPDATE_FREQUENCY == 0;
 	for (size_t x = 0; x < mapWidth; ++x)
 	{
 		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
 		auto& airInfluenceMapRow = m_airInfluenceMap[x];
+		auto& blockedTilesRow = m_blockedTiles[x];
 		for (size_t y = 0; y < mapHeight; ++y)
 		{
 			groundInfluenceMapRow[y] = 0;
 			airInfluenceMapRow[y] = 0;
+			if(resetBlockedTiles)
+				blockedTilesRow[y] = false;
 		}
 	}
 }
@@ -176,12 +218,19 @@ void CombatCommander::updateInfluenceMaps()
 	{
 		m_bot.StartProfiling("0.10.4.0.4      drawInfluenceMaps");
 		drawInfluenceMaps();
+		m_bot.StopProfiling("0.10.4.0.4      drawInfluenceMaps");
 	}
-	m_bot.StopProfiling("0.10.4.0.4      drawInfluenceMaps");
+	if (m_bot.Config().DrawBlockedTiles)
+	{
+		m_bot.StartProfiling("0.10.4.0.5      drawBlockedTiles");
+		drawBlockedTiles();
+		m_bot.StopProfiling("0.10.4.0.5      drawBlockedTiles");
+	}
 }
 
 void CombatCommander::updateInfluenceMapsWithUnits()
 {
+	const bool updateBlockedTiles = m_bot.GetGameLoop() % BLOCKED_TILES_UPDATE_FREQUENCY == 0;
 	for (auto& enemyUnit : m_bot.GetKnownEnemyUnits())
 	{
 		auto& enemyUnitType = enemyUnit.getType();
@@ -190,9 +239,25 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 			updateGroundInfluenceMapForUnit(enemyUnit);
 			updateAirInfluenceMapForUnit(enemyUnit);
 		}
-		else
+		if(updateBlockedTiles && enemyUnitType.isBuilding() && !enemyUnit.isFlying() && enemyUnit.getUnitPtr()->unit_type != sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
 		{
-			//TODO ground units cannot move through non flying buildings
+			updateBlockedTilesWithUnit(enemyUnit);
+		}
+	}
+	if(updateBlockedTiles)
+	{
+		for (auto& allyUnitPair : m_bot.GetAllyUnits())
+		{
+			auto& allyUnit = allyUnitPair.second;
+			if (allyUnit.getType().isBuilding() && !allyUnit.isFlying() && allyUnit.getUnitPtr()->unit_type != sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
+			{
+				updateBlockedTilesWithUnit(allyUnit);
+			}
+		}
+		for (auto& neutralUnitPair : m_bot.GetNeutralUnits())
+		{
+			auto& neutralUnit = neutralUnitPair.second;
+			updateBlockedTilesWithUnit(neutralUnit);
 		}
 	}
 }
@@ -339,6 +404,39 @@ void CombatCommander::updateInfluenceMap(const float dps, const float range, con
 	}
 }
 
+void CombatCommander::updateBlockedTilesWithUnit(const Unit& unit)
+{
+	const CCTilePosition centerTile = Util::GetTilePosition(unit.getPosition());
+	const int size = floor(unit.getUnitPtr()->radius * 2);
+	const int flooredHalfSize = floor(size / 2.f);
+	const int ceiledHalfSize = ceil(size / 2.f);
+	int minX = centerTile.x - flooredHalfSize;
+	const int maxX = centerTile.x + ceiledHalfSize;
+	int minY = centerTile.y - flooredHalfSize;
+	const int maxY = centerTile.y + ceiledHalfSize;
+
+	//special cases
+	if (unit.getType().isAttackingBuilding())
+	{
+		//attacking buildings have a smaller radius, so we must increase the min to cover more tiles
+		minX = centerTile.x - ceiledHalfSize;
+		minY = centerTile.y - ceiledHalfSize;
+	}
+	else if (unit.getType().isMineral())
+	{
+		//minerals are rectangles instead of squares
+		minY = centerTile.y;
+	}
+
+	for(int x = minX; x < maxX; ++x)
+	{
+		for(int y = minY; y < maxY; ++y)
+		{
+			m_blockedTiles[x][y] = true;
+		}
+	}
+}
+
 void CombatCommander::drawInfluenceMaps()
 {
 	const size_t mapWidth = m_bot.Map().width();
@@ -353,6 +451,21 @@ void CombatCommander::drawInfluenceMaps()
 				m_bot.Map().drawTile(x, y, CCColor(255, 255 - std::min(255.f, std::max(0.f, groundInfluenceMapRow[y] * 5)), 0));
 			if (airInfluenceMapRow[y] > 0.f)
 				m_bot.Map().drawCircle(CCPosition(x + 0.5f, y + 0.5f), 0.5f, CCColor(255, 255 - std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5)), 0));
+		}
+	}
+}
+
+void CombatCommander::drawBlockedTiles()
+{
+	const size_t mapWidth = m_bot.Map().width();
+	const size_t mapHeight = m_bot.Map().height();
+	for (size_t x = 0; x < mapWidth; ++x)
+	{
+		auto& blockedTilesRow = m_blockedTiles[x];
+		for (size_t y = 0; y < mapHeight; ++y)
+		{
+			if (blockedTilesRow[y])
+				m_bot.Map().drawTile(x, y, sc2::Colors::Red);
 		}
 	}
 }
@@ -603,6 +716,56 @@ void CombatCommander::updateScoutDefenseSquad()
     }
 }
 
+void CombatCommander::updateDefenseBuildings()
+{
+	int SUPPLYDEPOT_DISTANCE = 4;
+
+	auto enemies = m_bot.GetEnemyUnits();
+	auto buildings = m_bot.Buildings().getFinishedBuildings();
+	for (auto building : buildings)
+	{
+		sc2::UNIT_TYPEID buildingType = building.getType().getAPIUnitType();
+		switch (buildingType)
+		{
+			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED:
+				for (auto enemy : enemies)
+				{
+					CCTilePosition enemyPosition = enemy.second.getTilePosition();
+					CCTilePosition buildingPosition = building.getTilePosition();
+					int distance = abs(enemyPosition.x - buildingPosition.x) + abs(enemyPosition.y - buildingPosition.y);
+					if (distance < SUPPLYDEPOT_DISTANCE)
+					{//Raise
+						building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
+						break;
+					}
+				}
+				break;
+			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT:
+				{//Extra bracket needed to compile
+					bool canLower = true;
+					for (auto enemy : enemies)
+					{
+						CCTilePosition enemyPosition = enemy.second.getTilePosition();
+						CCTilePosition buildingPosition = building.getTilePosition();
+						int distance = abs(enemyPosition.x - buildingPosition.x) + abs(enemyPosition.y - buildingPosition.y);
+						if (distance < SUPPLYDEPOT_DISTANCE)
+						{
+							canLower = false;
+							break;
+						}
+					}
+					if (canLower)
+					{
+						building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+					}
+				}
+				break;
+			default:
+				break;
+		}
+	}
+}
+
 void CombatCommander::updateDefenseSquads()
 {
 	bool workerRushed = false;
@@ -777,6 +940,7 @@ void CombatCommander::updateDefenseSquads()
 	m_bot.Strategy().setIsWorkerRushed(workerRushed);
 
     // for each of our defense squads, if there aren't any enemy units near the position, clear the squad
+	auto enemies = m_bot.UnitInfo().getUnits(Players::Enemy);
     for (const auto & kv : m_squadData.getSquads())
     {
         const Squad & squad = kv.second;
@@ -788,7 +952,7 @@ void CombatCommander::updateDefenseSquads()
         }
 
         bool enemyUnitInRange = false;
-        for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+        for (auto & unit : enemies)
         {
             if (Util::DistSq(unit, order.getPosition()) < order.getRadius() * order.getRadius())
             {
@@ -876,7 +1040,7 @@ void CombatCommander::checkUnitsState()
 		auto it = m_unitStates.find(tag);
 		if (it == m_unitStates.end())
 		{
-			UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
+			UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy(), unit.getUnitPtr());
 			state.Update();
 			m_unitStates[tag] = state;
 			m_bot.StopProfiling("0.10.4.4.2.1        addState");
@@ -888,7 +1052,7 @@ void CombatCommander::checkUnitsState()
 		UnitState & state = it->second;
 		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
 		m_bot.StopProfiling("0.10.4.4.2.2        updateState");
-		if (state.WasAttacked())
+		/*if (state.WasAttacked())
 		{
 			m_bot.StartProfiling("0.10.4.4.2.3        checkForInvis");
 			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
@@ -906,7 +1070,7 @@ void CombatCommander::checkUnitsState()
 			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
 			state.UpdateThreat(!threats.empty());
 			m_bot.StopProfiling("0.10.4.4.2.4        updateThreats");
-		}
+		}*/
 	}
 	m_bot.StopProfiling("0.10.4.4.2      updateStates");
 
@@ -927,6 +1091,15 @@ void CombatCommander::checkUnitsState()
 		m_unitStates.erase(tag);
 	}
 	m_bot.StopProfiling("0.10.4.4.3      removeStates");
+}
+
+void CombatCommander::UpdateTotalHealthLoss()
+{
+	for (auto unitstate : m_unitStates)
+	{
+		increaseTotalHealthLoss(unitstate.second.GetDamageTaken(), unitstate.second.GetType());
+		increaseTotalHealthLoss(unitstate.second.GetDamageTaken(), (sc2::UNIT_TYPEID)0);
+	}
 }
 
 Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type)
@@ -1009,6 +1182,45 @@ std::map<Unit, std::pair<CCPosition, uint32_t>> & CombatCommander::GetInvisibleS
 void CombatCommander::drawSquadInformation()
 {
     m_squadData.drawSquadInformation();
+}
+
+void CombatCommander::drawDamageHealthRatio()
+{
+	if (!m_bot.Config().DrawDamageHealthRatio)
+	{
+		return;
+	}
+
+	float overrallDamage = 0;
+	float overrallhealthLoss = 0;
+	std::stringstream ss;
+	std::vector<std::pair<sc2::UNIT_TYPEID, std::string>> checkedTypes = { 
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_REAPER, "Reaper"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_BANSHEE, "Banshee"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_CYCLONE, "Cyclone")
+	};
+	for (auto type : checkedTypes)
+	{
+		if (totalDamage.find(type.first) != totalDamage.end())
+		{
+			if (totalhealthLoss.find(type.first) != totalhealthLoss.end())
+			{
+				float ratio = totalhealthLoss.at(type.first) > 0 ? totalDamage.at(type.first) / totalhealthLoss.at(type.first) : 0;
+				ss << type.second << ": " << ratio << "\n";
+
+				overrallhealthLoss += totalhealthLoss.at(type.first);
+			}
+			else
+			{
+				ss << type.second << ": " << totalDamage.at(type.first) << "\n";
+			}
+			overrallDamage += totalDamage.at(type.first);
+		}
+	}
+	float overrallRatio = overrallhealthLoss > 0 ? overrallDamage / overrallhealthLoss : 0;
+	ss << "Overrall: " << overrallRatio << "\n";
+
+	m_bot.Map().drawTextScreen(0.68f, 0.68f, std::string("Damage HealhLoss Ratio : \n") + ss.str().c_str());
 }
 
 CCPosition CombatCommander::getMainAttackLocation()

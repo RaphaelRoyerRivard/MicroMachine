@@ -268,7 +268,7 @@ void BaseLocation::draw()
     CCPositionType radius = Util::TileToPosition(1.0f);
 
     m_bot.Map().drawCircle(m_centerOfResources, radius, CCColor(255, 255, 0));
-
+	
     std::stringstream ss;
     ss << "BaseLocation: " << m_baseID << "\n";
     ss << "Start Loc:    " << (isStartLocation() ? "true" : "false") << "\n";

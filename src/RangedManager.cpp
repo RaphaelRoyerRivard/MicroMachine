@@ -15,6 +15,7 @@
 #include "UCTCDAction.h"
 #include <thread>
 
+const float HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE = 0.3f;
 const float HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE = 7.f;
 const float HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE = 10.f;
 const float HARASS_FRIENDLY_ATTRACTION_INTENSITY = 1.5f;
@@ -216,10 +217,38 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	CCPosition goal = m_order.getPosition();
 
+	UnitType unitType(rangedUnit->unit_type, m_bot);
+	bool unitShouldHeal = false;
+	if (unitType.shouldRepair())
+	{
+		auto it = unitsBeingRepaired.find(rangedUnit);
+		if (it != unitsBeingRepaired.end())
+		{
+			if (rangedUnit->health != rangedUnit->health_max)
+			{
+				unitShouldHeal = true;
+			}
+			else
+			{
+				unitsBeingRepaired.erase(rangedUnit);
+			}
+		}
+		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE)
+		{
+			unitShouldHeal = true;
+			unitsBeingRepaired.insert(rangedUnit);
+		}
+	}
+
 	// if the reaper is damaged, go to center of the map
 	const bool reaperShouldHeal = isReaper && rangedUnit->health / rangedUnit->health_max < 0.66f;
 	if (reaperShouldHeal)
+	{
 		goal = CCPosition(m_bot.Map().width(), m_bot.Map().height()) * 0.5f;
+		unitShouldHeal = true;
+	}
+	else if (unitShouldHeal)
+		goal = Util::GetPosition(m_bot.Bases().getClosestBasePosition(rangedUnit));
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
 
@@ -254,13 +283,16 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		m_bot.GetCommandMutex().unlock();
 		setNextCommandFrameAfterAttack(rangedUnit);
 		m_bot.StopProfiling("0.10.4.1.5.2        ShouldAttackTarget");
+
+		m_bot.Commander().Combat().increaseTotalDamage(Util::GetDpsForTarget(rangedUnit, target, m_bot), rangedUnit->unit_type);
+		m_bot.Commander().Combat().increaseTotalDamage(Util::GetDpsForTarget(rangedUnit, target, m_bot), (sc2::UNIT_TYPEID)0);
 		return;
 	}
 	m_bot.StopProfiling("0.10.4.1.5.2        ShouldAttackTarget");
 
 	m_bot.StartProfiling("0.10.4.1.5.3        ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
-	if (!reaperShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
+	if (!unitShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.3        ThreatFighting");
 		return;
@@ -288,7 +320,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StartProfiling("0.10.4.1.5.4        OffensivePathFinding");
 	if (AllowUnitToPathFind(rangedUnit))
 	{
-		const CCPosition pathFindEndPos = target && !reaperShouldHeal ? target->pos : goal;
+		const CCPosition pathFindEndPos = target && !unitShouldHeal ? target->pos : goal;
 		CCPosition closePositionInPath = FindOptimalPathToTarget(rangedUnit, pathFindEndPos, target ? unitAttackRange : 3.f);
 		if (closePositionInPath != CCPosition())
 		{
@@ -308,8 +340,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.4        OffensivePathFinding");
-
-	CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange);
 
 	bool useInfluenceMap = false;
 	CCPosition summedFleeVec(0, 0);
@@ -332,6 +362,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	if(!useInfluenceMap)
 	{
+		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange);
+
 		// Sum up the threats vector with the direction vector
 		if (!threats.empty())
 		{
@@ -356,8 +388,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			return;
 
 		// Normalize the final direction vector so it's easier to work with
-		if (dirVec.x != 0.f || dirVec.y != 0.f)
-			sc2::Normalize2D(dirVec);
+		Util::Normalize(dirVec);
 
 		// If we find a pathable tile in the direction of the vector, we move at that tile
 		CCPosition pathableTile(0, 0);
@@ -524,9 +555,7 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
 	}
-	if (dirVec.x != 0.f || dirVec.y != 0.f)
-		sc2::Normalize2D(dirVec);
-
+	Util::Normalize(dirVec);
 	return dirVec;
 }
 
@@ -640,7 +669,7 @@ void RangedManager::AdjustSummedFleeVec(CCPosition & summedFleeVec) const
 	float vecSquareLen = std::pow(summedFleeVec.x, 2) + std::pow(summedFleeVec.y, 2);
 	if (vecSquareLen > std::pow(HARASS_THREAT_MAX_REPULSION_INTENSITY, 2))
 	{
-		sc2::Normalize2D(summedFleeVec);
+		Util::Normalize(summedFleeVec);
 		summedFleeVec *= HARASS_THREAT_MAX_REPULSION_INTENSITY;
 	}
 }
@@ -669,7 +698,7 @@ CCPosition RangedManager::GetRepulsionVectorFromFriendlyReapers(const sc2::Unit 
 			m_bot.Map().drawLine(reaper->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
 
 		CCPosition fleeVec = reaper->pos - closestFriendlyUnitPosition;
-		sc2::Normalize2D(fleeVec);
+		Util::Normalize(fleeVec);
 		// The repulsion intensity is linearly interpolated (the closer the friendly Reaper is, the stronger is the repulsion)
 		const float intensity = HARASS_FRIENDLY_REPULSION_INTENSITY * (HARASS_FRIENDLY_REPULSION_MIN_DISTANCE - std::sqrt(distToClosestFriendlyUnit)) / HARASS_FRIENDLY_REPULSION_MIN_DISTANCE;
 		return fleeVec * intensity;
@@ -698,8 +727,7 @@ CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit 
 			m_bot.Map().drawLine(hellion->pos, closeAlliesCenter, sc2::Colors::Green);
 		const float distToCloseAlliesCenter = Util::Dist(hellion->pos, closeAlliesCenter);
 		CCPosition attractionVector = closeAlliesCenter - hellion->pos;
-		if(attractionVector.x != 0.f || attractionVector.y != 0.f)
-			sc2::Normalize2D(attractionVector);
+		Util::Normalize(attractionVector);
 		// The repulsion intensity is linearly interpolated (stronger the farthest to lower the closest)
 		const float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToCloseAlliesCenter / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
 		return attractionVector * intensity;
@@ -997,64 +1025,23 @@ bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveL
 
 CCPosition RangedManager::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const
 {
-	CCPosition returnPos;
-	std::set<IMNode*> opened;
-	std::set<IMNode*> closed;
-
-	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
-	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
-	const auto start = new IMNode(startPosition);
-	opened.insert(start);
-
-	while(!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE)
-	{
-		IMNode* currentNode = getLowestCostNode(opened);
-		opened.erase(currentNode);
-		closed.insert(currentNode);
-
-		if(ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange))
-		{
-			returnPos = GetCommandPositionFromPath(currentNode, rangedUnit);
-			break;
-		}
-
-		// Find neighbors
-		for (int x = -1; x <= 1; ++x)
-		{
-			for (int y = -1; y <= 1; ++y)
-			{
-				if (!IsNeighborNodeValid(x, y, currentNode, rangedUnit))
-					continue;
-
-				const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
-
-				const float cost = currentNode->cost + GetInfluenceOnTile(neighborPosition, rangedUnit) + HARASS_PATHFINDING_TILE_BASE_COST;
-				auto neighbor = new IMNode(neighborPosition, currentNode, cost, CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition));
-
-				if (SetContainsNode(closed, neighbor, false))
-					continue;	// already explored check
-
-				if (SetContainsNode(opened, neighbor, true))
-					continue;	// node already opened and of lower cost
-
-				opened.insert(neighbor);
-			}
-		}
-	}
-	for (auto node : opened)
-		delete node;
-	for (auto node : closed)
-		delete node;
-	return returnPos;
+	return FindOptimalPath(rangedUnit, goal, maxRange);
 }
 
 CCPosition RangedManager::FindOptimalPathToSafety(const sc2::Unit * rangedUnit) const
+{
+	return FindOptimalPath(rangedUnit, CCPosition(0, 0), 0.f);
+}
+
+CCPosition RangedManager::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const
 {
 	CCPosition returnPos;
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
 	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
+	const bool hasGoal = goal != CCPosition(0, 0);
+	const CCTilePosition goalPosition = hasGoal ? Util::GetTilePosition(goal) : CCTilePosition(0, 0);
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
 
@@ -1064,7 +1051,8 @@ CCPosition RangedManager::FindOptimalPathToSafety(const sc2::Unit * rangedUnit) 
 		opened.erase(currentNode);
 		closed.insert(currentNode);
 
-		if (ShouldTriggerExit(currentNode, rangedUnit))
+		const bool shouldTriggerExit = hasGoal ? ShouldTriggerExit(currentNode, rangedUnit, goal, maxRange) : ShouldTriggerExit(currentNode, rangedUnit);
+		if (shouldTriggerExit)
 		{
 			returnPos = GetCommandPositionFromPath(currentNode, rangedUnit);
 			break;
@@ -1080,8 +1068,11 @@ CCPosition RangedManager::FindOptimalPathToSafety(const sc2::Unit * rangedUnit) 
 
 				const CCTilePosition neighborPosition(currentNode->position.x + x, currentNode->position.y + y);
 
-				const float cost = currentNode->cost + GetInfluenceOnTile(neighborPosition, rangedUnit) + HARASS_PATHFINDING_TILE_BASE_COST;
-				auto neighbor = new IMNode(neighborPosition, currentNode, cost, 0.f);	// There is no heuristic since we have no idea in which direction is the closest safe spot
+				const bool isDiagonal = abs(x + y) != 1;
+				const float nodeCost = (GetInfluenceOnTile(neighborPosition, rangedUnit) + HARASS_PATHFINDING_TILE_BASE_COST) * (isDiagonal ? sqrt(2) : 1);
+				const float totalCost = currentNode->cost + nodeCost;
+				const float heuristic = hasGoal ? CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition) : 0.f;
+				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
 
 				if (SetContainsNode(closed, neighbor, false))
 					continue;	// already explored check
@@ -1116,7 +1107,10 @@ bool RangedManager::IsNeighborNodeValid(int x, int y, IMNode* currentNode, const
 
 	if (!rangedUnit->is_flying)
 	{
-		// TODO check the ground blockers map
+		if (m_bot.Commander().Combat().getBlockedTiles()[neighborPosition.x][neighborPosition.y])
+			return false;	// tile is blocked
+
+		// TODO check if the unit can pass between 2 blocked tiles (this will need a change in the blocked tiles map to have types of block)
 		// All units can pass between 2 command structures, medium units and small units can pass between a command structure and another building 
 		// while only small units can pass between non command buildings (where "between" means when 2 buildings have their corners touching diagonaly)
 

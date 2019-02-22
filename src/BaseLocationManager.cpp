@@ -479,3 +479,22 @@ CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
 	BOT_ASSERT(position.x != 0.f || position.y != 0.f, "Base location is 0,0");
 	return position;
 }
+
+CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player) const
+{
+	CCTilePosition closestBase;
+	float minDistance = 0.f;
+	for (auto & base : m_baseLocationData)
+	{
+		if (!base.isOccupiedByPlayer(player))
+			continue;
+
+		const float dist = Util::DistSq(base.getPosition(), unit->pos);
+		if (minDistance == 0.f || dist < minDistance)
+		{
+			minDistance = dist;
+			closestBase = Util::GetTilePosition(base.getPosition());
+		}
+	}
+	return closestBase;
+}

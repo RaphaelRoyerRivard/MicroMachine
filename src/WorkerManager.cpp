@@ -68,23 +68,7 @@ void WorkerManager::handleMineralWorkers()
 		return;
 	}
 
-	/*m_bot.StartProfiling("0.7.2.1     selectMineralWorkers");
-	std::list<Unit> mineralWorkers;
-	for (auto& worker : workers)
-	{
-		int workerJob = m_workerData.getWorkerJob(worker);
-		if (workerJob == WorkerJobs::Minerals && !isReturningCargo(worker))
-		{
-			mineralWorkers.push_back(worker);
-		}
-	}
-	m_bot.StopProfiling("0.7.2.1     selectMineralWorkers");
-	if (mineralWorkers.empty())
-	{
-		return;
-	}*/
-	
-	if (!m_isFirstFrame)
+	if (!m_isFirstFrame || true)//TODO Disable split. might cause the long distance mining issue. Gotta test without this code.
 	{
 		return;
 	}
@@ -108,14 +92,6 @@ void WorkerManager::handleMineralWorkers()
 		}
 	}
 	m_bot.StopProfiling("0.7.2.2     selectMinerals");
-
-	/*std::list<std::pair<Unit, float>> temp;
-	for (auto mineralWorker : mineralWorkers)
-	{
-		auto closestMineral = getClosest(mineralWorker, minerals);
-		const float dist = Util::Dist(mineralWorker.getPosition(), closestMineral.getPosition());
-		temp.push_back(std::pair<Unit, float>(mineralWorker, dist));
-	}*/
 
 	m_bot.StartProfiling("0.7.2.3     orderedMineralWorkers");
 	std::list<Unit> orderedMineralWorkers;//Replaces workers
@@ -267,6 +243,70 @@ void WorkerManager::handleRepairWorkers()
             }
         }*/
     }
+
+	//Repair station (RepairStation)
+	int MAX_REPAIR_WORKER = 6;
+	int REPAIR_STATION_SIZE = 10;
+	int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
+	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
+	{
+		auto bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+		for (auto & base : bases)
+		{
+			std::vector<Unit> unitsToRepair;
+			CCTilePosition repairStationLocation = base->getCenterOfMinerals();
+
+			//Get all units to repair
+			for (auto & tagUnit : m_bot.GetAllyUnits())
+			{
+				Unit unit = tagUnit.second;
+				float healthPercentage = unit.getHitPointsPercentage();
+				if (healthPercentage < 100 && !unit.isBeingConstructed())
+				{
+					if (!unit.getType().shouldRepair())
+						continue;
+
+					CCTilePosition position = unit.getTilePosition();
+					int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
+					if (distance < REPAIR_STATION_SIZE)
+					{
+						unitsToRepair.push_back(unit);
+					}
+				}
+			}
+
+			if (unitsToRepair.size() > 0)
+			{
+				//Send workers to repair
+				int repairWorkers = 0;
+				auto & workerData = getWorkerData();
+				for (auto & worker : getWorkers())
+				{
+					auto it = unitsToRepair.begin();
+					if (repairWorkers >= MAX_REPAIR_WORKER)
+					{
+						break;
+					}
+
+					if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || WorkerJobs::Repair)
+					{
+						CCTilePosition position = worker.getTilePosition();
+						int distance = abs(repairStationLocation.x - position.x) + abs(repairStationLocation.y - position.y);
+						if (distance < REPAIR_STATION_WORKER_ZONE_SIZE)
+						{
+							setRepairWorker(worker, *it);
+							repairWorkers++;
+							++it;
+							if (it == unitsToRepair.end())
+							{
+								it = unitsToRepair.begin();
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 void WorkerManager::repairCombatBuildings()
@@ -766,7 +806,7 @@ bool WorkerManager::isBuilder(Unit worker) const
 }
 
 bool WorkerManager::isReturningCargo(Unit worker) const
-{
+{//(ReturnCargo)
 	auto orders = worker.getUnitPtr()->orders;
 	if (orders.size() > 0)
 	{

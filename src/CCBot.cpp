@@ -156,32 +156,101 @@ void CCBot::checkKeyState()
 	{
 		printf("Pausing...");
 	}
+
 	if (GetAsyncKeyState('1'))
 	{
+		key1 = true;
+	}
+	else if (key1)
+	{
+		key1 = false;
 		m_config.DrawProductionInfo = !m_config.DrawProductionInfo;
 	}
+
 	if (GetAsyncKeyState('2'))
 	{
+		key2 = true;
+	}
+	else if (key2)
+	{
+		key2 = false;
 		m_config.DrawHarassInfo = !m_config.DrawHarassInfo;
 	}
+
 	if (GetAsyncKeyState('3'))
 	{
+		key3 = true;
+	}
+	else if (key3)
+	{
+		key3 = false;
 		m_config.DrawUnitPowerInfo = !m_config.DrawUnitPowerInfo;
 	}
+
 	if (GetAsyncKeyState('4'))
 	{
+		key4 = true;
+	}
+	else if (key4)
+	{
+		key4 = false;
 		m_config.DrawWorkerInfo = !m_config.DrawWorkerInfo;
 	}
+
+	/*if (GetAsyncKeyState('5'))
+	{
+		key5 = true;
+	}
+	else if (key5)
+	{
+		key5 = false;
+	}
+
+	if (GetAsyncKeyState('6'))
+	{
+		key6 = true;
+	}
+	else if (key6)
+	{
+		key6 = false;
+	}
+
+	if (GetAsyncKeyState('7'))
+	{
+		key7 = true;
+	}
+	else if (key7)
+	{
+		key7 = false;
+	}*/
+
 	if (GetAsyncKeyState('8'))
 	{
+		key8 = true;
+	}
+	else if (key8)
+	{
+		key8 = false;
 		m_config.DrawProfilingInfo = !m_config.DrawProfilingInfo;
 	}
+
 	if (GetAsyncKeyState('9'))
 	{
+		key9 = true;
+	}
+	else if (key9)
+	{
+		key9 = false;
 		m_config.DrawUnitID = !m_config.DrawUnitID;
 	}
+
 	if (GetAsyncKeyState('0'))
 	{
+		key0 = true;
+	}
+	else if (key0)
+	{
+		key0 = false;
 		m_config.DrawReservedBuildingTiles = !m_config.DrawReservedBuildingTiles;
 	}
 }
@@ -275,6 +344,10 @@ void CCBot::setUnits()
 			}
 			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, std::pair<CCPosition, uint32_t>(unitptr->pos, GetGameLoop()));
 		}
+		else //if(unitptr->alliance == sc2::Unit::Neutral)
+		{
+			m_neutralUnits.insert_or_assign(unitptr->tag, unit);
+		}
         m_allUnits.push_back(unit);
     }
 
@@ -317,19 +390,36 @@ void CCBot::clearDeadUnits()
 		m_allyUnits.erase(tag);
 		std::cout << "Dead ally unit removed from map" << std::endl;
 	}
+
 	unitsToRemove.clear();
-	// Find dead ally units
+	// Find dead enemy units
 	for (auto& pair : m_enemyUnits)
 	{
 		auto& unit = pair.second;
-		if (!unit.isAlive())
+		// Remove dead unit or old snapshot
+		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot && m_map.isVisible(unit.getPosition()) && unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
 			unitsToRemove.push_back(unit.getUnitPtr()->tag);
 	}
-	// Remove dead ally units
+	// Remove dead enemy units
 	for (auto tag : unitsToRemove)
 	{
 		m_enemyUnits.erase(tag);
 		std::cout << "Dead enemy unit removed from map" << std::endl;
+	}
+
+	unitsToRemove.clear();
+	// Find dead neutral units
+	for (auto& pair : m_neutralUnits)
+	{
+		auto& unit = pair.second;
+		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot && m_map.isVisible(unit.getPosition()) && unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
+			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+	}
+	// Remove dead neutral units
+	for (auto tag : unitsToRemove)
+	{
+		m_neutralUnits.erase(tag);
+		//std::cout << "Dead neutral unit removed from map" << std::endl;	//happens too often
 	}
 }
 
@@ -412,21 +502,21 @@ const UnitInfoManager & CCBot::UnitInfo() const
     return m_unitInfo;
 }
 
-int CCBot::GetCurrentFrame() const
+uint32_t CCBot::GetCurrentFrame() const
 {
 #ifdef SC2API
-    return (int)GetGameLoop();
+    return GetGameLoop();
 #else
     return BWAPI::Broodwar->getFrameCount();
 #endif
 }
 
-const TypeData & CCBot::Data(const UnitType & type) const
+const TypeData & CCBot::Data(const UnitType & type)
 {
     return m_techTree.getData(type);
 }
 
-const TypeData & CCBot::Data(const Unit & unit) const
+const TypeData & CCBot::Data(const Unit & unit)
 {
     return m_techTree.getData(unit.getType());
 }
@@ -436,7 +526,7 @@ const TypeData & CCBot::Data(const CCUpgrade & type) const
     return m_techTree.getData(type);
 }
 
-const TypeData & CCBot::Data(const MetaType & type) const
+const TypeData & CCBot::Data(const MetaType & type)
 {
     return m_techTree.getData(type);
 }
@@ -547,6 +637,11 @@ const std::vector<Unit> & CCBot::GetUnits() const
 const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
 {
 	return m_knownEnemyUnits;
+}
+
+std::map<sc2::Tag, Unit> & CCBot::GetNeutralUnits()
+{
+	return m_neutralUnits;
 }
 
 const CCPosition CCBot::GetStartLocation() const

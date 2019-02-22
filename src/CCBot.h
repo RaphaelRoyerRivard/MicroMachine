@@ -44,6 +44,7 @@ class CCBot
 	std::map<sc2::UNIT_TYPEID, int> m_unitCompletedCount;
 	std::map<sc2::Tag, Unit> m_allyUnits;
 	std::map<sc2::Tag, Unit> m_enemyUnits;
+	std::map<sc2::Tag, Unit> m_neutralUnits;
 	std::map<sc2::Tag, std::pair<CCPosition, uint32_t>> m_lastSeenPosUnits;
 	std::vector<Unit>       m_allUnits;
 	std::vector<Unit>       m_knownEnemyUnits;
@@ -53,6 +54,18 @@ class CCBot
 	std::mutex m_command_mutex;
 	bool m_conceedNextFrame;
 	bool m_conceed;
+
+	//KeyState
+	bool key1 = false;
+	bool key2 = false;
+	bool key3 = false;
+	bool key4 = false;
+	bool key5 = false;
+	bool key6 = false;
+	bool key7 = false;
+	bool key8 = false;
+	bool key9 = false;
+	bool key0 = false;
 
 	void checkKeyState();
 	void setUnits();
@@ -95,17 +108,17 @@ public:
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;
     StrategyManager & Strategy();
-    const TypeData & Data(const UnitType & type) const;
+    const TypeData & Data(const UnitType & type);
     const TypeData & Data(const CCUpgrade & type) const;
-    const TypeData & Data(const MetaType & type) const;
-    const TypeData & Data(const Unit & unit) const;
+    const TypeData & Data(const MetaType & type);
+    const TypeData & Data(const Unit & unit);
 	uint32_t GetGameLoop() const;
     const CCRace GetPlayerRace(int player) const;
 	const CCRace GetSelfRace() const;
     const CCPosition GetStartLocation() const;
 	const CCTilePosition GetBuildingArea() const;
 
-    int GetCurrentFrame() const;
+    uint32_t GetCurrentFrame() const;
     int GetMinerals() const;
     int GetCurrentSupply() const;
     int GetMaxSupply() const;
@@ -113,11 +126,13 @@ public:
     Unit GetUnit(const CCUnitID & tag) const;
     const std::vector<Unit> & GetUnits() const;
 	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false) const;
-	std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits();
-	std::map<sc2::Tag, Unit> CCBot::GetAllyUnits(sc2::UNIT_TYPEID type);
-	std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits();
+	std::map<sc2::Tag, Unit> & GetAllyUnits();
+	std::map<sc2::Tag, Unit> GetAllyUnits(sc2::UNIT_TYPEID type);
+	std::map<sc2::Tag, Unit> & GetEnemyUnits();
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
     const std::vector<CCPosition> & GetEnemyStartLocations() const;
+	std::map<sc2::Tag, Unit> & GetNeutralUnits();
+    const std::vector<CCPosition> & GetStartLocations() const;
 	void StartProfiling(const std::string & profilerName);
 	void StopProfiling(const std::string & profilerName);
 	std::mutex & GetCommandMutex();
