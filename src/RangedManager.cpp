@@ -222,7 +222,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StartProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 	if(targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
 	{
-		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, false, getAttackDuration(rangedUnit));
+		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit));
 		PlanAction(rangedUnit, action);
 		m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 
@@ -596,6 +596,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		}
 		// Ignore units that are not ready to perform an action
 		if(ShouldSkipFrame(unit))
+		{
+			continue;
+		}
+		// Ignore units that should heal to not consider them in the power calculation
+		if (unit != rangedUnit && ShouldUnitHeal(unit))
 		{
 			continue;
 		}
