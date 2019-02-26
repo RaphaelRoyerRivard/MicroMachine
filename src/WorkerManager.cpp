@@ -263,7 +263,7 @@ void WorkerManager::handleRepairWorkers()
 				float healthPercentage = unit.getHitPointsPercentage();
 				if (healthPercentage < 100 && !unit.isBeingConstructed())
 				{
-					if (!unit.getType().shouldRepair())
+					if (!unit.getType().isRepairable())
 						continue;
 
 					CCTilePosition position = unit.getTilePosition();

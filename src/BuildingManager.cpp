@@ -25,8 +25,15 @@ void BuildingManager::onFirstFrame()
 	std::list<CCTilePosition> checkedTiles;
 	FindRampTiles(rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
 	FindMainRamp(rampTiles);
-	auto tilesToBlock = FindRampTilesToPlaceBuilding(rampTiles);
-	PlaceSupplyDepots(tilesToBlock);
+
+	//Prevents crash when running in Release, will still crash in Debug. 
+#if !_DEBUG
+	if(rampTiles.size() > 0)
+#endif
+	{
+		auto tilesToBlock = FindRampTilesToPlaceBuilding(rampTiles);
+		PlaceSupplyDepots(tilesToBlock);
+	}
 }
 
 // gets called every frame from GameCommander
@@ -87,15 +94,20 @@ void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::l
 		}
 		else
 		{
-			int tileHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y);
+			float tileHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y);
 
-			int topHeight = m_bot.Map().terrainHeight(currentTile.x + 1, currentTile.y);
-			int downHeight = m_bot.Map().terrainHeight(currentTile.x - 1, currentTile.y);
-			int rightHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y + 1);
-			int leftHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y - 1);
+			float topHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x + 1, currentTile.y);
+			float downHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x - 1, currentTile.y);
+			float rightHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x, currentTile.y + 1);
+			float leftHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x, currentTile.y - 1);
+
+			bool topIsLower = (isgreaterequal(topHeightDiff, 0.5f) && isgreaterequal(1.f, topHeightDiff));
+			bool downIsLower = (isgreaterequal(downHeightDiff, 0.5f) && isgreaterequal(1.f, downHeightDiff));
+			bool rightIsLower = (isgreaterequal(rightHeightDiff, 0.5f) && isgreaterequal(1.f, rightHeightDiff));
+			bool leftIsLower = (isgreaterequal(leftHeightDiff, 0.5f) && isgreaterequal(1.f, leftHeightDiff));
 
 			//Ramps tiles are 1 lower
-			if (topHeight + 1 == tileHeight || downHeight + 1 == tileHeight || rightHeight + 1 == tileHeight || leftHeight + 1 == tileHeight)
+			if (topIsLower || downIsLower || rightIsLower || leftIsLower)
 			{
 				rampTiles.push_back(currentTile);
 			}
@@ -143,9 +155,9 @@ void BuildingManager::FindMainRamp(std::list<CCTilePosition> &rampTiles)
 	}
 }
 
-std::list<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles)
+std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles)
 {
-	std::list<CCTilePosition> tilesToBlock;
+	std::vector<CCTilePosition> tilesToBlock;
 	for (auto & tile : rampTiles)
 	{
 		CCTilePosition below = CCTilePosition(tile.x - 1, tile.y);
@@ -184,15 +196,29 @@ std::list<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::lis
 			}
 		}
 	}
-	BOT_ASSERT(tilesToBlock.size() == 3, "Unusual ramp detected");
-
-	CCTilePosition arrayTiles[3];
-	std::copy(tilesToBlock.begin(), tilesToBlock.end(), arrayTiles);
-	BOT_ASSERT((abs(arrayTiles[0].x - arrayTiles[2].x) == 1) && (abs(arrayTiles[0].y - arrayTiles[2].y) == 1), "Ramp tiles are wrong.");
+	if(tilesToBlock.size() != 3)
+	{
+		Util::DisplayError("Unusual ramp detected, tiles to block = " + std::to_string(tilesToBlock.size()), "0x00000003", m_bot, false);
+		return {};
+	}
+	
+	int swap = 0;
+	while((abs(tilesToBlock.at(0).x - tilesToBlock.at(2).x) != 1 || abs(tilesToBlock.at(0).y - tilesToBlock.at(2).y) != 1)
+		&& swap < tilesToBlock.size() - 1)
+	{
+		//Move front to back
+		std::rotate(tilesToBlock.begin(), tilesToBlock.begin() + 1, tilesToBlock.end());
+		swap++;
+	}
+	if (swap == tilesToBlock.size() - 1)
+	{
+		Util::DisplayError("Ramp tiles are wrong.", "0x00000004", m_bot, false);
+		return {};
+	}
 	return tilesToBlock;
 }
 
-void BuildingManager::PlaceSupplyDepots(std::list<CCTilePosition> tilesToBlock)
+void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock)
 {
 	std::list<CCTilePosition> buildingTiles;
 	for (auto tile : tilesToBlock)
@@ -242,12 +268,11 @@ void BuildingManager::PlaceSupplyDepots(std::list<CCTilePosition> tilesToBlock)
 			}
 		}
 		BOT_ASSERT(false, "Can't find possible position for a wall build. This shouldn't happen.");
+		//TODO: Check remove the buildingTiles and try again in a different order. To try again, pop front tilesToBlock and push back the front.
 	}
 	wallBuilding = buildingTiles;
 	for (auto building : buildingTiles)
 	{
-		//TODO No longer queue the supply depot, add positions to a list and use them when building. Also remove code for "proxy" supply depot
-		//m_bot.Buildings().addBuildingTask(MetaTypeEnum::SupplyDepot.getUnitType(), CCTilePosition(building.x + 1, building.y + 1), true);
 		nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(CCTilePosition(building.x + 1, building.y + 1));
 	}
 }

@@ -444,7 +444,7 @@ bool UnitType::isAttackingBuilding() const
     return isBuilding() && getAttackRange() > 0.f;
 }
 
-bool UnitType::shouldRepair() const
+bool UnitType::isRepairable() const
 {
 	switch ((sc2::UNIT_TYPEID)m_type)
 	{

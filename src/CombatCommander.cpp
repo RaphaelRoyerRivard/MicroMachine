@@ -450,7 +450,7 @@ void CombatCommander::drawInfluenceMaps()
 			if (groundInfluenceMapRow[y] > 0.f)
 				m_bot.Map().drawTile(x, y, CCColor(255, 255 - std::min(255.f, std::max(0.f, groundInfluenceMapRow[y] * 5)), 0));
 			if (airInfluenceMapRow[y] > 0.f)
-				m_bot.Map().drawCircle(CCPosition(x + 0.5f, y + 0.5f), 0.5f, CCColor(255, 255 - std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5)), 0));
+				m_bot.Map().drawTile(x, y, CCColor(255, 255 - std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5)), 0), 0.5f);
 		}
 	}
 }
@@ -500,9 +500,7 @@ void CombatCommander::updateIdleSquad()
 	{
 		const BaseLocation * nextExpansion = m_bot.Bases().getNextExpansion(Players::Self);
 
-		CCPosition idlePosition = CCPosition(nextExpansion->getDepotPosition().x, nextExpansion->getDepotPosition().y);
-		idlePosition.x += nextExpansion->getDepotPosition().x - nextExpansion->getCenterOfMinerals().x;
-		idlePosition.y += nextExpansion->getDepotPosition().y - nextExpansion->getCenterOfMinerals().y;
+		const CCPosition idlePosition = Util::GetPosition(nextExpansion ? nextExpansion->getCenterOfMinerals() : m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getCenterOfMinerals());
 
 		SquadOrder idleOrder(SquadOrderTypes::Attack, idlePosition, DefaultOrderRadius, "Prepare for battle");
 		m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
@@ -769,9 +767,10 @@ void CombatCommander::updateDefenseBuildings()
 void CombatCommander::updateDefenseSquads()
 {
 	bool workerRushed = false;
+	bool earlyRushed = false;
     // for each of our occupied regions
     const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-    for (const BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+    for (BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
     {
         // don't defend inside the enemy region, this will end badly when we are stealing gas or cannon rushing
         if (myBaseLocation == enemyBaseLocation)
@@ -802,7 +801,7 @@ void CombatCommander::updateDefenseSquads()
             if (myBaseLocation->containsPosition(unit.getPosition()))
             {
                 //we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
-                if (unit.getType().isWorker())
+                if (!workerRushed && unit.getType().isWorker())
                 {
 					if (firstWorker)
 					{
@@ -811,6 +810,10 @@ void CombatCommander::updateDefenseSquads()
 					}
 					workerRushed = true;
                 }
+				else if(!earlyRushed && m_bot.GetGameLoop() < 7320)	// first 5 minutes
+				{
+					earlyRushed = true;
+				}
 
 				const float enemyDistance = Util::DistSq(unit.getPosition(), basePosition);
 				if(!closestEnemy.isValid() || enemyDistance < minEnemyDistance)
@@ -855,6 +858,8 @@ void CombatCommander::updateDefenseSquads()
         std::stringstream squadName;
         squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
 
+		myBaseLocation->setIsUnderAttack(!enemyUnitsInRegion.empty());
+
         // if there's nothing in this region to worry about
         if (enemyUnitsInRegion.empty())
         {
@@ -878,7 +883,7 @@ void CombatCommander::updateDefenseSquads()
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
 
 						//Remove builder and gas jobs.
-						for (auto worker : m_bot.Workers().getWorkers())
+						for (auto & worker : m_bot.Workers().getWorkers())
 						{
 							if (m_bot.Workers().getWorkerData().getWorkerJob(worker) != WorkerJobs::Scout)
 							{
@@ -892,15 +897,13 @@ void CombatCommander::updateDefenseSquads()
             // and return, nothing to defend here
             continue;
         }
-        else
+
+        // if we don't have a squad assigned to this region already, create one
+        if (!m_squadData.squadExists(squadName.str()))
         {
-            // if we don't have a squad assigned to this region already, create one
-            if (!m_squadData.squadExists(squadName.str()))
-            {
-				//SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
-				SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
-				m_squadData.addSquad(squadName.str(), Squad(squadName.str(), defendRegion, BaseDefensePriority, m_bot));
-            }
+			//SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
+			SquadOrder defendRegion(SquadOrderTypes::Defend, basePosition, DefaultOrderRadius, "Defend Region!");
+			m_squadData.addSquad(squadName.str(), Squad(squadName.str(), defendRegion, BaseDefensePriority, m_bot));
         }
 
         // assign units to the squad
@@ -938,6 +941,7 @@ void CombatCommander::updateDefenseSquads()
     }
 
 	m_bot.Strategy().setIsWorkerRushed(workerRushed);
+	m_bot.Strategy().setIsEarlyRushed(earlyRushed);
 
     // for each of our defense squads, if there aren't any enemy units near the position, clear the squad
 	auto enemies = m_bot.UnitInfo().getUnits(Players::Enemy);
@@ -1167,9 +1171,10 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & woker, const Squad & defen
 	if (woker.isValid() && 
 		m_squadData.canAssignUnitToSquad(woker, defenseSquad) &&
 		!closestEnemy.isFlying() &&
+		(defenseSquad.getName() == "ScoutDefense" ||  // do not check distances if it is to protect against a scout
 		Util::DistSq(woker, pos) < 15.f * 15.f &&	// worker should not get too far from base
 		(Util::DistSq(woker, closestEnemy) < 7.f * 7.f ||	// worker can fight only units close to it
-		(closestEnemy.getType().isBuilding() && Util::DistSq(closestEnemy, pos) < 12.f * 12.f)))	// worker can fight buildings somewhat close to the base
+		(closestEnemy.getType().isBuilding() && Util::DistSq(closestEnemy, pos) < 12.f * 12.f))))	// worker can fight buildings somewhat close to the base
 		return true;
 	return false;
 }
@@ -1251,14 +1256,13 @@ CCPosition CombatCommander::getMainAttackLocation()
                 }
             }
         }
-    }
 
-	if(!m_bot.Strategy().shouldFocusBuildings())
-	{
-		m_bot.Actions()->SendChat("Looks like you lost your main base, time to conceed? :)");
-		m_bot.Actions()->SendChat("Entering Derp mode... sorry for the glitches to come");
-		m_bot.Strategy().setFocusBuildings(true);
-	}
+		if (!m_bot.Strategy().shouldFocusBuildings())
+		{
+			m_bot.Actions()->SendChat("Looks like you lost your main base, time to conceed? :)");
+			m_bot.Strategy().setFocusBuildings(true);
+		}
+    }
 
 	CCPosition harassSquadCenter = m_squadData.getSquad("Harass").calcCenter();
 	float lowestDistance = -1.f;

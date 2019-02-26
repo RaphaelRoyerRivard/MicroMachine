@@ -188,6 +188,9 @@
     <ClCompile Include="..\src\UCTConsideringDurations.cpp">
       <Filter>micro\old</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\RepairStationManager.cpp">
+      <Filter>micro</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CCBot.h" />
@@ -403,6 +406,9 @@
     </ClInclude>
     <ClInclude Include="..\src\UCTConsideringDurations.h">
       <Filter>micro\old</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\RepairStationManager.h">
+      <Filter>micro</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

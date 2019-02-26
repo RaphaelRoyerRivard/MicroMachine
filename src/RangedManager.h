@@ -24,8 +24,9 @@ private:
 	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	bool ShouldSkipFrame(const sc2::Unit * rangedUnit) const;
 	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit) const;
-	void ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats);
-	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target);
+	void ExecuteBansheeCloakLogic(const sc2::Unit * banshee, sc2::Units & threats) const;
+	bool ShouldUnitHeal(const sc2::Unit * rangedUnit);
+	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal);
 	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float squaredDistanceToGoal);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;
 	CCPosition GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange) const;
@@ -37,10 +38,8 @@ private:
 	CCPosition GetRepulsionVectorFromFriendlyReapers(const sc2::Unit * reaper, sc2::Units & rangedUnits) const;
 	CCPosition GetAttractionVectorToFriendlyHellions(const sc2::Unit * hellion, sc2::Units & rangedUnits) const;
 	bool MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const;
-	//CCTilePosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats) const;
-	//void CreateLocalInfluenceMap(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & threats, float (&map)[50][50]) const;
 	CCPosition FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const;
-	CCPosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit) const;
+	CCPosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal) const;
 	CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange) const;
 	bool IsNeighborNodeValid(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit) const;
 	CCPosition GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit) const;

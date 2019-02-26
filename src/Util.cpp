@@ -363,6 +363,10 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 		if (where != sc2::Weapon::TargetType::Air)
 			range = 4.f;
 	}
+	else if(unitType == sc2::UNIT_TYPEID::PROTOSS_CARRIER)
+	{
+		range = 8.f;
+	}
 
 	return range;
 }
@@ -583,6 +587,10 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 		if (where != sc2::Weapon::TargetType::Air)
 			dps = 13.7f;
 	}
+	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_CARRIER)
+	{
+		dps = 37.4f;
+	}
 
     return dps;
 }
@@ -629,7 +637,7 @@ float Util::getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCB
 	const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 	const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
 	const sc2::GameInfo gameInfo = m_bot.Observation()->GetGameInfo();
-	const float heightBonus = Util::TerainHeight(gameInfo, threat->pos) > Util::TerainHeight(gameInfo, unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
+	const float heightBonus = unit->is_flying ? 0.f : Util::TerainHeight(gameInfo, threat->pos) > Util::TerainHeight(gameInfo, unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
 	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + HARASS_THREAT_RANGE_BUFFER;
 	return threatRange;
 }

@@ -342,16 +342,21 @@ void MapTools::drawLine(const CCPosition & p1, const CCPosition & p2, const CCCo
 #endif
 }
 
-void MapTools::drawTile(const CCTilePosition& tilePosition, const CCColor & color) const
+void MapTools::drawTile(const CCTilePosition& tilePosition, const CCColor & color, float size) const
 {
-	drawTile(tilePosition.x, tilePosition.y, color);
+	drawTile(tilePosition.x, tilePosition.y, color, size);
 }
 
-void MapTools::drawTile(int tileX, int tileY, const CCColor & color) const
+void MapTools::drawTile(int tileX, int tileY, const CCColor & color, float size) const
 {
-    CCPositionType px = Util::TileToPosition((float)tileX) + Util::TileToPosition(0.1f);
-    CCPositionType py = Util::TileToPosition((float)tileY) + Util::TileToPosition(0.1f);
-    CCPositionType d  = Util::TileToPosition(0.8f);
+	if (!isInCameraFrustum(tileX, tileY))
+		return;
+
+	size = std::min(1.f, std::max(0.f, size));
+	const float margin = (1.f - size) / 2;
+    CCPositionType px = Util::TileToPosition((float)tileX) + Util::TileToPosition(margin);
+    CCPositionType py = Util::TileToPosition((float)tileY) + Util::TileToPosition(margin);
+    CCPositionType d  = Util::TileToPosition(size);
 
     drawLine(px,     py,     px + d, py,     color);
     drawLine(px + d, py,     px + d, py + d, color);
@@ -382,30 +387,20 @@ void MapTools::drawBox(const CCPosition & tl, const CCPosition & br, const CCCol
 
 void MapTools::drawCircle(const CCPosition & pos, CCPositionType radius, const CCColor & color) const
 {
-#ifdef SC2API
-    m_bot.Debug()->DebugSphereOut(sc2::Point3D(pos.x, pos.y, m_maxZ), radius, color);
-#else
-    BWAPI::Broodwar->drawCircleMap(pos, radius, color);
-#endif
+	drawCircle(pos.x, pos.y, radius, color);
 }
 
 void MapTools::drawCircle(CCPositionType x, CCPositionType y, CCPositionType radius, const CCColor & color) const
 {
-#ifdef SC2API
-    m_bot.Debug()->DebugSphereOut(sc2::Point3D(x, y, m_maxZ), radius, color);
-#else
-    BWAPI::Broodwar->drawCircleMap(BWAPI::Position(x, y), radius, color);
-#endif
+	if(isInCameraFrustum(x, y))
+		m_bot.Debug()->DebugSphereOut(sc2::Point3D(x, y, m_maxZ), radius, color);
 }
 
 
 void MapTools::drawText(const CCPosition & pos, const std::string & str, const CCColor & color) const
 {
-#ifdef SC2API
-    m_bot.Debug()->DebugTextOut(str, sc2::Point3D(pos.x, pos.y, m_maxZ), color);
-#else
-    BWAPI::Broodwar->drawTextMap(pos, str.c_str());
-#endif
+	if(isInCameraFrustum(pos.x, pos.y))
+		m_bot.Debug()->DebugTextOut(str, sc2::Point3D(pos.x, pos.y, m_maxZ), color);
 }
 
 void MapTools::drawTextScreen(float xPerc, float yPerc, const std::string & str, const CCColor & color) const
@@ -557,6 +552,12 @@ bool MapTools::canWalk(int tileX, int tileY)
 #endif
 }
 
+bool MapTools::isInCameraFrustum(int x, int y) const
+{
+	const CCPosition camera = m_bot.Observation()->GetCameraPos();
+	return x >= camera.x - 17 && x <= camera.x + 17 && y >= camera.y - 12 && y <= camera.y + 12;
+}
+
 bool MapTools::canBuild(int tileX, int tileY) 
 {
 #ifdef SC2API
@@ -643,6 +644,9 @@ void MapTools::draw() const
                 if (isWalkable(x, y) && !isBuildable(x, y)) { color = CCColor(255, 255, 0); }
                 if (isBuildable(x, y) && !isDepotBuildableTile(x, y)) { color = CCColor(127, 255, 255); }
                 drawTile(x, y, color);
+				std::string terrainHeight(16, '\0');
+				std::snprintf(&terrainHeight[0], terrainHeight.size(), "%.2f", m_bot.Map().terrainHeight(x, y));
+				m_bot.Map().drawText(CCPosition(x, y), terrainHeight, m_bot.Observation()->IsPathable(CCPosition(x, y)) ? sc2::Colors::Green : sc2::Colors::Red);
             }
         }
     }

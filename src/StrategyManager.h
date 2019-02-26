@@ -42,6 +42,7 @@ class StrategyManager
     int                             m_totalGamesPlayed;
     const BuildOrder                m_emptyBuildOrder;
 	bool m_workerRushed = false;
+	bool m_earlyRushed = false;
 	bool m_shouldProduceAntiAir = false;
 	bool m_enemyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
@@ -71,6 +72,8 @@ public:
     void readStrategyFile(const std::string & str);
 	bool isWorkerRushed() const { return m_workerRushed; }
 	void setIsWorkerRushed(bool workerRushed) { m_workerRushed = workerRushed; }
+	bool isEarlyRushed() const { return m_earlyRushed; }
+	void setIsEarlyRushed(bool earlyRushed) { m_earlyRushed = earlyRushed; }
 	bool shouldProduceAntiAir() const { return m_shouldProduceAntiAir; }
 	void setShouldProduceAntiAir(bool shouldProduceAntiAir) { m_shouldProduceAntiAir = shouldProduceAntiAir; }
 	bool enemyHasInvisible() const { return m_enemyHasInvisible; }

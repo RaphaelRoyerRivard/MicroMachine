@@ -81,6 +81,7 @@ void ProductionManager::onFrame()
 {
 	m_bot.StartProfiling("1.0 lowPriorityChecks");
 	lowPriorityChecks();
+	validateUpgradesProgress();
 	m_bot.StopProfiling("1.0 lowPriorityChecks");
 	m_bot.StartProfiling("2.0 manageBuildOrderQueue");
     manageBuildOrderQueue();
@@ -233,7 +234,6 @@ void ProductionManager::manageBuildOrderQueue()
 				Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
 				//Get building location
 				const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, false);
-
 				if (targetLocation != CCTilePosition(0, 0))
 				{
 					Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
@@ -291,31 +291,28 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	if (m_bot.GetSelfRace() == sc2::Race::Terran)
 	{
 		// Logic for building Orbital Commands and Refineries
-		if(m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_bot.Buildings().isBeingBuilt(MetaTypeEnum::CommandCenter.getUnitType()) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
+		const size_t ccCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), false, true);
+		const size_t completedCCCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), true, true);
+		if(completedCCCount > 0)
 		{
-			const auto orbitalCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::OrbitalCommand.getUnitType(), false, true);
-			if (orbitalCount < 3)
+			if (!m_queue.contains(MetaTypeEnum::OrbitalCommand) && !m_queue.contains(MetaTypeEnum::PlanetaryFortress))
 			{
-				m_queue.queueAsHighestPriority(MetaTypeEnum::OrbitalCommand, false);
+				const size_t orbitalCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::OrbitalCommand.getUnitType(), false, true);
+				if (orbitalCount < 3)
+				{
+					m_queue.queueAsHighestPriority(MetaTypeEnum::OrbitalCommand, false);
+				}
+				else
+				{
+					m_queue.queueAsHighestPriority(MetaTypeEnum::PlanetaryFortress, false);
+				}
+				m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
+				m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
 			}
-			else
-			{
-				m_queue.queueAsHighestPriority(MetaTypeEnum::PlanetaryFortress, false);
-			}
-
-			m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
-			m_queue.queueAsLowestPriority(MetaTypeEnum::Refinery, false);
-			m_ccShouldBeInQueue = false;
 		}
-
-		// Logic for building Command Centers
-		if (baseCount <= productionScore)
+		else if (ccCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter))
 		{
-			if (!m_ccShouldBeInQueue && !m_queue.contains(MetaTypeEnum::CommandCenter) && !m_queue.contains(MetaTypeEnum::OrbitalCommand))
-			{
-				m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
-				m_ccShouldBeInQueue = true;
-			}
+			m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
 		}
 
 		// Strategy base logic
@@ -408,11 +405,22 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 
-				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Viking))
+				if (m_bot.Strategy().isEarlyRushed() && !m_queue.contains(MetaTypeEnum::Hellion))
 				{
-					if (vikingCount < 2 * bansheeCount)
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
+				}
+
+				if (m_bot.Strategy().shouldProduceAntiAir())
+				{
+					if (!m_queue.contains(MetaTypeEnum::Viking) && vikingCount < 2 * bansheeCount)
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+					}
+
+					if (!m_queue.contains(MetaTypeEnum::HiSecAutoTracking) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::HiSecAutoTracking) == startedUpgrades.end())
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HiSecAutoTracking, 0, false));
+						startedUpgrades.push_back(MetaTypeEnum::HiSecAutoTracking);
 					}
 				}
 				break;
@@ -434,8 +442,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{//Addon
 						if (factoryAddonCount < 1)
 						{
-							toBuild = MetaTypeEnum::FactoryTechLab;
-							hasPicked = true;
+							// Commented because it will be added automatically as when we need to do the upgrade (and we might want to wait to build hellions instead)
+							//toBuild = MetaTypeEnum::FactoryTechLab;
+							//hasPicked = true;
 						}
 						else if (starportCount > starportAddonCount)
 						{
@@ -469,13 +478,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				if (!m_queue.contains(MetaTypeEnum::InfernalPreIgniter) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::InfernalPreIgniter) == startedUpgrades.end())
+				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
+				if (hellionCount >= 2 && !m_queue.contains(MetaTypeEnum::InfernalPreIgniter) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::InfernalPreIgniter) == startedUpgrades.end())
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::InfernalPreIgniter, 0, false));
 					startedUpgrades.push_back(MetaTypeEnum::InfernalPreIgniter);
 				}
 
-				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
 				const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), true, true);
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true);
 				if(hellionCount + bansheeCount + vikingCount >= 5)
@@ -496,11 +505,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
 
-				if (m_bot.Strategy().shouldProduceAntiAir() && !m_queue.contains(MetaTypeEnum::Viking))
+				if (m_bot.Strategy().shouldProduceAntiAir())
 				{
-					if (vikingCount < 2 * bansheeCount)
+					if (!m_queue.contains(MetaTypeEnum::Viking) && vikingCount < 2 * bansheeCount)
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+					}
+
+					if (!m_queue.contains(MetaTypeEnum::HiSecAutoTracking) && std::find(startedUpgrades.begin(), startedUpgrades.end(), MetaTypeEnum::HiSecAutoTracking) == startedUpgrades.end())
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::HiSecAutoTracking, 0, false));
+						startedUpgrades.push_back(MetaTypeEnum::HiSecAutoTracking);
 					}
 				}
 
@@ -1328,6 +1343,37 @@ MetaType ProductionManager::queueUpgrade(const MetaType & type)
 	return {};
 }
 
+void ProductionManager::validateUpgradesProgress()
+{
+	std::vector<MetaType> toRemove;
+	for (std::pair<const MetaType, Unit> & upgrade : incompletUpgrades)
+	{
+		bool found = false;
+		for (auto & order : upgrade.second.getUnitPtr()->orders)
+		{
+			float progress = order.progress;
+			if (order.ability_id == m_bot.Data(upgrade.first.getUpgrade()).buildAbility)
+			{
+				found = true;
+				if (progress > 0.98f)//About to finish, lets consider it done.
+				{
+					toRemove.push_back(upgrade.first);
+				}
+			}
+		}
+		if (!found)
+		{
+			toRemove.push_back(upgrade.first);
+			startedUpgrades.remove(upgrade.first);
+			//TODO refund ressources?
+		}
+	}
+	for (auto & remove : toRemove)
+	{
+		incompletUpgrades.erase(remove);
+	}
+}
+
 Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const
 {
     if (units.empty())
@@ -1390,6 +1436,13 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
     else if (item.type.isUpgrade())
     {
 		Micro::SmartAbility(producer.getUnitPtr(), m_bot.Data(item.type.getUpgrade()).buildAbility, m_bot);
+
+		auto it = incompletUpgrades.find(item.type);
+		if (it != incompletUpgrades.end())
+		{
+			Util::DisplayError("Trying to start and already started upgrade.", "0x00000006", m_bot);
+		}
+		incompletUpgrades.insert(std::make_pair(item.type, producer));
     }
 }
 
@@ -1416,16 +1469,19 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 	{
 		// check to see if one of the unit's available abilities matches the build ability type
 		sc2::AbilityID MetaTypeAbility = m_bot.Data(type).buildAbility;
-		if (type.isUpgrade())//TODO Not safe, is a fix for upgrades having the wrong ID
-		{
-			return true;
-		}
 		for (const sc2::AvailableAbility & available_ability : available_abilities.abilities)
 		{
 			if (available_ability.ability_id == MetaTypeAbility)
 			{
 				return true;
 			}
+		}
+		if (type.isUpgrade())//TODO Not safe, is a fix for upgrades having the wrong ID
+		{
+			std::ostringstream oss;
+			oss << "Unit can't create upgrade, but should be able. ID: " << MetaTypeAbility << " UnitType: " << producer.getType().getName();
+			Util::DisplayError(oss.str(), "0x00000005", m_bot);
+			return true;
 		}
 	}
 

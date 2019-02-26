@@ -18,6 +18,8 @@ class BaseLocation
     CCPosition                  m_centerOfResources;
     std::vector<Unit>           m_geysers;
     std::vector<Unit>           m_minerals;
+	Unit						m_resourceDepot;
+	bool						m_isUnderAttack;
 
 	CCTilePosition				m_centerOfMinerals;
 
@@ -50,6 +52,10 @@ public:
     const CCPosition & getPosition() const;
     const std::vector<Unit> & getGeysers() const;
     const std::vector<Unit> & getMinerals() const;
+	const Unit& getResourceDepot() const { return m_resourceDepot; }
+	void setResourceDepot(Unit resourceDepot) { m_resourceDepot = resourceDepot; }
+	bool isUnderAttack() const { return m_isUnderAttack; }
+	void setIsUnderAttack(bool isUnderAttack) { m_isUnderAttack = isUnderAttack; }
 	const CCTilePosition getCenterOfMinerals() const;
     bool isOccupiedByPlayer(CCPlayer player) const;
     bool isExplored() const;

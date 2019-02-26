@@ -46,8 +46,8 @@ public:
     void                onFrame();
 	void				FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile);
 	void				FindMainRamp(std::list<CCTilePosition> &rampTiles);
-	std::list<CCTilePosition> FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles);
-	void				BuildingManager::PlaceSupplyDepots(std::list<CCTilePosition> tilesToBlock);
+	std::vector<CCTilePosition> FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles);
+	void				BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock);
 	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
     void                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
 	bool				isConstructingType(const UnitType & type);

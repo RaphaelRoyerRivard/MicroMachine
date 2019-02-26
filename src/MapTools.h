@@ -33,6 +33,7 @@ class MapTools
     float   terrainHeight(const CCPosition & point) const;
     bool    canBuild(int tileX, int tileY);
     bool    canWalk(int tileX, int tileY);
+	bool isInCameraFrustum(int x, int y) const;
 
 public:
 
@@ -49,8 +50,8 @@ public:
 
     void    drawLine(CCPositionType x1, CCPositionType y1, CCPositionType x2, CCPositionType y2, const CCColor & color = CCColor(255, 255, 255)) const;
     void    drawLine(const CCPosition & p1, const CCPosition & p2, const CCColor & color = CCColor(255, 255, 255)) const;
-	void	drawTile(const CCTilePosition& tilePosition, const CCColor & color = CCColor(255, 255, 255)) const;
-    void    drawTile(int tileX, int tileY, const CCColor & color = CCColor(255, 255, 255)) const;
+	void	drawTile(const CCTilePosition& tilePosition, const CCColor & color = CCColor(255, 255, 255), float size = 0.8f) const;
+    void    drawTile(int tileX, int tileY, const CCColor & color = CCColor(255, 255, 255), float size = 0.8f) const;
     void    drawBox(CCPositionType x1, CCPositionType y1, CCPositionType x2, CCPositionType y2, const CCColor & color = CCColor(255, 255, 255)) const;
     void    drawBox(const CCPosition & tl, const CCPosition & br, const CCColor & color = CCColor(255, 255, 255)) const;
     void    drawCircle(CCPositionType x1, CCPositionType x2, CCPositionType radius, const CCColor & color = CCColor(255, 255, 255)) const;

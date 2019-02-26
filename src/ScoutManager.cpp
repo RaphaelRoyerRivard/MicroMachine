@@ -91,13 +91,13 @@ void ScoutManager::moveScouts()
                 if (m_bot.Config().ScoutHarassEnemy && closestEnemyWorkerUnit.isValid() && (Util::DistSq(workerScout, closestEnemyWorkerUnit) < 12 * 12))
                 {
                     m_scoutStatus = "Harass enemy worker";
-                    m_scoutUnit.attackUnit(closestEnemyWorkerUnit);
+					Micro::SmartAttackUnit(m_scoutUnit.getUnitPtr(), closestEnemyWorkerUnit.getUnitPtr(), m_bot);
                 }
                 // otherwise keep moving to the enemy base location
                 else
                 {
                     m_scoutStatus = "Moving to enemy base location";
-                    m_scoutUnit.move(enemyBaseLocation->getPosition());
+					Micro::SmartMove(m_scoutUnit.getUnitPtr(), enemyBaseLocation->getPosition(), m_bot);
                 }
             }
             // if the worker scout is under attack
@@ -184,5 +184,5 @@ bool ScoutManager::enemyWorkerInRadiusOf(const CCPosition & pos) const
 CCPosition ScoutManager::getFleePosition() const
 {
     // TODO: make this follow the perimeter of the enemy base again, but for now just use home base as flee direction
-    return m_bot.GetStartLocation();
+    return Util::GetPosition(m_bot.Bases().getClosestBasePosition(m_scoutUnit.getUnitPtr()));
 }
