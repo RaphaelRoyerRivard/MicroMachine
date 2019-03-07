@@ -119,7 +119,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPositio
 	if(foundIndex >= 0 && bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
 		return releventResult.m_result;
 
-	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, true, false, bot);
+	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, true, false, false, bot);
 	const bool success = pathPosition != CCPosition(0, 0);
 	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
 	if(foundIndex >= 0)
@@ -135,20 +135,22 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPositio
 
 CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot)
 {
-	return FindOptimalPath(rangedUnit, goal, maxRange, false, false, bot);
+	return FindOptimalPath(rangedUnit, goal, maxRange, false, false, true, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot)
 {
-	return FindOptimalPath(rangedUnit, goal, 0.f, false, false, bot);
+	return FindOptimalPath(rangedUnit, goal, 0.f, false, false, false, bot);
 }
 
-CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot)
 {
 	CCPosition returnPos;
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
+	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
+	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
 	const bool flee = !exitOnInfluence && maxRange == 0.f;
 	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
@@ -177,6 +179,24 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPo
 				shouldTriggerExit = (considerOnlyEffects || !HasInfluenceOnTile(currentNode, rangedUnit, bot)) &&
 					!HasEffectInfluenceOnTile(currentNode, rangedUnit, bot) &&
 					Util::Dist(Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
+
+				if(getCloser && shouldTriggerExit)
+				{
+					if(numberOfTilesExploredAfterPathFound > 10)
+					{
+						currentNode = closestNode;
+					}
+					else
+					{
+						shouldTriggerExit = false;
+						const CCPosition shiftedPos = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+						if(closestNode == nullptr || Util::Dist(shiftedPos, goal) < Util::Dist(Util::GetPosition(closestNode->position) + CCPosition(0.5f, 0.5f), goal))
+						{
+							closestNode = currentNode;
+						}
+						++numberOfTilesExploredAfterPathFound;
+					}
+				}
 			}
 		}
 		if (shouldTriggerExit)

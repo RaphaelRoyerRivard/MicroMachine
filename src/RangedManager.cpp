@@ -666,7 +666,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			// If the unit is standing on effect influence, get it out of it before fighting
 			if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), rangedUnit, m_bot) > 0.f)
 			{
-				CCPosition movePosition = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, unitRange, false, true, m_bot);
+				CCPosition movePosition = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, unitRange, false, true, false, m_bot);
 				if(movePosition != CCPosition())
 				{
 					const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
