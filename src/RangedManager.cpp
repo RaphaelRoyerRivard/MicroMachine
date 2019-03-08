@@ -580,7 +580,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	}
 
 	// Check if unit can fight cloaked
-	if(!unitShouldHeal && rangedUnit->cloak == sc2::Unit::Cloaked || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ShouldBansheeCloak(rangedUnit, false)))
+	if(!unitShouldHeal && rangedUnit->energy >= 5 && (rangedUnit->cloak == sc2::Unit::Cloaked || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ShouldBansheeCloak(rangedUnit, false))))
 	{
 		// If the unit is at an undetected position
 		if (!Util::IsPositionUnderDetection(rangedUnit->pos, m_bot))
