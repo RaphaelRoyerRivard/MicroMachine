@@ -1,6 +1,8 @@
 #include "CombatAnalyzer.h"
 #include "CCBot.h"
 
+uint32_t AREA_UNDER_DETECTION_DURATION = 732;		// around 30s
+
 CombatAnalyzer::CombatAnalyzer(CCBot & bot) 
 	: m_bot(bot)
 {
@@ -9,10 +11,13 @@ CombatAnalyzer::CombatAnalyzer(CCBot & bot)
 void CombatAnalyzer::onStart()
 {
 	m_bot.Commander();
+	if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss)
+		AREA_UNDER_DETECTION_DURATION *= 2;
 }
 
 void CombatAnalyzer::onFrame()
 {
+	clearAreasUnderDetection();
 	//Handle our units
 	m_bot.StartProfiling("0.10.4.4    checkUnitsState");
 	checkUnitsState();
@@ -21,6 +26,7 @@ void CombatAnalyzer::onFrame()
 	UpdateRatio();
 
 	drawDamageHealthRatio();
+	//drawAreasUnderDetection();
 
 	//Handle enemy units
 	/*auto currentEnemies = m_bot.GetEnemyUnits();
@@ -49,6 +55,20 @@ void CombatAnalyzer::onFrame()
 	auto a = 1;*/
 	//previousFrameEnemies = m_bot.GetEnemyUnits();
 	//auto b = m_bot.GetKnownEnemyUnits();
+}
+
+void CombatAnalyzer::clearAreasUnderDetection()
+{
+	m_areasUnderDetection.remove_if([this](auto & area) { return m_bot.GetGameLoop() > area.second + AREA_UNDER_DETECTION_DURATION; });
+}
+
+void CombatAnalyzer::drawAreasUnderDetection()
+{
+	const int areaUnderDetectionSize = m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? 20 : 10;
+	for (const auto & area : m_areasUnderDetection)
+	{
+		m_bot.Map().drawCircle(area.first, areaUnderDetectionSize, sc2::Colors::Blue);
+	}
 }
 
 void CombatAnalyzer::UpdateTotalHealthLoss()
@@ -183,7 +203,7 @@ void CombatAnalyzer::checkUnitsState()
 		m_bot.StopProfiling("0.10.4.4.2.2        updateState");
 		if (state.WasAttacked())
 		{
-			m_bot.StartProfiling("0.10.4.4.2.3        checkForRangeUpgrade");
+			m_bot.StartProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
 			const auto & influenceMap = unit.isFlying() ? m_bot.Commander().Combat().getAirInfluenceMap() : m_bot.Commander().Combat().getGroundInfluenceMap();
 			const auto & effectInfluenceMap = unit.isFlying() ? m_bot.Commander().Combat().getAirEffectInfluenceMap() : m_bot.Commander().Combat().getGroundEffectInfluenceMap();
 			const CCTilePosition tilePosition = Util::GetTilePosition(unit.getPosition());
@@ -205,6 +225,13 @@ void CombatAnalyzer::checkUnitsState()
 				}
 				//TODO detect invis
 			}
+			m_bot.StopProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
+			m_bot.StartProfiling("0.10.4.4.2.2        saveDetectedArea");
+			if(unit.getUnitPtr()->cloak == sc2::Unit::Cloaked && !Util::IsPositionUnderDetection(unit.getPosition(), m_bot))
+			{
+				m_areasUnderDetection.push_back({ unit.getPosition(), m_bot.GetGameLoop() });
+			}
+			m_bot.StopProfiling("0.10.4.4.2.2        saveDetectedArea");
 			/*auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
 			if (threats.empty() && state.HadRecentTreats())
 			{
@@ -212,7 +239,6 @@ void CombatAnalyzer::checkUnitsState()
 				m_bot.Strategy().setEnemyHasInvisible(true);
 				m_invisibleSighting[unit] = std::pair<CCPosition, uint32_t>(unit.getPosition(), m_bot.GetGameLoop());
 			}*/
-			m_bot.StopProfiling("0.10.4.4.2.3        checkForRangeUpgrade");
 		}
 		/*else if (m_bot.GetGameLoop() % 5)
 		{

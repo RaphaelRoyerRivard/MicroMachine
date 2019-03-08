@@ -18,13 +18,17 @@ class CombatAnalyzer {
 	std::map<sc2::UNIT_TYPEID, float> totalhealthLoss;
 	std::map<sc2::Tag, Unit> enemies;
 	std::map<sc2::Tag, Unit> deadEnemies;
+	std::list<std::pair<CCPosition, uint32_t>> m_areasUnderDetection;
 
+	void clearAreasUnderDetection();
+	void UpdateTotalHealthLoss();
 	void drawDamageHealthRatio();
+	void drawAreasUnderDetection();
 public:
 	CombatAnalyzer(CCBot & bot);
 	void onStart();
 	void onFrame();
-	void UpdateTotalHealthLoss();
+	std::list<std::pair<CCPosition, uint32_t>> & GetAreasUnderDetection() { return m_areasUnderDetection; };
 	void increaseTotalDamage(float damageDealt, sc2::UNIT_TYPEID unittype);
 	void increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID unittype);
 	float GetRatio(sc2::UNIT_TYPEID type);

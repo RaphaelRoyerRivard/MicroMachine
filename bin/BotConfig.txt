@@ -2,7 +2,7 @@
     "Bot Info" :
     {
         "BotName"                   : "MicroMachine",
-        "Authors"                   : "David Churchill, Raphael Royer-Rivard, Antoine Theberge, Benjamin Ross, Jean-Philippe Croteau, Francois Genest, Alexis Caron",
+        "Authors"                   : "Raphael Royer-Rivard, Alexis Caron, David Churchill, Antoine Theberge, Benjamin Ross, Jean-Philippe Croteau, Francois Genest",
         "PrintInfoOnStart"          : false
     },
 
@@ -23,7 +23,7 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
+        "EnemyRace"                 : "Terran",
         "MapFile"                   : "KairosJunctionLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
