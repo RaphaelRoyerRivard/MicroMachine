@@ -516,7 +516,11 @@ void CCBot::clearDeadUnits()
 		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
 			&& m_map.isVisible(unit.getPosition())
 			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
-			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+		{
+			auto unitPtr = unit.getUnitPtr();
+			unitsToRemove.push_back(unitPtr->tag);
+			this->CombatAnalyzer().increaseDeadEnemy(unitPtr->unit_type);
+		}
 	}
 	// Remove dead enemy units
 	for (auto tag : unitsToRemove)
