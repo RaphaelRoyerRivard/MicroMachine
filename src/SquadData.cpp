@@ -65,6 +65,9 @@ void SquadData::updateAllSquads()
 
 void SquadData::drawSquadInformation()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
     if (!m_bot.Config().DrawSquadInfo)
     {
         return;

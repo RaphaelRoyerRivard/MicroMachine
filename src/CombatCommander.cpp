@@ -206,18 +206,9 @@ void CombatCommander::updateInfluenceMaps()
 	m_bot.StartProfiling("0.10.4.0.3      updateInfluenceMapsWithEffects");
 	updateInfluenceMapsWithEffects();
 	m_bot.StopProfiling("0.10.4.0.3      updateInfluenceMapsWithEffects");
-	if (m_bot.Config().DrawInfluenceMaps)
-	{
-		m_bot.StartProfiling("0.10.4.0.4      drawInfluenceMaps");
-		drawInfluenceMaps();
-		m_bot.StopProfiling("0.10.4.0.4      drawInfluenceMaps");
-	}
-	if (m_bot.Config().DrawBlockedTiles)
-	{
-		m_bot.StartProfiling("0.10.4.0.5      drawBlockedTiles");
-		drawBlockedTiles();
-		m_bot.StopProfiling("0.10.4.0.5      drawBlockedTiles");
-	}
+	
+	drawInfluenceMaps();	
+	drawBlockedTiles();
 }
 
 void CombatCommander::updateInfluenceMapsWithUnits()
@@ -442,58 +433,73 @@ void CombatCommander::updateBlockedTilesWithUnit(const Unit& unit)
 
 void CombatCommander::drawInfluenceMaps()
 {
-	const size_t mapWidth = m_bot.Map().totalWidth();
-	const size_t mapHeight = m_bot.Map().totalHeight();
-	for (size_t x = 0; x < mapWidth; ++x)
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
+	if (m_bot.Config().DrawInfluenceMaps)
 	{
-		auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
-		auto& airInfluenceMapRow = m_airInfluenceMap[x];
-		auto& groundEffectInfluenceMapRow = m_groundEffectInfluenceMap[x];
-		auto& airEffectInfluenceMapRow = m_airEffectInfluenceMap[x];
-		for (size_t y = 0; y < mapHeight; ++y)
+		m_bot.StartProfiling("0.10.4.0.4      drawInfluenceMaps");
+		const size_t mapWidth = m_bot.Map().totalWidth();
+		const size_t mapHeight = m_bot.Map().totalHeight();
+		for (size_t x = 0; x < mapWidth; ++x)
 		{
-			if (groundInfluenceMapRow[y] > 0.f)
+			auto& groundInfluenceMapRow = m_groundInfluenceMap[x];
+			auto& airInfluenceMapRow = m_airInfluenceMap[x];
+			auto& groundEffectInfluenceMapRow = m_groundEffectInfluenceMap[x];
+			auto& airEffectInfluenceMapRow = m_airEffectInfluenceMap[x];
+			for (size_t y = 0; y < mapHeight; ++y)
 			{
-				const float value = std::min(255.f, std::max(0.f, groundInfluenceMapRow[y] * 5));
-				m_bot.Map().drawTile(x, y, CCColor(255, 255 - value, 0));	//yellow to red
-			}
-			if (airInfluenceMapRow[y] > 0.f)
-			{
-				const float value = std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5));
-				m_bot.Map().drawTile(x, y, CCColor(255, 255 - value, 0), 0.5f);	//yellow to red
-			}
-			if (groundEffectInfluenceMapRow[y] > 0.f)
-			{
-				const float value = std::min(255.f, std::max(0.f, groundEffectInfluenceMapRow[y] * 5));
-				m_bot.Map().drawTile(x, y, CCColor(255 - value, value, 255), 0.7f);	//cyan to purple
-			}
-			if (airEffectInfluenceMapRow[y] > 0.f)
-			{
-				const float value = std::min(255.f, std::max(0.f, airEffectInfluenceMapRow[y] * 5));
-				m_bot.Map().drawTile(x, y, CCColor(255 - value, value, 255), 0.4f);	//cyan to purple
+				if (groundInfluenceMapRow[y] > 0.f)
+				{
+					const float value = std::min(255.f, std::max(0.f, groundInfluenceMapRow[y] * 5));
+					m_bot.Map().drawTile(x, y, CCColor(255, 255 - value, 0));	//yellow to red
+				}
+				if (airInfluenceMapRow[y] > 0.f)
+				{
+					const float value = std::min(255.f, std::max(0.f, airInfluenceMapRow[y] * 5));
+					m_bot.Map().drawTile(x, y, CCColor(255, 255 - value, 0), 0.5f);	//yellow to red
+				}
+				if (groundEffectInfluenceMapRow[y] > 0.f)
+				{
+					const float value = std::min(255.f, std::max(0.f, groundEffectInfluenceMapRow[y] * 5));
+					m_bot.Map().drawTile(x, y, CCColor(255 - value, value, 255), 0.7f);	//cyan to purple
+				}
+				if (airEffectInfluenceMapRow[y] > 0.f)
+				{
+					const float value = std::min(255.f, std::max(0.f, airEffectInfluenceMapRow[y] * 5));
+					m_bot.Map().drawTile(x, y, CCColor(255 - value, value, 255), 0.4f);	//cyan to purple
+				}
 			}
 		}
+		m_bot.StopProfiling("0.10.4.0.4      drawInfluenceMaps");
 	}
 }
 
 void CombatCommander::drawBlockedTiles()
 {
-	const size_t mapWidth = m_bot.Map().totalWidth();
-	const size_t mapHeight = m_bot.Map().totalHeight();
-	for (size_t x = 0; x < mapWidth; ++x)
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
+	if (m_bot.Config().DrawBlockedTiles)
 	{
-		auto& blockedTilesRow = m_blockedTiles[x];
-		for (size_t y = 0; y < mapHeight; ++y)
+		m_bot.StartProfiling("0.10.4.0.5      drawBlockedTiles");
+		const size_t mapWidth = m_bot.Map().totalWidth();
+		const size_t mapHeight = m_bot.Map().totalHeight();
+		for (size_t x = 0; x < mapWidth; ++x)
 		{
-			if (blockedTilesRow[y])
-				m_bot.Map().drawTile(x, y, sc2::Colors::Red);
+			auto& blockedTilesRow = m_blockedTiles[x];
+			for (size_t y = 0; y < mapHeight; ++y)
+			{
+				if (blockedTilesRow[y])
+					m_bot.Map().drawTile(x, y, sc2::Colors::Red);
+			}
 		}
+		m_bot.StopProfiling("0.10.4.0.5      drawBlockedTiles");
 	}
 }
 
 void CombatCommander::updateIdleSquad()
 {
-	return;
     Squad & idleSquad = m_squadData.getSquad("Idle");
     for (auto & unit : m_combatUnits)
     {

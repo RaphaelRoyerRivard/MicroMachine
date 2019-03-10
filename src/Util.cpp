@@ -119,7 +119,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPositio
 	if(foundIndex >= 0 && bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
 		return releventResult.m_result;
 
-	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, true, false, bot);
+	CCPosition pathPosition = FindOptimalPath(rangedUnit, goal, 3.f, true, false, false, bot);
 	const bool success = pathPosition != CCPosition(0, 0);
 	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
 	if(foundIndex >= 0)
@@ -135,20 +135,22 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPositio
 
 CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot)
 {
-	return FindOptimalPath(rangedUnit, goal, maxRange, false, false, bot);
+	return FindOptimalPath(rangedUnit, goal, maxRange, false, false, true, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot)
 {
-	return FindOptimalPath(rangedUnit, goal, 0.f, false, false, bot);
+	return FindOptimalPath(rangedUnit, goal, 0.f, false, false, false, bot);
 }
 
-CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot)
 {
 	CCPosition returnPos;
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
+	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
+	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = Util::GetTilePosition(rangedUnit->pos);
 	const bool flee = !exitOnInfluence && maxRange == 0.f;
 	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
@@ -177,6 +179,24 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * rangedUnit, CCPo
 				shouldTriggerExit = (considerOnlyEffects || !HasInfluenceOnTile(currentNode, rangedUnit, bot)) &&
 					!HasEffectInfluenceOnTile(currentNode, rangedUnit, bot) &&
 					Util::Dist(Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
+
+				if(getCloser && shouldTriggerExit)
+				{
+					if(numberOfTilesExploredAfterPathFound > 10)
+					{
+						currentNode = closestNode;
+					}
+					else
+					{
+						shouldTriggerExit = false;
+						const CCPosition shiftedPos = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+						if(closestNode == nullptr || Util::Dist(shiftedPos, goal) < Util::Dist(Util::GetPosition(closestNode->position) + CCPosition(0.5f, 0.5f), goal))
+						{
+							closestNode = currentNode;
+						}
+						++numberOfTilesExploredAfterPathFound;
+					}
+				}
 			}
 		}
 		if (shouldTriggerExit)
@@ -282,8 +302,10 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(IMNode* currentNode, co
 	do
 	{
 		const CCPosition currentPosition = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+#ifndef PUBLIC_RELEASE
 		if (bot.Config().DrawHarassInfo)
 			bot.Map().drawTile(Util::GetTilePosition(currentPosition), sc2::Colors::Teal, 0.2f);
+#endif
 		//we want to retun a node close to the current position
 		if (Util::DistSq(currentPosition, rangedUnit->pos) <= 3.f * 3.f && returnPos == CCPosition(0, 0))
 			returnPos = currentPosition;
@@ -300,8 +322,10 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(IMNode* currentNode, co
 		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > CLIFF_MIN_HEIGHT_DIFFERENCE)
 			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
 	}
+#ifndef PUBLIC_RELEASE
 	if (bot.Config().DrawHarassInfo)
 		bot.Map().drawTile(Util::GetTilePosition(returnPos), sc2::Colors::Purple, 0.3f);
+#endif
 	return returnPos;
 }
 
@@ -631,8 +655,10 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 		}
 	}*/
 
+#ifndef PUBLIC_RELEASE
 	if (bot.Config().DrawUnitPowerInfo)
 		bot.Map().drawText(unit.getPosition(), "Power: " + std::to_string(unitPower));
+#endif
 
 	return unitPower;
 }
@@ -704,6 +730,20 @@ bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 	return GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground) > 0.f;
 }
 
+float Util::GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where)
+{
+	float range = Util::GetSpecialCaseRange(unit->unit_type, where);
+	if (range != 0)
+		return range;
+
+	if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
+	{
+		range = 0.1f;	// hack so the cannons will be considered as weak
+	}
+
+	return range;
+}
+
 float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where)
 {
 	float range = 0.f;
@@ -746,16 +786,17 @@ float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
 
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
-	float maxRange = 0.0f;
-	for (auto & weapon : unitTypeData.weapons)
-	{
-		// can attack target with a weapon
-		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Ground)
-			maxRange = weapon.range;
-	}
+	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground);
 
 	if (maxRange == 0.f)
-		maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground);
+	{
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			// can attack target with a weapon
+			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Ground)
+				maxRange = weapon.range;
+		}
+	}
 
 	if (maxRange > 0.f)
 	{
@@ -772,16 +813,16 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
-	float maxRange = 0.0f;
-	for (auto & weapon : unitTypeData.weapons)
-	{
-		// can attack target with a weapon
-		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Air)
-			maxRange = weapon.range;
-	}
-
+	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air);
 	if (maxRange == 0.f)
-		maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air);
+	{
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			// can attack target with a weapon
+			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Air)
+				maxRange = weapon.range;
+		}
+	}
 
 	if (maxRange > 0.f)
 	{
@@ -997,6 +1038,10 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	{
 		dps = 50.f;	//DPS is not really relevant since it's a single powerful attack
 	}
+	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
+	{
+		dps = 0.1f;	// hack so the cannons will be considered as weak
+	}
 
     return dps;
 }
@@ -1110,6 +1155,15 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 			{
 				return true;
 			}
+		}
+	}
+	auto & areasUnderDetection = bot.CombatAnalyzer().GetAreasUnderDetection();
+	const int areaUnderDetectionSize = bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? 20 : 10;
+	for(auto & area : areasUnderDetection)
+	{
+		if(Util::DistSq(position, area.first) < areaUnderDetectionSize * areaUnderDetectionSize)
+		{
+			return true;
 		}
 	}
 	return false;

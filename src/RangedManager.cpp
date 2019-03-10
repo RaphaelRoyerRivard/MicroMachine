@@ -150,8 +150,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
 	const bool isViking = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
 
+#ifndef PUBLIC_RELEASE
 	if (m_bot.Config().DrawHarassInfo)
 		m_bot.Map().drawText(rangedUnit->pos, std::to_string(rangedUnit->tag));
+#endif
 
 	// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 	if (ShouldSkipFrame(rangedUnit))
@@ -215,14 +217,16 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 		targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;
 
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(rangedUnit->pos, target->pos, targetInAttackRange ? sc2::Colors::Green : sc2::Colors::Yellow);
+#endif
 	}
 
 	m_bot.StartProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 	if(targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
 	{
-		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, false, getAttackDuration(rangedUnit));
+		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit));
 		PlanAction(rangedUnit, action);
 		m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 
@@ -344,8 +348,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		CCPosition pathableTile(0, 0);
 		if(MoveUnitWithDirectionVector(rangedUnit, dirVec, pathableTile))
 		{
+#ifndef PUBLIC_RELEASE
 			if (m_bot.Config().DrawHarassInfo)
 				m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
+#endif
 
 			if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 			{
@@ -401,13 +407,18 @@ bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit) const
 	return m_bot.GetGameLoop() >= availableFrame;
 }
 
-bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger)
+bool RangedManager::ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger) const
 {
 	if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
 		return false;
 
 	// Cloak if the amount of energy is rather high or HP is low
-	if (banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f) && !Util::IsPositionUnderDetection(banshee->pos, m_bot))
+	return banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f) && !Util::IsPositionUnderDetection(banshee->pos, m_bot);
+}
+
+bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger)
+{
+	if (ShouldBansheeCloak(banshee, inDanger))
 	{
 		const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::BEHAVIOR_CLOAKON, true, 0);
 		PlanAction(banshee, action);
@@ -488,8 +499,10 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 		(m_order.getType() != SquadOrderTypes::Defend && Util::DistSq(rangedUnit->pos, target->pos) > m_order.getRadius() * m_order.getRadius()))
 		&& threats.empty())
 	{
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
+#endif
 
 		const bool moveWithoutAttack = squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings();
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
@@ -548,8 +561,10 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 		// add normalized vector towards objective
 		dirVec = goal - rangedUnit->pos;
 
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
+#endif
 	}
 	Util::Normalize(dirVec);
 	return dirVec;
@@ -574,6 +589,57 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		return false;
 	}
 
+	// Check if unit can fight cloaked
+	if(!unitShouldHeal && rangedUnit->energy >= 5 && (rangedUnit->cloak == sc2::Unit::Cloaked || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ShouldBansheeCloak(rangedUnit, false))))
+	{
+		// If the unit is at an undetected position
+		if (!Util::IsPositionUnderDetection(rangedUnit->pos, m_bot))
+		{
+			bool canFightCloaked = true;
+			const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+			const float targetDist = Util::Dist(rangedUnit->pos, target->pos);
+			if (targetDist > range)
+			{
+				const CCPosition closestAttackPosition = rangedUnit->pos + Util::Normalized(target->pos - rangedUnit->pos) * (targetDist - range);
+				canFightCloaked = !Util::IsPositionUnderDetection(closestAttackPosition, m_bot);
+			}
+			if(canFightCloaked)
+			{
+				if (ExecuteBansheeCloakLogic(rangedUnit, false))
+				{
+					m_harassMode = true;
+					return true;
+				}
+
+				// If the unit is standing on effect influence, get it out of there before fighting
+				if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit, m_bot) > 0.f)
+				{
+					CCPosition movePosition = Util::PathFinding::FindOptimalPath(rangedUnit, target->pos, range, false, true, false, m_bot);
+					if (movePosition != CCPosition())
+					{
+						const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, 0);
+						// Move away from the effect
+						PlanAction(rangedUnit, action);
+						m_harassMode = true;
+						return true;
+					}
+					else
+					{
+						Util::DisplayError("Could not find an escape path towards target", "", m_bot);
+					}
+				}
+
+				const bool canAttackNow = range <= targetDist && rangedUnit->weapon_cooldown <= 0.f;
+				const int attackDuration = canAttackNow ? getAttackDuration(rangedUnit) : 0;
+				const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, false, attackDuration);
+				// Attack the target
+				PlanAction(rangedUnit, action);
+				m_harassMode = true;
+				return true;
+			}
+		}
+	}
+
 	// Calculate ally power
 	for (auto unit : rangedUnits)
 	{
@@ -596,6 +662,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		}
 		// Ignore units that are not ready to perform an action
 		if(ShouldSkipFrame(unit))
+		{
+			continue;
+		}
+		// Ignore units that should heal to not consider them in the power calculation
+		if (unit != rangedUnit && ShouldUnitHeal(unit))
 		{
 			continue;
 		}
@@ -651,7 +722,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			const auto unit = unitAndTarget.first;
 			const auto unitTarget = unitAndTarget.second;
 
-			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ExecuteBansheeCloakLogic(rangedUnit, false))
+			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ExecuteBansheeCloakLogic(unit, false))
 			{
 				continue;
 			}
@@ -659,9 +730,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 
 			// If the unit is standing on effect influence, get it out of it before fighting
-			if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), rangedUnit, m_bot) > 0.f)
+			if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), unit, m_bot) > 0.f)
 			{
-				CCPosition movePosition = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, unitRange, false, true, m_bot);
+				CCPosition movePosition = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, unitRange, false, true, false, m_bot);
 				if(movePosition != CCPosition())
 				{
 					const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
@@ -740,12 +811,14 @@ CCPosition RangedManager::GetFleeVectorFromThreat(const sc2::Unit * rangedUnit, 
 		bufferSize = 1.f;
 	float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - distance) / bufferSize));
 
+#ifndef PUBLIC_RELEASE
 	if (m_bot.Config().DrawHarassInfo)
 	{
 		m_bot.Map().drawCircle(threat->pos, threatRange, sc2::Colors::Red);
 		m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
 		m_bot.Map().drawLine(rangedUnit->pos, threat->pos, sc2::Colors::Red);
 	}
+#endif
 
 	return fleeVec * intensity;
 }
@@ -781,8 +854,10 @@ CCPosition RangedManager::GetRepulsionVectorFromFriendlyReapers(const sc2::Unit 
 	// Add repulsion vector if there is a friendly harass unit close enough
 	if (distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE * HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
 	{
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(reaper->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
+#endif
 
 		CCPosition fleeVec = reaper->pos - closestFriendlyUnitPosition;
 		Util::Normalize(fleeVec);
@@ -810,8 +885,12 @@ CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit 
 	if (!closeAllies.empty())
 	{
 		const CCPosition closeAlliesCenter = Util::CalcCenter(closeAllies);
+
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(hellion->pos, closeAlliesCenter, sc2::Colors::Green);
+#endif
+
 		const float distToCloseAlliesCenter = Util::Dist(hellion->pos, closeAlliesCenter);
 		CCPosition attractionVector = closeAlliesCenter - hellion->pos;
 		Util::Normalize(attractionVector);
@@ -884,8 +963,10 @@ CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vect
 		const CCPosition newFleePosition = rangedUnit->pos + newFleeVector;
 		if (m_bot.Observation()->IsPathable(newFleePosition))
 		{
+#ifndef PUBLIC_RELEASE
 			if (m_bot.Config().DrawHarassInfo)
 				m_bot.Map().drawCircle(safeTile, 0.2f, sc2::Colors::Purple);
+#endif
 			return newFleePosition;
 		}
 	}
@@ -1089,11 +1170,13 @@ void RangedManager::ExecuteActions()
 		const auto rangedUnit = unitAction.first;
 		auto & action = unitAction.second;
 
+#ifndef PUBLIC_RELEASE
 		if(m_bot.Config().DrawRangedUnitActions)
 		{
 			const std::string actionString = MicroActionTypeAccronyms[action.microActionType] + (action.prioritized ? "!" : "");
 			m_bot.Map().drawText(rangedUnit->pos, actionString, sc2::Colors::Teal);
 		}
+#endif
 
 		// If the action has already been executed and it is not time to reexecute it
 		if (action.executed && (action.duration >= ACTION_REEXECUTION_FREQUENCY || m_bot.GetGameLoop() - action.executionFrame < ACTION_REEXECUTION_FREQUENCY))

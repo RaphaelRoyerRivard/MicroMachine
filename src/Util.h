@@ -50,7 +50,7 @@ namespace Util
 		bool IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
-		CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, CCBot & bot);
+		CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot);
 		CCTilePosition GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		CCPosition GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to);
@@ -77,6 +77,7 @@ namespace Util
 	float GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot);
     float GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot);
     float GetMaxAttackRange(sc2::UnitTypeData unitTypeData, CCBot & bot);
+	float GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	float GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	float GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot);
 	float GetAirAttackRange(const sc2::Unit * unit, CCBot & bot);

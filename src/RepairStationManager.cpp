@@ -132,6 +132,9 @@ void RepairStationManager::reservePlaceForUnit(const sc2::Unit* unit)
 
 void RepairStationManager::drawRepairStations()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
 	for(const auto & repairStation : m_repairStations)
 	{
 		m_bot.Map().drawText(repairStation.first->getPosition(), "Units to repair: " + std::to_string(repairStation.second.size()));

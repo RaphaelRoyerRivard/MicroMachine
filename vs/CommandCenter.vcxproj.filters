@@ -107,16 +107,16 @@
       <Filter>micro</Filter>
     </ClCompile>
     <ClCompile Include="..\src\MetaTypeEnum.cpp">
-      <Filter>util</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UnitState.cpp">
-      <Filter>util</Filter>
+      <Filter>macro</Filter>
     </ClCompile>
     <ClCompile Include="..\src\StackWalker.cpp" />
-    <ClCompile Include="..\src\RepairStationManager.cpp">
-      <Filter>global</Filter>
+    <ClCompile Include="..\src\UnitState.cpp">
+      <Filter>micro</Filter>
     </ClCompile>
     <ClCompile Include="..\src\CombatAnalyzer.cpp">
+      <Filter>global</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RepairStationManager.cpp">
       <Filter>global</Filter>
     </ClCompile>
   </ItemGroup>
@@ -233,20 +233,18 @@
       <Filter>micro</Filter>
     </ClInclude>
     <ClInclude Include="..\src\MetaTypeEnum.h">
-      <Filter>util</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UnitState.h">
-      <Filter>util</Filter>
+      <Filter>macro</Filter>
     </ClInclude>
     <ClInclude Include="..\src\StackWalker.h" />
-    <ClInclude Include="..\src\RepairStationManager.h">
-      <Filter>global</Filter>
+    <ClInclude Include="..\src\UnitState.h">
+      <Filter>micro</Filter>
     </ClInclude>
     <ClInclude Include="..\src\CombatAnalyzer.h">
       <Filter>global</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Behavior.h" />
-    <ClInclude Include="..\src\BehaviorTreeBuilder.h" />
+    <ClInclude Include="..\src\RepairStationManager.h">
+      <Filter>global</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CommandCenter.rc" />

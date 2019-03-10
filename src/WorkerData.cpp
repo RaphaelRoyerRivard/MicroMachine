@@ -15,6 +15,7 @@ WorkerData::WorkerData(CCBot & bot)
 
 void WorkerData::updateAllWorkerData()
 {
+#ifndef PUBLIC_RELEASE
 	if(m_bot.Config().DrawWorkerInfo)
 	{
 		for (auto & unit : m_workerRefineryMap)
@@ -22,6 +23,7 @@ void WorkerData::updateAllWorkerData()
 			m_bot.Map().drawText(unit.first.getPosition(), "  Affected to refinery");
 		}
 	}
+#endif
 
     // check all our units and add new workers if we find them
     for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
@@ -310,8 +312,10 @@ int WorkerData::getNumAssignedWorkers(const Unit & unit)
         // if there is an entry, return it
         if (it != m_refineryWorkerCount.end())
         {
+#ifndef PUBLIC_RELEASE
 			if(m_bot.Config().DrawWorkerInfo)
 				m_bot.Map().drawText(unit.getPosition(), "Workers affected: " + std::to_string(it->second));
+#endif
             return it->second;
         }
         // otherwise, we are only calling this on completed refineries, so set it
@@ -369,6 +373,9 @@ const char * WorkerData::getJobCode(const Unit & unit)
 
 void WorkerData::drawDepotDebugInfo()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
 	if (!m_bot.Config().DrawWorkerInfo)
 		return;
 

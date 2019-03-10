@@ -320,6 +320,9 @@ void BuildingPlacer::reserveTiles(CCTilePosition start, CCTilePosition end)
 
 void BuildingPlacer::drawReservedTiles()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
     if (!m_bot.Config().DrawReservedBuildingTiles)
     {
         return;
