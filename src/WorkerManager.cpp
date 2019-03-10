@@ -61,25 +61,17 @@ void WorkerManager::stopRepairing(Unit worker)
 
 void WorkerManager::handleMineralWorkers()
 {
-	m_bot.StartProfiling("0.7.2.1     getWorkers");
-	auto workers = getWorkers();
-	m_bot.StopProfiling("0.7.2.1     getWorkers");
-	if (workers.empty())
-	{
-		return;
-	}
-
-	/*if (!m_isFirstFrame || true)///TODO Disable split. might cause the long distance mining issue. Gotta test without this code.
-	{
-		return;
-	}
-
 	//split workers on first frame
+	//TODO can be improved by sorting the workers by the furtherest distance, then assign them (further workers will be assigned first, so the average distance will be lower)
+	if (!m_isFirstFrame || (int)m_bot.GetCurrentFrame() == 0)
+	{
+		return;
+	}
 	m_isFirstFrame = false;
 
 	m_bot.StartProfiling("0.7.2.2     selectMinerals");
 	std::list<Unit> minerals;
-	std::list<std::pair<Unit, int>> mineralsUsage;
+	std::map<Unit, int> mineralsUsage;
 	for (auto& base : m_bot.Bases().getBaseLocations())
 	{
 		if (base->isOccupiedByPlayer(Players::Self))
@@ -88,7 +80,7 @@ void WorkerManager::handleMineralWorkers()
 			for (auto& t : mineralsVector)
 			{
 				minerals.push_back(t);
-				mineralsUsage.push_back(std::pair<Unit, int>(t, 0));
+				mineralsUsage[t] = 0;
 			}
 		}
 	}
@@ -96,7 +88,7 @@ void WorkerManager::handleMineralWorkers()
 
 	m_bot.StartProfiling("0.7.2.3     orderedMineralWorkers");
 	std::list<Unit> orderedMineralWorkers;//Replaces workers
-	for (auto& mineralWorker : workers)
+	for (auto& mineralWorker : getWorkers())
 	{
 		if (!mineralWorker.isValid())
 		{
@@ -118,19 +110,16 @@ void WorkerManager::handleMineralWorkers()
 			}
 		}
 
-		auto closestMineral = getClosest(mineralWorker, lowestMinerals);
-		for (auto & mineral : mineralsUsage)
+		auto closestMineral = getClosest(mineralWorker, minerals);
+		mineralsUsage[closestMineral]++;
+		if (mineralsUsage[closestMineral] >= 2)
 		{
-			if (mineral.first.getID() == closestMineral.getID())
-			{
-				mineral.second++;
-				break;
-			}
+			minerals.remove(closestMineral);
 		}
 
 		mineralWorker.rightClick(closestMineral);
 	}
-	m_bot.StopProfiling("0.7.2.3     orderedMineralWorkers");*/
+	m_bot.StopProfiling("0.7.2.3     orderedMineralWorkers");
 }
 
 void WorkerManager::handleGasWorkers()
