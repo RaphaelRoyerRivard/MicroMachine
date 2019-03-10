@@ -780,16 +780,17 @@ float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
 
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
-	float maxRange = 0.0f;
-	for (auto & weapon : unitTypeData.weapons)
-	{
-		// can attack target with a weapon
-		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Ground)
-			maxRange = weapon.range;
-	}
+	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground);
 
 	if (maxRange == 0.f)
-		maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground);
+	{
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			// can attack target with a weapon
+			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Ground)
+				maxRange = weapon.range;
+		}
+	}
 
 	if (maxRange > 0.f)
 	{
@@ -806,16 +807,16 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
-	float maxRange = 0.0f;
-	for (auto & weapon : unitTypeData.weapons)
-	{
-		// can attack target with a weapon
-		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Air)
-			maxRange = weapon.range;
-	}
-
+	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air);
 	if (maxRange == 0.f)
-		maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air);
+	{
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			// can attack target with a weapon
+			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Air)
+				maxRange = weapon.range;
+		}
+	}
 
 	if (maxRange > 0.f)
 	{
