@@ -1626,6 +1626,9 @@ bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, i
 
 void ProductionManager::drawProductionInformation()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
     if (!m_bot.Config().DrawProductionInfo)
     {
         return;

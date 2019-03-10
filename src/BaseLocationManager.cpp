@@ -298,6 +298,9 @@ BaseLocation * BaseLocationManager::getBaseLocation(const CCPosition & pos) cons
 
 void BaseLocationManager::drawBaseLocations()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
     if (!m_bot.Config().DrawBaseLocationInfo)
     {
         return;

@@ -172,6 +172,9 @@ void CombatAnalyzer::UpdateRatio()
 
 void CombatAnalyzer::drawDamageHealthRatio()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
 	if (!m_bot.Config().DrawDamageHealthRatio)
 	{
 		return;

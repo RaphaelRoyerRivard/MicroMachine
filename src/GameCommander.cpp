@@ -34,22 +34,6 @@ void GameCommander::onFrame()
 	m_bot.StartProfiling("0.10.4   m_combatCommander.onFrame");
     m_combatCommander.onFrame(m_combatUnits);
 	m_bot.StopProfiling("0.10.4   m_combatCommander.onFrame");
-
-    drawDebugInterface();
-}
-
-void GameCommander::drawDebugInterface()
-{
-    drawGameInformation(4, 1);
-}
-
-void GameCommander::drawGameInformation(int x, int y)
-{
-    std::stringstream ss;
-    ss << "Players: " << "\n";
-    ss << "Strategy: " << m_bot.Config().StrategyName << "\n";
-    ss << "Map Name: " << "\n";
-    ss << "Time: " << "\n";
 }
 
 ProductionManager& GameCommander::Production()

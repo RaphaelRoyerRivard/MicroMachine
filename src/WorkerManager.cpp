@@ -1047,6 +1047,9 @@ void WorkerManager::setCombatWorker(Unit workerTag)
 
 void WorkerManager::drawResourceDebugInfo()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
     if (!m_bot.Config().DrawResourceInfo)
     {
         return;
@@ -1100,6 +1103,9 @@ void WorkerManager::drawResourceDebugInfo()
 
 void WorkerManager::drawWorkerInformation()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
     if (!m_bot.Config().DrawWorkerInfo)
     {
         return;
