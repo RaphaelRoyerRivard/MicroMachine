@@ -724,6 +724,20 @@ bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 	return GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground) > 0.f;
 }
 
+float Util::GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where)
+{
+	float range = Util::GetSpecialCaseRange(unit->unit_type, where);
+	if (range != 0)
+		return range;
+
+	if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
+	{
+		range = 0.1f;	// hack so the cannons will be considered as weak
+	}
+
+	return range;
+}
+
 float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where)
 {
 	float range = 0.f;
@@ -1016,6 +1030,10 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED)
 	{
 		dps = 50.f;	//DPS is not really relevant since it's a single powerful attack
+	}
+	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
+	{
+		dps = 0.1f;	// hack so the cannons will be considered as weak
 	}
 
     return dps;

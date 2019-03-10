@@ -77,6 +77,7 @@ namespace Util
 	float GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot);
     float GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot);
     float GetMaxAttackRange(sc2::UnitTypeData unitTypeData, CCBot & bot);
+	float GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	float GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	float GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot);
 	float GetAirAttackRange(const sc2::Unit * unit, CCBot & bot);
