@@ -493,7 +493,6 @@ void CombatCommander::drawBlockedTiles()
 
 void CombatCommander::updateIdleSquad()
 {
-	return;
     Squad & idleSquad = m_squadData.getSquad("Idle");
     for (auto & unit : m_combatUnits)
     {
