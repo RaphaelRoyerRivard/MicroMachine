@@ -56,7 +56,7 @@ public:
     void                drawBuildingInformation();
 	void				drawStartingRamp();
 	void				drawWall();
-	std::vector<Building> getBuildings();//Cannot be passed by reference
+	std::vector<Building> & getBuildings();
 	std::vector<Building> getPreviousBuildings();//Cannot be passed by reference
 	std::vector<Unit>	getBaseBuildings();
 	std::vector<Unit>	getFinishedBuildings();

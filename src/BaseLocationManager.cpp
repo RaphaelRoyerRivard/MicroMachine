@@ -362,6 +362,22 @@ const std::set<BaseLocation *> & BaseLocationManager::getOccupiedBaseLocations(i
     return m_occupiedBaseLocations.at(player);
 }
 
+BaseLocation * BaseLocationManager::getClosestOccupiedBaseLocationForUnit(const Unit unit) const
+{
+	BaseLocation* closestBase = nullptr;
+	float minDistance = 0.f;
+	for (auto baseLocation : m_bot.Bases().getOccupiedBaseLocations(unit.getPlayer()))
+	{
+		const float distance = Util::DistSq(unit, baseLocation->getPosition());
+		if (!closestBase || distance < minDistance)
+		{
+			closestBase = baseLocation;
+			minDistance = distance;
+		}
+	}
+	return closestBase;
+}
+
 int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 {
 	std::vector<sc2::UNIT_TYPEID> baseTypes;

@@ -60,7 +60,7 @@ void Squad::onFrame()
     updateUnits();
 	m_bot.StopProfiling("0.10.4.1.1      updateUnits");
 
-    if (m_order.getType() == SquadOrderTypes::Retreat)
+    /*if (m_order.getType() == SquadOrderTypes::Retreat)
     {
 		m_bot.StartProfiling("0.10.4.1.2      SquadOrderTypes::Retreat");
         CCPosition retreatPosition = calcRetreatPosition();
@@ -84,13 +84,14 @@ void Squad::onFrame()
         m_rangedManager.regroup(regroupPosition);
 		m_bot.StopProfiling("0.10.4.1.2      SquadOrderTypes::Regroup");
     }
-    else // otherwise, execute micro
+    else*/ // otherwise, execute micro
     {
 		//m_rangedManager.setHarassMode(m_order.getType() == SquadOrderTypes::Harass);
 		m_rangedManager.setHarassMode(true);	//TODO fix behavior tree bugs instead of always using harass mode
         // Nothing to do if we have no units
-        if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend || m_order.getType() == SquadOrderTypes::Harass))
-        {
+        //if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend || m_order.getType() == SquadOrderTypes::Harass))
+		if (!m_units.empty() && m_order.getType() != SquadOrderTypes::Idle)
+		{
 			m_bot.StartProfiling("0.10.4.1.3      SetSquadTargets");
             std::vector<Unit> targets = calcTargets();
 

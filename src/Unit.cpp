@@ -144,15 +144,10 @@ float Unit::getBuildPercentage() const
 CCPlayer Unit::getPlayer() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
-#ifdef SC2API
-    if (m_unit->alliance == sc2::Unit::Alliance::Self) { return 0; }
-    else if (m_unit->alliance == sc2::Unit::Alliance::Enemy) { return 1; }
-    else { return 2; }
-#else
-    if (m_unit->getPlayer() == BWAPI::Broodwar->self()) { return 0; }
-    else if (m_unit->getPlayer() == BWAPI::Broodwar->enemy()) { return 1; }
-    else { return 2; }
-#endif
+
+    if (m_unit->alliance == sc2::Unit::Alliance::Self) { return Players::Self; }
+    else if (m_unit->alliance == sc2::Unit::Alliance::Enemy) { return Players::Enemy; }
+    else { return Players::Neutral; }
 }
 
 sc2::Tag Unit::getTag() const

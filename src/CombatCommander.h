@@ -36,7 +36,8 @@ class CombatCommander
 	void            updateScoutSquad();
 	void            updateHarassSquads();
 	void            updateAttackSquads();
-    void            updateIdleSquad();
+	void            updateIdleSquad();
+	void            updateWorkerFleeSquad();
     bool            isSquadUpdateFrame();
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);

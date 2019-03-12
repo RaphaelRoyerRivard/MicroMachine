@@ -62,6 +62,18 @@ void MeleeManager::executeMicro()
                 }
             }
         }
+		else if(m_order.getType() == SquadOrderTypes::Retreat)
+		{
+			const BaseLocation* closestBaseLocation = m_bot.Bases().getClosestOccupiedBaseLocationForUnit(meleeUnit);
+			if (closestBaseLocation)
+			{
+				CCPosition fleePosition = Util::PathFinding::FindOptimalPathToSafety(meleeUnit.getUnitPtr(), closestBaseLocation->getPosition(), m_bot);
+				if (fleePosition != CCPosition())
+				{
+					Micro::SmartMove(meleeUnit.getUnitPtr(), fleePosition, m_bot);
+				}
+			}
+		}
 
         if (m_bot.Config().DrawUnitTargetInfo)
         {
