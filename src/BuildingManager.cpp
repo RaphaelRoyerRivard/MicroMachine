@@ -433,129 +433,138 @@ void BuildingManager::validateWorkersAndBuildings()
 // STEP 2: ASSIGN WORKERS TO BUILDINGS WITHOUT THEM
 void BuildingManager::assignWorkersToUnassignedBuildings()
 {
-    // for each building that doesn't have a builder, assign one
-    for (Building & b : m_buildings)
-    {		
+	// for each building that doesn't have a builder, assign one
+	for (Building & b : m_buildings)
+	{
 		if (b.status != BuildingStatus::Unassigned)//b.buildingUnit.isBeingConstructed()//|| b.underConstruction)
-        {
+		{
 			continue;
-        }
-
-        BOT_ASSERT(!b.builderUnit.isValid(), "Error: Tried to assign a builder to a building that already had one ");
-
-        if (m_debugMode) { printf("Assigning Worker To: %s", b.type.getName().c_str()); }
-
-		if (b.type.isAddon())
-		{
-			
-			MetaType addonType = MetaType(b.type, m_bot);
-			Unit producer = m_bot.Commander().Production().getProducer(addonType);
-			if (!producer.isValid())
-			{
-				continue;
-			}
-			b.builderUnit = producer;
-			b.finalPosition = Util::GetTilePosition(producer.getPosition());
 		}
-		else
-		{
-			m_bot.StartProfiling("0.8.3.1 getBuildingLocation");
-			// grab a worker unit from WorkerManager which is closest to this final position
-			CCTilePosition testLocation = getNextBuildingLocation(b, false);
-			m_bot.StopProfiling("0.8.3.1 getBuildingLocation");
 
-			// Don't test the location if the building is already started
+		assignWorkersToUnassignedBuilding(b);
+	}
+}
+
+Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
+{
+    BOT_ASSERT(!b.builderUnit.isValid(), "Error: Tried to assign a builder to a building that already had one ");
+
+    if (m_debugMode) { printf("Assigning Worker To: %s", b.type.getName().c_str()); }
+
+	if (b.type.isAddon())
+	{
+			
+		MetaType addonType = MetaType(b.type, m_bot);
+		Unit producer = m_bot.Commander().Production().getProducer(addonType);
+		if (!producer.isValid())
+		{
+			return Unit();
+		}
+		b.builderUnit = producer;
+		b.finalPosition = Util::GetTilePosition(producer.getPosition());
+
+		b.status = BuildingStatus::Assigned;
+		return producer;
+	}
+	else
+	{
+		m_bot.StartProfiling("0.8.3.1 getBuildingLocation");
+		// grab a worker unit from WorkerManager which is closest to this final position
+		CCTilePosition testLocation = getNextBuildingLocation(b, false);
+		m_bot.StopProfiling("0.8.3.1 getBuildingLocation");
+
+		// Don't test the location if the building is already started
+		if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
+		{
+			return Unit();
+		}
+			
+		b.finalPosition = testLocation;
+
+		// grab the worker unit from WorkerManager which is closest to this final position
+		Unit builderUnit = m_bot.Workers().getBuilder(b, false);
+		//Test if worker path is safe
+		if (!builderUnit.isValid())
+		{
+			return Unit();
+		}
+		m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
+		if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+		{
+			//Not safe, pick another location
+			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
+			testLocation = getNextBuildingLocation(b, true);
 			if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
 			{
-				continue;
+				return Unit();
 			}
-			
+
 			b.finalPosition = testLocation;
 
 			// grab the worker unit from WorkerManager which is closest to this final position
-			Unit builderUnit = m_bot.Workers().getBuilder(b, false);
+			builderUnit = m_bot.Workers().getBuilder(b, false);
 			//Test if worker path is safe
-			if (!builderUnit.isValid())
+			if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
 			{
-				continue;
+				return Unit();
 			}
-			m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
-			if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+		}
+		else
+		{
+			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
+			//path  is safe, we can remove it from the list
+			auto & positions = nextBuildingPosition.find(b.type);// .pop_front();
+			if (positions != nextBuildingPosition.end())
 			{
-				//Not safe, pick another location
-				m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
-				testLocation = getNextBuildingLocation(b, true);
-				if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
+				for (auto & position : positions->second)
 				{
-					continue;
-				}
-
-				b.finalPosition = testLocation;
-
-				// grab the worker unit from WorkerManager which is closest to this final position
-				builderUnit = m_bot.Workers().getBuilder(b, false);
-				//Test if worker path is safe
-				if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
-				{
-					continue;
-				}
-			}
-			else
-			{
-				m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
-				//path  is safe, we can remove it from the list
-				auto & positions = nextBuildingPosition.find(b.type);// .pop_front();
-				if (positions != nextBuildingPosition.end())
-				{
-					for (auto & position : positions->second)
+					if (position == testLocation)
 					{
-						if (position == testLocation)
-						{
-							positions->second.remove(testLocation);
-							break;
-						}
-					}
-				}
-			}
-
-			m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
-			b.builderUnit = builderUnit;
-
-			if (!b.builderUnit.isValid())
-			{
-				continue;
-			}
-
-			if (!b.underConstruction)
-			{
-				// reserve this building's space
-				m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y, b.type.tileWidth(), b.type.tileHeight());
-
-				if (m_bot.GetSelfRace() == CCRace::Terran)
-				{
-					sc2::UNIT_TYPEID type = b.type.getAPIUnitType();
-					switch (type)
-					{
-						//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
-						case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
-						case sc2::UNIT_TYPEID::TERRAN_FACTORY:
-						case sc2::UNIT_TYPEID::TERRAN_STARPORT:
-						{
-							m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y - 1, 3, 1);//Reserve below
-							m_buildingPlacer.reserveTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, 2, 2);//Reserve addon
-						}
-						//Reserve tiles for addon
-						/*case sc2::UNIT_TYPEID::TERRAN_STARPORT:
-						{
-							m_buildingPlacer.reserveTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, 2, 2);
-						}*/
+						positions->second.remove(testLocation);
+						break;
 					}
 				}
 			}
 		}
 
-        b.status = BuildingStatus::Assigned;
-    }
+		m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
+		b.builderUnit = builderUnit;
+
+		if (!b.builderUnit.isValid())
+		{
+			return Unit();
+		}
+
+		if (!b.underConstruction)
+		{
+			// reserve this building's space
+			m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y, b.type.tileWidth(), b.type.tileHeight());
+
+			if (m_bot.GetSelfRace() == CCRace::Terran)
+			{
+				sc2::UNIT_TYPEID type = b.type.getAPIUnitType();
+				switch (type)
+				{
+					//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
+					case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+					case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+					case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+					{
+						m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y - 1, 3, 1);//Reserve below
+						m_buildingPlacer.reserveTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, 2, 2);//Reserve addon
+					}
+					//Reserve tiles for addon
+					/*case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+					{
+						m_buildingPlacer.reserveTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, 2, 2);
+					}*/
+				}
+			}
+		}
+
+		b.status = BuildingStatus::Assigned;
+		return builderUnit;
+	}
 }
 
 // STEP 3: ISSUE CONSTRUCTION ORDERS TO ASSIGN BUILDINGS AS NEEDED
@@ -853,13 +862,21 @@ void BuildingManager::checkForCompletedBuildings()
 // add a new building to be constructed
 void BuildingManager::addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition)
 {
-    m_bot.ReserveMinerals(m_bot.Data(type).mineralCost);
-    m_bot.ReserveGas(m_bot.Data(type).gasCost);
 	
     Building b(type, desiredPosition);
-    b.status = BuildingStatus::Unassigned;
-	
-    m_buildings.push_back(b);
+	b.status = BuildingStatus::Unassigned;
+	Unit producer = assignWorkersToUnassignedBuilding(b);
+	if (producer.isValid() && Util::PathFinding::IsPathToGoalSafe(producer.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+	{
+		m_bot.ReserveMinerals(m_bot.Data(type).mineralCost);
+		m_bot.ReserveGas(m_bot.Data(type).gasCost);
+
+		m_buildings.push_back(b);
+	}
+	else
+	{
+		Util::DebugLog("Producer is not valid.", __FUNCTION__, m_bot);
+	}	
 }
 
 bool BuildingManager::isConstructingType(const UnitType & type)
@@ -1146,6 +1163,23 @@ void BuildingManager::removeBuildings(const std::vector<Building> & toRemove)
             m_buildings.erase(it);
         }
     }
+}
+
+void BuildingManager::removeNonStartedBuildingsOfType(sc2::UNIT_TYPEID type)
+{
+	std::vector<Building> toRemove;
+	for (auto & b : m_buildings)
+	{
+		if (b.type.getAPIUnitType() == type)
+		{
+			if (!b.buildingUnit.isValid())
+			{
+				toRemove.push_back(b);
+			}
+		}
+	}
+
+	removeBuildings(toRemove);
 }
 
 Building BuildingManager::CancelBuilding(Building b)
