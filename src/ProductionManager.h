@@ -15,18 +15,19 @@ class ProductionManager
 	bool m_initialBuildOrderFinished;
 	bool m_ccShouldBeInQueue = false;
 	Unit rampSupplyDepotWorker;
-	std::list<MetaType> startedUpgrades;
+	std::list<MetaType> incompletUpgradesMetatypes;
 	std::map<MetaType, Unit> incompletUpgrades;
+	std::map<MetaType, float> incompletUpgradesProgress;
+	std::list<MetaType> completUpgrades;
 	std::list<std::list<MetaType>> possibleUpgrades;//Does not include tech
+	std::list<std::list<MetaType>> reversePossibleUpgrades;//Does not include tech
+	std::map<std::string, MetaType> alternateUpgrades;//Tech do not have alternate upgrades
 	bool firstBarrackBuilt = false;
 	UnitType supplyProvider;
 	MetaType supplyProviderType;
 	UnitType workerType;
 	MetaType workerMetatype;
 
-	void	queueUpgrade(const MetaType & type);
-	bool	isTechStarted(const MetaType & type);
-	void	queueTech(const MetaType & type);
 	void	validateUpgradesProgress();
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
     bool    canMakeNow(const Unit & producer, const MetaType & type);
@@ -61,6 +62,11 @@ public:
 	float getProductionScoreInQueue();
 	int getExtraMinerals();
 	int getExtraGas();
+	bool isTechQueuedOrStarted(const MetaType & type);
+	bool isTechStarted(const MetaType & type);
+	bool isTechFinished(const MetaType & type);
+	void queueTech(const MetaType & type);
+	bool queueUpgrade(const MetaType & type, bool balanceUpgrades, bool ifFinishedTryHigherLevel);
 	bool meetsReservedResources(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
 	bool meetsReservedResourcesWithExtra(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);

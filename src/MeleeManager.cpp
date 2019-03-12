@@ -75,10 +75,10 @@ void MeleeManager::executeMicro()
 			}
 		}
 
-        if (m_bot.Config().DrawUnitTargetInfo)
+        /*if (m_bot.Config().DrawUnitTargetInfo)
         {
             // TODO: draw the line to the unit's target
-        }
+        }*/
     }
 }
 

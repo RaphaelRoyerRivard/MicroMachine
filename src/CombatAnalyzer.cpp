@@ -22,39 +22,76 @@ void CombatAnalyzer::onFrame()
 	m_bot.StartProfiling("0.10.4.4    checkUnitsState");
 	checkUnitsState();
 	m_bot.StopProfiling("0.10.4.4    checkUnitsState");
+	m_bot.StartProfiling("0.10.4.5    UpdateTotalHealthLoss");
 	UpdateTotalHealthLoss();
+	m_bot.StartProfiling("0.10.4.5    UpdateTotalHealthLoss");
+	m_bot.StartProfiling("0.10.4.6    UpdateRatio");
 	UpdateRatio();
+	m_bot.StartProfiling("0.10.4.6    UpdateRatio");
 
 	drawDamageHealthRatio();
-	//drawAreasUnderDetection();
 
-	//Handle enemy units
-	/*auto currentEnemies = m_bot.GetEnemyUnits();
-	for (auto enemy : currentEnemies)
+	lowPriorityChecks();
+//drawAreasUnderDetection();
+}
+
+void CombatAnalyzer::lowPriorityChecks()
+{
+	if (m_bot.GetGameLoop() % 10)
 	{
-		if (enemies.find(enemy.first) == enemies.end())
+		return;
+	}
+
+	std::vector<CCTilePosition> buildingPositions;
+	aliveEnemiesCountByType.clear();
+	for (auto enemy : m_bot.GetEnemyUnits())
+	{
+		auto unit = enemy.second;
+		if (m_bot.Data(unit).isBuilding)
 		{
-			enemies[enemy.first] = enemy.second;
+			if (std::find(buildingPositions.begin(), buildingPositions.end(), unit.getTilePosition()) != buildingPositions.end())
+			{
+				continue;
+			}
+			buildingPositions.push_back(unit.getTilePosition());
+		}
+		aliveEnemiesCountByType[unit.getUnitPtr()->unit_type]++;
+	}
+	
+	//TODO handle dead ally units
+
+	//Upgrades
+	auto combatAirUnitCount = m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BANSHEE, true) +
+		m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT, true) + 
+		m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, true);
+	if (combatAirUnitCount >= 0)
+	{
+		auto & production = m_bot.Commander().Production();
+		if (!production.isTechQueuedOrStarted(MetaTypeEnum::TerranShipWeaponsLevel1))
+		{
+			production.queueTech(MetaTypeEnum::TerranShipWeaponsLevel1);
+		}
+		else if (production.isTechFinished(MetaTypeEnum::TerranShipWeaponsLevel1) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1))
+		{
+			production.queueTech(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1);
+		}
+		else if (production.isTechFinished(MetaTypeEnum::TerranVehicleAndShipArmorsLevel1) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranShipWeaponsLevel2))
+		{
+			production.queueTech(MetaTypeEnum::TerranShipWeaponsLevel2);
+		}
+		else if (production.isTechFinished(MetaTypeEnum::TerranShipWeaponsLevel2) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranVehicleAndShipArmorsLevel2))
+		{
+			production.queueTech(MetaTypeEnum::TerranVehicleAndShipArmorsLevel2);
+		}
+		else if (production.isTechFinished(MetaTypeEnum::TerranVehicleAndShipArmorsLevel2) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranShipWeaponsLevel3))
+		{
+			production.queueTech(MetaTypeEnum::TerranShipWeaponsLevel3);
+		}
+		else if (production.isTechFinished(MetaTypeEnum::TerranShipWeaponsLevel3) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranVehicleAndShipArmorsLevel3))
+		{
+			production.queueTech(MetaTypeEnum::TerranVehicleAndShipArmorsLevel3);
 		}
 	}
-	for (auto enemy : enemies)
-	{
-		if (!enemy.second.isValid() || !enemy.second.isAlive())
-		{
-			deadEnemies[enemy.first] = enemy.second;
-			enemies.erase(enemy.first);
-		}
-	}
-	for (auto enemy : currentEnemies)
-	{
-		if (deadEnemies.find(enemy.first) != deadEnemies.end())
-		{
-			auto b = 2;
-		}
-	}
-	auto a = 1;*/
-	//previousFrameEnemies = m_bot.GetEnemyUnits();
-	//auto b = m_bot.GetKnownEnemyUnits();
 }
 
 void CombatAnalyzer::clearAreasUnderDetection()
@@ -156,6 +193,9 @@ void CombatAnalyzer::UpdateRatio()
 
 void CombatAnalyzer::drawDamageHealthRatio()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
 	if (!m_bot.Config().DrawDamageHealthRatio)
 	{
 		return;
@@ -267,4 +307,10 @@ void CombatAnalyzer::checkUnitsState()
 		m_unitStates.erase(tag);
 	}
 	m_bot.StopProfiling("0.10.4.4.3      removeStates");
+}
+
+
+void CombatAnalyzer::increaseDeadEnemy(sc2::UNIT_TYPEID type)
+{
+	deadEnemiesCountByType[type]++;
 }

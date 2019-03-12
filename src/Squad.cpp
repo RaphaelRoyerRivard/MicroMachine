@@ -65,8 +65,10 @@ void Squad::onFrame()
 		m_bot.StartProfiling("0.10.4.1.2      SquadOrderTypes::Retreat");
         CCPosition retreatPosition = calcRetreatPosition();
 
+#ifndef PUBLIC_RELEASE
 		if(m_bot.Config().DrawSquadInfo)
 			m_bot.Map().drawCircle(retreatPosition, 3, CCColor(255, 0, 255));
+#endif
 
         m_meleeManager.regroup(retreatPosition);
         m_rangedManager.regroup(retreatPosition);
@@ -77,8 +79,10 @@ void Squad::onFrame()
 		m_bot.StartProfiling("0.10.4.1.2      SquadOrderTypes::Regroup");
         CCPosition regroupPosition = calcCenter();
 
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawSquadInfo)
 			m_bot.Map().drawCircle(regroupPosition, 3, CCColor(0, 0, 255));
+#endif
 
         m_meleeManager.regroup(regroupPosition);
         m_rangedManager.regroup(regroupPosition);
@@ -114,6 +118,7 @@ void Squad::onFrame()
         }
     }
 
+#ifndef PLUBLIC_RELEASE
 	if (m_bot.Config().DrawSquadInfo)
 	{
 		CCPosition center = calcCenter();
@@ -121,6 +126,7 @@ void Squad::onFrame()
 		for (auto & unit : m_units)
 			m_bot.Map().drawLine(unit.getPosition(), center);
 	}
+#endif
 }
 
 std::vector<Unit> Squad::calcVisibleTargets()
@@ -143,8 +149,10 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (visibilityFilter && !enemyUnit.isVisible())
 			continue;
 
+#ifndef PUBLIC_RELEASE
 		if(m_bot.Config().DrawMemoryInfo)
 			m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.4f, sc2::Colors::Gray);
+#endif
 
 		bool addUnit = false;
 
@@ -168,8 +176,10 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (addUnit)
 		{
 			targets.push_back(enemyUnit);
+#ifndef PUBLIC_RELEASE
 			if(m_bot.Config().DrawMemoryInfo)
 				m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.5f, sc2::Colors::Blue);
+#endif
 		}
 	}
     

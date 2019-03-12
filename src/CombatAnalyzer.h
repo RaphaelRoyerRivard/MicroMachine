@@ -17,7 +17,9 @@ class CombatAnalyzer {
 	std::map<sc2::UNIT_TYPEID, float> totalDamage;
 	std::map<sc2::UNIT_TYPEID, float> totalhealthLoss;
 	std::map<sc2::Tag, Unit> enemies;
-	std::map<sc2::Tag, Unit> deadEnemies;
+	std::map<sc2::UNIT_TYPEID, int> aliveEnemiesCountByType;
+	std::map<sc2::UNIT_TYPEID, int> deadEnemiesCountByType;
+	std::map<sc2::UNIT_TYPEID, int> deadCountByType;
 	std::list<std::pair<CCPosition, uint32_t>> m_areasUnderDetection;
 
 	void clearAreasUnderDetection();
@@ -28,10 +30,12 @@ public:
 	CombatAnalyzer(CCBot & bot);
 	void onStart();
 	void onFrame();
+	void lowPriorityChecks();
 	std::list<std::pair<CCPosition, uint32_t>> & GetAreasUnderDetection() { return m_areasUnderDetection; };
 	void increaseTotalDamage(float damageDealt, sc2::UNIT_TYPEID unittype);
 	void increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID unittype);
 	float GetRatio(sc2::UNIT_TYPEID type);
 	void UpdateRatio();
 	void checkUnitsState();
+	void increaseDeadEnemy(sc2::UNIT_TYPEID type);
 };

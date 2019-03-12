@@ -302,8 +302,10 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(IMNode* currentNode, co
 	do
 	{
 		const CCPosition currentPosition = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+#ifndef PUBLIC_RELEASE
 		if (bot.Config().DrawHarassInfo)
 			bot.Map().drawTile(Util::GetTilePosition(currentPosition), sc2::Colors::Teal, 0.2f);
+#endif
 		//we want to retun a node close to the current position
 		if (Util::DistSq(currentPosition, rangedUnit->pos) <= 3.f * 3.f && returnPos == CCPosition(0, 0))
 			returnPos = currentPosition;
@@ -320,8 +322,10 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(IMNode* currentNode, co
 		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > CLIFF_MIN_HEIGHT_DIFFERENCE)
 			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
 	}
+#ifndef PUBLIC_RELEASE
 	if (bot.Config().DrawHarassInfo)
 		bot.Map().drawTile(Util::GetTilePosition(returnPos), sc2::Colors::Purple, 0.3f);
+#endif
 	return returnPos;
 }
 
@@ -656,8 +660,10 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 		}
 	}*/
 
+#ifndef PUBLIC_RELEASE
 	if (bot.Config().DrawUnitPowerInfo)
 		bot.Map().drawText(unit.getPosition(), "Power: " + std::to_string(unitPower));
+#endif
 
 	return unitPower;
 }

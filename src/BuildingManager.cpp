@@ -893,6 +893,9 @@ char BuildingManager::getBuildingWorkerCode(const Building & b) const
 
 void BuildingManager::drawBuildingInformation()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
     m_buildingPlacer.drawReservedTiles();
 
     if (!m_bot.Config().DrawBuildingInfo)
@@ -949,6 +952,9 @@ void BuildingManager::drawBuildingInformation()
 
 void BuildingManager::drawStartingRamp()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
 	if (!m_bot.Config().DrawStartingRamp)
 	{
 		return;
@@ -962,6 +968,9 @@ void BuildingManager::drawStartingRamp()
 
 void BuildingManager::drawWall()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
 	if (!m_bot.Config().DrawWall)
 	{
 		return;

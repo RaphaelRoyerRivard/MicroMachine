@@ -240,6 +240,9 @@ size_t UnitInfoManager::getUnitTypeCount(CCPlayer player, UnitType type, bool co
 
 void UnitInfoManager::drawUnitInformation(float x,float y) const
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
     if (!m_bot.Config().DrawEnemyUnitInfo)
     {
         return;
@@ -272,6 +275,9 @@ void UnitInfoManager::drawUnitInformation(float x,float y) const
 
 void UnitInfoManager::drawUnitID()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
 	if (!m_bot.Config().DrawUnitID)
 	{
 		return;

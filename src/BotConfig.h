@@ -49,11 +49,9 @@ public:
 	bool DrawStartingRamp;
 	bool DrawWall;
     bool DrawEnemyUnitInfo;
-    bool DrawLastSeenTileInfo;
     bool DrawUnitTargetInfo;
     bool DrawSquadInfo;		
 	bool DrawUnitPowerInfo;
-	bool DrawFSMStateInfo;
 	bool DrawHarassInfo;
 	bool DrawMemoryInfo;
 	bool DrawUnitID;

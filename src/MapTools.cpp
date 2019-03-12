@@ -593,6 +593,15 @@ float MapTools::terrainHeight(const CCPosition & point) const
 
 void MapTools::draw() const
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
+
+	if (!m_bot.Config().DrawWalkableSectors && !m_bot.Config().DrawBuildableSectors && !m_bot.Config().DrawTileInfo)
+	{
+		return;
+	}
+
 #ifdef SC2API
     CCPosition camera = m_bot.Observation()->GetCameraPos();
     int sx = (int)(camera.x - 12.0f);
@@ -607,7 +616,7 @@ void MapTools::draw() const
     int ex = sx + 20;
     int ey = sy + 15;
 #endif
-
+	
     for (int x = sx; x < ex; ++x)
     {
         for (int y = sy; y < ey; y++)

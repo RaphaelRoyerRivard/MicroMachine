@@ -39,11 +39,9 @@ BotConfig::BotConfig()
 	DrawStartingRamp = false;
 	DrawWall = false;
     DrawEnemyUnitInfo = false;
-    DrawLastSeenTileInfo = false;
     DrawUnitTargetInfo = false;
 	DrawSquadInfo = false;
 	DrawUnitPowerInfo = false;
-	DrawFSMStateInfo = false;
 	DrawHarassInfo = false;
 	DrawMemoryInfo = false;
 	DrawUnitID = false;
@@ -197,10 +195,8 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawBuildingInfo", debug, DrawBuildingInfo);
 			JSONTools::ReadBool("DrawModuleTimers", debug, DrawModuleTimers);
 			JSONTools::ReadBool("DrawEnemyUnitInfo", debug, DrawEnemyUnitInfo);
-			JSONTools::ReadBool("DrawLastSeenTileInfo", debug, DrawLastSeenTileInfo);
 			JSONTools::ReadBool("DrawUnitTargetInfo", debug, DrawUnitTargetInfo);
 			JSONTools::ReadBool("DrawUnitPowerInfo", debug, DrawUnitPowerInfo);
-			JSONTools::ReadBool("DrawFSMStateInfo", debug, DrawFSMStateInfo);
 			JSONTools::ReadBool("DrawReservedBuildingTiles", debug, DrawReservedBuildingTiles);
 			JSONTools::ReadBool("DrawHarassInfo", debug, DrawHarassInfo);
 			JSONTools::ReadBool("DrawMemoryInfo", debug, DrawMemoryInfo);

@@ -156,11 +156,13 @@ void CCBot::OnStep()
 	StopProfiling("0.0 OnStep");	//Do not remove
 
 #ifdef SC2API
+#ifndef PUBLIC_RELEASE
 	if (Config().AllowDebug)
 	{
 		drawProfilingInfo();
 		Debug()->SendDebug();
 	}
+#endif
 #endif
 	StartProfiling("0 Starcraft II");
 }
@@ -168,6 +170,9 @@ void CCBot::OnStep()
 #pragma optimize( "checkKeyState", off )
 void CCBot::checkKeyState()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
 	if (!m_config.AllowDebug || !m_config.AllowKeyControl)
 	{
 		return;
@@ -521,7 +526,11 @@ void CCBot::clearDeadUnits()
 		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
 			&& m_map.isVisible(unit.getPosition())
 			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
-			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+		{
+			auto unitPtr = unit.getUnitPtr();
+			unitsToRemove.push_back(unitPtr->tag);
+			this->CombatAnalyzer().increaseDeadEnemy(unitPtr->unit_type);
+		}
 	}
 	// Remove dead enemy units
 	for (auto tag : unitsToRemove)
@@ -852,15 +861,18 @@ void CCBot::OnError(const std::vector<sc2::ClientError> & client_errors, const s
 
 void CCBot::StartProfiling(const std::string & profilerName)
 {
+#ifndef PUBLIC_RELEASE
 	if (m_config.DrawProfilingInfo)
 	{
 		auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
 		profiler.start = std::chrono::steady_clock::now();	// Set the start time (third element of the tuple) to now
 	}
+#endif
 }
 
 void CCBot::StopProfiling(const std::string & profilerName)
 {
+#ifndef PUBLIC_RELEASE
 	if (m_config.DrawProfilingInfo)
 	{
 		auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
@@ -878,10 +890,14 @@ void CCBot::StopProfiling(const std::string & profilerName)
 		else
 			queue[0] += elapsedTime;						// Add the time to the queue
 	}
+#endif
 }
 
 void CCBot::drawProfilingInfo()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
 	if (m_config.DrawProfilingInfo)
 	{
 		const std::string stepString = "0.0 OnStep";
@@ -898,8 +914,8 @@ void CCBot::drawProfilingInfo()
 			const std::string& key = mapPair.first;
 			auto& profiler = m_profilingTimes.at(mapPair.first);
 			auto& queue = profiler.queue;
-			const size_t queueCount = queue.size();
-			const long long time = profiler.total / queueCount;
+			const int queueCount = queue.size();
+			const long long time = profiler.total / std::max(queueCount, 1);
 			if (key != stepString && time * 10 > stepTime)
 			{
 				profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * time);

@@ -150,8 +150,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
 	const bool isViking = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
 
+#ifndef PUBLIC_RELEASE
 	if (m_bot.Config().DrawHarassInfo)
 		m_bot.Map().drawText(rangedUnit->pos, std::to_string(rangedUnit->tag));
+#endif
 
 	// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 	if (ShouldSkipFrame(rangedUnit))
@@ -215,8 +217,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 		targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;
 
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(rangedUnit->pos, target->pos, targetInAttackRange ? sc2::Colors::Green : sc2::Colors::Yellow);
+#endif
 	}
 
 	m_bot.StartProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
@@ -344,8 +348,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		CCPosition pathableTile(0, 0);
 		if(MoveUnitWithDirectionVector(rangedUnit, dirVec, pathableTile))
 		{
+#ifndef PUBLIC_RELEASE
 			if (m_bot.Config().DrawHarassInfo)
 				m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
+#endif
 
 			if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 			{
@@ -493,8 +499,10 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 		(m_order.getType() != SquadOrderTypes::Defend && Util::DistSq(rangedUnit->pos, target->pos) > m_order.getRadius() * m_order.getRadius()))
 		&& threats.empty())
 	{
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
+#endif
 
 		const bool moveWithoutAttack = squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings();
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
@@ -553,8 +561,10 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 		// add normalized vector towards objective
 		dirVec = goal - rangedUnit->pos;
 
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
+#endif
 	}
 	Util::Normalize(dirVec);
 	return dirVec;
@@ -801,12 +811,14 @@ CCPosition RangedManager::GetFleeVectorFromThreat(const sc2::Unit * rangedUnit, 
 		bufferSize = 1.f;
 	float intensity = threatDps * std::max(0.f, std::min(1.f, (totalRange - distance) / bufferSize));
 
+#ifndef PUBLIC_RELEASE
 	if (m_bot.Config().DrawHarassInfo)
 	{
 		m_bot.Map().drawCircle(threat->pos, threatRange, sc2::Colors::Red);
 		m_bot.Map().drawCircle(threat->pos, totalRange, CCColor(128, 0, 0));
 		m_bot.Map().drawLine(rangedUnit->pos, threat->pos, sc2::Colors::Red);
 	}
+#endif
 
 	return fleeVec * intensity;
 }
@@ -842,8 +854,10 @@ CCPosition RangedManager::GetRepulsionVectorFromFriendlyReapers(const sc2::Unit 
 	// Add repulsion vector if there is a friendly harass unit close enough
 	if (distToClosestFriendlyUnit != HARASS_FRIENDLY_REPULSION_MIN_DISTANCE * HARASS_FRIENDLY_REPULSION_MIN_DISTANCE)
 	{
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(reaper->pos, closestFriendlyUnitPosition, sc2::Colors::Red);
+#endif
 
 		CCPosition fleeVec = reaper->pos - closestFriendlyUnitPosition;
 		Util::Normalize(fleeVec);
@@ -871,8 +885,12 @@ CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit 
 	if (!closeAllies.empty())
 	{
 		const CCPosition closeAlliesCenter = Util::CalcCenter(closeAllies);
+
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(hellion->pos, closeAlliesCenter, sc2::Colors::Green);
+#endif
+
 		const float distToCloseAlliesCenter = Util::Dist(hellion->pos, closeAlliesCenter);
 		CCPosition attractionVector = closeAlliesCenter - hellion->pos;
 		Util::Normalize(attractionVector);
@@ -945,8 +963,10 @@ CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vect
 		const CCPosition newFleePosition = rangedUnit->pos + newFleeVector;
 		if (m_bot.Observation()->IsPathable(newFleePosition))
 		{
+#ifndef PUBLIC_RELEASE
 			if (m_bot.Config().DrawHarassInfo)
 				m_bot.Map().drawCircle(safeTile, 0.2f, sc2::Colors::Purple);
+#endif
 			return newFleePosition;
 		}
 	}
@@ -1150,11 +1170,13 @@ void RangedManager::ExecuteActions()
 		const auto rangedUnit = unitAction.first;
 		auto & action = unitAction.second;
 
+#ifndef PUBLIC_RELEASE
 		if(m_bot.Config().DrawRangedUnitActions)
 		{
 			const std::string actionString = MicroActionTypeAccronyms[action.microActionType] + (action.prioritized ? "!" : "");
 			m_bot.Map().drawText(rangedUnit->pos, actionString, sc2::Colors::Teal);
 		}
+#endif
 
 		// If the action has already been executed and it is not time to reexecute it
 		if (action.executed && (action.duration >= ACTION_REEXECUTION_FREQUENCY || m_bot.GetGameLoop() - action.executionFrame < ACTION_REEXECUTION_FREQUENCY))
