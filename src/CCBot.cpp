@@ -70,6 +70,11 @@ void CCBot::OnGameStart() //full start
 	Util::SetAllowDebug(Config().AllowDebug);
 	Util::CreateLog(*this);
 	selfRace = GetPlayerRace(Players::Self);
+
+	if(Config().AllowDebug)
+	{
+		IssueCheats();
+	}
     
     setUnits();
     m_techTree.onStart();
@@ -633,6 +638,11 @@ GameCommander & CCBot::Commander()
 const UnitInfoManager & CCBot::UnitInfo() const
 {
     return m_unitInfo;
+}
+
+void CCBot::IssueCheats() const
+{
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation, Players::Enemy, 1);
 }
 
 uint32_t CCBot::GetCurrentFrame() const
