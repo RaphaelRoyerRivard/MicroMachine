@@ -336,12 +336,17 @@ float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCT
 
 bool Util::PathFinding::HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
 {
-	return GetInfluenceOnTile(node->position, unit, bot) != 0.f;
+	return GetInfluenceOnTile(node->position, unit->is_flying, bot) != 0.f;
 }
 
-float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
+bool Util::PathFinding::HasInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot)
 {
-	const auto & influenceMap = unit->is_flying ? bot.Commander().Combat().getAirInfluenceMap() : bot.Commander().Combat().getGroundInfluenceMap();
+	return GetInfluenceOnTile(position, isFlying, bot) != 0.f;
+}
+
+float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot)
+{
+	const auto & influenceMap = isFlying ? bot.Commander().Combat().getAirInfluenceMap() : bot.Commander().Combat().getGroundInfluenceMap();
 	return influenceMap[tile.x][tile.y];
 }
 

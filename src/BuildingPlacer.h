@@ -26,10 +26,10 @@ public:
 
     // determines whether we can build at a given location
     bool canBuildHere(int bx, int by, const Building & b, bool ignoreReservedTiles = false) const;
-    bool canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved = false) const;
+    bool canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const;
 
     // returns a build location near a building's desired location
-    CCTilePosition getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved = false) const;
+    CCTilePosition getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const;
 
     void drawReservedTiles();
 

@@ -470,7 +470,7 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 	{
 		m_bot.StartProfiling("0.8.3.1 getBuildingLocation");
 		// grab a worker unit from WorkerManager which is closest to this final position
-		CCTilePosition testLocation = getNextBuildingLocation(b, false);
+		CCTilePosition testLocation = getNextBuildingLocation(b, true, true);
 		m_bot.StopProfiling("0.8.3.1 getBuildingLocation");
 
 		// Don't test the location if the building is already started
@@ -493,7 +493,7 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 		{
 			//Not safe, pick another location
 			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
-			testLocation = getNextBuildingLocation(b, true);
+			testLocation = getNextBuildingLocation(b, false, true);
 			if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
 			{
 				return Unit();
@@ -866,7 +866,7 @@ void BuildingManager::addBuildingTask(const UnitType & type, const CCTilePositio
     Building b(type, desiredPosition);
 	b.status = BuildingStatus::Unassigned;
 	Unit producer = assignWorkersToUnassignedBuilding(b);
-	if (producer.isValid() && Util::PathFinding::IsPathToGoalSafe(producer.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+	if (producer.isValid())
 	{
 		m_bot.ReserveMinerals(m_bot.Data(type).mineralCost);
 		m_bot.ReserveGas(m_bot.Data(type).gasCost);
@@ -1041,7 +1041,7 @@ std::vector<UnitType> BuildingManager::buildingsQueued() const
     return buildingsQueued;
 }
 
-CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
+CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool checkInfluenceMap)
 {
     //size_t numPylons = m_bot.UnitInfo().getUnitTypeCount(Players::Self, Util::GetSupplyProvider(m_bot.GetSelfRace(), m_bot), true);
 
@@ -1066,15 +1066,15 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b)
 		// get a position within our region
 		// TODO: put back in special pylon / cannon spacing
 		m_bot.StartProfiling("0.8.3.1.3 getBuildLocationNear");
-		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, m_bot.Config().BuildingSpacing);
+		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, m_bot.Config().BuildingSpacing, false, checkInfluenceMap);
 		m_bot.StopProfiling("0.8.3.1.3 getBuildLocationNear");
 	}
 	return buildingLocation;
 }
 
-CCTilePosition BuildingManager::getNextBuildingLocation(const Building & b, bool ignoreNextBuildingPosition)
+CCTilePosition BuildingManager::getNextBuildingLocation(const Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap)
 {
-	if (!ignoreNextBuildingPosition)
+	if (checkNextBuildingPosition)
 	{
 		std::map<UnitType, std::list<CCTilePosition>>::iterator it = nextBuildingPosition.find(b.type);
 		if (it != nextBuildingPosition.end())
@@ -1086,12 +1086,12 @@ CCTilePosition BuildingManager::getNextBuildingLocation(const Building & b, bool
 			}
 			else
 			{
-				location = getBuildingLocation(b);
+				location = getBuildingLocation(b, checkInfluenceMap);
 			}
 			return location;
 		}
 	}
-	return getBuildingLocation(b);
+	return getBuildingLocation(b, checkInfluenceMap);
 }
 
 Unit BuildingManager::getClosestResourceDepot(CCPosition position)

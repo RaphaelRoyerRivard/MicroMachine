@@ -362,7 +362,7 @@ void ProductionManager::manageBuildOrderQueue()
 				{
 					Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
 					//Get building location
-					const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, false);
+					const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, true, true);
 					if (targetLocation != CCTilePosition(0, 0))
 					{
 						Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));

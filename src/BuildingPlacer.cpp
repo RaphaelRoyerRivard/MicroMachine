@@ -60,8 +60,14 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b, bool ignor
 }
 
 //returns true if we can build this type of unit here with the specified amount of space.
-bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved) const
+bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const
 {
+	//If its not safe. We only check one tile since its very likely to be the save result for all tiles. This avoid a little bit of lag.
+	if (checkInfluenceMap && Util::PathFinding::HasInfluenceOnTile(CCTilePosition(bx, by), false, m_bot))
+	{
+		return false;
+	}
+
     UnitType type = b.type;
 
     //if we can't build here, we of course can't build here with space (it is checked again in the loop below)
@@ -124,7 +130,7 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     return true;
 }
 
-CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved) const
+CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const
 {
 	//If the space is not walkable, look arround for a walkable space. The result may not be the most optimal location.
 	const int MAX_OFFSET = 5;
@@ -132,7 +138,9 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 	int direction = 0;
 	auto buildLocation = b.desiredPosition;
 
-	while(!m_bot.Map().isWalkable(buildLocation) || m_bot.Map().getClosestTilesTo(buildLocation).size() < 10)
+	while(!m_bot.Map().isWalkable(buildLocation) ||
+		m_bot.Map().getClosestTilesTo(buildLocation).size() < 10 ||
+		(checkInfluenceMap && Util::PathFinding::HasInfluenceOnTile(buildLocation, false, m_bot)))
 	{
 		switch (direction)
 		{
@@ -209,7 +217,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
     {
         auto & pos = closestToBuilding[i];
 
-        if (canBuildHereWithSpace(pos.x, pos.y, b, buildDist, ignoreReserved))
+        if (canBuildHereWithSpace(pos.x, pos.y, b, buildDist, ignoreReserved, checkInfluenceMap))
         {
             return pos;
         }
@@ -405,6 +413,14 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 			// check to see if it's next to one of our depots
 			if (unit.getType().isResourceDepot() && Util::DistSq(unit, geyserPos) < 10 * 10)
 			{
+				//TODO Good?
+				//Skip base if underattack or if we can't figure out to which base it belongs
+				auto baseLocation = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
+				if (baseLocation != nullptr &&baseLocation->isUnderAttack())
+				{
+					continue;
+				}
+
 				const double homeDistance = Util::DistSq(geyser, homePosition);
 				if (homeDistance < minGeyserDistanceFromHome)
 				{
