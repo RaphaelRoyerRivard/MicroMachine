@@ -220,7 +220,7 @@ void ProductionManager::manageBuildOrderQueue()
 		lowestMineralReq = 0;
 		lowestGasReq = 0;
 	}
-
+	
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
     {
@@ -261,33 +261,6 @@ void ProductionManager::manageBuildOrderQueue()
 
 		if (currentlyHasRequirement(currentItem.type))
 		{
-			// TODO: if it's a building and we can't make it yet, predict the worker movement to the location, remove pre-movement
-
-			//Build supply depot at ramp against protoss
-			/*if (m_bot.Observation()->GetFoodCap() <= 15 && currentItem.type == MetaTypeEnum::SupplyDepot && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
-				m_bot.GetGameLoop() > 5 && getFreeMinerals() > 30)
-			{
-				const CCPosition centerMap(m_bot.Map().width() / 2, m_bot.Map().height() / 2);
-				if (!rampSupplyDepotWorker.isValid())
-				{
-					rampSupplyDepotWorker = m_bot.Workers().getClosestMineralWorkerTo(centerMap);
-				}
-				if (rampSupplyDepotWorker.isValid())
-				{
-					if (getFreeMinerals() + getExtraMinerals() >= 100)
-					{
-						rampSupplyDepotWorker.move(rampSupplyDepotWorker.getTilePosition());
-						create(rampSupplyDepotWorker, currentItem, rampSupplyDepotWorker.getTilePosition());
-						m_queue.removeCurrentHighestPriorityItem();
-						break;
-					}
-					else
-					{
-						rampSupplyDepotWorker.move(centerMap);
-					}
-				}
-			}*/
-
 			//TODO: TEMP build barrack away from the ramp to protect it from worker rush
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
 				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks, additionalReservedMineral, additionalReservedGas))

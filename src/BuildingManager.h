@@ -31,6 +31,7 @@ class BuildingManager
 
     void            validateWorkersAndBuildings();		    // STEP 1
     void            assignWorkersToUnassignedBuildings();	// STEP 2
+	Unit            assignWorkersToUnassignedBuilding(Building & b);
     void            constructAssignedBuildings();			// STEP 3
     void            checkForStartedConstruction();			// STEP 4
     void            checkForDeadTerranBuilders();			// STEP 5
@@ -73,6 +74,7 @@ public:
 	int					countBoughtButNotBeingBuilt(sc2::UNIT_TYPEID type) const;
 
 	void				removeBuildings(const std::vector<Building> & toRemove);
+	void				removeNonStartedBuildingsOfType(sc2::UNIT_TYPEID type);
 
 	void				updatePreviousBuildings();
 	void				updatePreviousBaseBuildings();

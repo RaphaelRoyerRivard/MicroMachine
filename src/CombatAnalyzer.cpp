@@ -64,7 +64,7 @@ void CombatAnalyzer::lowPriorityChecks()
 	auto combatAirUnitCount = m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BANSHEE, true) +
 		m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT, true) + 
 		m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, true);
-	if (combatAirUnitCount >= 0)
+	if (combatAirUnitCount >= 5)
 	{
 		auto & production = m_bot.Commander().Production();
 		if (!production.isTechQueuedOrStarted(MetaTypeEnum::TerranShipWeaponsLevel1))
