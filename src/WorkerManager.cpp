@@ -3,7 +3,7 @@
 #include "CCBot.h"
 #include "Util.h"
 #include "Building.h"
-#include "Util.h"
+#include "Micro.h"
 
 WorkerManager::WorkerManager(CCBot & bot)
     : m_bot         (bot)
@@ -29,7 +29,7 @@ void WorkerManager::onFrame()
     handleGasWorkers();
 	m_bot.StopProfiling("0.7.3   handleGasWorkers");
 	m_bot.StartProfiling("0.7.4   handleIdleWorkers");
-    handleIdleWorkers();
+	handleIdleWorkers();
 	m_bot.StopProfiling("0.7.4   handleIdleWorkers");
 	m_bot.StartProfiling("0.7.5   repairCombatBuildings");
 	repairCombatBuildings();
@@ -324,7 +324,24 @@ void WorkerManager::handleIdleWorkers()
 			}
 			else
 			{
- 				setMineralWorker(worker);
+				bool isBuilder = false;
+				for(const auto & building : m_bot.Buildings().getBuildings())
+				{
+					if(building.builderUnit == worker)
+					{
+						m_workerData.setWorkerJob(worker, WorkerJobs::Build, building.buildingUnit);
+						if(building.buildingUnit.isValid() && building.buildingUnit.getBuildPercentage() < 1.f)
+						{
+							Micro::SmartRightClick(worker.getUnitPtr(), building.buildingUnit.getUnitPtr(), m_bot);
+						}
+						isBuilder = true;
+						break;
+					}
+				}
+				if (!isBuilder)
+				{
+					setMineralWorker(worker);
+				}
 			}
 		}
     }
@@ -1003,7 +1020,7 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
 
 		//Check if worker is already building something else
 		//TODO This shouldn't be needed (shouldn't happen), right?
-		for (auto building : m_bot.Buildings().getBuildings())
+		for (auto & building : m_bot.Buildings().getBuildings())
 		{
 			if (building.builderUnit.isValid() && building.builderUnit.getID() == builderWorker.getID())
 			{

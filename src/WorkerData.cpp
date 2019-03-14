@@ -197,7 +197,7 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     }
     else if (previousJob == WorkerJobs::Build)
     {
-
+		Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::HALT, m_bot);
     }
     else if (previousJob == WorkerJobs::Repair)
     {

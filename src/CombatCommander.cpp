@@ -3,6 +3,7 @@
 #include "CCBot.h"
 
 const size_t IdlePriority = 0;
+const size_t WorkerFleePriority = 0;
 const size_t BackupPriority = 1;
 const size_t HarassPriority = 2;
 const size_t AttackPriority = 2;
@@ -37,9 +38,13 @@ void CombatCommander::onStart()
 {
     m_squadData.clearSquadData();
 
-    // the squad that consists of units waiting for the squad to be big enough to begin the main attack
-    SquadOrder idleOrder(SquadOrderTypes::Idle, CCPosition(), DefaultOrderRadius, "Prepare for battle");
-    m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
+	// the squad that consists of units waiting for the squad to be big enough to begin the main attack
+	SquadOrder idleOrder(SquadOrderTypes::Idle, CCPosition(), DefaultOrderRadius, "Prepare for battle");
+	m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
+
+	// the squad that consists of fleeing workers
+	SquadOrder fleeOrder(SquadOrderTypes::Retreat, CCPosition(), DefaultOrderRadius, "Worker flee");
+	m_squadData.addSquad("WorkerFlee", Squad("WorkerFlee", fleeOrder, WorkerFleePriority, m_bot));
 
 	// the harass attack squad that will pressure the enemy's main base workers
 	SquadOrder harassOrder(SquadOrderTypes::Harass, CCPosition(0, 0), HarassOrderRadius, "Harass");
@@ -85,7 +90,8 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	m_bot.StartProfiling("0.10.4.2    updateSquads");
     if (isSquadUpdateFrame())
     {
-        updateIdleSquad();
+		updateIdleSquad();
+		updateWorkerFleeSquad();
         updateScoutDefenseSquad();
 		m_bot.StartProfiling("0.10.4.2.1    updateDefenseBuildings");
 		updateDefenseBuildings();
@@ -513,46 +519,41 @@ void CombatCommander::updateIdleSquad()
 	if (idleSquad.getUnits().empty())
 		return;
 
-	/*if (idleSquad.needsToRetreat())
-	{
-		SquadOrder retreatOrder(SquadOrderTypes::Retreat, getMainAttackLocation(), DefaultOrderRadius, "Retreat!!");
-		idleSquad.setSquadOrder(retreatOrder);
-	}
-	//regroup only after retreat
-	else if (idleSquad.needsToRegroup())
-	{
-		SquadOrder regroupOrder(SquadOrderTypes::Regroup, getMainAttackLocation(), DefaultOrderRadius, "Regroup");
-		idleSquad.setSquadOrder(regroupOrder);
-	}
-	else
-	{
-		const BaseLocation * nextExpansion = m_bot.Bases().getNextExpansion(Players::Self);
-
-		const CCPosition idlePosition = Util::GetPosition(nextExpansion ? nextExpansion->getCenterOfMinerals() : m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getCenterOfMinerals());
-
-		SquadOrder idleOrder(SquadOrderTypes::Attack, idlePosition, DefaultOrderRadius, "Prepare for battle");
-		m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
-	}*/
-
 	if (m_bot.GetCurrentFrame() % 24 == 0)	// Every second
 	{
 		for (auto & combatUnit : idleSquad.getUnits())
 		{
-			const BaseLocation* closestBase = nullptr;
-			float minDistance = 0.f;
-			for (auto baseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
-			{
-				const float distance = Util::DistSq(combatUnit, baseLocation->getPosition());
-				if(!closestBase || distance < minDistance)
-				{
-					closestBase = baseLocation;
-					minDistance = distance;
-				}
-			}
-
-			if(closestBase != nullptr && minDistance > 5.f * 5.f)
+			const BaseLocation* closestBase = m_bot.Bases().getClosestOccupiedBaseLocationForUnit(combatUnit);
+			if(closestBase != nullptr && Util::DistSq(combatUnit, closestBase->getPosition()) > 5.f * 5.f)
 			{
 				Micro::SmartMove(combatUnit.getUnitPtr(), closestBase->getPosition(), m_bot);
+			}
+		}
+	}
+}
+
+void CombatCommander::updateWorkerFleeSquad()
+{
+	Squad & workerFleeSquad = m_squadData.getSquad("WorkerFlee");
+	for (auto & worker : m_bot.Workers().getWorkers())
+	{
+		// Check if the worker needs to flee
+		if (Util::PathFinding::IsUnitOnTileWithEffectInfluence(worker.getUnitPtr(), m_bot))
+		{
+			// Put it in the squad if it is not defending or already in the squad
+			if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
+			{
+				m_bot.Workers().setCombatWorker(worker);
+				workerFleeSquad.addUnit(worker);
+			}
+		}
+		else
+		{
+			const auto squad = m_squadData.getUnitSquad(worker);
+			if(squad != nullptr && squad == &workerFleeSquad)
+			{
+				m_bot.Workers().finishedWithWorker(worker);
+				workerFleeSquad.removeUnit(worker);
 			}
 		}
 	}
@@ -1115,7 +1116,6 @@ void CombatCommander::updateDefenseSquads()
 					{
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
 
-						//Remove builder and gas jobs.
 						for (auto & worker : m_bot.Workers().getWorkers())
 						{
 							if (m_bot.Workers().getWorkerData().getWorkerJob(worker) != WorkerJobs::Scout)

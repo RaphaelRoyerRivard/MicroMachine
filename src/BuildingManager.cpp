@@ -793,6 +793,11 @@ void BuildingManager::checkForDeadTerranBuilders()
 		{
 			if (m_buildingsNewWorker.find(tag) == m_buildingsNewWorker.end() || !m_buildingsNewWorker[tag].isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(m_buildingsNewWorker[tag]) != WorkerJobs::Build)
 			{
+				if(b.builderUnit.isValid() && b.builderUnit.isAlive())
+				{
+					// Builder is alright, probably just saving his ass, he'll come back
+					continue;
+				}
 				// grab the worker unit from WorkerManager which is closest to this final position
 				Unit newBuilderUnit = m_bot.Workers().getBuilder(b, false);
 				if (!newBuilderUnit.isValid())
@@ -995,7 +1000,7 @@ void BuildingManager::drawWall()
 	}
 }
 
-std::vector<Building> BuildingManager::getBuildings()
+std::vector<Building> & BuildingManager::getBuildings()
 {
 	return m_buildings;
 }

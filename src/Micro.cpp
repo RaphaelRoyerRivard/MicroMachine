@@ -28,10 +28,10 @@ MicroActionType Micro::SmartAttackMove(const sc2::Unit * attacker, const sc2::Po
 	return MicroActionType::AttackMove;
 }
 
-MicroActionType Micro::SmartMove(const sc2::Unit * attacker, const sc2::Point2D & targetPosition, CCBot & bot)
+MicroActionType Micro::SmartMove(const sc2::Unit * unit, const sc2::Point2D & targetPosition, CCBot & bot)
 {
-    BOT_ASSERT(attacker != nullptr, "Attacker is null");
-    bot.Actions()->UnitCommand(attacker, sc2::ABILITY_ID::MOVE, targetPosition);
+    BOT_ASSERT(unit != nullptr, "Unit is null");
+    bot.Actions()->UnitCommand(unit, sc2::ABILITY_ID::MOVE, targetPosition);
 	return MicroActionType::Move;
 }
 

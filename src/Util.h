@@ -47,10 +47,10 @@ namespace Util
 		static std::map<sc2::Tag, std::vector<SafePathResult>> m_lastPathFindingResultsForUnit;
 
 		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
-		bool IsPathToGoalSafe(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
-		CCPosition FindOptimalPathToTarget(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, CCBot & bot);
-		CCPosition FindOptimalPathToSafety(const sc2::Unit * rangedUnit, CCPosition goal, CCBot & bot);
-		CCPosition FindOptimalPath(const sc2::Unit * rangedUnit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot);
+		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
+		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot);
+		CCPosition FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
+		CCPosition FindOptimalPath(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot);
 		CCTilePosition GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		CCPosition GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to);
@@ -58,6 +58,7 @@ namespace Util
 		bool HasInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
 		float GetInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 		bool HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
+		bool IsUnitOnTileWithEffectInfluence(const sc2::Unit * unit, CCBot & bot);
 		float GetEffectInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
 	}
 
