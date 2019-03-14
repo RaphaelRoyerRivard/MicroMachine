@@ -649,7 +649,7 @@ const UnitInfoManager & CCBot::UnitInfo() const
     return m_unitInfo;
 }
 
-void CCBot::IssueCheats() const
+void CCBot::IssueCheats()
 {
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation, Players::Enemy, 1);
 }

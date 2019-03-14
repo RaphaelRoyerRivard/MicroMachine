@@ -131,7 +131,7 @@ public:
     const CCPosition GetStartLocation() const;
 	const CCTilePosition GetBuildingArea() const;
 
-	void IssueCheats() const;
+	void IssueCheats();
     uint32_t GetCurrentFrame() const;
     int GetMinerals() const;
     int GetCurrentSupply() const;
