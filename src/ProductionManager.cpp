@@ -330,6 +330,11 @@ void ProductionManager::manageBuildOrderQueue()
 				if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 				{
 					Unit producer = getProducer(currentItem.type);
+					if (!producer.isValid())
+					{
+						Util::DebugLog("Producer is not valid.", __FUNCTION__, m_bot);
+						break;
+					}
 
 					// build supply if we need some (SupplyBlock)
 					if (producer.isValid()

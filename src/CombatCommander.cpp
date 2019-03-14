@@ -813,51 +813,36 @@ void CombatCommander::updateScoutDefenseSquad()
 
 void CombatCommander::updateDefenseBuildings()
 {
-	int SUPPLYDEPOT_DISTANCE = 5;
+	int SUPPLYDEPOT_DISTANCE = 25;//5 tiles ^ 2, because we use DistSq
 
+	bool wallShouldBeRaised = false;
+	auto wallCenter = m_bot.Buildings().getWallPosition();
 	auto enemies = m_bot.GetEnemyUnits();
-	auto buildings = m_bot.Buildings().getFinishedBuildings();
-	for (auto building : buildings)
+	for (auto enemy : enemies)
 	{
-		sc2::UNIT_TYPEID buildingType = building.getType().getAPIUnitType();
-		switch (buildingType)
-		{
-			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED:
-				for (auto enemy : enemies)
+		CCTilePosition enemyPosition = enemy.second.getTilePosition();
+		int distance = Util::DistSq(enemyPosition, wallCenter);
+		if (distance < SUPPLYDEPOT_DISTANCE)
+		{//Raise wall
+			if (!m_wallRaised)
+			{
+				for (auto & building : m_bot.Buildings().getWallBuildings())
 				{
-					CCTilePosition enemyPosition = enemy.second.getTilePosition();
-					CCTilePosition buildingPosition = building.getTilePosition();
-					int distance = Util::DistSq(enemyPosition, buildingPosition);
-					if (distance < SUPPLYDEPOT_DISTANCE)
-					{//Raise
-						building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
-						break;
-					}
+					building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
 				}
-				break;
-			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT:
-				{//Extra bracket needed to compile
-					bool canLower = true;
-					for (auto enemy : enemies)
-					{
-						CCTilePosition enemyPosition = enemy.second.getTilePosition();
-						CCTilePosition buildingPosition = building.getTilePosition();
-						int distance = Util::DistSq(enemyPosition, buildingPosition);
-						if (distance < SUPPLYDEPOT_DISTANCE)
-						{
-							canLower = false;
-							break;
-						}
-					}
-					if (canLower)
-					{
-						building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
-					}
-				}
-				break;
-			default:
-				break;
+				m_wallRaised = true;
+				wallShouldBeRaised = true;
+			}
+			break;
 		}
+	}
+	if (wallShouldBeRaised && m_wallRaised)
+	{//Lower wall
+		for (auto & building : m_bot.Buildings().getWallBuildings())
+		{
+			building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+		}
+		m_wallRaised = false;
 	}
 }
 

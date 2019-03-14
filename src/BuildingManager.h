@@ -18,9 +18,10 @@ class BuildingManager
 	std::vector<Unit> m_baseBuildings;
 	std::vector<Unit> m_finishedBaseBuildings;
 	std::vector<Unit> m_previousBaseBuildings; //Base buildings last frame, useful to find dead buildings
-	std::list<CCTilePosition> rampTiles;
-	std::list<CCTilePosition> wallBuilding;
-	std::map<UnitType, std::list<CCTilePosition>> nextBuildingPosition;
+	std::list<CCTilePosition> m_rampTiles;
+	std::list<CCTilePosition> m_wallBuildingPosition;
+	std::list<Unit> m_wallBuilding;
+	std::map<UnitType, std::list<CCTilePosition>> m_nextBuildingPosition;
 
     bool            m_debugMode;
 
@@ -62,6 +63,8 @@ public:
 	std::vector<Unit>	getBaseBuildings();
 	std::vector<Unit>	getFinishedBuildings();
 	std::vector<Unit>	getPreviousBaseBuildings();
+	CCTilePosition		getWallPosition();
+	std::list<Unit>		getWallBuildings();
     CCTilePosition      getBuildingLocation(const Building & b, bool checkInfluenceMap);
 	CCTilePosition		getNextBuildingLocation(const Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;

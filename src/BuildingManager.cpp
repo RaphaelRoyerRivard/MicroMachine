@@ -21,15 +21,15 @@ void BuildingManager::onFirstFrame()
 {
 	//Ramp wall location
 	std::list<CCTilePosition> checkedTiles;
-	FindRampTiles(rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
-	FindMainRamp(rampTiles);
+	FindRampTiles(m_rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
+	FindMainRamp(m_rampTiles);
 
 	//Prevents crash when running in Release, will still crash in Debug. 
 #if !_DEBUG
 	if(rampTiles.size() > 0)
 #endif
 	{
-		auto tilesToBlock = FindRampTilesToPlaceBuilding(rampTiles);
+		auto tilesToBlock = FindRampTilesToPlaceBuilding(m_rampTiles);
 		PlaceSupplyDepots(tilesToBlock);
 	}
 }
@@ -299,10 +299,12 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 		BOT_ASSERT(false, "Can't find possible position for a wall build. This shouldn't happen.");
 		//TODO: Check remove the buildingTiles and try again in a different order. To try again, pop front tilesToBlock and push back the front.
 	}
-	wallBuilding = buildingTiles;
+
 	for (auto building : buildingTiles)
 	{
-		nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(CCTilePosition(building.x + 1, building.y + 1));
+		auto position = CCTilePosition(building.x + 1, building.y + 1);
+		m_nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(position);
+		m_wallBuildingPosition.push_back(position);
 	}
 }
 
@@ -456,6 +458,7 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 			
 		MetaType addonType = MetaType(b.type, m_bot);
 		Unit producer = m_bot.Commander().Production().getProducer(addonType);
+				
 		if (!producer.isValid())
 		{
 			return Unit();
@@ -491,6 +494,8 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 		m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
 		if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
 		{
+			//TODO checks twice if the path is safe for no reason if we get the same build location, should change location or change builder
+
 			//Not safe, pick another location
 			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 			testLocation = getNextBuildingLocation(b, false, true);
@@ -513,8 +518,8 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 		{
 			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 			//path  is safe, we can remove it from the list
-			auto & positions = nextBuildingPosition.find(b.type);// .pop_front();
-			if (positions != nextBuildingPosition.end())
+			auto & positions = m_nextBuildingPosition.find(b.type);// .pop_front();
+			if (positions != m_nextBuildingPosition.end())
 			{
 				for (auto & position : positions->second)
 				{
@@ -858,6 +863,12 @@ void BuildingManager::checkForCompletedBuildings()
 
             // remove this unit from the under construction vector
             toRemove.push_back(b);
+
+			//If building is part of the wall
+			if (std::find(m_wallBuildingPosition.begin(), m_wallBuildingPosition.end(), b.buildingUnit.getTilePosition()) != m_wallBuildingPosition.end())
+			{
+				m_wallBuilding.push_back(b.buildingUnit);
+			}
         }
     }
 
@@ -867,21 +878,14 @@ void BuildingManager::checkForCompletedBuildings()
 // add a new building to be constructed
 void BuildingManager::addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition)
 {
-	
-    Building b(type, desiredPosition);
+	Building b(type, desiredPosition);
 	b.status = BuildingStatus::Unassigned;
-	Unit producer = assignWorkersToUnassignedBuilding(b);
-	if (producer.isValid())
-	{
-		m_bot.ReserveMinerals(m_bot.Data(type).mineralCost);
-		m_bot.ReserveGas(m_bot.Data(type).gasCost);
 
-		m_buildings.push_back(b);
-	}
-	else
-	{
-		Util::DebugLog("Producer is not valid.", __FUNCTION__, m_bot);
-	}	
+	assignWorkersToUnassignedBuilding(b);
+	m_bot.ReserveMinerals(m_bot.Data(type).mineralCost);
+	m_bot.ReserveGas(m_bot.Data(type).gasCost);
+
+	m_buildings.push_back(b);
 }
 
 bool BuildingManager::isConstructingType(const UnitType & type)
@@ -977,7 +981,7 @@ void BuildingManager::drawStartingRamp()
 		return;
 	}
 
-	for (auto tile : rampTiles)
+	for (auto tile : m_rampTiles)
 	{
 		m_bot.Map().drawTile(tile.x, tile.y, CCColor(255, 255, 0));
 	}
@@ -993,7 +997,7 @@ void BuildingManager::drawWall()
 		return;
 	}
 
-	for (auto building : wallBuilding)
+	for (auto building : m_wallBuildingPosition)
 	{
 		m_bot.Map().drawTile(building.x, building.y, CCColor(255, 0, 0));
 		break;
@@ -1029,6 +1033,20 @@ std::vector<Unit> BuildingManager::getPreviousBaseBuildings()
 BuildingPlacer& BuildingManager::getBuildingPlacer()
 {
 	return m_buildingPlacer;
+}
+
+CCTilePosition BuildingManager::getWallPosition()
+{
+	if (m_wallBuildingPosition.empty())
+	{
+		return CCTilePosition(0, 0);
+	}
+	return m_wallBuildingPosition.front();
+}
+
+std::list<Unit> BuildingManager::getWallBuildings()
+{
+	return m_wallBuilding;
 }
 
 std::vector<UnitType> BuildingManager::buildingsQueued() const
@@ -1081,8 +1099,8 @@ CCTilePosition BuildingManager::getNextBuildingLocation(const Building & b, bool
 {
 	if (checkNextBuildingPosition)
 	{
-		std::map<UnitType, std::list<CCTilePosition>>::iterator it = nextBuildingPosition.find(b.type);
-		if (it != nextBuildingPosition.end())
+		std::map<UnitType, std::list<CCTilePosition>>::iterator it = m_nextBuildingPosition.find(b.type);
+		if (it != m_nextBuildingPosition.end())
 		{
 			CCTilePosition location;
 			if (!it->second.empty())

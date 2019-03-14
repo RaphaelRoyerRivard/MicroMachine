@@ -651,7 +651,12 @@ const UnitInfoManager & CCBot::UnitInfo() const
 
 void CCBot::IssueCheats()
 {
+	//Liberator
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation, Players::Enemy, 1);
+
+	//Workers
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, Players::Enemy, 10);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, m_startLocation, Players::Enemy, 1);
 }
 
 uint32_t CCBot::GetCurrentFrame() const
