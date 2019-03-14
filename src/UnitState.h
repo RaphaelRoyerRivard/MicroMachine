@@ -4,17 +4,22 @@
 class UnitState
 {
 	bool wasUpdated;
-	CCHealth m_hitPoints;
-	CCHealth m_previousHitPoints;
-	CCHealth m_shields;
-	CCHealth m_previousShields;
-	CCHealth m_energy;
-	CCHealth m_previousEnergy;
+	int m_hitPoints;
+	int m_previousHitPoints;
+	int m_shields;
+	int m_previousShields;
+	int m_energy;
+	int m_previousEnergy;
+	int m_damageTaken;
+	int m_totalRecentDamage = 0;
+	
 	const sc2::Unit* unit;
 
 	static const int THREAT_CHECK_EVERY_X_FRAME = 5;
 	static const int CONSIDER_X_LAST_THREAT_CHECK = 3;
+	static const int REMEMBER_X_LAST_DOMMAGE_TAKEN = 24;//1 sec
 	bool m_recentThreat[CONSIDER_X_LAST_THREAT_CHECK];
+	std::vector<int> m_recentDamage;
 public:
 
 	UnitState();
@@ -27,6 +32,7 @@ public:
 
 	bool WasAttacked();
 	int GetDamageTaken();
+	int GetRecentDamageTaken();
 	int GetHealed();
 	bool HadRecentTreats();
 	sc2::UNIT_TYPEID GetType();

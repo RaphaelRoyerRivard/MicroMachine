@@ -37,5 +37,6 @@ public:
 	float GetRatio(sc2::UNIT_TYPEID type);
 	void UpdateRatio();
 	void checkUnitsState();
+	void checkUnitState(Unit unit);
 	void increaseDeadEnemy(sc2::UNIT_TYPEID type);
 };

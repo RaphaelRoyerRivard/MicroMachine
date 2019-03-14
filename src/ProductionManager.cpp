@@ -372,7 +372,10 @@ void ProductionManager::manageBuildOrderQueue()
 
 							// create it and remove it from the _queue
 							create(worker, currentItem);
-							m_queue.removeCurrentHighestPriorityItem();
+							if (worker.isValid())
+							{
+								m_queue.removeCurrentHighestPriorityItem();
+							}
 
 							// don't actually loop around in here
 							break;

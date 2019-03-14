@@ -223,70 +223,11 @@ void CombatAnalyzer::checkUnitsState()
 	m_bot.StartProfiling("0.10.4.4.2      updateStates");
 	for (auto & unit : m_bot.Commander().getValidUnits())
 	{
-		m_bot.StartProfiling("0.10.4.4.2.1        addState");
-		auto tag = unit.getTag();
-
-		auto it = m_unitStates.find(tag);
-		if (it == m_unitStates.end())
-		{
-			UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy(), unit.getUnitPtr());
-			state.Update();
-			m_unitStates[tag] = state;
-			m_bot.StopProfiling("0.10.4.4.2.1        addState");
-			continue;
-		}
-		m_bot.StopProfiling("0.10.4.4.2.1        addState");
-
-		m_bot.StartProfiling("0.10.4.4.2.2        updateState");
-		UnitState & state = it->second;
-		state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
-		m_bot.StopProfiling("0.10.4.4.2.2        updateState");
-		if (state.WasAttacked())
-		{
-			m_bot.StartProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
-			const auto & influenceMap = unit.isFlying() ? m_bot.Commander().Combat().getAirInfluenceMap() : m_bot.Commander().Combat().getGroundInfluenceMap();
-			const auto & effectInfluenceMap = unit.isFlying() ? m_bot.Commander().Combat().getAirEffectInfluenceMap() : m_bot.Commander().Combat().getGroundEffectInfluenceMap();
-			const CCTilePosition tilePosition = Util::GetTilePosition(unit.getPosition());
-			const float influence = influenceMap.at(tilePosition.x).at(tilePosition.y) + effectInfluenceMap.at(tilePosition.x).at(tilePosition.y);
-			if(influence == 0.f)
-			{
-				if (unit.isFlying() && !m_bot.Strategy().enemyHasHiSecAutoTracking())
-				{
-					for (const auto & enemyMissileTurret : m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
-					{
-						if (Util::DistSq(unit, enemyMissileTurret) < 10 * 10)
-						{
-							m_bot.Strategy().setEnemyHasHiSecAutoTracking(true);
-							Util::Log(__FUNCTION__, unit.getType().getName() + " got hit near by a missile turret at a distance of " + std::to_string(Util::Dist(unit, enemyMissileTurret)), m_bot);
-							m_bot.Actions()->SendChat("Is that a range upgrade on your missile turrets? I ain't gonna fall for it again!");
-							break;
-						}
-					}
-				}
-				//TODO detect invis
-			}
-			m_bot.StopProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
-			m_bot.StartProfiling("0.10.4.4.2.2        saveDetectedArea");
-			if(unit.getUnitPtr()->cloak == sc2::Unit::Cloaked && !Util::IsPositionUnderDetection(unit.getPosition(), m_bot))
-			{
-				m_areasUnderDetection.push_back({ unit.getPosition(), m_bot.GetGameLoop() });
-			}
-			m_bot.StopProfiling("0.10.4.4.2.2        saveDetectedArea");
-			/*auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
-			if (threats.empty() && state.HadRecentTreats())
-			{
-				//Invisible unit detected
-				m_bot.Strategy().setEnemyHasInvisible(true);
-				m_invisibleSighting[unit] = std::pair<CCPosition, uint32_t>(unit.getPosition(), m_bot.GetGameLoop());
-			}*/
-		}
-		/*else if (m_bot.GetGameLoop() % 5)
-		{
-			m_bot.StartProfiling("0.10.4.4.2.4        updateThreats");
-			auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
-			state.UpdateThreat(!threats.empty());
-			m_bot.StopProfiling("0.10.4.4.2.4        updateThreats");
-		}*/
+		checkUnitState(unit);
+	}
+	for (auto & building : m_bot.Buildings().getBuildings())
+	{
+		checkUnitState(building.buildingUnit);
 	}
 	m_bot.StopProfiling("0.10.4.4.2      updateStates");
 
@@ -298,6 +239,8 @@ void CombatAnalyzer::checkUnitsState()
 		{
 			//Unit died
 			toRemove.push_back(state.first);
+
+			deadCountByType[state.second.GetType()]++;
 		}
 	}
 
@@ -309,6 +252,88 @@ void CombatAnalyzer::checkUnitsState()
 	m_bot.StopProfiling("0.10.4.4.3      removeStates");
 }
 
+void CombatAnalyzer::checkUnitState(Unit unit)
+{
+	if (!unit.isValid())
+	{
+		return;
+	}
+
+	m_bot.StartProfiling("0.10.4.4.2.1        addState");
+	auto tag = unit.getTag();
+
+	auto it = m_unitStates.find(tag);
+	if (it == m_unitStates.end())
+	{
+		UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy(), unit.getUnitPtr());
+		state.Update();
+		m_unitStates[tag] = state;
+		m_bot.StopProfiling("0.10.4.4.2.1        addState");
+		return;
+	}
+	m_bot.StopProfiling("0.10.4.4.2.1        addState");
+
+	m_bot.StartProfiling("0.10.4.4.2.2        updateState");
+	UnitState & state = it->second;
+	state.Update(unit.getHitPoints(), unit.getShields(), unit.getEnergy());
+	m_bot.StopProfiling("0.10.4.4.2.2        updateState");
+	if (state.WasAttacked())
+	{
+		m_bot.StartProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
+		const auto & influenceMap = unit.isFlying() ? m_bot.Commander().Combat().getAirInfluenceMap() : m_bot.Commander().Combat().getGroundInfluenceMap();
+		const auto & effectInfluenceMap = unit.isFlying() ? m_bot.Commander().Combat().getAirEffectInfluenceMap() : m_bot.Commander().Combat().getGroundEffectInfluenceMap();
+		const CCTilePosition tilePosition = Util::GetTilePosition(unit.getPosition());
+		const float influence = influenceMap.at(tilePosition.x).at(tilePosition.y) + effectInfluenceMap.at(tilePosition.x).at(tilePosition.y);
+		if (influence == 0.f)
+		{
+			if (unit.isFlying() && !m_bot.Strategy().enemyHasHiSecAutoTracking())
+			{
+				for (const auto & enemyMissileTurret : m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
+				{
+					if (Util::DistSq(unit, enemyMissileTurret) < 10 * 10)
+					{
+						m_bot.Strategy().setEnemyHasHiSecAutoTracking(true);
+						Util::Log(__FUNCTION__, unit.getType().getName() + " got hit near by a missile turret at a distance of " + std::to_string(Util::Dist(unit, enemyMissileTurret)), m_bot);
+						m_bot.Actions()->SendChat("Is that a range upgrade on your missile turrets? I ain't gonna fall for it again!");
+						break;
+					}
+				}
+			}
+			//TODO detect invis
+		}
+		m_bot.StopProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
+		m_bot.StartProfiling("0.10.4.4.2.2        saveDetectedArea");
+		if (unit.getUnitPtr()->cloak == sc2::Unit::Cloaked && !Util::IsPositionUnderDetection(unit.getPosition(), m_bot))
+		{
+			m_areasUnderDetection.push_back({ unit.getPosition(), m_bot.GetGameLoop() });
+		}
+		m_bot.StopProfiling("0.10.4.4.2.2        saveDetectedArea");
+
+		//Is building underconstruction. Cancel building
+		if (unit.isBeingConstructed())
+		{
+			//If the building could die, cancel it.
+			if (state.GetRecentDamageTaken() >= 2 * unit.getHitPoints())
+			{
+				unit.useAbility(sc2::ABILITY_ID::CANCEL);
+			}
+		}
+		/*auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
+		if (threats.empty() && state.HadRecentTreats())
+		{
+		//Invisible unit detected
+		m_bot.Strategy().setEnemyHasInvisible(true);
+		m_invisibleSighting[unit] = std::pair<CCPosition, uint32_t>(unit.getPosition(), m_bot.GetGameLoop());
+		}*/
+	}
+	/*else if (m_bot.GetGameLoop() % 5)
+	{
+	m_bot.StartProfiling("0.10.4.4.2.4        updateThreats");
+	auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
+	state.UpdateThreat(!threats.empty());
+	m_bot.StopProfiling("0.10.4.4.2.4        updateThreats");
+	}*/
+}
 
 void CombatAnalyzer::increaseDeadEnemy(sc2::UNIT_TYPEID type)
 {
