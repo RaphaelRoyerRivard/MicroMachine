@@ -447,7 +447,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 	}
 }
 
-Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
+bool BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 {
     BOT_ASSERT(!b.builderUnit.isValid(), "Error: Tried to assign a builder to a building that already had one ");
 
@@ -461,13 +461,13 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 				
 		if (!producer.isValid())
 		{
-			return Unit();
+			return false;
 		}
 		b.builderUnit = producer;
 		b.finalPosition = Util::GetTilePosition(producer.getPosition());
 
 		b.status = BuildingStatus::Assigned;
-		return producer;
+		return true;
 	}
 	else
 	{
@@ -479,7 +479,7 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 		// Don't test the location if the building is already started
 		if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
 		{
-			return Unit();
+			return false;
 		}
 			
 		b.finalPosition = testLocation;
@@ -489,7 +489,7 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 		//Test if worker path is safe
 		if (!builderUnit.isValid())
 		{
-			return Unit();
+			return false;
 		}
 		m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
 		if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
@@ -501,7 +501,7 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 			testLocation = getNextBuildingLocation(b, false, true);
 			if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
 			{
-				return Unit();
+				return false;
 			}
 
 			b.finalPosition = testLocation;
@@ -511,7 +511,7 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 			//Test if worker path is safe
 			if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
 			{
-				return Unit();
+				return false;
 			}
 		}
 		else
@@ -537,7 +537,7 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 
 		if (!b.builderUnit.isValid())
 		{
-			return Unit();
+			return false;
 		}
 
 		if (!b.underConstruction)
@@ -568,7 +568,7 @@ Unit BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
 		}
 
 		b.status = BuildingStatus::Assigned;
-		return builderUnit;
+		return true;
 	}
 }
 
@@ -876,16 +876,21 @@ void BuildingManager::checkForCompletedBuildings()
 }
 
 // add a new building to be constructed
-void BuildingManager::addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition)
+bool BuildingManager::addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition)
 {
 	Building b(type, desiredPosition);
 	b.status = BuildingStatus::Unassigned;
 
-	assignWorkersToUnassignedBuilding(b);
-	m_bot.ReserveMinerals(m_bot.Data(type).mineralCost);
-	m_bot.ReserveGas(m_bot.Data(type).gasCost);
+	if (assignWorkersToUnassignedBuilding(b))
+	{
+		m_bot.ReserveMinerals(m_bot.Data(type).mineralCost);
+		m_bot.ReserveGas(m_bot.Data(type).gasCost);
 
-	m_buildings.push_back(b);
+		m_buildings.push_back(b);
+
+		return true;
+	}
+	return false;
 }
 
 bool BuildingManager::isConstructingType(const UnitType & type)

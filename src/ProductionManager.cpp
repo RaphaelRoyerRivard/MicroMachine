@@ -297,8 +297,10 @@ void ProductionManager::manageBuildOrderQueue()
 					}
 
 					Unit producer = getProducer(currentItem.type);
-					create(producer, currentItem, target);
-					m_queue.removeCurrentHighestPriorityItem();
+					if (create(producer, currentItem, target))
+					{
+						m_queue.removeCurrentHighestPriorityItem();
+					}
 
 					break;
 				}				
@@ -351,8 +353,10 @@ void ProductionManager::manageBuildOrderQueue()
 					if (canMakeNow(producer, currentItem.type))
 					{
 						// create it and remove it from the _queue
-						create(producer, currentItem);
-						m_queue.removeCurrentHighestPriorityItem();
+						if (create(producer, currentItem))
+						{
+							m_queue.removeCurrentHighestPriorityItem();
+						}
 
 						// don't actually loop around in here
 						break;
@@ -376,8 +380,7 @@ void ProductionManager::manageBuildOrderQueue()
 							worker.move(targetLocation);
 
 							// create it and remove it from the _queue
-							create(worker, currentItem);
-							if (worker.isValid())
+							if (create(worker, currentItem) && worker.isValid())
 							{
 								m_queue.removeCurrentHighestPriorityItem();
 							}
@@ -1440,13 +1443,14 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 }
 
 // this function will check to see if all preconditions are met and then create a unit
-void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition position)
+bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition position)
 {
     if (!producer.isValid())
     {
-        return;
+        return false;
     }
 
+	bool result;
     // if we're dealing with a building
     if (item.type.isBuilding())
     {
@@ -1461,13 +1465,14 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 				position = Util::GetTilePosition(m_bot.GetStartLocation());
 			}
 
-			m_bot.Buildings().addBuildingTask(item.type.getUnitType(), position);
+			result = m_bot.Buildings().addBuildingTask(item.type.getUnitType(), position);
         }
     }
     // if we're dealing with a non-building unit
     else if (item.type.isUnit())
     {
         producer.train(item.type.getUnitType());
+		result = true;
     }
     else if (item.type.isUpgrade())
     {
@@ -1483,7 +1488,10 @@ void ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		incompletUpgradesMetatypes.push_back(item.type);
 		incompletUpgradesProgress.insert(std::make_pair(item.type, 0.f));
 		Util::DebugLog(__FUNCTION__, "upgrade starting " + item.type.getName(), m_bot);
+		result = true;
     }
+
+	return result;
 }
 
 bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
