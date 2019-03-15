@@ -261,12 +261,12 @@ void Squad::addUnitsToMicroManagers()
             tankUnits.push_back(unit);
         }
         // TODO: detectors
-        else if (unit.getType().isDetector() && !unit.getType().isBuilding())
+        /*else if (unit.getType().isDetector() && !unit.getType().isBuilding())
         {
             detectorUnits.push_back(unit);
-        }
+        }*/
         // select ranged _units
-        else if (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) >= 2.5f)
+        else if (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) >= 2.5f || unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_RAVEN)
         {
             rangedUnits.push_back(unit);
         }

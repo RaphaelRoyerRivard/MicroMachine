@@ -148,6 +148,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
 	const bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
 	const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
+	const bool isRaven = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
 	const bool isViking = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
 
 #ifndef PUBLIC_RELEASE
@@ -173,6 +174,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (unitShouldHeal)
 	{
 		goal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
+	}
+	else if(isRaven)
+	{
+		goal = GetBestSupportPosition(rangedUnits);
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
@@ -457,6 +462,26 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 	}
 
 	return rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.66f;
+}
+
+CCPosition RangedManager::GetBestSupportPosition(const sc2::Units & rangedUnits) const
+{
+	const CCPosition squadGoal = m_order.getPosition();
+	float minDist = 0.f;
+	const sc2::Unit * closestUnit = nullptr;
+	for(const auto rangedUnit : rangedUnits)
+	{
+		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN)
+			continue;
+
+		const float dist = Util::DistSq(rangedUnit->pos, squadGoal);
+		if (!closestUnit || dist < minDist)
+		{
+			minDist = dist;
+			closestUnit = rangedUnit;
+		}
+	}
+	return closestUnit->pos;
 }
 
 bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal)
@@ -977,6 +1002,11 @@ CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vect
 const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets)
 {
     BOT_ASSERT(rangedUnit, "null ranged unit in getTarget");
+
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN)
+	{
+		return nullptr;
+	}
 
 	std::multiset<std::pair<float, const sc2::Unit *>> targetPriorities;
 
