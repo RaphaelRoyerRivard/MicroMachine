@@ -119,8 +119,8 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	if(foundIndex >= 0 && bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
 		return releventResult.m_result;
 
-	CCPosition pathPosition = FindOptimalPath(unit, goal, 3.f, true, false, false, bot);
-	const bool success = pathPosition != CCPosition(0, 0);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, 3.f, true, false, false, false, bot);
+	const bool success = !path.empty();
 	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
 	if(foundIndex >= 0)
 	{
@@ -135,17 +135,64 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 
 CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot)
 {
-	return FindOptimalPath(unit, goal, maxRange, false, false, true, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, maxRange, false, false, true, false, bot);
+	return GetCommandPositionFromPath(path, unit, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot)
 {
-	return FindOptimalPath(unit, goal, 0.f, false, false, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, 0.f, false, false, false, false, bot);
+	return GetCommandPositionFromPath(path, unit, bot);
 }
 
-CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot)
+/*
+ * Returns pathing distance. Returns -1 if no path is found.
+ * If ignoreInfluence is true, no enemy influence will be taken into account when finding the path.
+ * If it is false and enemy influence is encountered along the way, it will return -1.
+ */
+float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot)
 {
-	CCPosition returnPos;
+	const auto path = FindOptimalPath(unit, goal, 0.f, !ignoreInfluence, false, false, ignoreInfluence, bot);
+	if (path.empty())
+	{
+		return -1.f;
+	}
+
+	float dist = 0.f;
+	CCPosition lastPosition;
+	for (const auto position : path)
+	{
+		if (lastPosition != CCPosition())
+		{
+			dist += Dist(lastPosition, position);
+		}
+		else
+		{
+			lastPosition = position;
+		}
+	}
+	return dist;
+}
+
+CCPosition Util::PathFinding::FindOptimalPathPosition(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot)
+{
+	auto path = FindOptimalPath(unit, goal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, false, bot);
+	if(path.empty())
+	{
+		return {};
+	}
+	return GetCommandPositionFromPath(path, unit, bot);
+}
+
+CCPosition Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot)
+{
+	std::list<CCPosition> path = Util::PathFinding::FindOptimalPath(unit, goal, range, false, true, false, false, bot);
+	return GetCommandPositionFromPath(path, unit, bot);
+}
+
+std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, CCBot & bot)
+{
+	std::list<CCPosition> path;
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
@@ -201,13 +248,9 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition
 		}
 		if (shouldTriggerExit)
 		{
-			if (!exitOnInfluence)
+			if (!exitOnInfluence || (!HasInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot)))
 			{
-				returnPos = GetCommandPositionFromPath(currentNode, unit, bot);
-			}
-			else if(!HasInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot))
-			{
-				returnPos = GetPosition(currentNode->position);
+				path = GetPositionListFromPath(currentNode, unit, bot);
 			}
 			break;
 		}
@@ -223,7 +266,7 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition
 
 				const float neighborDistance = Dist(currentNode->position, neighborPosition);
 				const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
-				const float influenceOnTile = exitOnInfluence ? 0.f : GetEffectInfluenceOnTile(neighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetInfluenceOnTile(neighborPosition, unit, bot));
+				const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(neighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetInfluenceOnTile(neighborPosition, unit, bot));
 				const float nodeCost = (influenceOnTile + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
 				const float totalCost = currentNode->cost + nodeCost;
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
@@ -243,7 +286,7 @@ CCPosition Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition
 		delete node;
 	for (auto node : closed)
 		delete node;
-	return returnPos;
+	return path;
 }
 
 CCTilePosition Util::PathFinding::GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot)
@@ -296,21 +339,18 @@ CCTilePosition Util::PathFinding::GetNeighborNodePosition(int x, int y, IMNode* 
 	return neighborPosition;
 }
 
-CCPosition Util::PathFinding::GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot)
+CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, CCBot & bot)
 {
 	CCPosition returnPos;
-	do
+	int i = 0;
+	for(const auto position : path)
 	{
-		const CCPosition currentPosition = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
-#ifndef PUBLIC_RELEASE
-		if (bot.Config().DrawHarassInfo)
-			bot.Map().drawTile(Util::GetTilePosition(currentPosition), sc2::Colors::Teal, 0.2f);
-#endif
+		++i;
+		returnPos = position;
 		//we want to retun a node close to the current position
-		if (Util::DistSq(currentPosition, rangedUnit->pos) <= 3.f * 3.f && returnPos == CCPosition(0, 0))
-			returnPos = currentPosition;
-		currentNode = currentNode->parent;
-	} while (currentNode != nullptr);
+		if (i >= 2)
+			break;
+	}
 
 	if (returnPos == CCPosition(0, 0))
 		std::cout << "returnPos is null" << std::endl;
@@ -327,6 +367,22 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(IMNode* currentNode, co
 		bot.Map().drawTile(Util::GetTilePosition(returnPos), sc2::Colors::Purple, 0.3f);
 #endif
 	return returnPos;
+}
+
+std::list<CCPosition> Util::PathFinding::GetPositionListFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot)
+{
+	std::list<CCPosition> returnPositions;
+	do
+	{
+		const CCPosition currentPosition = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+#ifndef PUBLIC_RELEASE
+		if (bot.Config().DrawHarassInfo)
+			bot.Map().drawTile(Util::GetTilePosition(currentPosition), sc2::Colors::Teal, 0.2f);
+#endif
+		returnPositions.push_front(currentPosition);
+		currentNode = currentNode->parent;
+	} while (currentNode != nullptr);
+	return returnPositions;
 }
 
 float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to)

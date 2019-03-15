@@ -481,7 +481,9 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Units & rangedUnits)
 			closestUnit = rangedUnit;
 		}
 	}
-	return closestUnit->pos;
+	if(closestUnit)
+		return closestUnit->pos;
+	return m_order.getPosition();
 }
 
 bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal)
@@ -639,7 +641,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 				// If the unit is standing on effect influence, get it out of there before fighting
 				if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit, m_bot) > 0.f)
 				{
-					CCPosition movePosition = Util::PathFinding::FindOptimalPath(rangedUnit, target->pos, range, false, true, false, m_bot);
+					CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(rangedUnit, target->pos, range, m_bot);
 					if (movePosition != CCPosition())
 					{
 						const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, 0);
@@ -757,7 +759,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			// If the unit is standing on effect influence, get it out of it before fighting
 			if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), unit, m_bot) > 0.f)
 			{
-				CCPosition movePosition = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, unitRange, false, true, false, m_bot);
+				CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(unit, unitTarget->pos, unitRange, m_bot);
 				if(movePosition != CCPosition())
 				{
 					const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
