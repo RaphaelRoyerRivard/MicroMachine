@@ -5,6 +5,9 @@
 class Building;
 class CCBot;
 
+//Using in first frame worker split to sort the map by value
+typedef std::function<bool(std::pair<Unit, int>, std::pair<Unit, int>)> Comparator;
+
 class WorkerManager
 {
     CCBot & m_bot;

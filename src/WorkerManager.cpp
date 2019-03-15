@@ -62,7 +62,7 @@ void WorkerManager::stopRepairing(Unit worker)
 void WorkerManager::handleMineralWorkers()
 {
 	//split workers on first frame
-	//TODO can be improved by sorting the workers by the furtherest distance, then assign them (further workers will be assigned first, so the average distance will be lower)
+	//TODO can be improved by preventing the worker from retargetting a very far mineral patch
 	if (!m_isFirstFrame || (int)m_bot.GetCurrentFrame() == 0)
 	{
 		return;
@@ -87,10 +87,38 @@ void WorkerManager::handleMineralWorkers()
 	m_bot.StopProfiling("0.7.2.2     selectMinerals");
 
 	m_bot.StartProfiling("0.7.2.3     orderedMineralWorkers");
-	std::list<Unit> orderedMineralWorkers;//Replaces workers
-	for (auto& mineralWorker : getWorkers())
+	std::map<Unit, int> workerMineralDistance;
+	for (auto & worker : getWorkers())
 	{
-		if (!mineralWorker.isValid())
+		CCPosition position = worker.getPosition();
+		int maxDist = -1;
+		for (auto& mineral : mineralsUsage)
+		{
+			int distance = Util::DistSq(position, mineral.first.getPosition());
+			if (distance > maxDist)
+			{
+				maxDist = distance;
+			}
+		}
+		workerMineralDistance[worker] = maxDist;
+	}
+
+	//Sorting the workers by furthest distance
+	//Defining a lambda function to compare two pairs. It will compare two pairs using the value
+	Comparator compFunctor = [](std::pair<Unit, int> elem1, std::pair<Unit, int> elem2)
+	{
+		return elem1.second > elem2.second;
+	};
+
+	//Declaring a set that will store the pairs using above comparision logic
+	std::set<std::pair<Unit, int>, Comparator> orderedMineralWorkers(workerMineralDistance.begin(), workerMineralDistance.end(), compFunctor);
+	m_bot.StopProfiling("0.7.2.3     orderedMineralWorkers");
+
+	m_bot.StartProfiling("0.7.2.4     splitMineralWorkers");
+	for (auto& mineralWorker : orderedMineralWorkers)
+	{
+		auto worker = mineralWorker.first;
+		if (!worker.isValid())
 		{
 			continue;
 		}
@@ -110,16 +138,16 @@ void WorkerManager::handleMineralWorkers()
 			}
 		}
 
-		auto closestMineral = getClosest(mineralWorker, minerals);
+		auto closestMineral = getClosest(worker, minerals);
 		mineralsUsage[closestMineral]++;
 		if (mineralsUsage[closestMineral] >= 2)
 		{
 			minerals.remove(closestMineral);
 		}
 
-		mineralWorker.rightClick(closestMineral);
+		worker.rightClick(closestMineral);
 	}
-	m_bot.StopProfiling("0.7.2.3     orderedMineralWorkers");
+	m_bot.StopProfiling("0.7.2.4     splitMineralWorkers");
 }
 
 void WorkerManager::handleGasWorkers()
