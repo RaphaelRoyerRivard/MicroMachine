@@ -177,7 +177,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	else if(isRaven)
 	{
-		goal = GetBestSupportPosition(rangedUnits);
+		goal = GetBestSupportPosition(rangedUnit, rangedUnits);
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
@@ -464,9 +464,39 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 	return rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.66f;
 }
 
-CCPosition RangedManager::GetBestSupportPosition(const sc2::Units & rangedUnits) const
+CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const
 {
-	const CCPosition squadGoal = m_order.getPosition();
+	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = {sc2::UNIT_TYPEID::TERRAN_RAVEN};
+	const auto clusters = Util::GetUnitClusters(rangedUnits, typesToIgnore, m_bot);
+	const Util::UnitCluster* closestBiggestCluster = nullptr;
+	float distance = 0.f;
+	for(const auto & cluster : clusters)
+	{
+		if(!closestBiggestCluster || cluster.m_units.size() > closestBiggestCluster->m_units.size())
+		{
+			closestBiggestCluster = &cluster;
+			distance = Util::Dist(supportUnit->pos, cluster.m_center) + Util::Dist(cluster.m_center, m_order.getPosition());
+			continue;
+		}
+		if (cluster.m_units.size() < closestBiggestCluster->m_units.size())
+		{
+			//break;
+			continue;
+		}
+		const float dist = Util::Dist(supportUnit->pos, cluster.m_center) + Util::Dist(cluster.m_center, m_order.getPosition());
+		if(dist < distance)
+		{
+			closestBiggestCluster = &cluster;
+			distance = dist;
+		}
+	}
+	if(closestBiggestCluster)
+	{
+		return closestBiggestCluster->m_center;
+	}
+	return m_order.getPosition();
+
+	/*const CCPosition squadGoal = m_order.getPosition();
 	float minDist = 0.f;
 	const sc2::Unit * closestUnit = nullptr;
 	for(const auto rangedUnit : rangedUnits)
@@ -483,7 +513,7 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Units & rangedUnits)
 	}
 	if(closestUnit)
 		return closestUnit->pos;
-	return m_order.getPosition();
+	return squadGoal;*/
 }
 
 bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal)

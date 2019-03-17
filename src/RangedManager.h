@@ -130,7 +130,7 @@ private:
 	bool ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger) const;
 	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger);
 	bool ShouldUnitHeal(const sc2::Unit * rangedUnit);
-	CCPosition GetBestSupportPosition(const sc2::Units & rangedUnits) const;
+	CCPosition GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const;
 	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal);
 	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float squaredDistanceToGoal, bool unitShouldHeal);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;

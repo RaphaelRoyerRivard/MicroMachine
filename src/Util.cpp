@@ -9,6 +9,8 @@ const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
+const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
+const float UNIT_CLUSTERING_MAX_DISTANCE = 5.f;
 
 // Influence Map Node
 struct Util::PathFinding::IMNode
@@ -592,6 +594,90 @@ CCPosition Util::CalcCenter(const std::vector<Unit> & units)
     }
 
     return CCPosition(cx / units.size(), cy / units.size());
+}
+
+std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & typesToIgnore, CCBot & bot)
+{
+	// Return the saved clusters if they were calculated not long ago
+	if(bot.GetCurrentFrame() - m_lastUnitClusterFrame < UNIT_CLUSTERING_COOLDOWN)
+	{
+		return m_unitClusters;
+	}
+
+	m_unitClusters.clear();
+
+	for (const auto unit : units)
+	{
+		if(Contains(unit->unit_type, typesToIgnore))
+		{
+			continue;
+		}
+		std::vector<UnitCluster*> clustersToMerge;
+		UnitCluster* mainCluster = nullptr;
+
+		// Check the clusters to find if the unit is already part of a cluster and to check if it can be part of an existing cluster
+		for (auto & cluster : m_unitClusters)
+		{
+			for(const auto clusterUnit : cluster.m_units)
+			{
+				if (Util::DistSq(clusterUnit->pos, unit->pos) <= UNIT_CLUSTERING_MAX_DISTANCE * UNIT_CLUSTERING_MAX_DISTANCE)
+				{
+					if (!mainCluster)
+					{
+						cluster.m_units.push_back(unit);
+						mainCluster = &cluster;
+					}
+					else
+					{
+						clustersToMerge.push_back(&cluster);
+					}
+					break;
+				}
+			}
+		}
+
+		// Merge clusters
+		for (auto clusterToMerge : clustersToMerge)
+		{
+			// Put the units of the cluster into the main cluster
+			for (const auto clusterUnit : clusterToMerge->m_units)
+			{
+				mainCluster->m_units.push_back(clusterUnit);
+			}
+			// Remove the cluster from the list
+			auto clusterIt = m_unitClusters.begin();
+			while (clusterIt != m_unitClusters.end())
+			for(auto & cluster : m_unitClusters)
+			{
+				if(clusterToMerge == &cluster)
+				{
+					m_unitClusters.erase(clusterIt);
+					break;
+				}
+				++clusterIt;
+			}
+		}
+
+		// If the unit was not already in a cluster, create one for it
+		if(!mainCluster)
+		{
+			m_unitClusters.emplace_back(UnitCluster(unit->pos, { unit }));
+		}
+	}
+
+	for (auto & cluster : m_unitClusters)
+	{
+		CCPosition center;
+		for(const auto unit : cluster.m_units)
+		{
+			center += unit->pos;
+		}
+		cluster.m_center = CCPosition(center.x / cluster.m_units.size(), center.y / cluster.m_units.size());
+	}
+	
+	//std::sort(m_unitClusters.begin(), m_unitClusters.end(), std::greater<>());	//doesn't work
+
+	return m_unitClusters;
 }
 
 void Util::CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits)

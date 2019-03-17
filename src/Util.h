@@ -13,6 +13,37 @@ namespace Util
 	static std::ofstream file;
 	static bool allowDebug;
 
+	struct UnitCluster
+	{
+		CCPosition m_center;
+		std::vector<const sc2::Unit *> m_units;
+
+		UnitCluster(CCPosition center, std::vector<const sc2::Unit *> units)
+			: m_center(center)
+			, m_units(units)
+		{};
+
+		bool operator<(const UnitCluster & rhs) const
+		{
+			if(m_units.size() == rhs.m_units.size())
+			{
+				if(m_center.x == rhs.m_center.x)
+				{
+					return m_center.y < rhs.m_center.y;
+				}
+				return m_center.x < rhs.m_center.x;
+			}
+			return m_units.size() < rhs.m_units.size();
+		}
+		bool operator>(const UnitCluster & rhs) const
+		{
+			return rhs < *this;
+		}
+	};
+
+	static std::list<UnitCluster> m_unitClusters;
+	static uint32_t m_lastUnitClusterFrame;
+
     struct IsUnit 
     {
         sc2::UNIT_TYPEID m_type;
@@ -71,6 +102,8 @@ namespace Util
 	bool Contains(O object, S structure) { return std::find(structure.begin(), structure.end(), object) != structure.end(); }
 	template< typename O, typename S>
 	typename S::iterator Find(O object, S structure) { return std::find(structure.begin(), structure.end(), object); }
+
+	std::list<UnitCluster> & GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & typesToIgnore, CCBot & bot);
 
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);
