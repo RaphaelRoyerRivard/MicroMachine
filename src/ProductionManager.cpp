@@ -1649,7 +1649,9 @@ bool ProductionManager::canMakeAtArrival(const Building & building, const Unit &
 	//TODO get distance (raph), calcule travel time in frames, get current ressource per frame (need to do maths), check if we will have enough ressources in X frames
 	const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals / 60 / 24.4;
 	const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene / 60 / 24.4;
-	//Util::PathFinding::FindOptimalPathDistance()
+
+	//float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);
+	float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(building.finalPosition), false, m_bot);
 	return true;
 }
 
