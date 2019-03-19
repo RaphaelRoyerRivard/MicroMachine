@@ -80,6 +80,9 @@ CCPosition RepairStationManager::getBestRepairStationForUnit(const sc2::Unit* un
 
 bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack)
 {
+	if (!baseLocation)
+		return false;
+
 	if (!baseLocation->isOccupiedByPlayer(Players::Self))
 		return false;
 
