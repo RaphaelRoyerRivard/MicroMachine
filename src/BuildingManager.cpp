@@ -443,11 +443,11 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 			continue;
 		}
 
-		assignWorkersToUnassignedBuilding(b);
+		assignWorkerToUnassignedBuilding(b);
 	}
 }
 
-bool BuildingManager::assignWorkersToUnassignedBuilding(Building & b)
+bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 {
     BOT_ASSERT(!b.builderUnit.isValid(), "Error: Tried to assign a builder to a building that already had one ");
 
@@ -876,15 +876,36 @@ void BuildingManager::checkForCompletedBuildings()
 }
 
 // add a new building to be constructed
+// Used to create buildings (when we have the ressources)
 bool BuildingManager::addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition)
 {
 	Building b(type, desiredPosition);
 	b.status = BuildingStatus::Unassigned;
 
-	if (assignWorkersToUnassignedBuilding(b))
+	if (assignWorkerToUnassignedBuilding(b))
 	{
-		m_bot.ReserveMinerals(m_bot.Data(type).mineralCost);
-		m_bot.ReserveGas(m_bot.Data(type).gasCost);
+		TypeData typeData = m_bot.Data(b.type);
+		m_bot.ReserveMinerals(typeData.mineralCost);
+		m_bot.ReserveGas(typeData.gasCost);
+
+		m_buildings.push_back(b);
+
+		return true;
+	}
+	return false;
+}
+
+// add a new building to be constructed
+// Used for Premove
+bool BuildingManager::addBuildingTask(Building & b)
+{
+	b.status = BuildingStatus::Unassigned;
+
+	if (b.builderUnit.isValid() || assignWorkerToUnassignedBuilding(b))
+	{
+		TypeData typeData = m_bot.Data(b.type);
+		m_bot.ReserveMinerals(typeData.mineralCost);
+		m_bot.ReserveGas(typeData.gasCost);
 
 		m_buildings.push_back(b);
 

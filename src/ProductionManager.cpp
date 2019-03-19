@@ -363,11 +363,14 @@ void ProductionManager::manageBuildOrderQueue()
 					}
 				}
 
+				//TODO premove, getProducer, determine build location then check with canMakeAtArrival
+				//TODO remove other check for IsPathSafe, remove other worker selection, remove other Building b() creation
+
 				// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 				if (m_bot.Data(currentItem.type).isBuilding
 					&& !m_bot.Data(currentItem.type).isAddon
-					&& !currentItem.type.getUnitType().isMorphedBuilding()
-					&& meetsReservedResourcesWithExtra(currentItem.type, additionalReservedMineral, additionalReservedGas))
+					&& !currentItem.type.getUnitType().isMorphedBuilding())
+					/*&& meetsReservedResourcesWithExtra(currentItem.type, additionalReservedMineral, additionalReservedGas))*/
 				{
 					Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
 					//Get building location
@@ -375,19 +378,23 @@ void ProductionManager::manageBuildOrderQueue()
 					if (targetLocation != CCTilePosition(0, 0))
 					{
 						Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
+						b.finalPosition = targetLocation;
 						if (worker.isValid())
 						{
-							worker.move(targetLocation);
-
-							// create it and remove it from the _queue
-							if (create(worker, currentItem) && worker.isValid())
+							if (canMakeAtArrival(b, worker))
 							{
-								m_queue.removeCurrentHighestPriorityItem();
-							}
+								worker.move(targetLocation);
 
-							// don't actually loop around in here
-							break;
-						}
+								// create it and remove it from the _queue
+								if (create(worker, b) && worker.isValid())
+								{
+									m_queue.removeCurrentHighestPriorityItem();
+								}
+
+								// don't actually loop around in here
+								break;
+							}
+							}
 					}
 					else
 					{
@@ -1443,39 +1450,40 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 }
 
 // this function will check to see if all preconditions are met and then create a unit
-bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition position)
+// Used to create unit/tech/buildings (when we have the ressources)
+bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition)
 {
-    if (!producer.isValid())
-    {
-        return false;
-    }
+	if (!producer.isValid())
+	{
+		return false;
+	}
 
 	bool result;
-    // if we're dealing with a building
-    if (item.type.isBuilding())
-    {
-        if (item.type.getUnitType().isMorphedBuilding())
-        {
-            producer.morph(item.type.getUnitType());
-        }
-        else
-        {
-			if (position == CCTilePosition())
+	// if we're dealing with a building
+	if (item.type.isBuilding())
+	{
+		if (item.type.getUnitType().isMorphedBuilding())
+		{
+			producer.morph(item.type.getUnitType());
+		}
+		else
+		{
+			if (desidredPosition == CCTilePosition())
 			{
-				position = Util::GetTilePosition(m_bot.GetStartLocation());
+				desidredPosition = Util::GetTilePosition(m_bot.GetStartLocation());
 			}
 
-			result = m_bot.Buildings().addBuildingTask(item.type.getUnitType(), position);
-        }
-    }
-    // if we're dealing with a non-building unit
-    else if (item.type.isUnit())
-    {
-        producer.train(item.type.getUnitType());
+			result = m_bot.Buildings().addBuildingTask(item.type.getUnitType(), desidredPosition);
+		}
+	}
+	// if we're dealing with a non-building unit
+	else if (item.type.isUnit())
+	{
+		producer.train(item.type.getUnitType());
 		result = true;
-    }
-    else if (item.type.isUpgrade())
-    {
+	}
+	else if (item.type.isUpgrade())
+	{
 		Micro::SmartAbility(producer.getUnitPtr(), m_bot.Data(item.type.getUpgrade()).buildAbility, m_bot);
 
 #if _DEBUG
@@ -1489,9 +1497,32 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		incompletUpgradesProgress.insert(std::make_pair(item.type, 0.f));
 		Util::DebugLog(__FUNCTION__, "upgrade starting " + item.type.getName(), m_bot);
 		result = true;
-    }
+	}
 
 	return result;
+}
+
+// this function will check to see if all preconditions are met and then create a unit
+// Used for premove
+bool ProductionManager::create(const Unit & producer, Building & b, CCTilePosition desidredPosition)
+{
+    if (!producer.isValid())
+    {
+        return false;
+    }
+
+    if (b.type.isMorphedBuilding())
+    {
+        producer.morph(b.type);
+		return true;
+    }
+	
+	if (desidredPosition == CCTilePosition())
+	{
+		desidredPosition = Util::GetTilePosition(m_bot.GetStartLocation());
+	}
+
+	return m_bot.Buildings().addBuildingTask(b.type, desidredPosition);
 }
 
 bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
@@ -1611,6 +1642,14 @@ bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, i
 {
 	assert("Addons cannot use extra ressources", m_bot.Data(type).isAddon);
 	return (m_bot.Data(type).mineralCost <= m_bot.GetFreeMinerals() + getExtraMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= m_bot.GetFreeGas() + getExtraGas() - additionalReservedGas);
+}
+
+bool ProductionManager::canMakeAtArrival(const Building & building, const Unit & worker)
+{
+	//TODO get distance (raph), calcule travel time in frames, get current ressource per frame (need to do maths), check if we will have enough ressources in X frames
+	const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals / 60 / 24.4;
+	const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene / 60 / 24.4;
+	return true;
 }
 
 void ProductionManager::drawProductionInformation()

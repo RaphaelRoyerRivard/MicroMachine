@@ -32,7 +32,7 @@ class BuildingManager
 
     void            validateWorkersAndBuildings();		    // STEP 1
     void            assignWorkersToUnassignedBuildings();	// STEP 2
-	bool            assignWorkersToUnassignedBuilding(Building & b);
+	bool            assignWorkerToUnassignedBuilding(Building & b);
     void            constructAssignedBuildings();			// STEP 3
     void            checkForStartedConstruction();			// STEP 4
     void            checkForDeadTerranBuilders();			// STEP 5
@@ -54,6 +54,7 @@ public:
 	void				BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock);
 	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
     bool                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
+	bool				addBuildingTask(Building & b);
 	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
 	void				drawStartingRamp();

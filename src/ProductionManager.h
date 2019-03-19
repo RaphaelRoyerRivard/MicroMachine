@@ -4,6 +4,7 @@
 #include "BuildOrder.h"
 #include "BuildOrderQueue.h"
 #include "Unit.h"
+#include "Building.h"
 
 class CCBot;
 
@@ -33,7 +34,8 @@ class ProductionManager
     bool    canMakeNow(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
     void    setBuildOrder(const BuildOrder & buildOrder);
-    bool    create(const Unit & producer, BuildOrderItem & item, CCTilePosition position = CCTilePosition(0,0));
+    bool    create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition = CCTilePosition(0,0));
+	bool    create(const Unit & producer, Building & b, CCTilePosition desidredPosition = CCTilePosition(0, 0));
     void    manageBuildOrderQueue();
 	void	putImportantBuildOrderItemsInQueue();
 	void	QueueDeadBuildings();
@@ -69,5 +71,6 @@ public:
 	bool queueUpgrade(const MetaType & type, bool balanceUpgrades, bool ifFinishedTryHigherLevel);
 	bool meetsReservedResources(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
 	bool meetsReservedResourcesWithExtra(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
+	bool canMakeAtArrival(const Building & building, const Unit & worker);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
 };
