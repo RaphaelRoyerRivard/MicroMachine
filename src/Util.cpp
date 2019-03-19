@@ -168,10 +168,7 @@ float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosit
 		{
 			dist += Dist(lastPosition, position);
 		}
-		else
-		{
-			lastPosition = position;
-		}
+		lastPosition = position;
 	}
 	return dist;
 }
