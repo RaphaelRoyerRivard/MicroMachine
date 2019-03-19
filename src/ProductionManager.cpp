@@ -224,6 +224,10 @@ void ProductionManager::manageBuildOrderQueue()
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
     {
+		if (currentItem.type == MetaTypeEnum::CommandCenter)
+		{
+			auto a = 1;
+		}
 		//Get the lowest price for any top priority item in the queue.
 		if (currentItem.priority == highestPriority)
 		{
@@ -329,49 +333,44 @@ void ProductionManager::manageBuildOrderQueue()
 			if (!idleProductionBuilding)
 			{
 				// if we can make the current item
+				m_bot.StartProfiling("2.2.2     tryingToBuild");
 				if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 				{
+					m_bot.StartProfiling("2.2.3     getProducer");
 					Unit producer = getProducer(currentItem.type);
-					if (!producer.isValid())
-					{
-						Util::DebugLog("Producer is not valid.", __FUNCTION__, m_bot);
-						break;
-					}
-
+					m_bot.StopProfiling("2.2.3     getProducer");
 					// build supply if we need some (SupplyBlock)
-					if (producer.isValid()
-						&& m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+					if (producer.isValid())
 					{
-						supplyBlockedFrames++;
-#if _DEBUG
-						Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
-#else
-						Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", m_bot);
-#endif
-					}
-
-					if (canMakeNow(producer, currentItem.type))
-					{
-						// create it and remove it from the _queue
-						if (create(producer, currentItem))
+						if (m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
 						{
-							m_queue.removeCurrentHighestPriorityItem();
+							supplyBlockedFrames++;
+#if _DEBUG
+							Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
+#else
+							Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", m_bot);
+#endif
 						}
 
-						// don't actually loop around in here
-						break;
+						if (canMakeNow(producer, currentItem.type))
+						{
+							// create it and remove it from the _queue
+							if (create(producer, currentItem))
+							{
+								m_queue.removeCurrentHighestPriorityItem();
+							}
+
+							// don't actually loop around in here
+							break;
+						}
 					}
 				}
-
-				//TODO premove, getProducer, determine build location then check with canMakeAtArrival
-				//TODO remove other check for IsPathSafe, remove other worker selection, remove other Building b() creation
-
-				// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
-				if (m_bot.Data(currentItem.type).isBuilding
+				else if (m_bot.Data(currentItem.type).isBuilding
 					&& !m_bot.Data(currentItem.type).isAddon
 					&& !currentItem.type.getUnitType().isMorphedBuilding())
-					/*&& meetsReservedResourcesWithExtra(currentItem.type, additionalReservedMineral, additionalReservedGas))*/
 				{
+					// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
+
 					Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
 					//Get building location
 					const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, true, true);
@@ -394,13 +393,14 @@ void ProductionManager::manageBuildOrderQueue()
 								// don't actually loop around in here
 								break;
 							}
-							}
+						}
 					}
 					else
 					{
 						Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
 					}
 				}
+				m_bot.StopProfiling("2.2.2     tryingToBuild");
 			}
 		}
 		              
@@ -1644,15 +1644,28 @@ bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, i
 	return (m_bot.Data(type).mineralCost <= m_bot.GetFreeMinerals() + getExtraMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= m_bot.GetFreeGas() + getExtraGas() - additionalReservedGas);
 }
 
-bool ProductionManager::canMakeAtArrival(const Building & building, const Unit & worker)
+bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker)
 {
 	//TODO get distance (raph), calcule travel time in frames, get current ressource per frame (need to do maths), check if we will have enough ressources in X frames
 	const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals / 60 / 24.4;
 	const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene / 60 / 24.4;
 
 	//float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);
-	float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(building.finalPosition), false, m_bot);
-	return true;
+	float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(b.finalPosition), false, m_bot);
+	if (distance == -1)
+	{
+		auto a = 1;
+	}
+	float distance2 = Util::Dist(worker.getPosition(), Util::GetPosition(b.finalPosition));
+	const float speed = 2.8125f;//Always the same for workers, Util::getSpeedOfUnit(worker.getUnitPtr(), m_bot);
+	auto mineralGain = distance / speed / 16.f * mineralRate;
+	auto gasGain = distance / speed / 16.f * gasRate;
+
+	if (meetsReservedResourcesWithExtra(MetaType(b.type, m_bot), mineralGain, gasGain))
+	{
+		return true;
+	}
+	return false;
 }
 
 void ProductionManager::drawProductionInformation()

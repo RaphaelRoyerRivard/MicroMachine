@@ -24,14 +24,8 @@ void BuildingManager::onFirstFrame()
 	FindRampTiles(m_rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
 	FindMainRamp(m_rampTiles);
 
-	//Prevents crash when running in Release, will still crash in Debug. 
-#if !_DEBUG
-	if(rampTiles.size() > 0)
-#endif
-	{
-		auto tilesToBlock = FindRampTilesToPlaceBuilding(m_rampTiles);
-		PlaceSupplyDepots(tilesToBlock);
-	}
+	auto tilesToBlock = FindRampTilesToPlaceBuilding(m_rampTiles);
+	PlaceSupplyDepots(tilesToBlock);
 }
 
 // gets called every frame from GameCommander
