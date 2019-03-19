@@ -154,7 +154,7 @@ CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CC
  */
 float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot)
 {
-	const auto path = FindOptimalPath(unit, goal, 0.f, !ignoreInfluence, false, false, ignoreInfluence, bot);
+	const auto path = FindOptimalPath(unit, goal, 1.f, !ignoreInfluence, false, false, ignoreInfluence, bot);
 	if (path.empty())
 	{
 		return -1.f;
