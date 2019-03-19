@@ -919,6 +919,11 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		range = 5.f;
 	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			range = 4.f;
+	}
 
 	return range;
 }
@@ -1185,6 +1190,11 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
 	{
 		dps = 0.1f;	// hack so the cannons will be considered as weak
+	}
+	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			dps = 15.f;
 	}
 
     return dps;
