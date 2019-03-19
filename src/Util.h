@@ -13,6 +13,37 @@ namespace Util
 	static std::ofstream file;
 	static bool allowDebug;
 
+	struct UnitCluster
+	{
+		CCPosition m_center;
+		std::vector<const sc2::Unit *> m_units;
+
+		UnitCluster(CCPosition center, std::vector<const sc2::Unit *> units)
+			: m_center(center)
+			, m_units(units)
+		{};
+
+		bool operator<(const UnitCluster & rhs) const
+		{
+			if(m_units.size() == rhs.m_units.size())
+			{
+				if(m_center.x == rhs.m_center.x)
+				{
+					return m_center.y < rhs.m_center.y;
+				}
+				return m_center.x < rhs.m_center.x;
+			}
+			return m_units.size() < rhs.m_units.size();
+		}
+		bool operator>(const UnitCluster & rhs) const
+		{
+			return rhs < *this;
+		}
+	};
+
+	static std::list<UnitCluster> m_unitClusters;
+	static uint32_t m_lastUnitClusterFrame;
+
     struct IsUnit 
     {
         sc2::UNIT_TYPEID m_type;
@@ -50,9 +81,13 @@ namespace Util
 		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
-		CCPosition FindOptimalPath(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot);
+		float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);
+		CCPosition FindOptimalPathPosition(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot);
+		CCPosition FindOptimalPathToDodgeEffectTowardsGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot);
+		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, CCBot & bot);
 		CCTilePosition GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
-		CCPosition GetCommandPositionFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
+		CCPosition GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, CCBot & bot);
+		std::list<CCPosition> GetPositionListFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to);
 		bool HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		bool HasInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
@@ -68,6 +103,8 @@ namespace Util
 	bool Contains(O object, S structure) { return std::find(structure.begin(), structure.end(), object) != structure.end(); }
 	template< typename O, typename S>
 	typename S::iterator Find(O object, S structure) { return std::find(structure.begin(), structure.end(), object); }
+
+	std::list<UnitCluster> & GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & typesToIgnore, CCBot & bot);
 
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);

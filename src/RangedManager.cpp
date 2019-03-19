@@ -148,6 +148,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
 	const bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
 	const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
+	const bool isRaven = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
 	const bool isViking = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
 
 #ifndef PUBLIC_RELEASE
@@ -173,6 +174,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (unitShouldHeal)
 	{
 		goal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
+	}
+	else if(isRaven)
+	{
+		goal = GetBestSupportPosition(rangedUnit, rangedUnits);
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
@@ -244,28 +249,14 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 
-	m_bot.StartProfiling("0.10.4.1.5.1.6          KD8Charge");
-	// Check if unit can use KD8Charge
-	if(CanUseKD8Charge(rangedUnit))
+	m_bot.StartProfiling("0.10.4.1.5.1.6          UnitAbilities");
+	// Check if unit can use one of its abilities
+	if(ExecuteUnitAbilitiesLogic(rangedUnit, threats))
 	{
-		bool usedKD8Charge = false;
-		for (auto threat : threats)
-		{
-			// The expected threat position will be used to decide where to throw the mine
-			// (between the unit and the enemy or on the enemy if it is a worker)
-			if (ExecuteKD8ChargeLogic(rangedUnit, threat))
-			{
-				usedKD8Charge = true;
-				break;
-			}
-		}
-		if (usedKD8Charge)
-		{
-			m_bot.StopProfiling("0.10.4.1.5.1.6          KD8Charge");
-			return;
-		}
+		m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
+		return;
 	}
-	m_bot.StopProfiling("0.10.4.1.5.1.6          KD8Charge");
+	m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
 
 	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 	if (AllowUnitToPathFind(rangedUnit))
@@ -459,6 +450,39 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 	return rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.66f;
 }
 
+CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const
+{
+	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = {sc2::UNIT_TYPEID::TERRAN_RAVEN};
+	const auto clusters = Util::GetUnitClusters(rangedUnits, typesToIgnore, m_bot);
+	const Util::UnitCluster* closestBiggestCluster = nullptr;
+	float distance = 0.f;
+	for(const auto & cluster : clusters)
+	{
+		if(!closestBiggestCluster || cluster.m_units.size() > closestBiggestCluster->m_units.size())
+		{
+			closestBiggestCluster = &cluster;
+			distance = Util::Dist(supportUnit->pos, cluster.m_center) + Util::Dist(cluster.m_center, m_order.getPosition());
+			continue;
+		}
+		if (cluster.m_units.size() < closestBiggestCluster->m_units.size())
+		{
+			//break;	//could break if the clusters were sorted
+			continue;
+		}
+		const float dist = Util::Dist(supportUnit->pos, cluster.m_center) + Util::Dist(cluster.m_center, m_order.getPosition());
+		if(dist < distance)
+		{
+			closestBiggestCluster = &cluster;
+			distance = dist;
+		}
+	}
+	if(closestBiggestCluster)
+	{
+		return closestBiggestCluster->m_center;
+	}
+	return m_order.getPosition();
+}
+
 bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal)
 {
 	bool morph = false;
@@ -614,7 +638,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 				// If the unit is standing on effect influence, get it out of there before fighting
 				if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit, m_bot) > 0.f)
 				{
-					CCPosition movePosition = Util::PathFinding::FindOptimalPath(rangedUnit, target->pos, range, false, true, false, m_bot);
+					CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(rangedUnit, target->pos, range, m_bot);
 					if (movePosition != CCPosition())
 					{
 						const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, 0);
@@ -732,7 +756,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			// If the unit is standing on effect influence, get it out of it before fighting
 			if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), unit, m_bot) > 0.f)
 			{
-				CCPosition movePosition = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, unitRange, false, true, false, m_bot);
+				CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(unit, unitTarget->pos, unitRange, m_bot);
 				if(movePosition != CCPosition())
 				{
 					const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
@@ -758,46 +782,113 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	return false;
 }
 
-bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * rangedUnit, const sc2::Unit * threat)
+bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats)
 {
-	if (threat->is_flying)
-		return false;
-
-	const auto it = m_bot.GetPreviousFrameEnemyPos().find(threat->tag);
-	if (it == m_bot.GetPreviousFrameEnemyPos().end())
-		return false;
-
-	const auto previousFrameEnemyPos = it->second;
-	const auto threatDirectionVector = Util::Normalized(threat->pos - previousFrameEnemyPos);
-	const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
-	CCPosition expectedThreatPosition = threat->pos + threatDirectionVector * threatSpeed * HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE;
-	Unit threatUnit = Unit(threat, m_bot);
-	if (threatUnit.getType().isBuilding())	//because some buildings speed > 0
-		expectedThreatPosition = threat->pos;
-	if (!m_bot.Map().isWalkable(expectedThreatPosition))
-		return false;
-	const float distToExpectedPosition = Util::DistSq(rangedUnit->pos, expectedThreatPosition);
-	const float rangedUnitRange = Util::GetAttackRangeForTarget(rangedUnit, threat, m_bot);
-	// Check if we have enough reach to throw at the threat
-	if (distToExpectedPosition <= rangedUnitRange * rangedUnitRange)
+	if (ExecuteKD8ChargeLogic(rangedUnit, threats))
 	{
-		const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, true, REAPER_KD8_CHARGE_FRAME_COUNT);
-		if (PlanAction(rangedUnit, action))
-		{
-			nextAvailableKD8ChargeFrameForReaper[rangedUnit] = m_bot.GetGameLoop() + REAPER_KD8_CHARGE_COOLDOWN;
-		}
 		return true;
+	}
+
+	if (ExecuteAutoTurretLogic(rangedUnit, threats))
+	{
+		return true;
+	}
+
+	return false;
+}
+
+bool RangedManager::CanUseKD8Charge(const sc2::Unit * reaper) const
+{
+	if (reaper->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+	{
+		const uint32_t availableFrame = nextAvailableKD8ChargeFrameForReaper.find(reaper) != nextAvailableKD8ChargeFrameForReaper.end() ? nextAvailableKD8ChargeFrameForReaper.at(reaper) : 0;
+		return m_bot.GetGameLoop() >= availableFrame;
 	}
 	return false;
 }
 
-bool RangedManager::CanUseKD8Charge(const sc2::Unit * rangedUnit) const
+bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::Units & threats)
 {
-	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+	// Check if the Reaper can use its KD8Charge ability
+	if (!CanUseKD8Charge(reaper))
 	{
-		const uint32_t availableFrame = nextAvailableKD8ChargeFrameForReaper.find(rangedUnit) != nextAvailableKD8ChargeFrameForReaper.end() ? nextAvailableKD8ChargeFrameForReaper.at(rangedUnit) : 0;
-		return m_bot.GetGameLoop() >= availableFrame;
+		return false;
 	}
+
+	for (const auto threat : threats)
+	{
+		if (threat->is_flying)
+			continue;
+
+		const auto it = m_bot.GetPreviousFrameEnemyPos().find(threat->tag);
+		if (it == m_bot.GetPreviousFrameEnemyPos().end())
+			continue;
+
+		// The expected threat position will be used to decide where to throw the mine
+		const auto previousFrameEnemyPos = it->second;
+		const auto threatDirectionVector = Util::Normalized(threat->pos - previousFrameEnemyPos);
+		const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+		CCPosition expectedThreatPosition = threat->pos + threatDirectionVector * threatSpeed * HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE;
+		Unit threatUnit = Unit(threat, m_bot);
+		if (threatUnit.getType().isBuilding())	//because some buildings speed > 0
+			expectedThreatPosition = threat->pos;
+		if (!m_bot.Map().isWalkable(expectedThreatPosition))
+			continue;
+		const float distToExpectedPosition = Util::DistSq(reaper->pos, expectedThreatPosition);
+		const float rangedUnitRange = Util::GetAttackRangeForTarget(reaper, threat, m_bot);
+		// Check if we have enough reach to throw at the threat
+		if (distToExpectedPosition <= rangedUnitRange * rangedUnitRange)
+		{
+			const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, true, REAPER_KD8_CHARGE_FRAME_COUNT);
+			if (PlanAction(reaper, action))
+			{
+				nextAvailableKD8ChargeFrameForReaper[reaper] = m_bot.GetGameLoop() + REAPER_KD8_CHARGE_COOLDOWN;
+			}
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool RangedManager::ShouldBuildAutoTurret(const sc2::Unit * raven, const sc2::Units & threats) const
+{
+	if (raven->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN && raven->energy >= 50)
+	{
+		//TODO check if we have the +1 range upgrade for the Auto-Turret
+		for(const auto threat : threats)
+		{
+			if (Util::DistSq(raven->pos, threat->pos) < 9.f * 9.f)	// Ability range (3) + Auto-Turret range (6)
+				return true;
+		}
+	}
+	return false;
+}
+
+bool RangedManager::ExecuteAutoTurretLogic(const sc2::Unit * raven, const sc2::Units & threats)
+{
+	if(!ShouldBuildAutoTurret(raven, threats))
+	{
+		return false;
+	}
+
+	//TODO check if we have the +1 range upgrade for the Auto-Turret
+	const sc2::Unit * closestThreat = nullptr;
+	float distance = 0.f;
+	for (const auto threat : threats)
+	{
+		const float dist = Util::DistSq(raven->pos, threat->pos);
+		if(!closestThreat || dist < distance)
+		{
+			closestThreat = threat;
+			distance = dist;
+		}
+	}
+
+	const CCPosition autoTurretPosition = raven->pos + 2.5f * Util::Normalized(closestThreat->pos - raven->pos);
+
+	const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_AUTOTURRET, autoTurretPosition, true, 0);
+	PlanAction(raven, action);
 	return false;
 }
 
@@ -977,6 +1068,11 @@ CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vect
 const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets)
 {
     BOT_ASSERT(rangedUnit, "null ranged unit in getTarget");
+
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN)
+	{
+		return nullptr;
+	}
 
 	std::multiset<std::pair<float, const sc2::Unit *>> targetPriorities;
 
