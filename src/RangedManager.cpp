@@ -772,10 +772,26 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			}
 
 			const bool canAttackNow = unitRange * unitRange <= Util::DistSq(unit->pos, unitTarget->pos) && rangedUnit->weapon_cooldown <= 0.f;
-			const int attackDuration = canAttackNow ? getAttackDuration(unit) : 0;
-			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, false, attackDuration);
-			// Attack the target
-			PlanAction(unit, action);
+
+			auto fleePosition = CCPosition();
+			if(!canAttackNow && unit->health / unit->health_max < 0.5f)
+			{
+				fleePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, m_bot);
+			}
+			if(fleePosition != CCPosition())
+			{
+				const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
+				const auto action = RangedUnitAction(MicroActionType::Move, fleePosition, false, actionDuration);
+				// Flee but stay in range
+				PlanAction(unit, action);
+			}
+			else
+			{
+				const int attackDuration = canAttackNow ? getAttackDuration(unit) : 0;
+				const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, false, attackDuration);
+				// Attack the target
+				PlanAction(unit, action);
+			}
 		}
 		return true;
 	}
