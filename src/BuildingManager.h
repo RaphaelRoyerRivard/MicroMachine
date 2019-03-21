@@ -22,6 +22,7 @@ class BuildingManager
 	std::list<CCTilePosition> m_wallBuildingPosition;
 	std::list<Unit> m_wallBuilding;
 	std::map<UnitType, std::list<CCTilePosition>> m_nextBuildingPosition;
+	std::vector<std::pair<CCTilePosition, CCTilePosition>> m_previousNextBuildingPositionByBase;
 
     bool            m_debugMode;
 
@@ -53,7 +54,6 @@ public:
 	std::vector<CCTilePosition> FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles);
 	void				BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock);
 	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
-    bool                addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition);
 	bool				addBuildingTask(Building & b);
 	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
@@ -67,7 +67,7 @@ public:
 	CCTilePosition		getWallPosition();
 	std::list<Unit>		getWallBuildings();
     CCTilePosition      getBuildingLocation(const Building & b, bool checkInfluenceMap);
-	CCTilePosition		getNextBuildingLocation(const Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap);
+	CCTilePosition		getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);

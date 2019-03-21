@@ -94,7 +94,7 @@
         "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
-        "DrawProfilingInfo"         : false,
+        "DrawProfilingInfo"         : true,
         "DrawInfluenceMaps"         : false,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,

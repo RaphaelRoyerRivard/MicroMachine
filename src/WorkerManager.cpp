@@ -219,7 +219,7 @@ void WorkerManager::handleGasWorkers()
 	}
 
     // for each unit we have
-    for (auto & building : m_bot.Buildings().getFinishedBuildings())
+    for (auto & building : m_bot.Buildings().getFinishedBuildings())//TODO Can be optimised CCBot::GetAllyUnits(sc2::UNIT_TYPEID type)
     {
         // if that unit is a refinery
         if (building.getType().isRefinery() && building.isCompleted())
@@ -816,7 +816,7 @@ Unit WorkerManager::getClosestGasWorkerTo(const CCPosition & pos, CCUnitID worke
 		{
 			if (!isReturningCargo(worker))
 			{
-				///TODO: Maybe it should by ground distance?
+				///TODO: Maybe it should by ground distance? Not sure how it will affect performance
 				double dist = Util::DistSq(worker.getPosition(), pos);
 				if (!closestMineralWorker.isValid() || dist < closestDist)
 				{

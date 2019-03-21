@@ -224,10 +224,6 @@ void ProductionManager::manageBuildOrderQueue()
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
     {
-		if (currentItem.type == MetaTypeEnum::CommandCenter)
-		{
-			auto a = 1;
-		}
 		//Get the lowest price for any top priority item in the queue.
 		if (currentItem.priority == highestPriority)
 		{
@@ -310,16 +306,20 @@ void ProductionManager::manageBuildOrderQueue()
 				}				
 			}
 
+			//Check if we already have an idle production building of that type
 			bool idleProductionBuilding = false;
 			if(currentItem.type.isBuilding())
 			{
 				auto productionBuildingTypes = getProductionBuildingTypes();
 				const sc2::UnitTypeID itemType = currentItem.type.getUnitType().getAPIUnitType();
+
+				//If its a production building
 				if(std::find(productionBuildingTypes.begin(), productionBuildingTypes.end(), itemType) != productionBuildingTypes.end())
 				{
 					auto & productionBuildings = m_bot.GetAllyUnits(itemType);
 					for(auto & productionBuilding : productionBuildings)
 					{
+						//Check if this building is idle
 						auto & orders = productionBuilding.getUnitPtr()->orders;
 						if(orders.empty() || orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
 						{
@@ -336,9 +336,8 @@ void ProductionManager::manageBuildOrderQueue()
 				m_bot.StartProfiling("2.2.2     tryingToBuild");
 				if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 				{
-					m_bot.StartProfiling("2.2.3     getProducer");
+					m_bot.StartProfiling("2.2.3     Build without premovement");
 					Unit producer = getProducer(currentItem.type);
-					m_bot.StopProfiling("2.2.3     getProducer");
 					// build supply if we need some (SupplyBlock)
 					if (producer.isValid())
 					{
@@ -355,15 +354,18 @@ void ProductionManager::manageBuildOrderQueue()
 						if (canMakeNow(producer, currentItem.type))
 						{
 							// create it and remove it from the _queue
-							if (create(producer, currentItem))
+							if (create(producer, currentItem, Util::GetTilePosition(m_bot.GetStartLocation())))
 							{
 								m_queue.removeCurrentHighestPriorityItem();
-							}
 
-							// don't actually loop around in here
-							break;
+								// don't actually loop around in here
+								m_bot.StopProfiling("2.2.2     tryingToBuild");
+								m_bot.StopProfiling("2.2.3     Build without premovement");
+								break;
+							}
 						}
 					}
+					m_bot.StopProfiling("2.2.3     Build without premovement");
 				}
 				else if (m_bot.Data(currentItem.type).isBuilding
 					&& !m_bot.Data(currentItem.type).isAddon
@@ -371,26 +373,31 @@ void ProductionManager::manageBuildOrderQueue()
 				{
 					// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
+					m_bot.StartProfiling("2.2.4     Build with premovement");
 					Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
 					//Get building location
+
+					m_bot.StartProfiling("2.2.5     getNextBuildingLocation");
 					const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, true, true);
+					m_bot.StopProfiling("2.2.5     getNextBuildingLocation");
 					if (targetLocation != CCTilePosition(0, 0))
 					{
 						Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
-						b.finalPosition = targetLocation;
 						if (worker.isValid())
 						{
+							b.finalPosition = targetLocation;
 							if (canMakeAtArrival(b, worker))
 							{
-								worker.move(targetLocation);
-
 								// create it and remove it from the _queue
 								if (create(worker, b) && worker.isValid())
 								{
+									worker.move(targetLocation);
 									m_queue.removeCurrentHighestPriorityItem();
 								}
 
 								// don't actually loop around in here
+								m_bot.StopProfiling("2.2.2     tryingToBuild");
+								m_bot.StopProfiling("2.2.4     Build with premovement");
 								break;
 							}
 						}
@@ -399,6 +406,7 @@ void ProductionManager::manageBuildOrderQueue()
 					{
 						Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
 					}
+					m_bot.StopProfiling("2.2.4     Build with premovement");
 				}
 				m_bot.StopProfiling("2.2.2     tryingToBuild");
 			}
@@ -1465,15 +1473,12 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		if (item.type.getUnitType().isMorphedBuilding())
 		{
 			producer.morph(item.type.getUnitType());
+			result = true;
 		}
 		else
 		{
-			if (desidredPosition == CCTilePosition())
-			{
-				desidredPosition = Util::GetTilePosition(m_bot.GetStartLocation());
-			}
-
-			result = m_bot.Buildings().addBuildingTask(item.type.getUnitType(), desidredPosition);
+			Building b(item.type.getUnitType(), desidredPosition);
+			result = m_bot.Buildings().addBuildingTask(b);
 		}
 	}
 	// if we're dealing with a non-building unit
@@ -1504,7 +1509,7 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used for premove
-bool ProductionManager::create(const Unit & producer, Building & b, CCTilePosition desidredPosition)
+bool ProductionManager::create(const Unit & producer, Building & b)
 {
     if (!producer.isValid())
     {
@@ -1516,13 +1521,8 @@ bool ProductionManager::create(const Unit & producer, Building & b, CCTilePositi
         producer.morph(b.type);
 		return true;
     }
-	
-	if (desidredPosition == CCTilePosition())
-	{
-		desidredPosition = Util::GetTilePosition(m_bot.GetStartLocation());
-	}
 
-	return m_bot.Buildings().addBuildingTask(b.type, desidredPosition);
+	return m_bot.Buildings().addBuildingTask(b);
 }
 
 bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
@@ -1651,15 +1651,15 @@ bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker
 	const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene / 60 / 24.4;
 
 	//float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);
-	float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(b.finalPosition), false, m_bot);
+	/*float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(b.finalPosition), false, m_bot);
 	if (distance == -1)
 	{
 		auto a = 1;
-	}
+	}*/
 	float distance2 = Util::Dist(worker.getPosition(), Util::GetPosition(b.finalPosition));
 	const float speed = 2.8125f;//Always the same for workers, Util::getSpeedOfUnit(worker.getUnitPtr(), m_bot);
-	auto mineralGain = distance / speed / 16.f * mineralRate;
-	auto gasGain = distance / speed / 16.f * gasRate;
+	auto mineralGain = distance2 / speed / 16.f * mineralRate;
+	auto gasGain = distance2 / speed / 16.f * gasRate;
 
 	if (meetsReservedResourcesWithExtra(MetaType(b.type, m_bot), mineralGain, gasGain))
 	{

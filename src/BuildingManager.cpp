@@ -529,11 +529,6 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 		m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
 		b.builderUnit = builderUnit;
 
-		if (!b.builderUnit.isValid())
-		{
-			return false;
-		}
-
 		if (!b.underConstruction)
 		{
 			// reserve this building's space
@@ -552,11 +547,6 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 						m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y - 1, 3, 1);//Reserve below
 						m_buildingPlacer.reserveTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, 2, 2);//Reserve addon
 					}
-					//Reserve tiles for addon
-					/*case sc2::UNIT_TYPEID::TERRAN_STARPORT:
-					{
-						m_buildingPlacer.reserveTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, 2, 2);
-					}*/
 				}
 			}
 		}
@@ -870,42 +860,31 @@ void BuildingManager::checkForCompletedBuildings()
 }
 
 // add a new building to be constructed
-// Used to create buildings (when we have the ressources)
-bool BuildingManager::addBuildingTask(const UnitType & type, const CCTilePosition & desiredPosition)
-{
-	Building b(type, desiredPosition);
-	b.status = BuildingStatus::Unassigned;
-
-	if (assignWorkerToUnassignedBuilding(b))
-	{
-		TypeData typeData = m_bot.Data(b.type);
-		m_bot.ReserveMinerals(typeData.mineralCost);
-		m_bot.ReserveGas(typeData.gasCost);
-
-		m_buildings.push_back(b);
-
-		return true;
-	}
-	return false;
-}
-
-// add a new building to be constructed
 // Used for Premove
 bool BuildingManager::addBuildingTask(Building & b)
 {
 	b.status = BuildingStatus::Unassigned;
 
-	if (b.builderUnit.isValid() || assignWorkerToUnassignedBuilding(b))
+	if (b.builderUnit.isValid())
 	{
-		TypeData typeData = m_bot.Data(b.type);
-		m_bot.ReserveMinerals(typeData.mineralCost);
-		m_bot.ReserveGas(typeData.gasCost);
-
-		m_buildings.push_back(b);
-
-		return true;
+		//Check if path is safe
+		if (!Util::PathFinding::IsPathToGoalSafe(b.builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+		{
+			return false;
+		}
 	}
-	return false;
+	else if (!assignWorkerToUnassignedBuilding(b))//Includes a check to see if path is safe
+	{
+		return false;
+	}
+
+	TypeData typeData = m_bot.Data(b.type);
+	m_bot.ReserveMinerals(typeData.mineralCost);
+	m_bot.ReserveGas(typeData.gasCost);
+
+	m_buildings.push_back(b);
+
+	return true;
 }
 
 bool BuildingManager::isConstructingType(const UnitType & type)
@@ -1115,26 +1094,52 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool che
 	return buildingLocation;
 }
 
-CCTilePosition BuildingManager::getNextBuildingLocation(const Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap)
+CCTilePosition BuildingManager::getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap)
 {
 	if (checkNextBuildingPosition)
 	{
 		std::map<UnitType, std::list<CCTilePosition>>::iterator it = m_nextBuildingPosition.find(b.type);
 		if (it != m_nextBuildingPosition.end())
 		{
-			CCTilePosition location;
 			if (!it->second.empty())
 			{
-				location = it->second.front();
+				return it->second.front();
 			}
-			else
-			{
-				location = getBuildingLocation(b, checkInfluenceMap);
-			}
-			return location;
 		}
 	}
-	return getBuildingLocation(b, checkInfluenceMap);
+
+	CCTilePosition basePosition = b.desiredPosition;
+	//Check where we last built (or tried to) a building and start looking from there.
+	CCTilePosition position;
+	/*for (auto & lastBuiltPosition : m_previousNextBuildingPositionByBase)
+	{
+		if (lastBuiltPosition.first == basePosition)
+		{
+			b.desiredPosition = lastBuiltPosition.second;
+			break;
+		}
+	}
+	*/
+	position = getBuildingLocation(b, checkInfluenceMap);
+	/*if (position.x != 0)//No need to check Y
+	{
+		//Update the last built (or tried to) location.
+		bool found = false;
+		for (auto & lastBuiltPosition : m_previousNextBuildingPositionByBase)
+		{
+			if (lastBuiltPosition.first == basePosition)
+			{
+				lastBuiltPosition.second = position;
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+		{
+			m_previousNextBuildingPositionByBase.push_back(std::pair<CCTilePosition, CCTilePosition>(basePosition, position));
+		}
+	}*/
+	return position;
 }
 
 Unit BuildingManager::getClosestResourceDepot(CCPosition position)
