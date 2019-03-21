@@ -222,10 +222,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 		{
 			buildLocation = b.desiredPosition;//Avoids crashing, but this won't work well.
 		}
-		else
-		{
-			direction++;
-		}
+		direction++;
 	}
 
     // get the precomputed vector of tile positions which are sorted closes to this location

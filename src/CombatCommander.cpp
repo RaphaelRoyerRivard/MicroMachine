@@ -819,24 +819,33 @@ void CombatCommander::updateDefenseBuildings()
 	bool wallShouldBeRaised = false;
 	auto wallCenter = m_bot.Buildings().getWallPosition();
 	auto enemies = m_bot.GetEnemyUnits();
-	for (auto enemy : enemies)
+
+	if (enemies.count == 0)
 	{
-		CCTilePosition enemyPosition = enemy.second.getTilePosition();
-		int distance = Util::DistSq(enemyPosition, wallCenter);
-		if (distance < SUPPLYDEPOT_DISTANCE)
-		{//Raise wall
-			if (!m_wallRaised)
-			{
-				for (auto & building : m_bot.Buildings().getWallBuildings())
+		wallShouldBeRaised = true;
+	}
+	else
+	{
+		for (auto enemy : enemies)
+		{
+			CCTilePosition enemyPosition = enemy.second.getTilePosition();
+			int distance = Util::DistSq(enemyPosition, wallCenter);
+			if (distance < SUPPLYDEPOT_DISTANCE)
+			{//Raise wall
+				if (!m_wallRaised)
 				{
-					building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
+					for (auto & building : m_bot.Buildings().getWallBuildings())
+					{
+						building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
+					}
+					m_wallRaised = true;
+					wallShouldBeRaised = true;
 				}
-				m_wallRaised = true;
-				wallShouldBeRaised = true;
+				break;
 			}
-			break;
 		}
 	}
+
 	if (wallShouldBeRaised && m_wallRaised)
 	{//Lower wall
 		for (auto & building : m_bot.Buildings().getWallBuildings())
