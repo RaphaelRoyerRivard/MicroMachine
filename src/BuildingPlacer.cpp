@@ -38,43 +38,35 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b, bool ignor
 	//TODO: Unused, it is outdated, check canBuildHereWithSpace instead
 	BOT_ASSERT(true, "Unused, it is outdated, check canBuildHereWithSpace instead");
 
+	// if it overlaps a base location return false
+	if (!ignoreReservedTiles && tileOverlapsBaseLocation(bx, by, b.type))
+	{
+		return false;
+	}
+
     // check the reserve map
     for (int x = bx; x < bx + b.type.tileWidth(); x++)
     {
         for (int y = by; y < by + b.type.tileHeight(); y++)
         {
-            if (!buildable(b.type, x, y, ignoreReservedTiles) || (!ignoreReservedTiles && m_reserveMap[x][y]))
+            if ((!ignoreReservedTiles && m_reserveMap[x][y]) || !buildable(b.type, x, y, ignoreReservedTiles))
             {
                 return false;
             }
         }
     }
-
-    // if it overlaps a base location return false
-    if (!ignoreReservedTiles && tileOverlapsBaseLocation(bx, by, b.type))
-    {
-        return false;
-    }
-
-    return true;
+	//TODO removed unneeded Query
+	/*if (!ignoreReservedTiles && !m_bot.Map().canBuildTypeAtPosition(bx, by, b.type))
+	{
+		return false;
+	}*/
+	return true;
 }
 
 //returns true if we can build this type of unit here with the specified amount of space.
 bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const
 {
-	//If its not safe. We only check one tile since its very likely to be the save result for all tiles. This avoid a little bit of lag.
-	if (checkInfluenceMap && Util::PathFinding::HasInfluenceOnTile(CCTilePosition(bx, by), false, m_bot))
-	{
-		return false;
-	}
-
-    UnitType type = b.type;
-
-    //if we can't build here, we of course can't build here with space (it is checked again in the loop below)
-    if (!buildable(b.type, bx, by) || (!ignoreReserved && m_reserveMap[bx][by]))
-    {
-        return false;
-    }
+	UnitType type = b.type;
 
     // height and width of the building
     int width  = b.type.tileWidth();
@@ -86,8 +78,6 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     int endx   = bx + width + buildDist;
     int endy   = by + height + buildDist;
 
-    // TODO: recalculate start and end positions for addons
-
     // if this rectangle doesn't fit on the map we can't build here
 	const CCPosition mapMin = m_bot.Map().mapMin();
 	const CCPosition mapMax = m_bot.Map().mapMax();
@@ -95,6 +85,13 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     {
         return false;
     }
+
+	//If its not safe. We only check one tile since its very likely to be the save result for all tiles. This avoid a little bit of lag.
+	if (checkInfluenceMap && Util::PathFinding::HasInfluenceOnTile(CCTilePosition(bx, by), false, m_bot))
+	{
+		//TODO don't think this can happen, there is a check earlier
+		return false;
+	}
 	
     // if we can't build here, or space is reserved, we can't build here
     for (int x = startx; x < endx; x++)
@@ -103,30 +100,52 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
         {
             if (!b.type.isRefinery())
             {
-                if (!buildable(b.type, x, y) || (!ignoreReserved && m_reserveMap[x][y]))
+                if ((!ignoreReserved && m_reserveMap[x][y]) || !buildable(b.type, x, y))
                 {
                     return false;
                 }
             }
         }
     }
+	//TODO removed unneeded Query
+	/*if (!ignoreReserved && !m_bot.Map().canBuildTypeAtPosition(bx, by, type))
+	{
+		//Type 29, armory close to refinery
+		return false;
+	}*/
 
 	//Test if there is space for an addon
+	m_bot.StartProfiling("0.1 AddonLagCheck");
 	switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
 	{
 		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
 		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
 		case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 		{
-			if (!m_bot.Map().canBuildTypeAtPosition(startx + width, starty, UnitType(sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR, m_bot)))
+			for (int x = 0; x < 2; x++)
 			{
-				return false;
+				for (int y = 0; y < 2; y++)
+				{
+					if ((!ignoreReserved && m_reserveMap[startx + width + x][starty + y]) || !buildable(b.type, startx + width + x, starty + y))
+					{
+						m_bot.StopProfiling("0.1 AddonLagCheck");
+						return false;
+					}
+				}
 			}
+			//TODO removed unneeded Query
+			//Replaced by above
+			/*if (!ignoreReserved && !m_bot.Map().canBuildTypeAtPosition(bx + width, by, UnitType(sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR, m_bot)))
+			{
+				//Type Starport, failed addon
+				return false;
+			}*/
 			break;
 		}
 		default:
 			break;
 	}
+	m_bot.StopProfiling("0.1 AddonLagCheck");
     return true;
 }
 
@@ -267,11 +286,54 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
 
 bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreReservedTiles) const
 {
-    // TODO: doesnt take units on the map into account
-	bool isBuildable = m_bot.Map().isBuildable(x, y) || ignoreReservedTiles;
-	bool canBuildAtPosition = type.isAddon() || m_bot.Map().canBuildTypeAtPosition(x, y, type) || ignoreReservedTiles;
-	bool isOkWithCreep = Util::IsZerg(m_bot.GetSelfRace()) || !m_bot.Observation()->HasCreep(CCPosition(x, y));
-	return isBuildable && canBuildAtPosition && isOkWithCreep;	//Replaced !m_bot.Map().canBuildTypeAtPosition(x, y, b.type)) with isBuildable.
+	//Do not check for reservedTiles here, bool is not properly named.
+	// TODO: doesnt take units on the map into account
+	//ignoreReservedTiles is used for more than just ignoring reserved tiles.
+
+	//Check if tiles are blocked
+	if (!ignoreReservedTiles && !type.isGeyser())
+	{
+		if (m_bot.Commander().Combat().isTileBlocked(x - 1, y - 1))
+		{
+			return false;
+		}
+	}
+
+	//Check for supply depot in the way, they are not in the blockedTiles map
+	for (auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED))//TODO could be simplified
+	{
+		CCTilePosition position = b.getTilePosition();
+				
+		//(x, y) is inside a supply depot
+		if (position.x == x && position.y == y)
+		{
+			return false;
+		}
+		if (position.x + 1 == x && position.y == y)
+		{
+			return false;
+		}
+		if (position.x == x && position.y + 1 == y)
+		{
+			return false;
+		}
+		if (position.x + 1 == x && position.y + 1 == y)
+		{
+			return false;
+		}
+	}
+	
+	//check if buildable
+	if (!ignoreReservedTiles && !m_bot.Map().isBuildable(x, y))
+	{
+		return false;
+	}
+
+	if (!Util::IsZerg(m_bot.GetSelfRace()) && m_bot.Observation()->HasCreep(CCPosition(x, y)))
+	{
+		return false;
+	}
+	return true;
 }
 
 void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)

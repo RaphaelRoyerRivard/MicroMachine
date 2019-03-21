@@ -1493,6 +1493,15 @@ std::map<Unit, std::pair<CCPosition, uint32_t>> & CombatCommander::GetInvisibleS
 	return m_invisibleSighting;
 }
 
+bool CombatCommander::isTileBlocked(int x, int y)
+{
+	if (m_blockedTiles.size() <= 0)
+	{
+		return false;
+	}
+	return m_blockedTiles[x][y];
+}
+
 void CombatCommander::drawSquadInformation()
 {
     m_squadData.drawSquadInformation();

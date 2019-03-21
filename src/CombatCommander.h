@@ -80,6 +80,7 @@ public:
 	const std::vector<std::vector<float>> & getGroundEffectInfluenceMap() const { return m_groundEffectInfluenceMap; }
 	const std::vector<std::vector<float>> & getAirEffectInfluenceMap() const { return m_airEffectInfluenceMap; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
+	bool isTileBlocked(int x, int y);
 
 	CCPosition getMainAttackLocation();
     void drawSquadInformation();
