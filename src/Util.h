@@ -92,9 +92,11 @@ namespace Util
 		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to);
 		bool HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		float GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
+		float GetInfluenceOnTile(CCTilePosition tile, bool ground, CCBot & bot);
 		bool HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		bool IsUnitOnTileWithEffectInfluence(const sc2::Unit * unit, CCBot & bot);
 		float GetEffectInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
+		float GetEffectInfluenceOnTile(CCTilePosition tile, bool ground, CCBot & bot);
 	}
 
 	void SetAllowDebug(bool _allowDebug);

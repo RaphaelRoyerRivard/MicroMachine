@@ -420,7 +420,12 @@ bool Util::PathFinding::HasInfluenceOnTile(const IMNode* node, const sc2::Unit *
 
 float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
 {
-	const auto & influenceMap = unit->is_flying ? bot.Commander().Combat().getAirInfluenceMap() : bot.Commander().Combat().getGroundInfluenceMap();
+	return GetInfluenceOnTile(tile, !unit->is_flying, bot);
+}
+
+float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, bool ground, CCBot & bot)
+{
+	const auto & influenceMap = ground ? bot.Commander().Combat().getGroundInfluenceMap() : bot.Commander().Combat().getAirInfluenceMap();
 	return influenceMap[tile.x][tile.y];
 }
 
@@ -436,7 +441,12 @@ bool Util::PathFinding::IsUnitOnTileWithEffectInfluence(const sc2::Unit * unit, 
 
 float Util::PathFinding::GetEffectInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
 {
-	const auto & effectInfluenceMap = unit->is_flying ? bot.Commander().Combat().getAirEffectInfluenceMap() : bot.Commander().Combat().getGroundEffectInfluenceMap();
+	return GetEffectInfluenceOnTile(tile, !unit->is_flying, bot);
+}
+
+float Util::PathFinding::GetEffectInfluenceOnTile(CCTilePosition tile, bool ground, CCBot & bot)
+{
+	const auto & effectInfluenceMap = ground ? bot.Commander().Combat().getGroundEffectInfluenceMap() : bot.Commander().Combat().getAirEffectInfluenceMap();
 	return effectInfluenceMap[tile.x][tile.y];
 }
 

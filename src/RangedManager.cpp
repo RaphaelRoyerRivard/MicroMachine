@@ -22,7 +22,7 @@ const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_COOLDOWN = 342;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
 const int REAPER_MOVE_FRAME_COUNT = 3;
-const int VIKING_MORPH_FRAME_COUNT = 80;
+const int VIKING_MORPH_FRAME_COUNT = 40;
 const float VIKING_LANDING_DISTANCE_FROM_GOAL = 10.f;
 const int ACTION_REEXECUTION_FREQUENCY = 50;
 
@@ -497,7 +497,9 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squa
 	}
 	else if (squaredDistanceToGoal < VIKING_LANDING_DISTANCE_FROM_GOAL * VIKING_LANDING_DISTANCE_FROM_GOAL && !target)
 	{
-		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
+			&& Util::PathFinding::GetInfluenceOnTile(Util::GetTilePosition(viking->pos), true, m_bot) == 0.f
+			&& Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(viking->pos), true, m_bot) == 0.f)
 		{
 			morphAbility = sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE;
 			morph = true;
