@@ -26,7 +26,7 @@ void BuildingManager::onFirstFrame()
 
 	//Prevents crash when running in Release, will still crash in Debug. 
 #if !_DEBUG
-	if(m_rampTiles.size() > 0)
+	if(rampTiles.size() > 0)
 #endif
 	{
 		auto tilesToBlock = FindRampTilesToPlaceBuilding(rampTiles);
