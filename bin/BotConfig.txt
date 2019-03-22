@@ -23,7 +23,7 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
-        "EnemyRace"                 : "Zerg",
+        "EnemyRace"                 : "Protoss",
         "MapFile"                   : "KairosJunctionLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,

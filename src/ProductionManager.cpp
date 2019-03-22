@@ -262,7 +262,7 @@ void ProductionManager::manageBuildOrderQueue()
 		if (currentlyHasRequirement(currentItem.type))
 		{
 			//TODO: TEMP build barrack away from the ramp to protect it from worker rush
-			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
+			/*if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
 				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks, 0, 0, additionalReservedMineral, additionalReservedGas))
 			{
 				firstBarrackBuilt = true;
@@ -304,7 +304,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 					break;
 				}				
-			}
+			}*/
 
 			//Check if we already have an idle production building of that type
 			bool idleProductionBuilding = false;
