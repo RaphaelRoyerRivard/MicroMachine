@@ -28,7 +28,6 @@ class CombatCommander
 	int				m_currentBaseExplorationIndex;
 	int				m_currentBaseScoutingIndex;
 	std::vector<const BaseLocation*> m_visitedBaseLocations;
-	bool			m_wallRaised = false;
 
     void            updateScoutDefenseSquad();
 	void            updateDefenseBuildings();

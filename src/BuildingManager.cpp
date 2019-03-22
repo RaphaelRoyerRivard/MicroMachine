@@ -838,11 +838,6 @@ void BuildingManager::checkForCompletedBuildings()
 				{
 					m_bot.Workers().finishedWithWorker(b.builderUnit);
 				}
-
-				if (b.buildingUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
-				{
-					Micro::SmartAbility(b.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER, m_bot);
-				}
             }
 
             // remove this unit from the under construction vector
