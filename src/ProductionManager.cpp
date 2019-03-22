@@ -263,7 +263,7 @@ void ProductionManager::manageBuildOrderQueue()
 		{
 			//TODO: TEMP build barrack away from the ramp to protect it from worker rush
 			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
-				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks, additionalReservedMineral, additionalReservedGas))
+				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks, 0, 0, additionalReservedMineral, additionalReservedGas))
 			{
 				firstBarrackBuilt = true;
 
@@ -386,7 +386,7 @@ void ProductionManager::manageBuildOrderQueue()
 						if (worker.isValid())
 						{
 							b.finalPosition = targetLocation;
-							if (canMakeAtArrival(b, worker))
+							if (canMakeAtArrival(b, worker, additionalReservedMineral, additionalReservedGas))
 							{
 								// create it and remove it from the _queue
 								if (create(worker, b) && worker.isValid())
@@ -1638,30 +1638,32 @@ bool ProductionManager::meetsReservedResources(const MetaType & type, int additi
 }
 
 // return whether or not we meet resources, including building reserves
-bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
+bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, int additionalMineral, int additionalGas, int additionalReservedMineral, int additionalReservedGas)
 {
 	assert("Addons cannot use extra ressources", m_bot.Data(type).isAddon);
-	return (m_bot.Data(type).mineralCost <= m_bot.GetFreeMinerals() + getExtraMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= m_bot.GetFreeGas() + getExtraGas() - additionalReservedGas);
+	return (m_bot.Data(type).mineralCost <= m_bot.GetFreeMinerals() + additionalMineral - additionalReservedMineral) && (m_bot.Data(type).gasCost <= m_bot.GetFreeGas() + additionalGas - additionalReservedGas);
 }
 
-bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker)
+bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker, int additionalReservedMineral, int additionalReservedGas)
 {
-	//TODO get distance (raph), calcule travel time in frames, get current ressource per frame (need to do maths), check if we will have enough ressources in X frames
-	const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals / 60 / 24.4;
-	const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene / 60 / 24.4;
+	const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals / 60.f / 16.f;
+	const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene / 60.f / 16.f;
 
-	//float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);
-	/*float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(b.finalPosition), false, m_bot);
-	if (distance == -1)
+	if (mineralRate == 0 && gasRate == 0)
 	{
-		auto a = 1;
-	}*/
-	float distance2 = Util::Dist(worker.getPosition(), Util::GetPosition(b.finalPosition));
-	const float speed = 2.8125f;//Always the same for workers, Util::getSpeedOfUnit(worker.getUnitPtr(), m_bot);
-	auto mineralGain = distance2 / speed / 16.f * mineralRate;
-	auto gasGain = distance2 / speed / 16.f * gasRate;
+		return false;
+	}
 
-	if (meetsReservedResourcesWithExtra(MetaType(b.type, m_bot), mineralGain, gasGain))
+	//float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(b.finalPosition), false, m_bot);
+	float distance = Util::Dist(worker.getPosition(), Util::GetPosition(b.finalPosition));
+	const float speed = 2.8125f;//Always the same for workers, Util::getSpeedOfUnit(worker.getUnitPtr(), m_bot);
+
+	auto speedPerFrame = speed / 16.f;
+	auto travelFrame = distance / speedPerFrame;
+	auto mineralGain = travelFrame * mineralRate;
+	auto gasGain = travelFrame * gasRate;
+
+	if (meetsReservedResourcesWithExtra(MetaType(b.type, m_bot), mineralGain, gasGain, additionalReservedMineral, additionalReservedGas))
 	{
 		return true;
 	}

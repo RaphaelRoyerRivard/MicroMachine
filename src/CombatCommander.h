@@ -32,6 +32,7 @@ class CombatCommander
 
     void            updateScoutDefenseSquad();
 	void            updateDefenseBuildings();
+	void			handleWall();
     void            updateDefenseSquads();
     void            updateBackupSquads();
 	void            updateScoutSquad();

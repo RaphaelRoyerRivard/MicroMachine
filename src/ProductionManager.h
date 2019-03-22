@@ -70,7 +70,7 @@ public:
 	void queueTech(const MetaType & type);
 	bool queueUpgrade(const MetaType & type, bool balanceUpgrades, bool ifFinishedTryHigherLevel);
 	bool meetsReservedResources(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
-	bool meetsReservedResourcesWithExtra(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
-	bool canMakeAtArrival(const Building & building, const Unit & worker);
+	bool meetsReservedResourcesWithExtra(const MetaType & type, int additionalMineral, int additionalGas, int additionalReservedMineral, int additionalReservedGas);
+	bool canMakeAtArrival(const Building & building, const Unit & worker, int additionalReservedMineral, int additionalReservedGas);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
 };
