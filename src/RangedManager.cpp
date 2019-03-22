@@ -291,10 +291,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		const float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
 		if (dist < threatRange + 0.5f)
 		{
-			if(isHellion && threat && threat->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
-			{
-				//Util::DebugLog(__FUNCTION__, "Threat is too close to HELLION for using potential fields.", m_bot);
-			}
 			useInfluenceMap = true;
 			break;
 		}
@@ -344,20 +340,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
 #endif
 
-			if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
-			{
-				std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used potential fields to move to (" +
-					std::to_string(pathableTile.x) + ", " + std::to_string(pathableTile.y) + ")";
-				//Util::DebugLog(__FUNCTION__, str, bot);
-			}
 			const auto action = RangedUnitAction(MicroActionType::Move, pathableTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 			PlanAction(rangedUnit, action);
 			m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 			return;
-		}
-		if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
-		{
-			//Util::DebugLog(__FUNCTION__, "HELLION failed to use potential fields.", bot);
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
@@ -373,12 +359,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	// Use influence map to find safest path
 	CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, m_bot);
 	//safeTile = AttenuateZigzag(rangedUnit, threats, safeTile, summedFleeVec);	//if we decomment this, we must not break in the threat check loop
-	if (isHellion && target && target->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
-	{
-		std::string str = "HELLION at (" + std::to_string(rangedUnit->pos.x) + ", " + std::to_string(rangedUnit->pos.y) + ") used influence maps to move to (" +
-			std::to_string(safeTile.x) + ", " + std::to_string(safeTile.y) + ")";
-		//Util::DebugLog(__FUNCTION__, str, bot);
-	}
 	const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 	PlanAction(rangedUnit, action);
 	m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
@@ -739,65 +719,74 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 
 	m_harassMode = true;
 
+	bool currentUnitHasACommand = false;
 	// If we can beat the enemy
-	if (unitsPower >= targetsPower)
+	const bool shouldFight = unitsPower >= targetsPower;
+	// For each of our close units
+	for (auto & unitAndTarget : closeUnitsTarget)
 	{
-		// For each of our close units
-		for(auto & unitAndTarget : closeUnitsTarget)
+		const auto unit = unitAndTarget.first;
+		const auto unitTarget = unitAndTarget.second;
+
+		if (shouldFight && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ExecuteBansheeCloakLogic(unit, false))
 		{
-			const auto unit = unitAndTarget.first;
-			const auto unitTarget = unitAndTarget.second;
+			if (unit == rangedUnit)
+				currentUnitHasACommand = true;
+			continue;
+		}
 
-			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ExecuteBansheeCloakLogic(unit, false))
-			{
-				continue;
-			}
+		const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
+		const bool canAttackNow = unitRange * unitRange >= Util::DistSq(unit->pos, unitTarget->pos) && unit->weapon_cooldown <= 0.f;
 
-			const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
+		//TODO maybe prevent attacking if enemy units are slower
+		if (!shouldFight && !canAttackNow)
+		{
+			continue;
+		}
 
-			// If the unit is standing on effect influence, get it out of it before fighting
-			if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), unit, m_bot) > 0.f)
-			{
-				CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(unit, unitTarget->pos, unitRange, m_bot);
-				if(movePosition != CCPosition())
-				{
-					const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
-					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, actionDuration);
-					// Attack the target
-					PlanAction(unit, action);
-					continue;
-				}
-				else
-				{
-					Util::DisplayError("Could not find an escape path towards target", "", m_bot);
-				}
-			}
-
-			const bool canAttackNow = unitRange * unitRange <= Util::DistSq(unit->pos, unitTarget->pos) && rangedUnit->weapon_cooldown <= 0.f;
-
-			auto fleePosition = CCPosition();
-			if(!canAttackNow && unit->health / unit->health_max < 0.5f)
-			{
-				fleePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, m_bot);
-			}
-			if(fleePosition != CCPosition())
+		// If the unit is standing on effect influence, get it out of it before fighting
+		if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), unit, m_bot) > 0.f)
+		{
+			CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(unit, unitTarget->pos, unitRange, m_bot);
+			if (movePosition != CCPosition())
 			{
 				const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
-				const auto action = RangedUnitAction(MicroActionType::Move, fleePosition, false, actionDuration);
-				// Flee but stay in range
+				const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, actionDuration);
+				// Attack the target
 				PlanAction(unit, action);
+				if (unit == rangedUnit)
+					currentUnitHasACommand = true;
+				continue;
 			}
 			else
 			{
-				const int attackDuration = canAttackNow ? getAttackDuration(unit) : 0;
-				const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, false, attackDuration);
-				// Attack the target
-				PlanAction(unit, action);
+				Util::DisplayError("Could not find an escape path towards target", "", m_bot);
 			}
 		}
-		return true;
+
+		auto fleePosition = CCPosition();
+		if (!canAttackNow && unit->health / unit->health_max < 0.5f)
+		{
+			fleePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, m_bot);
+		}
+		if (fleePosition != CCPosition())
+		{
+			// Flee but stay in range
+			const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
+			const auto action = RangedUnitAction(MicroActionType::Move, fleePosition, false, actionDuration);
+			PlanAction(unit, action);
+		}
+		else
+		{
+			// Attack the target
+			const int attackDuration = canAttackNow ? getAttackDuration(unit) : 0;
+			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, false, attackDuration);
+			PlanAction(unit, action);
+		}
+		if (unit == rangedUnit)
+			currentUnitHasACommand = true;
 	}
-	return false;
+	return currentUnitHasACommand;
 }
 
 bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats)
