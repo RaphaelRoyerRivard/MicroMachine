@@ -121,7 +121,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	if(foundIndex >= 0 && bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
 		return releventResult.m_result;
 
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, 3.f, true, false, false, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, 3.f, true, false, false, false, false, bot);
 	const bool success = !path.empty();
 	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
 	if(foundIndex >= 0)
@@ -135,15 +135,28 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	return success;
 }
 
-CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, const sc2::Unit* target, float maxRange, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, maxRange, false, false, true, false, bot);
+	bool getCloser = false;
+	if (target)
+	{
+		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
+		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > targetRange + 1.f;
+	}
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, maxRange, false, false, getCloser, false, false, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, 0.f, false, false, false, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, 0.f, false, false, false, false, true, bot);
+	return GetCommandPositionFromPath(path, unit, bot);
+}
+
+CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
+{
+	const float range = GetAttackRangeForTarget(unit, target, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, range, false, false, false, false, true, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
@@ -154,7 +167,7 @@ CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CC
  */
 float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot)
 {
-	const auto path = FindOptimalPath(unit, goal, 2.f, !ignoreInfluence, false, false, ignoreInfluence, bot);
+	const auto path = FindOptimalPath(unit, goal, 2.f, !ignoreInfluence, false, false, ignoreInfluence, false, bot);
 	if (path.empty())
 	{
 		return -1.f;
@@ -175,7 +188,7 @@ float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosit
 
 CCPosition Util::PathFinding::FindOptimalPathPosition(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot)
 {
-	auto path = FindOptimalPath(unit, goal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, false, bot);
+	auto path = FindOptimalPath(unit, goal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, false, false, bot);
 	if(path.empty())
 	{
 		return {};
@@ -185,11 +198,11 @@ CCPosition Util::PathFinding::FindOptimalPathPosition(const sc2::Unit * unit, CC
 
 CCPosition Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot)
 {
-	std::list<CCPosition> path = Util::PathFinding::FindOptimalPath(unit, goal, range, false, true, false, false, bot);
+	std::list<CCPosition> path = Util::PathFinding::FindOptimalPath(unit, goal, range, false, true, false, false, false, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
-std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, CCBot & bot)
+std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, CCBot & bot)
 {
 	std::list<CCPosition> path;
 	std::set<IMNode*> opened;
@@ -198,7 +211,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = Util::GetTilePosition(unit->pos);
-	const bool flee = !exitOnInfluence && maxRange == 0.f;
+	//const bool flee = !exitOnInfluence && maxRange == 0.f;
 	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
@@ -212,7 +225,14 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		bool shouldTriggerExit = false;
 		if (flee)
 		{
-			shouldTriggerExit = !HasInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot);
+			if (maxRange == 0.f)
+			{
+				shouldTriggerExit = !HasInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot);
+			}
+			else
+			{
+				shouldTriggerExit = Dist(GetPosition(currentNode->position), goal) > maxRange || (!HasInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot));
+			}
 		}
 		else
 		{
@@ -247,8 +267,20 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		}
 		if (shouldTriggerExit)
 		{
+			// If it exits on influence, we need to check if there is actually influence on the current tile. If so, we do not return a valid path
 			if (!exitOnInfluence || (!HasInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot)))
 			{
+				// If the unit wants to flee but stay in range
+				if(flee && maxRange > 0.f && Dist(GetPosition(currentNode->position), goal) > maxRange)
+				{
+					// But this is the first node, we do not return a valid path
+					if(currentNode->parent == nullptr)
+					{
+						break;
+					}
+					// Otherwise we return a path to the previous tile (otherwise the unit would go out of range)
+					currentNode = currentNode->parent;
+				}
 				path = GetPositionListFromPath(currentNode, unit, bot);
 			}
 			break;
@@ -351,9 +383,7 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 			break;
 	}
 
-	if (returnPos == CCPosition(0, 0))
-		std::cout << "returnPos is null" << std::endl;
-	else if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+	if (returnPos != CCPosition(0, 0) && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
 	{
 		//We need to click far enough to jump cliffs
 		const float squareDistance = Util::DistSq(rangedUnit->pos, returnPos);
@@ -399,6 +429,12 @@ bool Util::PathFinding::HasInfluenceOnTile(const CCTilePosition position, bool i
 	return GetInfluenceOnTile(position, isFlying, bot) != 0.f;
 }
 
+float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
+{
+	const auto & influenceMap = unit->is_flying ? bot.Commander().Combat().getAirInfluenceMap() : bot.Commander().Combat().getGroundInfluenceMap();
+	return influenceMap[tile.x][tile.y];
+}
+
 float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot)
 {
 	const auto & influenceMap = isFlying ? bot.Commander().Combat().getAirInfluenceMap() : bot.Commander().Combat().getGroundInfluenceMap();
@@ -417,7 +453,12 @@ bool Util::PathFinding::IsUnitOnTileWithEffectInfluence(const sc2::Unit * unit, 
 
 float Util::PathFinding::GetEffectInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
 {
-	const auto & effectInfluenceMap = unit->is_flying ? bot.Commander().Combat().getAirEffectInfluenceMap() : bot.Commander().Combat().getGroundEffectInfluenceMap();
+	return GetEffectInfluenceOnTile(tile, unit->is_flying, bot);
+}
+
+float Util::PathFinding::GetEffectInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot)
+{
+	const auto & effectInfluenceMap = isFlying ? bot.Commander().Combat().getAirEffectInfluenceMap() : bot.Commander().Combat().getGroundEffectInfluenceMap();
 	return effectInfluenceMap[tile.x][tile.y];
 }
 

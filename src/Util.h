@@ -79,12 +79,13 @@ namespace Util
 
 		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
 		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
-		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, float maxRange, CCBot & bot);
+		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, const sc2::Unit* target, float maxRange, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
+		CCPosition FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
 		float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);
 		CCPosition FindOptimalPathPosition(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot);
 		CCPosition FindOptimalPathToDodgeEffectTowardsGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot);
-		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, CCBot & bot);
+		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, CCBot & bot);
 		CCTilePosition GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		CCPosition GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, CCBot & bot);
 		std::list<CCPosition> GetPositionListFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
@@ -92,9 +93,11 @@ namespace Util
 		bool HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		bool HasInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
 		float GetInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
+		float GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
 		bool HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		bool IsUnitOnTileWithEffectInfluence(const sc2::Unit * unit, CCBot & bot);
 		float GetEffectInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
+		float GetEffectInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 	}
 
 	void SetAllowDebug(bool _allowDebug);
