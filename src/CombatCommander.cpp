@@ -814,6 +814,11 @@ void CombatCommander::updateScoutDefenseSquad()
 
 void CombatCommander::updateDefenseBuildings()
 {
+	handleWall();
+}
+
+void CombatCommander::handleWall()
+{
 	int SUPPLYDEPOT_DISTANCE = 25;//5 tiles ^ 2, because we use DistSq
 
 	auto wallCenter = m_bot.Buildings().getWallPosition();
