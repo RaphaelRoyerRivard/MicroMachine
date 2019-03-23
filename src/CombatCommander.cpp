@@ -815,6 +815,7 @@ void CombatCommander::updateScoutDefenseSquad()
 void CombatCommander::updateDefenseBuildings()
 {
 	handleWall();
+	lowerSupplyDepots();
 }
 
 void CombatCommander::handleWall()
@@ -849,6 +850,17 @@ void CombatCommander::handleWall()
 		if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
 		{
 			building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+		}
+	}
+}
+
+void CombatCommander::lowerSupplyDepots()
+{
+	for(auto & supplyDepot : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT))
+	{
+		if(!Util::Contains(supplyDepot, m_bot.Buildings().getWallBuildings()))
+		{
+			supplyDepot.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
 		}
 	}
 }
