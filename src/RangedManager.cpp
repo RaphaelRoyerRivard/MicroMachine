@@ -706,6 +706,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		}
 	}
 
+	float maxThreatSpeed = 0.f;
 	// Calculate enemy power
 	for (auto threat : threats)
 	{
@@ -713,6 +714,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			continue;
 		}
+		const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+		if (threatSpeed > maxThreatSpeed)
+			maxThreatSpeed = threatSpeed;
 		const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
 		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
 	}
@@ -739,7 +743,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		const bool canAttackNow = unitRange * unitRange >= Util::DistSq(unit->pos, unitTarget->pos) && unit->weapon_cooldown <= 0.f;
 
 		//TODO maybe prevent attacking if enemy units are slower
-		if (!shouldFight && !canAttackNow)
+		if (!shouldFight && (!canAttackNow || Util::getSpeedOfUnit(unit, m_bot) > maxThreatSpeed))
 		{
 			continue;
 		}
