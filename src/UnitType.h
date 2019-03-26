@@ -39,7 +39,8 @@ public:
     bool isCombatUnit() const;
     bool isSupplyProvider() const;
     bool isResourceDepot() const;
-    bool isRefinery() const;
+	bool isRefinery() const;
+	static sc2::UNIT_TYPEID getEnemyRefineryType(sc2::Race enemyRace);
     bool isDetector() const;
     bool isGeyser() const;
     bool isMineral() const;

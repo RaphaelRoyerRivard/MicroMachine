@@ -1185,7 +1185,32 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
             //We manually reduce the dps of the bunker because it only serve as a shield, units will spawn out of it when destroyed
 			targetDps = 5.f;
         }
-        const float workerBonus = targetUnit.getType().isWorker() && attacker->unit_type != sc2::UNIT_TYPEID::TERRAN_HELLION ? m_harassMode ? 2.f : 1.5f : 1.f;	//workers are important to kill
+		float workerBonus = 1.f;
+		if(targetUnit.getType().isWorker() && m_order.getType() != SquadOrderTypes::Defend)
+		{
+			if (attacker->unit_type != sc2::UNIT_TYPEID::TERRAN_HELLION)
+			{
+				workerBonus = 2.f;
+			}
+
+			// Reduce priority for workers that are going in a refinery
+			const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
+			const auto enemyRefineryType = UnitType::getEnemyRefineryType(enemyRace);
+			for(auto & refinery : m_bot.GetKnownEnemyUnits(enemyRefineryType))
+			{
+				const float refineryDist = Util::DistSq(refinery, target->pos);
+				if(refineryDist < 2.5 * 2.5)
+				{
+					const CCPosition facingVector = CCPosition(cos(target->facing), sin(target->facing));
+					if(Dot2D(facingVector, refinery.getPosition() - target->pos) > 0.99f)
+					{
+						workerBonus *= 0.5f;
+					}
+				}
+			}
+		}
+
+
 		float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;								//targets that cannot hit our unit are less prioritized
 		if(targetUnit.getType().isAttackingBuilding())
 		{
