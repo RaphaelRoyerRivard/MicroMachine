@@ -423,8 +423,9 @@ void CCBot::setUnits()
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{
 					case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+					case sc2::UNIT_TYPEID::TERRAN_FUSIONCORE:
 					case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
-					case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
+					//case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
 					case sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON:
 					case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
 					case sc2::UNIT_TYPEID::ZERG_SPIRE:

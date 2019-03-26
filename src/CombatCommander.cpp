@@ -66,7 +66,7 @@ void CombatCommander::onStart()
 	SquadOrder scoutOrder(SquadOrderTypes::Scout, CCPosition(), ScoutOrderRadius, "Scouting for new bases");
 	m_squadData.addSquad("Scout", Squad("Scout", scoutOrder, ScoutPriority, m_bot));
 
-	initInfluenceMaps();
+	//The influence maps are initialised earlier so we can use the blocked tiles influence map to place the turrets
 }
 
 bool CombatCommander::isSquadUpdateFrame()
@@ -252,11 +252,7 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 				updateBlockedTilesWithUnit(allyUnit);
 			}
 		}
-		for (auto& neutralUnitPair : m_bot.GetNeutralUnits())
-		{
-			auto& neutralUnit = neutralUnitPair.second;
-			updateBlockedTilesWithUnit(neutralUnit);
-		}
+		updateBlockedTilesWithNeutral();
 	}
 }
 
@@ -434,6 +430,15 @@ void CombatCommander::updateBlockedTilesWithUnit(const Unit& unit)
 		{
 			m_blockedTiles[x][y] = true;
 		}
+	}
+}
+
+void CombatCommander::updateBlockedTilesWithNeutral()
+{
+	for (auto& neutralUnitPair : m_bot.GetNeutralUnits())
+	{
+		auto& neutralUnit = neutralUnitPair.second;
+		updateBlockedTilesWithUnit(neutralUnit);
 	}
 }
 

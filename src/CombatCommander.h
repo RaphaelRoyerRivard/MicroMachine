@@ -51,8 +51,7 @@ class CombatCommander
 
     void            updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy);
     bool            shouldWeStartAttacking();
-
-	void			initInfluenceMaps();
+	
 	void			resetInfluenceMaps();
 	void			updateInfluenceMaps();
 	void			updateInfluenceMapsWithUnits();
@@ -83,7 +82,9 @@ public:
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
 	bool isTileBlocked(int x, int y);
 
+	void initInfluenceMaps();
 	CCPosition getMainAttackLocation();
+	void updateBlockedTilesWithNeutral();
     void drawSquadInformation();
 };
 

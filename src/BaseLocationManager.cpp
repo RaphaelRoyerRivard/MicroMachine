@@ -83,7 +83,11 @@ void BaseLocationManager::onStart()
         }
     }
 
-    // add the base locations if there are more than 4 resouces in the cluster
+	//Initialise the influence map so we can use the blocked tiles influence to  place the turrets
+	m_bot.Commander().Combat().initInfluenceMaps();
+	m_bot.Commander().Combat().updateBlockedTilesWithNeutral();
+
+	// add the base locations if there are more than 4 resouces in the cluster
     int baseID = 0;
     for (auto & cluster : resourceClusters)
     {
