@@ -96,7 +96,7 @@
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : true,
         "DrawInfluenceMaps"         : false,
-        "DrawBlockedTiles"          : false,
+        "DrawBlockedTiles"          : true,
 		"DrawRepairStation"			: false,
 		"DrawDamageHealthRatio"		: false,
         "DrawRangedUnitActions"     : false

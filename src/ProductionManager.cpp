@@ -332,6 +332,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 			if (!idleProductionBuilding)
 			{
+				auto data = m_bot.Data(currentItem.type);
 				// if we can make the current item
 				m_bot.StartProfiling("2.2.2     tryingToBuild");
 				if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
@@ -367,9 +368,10 @@ void ProductionManager::manageBuildOrderQueue()
 					}
 					m_bot.StopProfiling("2.2.3     Build without premovement");
 				}
-				else if (m_bot.Data(currentItem.type).isBuilding
-					&& !m_bot.Data(currentItem.type).isAddon
-					&& !currentItem.type.getUnitType().isMorphedBuilding())
+				else if (data.isBuilding
+					&& !data.isAddon
+					&& !currentItem.type.getUnitType().isMorphedBuilding()
+					&& !data.isResourceDepot)//TODO temporary until we have a better solution
 				{
 					// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
@@ -435,6 +437,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
 	const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
+	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 
 	const int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 
@@ -469,7 +472,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 		// We want to wait for our first Banshee to build our second CC, otherwise we might have difficulty defending it **COMMENTED**
-		else if (ccCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) /*&& bansheeCount > 0*/)
+		else if (ccCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) && starportCount > 0)
 		{
 			m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
 		}
@@ -481,7 +484,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			{
 				//if (productionScore < (float)baseCount)
 				{
-					const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 					if (productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
 						bool hasPicked = false;
@@ -757,7 +759,7 @@ void ProductionManager::lowPriorityChecks()
 					{
 						m_bot.Buildings().getBuildingPlacer().freeTilesForTurrets(position);
 						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(position.x, position.y));
-						create(worker, BuildOrderItem(MetaTypeEnum::MissileTurret, 1000, false), position);
+						create(worker, BuildOrderItem(MetaTypeEnum::MissileTurret, 0, false), position);
 					}
 				}
 			}
