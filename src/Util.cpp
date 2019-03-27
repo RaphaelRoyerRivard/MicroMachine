@@ -970,6 +970,11 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 		if (where != sc2::Weapon::TargetType::Air)
 			range = 4.f;
 	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			range = 3.f;
+	}
 
 	return range;
 }
@@ -1237,10 +1242,20 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	{
 		dps = 0.1f;	// hack so the cannons will be considered as weak
 	}
-	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
 	{
 		if (where != sc2::Weapon::TargetType::Air)
 			dps = 15.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			dps = 15.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			dps = 200.f;
 	}
 
     return dps;

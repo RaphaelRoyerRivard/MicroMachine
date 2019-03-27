@@ -87,7 +87,7 @@
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
         "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : false,
+        "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,

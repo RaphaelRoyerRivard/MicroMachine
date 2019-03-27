@@ -177,6 +177,19 @@ sc2::UNIT_TYPEID UnitType::getEnemyRefineryType(sc2::Race enemyRace)
 	}
 }
 
+bool UnitType::isTargetable(sc2::UnitTypeID unitTypeId)
+{
+	switch(unitTypeId.ToType())
+	{
+	case sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT:
+	case sc2::UNIT_TYPEID::TERRAN_KD8CHARGE:
+	case sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED:
+		return false;
+	default:
+		return true;
+	}
+}
+
 bool UnitType::isDetector() const
 {
 #ifdef SC2API

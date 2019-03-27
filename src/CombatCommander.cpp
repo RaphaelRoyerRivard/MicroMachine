@@ -225,7 +225,7 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 		auto& enemyUnitType = enemyUnit.getType();
 		if (enemyUnitType.isCombatUnit() || enemyUnitType.isWorker() || (enemyUnitType.isAttackingBuilding() && enemyUnit.getUnitPtr()->build_progress >= 1.f))
 		{
-			if(enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+			if(enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
 			{
 				const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
 				const float radius = Util::GetSpecialCaseRange(enemyUnit.getAPIUnitType(), sc2::Weapon::TargetType::Ground);
@@ -1041,6 +1041,10 @@ void CombatCommander::updateDefenseSquads()
             {
                 continue;
             }
+
+			// if the unit is not targetable, we do not need to defend against it (shade, kd8 charge, disruptor's ball, etc.)
+			if (!UnitType::isTargetable(unit.getAPIUnitType()))
+				continue;
 
             if (myBaseLocation->containsPosition(unit.getPosition()))
             {

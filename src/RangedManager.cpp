@@ -742,7 +742,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 		const bool canAttackNow = unitRange * unitRange >= Util::DistSq(unit->pos, unitTarget->pos) && unit->weapon_cooldown <= 0.f;
 
-		//TODO maybe prevent attacking if enemy units are slower
 		if (!shouldFight && (!canAttackNow || Util::getSpeedOfUnit(unit, m_bot) > maxThreatSpeed))
 		{
 			continue;
@@ -829,6 +828,9 @@ bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::U
 	for (const auto threat : threats)
 	{
 		if (threat->is_flying)
+			continue;
+
+		if (!UnitType::isTargetable(threat->unit_type))
 			continue;
 
 		const auto it = m_bot.GetPreviousFrameEnemyPos().find(threat->tag);
@@ -1137,8 +1139,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 {
     BOT_ASSERT(target, "null unit in getAttackPriority");
 
-	if (target->unit_type == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT
-		|| target->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+	if (!UnitType::isTargetable(target->unit_type))
 		return 0.f;
 
 	// Ignoring invisible creep tumors
