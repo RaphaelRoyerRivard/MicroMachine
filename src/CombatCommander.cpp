@@ -820,42 +820,53 @@ void CombatCommander::updateScoutDefenseSquad()
 void CombatCommander::updateDefenseBuildings()
 {
 	handleWall();
+	lowerSupplyDepots();
 }
 
 void CombatCommander::handleWall()
 {
 	int SUPPLYDEPOT_DISTANCE = 25;//5 tiles ^ 2, because we use DistSq
 
-	bool wallShouldBeRaised = false;
 	auto wallCenter = m_bot.Buildings().getWallPosition();
 	auto & enemies = m_bot.GetEnemyUnits();
 
 	for (auto & enemy : enemies)
 	{
+		if (enemy.second.isFlying() || enemy.second.getType().isBuilding())
+			continue;
 		CCTilePosition enemyPosition = enemy.second.getTilePosition();
 		int distance = Util::DistSq(enemyPosition, wallCenter);
 		if (distance < SUPPLYDEPOT_DISTANCE)
 		{//Raise wall
-			if (!m_wallRaised)
+			for (auto & building : m_bot.Buildings().getWallBuildings())
 			{
-				for (auto & building : m_bot.Buildings().getWallBuildings())
+				if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
 				{
 					building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
 				}
-				m_wallRaised = true;
-				wallShouldBeRaised = true;
 			}
 			return;
 		}
 	}
 
-	if (wallShouldBeRaised && m_wallRaised)
-	{//Lower wall
-		for (auto & building : m_bot.Buildings().getWallBuildings())
+	//Lower wall
+	for (auto & building : m_bot.Buildings().getWallBuildings())
+	{
+		if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
 		{
 			building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
 		}
-		m_wallRaised = false;
+	}
+}
+
+void CombatCommander::lowerSupplyDepots()
+{
+	for(auto & supplyDepot : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT))
+	{
+		if(!Util::Contains(supplyDepot, m_bot.Buildings().getWallBuildings()))
+		{
+			supplyDepot.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+		}
 	}
 }
 

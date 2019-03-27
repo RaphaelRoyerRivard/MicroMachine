@@ -166,6 +166,17 @@ bool UnitType::isRefinery() const
 #endif
 }
 
+sc2::UNIT_TYPEID UnitType::getEnemyRefineryType(sc2::Race enemyRace)
+{
+	switch (enemyRace)
+	{
+	case sc2::Terran: return sc2::UNIT_TYPEID::TERRAN_REFINERY;
+	case sc2::Protoss: return sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR;
+	case sc2::Zerg: return sc2::UNIT_TYPEID::ZERG_EXTRACTOR;
+	default: return sc2::UNIT_TYPEID::INVALID;
+	}
+}
+
 bool UnitType::isDetector() const
 {
 #ifdef SC2API

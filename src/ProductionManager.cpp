@@ -262,7 +262,7 @@ void ProductionManager::manageBuildOrderQueue()
 		if (currentlyHasRequirement(currentItem.type))
 		{
 			//TODO: TEMP build barrack away from the ramp to protect it from worker rush
-			if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
+			/*if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
 				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks, 0, 0, additionalReservedMineral, additionalReservedGas))
 			{
 				firstBarrackBuilt = true;
@@ -304,7 +304,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 					break;
 				}				
-			}
+			}*/
 
 			//Check if we already have an idle production building of that type
 			bool idleProductionBuilding = false;
@@ -554,6 +554,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
+				}
+
+				if (bansheeCount >= 2 && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
+				{
+					//m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Raven, 0, false));
 				}
 
 				if ((m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
