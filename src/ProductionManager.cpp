@@ -1332,9 +1332,9 @@ bool ProductionManager::queueUpgrade(const MetaType & type, bool balanceUpgrades
 
 bool ProductionManager::isTechQueuedOrStarted(const MetaType & type)
 {
-	return m_queue.contains(type)
-		|| std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), type) != incompletUpgradesMetatypes.end()
-		|| std::find(completUpgrades.begin(), completUpgrades.end(), type) != completUpgrades.end();
+	return std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), type) != incompletUpgradesMetatypes.end()
+		|| std::find(completUpgrades.begin(), completUpgrades.end(), type) != completUpgrades.end()
+		|| m_queue.contains(type);
 }
 
 bool ProductionManager::isTechStarted(const MetaType & type)
@@ -1385,9 +1385,9 @@ void ProductionManager::validateUpgradesProgress()
 				break;
 
 			default:
+				auto buildAbilityId = m_bot.Data(upgrade.first.getUpgrade()).buildAbility;
 				for (auto & order : unitPtr->orders)
 				{
-					auto buildAbilityId = m_bot.Data(upgrade.first.getUpgrade()).buildAbility;
 					if (order.ability_id == buildAbilityId)
 					{
 						found = true;
