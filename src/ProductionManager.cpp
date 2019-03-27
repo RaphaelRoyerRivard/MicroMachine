@@ -371,7 +371,7 @@ void ProductionManager::manageBuildOrderQueue()
 				else if (data.isBuilding
 					&& !data.isAddon
 					&& !currentItem.type.getUnitType().isMorphedBuilding()
-					&& !data.isResourceDepot)//TODO temporary until we have a better solution
+					&& !data.isResourceDepot)//TODO temporary until we have a better solution, allow this if the enemy base doesn't look aggressive
 				{
 					// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
@@ -1337,9 +1337,9 @@ bool ProductionManager::queueUpgrade(const MetaType & type, bool balanceUpgrades
 
 bool ProductionManager::isTechQueuedOrStarted(const MetaType & type)
 {
-	return m_queue.contains(type)
-		|| std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), type) != incompletUpgradesMetatypes.end()
-		|| std::find(completUpgrades.begin(), completUpgrades.end(), type) != completUpgrades.end();
+	return std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), type) != incompletUpgradesMetatypes.end()
+		|| std::find(completUpgrades.begin(), completUpgrades.end(), type) != completUpgrades.end()
+		|| m_queue.contains(type);
 }
 
 bool ProductionManager::isTechStarted(const MetaType & type)
@@ -1390,9 +1390,9 @@ void ProductionManager::validateUpgradesProgress()
 				break;
 
 			default:
+				auto buildAbilityId = m_bot.Data(upgrade.first.getUpgrade()).buildAbility;
 				for (auto & order : unitPtr->orders)
 				{
-					auto buildAbilityId = m_bot.Data(upgrade.first.getUpgrade()).buildAbility;
 					if (order.ability_id == buildAbilityId)
 					{
 						found = true;
