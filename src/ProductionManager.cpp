@@ -371,7 +371,7 @@ void ProductionManager::manageBuildOrderQueue()
 				else if (data.isBuilding
 					&& !data.isAddon
 					&& !currentItem.type.getUnitType().isMorphedBuilding()
-					&& !data.isResourceDepot)//TODO temporary until we have a better solution
+					&& !data.isResourceDepot)//TODO temporary until we have a better solution, allow this if the enemy base doesn't look aggressive
 				{
 					// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
