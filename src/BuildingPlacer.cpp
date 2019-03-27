@@ -326,6 +326,16 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 		return false;
 	}
 
+	/*if (!ignoreReservedTiles && !m_bot.Observation()->IsPathable(sc2::Point2D(x, y)))
+	{
+		return false;
+	}
+
+	if (!ignoreReservedTiles && !m_bot.Observation()->IsPlacable(sc2::Point2D(x, y)))
+	{
+		return false;
+	}*/
+
 	if (!Util::IsZerg(m_bot.GetSelfRace()) && m_bot.Observation()->HasCreep(CCPosition(x, y)))
 	{
 		return false;
@@ -403,10 +413,14 @@ void BuildingPlacer::drawReservedTiles()
     { 
         for (int y = 0; y < rheight; ++y)
         {
-            if (m_reserveMap[x][y])
-            {
-                m_bot.Map().drawTile(x - 1, y - 1, yellow);
-            }
+			if (m_reserveMap[x][y])
+			{
+				m_bot.Map().drawTile(x - 1, y - 1, yellow);
+
+				std::stringstream s;
+				s << x << "," << y;
+				m_bot.Map().drawText(CCPosition(x - 1, y), s.str(), yellow);
+			}
         }
     }
 }

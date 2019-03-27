@@ -308,6 +308,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 			//Check if we already have an idle production building of that type
 			bool idleProductionBuilding = false;
+#ifndef NO_UNITS
 			if(currentItem.type.isBuilding())
 			{
 				auto productionBuildingTypes = getProductionBuildingTypes();
@@ -329,6 +330,7 @@ void ProductionManager::manageBuildOrderQueue()
 					}
 				}
 			}
+#endif
 
 			if (!idleProductionBuilding)
 			{
@@ -540,7 +542,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (!m_bot.Strategy().enemyHasMetabolicBoost() && !m_queue.contains(MetaTypeEnum::Reaper) && m_bot.CombatAnalyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 3)
 				{
+#ifndef NO_UNITS
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
+#endif
 				}
 
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
@@ -553,7 +557,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{
+#ifndef NO_UNITS
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
+#endif
 				}
 
 				if (bansheeCount >= 2 && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
@@ -563,7 +569,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if ((m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
 				{
+#ifndef NO_UNITS
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
+#endif
 				}
 
 				if(m_bot.Strategy().enemyHasMetabolicBoost())
@@ -579,7 +587,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					if (vikingCount < bansheeCount && !m_queue.contains(MetaTypeEnum::Viking))
 					{
+#ifndef NO_UNITS
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+#endif
 					}
 
 					if (!isTechQueuedOrStarted(MetaTypeEnum::HiSecAutoTracking) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HISECAUTOTRACKING))
@@ -591,7 +601,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					if (vikingCount < 1 && !m_queue.contains(MetaTypeEnum::Viking))
 					{
+#ifndef NO_UNITS
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+#endif
 					}
 				}
 				break;
@@ -734,12 +746,26 @@ void ProductionManager::lowPriorityChecks()
 
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
-	if (m_bot.Strategy().shouldProduceAntiAir() || m_bot.Strategy().enemyHasInvisible())
+	bool shouldProduceAntiAir = m_bot.Strategy().shouldProduceAntiAir();
+	if (shouldProduceAntiAir || m_bot.Strategy().enemyHasInvisible())
 	{
 		auto engeneeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
 		if (engeneeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
 		{
-			m_queue.queueAsHighestPriority(MetaTypeEnum::EngineeringBay, false);
+			const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+			if (starportCount > 0)
+			{
+				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
+				if (vikingCount == 0)
+				{
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Viking, false);
+				}
+				m_queue.queueAsLowestPriority(MetaTypeEnum::EngineeringBay, false);
+			}
+			else
+			{
+				m_queue.queueAsHighestPriority(MetaTypeEnum::EngineeringBay, false);
+			}
 		}
 
 		if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::MissileTurret.getUnitType()))
@@ -912,62 +938,66 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 			typeName == "Medivac" ||
 			typeName == "Liberator")
 		{
-			for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
+
+			for (auto & producerType : producerTypes)
 			{
-				// reasons a unit can not train the desired type
-				if (!unit.isValid()) { continue; }
-				if (!unit.isCompleted()) { continue; }
-				if (unit.isFlying()) { continue; }
-				if (std::find(producerTypes.begin(), producerTypes.end(), unit.getType()) == producerTypes.end()) { continue; }
-				if (unit.isAddonTraining()) { continue; }
-
-				//Building can produce unit, now check if addon is reactor and available
-				auto addonTag = unit.getAddonTag();
-				if (addonTag == 0)
+				for (auto & unit : m_bot.GetAllyUnits(producerType.getAPIUnitType()))
 				{
-					continue;
-				}
+					// reasons a unit can not train the desired type
+					if (!unit.isValid()) { continue; }
+					if (!unit.isCompleted()) { continue; }
+					if (unit.isFlying()) { continue; }
+					if (unit.isAddonTraining()) { continue; }
 
-				auto addon = m_bot.GetUnit(addonTag);
-				auto addonType = (sc2::UNIT_TYPEID)addon.getAPIUnitType();
-				switch (addonType)
-				{
-					case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
-					case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
-					case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+					//Building can produce unit, now check if addon is reactor and available
+					auto addonTag = unit.getAddonTag();
+					if (addonTag == 0)
 					{
-						priorizeReactor = true;
-						break;
+						continue;
 					}
+
+					auto addon = m_bot.GetUnit(addonTag);
+					auto addonType = (sc2::UNIT_TYPEID)addon.getAPIUnitType();
+					switch (addonType)
+					{
+						case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+						case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+						{
+							priorizeReactor = true;
+							break;
+						}
+					}
+					break;
 				}
-				break;
 			}
 		}
 	}
 
     // make a set of all candidate producers
     std::vector<Unit> candidateProducers;
-    for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
-    {
-        // reasons a unit can not train the desired type
-		if (!unit.isValid()) { continue; }
-		if (!unit.isCompleted()) { continue; }
-		if (unit.isFlying()) { continue; }
-        if (std::find(producerTypes.begin(), producerTypes.end(), unit.getType()) == producerTypes.end()) { continue; }
+	for (auto & producerType : producerTypes)
+	{
+		for (auto & unit : m_bot.GetAllyUnits(producerType.getAPIUnitType()))
+		{
+			// reasons a unit can not train the desired type
+			if (!unit.isValid()) { continue; }
+			if (!unit.isCompleted()) { continue; }
+			if (unit.isFlying()) { continue; }
 
-		bool isBuilding = m_bot.Data(unit).isBuilding;
-		if (isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }//TODO might break other races
-		if (isBuilding && m_bot.GetSelfRace() == CCRace::Terran)
-		{//If is terran, check for Reactor addon
-			sc2::Tag addonTag = unit.getAddonTag();
-			sc2::UNIT_TYPEID unitType = unit.getAPIUnitType();
-			
-			if (addonTag != 0)
-			{
-				bool addonIsReactor = false;
-				auto addon = m_bot.GetUnit(addonTag);
-				switch ((sc2::UNIT_TYPEID)addon.getAPIUnitType())
+			bool isBuilding = m_bot.Data(unit).isBuilding;
+			if (isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }//TODO might break other races
+			if (isBuilding && m_bot.GetSelfRace() == CCRace::Terran)
+			{//If is terran, check for Reactor addon
+				sc2::Tag addonTag = unit.getAddonTag();
+				sc2::UNIT_TYPEID unitType = unit.getAPIUnitType();
+
+				if (addonTag != 0)
 				{
+					bool addonIsReactor = false;
+					auto addon = m_bot.GetUnit(addonTag);
+					switch ((sc2::UNIT_TYPEID)addon.getAPIUnitType())
+					{
 					case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
 					case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
 					case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
@@ -975,28 +1005,28 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 						addonIsReactor = true;
 						break;
 					}
-				}
+					}
 
-				if (unit.isTraining() && !addonIsReactor)
-				{//skip, Techlab can't build two units
-					continue;
-				}
-				
-				if (addonIsReactor && unit.isAddonTraining())
-				{//skip, reactor at max capacity
-					continue;
-				}
+					if (unit.isTraining() && !addonIsReactor)
+					{//skip, Techlab can't build two units
+						continue;
+					}
 
-				//Skip techlab if we have an available reactor
-				if (priorizeReactor && !addonIsReactor)
-				{
-					continue;
+					if (addonIsReactor && unit.isAddonTraining())
+					{//skip, reactor at max capacity
+						continue;
+					}
+
+					//Skip techlab if we have an available reactor
+					if (priorizeReactor && !addonIsReactor)
+					{
+						continue;
+					}
 				}
 			}
-		}
 
-		switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())
-		{
+			switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())
+			{
 			case sc2::UNIT_TYPEID::TERRAN_SCV:
 			case sc2::UNIT_TYPEID::PROTOSS_PROBE:
 			case sc2::UNIT_TYPEID::ZERG_DRONE:
@@ -1011,52 +1041,53 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 			{
 				continue;
 			}
-		}
+			}
 
-        // TODO: if unit is not powered continue
-        // TODO: if the type requires an addon and the producer doesn't have one
+			// TODO: if unit is not powered continue
+			// TODO: if the type requires an addon and the producer doesn't have one
 
-		// if the type we want to produce has required units, we make sure the unit is one of those unit types
-		if (m_bot.Data(type).requiredUnits.size() > 0)
-		{
-			bool hasRequiredUnit = false;
-			for (UnitType requiredUnit : m_bot.Data(type).requiredUnits)
+			// if the type we want to produce has required units, we make sure the unit is one of those unit types
+			if (m_bot.Data(type).requiredUnits.size() > 0)
 			{
-				if (!requiredUnit.isAddon())
+				bool hasRequiredUnit = false;
+				for (UnitType requiredUnit : m_bot.Data(type).requiredUnits)
 				{
-					// maybe we don't hve what is needed, but it seems to already work for non addon units
-					hasRequiredUnit = true;
-					break;
-				}
-				else	// addon
-				{
-					if (unit.getUnitPtr()->add_on_tag != 0)
+					if (!requiredUnit.isAddon())
 					{
-						Unit addon = m_bot.GetUnit(unit.getUnitPtr()->add_on_tag);
-						if (requiredUnit.getAPIUnitType() == addon.getAPIUnitType())
+						// maybe we don't hve what is needed, but it seems to already work for non addon units
+						hasRequiredUnit = true;
+						break;
+					}
+					else	// addon
+					{
+						if (unit.getUnitPtr()->add_on_tag != 0)
 						{
-							hasRequiredUnit = true;
-							break;
+							Unit addon = m_bot.GetUnit(unit.getUnitPtr()->add_on_tag);
+							if (requiredUnit.getAPIUnitType() == addon.getAPIUnitType())
+							{
+								hasRequiredUnit = true;
+								break;
+							}
 						}
 					}
 				}
+				if (!hasRequiredUnit) { continue; }
 			}
-			if (!hasRequiredUnit) { continue; }
-		}
 
-		//if the type is an addon, some special cases
-		if (isTypeAddon)
-		{
-			//Skip if the building already has an addon
-			if (unit.getUnitPtr()->add_on_tag != 0)
+			//if the type is an addon, some special cases
+			if (isTypeAddon)
 			{
-				continue;
+				//Skip if the building already has an addon
+				if (unit.getUnitPtr()->add_on_tag != 0)
+				{
+					continue;
+				}
 			}
-		}
 
-        // if we haven't cut it, add it to the set of candidates
-        candidateProducers.push_back(unit);
-    }
+			// if we haven't cut it, add it to the set of candidates
+			candidateProducers.push_back(unit);
+		}
+	}
 
     return getClosestUnitToPosition(candidateProducers, closestTo);
 }
