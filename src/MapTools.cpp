@@ -446,7 +446,18 @@ bool MapTools::isBuildable(int tileX, int tileY) const
         return false;
     }
 
-    return m_buildable[tileX][tileY];
+	return m_buildable[tileX - 1][tileY - 1];
+}
+
+
+bool MapTools::isBuildable(CCTilePosition & tile) const
+{
+	if (!isValidTile(tile.x, tile.y))
+	{
+		return false;
+	}
+
+	return m_buildable[tile.x - 1][tile.y - 1];
 }
 
 bool MapTools::canBuildTypeAtPosition(int tileX, int tileY, const UnitType & type) const
@@ -458,9 +469,14 @@ bool MapTools::canBuildTypeAtPosition(int tileX, int tileY, const UnitType & typ
 #endif
 }
 
-bool MapTools::isBuildable(const CCTilePosition & tile) const
+bool MapTools::isWallBuildable(const CCTilePosition & tile) const
 {
-    return isBuildable(tile.x, tile.y);
+	if (!isValidTile(tile.x, tile.y))
+	{
+		return false;
+	}
+
+	return m_buildable[tile.x][tile.y];
 }
 
 void MapTools::printMap()

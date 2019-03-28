@@ -108,7 +108,7 @@ void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::l
 	checkedTiles.push_front(currentTile);
 	if (m_bot.Map().isWalkable(currentTile))
 	{
-		if (m_bot.Map().isBuildable(currentTile))
+		if (m_bot.Map().isWallBuildable(currentTile))
 		{
 			FindRampTiles(rampTiles, checkedTiles, CCTilePosition(currentTile.x + 1, currentTile.y));
 			FindRampTiles(rampTiles, checkedTiles, CCTilePosition(currentTile.x - 1, currentTile.y));
@@ -187,7 +187,7 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 		CCTilePosition above = CCTilePosition(tile.x + 1, tile.y);
 		CCTilePosition left = CCTilePosition(tile.x, tile.y - 1);
 		CCTilePosition right = CCTilePosition(tile.x, tile.y + 1);
-		if (m_bot.Map().isBuildable(below) && m_bot.Map().isWalkable(below) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(below))
+		if (m_bot.Map().isWallBuildable(below) && m_bot.Map().isWalkable(below) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(below))
 		{//we need to block this tile
 			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), below) == tilesToBlock.end())
 			{
@@ -195,7 +195,7 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 			}
 		}
 		
-		if (m_bot.Map().isBuildable(above) && m_bot.Map().isWalkable(above) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(above))
+		if (m_bot.Map().isWallBuildable(above) && m_bot.Map().isWalkable(above) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(above))
 		{//we need to block this tile
 			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), above) == tilesToBlock.end())
 			{
@@ -203,7 +203,7 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 			}
 		}
 
-		if (m_bot.Map().isBuildable(left) && m_bot.Map().isWalkable(left) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(left))
+		if (m_bot.Map().isWallBuildable(left) && m_bot.Map().isWalkable(left) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(left))
 		{//we need to block this tile
 			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), left) == tilesToBlock.end())
 			{
@@ -211,7 +211,7 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 			}
 		}
 
-		if (m_bot.Map().isBuildable(right) && m_bot.Map().isWalkable(right) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(right))
+		if (m_bot.Map().isWallBuildable(right) && m_bot.Map().isWalkable(right) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(right))
 		{//we need to block this tile
 			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), right) == tilesToBlock.end())
 			{
@@ -246,10 +246,10 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 	std::list<CCTilePosition> buildingTiles;
 	for (auto tile : tilesToBlock)
 	{
-		if (m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y - 1)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y - 1)))
+		if (m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x - 1, tile.y)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y - 1)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x - 1, tile.y - 1)))
 		{
 			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x - 1, tile.y - 1)))
 			{
@@ -257,10 +257,10 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 				continue;
 			}
 		}
-		if (m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y - 1)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y - 1)))
+		if (m_bot.Map().isWallBuildable(CCTilePosition(tile.x + 1, tile.y)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x + 1, tile.y - 1)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y - 1)))
 		{
 			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x, tile.y - 1)))
 			{
@@ -268,10 +268,10 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 				continue;
 			}
 		}
-		if (m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y + 1)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y + 1)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y)))
+		if (m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y + 1)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x - 1, tile.y + 1)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x - 1, tile.y)))
 		{
 			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x - 1, tile.y)))
 			{
@@ -279,10 +279,10 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 				continue;
 			}
 		}
-		if (m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y + 1)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y + 1)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y)) &&
-			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)))
+		if (m_bot.Map().isWallBuildable(CCTilePosition(tile.x + 1, tile.y + 1)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y + 1)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x + 1, tile.y)) &&
+			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y)))
 		{
 			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x, tile.y)))
 			{
@@ -1296,9 +1296,31 @@ const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) con
 	return mineralField;
 }
 
+const sc2::Unit * BuildingManager::getLargestCloseMineral(const sc2::Unit * unit) const
+{
+	auto base = m_bot.Bases().getBaseContainingPosition(unit->pos, Players::Self);
+	if (base == nullptr)
+	{
+		return nullptr;
+	}
+
+	auto potentialMinerals = base->getMinerals();
+	const sc2::Unit * mineralField = nullptr;
+	int maxMinerals = 0;
+	for (auto mineral : potentialMinerals)
+	{
+		int mineralContent = mineral.getUnitPtr()->mineral_contents;
+		if (mineralField == nullptr || mineralContent > maxMinerals) {
+			mineralField = mineral.getUnitPtr();
+			maxMinerals = mineralContent;
+		}
+	}
+	return mineralField;
+}
+
 void BuildingManager::castBuildingsAbilities()
 {
-	for (const auto & b : m_finishedBaseBuildings)
+	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
 	{
 		auto energy = b.getEnergy();
 		if (energy <= 0)
@@ -1306,32 +1328,39 @@ void BuildingManager::castBuildingsAbilities()
 			continue;
 		}
 
-		auto id = b.getType().getAPIUnitType();
-		if (b.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND)
+		bool hasInvisible = m_bot.Strategy().enemyHasInvisible();
+		//Scan
+		if (hasInvisible)
 		{
-			bool hasInvisible = m_bot.Strategy().enemyHasInvisible();
-			//Scan
-			if (hasInvisible)
+			for (auto sighting : m_bot.Commander().Combat().GetInvisibleSighting())
 			{
-				for (auto sighting : m_bot.Commander().Combat().GetInvisibleSighting())
+				if (energy >= 50)//TODO: do not scan if no combat unit close by
 				{
-					if (energy >= 50)//TODO: do not scan if no combat unit close by
-					{
-						Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, sighting.second.first, m_bot);
-					}
+					Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, sighting.second.first, m_bot);
 				}
 			}
+		}
 
-			//Mule
-			if (energy >= 50 && (!hasInvisible || energy >= 100))
+		//Mule
+		if (energy >= 50 && (!hasInvisible || energy >= 100))
+		{
+			auto orbitalPosition = b.getPosition();
+			auto closestMineral = getLargestCloseMineral(b.getUnitPtr());
+			if (closestMineral == nullptr)
 			{
-				auto orbitalPosition = b.getPosition();
-				auto point = getClosestMineral(b.getUnitPtr())->pos;
-				//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
-				point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
-				point.y = (point.y + (point.y + (point.y + orbitalPosition.y) / 2) / 2) / 2;
-				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
+				closestMineral = getClosestMineral(b.getUnitPtr());
+				if (closestMineral == nullptr)
+				{
+					Util::DebugLog(__FUNCTION__, "No mineral found.", m_bot);
+					continue;
+				}
 			}
+			auto point = closestMineral->pos;
+
+			//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
+			point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
+			point.y = (point.y + (point.y + (point.y + orbitalPosition.y) / 2) / 2) / 2;
+			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 		}
 	}
 }

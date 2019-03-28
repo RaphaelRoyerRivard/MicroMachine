@@ -72,6 +72,7 @@ public:
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);
 	const sc2::Unit *	getClosestMineral(const sc2::Unit * unit) const;
+	const sc2::Unit *	getLargestCloseMineral(const sc2::Unit * unit) const;
 
     bool                isBeingBuilt(UnitType type) const;
 	int					countBeingBuilt(UnitType type) const;

@@ -107,15 +107,8 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
             }
         }
     }
-	//TODO removed unneeded Query
-	/*if (!ignoreReserved && !m_bot.Map().canBuildTypeAtPosition(bx, by, type))
-	{
-		//Type 29, armory close to refinery
-		return false;
-	}*/
 
 	//Test if there is space for an addon
-	m_bot.StartProfiling("0.1 AddonLagCheck");
 	switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
 	{
 		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
@@ -126,20 +119,33 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
 			{
 				for (int y = 0; y < 2; y++)
 				{
-					if ((!ignoreReserved && m_reserveMap[startx + width + x][starty + y]) || !buildable(b.type, startx + width + x, starty + y))
+					if ((!ignoreReserved && m_reserveMap[startx + width + x][starty + y]) || !buildable(b.type, startx + width + x, starty + y, false))
 					{
-						m_bot.StopProfiling("0.1 AddonLagCheck");
 						return false;
 					}
 				}
 			}
-			//TODO removed unneeded Query
-			//Replaced by above
-			/*if (!ignoreReserved && !m_bot.Map().canBuildTypeAtPosition(bx + width, by, UnitType(sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR, m_bot)))
+			break;
+		}
+		default:
+			break;
+	}
+
+	//Validate tiles below are free so units don't likely get stuck
+	switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
+	{
+		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+		case sc2::UNIT_TYPEID::PROTOSS_GATEWAY:
+		case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
+		{
+			for (int x = 0; x < 3; x++)
 			{
-				//Type Starport, failed addon
-				return false;
-			}*/
+				if ((!ignoreReserved && m_reserveMap[startx + width + x][starty - 1]) || !buildable(b.type, startx + width + x, starty - 1, false))
+				{
+					return false;
+				}
+			}
 			break;
 		}
 		default:
@@ -416,10 +422,6 @@ void BuildingPlacer::drawReservedTiles()
 			if (m_reserveMap[x][y])
 			{
 				m_bot.Map().drawTile(x - 1, y - 1, yellow);
-
-				std::stringstream s;
-				s << x << "," << y;
-				m_bot.Map().drawText(CCPosition(x - 1, y), s.str(), yellow);
 			}
         }
     }
