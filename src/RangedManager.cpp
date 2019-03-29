@@ -228,8 +228,17 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 #endif
 	}
 
+	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
+	// Check if our units are powerful enough to exchange fire with the enemies
+	if (ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats, unitShouldHeal))
+	{
+		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
+		return;
+	}
+	m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
+
 	m_bot.StartProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
-	if(targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
+	if (targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
 	{
 		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit));
 		PlanAction(rangedUnit, action);
@@ -239,15 +248,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
-
-	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
-	// Check if our units are powerful enough to exchange fire with the enemies
-	if (ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats, unitShouldHeal))
-	{
-		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
-		return;
-	}
-	m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 
 	m_bot.StartProfiling("0.10.4.1.5.1.6          UnitAbilities");
 	// Check if unit can use one of its abilities
