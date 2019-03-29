@@ -190,22 +190,25 @@ bool UnitType::isTargetable(sc2::UnitTypeID unitTypeId)
 	}
 }
 
+bool UnitType::isDetector(sc2::UnitTypeID unitTypeId)
+{
+	switch (unitTypeId.ToType())
+	{
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+		case sc2::UNIT_TYPEID::ZERG_OVERSEER:
+		case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET:
+		case sc2::UNIT_TYPEID::ZERG_SPORECRAWLER:
+		case sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON:
+		case sc2::UNIT_TYPEID::TERRAN_RAVEN:
+			return true;
+		default:
+			return false;
+	}
+}
+
 bool UnitType::isDetector() const
 {
-#ifdef SC2API
-    switch (m_type.ToType())
-    {
-        case sc2::UNIT_TYPEID::PROTOSS_OBSERVER        : return true;
-        case sc2::UNIT_TYPEID::ZERG_OVERSEER           : return true;
-        case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET    : return true;
-        case sc2::UNIT_TYPEID::ZERG_SPORECRAWLER       : return true;
-        case sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON    : return true;
-        case sc2::UNIT_TYPEID::TERRAN_RAVEN            : return true;
-        default: return false;
-    }
-#else
-    return m_type.isDetector();
-#endif
+	return isDetector(m_type);
 }
 
 bool UnitType::isGeyser() const
