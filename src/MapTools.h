@@ -90,7 +90,8 @@ public:
     bool    isWalkable(const CCPosition & pos) const;
     
     bool    isBuildable(int tileX, int tileY) const;
-    bool    isBuildable(const CCTilePosition & tile) const;
+	bool	isBuildable(CCTilePosition & tile) const;
+    bool    isWallBuildable(const CCTilePosition & tile) const;
     bool    isDepotBuildableTile(int tileX, int tileY) const;
 
     // returns a list of all tiles on the map, sorted by 4-direcitonal walk distance from the given position

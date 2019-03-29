@@ -1,5 +1,10 @@
 #pragma once
 //#define PUBLIC_RELEASE
+#define NO_UNITS
+
+#ifdef PUBLIC_RELEASE && NO_UNITS
+#undef NO_UNITS
+#endif
 
 #include "Common.h"
 

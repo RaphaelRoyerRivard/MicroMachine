@@ -677,7 +677,7 @@ void WorkerManager::lowPriorityChecks()
 			}
 
 			auto depot = getDepotAtBasePosition(base->getPosition());
-			if (depot.isBeingConstructed())
+			if (!depot.isValid() || depot.isBeingConstructed())
 			{
 				continue;
 			}
