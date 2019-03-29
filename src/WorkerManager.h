@@ -14,6 +14,7 @@ class WorkerManager
 	bool m_isFirstFrame = true;
 	int gasWorkersTarget = 3;
 	std::list<Unit> buildingAutomaticallyRepaired;
+	std::map<CCUnitID, std::pair<bool, int>> muleHarvests;//<MuleId, <isReturningCargo, harvest count>>, we are not removing killed mules from this map, but it doesn't really matter
 
     mutable WorkerData  m_workerData;
     Unit m_previousClosestWorker;
@@ -21,6 +22,7 @@ class WorkerManager
     void setMineralWorker(const Unit & unit);
     
 	void handleMineralWorkers();
+	void handleMules();
     void handleGasWorkers();
 	void handleIdleWorkers();
     void handleRepairWorkers();
