@@ -16,14 +16,14 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.2.0",
+        "BotVersion"                : "1.4.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 1,
-        "EnemyRace"                 : "Protoss",
+        "EnemyDifficulty"           : 10,
+        "EnemyRace"                 : "Terran",
         "MapFile"                   : "KairosJunctionLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,

@@ -725,25 +725,27 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 			}
 		}
 
-		// Merge clusters
-		for (auto clusterToMerge : clustersToMerge)
+		if (!clustersToMerge.empty())
 		{
-			// Put the units of the cluster into the main cluster
-			for (const auto clusterUnit : clusterToMerge->m_units)
+			// Merge clusters
+			for (auto clusterToMerge : clustersToMerge)
 			{
-				mainCluster->m_units.push_back(clusterUnit);
+				// Put the units of the cluster into the main cluster
+				for (const auto clusterUnit : clusterToMerge->m_units)
+				{
+					mainCluster->m_units.push_back(clusterUnit);
+				}
+				clusterToMerge->m_units.clear();
 			}
-			// Remove the cluster from the list
+
+			// Remove emptied clusters from the list
 			auto clusterIt = m_unitClusters.begin();
 			while (clusterIt != m_unitClusters.end())
-			for(auto & cluster : m_unitClusters)
 			{
-				if(clusterToMerge == &cluster)
-				{
-					m_unitClusters.erase(clusterIt);
-					break;
-				}
-				++clusterIt;
+				if (clusterIt->m_units.empty())
+					m_unitClusters.erase(clusterIt++);
+				else
+					++clusterIt;
 			}
 		}
 

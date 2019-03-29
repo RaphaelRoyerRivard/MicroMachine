@@ -1722,7 +1722,11 @@ CCPosition CombatCommander::getMainAttackLocation()
 
 CCPosition CombatCommander::exploreMap()
 {
-	CCPosition basePosition = Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
+	// Hack to prevent our units from hugging observers that they can't kill 
+	if (!m_bot.Strategy().shouldProduceAntiAir())
+		m_bot.Strategy().setShouldProduceAntiAir(true);
+
+	const CCPosition basePosition = Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
 	for (auto & unit : m_combatUnits)
 	{
 		if (Util::DistSq(unit.getPosition(), basePosition) < 3.f * 3.f)
