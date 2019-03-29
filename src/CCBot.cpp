@@ -696,6 +696,11 @@ const TypeData & CCBot::Data(const MetaType & type)
     return m_techTree.getData(type);
 }
 
+const TypeData & CCBot::Data(const sc2::UNIT_TYPEID & type)
+{
+	return Data(UnitType(type, *this));
+}
+
 WorkerManager & CCBot::Workers()
 {
     return m_workers;
@@ -792,7 +797,7 @@ Unit CCBot::GetUnit(const CCUnitID & tag) const
 }
 
 
-int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed) const
+int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed)
 { 
 	if (completed && m_unitCompletedCount.find(type) != m_unitCompletedCount.end())
 	{
@@ -800,10 +805,29 @@ int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed) const
 	}
 	else if (!completed)
 	{
-		int boughtButNotBeingBuilt = m_buildings.countBoughtButNotBeingBuilt(type);
-		if(m_unitCount.find(type) != m_unitCount.end())
-			return m_unitCount.at(type) + boughtButNotBeingBuilt;
-		return boughtButNotBeingBuilt;
+		int total = 0;
+
+		auto unitType = UnitType(type, *this);
+		if (unitType.isBuilding())
+		{
+			total += m_buildings.countBoughtButNotBeingBuilt(type);
+		}
+		else//is unit
+		{
+			for (auto building : m_buildings.getFinishedBuildings())
+			{
+				if (building.isConstructing(unitType))
+				{
+					total++;
+				}
+			}
+		}
+		
+		if (m_unitCount.find(type) != m_unitCount.end())
+		{
+			total += m_unitCount.at(type);
+		}
+		return total;
 	}
 	return 0;
 }

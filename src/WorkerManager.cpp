@@ -61,6 +61,8 @@ void WorkerManager::stopRepairing(Unit worker)
 
 void WorkerManager::handleMineralWorkers()
 {
+	handleMules();
+
 	//split workers on first frame
 	//TODO can be improved by preventing the worker from retargetting a very far mineral patch
 	if (!m_isFirstFrame || (int)m_bot.GetCurrentFrame() == 0)
@@ -148,6 +150,39 @@ void WorkerManager::handleMineralWorkers()
 		worker.rightClick(closestMineral);
 	}
 	m_bot.StopProfiling("0.7.2.4     splitMineralWorkers");
+}
+
+void WorkerManager::handleMules()
+{
+	for (auto mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
+	{
+		auto id = mule.getID();
+		if (muleHarvests.find(id) == muleHarvests.end())
+		{
+			muleHarvests[id] = std::pair<bool, int>(false, 0);
+		}
+		else
+		{
+			if (isReturningCargo(mule))
+			{
+				muleHarvests[id].first = true;
+			}
+			else
+			{
+				if (muleHarvests[id].first)//Cargo was returned
+				{
+					muleHarvests[id].first = false;
+					muleHarvests[id].second++;
+					if (muleHarvests[id].second == 9)//Maximum of 9 harvest per mule, the mules can't finish the 10th.
+					{
+						auto position = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getDepotPosition();
+						mule.move(position);	
+						muleHarvests.erase(id);
+					}
+				}
+			}
+		}
+	}
 }
 
 void WorkerManager::handleGasWorkers()
@@ -883,7 +918,6 @@ Unit WorkerManager::getClosest(const Unit unit, const std::list<Unit> units) con
 
 	for (auto unit : units)
 	{
-		auto a = unit.getUnitPtr();
 		unorderedUnitsDistance.push_back(UnitDistance(unit, Util::Dist(unit.getUnitPtr()->pos, pos)));
 	}
 	
@@ -1092,7 +1126,10 @@ void WorkerManager::drawResourceDebugInfo()
     for (auto & worker : m_workerData.getWorkers())
     {
         if (!worker.isValid()) { continue; }
-		if (worker.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MULE) { continue; }
+		if (worker.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MULE)
+		{
+			continue;
+		}
 
         if (worker.isIdle())
         {
