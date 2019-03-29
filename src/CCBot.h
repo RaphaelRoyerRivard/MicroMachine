@@ -1,6 +1,6 @@
 #pragma once
 //#define PUBLIC_RELEASE
-#define NO_UNITS
+//#define NO_UNITS
 
 #ifdef PUBLIC_RELEASE && NO_UNITS
 #undef NO_UNITS
@@ -130,6 +130,7 @@ public:
     const TypeData & Data(const CCUpgrade & type) const;
     const TypeData & Data(const MetaType & type);
     const TypeData & Data(const Unit & unit);
+	const TypeData & Data(const sc2::UNIT_TYPEID & type);
 	uint32_t GetGameLoop() const;
     const CCRace GetPlayerRace(int player) const;
 	const CCRace GetSelfRace() const;
@@ -152,7 +153,7 @@ public:
 	int GetFreeGas();
     Unit GetUnit(const CCUnitID & tag) const;
     const std::vector<Unit> & GetUnits() const;
-	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false) const;
+	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false);
 	std::map<sc2::Tag, Unit> & GetAllyUnits();
 	const std::vector<Unit> & GetAllyUnits(sc2::UNIT_TYPEID type);
 	std::map<sc2::Tag, Unit> & GetEnemyUnits();

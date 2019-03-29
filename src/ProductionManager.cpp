@@ -540,12 +540,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					queueTech(MetaTypeEnum::HyperflightRotors);
 				}
 
+#ifndef NO_UNITS
 				if (!m_bot.Strategy().enemyHasMetabolicBoost() && !m_queue.contains(MetaTypeEnum::Reaper) && m_bot.CombatAnalyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 3)
 				{
-#ifndef NO_UNITS
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
-#endif
 				}
+#endif
 
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 
@@ -555,24 +555,26 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					auto metaTypeInfantryWeapon = queueUpgrade(MetaTypeEnum::TerranInfantryWeaponsLevel1);
 				}*/
 
+#ifndef NO_UNITS
 				if (!m_queue.contains(MetaTypeEnum::Banshee))
 				{
-#ifndef NO_UNITS
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
-#endif
 				}
+#endif
 
+#ifndef NO_UNITS
 				if (bansheeCount >= 2 && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
 				{
-					//m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Raven, 0, false));
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Raven, 0, false));
 				}
+#endif
 
+#ifndef NO_UNITS
 				if ((m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
 				{
-#ifndef NO_UNITS
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
-#endif
 				}
+#endif
 
 				if(m_bot.Strategy().enemyHasMetabolicBoost())
 				{
@@ -585,12 +587,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if (m_bot.Strategy().shouldProduceAntiAir())
 				{
+#ifndef NO_UNITS
 					if (vikingCount < bansheeCount && !m_queue.contains(MetaTypeEnum::Viking))
 					{
-#ifndef NO_UNITS
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
-#endif
 					}
+#endif
 
 					if (!isTechQueuedOrStarted(MetaTypeEnum::HiSecAutoTracking) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HISECAUTOTRACKING))
 					{
@@ -599,12 +601,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings())
 				{
+#ifndef NO_UNITS
 					if (vikingCount < 1 && !m_queue.contains(MetaTypeEnum::Viking))
 					{
-#ifndef NO_UNITS
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
-#endif
 					}
+#endif
 				}
 				break;
 			}
