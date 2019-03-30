@@ -412,7 +412,7 @@ void WorkerManager::handleIdleWorkers()
 
 void WorkerManager::handleRepairWorkers()
 {
-	const int REPAIR_STATION_MIN_MINERAL = 25;//Also affects the automatic building repairing
+	const int REPAIR_STATION_MIN_MINERAL = 15;//Also affects the automatic building repairing
 
     // Only terran worker can repair
     if (!Util::IsTerran(m_bot.GetSelfRace()))
@@ -480,75 +480,73 @@ void WorkerManager::handleRepairWorkers()
 	const int FULL_REPAIR_GAS = 50;
 	const int REPAIR_STATION_SIZE = 3;
 	const int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
-	int currentMaxRepairWorker = std::min(MAX_REPAIR_WORKER, (int)floor(MAX_REPAIR_WORKER * (mineral / (float)FULL_REPAIR_MINERAL)));
+
 	/* Chart of repair worker based on minerals
-	0: 25 mineral-
+	0: 15 mineral-
 	1: 25 mineral+
 	2: 40 mineral+
 	3: 60 mineral+
 	4: 80 mineral+
 	5: 100 mineral+
 	*/
+	int currentMaxRepairWorker = std::min(MAX_REPAIR_WORKER, (int)floor(MAX_REPAIR_WORKER * (mineral / (float)FULL_REPAIR_MINERAL)));
 
-	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
+	auto bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+	for (auto & base : bases)
 	{
-		auto bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
-		for (auto & base : bases)
+		std::vector<Unit> unitsToRepair;
+
+		//Get all units to repair
+		for (auto & tagUnit : m_bot.GetAllyUnits())
 		{
-			std::vector<Unit> unitsToRepair;
-
-			//Get all units to repair
-			for (auto & tagUnit : m_bot.GetAllyUnits())
+			Unit unit = tagUnit.second;
+			if (unit.getUnitPtr()->build_progress != 1.0f)
 			{
-				Unit unit = tagUnit.second;
-				if (unit.getUnitPtr()->build_progress != 1.0f)
-				{
-					continue;
-				}
-
-				float healthPercentage = unit.getHitPointsPercentage();
-				if (healthPercentage < 100 && !unit.isBeingConstructed())
-				{
-					//Is repairable
-					if (!unit.getType().isRepairable())
-						continue;
-					//Check if we have the required gas to repair it
-					if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
-						continue;
-
-					const float distanceSquare = Util::DistSq(unit, base->getPosition());
-					if (distanceSquare < REPAIR_STATION_SIZE * REPAIR_STATION_SIZE)
-					{
-						unitsToRepair.push_back(unit);
-					}
-				}
+				continue;
 			}
 
-			if (unitsToRepair.size() > 0)
+			float healthPercentage = unit.getHitPointsPercentage();
+			if (healthPercentage < 100 && !unit.isBeingConstructed())
 			{
-				//Send workers to repair
-				int repairWorkers = 0;
-				auto & workerData = getWorkerData();
-				for (auto & worker : getWorkers())
-				{
-					auto it = unitsToRepair.begin();
-					if (repairWorkers >= currentMaxRepairWorker)
-					{
-						break;
-					}
+				//Is repairable
+				if (!unit.getType().isRepairable())
+					continue;
+				//Check if we have the required gas to repair it
+				if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
+					continue;
 
-					if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || workerData.getWorkerJob(worker) == WorkerJobs::Repair)
+				const float distanceSquare = Util::DistSq(unit, base->getPosition());
+				if (distanceSquare < REPAIR_STATION_SIZE * REPAIR_STATION_SIZE)
+				{
+					unitsToRepair.push_back(unit);
+				}
+			}
+		}
+
+		if (unitsToRepair.size() > 0)
+		{
+			//Send workers to repair
+			int repairWorkers = 0;
+			auto & workerData = getWorkerData();
+			for (auto & worker : getWorkers())
+			{
+				auto it = unitsToRepair.begin();
+				if (repairWorkers >= currentMaxRepairWorker)
+				{
+					break;
+				}
+
+				if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || workerData.getWorkerJob(worker) == WorkerJobs::Repair)
+				{
+					const float distanceSquare = Util::DistSq(worker, base->getPosition());
+					if (distanceSquare < REPAIR_STATION_WORKER_ZONE_SIZE * REPAIR_STATION_WORKER_ZONE_SIZE)
 					{
-						const float distanceSquare = Util::DistSq(worker, base->getPosition());
-						if (distanceSquare < REPAIR_STATION_WORKER_ZONE_SIZE * REPAIR_STATION_WORKER_ZONE_SIZE)
+						setRepairWorker(worker, *it);
+						repairWorkers++;
+						++it;
+						if (it == unitsToRepair.end())
 						{
-							setRepairWorker(worker, *it);
-							repairWorkers++;
-							++it;
-							if (it == unitsToRepair.end())
-							{
-								it = unitsToRepair.begin();
-							}
+							it = unitsToRepair.begin();
 						}
 					}
 				}
@@ -560,7 +558,7 @@ void WorkerManager::handleRepairWorkers()
 	const float MIN_HEALTH = 30.f;
 	const float MAX_HEALTH = 100.f;
 	const int MAX_WORKER_PER_BUILDING = 1;
-	for (auto & building : m_bot.Buildings().getBaseBuildings())
+	for (auto & building : m_bot.Buildings().getFinishedBuildings())
 	{
 		auto percentage = building.getHitPointsPercentage();
 		//Skip building being repaired
