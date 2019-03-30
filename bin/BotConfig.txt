@@ -24,11 +24,33 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 9,
         "EnemyRace"                 : "Random",
-        "MapFile"                   : "KairosJunctionLE.SC2Map",
+        "MapFile"                   : "Random",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
     },
+	
+	"RandomMaps":
+	[
+		"16BitLE.SC2Map",
+		"AcidPlantLE.SC2Map",
+		"AutomatonLE.SC2Map",
+		"BlueshiftLE.SC2Map",
+		"CatalystLE.SC2Map",
+		"CeruleanFallLE.SC2Map",
+		"DarknessSanctuary.SC2Map",
+		"DarknessSanctuaryLE.SC2Map",
+		"DreamcatcherLE.SC2Map",
+		"FractureLE.SC2Map",
+		"InterloperLE.SC2Map",
+		"KairosJunctionLE.SC2Map",
+		"LostAndFoundLE.SC2Map",
+		"MechDepotLE.SC2Map",
+		"ParaSiteLE.SC2Map",
+		"PortAleksanderLE.SC2Map",
+		"Redshift.SC2Map",
+		"StasisLE.SC2Map"
+	],
         
     "Micro" :
     {

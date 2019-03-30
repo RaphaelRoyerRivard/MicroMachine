@@ -11,6 +11,7 @@ namespace Util
 	static const int DELAY_BETWEEN_ERROR = 120;
 	static std::vector<std::string> displayedError;
 	static std::ofstream file;
+	static std::string mapName;
 	static bool allowDebug;
 
 	struct UnitCluster
@@ -101,6 +102,9 @@ namespace Util
 	}
 
 	void SetAllowDebug(bool _allowDebug);
+
+	void SetMapName(std::string _mapName);
+	std::string GetMapName();
 	
 	template< typename O, typename S>
 	bool Contains(O object, S structure) { return std::find(structure.begin(), structure.end(), object) != structure.end(); }
@@ -178,6 +182,7 @@ namespace Util
 	void			CreateLog(CCBot & bot);
 	void			DebugLog(const std::string & function, CCBot & bot);
 	void			DebugLog(const std::string & function, const std::string & message, CCBot & bot);
+	void			LogNoFrame(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, const std::string & message, CCBot & bot);
     UnitType        GetTownHall(const CCRace & race, CCBot & bot);

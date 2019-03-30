@@ -467,6 +467,16 @@ void Util::SetAllowDebug(bool _allowDebug)
 	allowDebug = _allowDebug;
 }
 
+void Util::SetMapName(std::string _mapName)
+{
+	mapName = _mapName;
+}
+
+std::string Util::GetMapName()
+{
+	return mapName;
+}
+
 std::string Util::GetStringFromRace(const CCRace & race)
 {
 #ifdef SC2API
@@ -1682,8 +1692,8 @@ void Util::CreateLog(CCBot & bot)
 	file.open(buf);
 
 	std::stringstream races;
-	races << Util::GetStringFromRace(bot.GetPlayerRace(Players::Self)) << " VS " << Util::GetStringFromRace(bot.GetPlayerRace(Players::Enemy));
-	Util::Log(races.str(), bot);
+	races << Util::GetStringFromRace(bot.GetPlayerRace(Players::Self)) << " VS " << Util::GetStringFromRace(bot.GetPlayerRace(Players::Enemy)) << " on " << Util::GetMapName();
+	Util::LogNoFrame(races.str(), bot);
 }
 
 void Util::DebugLog(const std::string & function, CCBot & bot)
@@ -1700,6 +1710,11 @@ void Util::DebugLog(const std::string & function, const std::string & message, C
 	{
 		file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 	}
+}
+
+void Util::LogNoFrame(const std::string & function, CCBot & bot)
+{
+	file << function << std::endl;
 }
 
 void Util::Log(const std::string & function, CCBot & bot)

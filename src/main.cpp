@@ -120,7 +120,24 @@ int main(int argc, char* argv[])
 		JSONTools::ReadBool("ConnectToLadder", info, connectToLadder);
         JSONTools::ReadString("BotRace", info, botRaceString);
         JSONTools::ReadString("EnemyRace", info, enemyRaceString);
+
         JSONTools::ReadString("MapFile", info, mapString);
+		//Random map
+		if (mapString.compare("Random") == 0)
+		{
+			if (j.count("RandomMaps") && j["RandomMaps"].is_array())
+			{
+				auto maps = j["RandomMaps"];
+				srand(time(NULL));//Set random seed, otherwise the result is always the same
+				int mapNumber = rand() % maps.size();
+				auto map = maps.at(mapNumber);
+				auto mapName = map.dump();//gets the string value in the json field
+				mapString = mapName.substr(1, mapName.length() - 2);//Remove quotation marks from start and end of the map name
+
+				Util::SetMapName(mapString);//Setting name in Util so we have access to it elsewhere
+			}
+		}
+
         JSONTools::ReadInt("StepSize", info, stepSize);
         JSONTools::ReadInt("EnemyDifficulty", info, enemyDifficulty);
         JSONTools::ReadBool("PlayAsHuman", info, PlayerOneIsHuman);
