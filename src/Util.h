@@ -91,12 +91,20 @@ namespace Util
 		CCPosition GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, CCBot & bot);
 		std::list<CCPosition> GetPositionListFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to);
-		bool HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		bool HasInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
-		float GetInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
-		float GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
+		bool HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
+		bool HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
+		bool HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, bool fromGround, CCBot & bot);
+		bool HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, bool fromGround, CCBot & bot);
+		float GetTotalInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
+		float GetTotalInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
+		float GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
+		float GetCombatInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
+		float GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, bool fromGround, CCBot & bot);
+		float GetCombatInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, bool fromGround, CCBot & bot);
+		bool HasEffectInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 		bool HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
-		bool IsUnitOnTileWithEffectInfluence(const sc2::Unit * unit, CCBot & bot);
+		bool IsUnitOnTileWithInfluence(const sc2::Unit * unit, CCBot & bot);
 		float GetEffectInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
 		float GetEffectInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 	}

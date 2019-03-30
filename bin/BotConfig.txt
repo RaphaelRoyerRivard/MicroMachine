@@ -16,13 +16,13 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.2.0",
+        "BotVersion"                : "1.4.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 9,
+        "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Random",
         "MapFile"                   : "Random",
         "StepSize"                  : 1,
@@ -109,7 +109,7 @@
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
         "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : false,
+        "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,

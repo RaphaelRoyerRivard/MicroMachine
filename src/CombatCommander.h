@@ -17,8 +17,10 @@ class CombatCommander
     SquadData       m_squadData;
     std::vector<Unit>  m_combatUnits;
 	std::map<Unit, std::pair<CCPosition, uint32_t>> m_invisibleSighting;
-	std::vector<std::vector<float>> m_groundInfluenceMap;
-	std::vector<std::vector<float>> m_airInfluenceMap;
+	std::vector<std::vector<float>> m_groundFromGroundCombatInfluenceMap;
+	std::vector<std::vector<float>> m_groundFromAirCombatInfluenceMap;
+	std::vector<std::vector<float>> m_airFromGroundCombatInfluenceMap;
+	std::vector<std::vector<float>> m_airFromAirCombatInfluenceMap;
 	std::vector<std::vector<float>> m_groundEffectInfluenceMap;
 	std::vector<std::vector<float>> m_airEffectInfluenceMap;
 	std::vector<std::vector<bool>> m_blockedTiles;
@@ -44,7 +46,7 @@ class CombatCommander
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);
     Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy);
-	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy);
+	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy) const;
 
 	CCPosition		exploreMap();
 	CCPosition		GetNextBaseLocationToScout();
@@ -59,7 +61,7 @@ class CombatCommander
 	void			updateGroundInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateAirInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
-	void			updateInfluenceMap(const float dps, const float range, const float speed, const CCPosition & position, const bool ground, const bool effect);
+	void			updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect);
 	void			updateBlockedTilesWithUnit(const Unit& unit);
 	void			drawInfluenceMaps();
 	void			drawBlockedTiles();
@@ -75,11 +77,17 @@ public:
 
 	std::map<Unit, std::pair<CCPosition, uint32_t>> & GetInvisibleSighting();
 
-	const std::vector<std::vector<float>> & getGroundInfluenceMap() const { return m_groundInfluenceMap; }
-	const std::vector<std::vector<float>> & getAirInfluenceMap() const { return m_airInfluenceMap; }
-	const std::vector<std::vector<float>> & getGroundEffectInfluenceMap() const { return m_groundEffectInfluenceMap; }
-	const std::vector<std::vector<float>> & getAirEffectInfluenceMap() const { return m_airEffectInfluenceMap; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
+	float getTotalGroundInfluence(CCTilePosition tilePosition) const;
+	float getTotalAirInfluence(CCTilePosition tilePosition) const;
+	float getGroundCombatInfluence(CCTilePosition tilePosition) const;
+	float getAirCombatInfluence(CCTilePosition tilePosition) const;
+	float getGroundFromGroundCombatInfluence(CCTilePosition tilePosition) const;
+	float getGroundFromAirCombatInfluence(CCTilePosition tilePosition) const;
+	float getAirFromGroundCombatInfluence(CCTilePosition tilePosition) const;
+	float getAirFromAirCombatInfluence(CCTilePosition tilePosition) const;
+	float getGroundEffectInfluence(CCTilePosition tilePosition) const;
+	float getAirEffectInfluence(CCTilePosition tilePosition) const;
 	bool isTileBlocked(int x, int y);
 
 	void initInfluenceMaps();

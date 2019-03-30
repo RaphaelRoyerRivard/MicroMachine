@@ -87,7 +87,7 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
     }
 
 	//If its not safe. We only check one tile since its very likely to be the save result for all tiles. This avoid a little bit of lag.
-	if (checkInfluenceMap && Util::PathFinding::HasInfluenceOnTile(CCTilePosition(bx, by), false, m_bot))
+	if (checkInfluenceMap && Util::PathFinding::HasCombatInfluenceOnTile(CCTilePosition(bx, by), false, m_bot))
 	{
 		//TODO don't think this can happen, there is a check earlier
 		return false;
@@ -165,7 +165,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
 
 	while(!m_bot.Map().isWalkable(buildLocation) ||
 		m_bot.Map().getClosestTilesTo(buildLocation).size() < 10 ||
-		(checkInfluenceMap && Util::PathFinding::HasInfluenceOnTile(buildLocation, false, m_bot)))
+		(checkInfluenceMap && Util::PathFinding::HasCombatInfluenceOnTile(buildLocation, false, m_bot)))
 	{
 		switch (direction)
 		{

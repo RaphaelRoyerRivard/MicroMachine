@@ -228,8 +228,17 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 #endif
 	}
 
+	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
+	// Check if our units are powerful enough to exchange fire with the enemies
+	if (ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats, unitShouldHeal))
+	{
+		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
+		return;
+	}
+	m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
+
 	m_bot.StartProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
-	if(targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
+	if (targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
 	{
 		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit));
 		PlanAction(rangedUnit, action);
@@ -239,15 +248,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
-
-	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
-	// Check if our units are powerful enough to exchange fire with the enemies
-	if (ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats, unitShouldHeal))
-	{
-		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
-		return;
-	}
-	m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 
 	m_bot.StartProfiling("0.10.4.1.5.1.6          UnitAbilities");
 	// Check if unit can use one of its abilities
@@ -478,7 +478,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squa
 	else if (squaredDistanceToGoal < VIKING_LANDING_DISTANCE_FROM_GOAL * VIKING_LANDING_DISTANCE_FROM_GOAL && !target)
 	{
 		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
-			&& Util::PathFinding::GetInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f
+			&& Util::PathFinding::GetCombatInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f
 			&& Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f)
 		{
 			morphAbility = sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE;
@@ -742,7 +742,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 		const bool canAttackNow = unitRange * unitRange >= Util::DistSq(unit->pos, unitTarget->pos) && unit->weapon_cooldown <= 0.f;
 
-		//TODO maybe prevent attacking if enemy units are slower
 		if (!shouldFight && (!canAttackNow || Util::getSpeedOfUnit(unit, m_bot) > maxThreatSpeed))
 		{
 			continue;
@@ -831,6 +830,9 @@ bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::U
 		if (threat->is_flying)
 			continue;
 
+		if (!UnitType::isTargetable(threat->unit_type))
+			continue;
+
 		const auto it = m_bot.GetPreviousFrameEnemyPos().find(threat->tag);
 		if (it == m_bot.GetPreviousFrameEnemyPos().end())
 			continue;
@@ -866,10 +868,10 @@ bool RangedManager::ShouldBuildAutoTurret(const sc2::Unit * raven, const sc2::Un
 {
 	if (raven->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN && raven->energy >= 50)
 	{
-		//TODO check if we have the +1 range upgrade for the Auto-Turret
+		const float maxDistance = 6.f + (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HISECAUTOTRACKING) ? 1.f : 0.f);
 		for(const auto threat : threats)
 		{
-			if (Util::DistSq(raven->pos, threat->pos) < 9.f * 9.f)	// Ability range (3) + Auto-Turret range (6)
+			if (Util::DistSq(raven->pos, threat->pos) < maxDistance * maxDistance)
 				return true;
 		}
 	}
@@ -883,23 +885,16 @@ bool RangedManager::ExecuteAutoTurretLogic(const sc2::Unit * raven, const sc2::U
 		return false;
 	}
 
-	//TODO check if we have the +1 range upgrade for the Auto-Turret
-	const sc2::Unit * closestThreat = nullptr;
-	float distance = 0.f;
-	for (const auto threat : threats)
+	const auto turretBuilding = Building(UnitType(sc2::UNIT_TYPEID::TERRAN_AUTOTURRET, m_bot), Util::GetTilePosition(raven->pos));
+	const CCPosition turretPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(turretBuilding, 0, true, false));
+
+	if(Util::DistSq(turretPosition, raven->pos) < 2.75f * 2.75)
 	{
-		const float dist = Util::DistSq(raven->pos, threat->pos);
-		if(!closestThreat || dist < distance)
-		{
-			closestThreat = threat;
-			distance = dist;
-		}
+		const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_AUTOTURRET, turretPosition, true, 0);
+		PlanAction(raven, action);
+		return true;
 	}
 
-	const CCPosition autoTurretPosition = raven->pos + 2.5f * Util::Normalized(closestThreat->pos - raven->pos);
-
-	const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_AUTOTURRET, autoTurretPosition, true, 0);
-	PlanAction(raven, action);
 	return false;
 }
 
@@ -1137,8 +1132,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 {
     BOT_ASSERT(target, "null unit in getAttackPriority");
 
-	if (target->unit_type == sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT
-		|| target->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+	if (!UnitType::isTargetable(target->unit_type))
 		return 0.f;
 
 	// Ignoring invisible creep tumors
@@ -1216,8 +1210,9 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 		{
 			nonThreateningModifier = targetDps == 0.f ? 1.f : 0.5f;		//for buildings, we prefer targetting them with units that will not get attacked back
 		}
+		const float flyingDetectorModifier = target->is_flying && UnitType::isDetector(target->unit_type) ? 2.f : 1.f;
 		const float minionModifier = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR ? 0.1f : 1.f;	//units that can be respawned should be less prioritized
-        return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier;
+        return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier;
     }
 
 	return (distanceValue * 50 - healthValue) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units

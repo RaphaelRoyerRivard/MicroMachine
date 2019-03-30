@@ -227,22 +227,22 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		{
 			if (maxRange == 0.f)
 			{
-				shouldTriggerExit = !HasInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot);
+				shouldTriggerExit = !HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot);
 			}
 			else
 			{
-				shouldTriggerExit = Dist(GetPosition(currentNode->position), goal) > maxRange || (!HasInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot));
+				shouldTriggerExit = Dist(GetPosition(currentNode->position), goal) > maxRange || (!HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot));
 			}
 		}
 		else
 		{
 			if (exitOnInfluence)
 			{
-				shouldTriggerExit = HasInfluenceOnTile(currentNode, unit, bot) || HasEffectInfluenceOnTile(currentNode, unit, bot);
+				shouldTriggerExit = HasCombatInfluenceOnTile(currentNode, unit, bot) || HasEffectInfluenceOnTile(currentNode, unit, bot);
 			}
 			if (!shouldTriggerExit)
 			{
-				shouldTriggerExit = (considerOnlyEffects || !HasInfluenceOnTile(currentNode, unit, bot)) &&
+				shouldTriggerExit = (considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot)) &&
 					!HasEffectInfluenceOnTile(currentNode, unit, bot) &&
 					Util::Dist(Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
 
@@ -268,7 +268,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		if (shouldTriggerExit)
 		{
 			// If it exits on influence, we need to check if there is actually influence on the current tile. If so, we do not return a valid path
-			if (!exitOnInfluence || (!HasInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot)))
+			if (!exitOnInfluence || (!HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot)))
 			{
 				// If the unit wants to flee but stay in range
 				if(flee && maxRange > 0.f && Dist(GetPosition(currentNode->position), goal) > maxRange)
@@ -297,7 +297,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 
 				const float neighborDistance = Dist(currentNode->position, neighborPosition);
 				const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
-				const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(neighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetInfluenceOnTile(neighborPosition, unit, bot));
+				const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(neighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetCombatInfluenceOnTile(neighborPosition, unit, bot));
 				const float nodeCost = (influenceOnTile + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
 				const float totalCost = currentNode->cost + nodeCost;
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
@@ -419,26 +419,67 @@ float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCT
 	return Util::Dist(from, to) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER;
 }
 
-bool Util::PathFinding::HasInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
-{
-	return GetInfluenceOnTile(node->position, unit->is_flying, bot) != 0.f;
-}
-
 bool Util::PathFinding::HasInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot)
 {
-	return GetInfluenceOnTile(position, isFlying, bot) != 0.f;
+	return GetTotalInfluenceOnTile(position, isFlying, bot) != 0.f;
 }
 
-float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
+bool Util::PathFinding::HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, bool fromGround, CCBot & bot)
 {
-	const auto & influenceMap = unit->is_flying ? bot.Commander().Combat().getAirInfluenceMap() : bot.Commander().Combat().getGroundInfluenceMap();
-	return influenceMap[tile.x][tile.y];
+	return GetCombatInfluenceOnTile(node->position, unit->is_flying, fromGround, bot) != 0.f;
 }
 
-float Util::PathFinding::GetInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot)
+bool Util::PathFinding::HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, bool fromGround, CCBot & bot)
 {
-	const auto & influenceMap = isFlying ? bot.Commander().Combat().getAirInfluenceMap() : bot.Commander().Combat().getGroundInfluenceMap();
-	return influenceMap[tile.x][tile.y];
+	return GetCombatInfluenceOnTile(position, isFlying, fromGround, bot) != 0.f;
+}
+
+bool Util::PathFinding::HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
+{
+	return GetCombatInfluenceOnTile(node->position, unit->is_flying, bot) != 0.f;
+}
+
+bool Util::PathFinding::HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot)
+{
+	return GetCombatInfluenceOnTile(position, isFlying, bot) != 0.f;
+}
+
+float Util::PathFinding::GetTotalInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
+{
+	return GetTotalInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
+}
+
+float Util::PathFinding::GetTotalInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot)
+{
+	return isFlying ? bot.Commander().Combat().getTotalAirInfluence(tile) : bot.Commander().Combat().getTotalGroundInfluence(tile);
+}
+
+float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
+{
+	return GetCombatInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
+}
+
+float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot)
+{
+	return isFlying ? bot.Commander().Combat().getAirCombatInfluence(tile) : bot.Commander().Combat().getGroundCombatInfluence(tile);
+}
+
+float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, bool fromGround, CCBot & bot)
+{
+	return GetCombatInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
+}
+
+float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, bool fromGround, CCBot & bot)
+{
+	if(isFlying)
+	{
+		if(fromGround)
+			return bot.Commander().Combat().getAirFromGroundCombatInfluence(tile);
+		return bot.Commander().Combat().getAirFromAirCombatInfluence(tile);
+	}
+	if (fromGround)
+		return bot.Commander().Combat().getGroundFromGroundCombatInfluence(tile);
+	return bot.Commander().Combat().getGroundFromAirCombatInfluence(tile);
 }
 
 bool Util::PathFinding::HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
@@ -446,9 +487,15 @@ bool Util::PathFinding::HasEffectInfluenceOnTile(const IMNode* node, const sc2::
 	return GetEffectInfluenceOnTile(node->position, unit, bot) != 0.f;
 }
 
-bool Util::PathFinding::IsUnitOnTileWithEffectInfluence(const sc2::Unit * unit, CCBot & bot)
+bool Util::PathFinding::HasEffectInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot)
 {
-	return GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), unit, bot) != 0.f;
+	return GetEffectInfluenceOnTile(tile, isFlying, bot) != 0.f;
+}
+
+bool Util::PathFinding::IsUnitOnTileWithInfluence(const sc2::Unit * unit, CCBot & bot)
+{
+	const CCTilePosition tile = Util::GetTilePosition(unit->pos);
+	return GetCombatInfluenceOnTile(tile, unit, bot) != 0.f || GetEffectInfluenceOnTile(tile, unit, bot) != 0.f;
 }
 
 float Util::PathFinding::GetEffectInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
@@ -458,8 +505,7 @@ float Util::PathFinding::GetEffectInfluenceOnTile(CCTilePosition tile, const sc2
 
 float Util::PathFinding::GetEffectInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot)
 {
-	const auto & effectInfluenceMap = isFlying ? bot.Commander().Combat().getAirEffectInfluenceMap() : bot.Commander().Combat().getGroundEffectInfluenceMap();
-	return effectInfluenceMap[tile.x][tile.y];
+	return isFlying ? bot.Commander().Combat().getAirEffectInfluence(tile) : bot.Commander().Combat().getGroundEffectInfluence(tile);
 }
 
 void Util::SetAllowDebug(bool _allowDebug)
@@ -689,25 +735,27 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 			}
 		}
 
-		// Merge clusters
-		for (auto clusterToMerge : clustersToMerge)
+		if (!clustersToMerge.empty())
 		{
-			// Put the units of the cluster into the main cluster
-			for (const auto clusterUnit : clusterToMerge->m_units)
+			// Merge clusters
+			for (auto clusterToMerge : clustersToMerge)
 			{
-				mainCluster->m_units.push_back(clusterUnit);
+				// Put the units of the cluster into the main cluster
+				for (const auto clusterUnit : clusterToMerge->m_units)
+				{
+					mainCluster->m_units.push_back(clusterUnit);
+				}
+				clusterToMerge->m_units.clear();
 			}
-			// Remove the cluster from the list
+
+			// Remove emptied clusters from the list
 			auto clusterIt = m_unitClusters.begin();
 			while (clusterIt != m_unitClusters.end())
-			for(auto & cluster : m_unitClusters)
 			{
-				if(clusterToMerge == &cluster)
-				{
-					m_unitClusters.erase(clusterIt);
-					break;
-				}
-				++clusterIt;
+				if (clusterIt->m_units.empty())
+					m_unitClusters.erase(clusterIt++);
+				else
+					++clusterIt;
 			}
 		}
 
@@ -980,6 +1028,11 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 		if (where != sc2::Weapon::TargetType::Air)
 			range = 4.f;
 	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			range = 3.f;
+	}
 
 	return range;
 }
@@ -1247,10 +1300,20 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	{
 		dps = 0.1f;	// hack so the cannons will be considered as weak
 	}
-	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
 	{
 		if (where != sc2::Weapon::TargetType::Air)
 			dps = 15.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			dps = 15.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			dps = 200.f;
 	}
 
     return dps;
