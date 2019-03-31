@@ -73,6 +73,7 @@ public:
     void move           (const CCPosition & targetPosition) const;
     void move           (const CCTilePosition & targetTilePosition) const;
 	void rightClick     (const Unit & target) const;
+	void rightClick		(const CCPosition position) const;
     void repair         (const Unit & target) const;
     void build          (const UnitType & buildingType, CCTilePosition pos) const;
     void buildTarget    (const UnitType & buildingType, const Unit & target) const;

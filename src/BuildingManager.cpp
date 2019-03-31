@@ -830,13 +830,41 @@ void BuildingManager::checkForCompletedBuildings()
             // if we are terran, give the worker back to worker manager
             if (Util::IsTerran(m_bot.GetSelfRace()))
             {
-				if(b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REFINERY)//Worker that built the refinery, will be a gas worker for it.
+				auto type = b.type.getAPIUnitType();
+				if(type == sc2::UNIT_TYPEID::TERRAN_REFINERY)//Worker that built the refinery, will be a gas worker for it.
 				{
 					m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Gas, b.buildingUnit);
 				}
 				else
 				{
 					m_bot.Workers().finishedWithWorker(b.builderUnit);
+
+					//Handle rally points
+					switch ((sc2::UNIT_TYPEID)type)
+					{
+						case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER:
+						case sc2::UNIT_TYPEID::PROTOSS_NEXUS:
+						{
+							//Set rally in the middle of the minerals
+							auto position = b.buildingUnit.getPosition();
+							auto base = m_bot.Bases().getBaseContainingPosition(position, Players::Self);
+							b.buildingUnit.rightClick(Util::GetPosition(base->getCenterOfMinerals()));
+							break;
+						}
+						case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+						case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+						case sc2::UNIT_TYPEID::PROTOSS_GATEWAY:
+						case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
+						case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
+						{
+							//Set rally in the middle of the minerals
+							auto position = b.buildingUnit.getPosition();
+							auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+							b.buildingUnit.rightClick(enemyBase->getPosition());
+							break;
+						}
+					}
 				}
             }
 

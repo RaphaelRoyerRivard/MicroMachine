@@ -378,6 +378,11 @@ void Unit::rightClick(const Unit & target) const
 #endif
 }
 
+void Unit::rightClick(const CCPosition position) const
+{
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::SMART, sc2::Point2D(position.x, position.y));
+}
+
 void Unit::repair(const Unit & target) const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
