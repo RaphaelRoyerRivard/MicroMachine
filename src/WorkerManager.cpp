@@ -254,24 +254,24 @@ void WorkerManager::handleGasWorkers()
 	}
 
     // for each unit we have
-    for (auto & building : m_bot.Buildings().getFinishedBuildings())//TODO Can be optimised CCBot::GetAllyUnits(sc2::UNIT_TYPEID type)
+	for (auto & geyser : m_bot.GetAllyUnits(Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot).getAPIUnitType()))
     {
         // if that unit is a refinery
-        if (building.getType().isRefinery() && building.isCompleted())
+        if (geyser.isCompleted() && geyser.getUnitPtr()->vespene_contents > 0)
         {
             // get the number of workers currently assigned to it
-            int numAssigned = m_workerData.getNumAssignedWorkers(building);
-			auto base = m_bot.Bases().getBaseContainingPosition(building.getPosition(), Players::Self);
+            int numAssigned = m_workerData.getNumAssignedWorkers(geyser);
+			auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
 
 			if (numAssigned < gasWorkersTarget)
 			{
 				// if it's less than we want it to be, fill 'er up
 				for (int i = 0; i<(gasWorkersTarget - numAssigned); ++i)
 				{
-					auto mineralWorker = getMineralWorker(building);
-					if (mineralWorker.isValid() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), building.getPosition(), m_bot))
+					auto mineralWorker = getMineralWorker(geyser);
+					if (mineralWorker.isValid() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyser.getPosition(), m_bot))
 					{
-						m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, building);
+						m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
 					}
 				}
 			}
@@ -298,7 +298,7 @@ void WorkerManager::handleGasWorkers()
 						break;
 					}
 
-					auto gasWorker = getGasWorker(building, true);
+					auto gasWorker = getGasWorker(geyser, true);
 					if (gasWorker.isValid())
 					{
 						if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
@@ -656,9 +656,24 @@ void WorkerManager::repairCombatBuildings()
 void WorkerManager::lowPriorityChecks()
 {
 	int currentFrame = m_bot.GetCurrentFrame();
-	if (currentFrame % 60)
+	if (currentFrame % 48)
 	{
 		return;
+	}
+
+	//Detect depleted geysers
+	for (auto & geyser : m_bot.GetAllyUnits(Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot).getAPIUnitType()))
+	{
+		//if Depleted
+		if (geyser.getUnitPtr()->vespene_contents == 0)
+		{
+			//remove workers from depleted geyser
+			auto workers = m_workerData.getAssignedWorkersRefinery(geyser);
+			for (auto & worker : workers)
+			{
+				m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
+			}
+		}
 	}
 
 	//Worker split between bases (transfer worker)

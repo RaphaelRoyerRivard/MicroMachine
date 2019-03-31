@@ -923,7 +923,14 @@ void BuildingManager::checkForCompletedBuildings()
 							//Set rally in the middle of the minerals
 							auto position = b.buildingUnit.getPosition();
 							auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-							b.buildingUnit.rightClick(enemyBase->getPosition());
+							if (enemyBase == nullptr)
+							{
+								b.buildingUnit.rightClick(m_bot.Map().center());
+							}
+							else
+							{
+								b.buildingUnit.rightClick(enemyBase->getPosition());
+							}
 							break;
 						}
 					}

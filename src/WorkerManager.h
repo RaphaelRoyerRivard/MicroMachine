@@ -15,6 +15,7 @@ class WorkerManager
 	int gasWorkersTarget = 3;
 	std::list<Unit> buildingAutomaticallyRepaired;
 	std::map<CCUnitID, std::pair<bool, int>> muleHarvests;//<MuleId, <isReturningCargo, harvest count>>, we are not removing killed mules from this map, but it doesn't really matter
+	std::list<Unit> depletedGeyser;
 
     mutable WorkerData  m_workerData;
     Unit m_previousClosestWorker;
