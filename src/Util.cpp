@@ -1451,6 +1451,18 @@ bool Util::IsTerran(const CCRace & race)
 #endif
 }
 
+int Util::ToMapKey(const CCTilePosition position)
+{
+	return position.x * 1000000 + position.y;
+}
+
+CCTilePosition Util::FromCCTilePositionMapKey(const int mapKey)
+{
+	int y = mapKey % 1000;//Keep last 3 digits
+	int x = (mapKey - y) / 1000000;
+	return CCTilePosition(x, y);
+}
+
 CCTilePosition Util::GetTilePosition(const CCPosition & pos)
 {
 #ifdef SC2API

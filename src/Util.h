@@ -200,6 +200,8 @@ namespace Util
     bool            IsZerg(const CCRace & race);
     bool            IsProtoss(const CCRace & race);
     bool            IsTerran(const CCRace & race);
+	int				ToMapKey(const CCTilePosition position);
+	CCTilePosition	FromCCTilePositionMapKey(const int mapKey);
     CCPositionType  TileToPosition(float tile);
 
 #ifdef SC2API

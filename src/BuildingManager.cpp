@@ -221,8 +221,70 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 	}
 	if(tilesToBlock.size() != 3)
 	{
-		Util::DisplayError("Unusual ramp detected, tiles to block = " + std::to_string(tilesToBlock.size()), "0x00000003", m_bot, false);
-		return {};
+		//Handle maps with multiple ramps
+
+		//Create a list of all connected tiles
+		std::map<int, std::vector<CCTilePosition>> connectedTiles;
+		for (auto & tile : tilesToBlock)
+		{
+			for (auto & tile2 : tilesToBlock)
+			{
+				if (tile == tile2)
+					continue;
+				int diff = abs(tile.x - tile2.x) + abs(tile.y - tile2.y);
+				if (diff <= 2)
+				{
+					connectedTiles[Util::ToMapKey(tile)].push_back(tile2);
+				}
+			}
+		}
+
+		//Connects connected tiles together.
+		bool hasChanges = true;
+		while (hasChanges)
+		{
+			hasChanges = false;
+
+			for (auto & connectedTile : connectedTiles)
+			{
+				for (auto & connectedTile2 : connectedTiles)
+				{
+					if (connectedTile.first == connectedTile2.first)
+						continue;
+
+					//If the connectedTiles contain this tile, add its results
+					if(std::find(connectedTile.second.begin(), connectedTile.second.end(), Util::FromCCTilePositionMapKey(connectedTile2.first)) != connectedTile.second.end())
+					{
+						for (auto & tile : connectedTile2.second)
+						{
+							//If these connected tiles do not contain this tile yet, add it
+							if (std::find(connectedTile.second.begin(), connectedTile.second.end(), tile) == connectedTile.second.end())
+							{
+								connectedTile.second.push_back(tile);
+								hasChanges = true;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		//Check if we found a 3 wide ramp
+		bool found = false;
+		for (auto & connectedTile : connectedTiles)
+		{
+			if (connectedTile.second.size() == 3)
+			{//found the ramp
+				tilesToBlock = connectedTile.second;
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+		{
+			Util::DisplayError("Unusual ramp detected, tiles to block = " + std::to_string(tilesToBlock.size()), "0x00000003", m_bot, false);
+			return {};
+		}
 	}
 	
 	int swap = 0;
