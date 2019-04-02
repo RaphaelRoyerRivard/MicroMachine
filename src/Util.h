@@ -12,8 +12,15 @@ namespace Util
 	static std::vector<std::string> displayedError;
 	static std::ofstream file;
 	static std::string mapName;
-	static bool allowDebug;
 
+	//used for optimisation
+	static UnitType refineryType;
+	static UnitType depotType;
+	static UnitType workerType;
+	static UnitType supplyType;
+
+	static bool allowDebug;
+	
 	struct UnitCluster
 	{
 		CCPosition m_center;
@@ -109,6 +116,7 @@ namespace Util
 		float GetEffectInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 	}
 
+	void Initialize(CCBot & bot, CCRace race);
 	void SetAllowDebug(bool _allowDebug);
 
 	void SetMapName(std::string _mapName);
@@ -158,8 +166,8 @@ namespace Util
 	CCPosition      CalcCenter(const std::vector<Unit> & units);
 	const sc2::Unit* CalcClosestUnit(const sc2::Unit* unit, const sc2::Units & targets);
 	float           GetUnitsPower(const std::vector<Unit> & units, const std::vector<Unit> & targets, CCBot& bot);
-	float GetUnitsPower(const sc2::Units & units, const sc2::Units & targets, CCBot& bot);
-	float GetUnitPower(const sc2::Unit* unit, const sc2::Unit* closestUnit, CCBot& bot);
+	float			GetUnitsPower(const sc2::Units & units, const sc2::Units & targets, CCBot& bot);
+	float			GetUnitPower(const sc2::Unit* unit, const sc2::Unit* closestUnit, CCBot& bot);
 	float			GetUnitPower(const Unit &unit, const Unit& closestUnit, CCBot& m_bot);
 	float           GetNorm(const sc2::Point2D& point);
     void            Normalize(sc2::Point2D& point);
@@ -193,8 +201,8 @@ namespace Util
 	void			LogNoFrame(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, const std::string & message, CCBot & bot);
-    UnitType        GetTownHall(const CCRace & race, CCBot & bot);
-    UnitType        GetRefinery(const CCRace & race, CCBot & bot);
+    UnitType        GetRessourceDepotType(const CCRace & race, CCBot & bot);
+    UnitType        GetRefineryType(const CCRace & race, CCBot & bot);
 	UnitType        GetSupplyProvider(const CCRace & race, CCBot & bot);
 	UnitType        GetWorkerType(const CCRace & race, CCBot & bot);
     bool            IsZerg(const CCRace & race);

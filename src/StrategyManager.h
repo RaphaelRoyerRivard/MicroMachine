@@ -52,7 +52,6 @@ class StrategyManager
 	bool m_focusBuildings = false;
 	std::set<sc2::UPGRADE_ID> m_completedUpgrades;
 
-    bool  shouldExpandNow() const;
     const UnitPairVector getProtossBuildOrderGoal() const;
     const UnitPairVector getTerranBuildOrderGoal() const;
     const UnitPairVector getZergBuildOrderGoal() const;

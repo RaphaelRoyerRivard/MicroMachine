@@ -191,7 +191,7 @@ void WorkerManager::handleGasWorkers()
 	int gas = m_bot.GetGas();
 	int numMineralWorker = getNumMineralWorkers();
 	int numGasWorker = getNumGasWorkers();
-	int numRefinery = m_bot.Buildings().getBuildingCountOfType(Util::GetRefinery(m_bot.GetSelfRace(), m_bot).getAPIUnitType(), true);
+	int numRefinery = m_bot.Buildings().getBuildingCountOfType(Util::GetRefineryType(m_bot.GetSelfRace(), m_bot).getAPIUnitType(), true);
 	const int ressourceTreshold = 300;
 
 	switch (gasWorkersTarget)
@@ -254,7 +254,7 @@ void WorkerManager::handleGasWorkers()
 	}
 
     // for each unit we have
-	for (auto & geyser : m_bot.GetAllyUnits(Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot).getAPIUnitType()))
+	for (auto & geyser : m_bot.GetAllyUnits(Util::GetRefineryType(m_bot.GetPlayerRace(Players::Self), m_bot).getAPIUnitType()))
     {
         // if that unit is a refinery
         if (geyser.isCompleted() && geyser.getUnitPtr()->vespene_contents > 0)
@@ -662,7 +662,7 @@ void WorkerManager::lowPriorityChecks()
 	}
 
 	//Detect depleted geysers
-	for (auto & geyser : m_bot.GetAllyUnits(Util::GetRefinery(m_bot.GetPlayerRace(Players::Self), m_bot).getAPIUnitType()))
+	for (auto & geyser : m_bot.GetAllyUnits(Util::GetRefineryType(m_bot.GetPlayerRace(Players::Self), m_bot).getAPIUnitType()))
 	{
 		//if Depleted
 		if (geyser.getUnitPtr()->vespene_contents == 0)
@@ -1195,19 +1195,10 @@ void WorkerManager::drawWorkerInformation()
         return;
     }
 
-    std::stringstream ss;
-    ss << "Workers: " << m_workerData.getWorkers().size() << "\n";
-
-    int yspace = 0;
-
     for (auto & worker : m_workerData.getWorkers())
     {
-        ss << m_workerData.getJobCode(worker) << " " << worker.getID() << "\n";
-
         m_bot.Map().drawText(worker.getPosition(), m_workerData.getJobCode(worker));
     }
-
-    m_bot.Map().drawTextScreen(0.75f, 0.2f, ss.str());
 }
  
 bool WorkerManager::isFree(Unit worker) const

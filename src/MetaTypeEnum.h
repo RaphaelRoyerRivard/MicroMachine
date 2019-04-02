@@ -28,6 +28,7 @@ class MetaTypeEnum
 		static MetaType EngineeringBay;
 		static MetaType MissileTurret;
 			//Units
+		static MetaType SCV;
 		static MetaType Marine;
 		static MetaType Marauder;
 		static MetaType Reaper;

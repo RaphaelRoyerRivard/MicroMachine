@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
     // Start the game.
     coordinator.LaunchStarcraft();
     coordinator.StartGame(mapString);
-
+	
     // Step forward the game simulation.
     while (coordinator.Update())
     {

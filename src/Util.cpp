@@ -74,6 +74,42 @@ struct Util::PathFinding::IMNode
 	}
 };
 
+void Util::Initialize(CCBot & bot, CCRace race)
+{
+#ifdef SC2API
+	switch (race)
+	{
+		case sc2::Race::Terran:
+		{
+			Util::depotType = UnitType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, bot);
+			Util::refineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_REFINERY, bot);
+			Util::workerType = UnitType(sc2::UNIT_TYPEID::TERRAN_SCV, bot);
+			Util::supplyType = UnitType(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, bot);
+			break;
+		}
+		case sc2::Race::Protoss:
+		{
+			Util::depotType = UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, bot);
+			Util::refineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, bot);
+			Util::workerType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, bot);
+			Util::supplyType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, bot);
+			break;
+		}
+		case sc2::Race::Zerg:
+		{
+			Util::depotType = UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, bot);
+			Util::refineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, bot);
+			Util::workerType = UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, bot);
+			Util::supplyType = UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, bot);
+			break;
+		}
+	}
+#else
+	Util::depotType = UnitType(race.getResourceDepot(), bot);
+	Util::depotType = UnitType(race.getRefinery(), bot);
+#endif
+}
+
 Util::PathFinding::IMNode* getLowestCostNode(std::set<Util::PathFinding::IMNode*> & set)
 {
 	Util::PathFinding::IMNode* lowestCostNode = nullptr;
@@ -575,58 +611,22 @@ CCPositionType Util::TileToPosition(float tile)
 
 UnitType Util::GetSupplyProvider(const CCRace & race, CCBot & bot)
 {
-#ifdef SC2API
-    switch (race) 
-    {
-        case sc2::Race::Terran: return UnitType(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, bot);
-        case sc2::Race::Protoss: return UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, bot);
-        case sc2::Race::Zerg: return UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, bot);
-        default: return UnitType();
-    }
-#else
-    return UnitType(race.getSupplyProvider(), bot);
-#endif
+	return supplyType;
 }
 
 UnitType Util::GetWorkerType(const CCRace & race, CCBot & bot)
 {
-	switch (race)
-	{
-		case sc2::Race::Terran: return UnitType(sc2::UNIT_TYPEID::TERRAN_SCV, bot);
-		case sc2::Race::Protoss: return UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, bot);
-		case sc2::Race::Zerg: return UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, bot);
-		default: return UnitType();
-	}
+	return workerType;
 }
 
-UnitType Util::GetTownHall(const CCRace & race, CCBot & bot)
+UnitType Util::GetRessourceDepotType(const CCRace & race, CCBot & bot)
 {
-#ifdef SC2API
-    switch (race) 
-    {
-        case sc2::Race::Terran: return UnitType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, bot);
-        case sc2::Race::Protoss: return UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, bot);
-        case sc2::Race::Zerg: return UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, bot);
-        default: return UnitType();
-    }
-#else
-    return UnitType(race.getResourceDepot(), bot);
-#endif
+	return depotType;
 }
 
-UnitType Util::GetRefinery(const CCRace & race, CCBot & bot)
+UnitType Util::GetRefineryType(const CCRace & race, CCBot & bot)
 {
-#ifdef SC2API
-    switch (race) 
-    {
-        case sc2::Race::Terran: return UnitType(sc2::UNIT_TYPEID::TERRAN_REFINERY, bot);
-        case sc2::Race::Protoss: return UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, bot);
-        case sc2::Race::Zerg: return UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, bot);
-        default: return UnitType();
-    }
-#else
-    return UnitType(race.getRefinery(), bot);
-#endif
+	return refineryType;
 }
 
 CCPosition Util::CalcCenter(const std::vector<const sc2::Unit*> & units)

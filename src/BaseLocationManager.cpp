@@ -185,7 +185,7 @@ void BaseLocationManager::onFrame()
 
         if (baseLocation != nullptr)
         {
-            baseLocation->setPlayerOccupying(unit.getPlayer(), true);
+            baseLocation->setPlayerOccupying(Players::Self, true);
 			baseLocation->setResourceDepot(unit);
         }
     }
@@ -193,7 +193,7 @@ void BaseLocationManager::onFrame()
 
 	m_bot.StartProfiling("0.6.4   updateEnemyBaseLocations");
     // update enemy base occupations
-    for (const auto & kv : m_bot.UnitInfo().getUnitInfoMap(Players::Enemy))
+    /*for (const auto & kv : m_bot.UnitInfo().getUnitInfoMap(Players::Enemy))
     {
         const UnitInfo & ui = kv.second;
 
@@ -208,7 +208,21 @@ void BaseLocationManager::onFrame()
         {
             baseLocation->setPlayerOccupying(Players::Enemy, true);
         }
-    }
+    }*/
+	for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+	{
+		// we only care about resource depots
+		if (!unit.getType().isResourceDepot())
+			continue;
+
+		BaseLocation * baseLocation = getBaseLocation(unit.getPosition());
+
+		if (baseLocation != nullptr)
+		{
+			baseLocation->setPlayerOccupying(Players::Enemy, true);
+			baseLocation->setResourceDepot(unit);
+		}
+	}
 	m_bot.StopProfiling("0.6.4   updateEnemyBaseLocations");
 
     // update the starting locations of the enemy player
@@ -405,6 +419,7 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 
 const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBuildable) const
 {
+	//[expand]
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
 	BOT_ASSERT(homeBase, "No home base detected");
 

@@ -23,6 +23,7 @@ MetaType MetaTypeEnum::Refinery;
 MetaType MetaTypeEnum::EngineeringBay;
 MetaType MetaTypeEnum::MissileTurret;
 	//Units
+MetaType MetaTypeEnum::SCV;
 MetaType MetaTypeEnum::Marine;
 MetaType MetaTypeEnum::Marauder;
 MetaType MetaTypeEnum::Reaper;
@@ -118,6 +119,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::EngineeringBay = MetaType("EngineeringBay", m_bot);
 	MetaTypeEnum::MissileTurret = MetaType("MissileTurret", m_bot);
 		//Units
+	MetaTypeEnum::SCV = MetaType("SCV", m_bot);
 	MetaTypeEnum::Marine = MetaType("Marine", m_bot);
 	MetaTypeEnum::Marauder = MetaType("Marauder", m_bot);
 	MetaTypeEnum::Reaper = MetaType("Reaper", m_bot);

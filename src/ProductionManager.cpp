@@ -456,9 +456,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	if (m_bot.GetSelfRace() == sc2::Race::Terran)
 	{
 		// Logic for building Orbital Commands and Refineries
-		const size_t ccCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), false, true);
-		const size_t completedCCCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), true, true);
-		if(completedCCCount > 0)
+		UnitType depot = Util::GetRessourceDepotType(m_bot.GetSelfRace(), m_bot);
+		const size_t depotCount = m_bot.Buildings().countBoughtButNotBeingBuilt(depot.getAPIUnitType());
+		const size_t completedDepotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, depot, true, true);
+		if(m_bot.GetSelfRace() == CCRace::Terran && completedDepotCount > 0)
 		{
 			if (!m_queue.contains(MetaTypeEnum::OrbitalCommand) && !m_queue.contains(MetaTypeEnum::PlanetaryFortress))
 			{
@@ -474,7 +475,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 		// We want to wait for our first Banshee to build our second CC, otherwise we might have difficulty defending it **COMMENTED**
-		else if (ccCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) && starportCount > 0)
+		else if (depotCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) && starportCount > 0)
 		{
 			m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
 		}
@@ -716,7 +717,7 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     }
 
     // build a refinery if we don't have one and the thing costs gas
-    auto refinery = Util::GetRefinery(m_bot.GetSelfRace(), m_bot);
+    auto refinery = Util::GetRefineryType(m_bot.GetSelfRace(), m_bot);
 	if (typeData.gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
     {
 		m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
@@ -732,7 +733,7 @@ void ProductionManager::lowPriorityChecks()
 
 	// build a refinery if we are missing one
 	//TODO doesn't handle extra hatcheries, doesn't handle rich geyser
-	auto refinery = Util::GetRefinery(m_bot.GetSelfRace(), m_bot);
+	auto refinery = Util::GetRefineryType(m_bot.GetSelfRace(), m_bot);
 	if (m_bot.Workers().canHandleMoreRefinery() && !m_queue.contains(MetaType(refinery, m_bot)))
 	{
 		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
@@ -990,41 +991,54 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 			bool isBuilding = m_bot.Data(unit).isBuilding;
 			if (isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }//TODO might break other races
 			if (isBuilding && m_bot.GetSelfRace() == CCRace::Terran)
-			{//If is terran, check for Reactor addon
-				sc2::Tag addonTag = unit.getAddonTag();
+			{
 				sc2::UNIT_TYPEID unitType = unit.getAPIUnitType();
 
-				if (addonTag != 0)
+				//If the commandcenter should morph instead, don't queue workers on it
+				if (unitType == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && !type.getUnitType().isMorphedBuilding())
 				{
-					bool addonIsReactor = false;
-					auto addon = m_bot.GetUnit(addonTag);
-					switch ((sc2::UNIT_TYPEID)addon.getAPIUnitType())
-					{
-					case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
-					case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
-					case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
-					{
-						addonIsReactor = true;
-						break;
-					}
-					}
-
-					if (unit.isTraining() && !addonIsReactor)
-					{//skip, Techlab can't build two units
-						continue;
-					}
-
-					if (addonIsReactor && unit.isAddonTraining())
-					{//skip, reactor at max capacity
-						continue;
-					}
-
-					//Skip techlab if we have an available reactor
-					if (priorizeReactor && !addonIsReactor)
+					if (m_initialBuildOrderFinished && (m_queue.contains(MetaTypeEnum::OrbitalCommand) || m_queue.contains(MetaTypeEnum::PlanetaryFortress)))
 					{
 						continue;
 					}
 				}
+				else
+				{
+					//If is terran, check for Reactor addon
+					sc2::Tag addonTag = unit.getAddonTag();
+
+					if (addonTag != 0)
+					{
+						bool addonIsReactor = false;
+						auto addon = m_bot.GetUnit(addonTag);
+						switch ((sc2::UNIT_TYPEID)addon.getAPIUnitType())
+						{
+						case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+						case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+						{
+							addonIsReactor = true;
+							break;
+						}
+						}
+
+						if (unit.isTraining() && !addonIsReactor)
+						{//skip, Techlab can't build two units
+							continue;
+						}
+
+						if (addonIsReactor && unit.isAddonTraining())
+						{//skip, reactor at max capacity
+							continue;
+						}
+
+						//Skip techlab if we have an available reactor
+						if (priorizeReactor && !addonIsReactor)
+						{
+							continue;
+						}
+					}
+				}				
 			}
 
 			switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())

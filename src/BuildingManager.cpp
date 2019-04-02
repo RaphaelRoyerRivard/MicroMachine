@@ -77,7 +77,7 @@ void BuildingManager::lowPriorityChecks()
 		return;
 	}
 
-	//Validate buildings are not on creep, does NOT validate if there is an enemy building in the way
+	//Validate buildings are not on creep
 	std::vector<Building> toRemove;
 	for (auto & building : m_buildings)
 	{
