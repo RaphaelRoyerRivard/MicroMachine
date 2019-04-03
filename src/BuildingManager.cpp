@@ -1372,7 +1372,7 @@ void BuildingManager::updateBaseBuildings()
 	}
 }
 
-const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) const
+const sc2::Unit * BuildingManager::getClosestMineral(const CCPosition position) const
 {
 	auto potentialMinerals = m_bot.UnitInfo().getUnits(Players::Neutral);
 	const sc2::Unit * mineralField = nullptr;
@@ -1384,7 +1384,7 @@ const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) con
 			continue;
 		}
 
-		const float dist = Util::DistSq(mineral.getUnitPtr()->pos, unit->pos);
+		const float dist = Util::DistSq(mineral.getUnitPtr()->pos, position);
 		if (mineralField == nullptr || dist < minDist) {
 			mineralField = mineral.getUnitPtr();
 			minDist = dist;
@@ -1393,10 +1393,18 @@ const sc2::Unit * BuildingManager::getClosestMineral(const sc2::Unit * unit) con
 	return mineralField;
 }
 
-const sc2::Unit * BuildingManager::getLargestCloseMineral(const sc2::Unit * unit) const
+const sc2::Unit * BuildingManager::getLargestCloseMineral(const CCTilePosition position, bool checkUnderAttack) const
 {
-	auto base = m_bot.Bases().getBaseContainingPosition(unit->pos, Players::Self);
+	auto base = m_bot.Bases().getBaseForDepotPosition(position);
 	if (base == nullptr)
+		return nullptr;
+	return getLargestCloseMineral(base->getResourceDepot(), checkUnderAttack);
+}
+
+const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool checkUnderAttack) const
+{
+	auto base = m_bot.Bases().getBaseForDepot(unit);
+	if (base == nullptr || (checkUnderAttack && base->isUnderAttack()))
 	{
 		return nullptr;
 	}
@@ -1420,7 +1428,7 @@ void BuildingManager::castBuildingsAbilities()
 	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
 	{
 		auto energy = b.getEnergy();
-		if (energy <= 0)
+		if (energy <= 0 || b.isFlying())
 		{
 			continue;
 		}
@@ -1442,10 +1450,21 @@ void BuildingManager::castBuildingsAbilities()
 		if (energy >= 50 && (!hasInvisible || energy >= 100))
 		{
 			auto orbitalPosition = b.getPosition();
-			auto closestMineral = getLargestCloseMineral(b.getUnitPtr());
+			auto closestMineral = getLargestCloseMineral(b, true);
 			if (closestMineral == nullptr)
 			{
-				closestMineral = getClosestMineral(b.getUnitPtr());
+				auto closestBase = m_bot.Bases().getClosestBasePosition(b.getUnitPtr(), Players::Self, false, true, true);
+				if (closestBase != Util::GetTilePosition(m_bot.Map().center()))
+				{
+					closestMineral = getLargestCloseMineral(closestBase);
+				}
+
+				if (closestMineral == nullptr)
+				{
+					//If none of our bases fit the requirements (have minerals + not underattack), drop on closest mineral
+					closestMineral = getClosestMineral(b.getPosition());
+				}
+
 				if (closestMineral == nullptr)
 				{
 					Util::DebugLog(__FUNCTION__, "No mineral found.", m_bot);

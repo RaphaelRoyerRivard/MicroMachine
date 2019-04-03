@@ -156,6 +156,18 @@ void WorkerManager::handleMules()
 {
 	for (auto mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
 	{
+		if (!mule.isValid())
+		{
+			continue;
+		}
+
+		auto unit = mule.getUnitPtr();
+		if (unit->orders.size() == 0)
+		{
+			auto mineral = m_bot.Buildings().getClosestMineral(unit->pos);
+			mule.rightClick(mineral->pos);
+		}
+
 		auto id = mule.getID();
 		if (muleHarvests.find(id) == muleHarvests.end())
 		{

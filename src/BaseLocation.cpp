@@ -83,19 +83,23 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
         }
     }
     
-    // if this base location position is near our own resource depot, it's our start location
-    for (auto & unit : m_bot.GetAllyUnits())
-    {
-		CCPosition pos = unit.second.getPosition();
-        if (unit.second.getType().isResourceDepot() && containsPosition(pos))
-        {
-            m_isPlayerStartLocation[Players::Self] = true;
-            m_isStartLocation = true;
-            m_isPlayerOccupying[Players::Self] = true;
-			m_depotPosition = Util::GetTilePosition(pos);
-            break;
-        }
-    }
+	//if its not an enemy start baselocation
+	if (!m_isStartLocation)
+	{
+		// if this base location position is near our own resource depot, it's our start location
+		for (auto & unit : m_bot.GetAllyUnits(Util::GetRessourceDepotType(m_bot.GetSelfRace(), m_bot).getAPIUnitType()))
+		{
+			CCPosition pos = unit.getPosition();
+			if (unit.getType().isResourceDepot() && containsPosition(pos))
+			{
+				m_isPlayerStartLocation[Players::Self] = true;
+				m_isStartLocation = true;
+				m_isPlayerOccupying[Players::Self] = true;
+				m_depotPosition = Util::GetTilePosition(pos);
+				break;
+			}
+		}
+	}
     
     // if it's not a start location, we need to calculate the depot position
     if (!isStartLocation())
@@ -234,7 +238,8 @@ bool BaseLocation::containsPosition(const CCPosition & pos) const
         return false;
     }
 
-    return getGroundDistance(pos) > 0 && getGroundDistance(pos) < NearBaseLocationTileDistance;
+	int groundDistance = getGroundDistance(pos);
+    return groundDistance > 0 && groundDistance < NearBaseLocationTileDistance;
 }
 
 const std::vector<Unit> & BaseLocation::getGeysers() const
@@ -307,15 +312,15 @@ void BaseLocation::draw()
     // draw the base bounding box
     m_bot.Map().drawBox(m_left, m_top, m_right, m_bottom);
 
-    for (CCPositionType x=m_left; x < m_right; x += Util::TileToPosition(1.0f))
+    /*for (CCPositionType x=m_left; x < m_right; x += Util::TileToPosition(1.0f))
     {
-        //m_bot.Map().drawLine(x, m_top, x, m_bottom, CCColor(160, 160, 160));
+        m_bot.Map().drawLine(x, m_top, x, m_bottom, CCColor(160, 160, 160));
     }
 
     for (CCPositionType y=m_bottom; y<m_top; y += Util::TileToPosition(1.0f))
     {
-        //m_bot.Map().drawLine(m_left, y, m_right, y, CCColor(160, 160, 160));
-    }
+        m_bot.Map().drawLine(m_left, y, m_right, y, CCColor(160, 160, 160));
+    }*/
 
     for (auto & mineralPos : m_mineralPositions)
     {

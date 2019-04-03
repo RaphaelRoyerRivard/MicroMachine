@@ -175,11 +175,12 @@ void BaseLocationManager::onFrame()
 
 	m_bot.StartProfiling("0.6.3   updateBaseLocations");
     // for each unit on the map, update which base location it may be occupying
-    for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
+    for (auto & unit : m_bot.Buildings().getBaseBuildings())
     {
-        // we only care about resource depots
-        if (!unit.getType().isResourceDepot())
-            continue;
+		if (!unit.getType().isResourceDepot())
+		{
+			continue;
+		}
 
         BaseLocation * baseLocation = getBaseLocation(unit.getPosition());
 
@@ -209,7 +210,7 @@ void BaseLocationManager::onFrame()
             baseLocation->setPlayerOccupying(Players::Enemy, true);
         }
     }*/
-	for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+	for (auto & unit : m_bot.GetKnownEnemyUnits())
 	{
 		// we only care about resource depots
 		if (!unit.getType().isResourceDepot())
@@ -421,12 +422,16 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool check
 {
 	//[expand]
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
+
+	auto otherPlayer = player == Players::Self ? Players::Enemy : Players::Self;
+	const BaseLocation * enemyHomeBase = getPlayerStartingBaseLocation(otherPlayer);
 	BOT_ASSERT(homeBase, "No home base detected");
 
 	const BaseLocation * closestBase = nullptr;
 	int minDistance = std::numeric_limits<int>::max();
 
 	CCPosition homeTile = homeBase->getPosition();
+	CCPosition enemyHomeTile = enemyHomeBase == nullptr? homeTile : enemyHomeBase->getPosition();
 
 	for (auto & base : getBaseLocations())
 	{
@@ -439,7 +444,8 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool check
 		// get the tile position of the base
 		auto tile = base->getDepotPosition();
 
-		bool buildingInTheWay = false; // TODO: check if there are any units on the tile
+		//COMMENTED, this isn't required anymore since the check is in canBuildHere
+		/*bool buildingInTheWay = false; // TODO: check if there are any units on the tile
 		for (auto unit : m_bot.GetUnits())
 		{
 			if (unit.isValid() && (unit.getPlayer() == Players::Self || unit.getPlayer() == Players::Enemy) && unit.getType().isBuilding())
@@ -458,7 +464,7 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool check
 		if (buildingInTheWay)
 		{
 			continue;
-		}
+		}*/
 		
 		//Check if buildable (creep check), using CC for building size, should work for all races.
 		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, Building(MetaTypeEnum::CommandCenter.getUnitType(), tile)))
@@ -475,10 +481,22 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool check
 			continue;
 		}
 
-		if (!closestBase || distanceFromHome < minDistance)
+		int distanceFromEnemyHome = 0;
+		if (enemyHomeBase != nullptr)
+		{
+			distanceFromEnemyHome = enemyHomeBase->getGroundDistance(tile);
+
+			// if it is not connected, ignore
+			if (distanceFromEnemyHome < 0)
+			{
+				distanceFromEnemyHome = 0;
+			}
+		}		
+
+		if (!closestBase || distanceFromHome - distanceFromEnemyHome < minDistance)
 		{
 			closestBase = base;
-			minDistance = distanceFromHome;
+			minDistance = distanceFromHome - distanceFromEnemyHome;
 		}
 	}
 
@@ -504,13 +522,13 @@ CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
 	return position;
 }
 
-CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player, bool shiftTowardsResourceDepot) const
+CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player, bool shiftTowardsResourceDepot, bool checkContainsMinerals, bool checkUnderAttack) const
 {
 	CCTilePosition closestBase = Util::GetTilePosition(m_bot.Map().center());
 	float minDistance = 0.f;
 	for (auto & base : m_baseLocationData)
 	{
-		if (!base.isOccupiedByPlayer(player))
+		if (!base.isOccupiedByPlayer(player) || (checkContainsMinerals && base.getMinerals().size() == 0) || (checkUnderAttack && base.isUnderAttack()))
 			continue;
 
 		const float dist = Util::DistSq(base.getPosition(), unit->pos);
@@ -530,6 +548,30 @@ CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit
 		}
 	}
 	return closestBase;
+}
+
+const BaseLocation* BaseLocationManager::getBaseForDepotPosition(const CCTilePosition position) const
+{
+	for (auto & base : m_baseLocationData)
+	{
+		if (base.getDepotPosition() == position)
+		{
+			return &base;
+		}
+	}
+	return nullptr;
+}
+
+const BaseLocation* BaseLocationManager::getBaseForDepot(const Unit depot) const
+{
+	for (auto & base : m_baseLocationData)
+	{
+		if (base.getDepotPosition() == depot.getTilePosition())
+		{
+			return &base;
+		}
+	}
+	return nullptr;
 }
 
 const BaseLocation* BaseLocationManager::getBaseContainingPosition(const CCPosition position, int player) const
