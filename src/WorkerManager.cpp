@@ -161,36 +161,38 @@ void WorkerManager::handleMules()
 			continue;
 		}
 
-		auto unit = mule.getUnitPtr();
-		if (unit->orders.size() == 0)
-		{
-			auto mineral = m_bot.Buildings().getClosestMineral(unit->pos);
-			mule.rightClick(mineral->pos);
-		}
-
 		auto id = mule.getID();
 		if (muleHarvests.find(id) == muleHarvests.end())
 		{
-			muleHarvests[id] = std::pair<bool, int>(false, 0);
+			muleHarvests[id] = std::pair<bool, std::pair<int, sc2::Tag>>();
 		}
 		else
 		{
-			if (isReturningCargo(mule))
+			//Do not run on first frame of Mule existance, or we might assign it to the wrong mineral
+			auto unit = mule.getUnitPtr();
+			if (unit->orders.size() == 0)
 			{
-				muleHarvests[id].first = true;
+				auto mineral = m_bot.Buildings().getClosestMineral(unit->pos);
+				muleHarvests[id].second.second = mineral->tag;
+				mule.rightClick(mineral->pos);
 			}
-			else
+		}
+
+		if (isReturningCargo(mule))
+		{
+			muleHarvests[id].first = true;
+		}
+		else
+		{
+			if (muleHarvests[id].first)//Cargo was returned
 			{
-				if (muleHarvests[id].first)//Cargo was returned
+				muleHarvests[id].first = false;
+				muleHarvests[id].second.first++;
+				if (muleHarvests[id].second.first == 9)//Maximum of 9 harvest per mule, the mules can't finish the 10th.
 				{
-					muleHarvests[id].first = false;
-					muleHarvests[id].second++;
-					if (muleHarvests[id].second == 9)//Maximum of 9 harvest per mule, the mules can't finish the 10th.
-					{
-						auto position = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getDepotPosition();
-						mule.move(position);	
-						muleHarvests.erase(id);
-					}
+					auto position = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getDepotPosition();
+					mule.move(position);	
+					muleHarvests.erase(id);
 				}
 			}
 		}
@@ -567,11 +569,16 @@ void WorkerManager::handleRepairWorkers()
 	}
 	
 	//Automatically repair low health buildings, maximum 1 worker
-	const float MIN_HEALTH = 30.f;
+	const float MIN_HEALTH = 50.f;
 	const float MAX_HEALTH = 100.f;
 	const int MAX_WORKER_PER_BUILDING = 1;
 	for (auto & building : m_bot.Buildings().getFinishedBuildings())
 	{
+		if (!building.isCompleted())
+		{
+			continue;
+		}
+
 		auto percentage = building.getHitPointsPercentage();
 		//Skip building being repaired
 		if (std::find(buildingAutomaticallyRepaired.begin(), buildingAutomaticallyRepaired.end(), building) != buildingAutomaticallyRepaired.end())
@@ -583,7 +590,7 @@ void WorkerManager::handleRepairWorkers()
 			continue;
 		}
 
-		if (building.isCompleted() && percentage <= MIN_HEALTH && m_workerData.getWorkerRepairingTargetCount(building) < MAX_WORKER_PER_BUILDING)
+		if (percentage <= MIN_HEALTH && m_workerData.getWorkerRepairingTargetCount(building) < MAX_WORKER_PER_BUILDING)
 		{
 			auto position = building.getPosition();
 			auto worker = getClosestMineralWorkerTo(position);
@@ -1283,4 +1290,24 @@ std::set<Unit> WorkerManager::getWorkers() const
 WorkerData & WorkerManager::getWorkerData() const
 {
 	return m_workerData;
+}
+
+sc2::Tag WorkerManager::getMuleTargetTag(const Unit mule)
+{
+	auto id = mule.getID();
+	if (muleHarvests.find(id) == muleHarvests.end())
+	{
+		muleHarvests[id] = std::pair<bool, std::pair<int, sc2::Tag>>();
+	}
+	return muleHarvests[id].second.second;
+}
+
+void WorkerManager::setMuleTargetTag(const Unit mule, const sc2::Tag mineral)
+{
+	auto id = mule.getID();
+	if (muleHarvests.find(id) == muleHarvests.end())
+	{
+		muleHarvests[id] = std::pair<bool, std::pair<int, sc2::Tag>>();
+	}
+	muleHarvests[id].second.second = mineral;
 }

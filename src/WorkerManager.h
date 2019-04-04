@@ -14,8 +14,10 @@ class WorkerManager
 	bool m_isFirstFrame = true;
 	int gasWorkersTarget = 3;
 	std::list<Unit> buildingAutomaticallyRepaired;
-	std::map<CCUnitID, std::pair<bool, int>> muleHarvests;//<MuleId, <isReturningCargo, harvest count>>, we are not removing killed mules from this map, but it doesn't really matter
 	std::list<Unit> depletedGeyser;
+
+	//<MuleId, <isReturningCargo, <harvest count, target mineral ID>>>, we are not removing killed mules from this map, but it doesn't really matter
+	std::map<CCUnitID, std::pair<bool, std::pair<int, sc2::Tag> > > muleHarvests;
 
     mutable WorkerData  m_workerData;
     Unit m_previousClosestWorker;
@@ -52,6 +54,10 @@ public:
     int  getNumWorkers();
 	std::set<Unit> WorkerManager::getWorkers() const;
 	WorkerData & WorkerManager::getWorkerData() const;
+	
+	sc2::Tag getMuleTargetTag(const Unit mule);
+	void setMuleTargetTag(const Unit mule, const sc2::Tag mineral);
+
     bool isWorkerScout(Unit worker) const;
     bool isFree(Unit worker) const;
     bool isBuilder(Unit worker) const;
@@ -73,4 +79,3 @@ public:
 	Unit getClosest(const Unit unit, const std::list<Unit> units) const;
 	//std::list<Unit> WorkerManager::orderByDistance(const std::list<Unit> units, CCPosition pos, bool closestFirst);
 };
-
