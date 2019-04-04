@@ -954,7 +954,22 @@ void CCBot::drawProfilingInfo()
 			auto& queue = profiler.queue;
 			const int queueCount = queue.size();
 			const long long time = profiler.total / std::max(queueCount, 1);
-			if (key != stepString && time * 10 > stepTime)
+			if (key == stepString)
+			{
+				long long maxFrameTime = 0;
+				for(auto frameTime : queue)
+				{
+					if (frameTime > maxFrameTime)
+						maxFrameTime = frameTime;
+				}
+				profilingInfo += "\n Recent Frame Max: " + std::to_string(0.001f * maxFrameTime);
+				if(maxFrameTime > 40900)	//limit for a frame in real time
+				{
+					profilingInfo += "!!!";
+				}
+				profilingInfo += "\n Recent Frame Avg: " + std::to_string(0.001f * time);
+			}
+			else if (time * 10 > stepTime)
 			{
 				profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * time);
 				profilingInfo += " !";
