@@ -54,6 +54,12 @@ public:
     bool isBeingConstructed() const;
     bool isCloaked() const;
     bool isFlying() const;
+	bool isLight() const;
+	bool isArmored() const;
+	bool isBiological() const;
+	bool isMechanical() const;
+	bool isPsionic() const;
+	bool isMassive() const;
     bool isAlive() const;
     bool isPowered() const;
     bool isIdle() const;
