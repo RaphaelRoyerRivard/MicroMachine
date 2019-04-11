@@ -303,6 +303,7 @@ void CCBot::setUnits()
 			m_allyUnits.insert_or_assign(unitptr->tag, unit);
 			m_allyUnitsPerType[unitptr->unit_type].push_back(unit);
 			bool isMorphingResourceDepot = false;
+			auto type = unit.getType();
 			if (unit.getType().isResourceDepot())
 			{
 				for(auto& order : unit.getUnitPtr()->orders)
@@ -335,6 +336,7 @@ void CCBot::setUnits()
 			if (!isMorphingResourceDepot)
 			{
 				++m_unitCount[unit.getAPIUnitType()];
+
 				if (unit.isCompleted())
 				{
 					m_unitCompletedCount[unit.getAPIUnitType()]++;
@@ -841,6 +843,78 @@ std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()
 const std::vector<Unit> & CCBot::GetAllyUnits(sc2::UNIT_TYPEID type)
 {
 	return m_allyUnitsPerType[type];
+}
+
+const std::vector<Unit> CCBot::GetAllyDepotUnits()
+{
+	switch (this->GetSelfRace())
+	{
+		case CCRace::Protoss:
+		{
+			return GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_NEXUS);
+		}
+		case CCRace::Zerg:
+		{
+			auto hatchery = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_HATCHERY);//cannot be by reference, because its modified
+			auto& lair = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_LAIR);
+			auto& hive = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_HIVE);
+			hatchery.insert(hatchery.end(), lair.begin(), lair.end());
+			hatchery.insert(hatchery.end(), hive.begin(), hive.end());
+			return hatchery;
+		}
+		case CCRace::Terran:
+		{
+			auto commandcenter = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);//cannot be by reference, because its modified
+			auto& commandcenterFlying = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING);
+			auto& orbital = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND);
+			auto& orbitalFlying = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING);
+			auto& planetary = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS);
+			commandcenter.insert(commandcenter.end(), commandcenterFlying.begin(), commandcenterFlying.end());
+			commandcenter.insert(commandcenter.end(), orbital.begin(), orbital.end());
+			commandcenter.insert(commandcenter.end(), orbitalFlying.begin(), orbitalFlying.end());
+			commandcenter.insert(commandcenter.end(), planetary.begin(), planetary.end());
+			return commandcenter;
+		}
+		default://Random?
+		{
+			//TODO not sure it can happen
+			assert(false);
+		}
+	}
+}
+
+const std::vector<Unit> CCBot::GetAllyGeyserUnits()
+{
+	//TODO protoss and zerg do not support rich geysers
+	switch (this->GetSelfRace())
+	{
+		case CCRace::Protoss:
+		{
+			auto assimilator = GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR);//cannot be by reference, because its modified
+			auto& richAssimilator = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY);//TODO wrong
+			assimilator.insert(assimilator.end(), richAssimilator.begin(), richAssimilator.end());
+			return assimilator;
+		}
+		case CCRace::Zerg:
+		{
+			auto extractor = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_EXTRACTOR);//cannot be by reference, because its modified
+			auto& richExtractor = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY);//TODO wrong
+			extractor.insert(extractor.end(), richExtractor.begin(), richExtractor.end());
+			return extractor;
+		}
+		case CCRace::Terran:
+		{
+			auto refinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERY);//cannot be by reference, because its modified
+			auto& richRefinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY);
+			refinery.insert(refinery.end(), richRefinery.begin(), richRefinery.end());
+			return refinery;
+		}
+		default://Random?
+		{
+			//TODO not sure it can happen
+			assert(false);
+		}
+	}
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetEnemyUnits()

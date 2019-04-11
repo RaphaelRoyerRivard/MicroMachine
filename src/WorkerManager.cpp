@@ -205,8 +205,8 @@ void WorkerManager::handleGasWorkers()
 	int gas = m_bot.GetGas();
 	int numMineralWorker = getNumMineralWorkers();
 	int numGasWorker = getNumGasWorkers();
-	int numRefinery = m_bot.Buildings().getBuildingCountOfType(Util::GetRefineryType(m_bot.GetSelfRace(), m_bot).getAPIUnitType(), true);
 	const int ressourceTreshold = 300;
+	int previousGasWorkersTarget = gasWorkersTarget;
 
 	switch (gasWorkersTarget)
 	{
@@ -258,17 +258,17 @@ void WorkerManager::handleGasWorkers()
 			gasWorkersTarget = 3;
 	}
 
-	if (numMineralWorker < 6 + numRefinery)
+	/*if (numMineralWorker <= 6) Causes issues when having lots of bases but few workers.
 	{
 		gasWorkersTarget = 0;
-	}
+	}*/
 	if (m_bot.Strategy().isWorkerRushed())
 	{
 		gasWorkersTarget = 3;
 	}
 
     // for each unit we have
-	for (auto & geyser : m_bot.GetAllyUnits(Util::GetRefineryType(m_bot.GetPlayerRace(Players::Self), m_bot).getAPIUnitType()))
+	for (auto & geyser : m_bot.GetAllyGeyserUnits())
     {
         // if that unit is a refinery
         if (geyser.isCompleted() && geyser.getUnitPtr()->vespene_contents > 0)
@@ -277,52 +277,61 @@ void WorkerManager::handleGasWorkers()
             int numAssigned = m_workerData.getNumAssignedWorkers(geyser);
 			auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
 
-			if (numAssigned < gasWorkersTarget)
+			if (base == nullptr)
 			{
-				// if it's less than we want it to be, fill 'er up
-				for (int i = 0; i<(gasWorkersTarget - numAssigned); ++i)
+				//if the base is destroyed, remove the gas workers
+				for (int i = 0; i < numAssigned; i++)
 				{
-					auto mineralWorker = getMineralWorker(geyser);
-					if (mineralWorker.isValid() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyser.getPosition(), m_bot))
-					{
-						m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
-					}
+					auto gasWorker = getGasWorker(geyser, true);
+					m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
 				}
 			}
-			else if (numAssigned > gasWorkersTarget)
+			else
 			{
-				int mineralWorkerRoom = 26;//Number of free spaces for mineral workers
-				if (base != nullptr)
+				auto & depot = base->getResourceDepot();
+				if (depot.isValid() && depot.isCompleted())
 				{
-					auto & depot = base->getResourceDepot();
-					if (depot.isValid())
+					if (numAssigned < gasWorkersTarget)
 					{
+						// if it's less than we want it to be, fill 'er up
+						for (int i = 0; i<(gasWorkersTarget - numAssigned); ++i)
+						{
+							auto mineralWorker = getMineralWorker(geyser);
+							if (mineralWorker.isValid() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyser.getPosition(), m_bot))
+							{
+								m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
+							}
+						}
+					}
+					else if (numAssigned > gasWorkersTarget)
+					{
+						int mineralWorkerRoom = 26;//Number of free spaces for mineral workers
 						int mineralWorkersCount = m_workerData.getNumAssignedWorkers(depot);
 						int optimalWorkersCount = base->getOptimalMineralWorkerCount();
 						mineralWorkerRoom = optimalWorkersCount - mineralWorkersCount;
-					}
-				}
 
-				// if it's more than we want it to be, empty it up
-				for (int i = 0; i<(numAssigned - gasWorkersTarget); ++i)
-				{
-					//check if we have room for more mineral workers
-					if (mineralWorkerRoom <= 0)
-					{
-						break;
-					}
-
-					auto gasWorker = getGasWorker(geyser, true);
-					if (gasWorker.isValid())
-					{
-						if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
+						// if it's more than we want it to be, empty it up
+						for (int i = 0; i<(numAssigned - gasWorkersTarget); ++i)
 						{
-							Util::DisplayError(__FUNCTION__, "Worker assigned to a refinery is not a gas worker.", m_bot);
-						}
- 						m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
-					}
+							//check if we have room for more mineral workers
+							if (mineralWorkerRoom <= 0)
+							{
+								break;
+							}
 
-					mineralWorkerRoom--;
+							auto gasWorker = getGasWorker(geyser, true);
+							if (gasWorker.isValid())
+							{
+								if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
+								{
+									Util::DisplayError(__FUNCTION__, "Worker assigned to a refinery is not a gas worker.", m_bot);
+								}
+								m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
+							}
+
+							mineralWorkerRoom--;
+						}
+					}
 				}
 			}
         }
@@ -681,7 +690,7 @@ void WorkerManager::lowPriorityChecks()
 	}
 
 	//Detect depleted geysers
-	for (auto & geyser : m_bot.GetAllyUnits(Util::GetRefineryType(m_bot.GetPlayerRace(Players::Self), m_bot).getAPIUnitType()))
+	for (auto & geyser : m_bot.GetAllyGeyserUnits())
 	{
 		//if Depleted
 		if (geyser.getUnitPtr()->vespene_contents == 0)
@@ -995,7 +1004,7 @@ void WorkerManager::setMineralWorker(const Unit & unit)
     auto depot = getClosestDepot(unit);
 
     // if there is a valid mineral
-    if (depot.isValid())
+    if (depot.isValid() && depot.isCompleted())
     {
         // update m_workerData with the new job
         m_workerData.setWorkerJob(unit, WorkerJobs::Minerals, depot);

@@ -15,6 +15,7 @@ namespace Util
 
 	//used for optimisation
 	static UnitType refineryType;
+	static UnitType richRefineryType;
 	static UnitType depotType;
 	static UnitType workerType;
 	static UnitType supplyType;
@@ -201,10 +202,11 @@ namespace Util
 	void			LogNoFrame(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, const std::string & message, CCBot & bot);
-    UnitType        GetRessourceDepotType(const CCRace & race, CCBot & bot);
-    UnitType        GetRefineryType(const CCRace & race, CCBot & bot);
-	UnitType        GetSupplyProvider(const CCRace & race, CCBot & bot);
-	UnitType        GetWorkerType(const CCRace & race, CCBot & bot);
+    UnitType        GetRessourceDepotType();
+    UnitType        GetRefineryType();
+	UnitType		GetRichRefineryType();
+	UnitType        GetSupplyProvider();
+	UnitType        GetWorkerType();
     bool            IsZerg(const CCRace & race);
     bool            IsProtoss(const CCRace & race);
     bool            IsTerran(const CCRace & race);

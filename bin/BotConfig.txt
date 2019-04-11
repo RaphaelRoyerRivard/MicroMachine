@@ -22,9 +22,9 @@
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 10,
+        "EnemyDifficulty"           : 1,
         "EnemyRace"                 : "Random",
-        "MapFile"                   : "Random",
+        "MapFile"                   : "Urzagol.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -49,7 +49,14 @@
 		"ParaSiteLE.SC2Map",
 		"PortAleksanderLE.SC2Map",
 		"Redshift.SC2Map",
-		"StasisLE.SC2Map"
+		"StasisLE.SC2Map",
+		"Bandwidth.SC2Map",
+		"Ephemeron.SC2Map",
+		"PrimusQ9.SC2Map",
+		"Reminiscence.SC2Map",
+		"Sanglune.SC2Map",
+		"TheTimelessVoid.SC2Map",
+		"Urzagol.SC2Map"
 	],
         
     "Micro" :
@@ -320,6 +327,13 @@
                 "Race"              : "Terran",  
                 "OpeningBuildOrder" : ["SCV",
 										"Banshee"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
+            },
+			"Terran_ExpandTest"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },

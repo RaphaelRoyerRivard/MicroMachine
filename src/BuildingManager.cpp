@@ -733,46 +733,60 @@ void BuildingManager::constructAssignedBuildings()
 // STEP 4: UPDATE DATA STRUCTURES FOR BUILDINGS STARTING CONSTRUCTION
 void BuildingManager::checkForStartedConstruction()
 {
-	// for each building unit which is being constructed
-	for (auto buildingStarted : m_bot.UnitInfo().getUnits(Players::Self))
+	// check all our building status objects to see if we have a match and if we do, update it
+	for (auto & b : m_buildings)
 	{
-		// filter out units which aren't buildings under construction
-		if (!buildingStarted.getType().isBuilding() || !buildingStarted.isBeingConstructed())
+		if (b.status != BuildingStatus::Assigned)
 		{
 			continue;
 		}
-
-		// check all our building status objects to see if we have a match and if we do, update it
-
-		for (auto & b : m_buildings)
+		if (b.buildingUnit.isValid())
 		{
-			if (b.status != BuildingStatus::Assigned)
-			{
-				continue;
-			}
-			if (b.buildingUnit.isValid())
-			{
-				std::cout << "Replaced dead worker or Building mis-match somehow\n";
-				b.status = BuildingStatus::UnderConstruction;
-				continue;
-			}
-			auto type = b.type;
+			std::cout << "Replaced dead worker or Building mis-match somehow\n";
+			b.status = BuildingStatus::UnderConstruction;
+			continue;
+		}
+		auto type = b.type;
 
-			// check if the positions match
-			int addonOffset = (type.isAddon() ? 3 : 0);
-			int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
-			int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
+		// check if the positions match
+		int addonOffset = (type.isAddon() ? 3 : 0);
+
+		std::vector<Unit> buildingsOfType;
+		switch ((sc2::UNIT_TYPEID)type.getAPIUnitType())
+		{
+			//Special case for geysers because of rich geysers having a different ID
+			case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR:
+			case sc2::UNIT_TYPEID::ZERG_EXTRACTOR:
+			case sc2::UNIT_TYPEID::TERRAN_REFINERY:
+				buildingsOfType = m_bot.GetAllyGeyserUnits();
+				break;
+			default:
+				buildingsOfType = m_bot.GetAllyUnits(type.getAPIUnitType());
+				break;
+		}
+
+		// for each building unit which is being constructed
+		for (auto building : buildingsOfType)
+		{
+			// filter out units which aren't buildings under construction
+			if (!building.getType().isBuilding() || !building.isBeingConstructed())
+			{
+				continue;
+			}
+
+			int dx = b.finalPosition.x + addonOffset - building.getTilePosition().x;
+			int dy = b.finalPosition.y - building.getTilePosition().y;
 
 			if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
 			{
 				// the resources should now be spent, so unreserve them
-				m_bot.FreeMinerals(buildingStarted.getType().mineralPrice());
-				m_bot.FreeGas(buildingStarted.getType().gasPrice());
+				m_bot.FreeMinerals(building.getType().mineralPrice());
+				m_bot.FreeGas(building.getType().gasPrice());
 
 				// flag it as started and set the buildingUnit
 				b.underConstruction = true;
-				b.buildingUnit = buildingStarted;
-				m_buildingsProgress[buildingStarted.getTag()] = 0;
+				b.buildingUnit = building;
+				m_buildingsProgress[building.getTag()] = 0;
 
 				// if we are zerg, the buildingUnit now becomes nullptr since it's destroyed
 				if (Util::IsZerg(m_bot.GetSelfRace()))
@@ -881,6 +895,7 @@ void BuildingManager::checkForCompletedBuildings()
     // for each of our buildings under construction
     for (auto & b : m_buildings)
     {
+		auto type = b.type.getAPIUnitType();
         if (b.status != BuildingStatus::UnderConstruction)
         {
             continue;
@@ -893,7 +908,7 @@ void BuildingManager::checkForCompletedBuildings()
             if (Util::IsTerran(m_bot.GetSelfRace()))
             {
 				auto type = b.type.getAPIUnitType();
-				if(type == sc2::UNIT_TYPEID::TERRAN_REFINERY)//Worker that built the refinery, will be a gas worker for it.
+				if(b.type.isRefinery())//Worker that built the refinery, will be a gas worker for it.
 				{
 					m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Gas, b.buildingUnit);
 				}
