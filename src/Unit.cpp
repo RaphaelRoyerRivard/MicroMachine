@@ -603,6 +603,18 @@ void Unit::move(const CCTilePosition & targetPosition) const
 #endif
 }
 
+void Unit::patrol(const CCPosition & targetPosition) const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::PATROL, targetPosition);
+}
+
+void Unit::patrol(const CCTilePosition & targetPosition) const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::PATROL, CCPosition((float)targetPosition.x, (float)targetPosition.y));
+}
+
 void Unit::rightClick(const Unit & target) const
 {
 	BOT_ASSERT(isValid(), "Unit is not valid");

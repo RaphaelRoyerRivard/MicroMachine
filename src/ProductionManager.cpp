@@ -431,6 +431,11 @@ void ProductionManager::manageBuildOrderQueue()
 
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
+#ifdef NO_PRODUCTION
+	return;
+#endif
+
+
 	if (m_bot.Config().AllowDebug && m_bot.GetCurrentFrame() % 10)
 		return;
 
@@ -1780,7 +1785,9 @@ void ProductionManager::drawProductionInformation()
 	ss.str(std::string());
 	ss << "Free Mineral:     " << m_bot.GetFreeMinerals() << "\n";
 	ss << "Free Gas:         " << m_bot.GetFreeGas() << "\n";
-	ss << "Gas Worker Target:" << m_bot.Workers().getGasWorkersTarget();
+	ss << "Gas Worker Target:" << m_bot.Workers().getGasWorkersTarget() << "\n";
+	ss << "Mineral income:   " << m_bot.Observation()->GetScore().score_details.collection_rate_minerals << "\n";
+	ss << "Gas income:       " << m_bot.Observation()->GetScore().score_details.collection_rate_vespene << "\n";
 	m_bot.Map().drawTextScreen(0.75f, 0.05f, ss.str(), CCColor(255, 255, 0));
 
 	ss.str(std::string());

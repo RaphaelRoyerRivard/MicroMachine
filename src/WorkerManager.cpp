@@ -385,7 +385,8 @@ void WorkerManager::handleIdleWorkers()
         if (!worker.isValid()) { continue; }
 
 		int workerJob = m_workerData.getWorkerJob(worker);
-        if (worker.isIdle() &&
+		bool idle = worker.isIdle();
+        if (idle &&
             // We need to consider building worker because of builder finishing the job of another worker is not consider idle.
 			//(m_workerData.getWorkerJob(worker) != WorkerJobs::Build) && 
             (workerJob != WorkerJobs::Move) &&
@@ -396,10 +397,46 @@ void WorkerManager::handleIdleWorkers()
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 			workerJob = WorkerJobs::Idle;
 		}
-		else if (workerJob == WorkerJobs::Build && !worker.isConstructingAnything())
+		else if (workerJob == WorkerJobs::Build)
 		{
-			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
-			workerJob = WorkerJobs::Idle;
+			if (!worker.isConstructingAnything())
+			{
+				bool hasBuilding = false;
+				if (idle)
+				{
+					//Check if worker is waiting to build
+					for (auto b : m_bot.Buildings().getBuildings())
+					{
+						if (!b.builderUnit.isValid()) continue;
+						if (b.buildingUnit.isValid() && b.buildingUnit.isCompleted()) continue;
+						if (b.builderUnit.getTag() == worker.getTag())
+						{
+							//Do not try to patrol on refinery, could slow down the building creation
+							if (!b.type.isRefinery())
+							{
+								hasBuilding = true;
+							}
+							break;
+						}
+					}
+				}
+				if (hasBuilding)
+				{
+					//Is waiting for resources, so we patrol
+					//Patrol requires at least a 1 tile distance, 0.707 is exactly what we need to have a diagonal distance of 1.
+					auto patrolTarget = worker.getPosition();
+					patrolTarget.x += 0.71f;
+					patrolTarget.y += 0.71f;
+
+					worker.patrol(patrolTarget);
+				}
+				else
+				{
+					//return mining
+					m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
+					workerJob = WorkerJobs::Idle;
+				}
+			}
 		}
 
 		if (workerJob == WorkerJobs::Idle)

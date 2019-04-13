@@ -78,6 +78,8 @@ public:
     void attackMove     (const CCPosition & targetPosition) const;
     void move           (const CCPosition & targetPosition) const;
     void move           (const CCTilePosition & targetTilePosition) const;
+	void patrol			(const CCPosition & targetPosition) const;
+	void patrol			(const CCTilePosition & targetPosition) const;
 	void rightClick     (const Unit & target) const;
 	void rightClick		(const CCPosition position) const;
     void repair         (const Unit & target) const;
