@@ -628,9 +628,20 @@ void BuildingManager::constructAssignedBuildings()
             continue;
         }
 
-        // TODO: not sure if this is the correct way to tell if the building is constructing
-        //sc2::AbilityID buildAbility = m_bot.Data(b.type).buildAbility;
+		// TODO: not sure if this is the correct way to tell if the building is constructing
 		Unit builderUnit = b.builderUnit;
+
+		//Prevent order spam 
+		if (b.buildCommandGiven && builderUnit.isValid())
+		{
+			auto orders = b.builderUnit.getUnitPtr()->orders;
+			if (orders.size() != 0 && orders[0].ability_id != sc2::ABILITY_ID::PATROL)
+			{
+				//Is not idle and is not patroling, should be trying to build.
+				continue;
+			}
+		}
+
 
 		// if we're zerg and the builder unit is null, we assume it morphed into the building
 		bool isConstructing = false;
