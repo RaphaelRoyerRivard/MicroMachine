@@ -1485,7 +1485,7 @@ void BuildingManager::castBuildingsAbilities()
 			}
 
 			CCTilePosition orbitalPosition;
-			const sc2::Unit* closestMineral;
+			const sc2::Unit* closestMineral = nullptr;
 			auto bases = m_bot.Bases().getBaseLocations();//Sorted by closest to enemy base
 			for (auto base : bases)
 			{

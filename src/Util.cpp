@@ -418,7 +418,7 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 		++i;
 		returnPos = position;
 		//we want to retun a node close to the current position
-		if (i >= 2)
+		if (i >= 3)
 			break;
 	}
 
@@ -429,6 +429,10 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 		const float terrainHeightDiff = abs(bot.Map().terrainHeight(rangedUnit->pos.x, rangedUnit->pos.y) - bot.Map().terrainHeight(returnPos.x, returnPos.y));
 		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > CLIFF_MIN_HEIGHT_DIFFERENCE)
 			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
+	}
+	if (Util::DistSq(rangedUnit->pos, returnPos) < 2*2)
+	{
+		returnPos = Normalized(returnPos - rangedUnit->pos) + rangedUnit->pos;
 	}
 #ifndef PUBLIC_RELEASE
 	if (bot.Config().DrawHarassInfo)
