@@ -447,7 +447,7 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
     CCPosition closestGeyser(0, 0);
     double minGeyserDistanceFromHome = std::numeric_limits<double>::max();
     CCPosition homePosition = m_bot.GetStartLocation();
-	auto units = m_bot.UnitInfo().getUnits(Players::Self);
+	auto& depots = m_bot.GetAllyDepotUnits();
 
     for (auto & geyser : m_bot.UnitInfo().getUnits(Players::Neutral))
     {
@@ -478,10 +478,9 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 			continue;
 		}
 
-		for (auto & unit : units)
+		for (auto & depot : depots)
 		{
-			// check to see if it's next to one of our depots
-			if (unit.getType().isResourceDepot() && Util::DistSq(unit, geyserPos) < 10 * 10)
+			if (Util::DistSq(depot, geyserPos) < 10 * 10)
 			{
 				//TODO Good?
 				//Skip base if underattack or if we can't figure out to which base it belongs

@@ -1,9 +1,11 @@
 #pragma once
 //#define PUBLIC_RELEASE
-#define NO_UNITS
+//#define NO_UNITS
+//#define NO_PRODUCTION
 
-#ifdef PUBLIC_RELEASE && NO_UNITS
+#ifdef PUBLIC_RELEASE
 #undef NO_UNITS
+#undef NO_PRODUCTION
 #endif
 
 #include "Common.h"
@@ -156,6 +158,8 @@ public:
 	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false);
 	std::map<sc2::Tag, Unit> & GetAllyUnits();
 	const std::vector<Unit> & GetAllyUnits(sc2::UNIT_TYPEID type);
+	const std::vector<Unit> GetAllyDepotUnits();//Cannot be by reference, vector created in function
+	const std::vector<Unit> GetAllyGeyserUnits();//Cannot be by reference, vector created in function
 	std::map<sc2::Tag, Unit> & GetEnemyUnits();
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
 	const std::vector<Unit> & GetKnownEnemyUnits(sc2::UnitTypeID type);

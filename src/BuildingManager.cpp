@@ -628,9 +628,20 @@ void BuildingManager::constructAssignedBuildings()
             continue;
         }
 
-        // TODO: not sure if this is the correct way to tell if the building is constructing
-        //sc2::AbilityID buildAbility = m_bot.Data(b.type).buildAbility;
+		// TODO: not sure if this is the correct way to tell if the building is constructing
 		Unit builderUnit = b.builderUnit;
+
+		//Prevent order spam 
+		if (b.buildCommandGiven && builderUnit.isValid())
+		{
+			auto orders = b.builderUnit.getUnitPtr()->orders;
+			if (orders.size() != 0 && orders[0].ability_id != sc2::ABILITY_ID::PATROL)
+			{
+				//Is not idle and is not patroling, should be trying to build.
+				continue;
+			}
+		}
+
 
 		// if we're zerg and the builder unit is null, we assume it morphed into the building
 		bool isConstructing = false;
@@ -733,46 +744,60 @@ void BuildingManager::constructAssignedBuildings()
 // STEP 4: UPDATE DATA STRUCTURES FOR BUILDINGS STARTING CONSTRUCTION
 void BuildingManager::checkForStartedConstruction()
 {
-	// for each building unit which is being constructed
-	for (auto buildingStarted : m_bot.UnitInfo().getUnits(Players::Self))
+	// check all our building status objects to see if we have a match and if we do, update it
+	for (auto & b : m_buildings)
 	{
-		// filter out units which aren't buildings under construction
-		if (!buildingStarted.getType().isBuilding() || !buildingStarted.isBeingConstructed())
+		if (b.status != BuildingStatus::Assigned)
 		{
 			continue;
 		}
-
-		// check all our building status objects to see if we have a match and if we do, update it
-
-		for (auto & b : m_buildings)
+		if (b.buildingUnit.isValid())
 		{
-			if (b.status != BuildingStatus::Assigned)
-			{
-				continue;
-			}
-			if (b.buildingUnit.isValid())
-			{
-				std::cout << "Replaced dead worker or Building mis-match somehow\n";
-				b.status = BuildingStatus::UnderConstruction;
-				continue;
-			}
-			auto type = b.type;
+			std::cout << "Replaced dead worker or Building mis-match somehow\n";
+			b.status = BuildingStatus::UnderConstruction;
+			continue;
+		}
+		auto type = b.type;
 
-			// check if the positions match
-			int addonOffset = (type.isAddon() ? 3 : 0);
-			int dx = b.finalPosition.x + addonOffset - buildingStarted.getTilePosition().x;
-			int dy = b.finalPosition.y - buildingStarted.getTilePosition().y;
+		// check if the positions match
+		int addonOffset = (type.isAddon() ? 3 : 0);
+
+		std::vector<Unit> buildingsOfType;
+		switch ((sc2::UNIT_TYPEID)type.getAPIUnitType())
+		{
+			//Special case for geysers because of rich geysers having a different ID
+			case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR:
+			case sc2::UNIT_TYPEID::ZERG_EXTRACTOR:
+			case sc2::UNIT_TYPEID::TERRAN_REFINERY:
+				buildingsOfType = m_bot.GetAllyGeyserUnits();
+				break;
+			default:
+				buildingsOfType = m_bot.GetAllyUnits(type.getAPIUnitType());
+				break;
+		}
+
+		// for each building unit which is being constructed
+		for (auto building : buildingsOfType)
+		{
+			// filter out units which aren't buildings under construction
+			if (!building.getType().isBuilding() || !building.isBeingConstructed())
+			{
+				continue;
+			}
+
+			int dx = b.finalPosition.x + addonOffset - building.getTilePosition().x;
+			int dy = b.finalPosition.y - building.getTilePosition().y;
 
 			if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
 			{
 				// the resources should now be spent, so unreserve them
-				m_bot.FreeMinerals(buildingStarted.getType().mineralPrice());
-				m_bot.FreeGas(buildingStarted.getType().gasPrice());
+				m_bot.FreeMinerals(building.getType().mineralPrice());
+				m_bot.FreeGas(building.getType().gasPrice());
 
 				// flag it as started and set the buildingUnit
 				b.underConstruction = true;
-				b.buildingUnit = buildingStarted;
-				m_buildingsProgress[buildingStarted.getTag()] = 0;
+				b.buildingUnit = building;
+				m_buildingsProgress[building.getTag()] = 0;
 
 				// if we are zerg, the buildingUnit now becomes nullptr since it's destroyed
 				if (Util::IsZerg(m_bot.GetSelfRace()))
@@ -881,6 +906,7 @@ void BuildingManager::checkForCompletedBuildings()
     // for each of our buildings under construction
     for (auto & b : m_buildings)
     {
+		auto type = b.type.getAPIUnitType();
         if (b.status != BuildingStatus::UnderConstruction)
         {
             continue;
@@ -893,7 +919,7 @@ void BuildingManager::checkForCompletedBuildings()
             if (Util::IsTerran(m_bot.GetSelfRace()))
             {
 				auto type = b.type.getAPIUnitType();
-				if(type == sc2::UNIT_TYPEID::TERRAN_REFINERY)//Worker that built the refinery, will be a gas worker for it.
+				if(b.type.isRefinery())//Worker that built the refinery, will be a gas worker for it.
 				{
 					m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Gas, b.buildingUnit);
 				}
@@ -1361,14 +1387,17 @@ void BuildingManager::updateBaseBuildings()
 		if (!building.getType().isBuilding())
 		{
 			continue;
-		}
-		if (building.isBeingConstructed())
+		}		
+
+		if (building.isCompleted())
 		{
 			m_baseBuildings.push_back(building);
-			continue;
+			m_finishedBaseBuildings.push_back(building);
 		}
-		m_baseBuildings.push_back(building);
-		m_finishedBaseBuildings.push_back(building);
+		else if (building.isBeingConstructed())
+		{
+			m_baseBuildings.push_back(building);
+		}
 	}
 }
 
@@ -1393,15 +1422,15 @@ const sc2::Unit * BuildingManager::getClosestMineral(const CCPosition position) 
 	return mineralField;
 }
 
-const sc2::Unit * BuildingManager::getLargestCloseMineral(const CCTilePosition position, bool checkUnderAttack) const
+const sc2::Unit * BuildingManager::getLargestCloseMineral(const CCTilePosition position, bool checkUnderAttack, std::vector<CCUnitID> skipMinerals) const
 {
 	auto base = m_bot.Bases().getBaseForDepotPosition(position);
 	if (base == nullptr)
 		return nullptr;
-	return getLargestCloseMineral(base->getResourceDepot(), checkUnderAttack);
+	return getLargestCloseMineral(base->getResourceDepot(), checkUnderAttack, skipMinerals);
 }
 
-const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool checkUnderAttack) const
+const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool checkUnderAttack, std::vector<CCUnitID> skipMinerals) const
 {
 	auto base = m_bot.Bases().getBaseForDepot(unit);
 	if (base == nullptr || (checkUnderAttack && base->isUnderAttack()))
@@ -1449,21 +1478,41 @@ void BuildingManager::castBuildingsAbilities()
 		//Mule
 		if (energy >= 50 && (!hasInvisible || energy >= 100))
 		{
-			auto orbitalPosition = b.getPosition();
-			auto closestMineral = getLargestCloseMineral(b, true);
-			if (closestMineral == nullptr)
+			std::vector<CCUnitID> skipMinerals;
+			for (auto mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
 			{
-				auto closestBase = m_bot.Bases().getClosestBasePosition(b.getUnitPtr(), Players::Self, false, true, true);
-				if (closestBase != Util::GetTilePosition(m_bot.Map().center()))
-				{
-					closestMineral = getLargestCloseMineral(closestBase);
-				}
+				skipMinerals.push_back(m_bot.Workers().getMuleTargetTag(mule));
+			}
 
+			CCTilePosition orbitalPosition;
+			const sc2::Unit* closestMineral;
+			auto bases = m_bot.Bases().getBaseLocations();//Sorted by closest to enemy base
+			for (auto base : bases)
+			{
+				if (!base->isOccupiedByPlayer(Players::Self))
+					continue;
+
+				if (base->isUnderAttack())
+					continue;
+
+				auto depot = base->getResourceDepot();
+				if (!depot.isCompleted())
+					continue;
+
+				closestMineral = getLargestCloseMineral(depot, false, skipMinerals);
 				if (closestMineral == nullptr)
 				{
-					//If none of our bases fit the requirements (have minerals + not underattack), drop on closest mineral
-					closestMineral = getClosestMineral(b.getPosition());
+					continue;
 				}
+				orbitalPosition = base->getCenterOfMinerals();
+				
+				break;
+			}
+			
+			if (closestMineral == nullptr)
+			{
+				//If none of our bases fit the requirements (have minerals + not underattack), drop on closest mineral
+				closestMineral = getClosestMineral(b.getPosition());
 
 				if (closestMineral == nullptr)
 				{
@@ -1471,6 +1520,7 @@ void BuildingManager::castBuildingsAbilities()
 					continue;
 				}
 			}
+
 			auto point = closestMineral->pos;
 
 			//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.

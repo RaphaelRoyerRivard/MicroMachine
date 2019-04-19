@@ -44,18 +44,139 @@ void CombatAnalyzer::lowPriorityChecks()
 
 	std::vector<CCTilePosition> buildingPositions;
 	aliveEnemiesCountByType.clear();
+
+	lightCountByType.clear();
+	armoredCountByType.clear();
+	bioCountByType.clear();
+	mechCountByType.clear();
+	psiCountByType.clear();
+	massiveCountByType.clear();
+
+	totalKnownWorkerCount = 0;
+	totalAirUnitsCount = 0;
+	totalGroundUnitsCount = 0;
+	totalGroundLightCount = 0;
+	totalAirLightCount = 0;
+	totalGroundArmoredCount = 0;
+	totalAirArmoredCount = 0;
+	totalGroundBioCount = 0;
+	totalAirBioCount = 0;
+	totalGroundMechCount = 0;
+	totalAirMechCount = 0;
+	totalGroundPsiCount = 0;
+	totalAirPsiCount = 0;
+	totalGroundMassiveCount = 0;
+	totalAirMassiveCount = 0;
+
 	for (auto enemy : m_bot.GetEnemyUnits())
 	{
 		auto unit = enemy.second;
+		sc2::UNIT_TYPEID type = (sc2::UNIT_TYPEID)unit.getAPIUnitType();
+		
 		if (m_bot.Data(unit).isBuilding)
 		{
-			if (std::find(buildingPositions.begin(), buildingPositions.end(), unit.getTilePosition()) != buildingPositions.end())
+			if (std::find(buildingPositions.begin(), buildingPositions.end(), unit.getTilePosition()) == buildingPositions.end())
 			{
-				continue;
+				buildingPositions.push_back(unit.getTilePosition());
 			}
-			buildingPositions.push_back(unit.getTilePosition());
 		}
 		aliveEnemiesCountByType[unit.getUnitPtr()->unit_type]++;
+
+		if (unit.getType().isBuilding())
+		{
+			continue;
+		}
+
+		//Count units by types
+		if (unit.getType().isWorker())
+		{
+			totalKnownWorkerCount++;
+			continue;
+		}
+
+		//Ignored units
+		switch (type)
+		{
+			case sc2::UNIT_TYPEID::TERRAN_AUTOTURRET:
+			case sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR:
+			case sc2::UNIT_TYPEID::ZERG_LARVA:
+			case sc2::UNIT_TYPEID::ZERG_BROODLING:
+			case sc2::UNIT_TYPEID::ZERG_CHANGELING:
+			case sc2::UNIT_TYPEID::ZERG_INFESTEDTERRANSEGG:
+			case sc2::UNIT_TYPEID::ZERG_INFESTORTERRAN:
+			case sc2::UNIT_TYPEID::ZERG_EGG:
+			case sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON:
+			case sc2::UNIT_TYPEID::ZERG_BROODLORDCOCOON:
+			case sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON:
+			case sc2::UNIT_TYPEID::ZERG_TRANSPORTOVERLORDCOCOON:
+			continue;
+		}
+
+		if (unit.isFlying())
+			totalAirUnitsCount++;
+		else
+			totalGroundUnitsCount++;
+
+
+		if (unit.isLight())
+		{
+			lightCountByType[type]++;
+			if (unit.isFlying())
+				totalAirLightCount++;
+			else
+				totalGroundLightCount++;
+		}
+
+		//Check armored units
+		if (unit.isArmored())
+		{
+			armoredCountByType[type]++;
+			if (unit.isFlying())
+				totalAirArmoredCount++;
+			else
+				totalGroundArmoredCount++;
+		}
+
+		//Check biological units
+		if (unit.isBiological())
+		{
+
+			bioCountByType[type]++;
+			if (unit.isFlying())
+				totalAirBioCount++;
+			else
+				totalGroundBioCount++;
+		}
+
+		//Check mech units
+		if (unit.isMechanical())
+		{
+			mechCountByType[type]++;
+			if (unit.isFlying())
+				totalAirMechCount++;
+			else
+				totalGroundMechCount++;
+		}
+
+		//Check psi units
+		if (unit.isPsionic())
+		{
+			psiCountByType[type]++;
+			if (unit.isFlying())
+				totalAirPsiCount++;
+			else
+				totalGroundPsiCount++;
+		}
+
+		//Check massive units
+		if (unit.isMassive())
+		{
+			massiveCountByType[type]++;
+			if (unit.isFlying())
+				totalAirMassiveCount++;
+			else
+				totalGroundMassiveCount++;
+		}
 	}
 	
 	//TODO handle dead ally units

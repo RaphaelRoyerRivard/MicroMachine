@@ -153,10 +153,12 @@ bool UnitType::isResourceDepot() const
 
 bool UnitType::isRefinery() const
 {
+	//TODO Doesn't handle protoss and zerg rich geysers
 #ifdef SC2API
     switch (m_type.ToType()) 
     {
         case sc2::UNIT_TYPEID::TERRAN_REFINERY      : return true;
+		case sc2::UNIT_TYPEID::TERRAN_RICHREFINERY	: return true;//Rich terran refinery
         case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR  : return true;
         case sc2::UNIT_TYPEID::ZERG_EXTRACTOR       : return true;
         default: return false;

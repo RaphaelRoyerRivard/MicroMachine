@@ -30,7 +30,7 @@ void RepairStationManager::onFrame()
 
 	// Add the valid repair stations that are missing from the map
 	const std::vector<const BaseLocation *> & bases = m_bot.Bases().getBaseLocations();
-	for(auto base : bases)
+	for(auto & base : bases)
 	{
 		if (!isRepairStationValidForBaseLocation(base))
 			continue;

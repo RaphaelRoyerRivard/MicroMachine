@@ -83,6 +83,7 @@ void Util::Initialize(CCBot & bot, CCRace race)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_REFINERY, bot);
+			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::TERRAN_SCV, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, bot);
 			break;
@@ -91,6 +92,7 @@ void Util::Initialize(CCBot & bot, CCRace race)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, bot);
+			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY, bot);//TODO Wrong
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, bot);
 			break;
@@ -99,6 +101,7 @@ void Util::Initialize(CCBot & bot, CCRace race)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, bot);
+			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY, bot);//TODO Wrong
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, bot);
 			break;
@@ -609,24 +612,29 @@ CCPositionType Util::TileToPosition(float tile)
 #endif
 }
 
-UnitType Util::GetSupplyProvider(const CCRace & race, CCBot & bot)
+UnitType Util::GetSupplyProvider()
 {
 	return supplyType;
 }
 
-UnitType Util::GetWorkerType(const CCRace & race, CCBot & bot)
+UnitType Util::GetWorkerType()
 {
 	return workerType;
 }
 
-UnitType Util::GetRessourceDepotType(const CCRace & race, CCBot & bot)
+UnitType Util::GetRessourceDepotType()
 {
 	return depotType;
 }
 
-UnitType Util::GetRefineryType(const CCRace & race, CCBot & bot)
+UnitType Util::GetRefineryType()
 {
 	return refineryType;
+}
+
+UnitType Util::GetRichRefineryType()
+{
+	return richRefineryType;
 }
 
 CCPosition Util::CalcCenter(const std::vector<const sc2::Unit*> & units)

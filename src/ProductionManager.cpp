@@ -26,10 +26,10 @@ void ProductionManager::onStart()
     setBuildOrder(m_bot.Strategy().getOpeningBookBuildOrder());
 	if (m_queue.isEmpty())
 		Util::DisplayError("Initial build order is empty.", "0x00000003", m_bot, true);
-	supplyProvider = Util::GetSupplyProvider(m_bot.GetSelfRace(), m_bot);
+	supplyProvider = Util::GetSupplyProvider();
 	supplyProviderType = MetaType(supplyProvider, m_bot);
 
-	workerType = Util::GetWorkerType(m_bot.GetSelfRace(), m_bot);
+	workerType = Util::GetWorkerType();
 	workerMetatype = MetaType(workerType, m_bot);
 	
 	switch (m_bot.GetSelfRace())
@@ -431,6 +431,11 @@ void ProductionManager::manageBuildOrderQueue()
 
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
+#ifdef NO_PRODUCTION
+	return;
+#endif
+
+
 	if (m_bot.Config().AllowDebug && m_bot.GetCurrentFrame() % 10)
 		return;
 
@@ -456,7 +461,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	if (m_bot.GetSelfRace() == sc2::Race::Terran)
 	{
 		// Logic for building Orbital Commands and Refineries
-		UnitType depot = Util::GetRessourceDepotType(m_bot.GetSelfRace(), m_bot);
+		UnitType depot = Util::GetRessourceDepotType();
 		const size_t depotCount = m_bot.Buildings().countBoughtButNotBeingBuilt(depot.getAPIUnitType());
 		const size_t completedDepotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, depot, true, true);
 		if(m_bot.GetSelfRace() == CCRace::Terran && completedDepotCount > 0)
@@ -717,10 +722,16 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     }
 
     // build a refinery if we don't have one and the thing costs gas
-    auto refinery = Util::GetRefineryType(m_bot.GetSelfRace(), m_bot);
-	if (typeData.gasCost > 0 && m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true) == 0)
+	if (typeData.gasCost > 0)
     {
-		m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
+		auto refinery = Util::GetRefineryType();
+		auto richRefinery = Util::GetRichRefineryType();
+		auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true);
+		auto richRefineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, richRefinery, false, true);
+		if (refineryCount + richRefineryCount == 0)
+		{
+			m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
+		}
     }
 }
 
@@ -732,17 +743,48 @@ void ProductionManager::lowPriorityChecks()
 	}
 
 	// build a refinery if we are missing one
-	//TODO doesn't handle extra hatcheries, doesn't handle rich geyser
-	auto refinery = Util::GetRefineryType(m_bot.GetSelfRace(), m_bot);
+	//TODO doesn't handle extra hatcheries
+	auto refinery = Util::GetRefineryType();
 	if (m_bot.Workers().canHandleMoreRefinery() && !m_queue.contains(MetaType(refinery, m_bot)))
 	{
 		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
 		{
-			auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
-			auto geyserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true);
-			if (geyserCount < baseCount * 2)
+			auto& refineries = m_bot.GetAllyGeyserUnits();
+			const std::vector<const BaseLocation *> & bases = m_bot.Bases().getBaseLocations();
+			for (auto & base : bases)
 			{
-				m_queue.queueAsLowestPriority(MetaType(refinery, m_bot), false);
+				if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
+					continue;
+				
+				const Unit& resourceDepot = base->getResourceDepot();
+				if (!resourceDepot.isValid() || !resourceDepot.isCompleted())
+					continue;
+
+				auto& geysers = base->getGeysers();
+				for (auto & geyser : geysers)
+				{
+					//filter out depleted geysers
+					if (geyser.getUnitPtr()->vespene_contents <= 0)
+						continue;
+
+					auto position = geyser.getTilePosition();
+					bool refineryFound = false;
+					for (auto refinery : refineries)
+					{
+						if (!refinery.isValid())
+							continue;
+						if (refinery.getTilePosition() == position)
+						{
+							refineryFound = true;
+							break;
+						}
+					}
+
+					if (!refineryFound)
+					{
+						m_queue.queueAsLowestPriority(MetaType(refinery, m_bot), false);
+					}
+				}
 			}
 		}
 	}
@@ -1743,7 +1785,9 @@ void ProductionManager::drawProductionInformation()
 	ss.str(std::string());
 	ss << "Free Mineral:     " << m_bot.GetFreeMinerals() << "\n";
 	ss << "Free Gas:         " << m_bot.GetFreeGas() << "\n";
-	ss << "Gas Worker Target:" << m_bot.Workers().getGasWorkersTarget();
+	ss << "Gas Worker Target:" << m_bot.Workers().getGasWorkersTarget() << "\n";
+	ss << "Mineral income:   " << m_bot.Observation()->GetScore().score_details.collection_rate_minerals << "\n";
+	ss << "Gas income:       " << m_bot.Observation()->GetScore().score_details.collection_rate_vespene << "\n";
 	m_bot.Map().drawTextScreen(0.75f, 0.05f, ss.str(), CCColor(255, 255, 0));
 
 	ss.str(std::string());
