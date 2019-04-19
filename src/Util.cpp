@@ -180,7 +180,8 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 	if (target)
 	{
 		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
-		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > targetRange + 1.f;
+		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot);
+		
 	}
 	std::list<CCPosition> path = FindOptimalPath(unit, goal, maxRange, false, false, getCloser, false, false, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
