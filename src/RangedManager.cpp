@@ -892,6 +892,15 @@ bool RangedManager::ExecuteAutoTurretLogic(const sc2::Unit * raven, const sc2::U
 
 	if(Util::DistSq(turretPosition, raven->pos) < 2.75f * 2.75)
 	{
+		//check all the enemy units to see if there is none blocking that location
+		for(auto & enemy : m_bot.GetKnownEnemyUnits())
+		{
+			if (enemy.isFlying() || enemy.getType().isBuilding())
+				continue;	// flying units do not block and buildings are already managed in getBuildLocationNear
+			const float minDist = enemy.getUnitPtr()->radius + 1.5f;
+			if (Util::DistSq(enemy, turretPosition) < minDist * minDist)
+				return false;
+		}
 		const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_AUTOTURRET, turretPosition, true, 0);
 		PlanAction(raven, action);
 		return true;
