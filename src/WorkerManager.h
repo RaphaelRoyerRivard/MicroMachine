@@ -60,13 +60,14 @@ public:
 
     bool isWorkerScout(Unit worker) const;
     bool isFree(Unit worker) const;
+	bool isInsideGeyser(Unit worker) const;
     bool isBuilder(Unit worker) const;
 	bool isReturningCargo(Unit worker) const;
 	bool canHandleMoreRefinery() const;
 
     Unit getBuilder(Building & b, bool setJobAsBuilder = true) const;
 	Unit getMineralWorker(Unit refinery) const;
-	Unit getGasWorker(Unit refinery, bool checkReturningCargo = false) const;
+	Unit getGasWorker(Unit refinery, bool checkReturningCargo, bool checkInsideRefinery) const;
 	int  getGasWorkersTarget() const;
 	Unit getDepotAtBasePosition(CCPosition basePosition) const;
 	int  getWorkerCountAtBasePosition(CCPosition basePosition) const;

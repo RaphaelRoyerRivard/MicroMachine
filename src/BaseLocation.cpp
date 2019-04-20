@@ -104,7 +104,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     // if it's not a start location, we need to calculate the depot position
     if (!isStartLocation())
     {
-        UnitType depot = Util::GetRessourceDepotType();
+        
 #ifdef SC2API
         int offsetX = 0;
         int offsetY = 0;
@@ -120,8 +120,8 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
             // this means we are positioning the center of the resouce depot
             CCTilePosition buildTile(tile.x - offsetX, tile.y - offsetY);
 
-            if (m_bot.Map().canBuildTypeAtPosition(buildTile.x, buildTile.y, depot))
-            {
+            if(m_bot.Buildings().getBuildingPlacer().canBuildDepotHere(tile.x, tile.y, m_minerals, m_geysers))
+			{
                 m_depotPosition = buildTile;
                 break;
             }
@@ -331,6 +331,11 @@ void BaseLocation::draw()
     {
         m_bot.Map().drawCircle(geyserPos, radius, CCColor(0, 255, 0));
     }
+
+	/*for (auto & g : m_geysers)
+	{
+		m_bot.Map().drawTile(g.getTilePosition(), CCColor(0, 255, 0));
+	}*/
 
     if (m_isStartLocation)
     {

@@ -61,6 +61,7 @@ public:
 	bool DrawRepairStation;
 	bool DrawDamageHealthRatio;
 	bool DrawRangedUnitActions;
+	bool DrawResourcesProximity;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;

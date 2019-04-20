@@ -291,7 +291,7 @@ void CCBot::setUnits()
 	m_unitCompletedCount.clear();
 #ifdef SC2API
 	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
-    for (auto unitptr : Observation()->GetUnits())
+    for (auto & unitptr : Observation()->GetUnits())
     {
 		Unit unit(unitptr, *this);
 		if (!unit.isValid())

@@ -19,17 +19,52 @@ void BaseLocationManager::onStart()
     // a BaseLocation will be anything where there are minerals to mine
     // so we will first look over all minerals and cluster them based on some distance
     const CCPositionType clusterDistanceSq = Util::TileToPosition(12*12);
+
+	//Initialize resource proximity map
+	const size_t mapWidth = m_bot.Map().totalWidth();
+	const size_t mapHeight = m_bot.Map().totalHeight();
+	m_resourceProximity.resize(mapWidth);
+	for (size_t x = 0; x < mapWidth; ++x)
+	{
+		auto& m_resourceProximityRow = m_resourceProximity[x];
+		m_resourceProximityRow.resize(mapHeight);
+		for (size_t y = 0; y < mapHeight; ++y)
+		{
+			m_resourceProximityRow[y] = false;
+		}
+	}
     
     // stores each cluster of resources based on some ground distance
     std::vector<std::vector<Unit>> resourceClusters;
-    for (auto & mineral : m_bot.GetUnits())
-    {
-        // skip minerals that don't have more than 100 starting minerals
-        // these are probably stupid map-blocking minerals to confuse us
-        if (!mineral.getType().isMineral())
-        {
-            continue;
-        }
+	for (auto & mineral : m_bot.GetNeutralUnits())
+	{
+		// skip minerals that don't have more than 100 starting minerals
+		// these are probably stupid map-blocking minerals to confuse us
+		if (!mineral.second.getType().isMineral())
+		{
+			continue;
+		}
+
+		//calculate resource proximity for minerals
+		int x = mineral.second.getTilePosition().x;
+		int y = mineral.second.getTilePosition().y;
+		for (int xShift = 0; xShift < 2; xShift++)//Right side, then same check for the left side of the mineral patch
+		{
+			x -= xShift;
+			for (int i = x - 3; i <= x + 3; i++)
+			{
+				for (int j = y - 3; j <= y + 3; j++)
+				{
+					bool xLimit = abs(x - i) == 3;
+					bool yLimit = abs(y - j) == 3;
+					if (xLimit && yLimit)
+					{
+						continue;
+					}
+					m_resourceProximity[i][j] = true;
+				}
+			}
+		}
 
 #ifndef SC2API
         // for BWAPI we have to eliminate minerals that have low resource counts
@@ -39,7 +74,7 @@ void BaseLocationManager::onStart()
         bool foundCluster = false;
         for (auto & cluster : resourceClusters)
         {
-            float distSq = Util::DistSq(mineral, Util::CalcCenter(cluster));
+            float distSq = Util::DistSq(mineral.second, Util::CalcCenter(cluster));
             
             // quick initial air distance check to eliminate most resources
             if (distSq < clusterDistanceSq)
@@ -48,7 +83,7 @@ void BaseLocationManager::onStart()
                 //float groundDist = dist; //m_bot.Map().getGroundDistance(mineral.pos, Util::CalcCenter(cluster));
                 //if (groundDist >= 0 && groundDist < clusterDistance)
                 {
-                    cluster.push_back(mineral);
+                    cluster.push_back(mineral.second);
                     foundCluster = true;
                     break;
                 }
@@ -58,26 +93,41 @@ void BaseLocationManager::onStart()
         if (!foundCluster)
         {
             resourceClusters.push_back(std::vector<Unit>());
-            resourceClusters.back().push_back(mineral);
+            resourceClusters.back().push_back(mineral.second);
         }
     }
 
     // add geysers only to existing resource clusters
-    for (auto & geyser : m_bot.GetUnits())
+    for (auto & geyser : m_bot.GetNeutralUnits())
     {
-        if (!geyser.getType().isGeyser())
+        if (!geyser.second.getType().isGeyser())
         {
             continue;
         }
 
+		//calculate resource proximity for geysers
+		int x = geyser.second.getTilePosition().x;
+		int y = geyser.second.getTilePosition().y;
+		for (int i = x - 4; i <= x + 4; i++)
+		{
+			for (int j = y - 4; j <= y + 4; j++)
+			{
+				if(abs(x-i) == 4 && abs(y-j) == 4)
+				{
+					continue;
+				}
+				m_resourceProximity[i][j] = true;
+			}
+		}
+
         for (auto & cluster : resourceClusters)
         {
             //int groundDist = m_bot.Map().getGroundDistance(geyser.pos, Util::CalcCenter(cluster));
-            float groundDistSq = Util::DistSq(geyser, Util::CalcCenter(cluster));
+            float groundDistSq = Util::DistSq(geyser.second, Util::CalcCenter(cluster));
 
             if (/*groundDist >= 0 &&*/ groundDistSq < clusterDistanceSq)
             {
-                cluster.push_back(geyser);
+                cluster.push_back(geyser.second);
                 break;
             }
         }
@@ -155,6 +205,8 @@ void BaseLocationManager::onFrame()
 	m_bot.StartProfiling("0.6.0   drawBaseLocations");
     drawBaseLocations();
 	m_bot.StopProfiling("0.6.0   drawBaseLocations");
+
+	drawResourceProxity();
 
 	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
 	{
@@ -335,6 +387,30 @@ void BaseLocationManager::drawBaseLocations()
 
     m_bot.Map().drawCircle(Util::GetPosition(nextExpansionPosition), 1, CCColor(255, 0, 255));
     m_bot.Map().drawText(Util::GetPosition(nextExpansionPosition), "Next Expansion Location", CCColor(255, 0, 255));
+}
+
+void BaseLocationManager::drawResourceProxity()
+{
+#ifdef PUBLIC_RELESE
+	return;
+#endif
+	if (!m_bot.Config().DrawResourcesProximity)
+	{
+		return;
+	}
+
+	const size_t mapWidth = m_bot.Map().totalWidth();
+	const size_t mapHeight = m_bot.Map().totalHeight();
+	for (int x = 0; x < mapWidth - 1; x++)
+	{
+		for (int y = 0; y < mapHeight - 1; y++)
+		{
+			if (m_resourceProximity[x][y])
+			{
+				m_bot.Map().drawTile(x, y, CCColor(255, 255, 255));
+			}
+		}
+	}
 }
 
 const std::vector<const BaseLocation *> & BaseLocationManager::getBaseLocations() const
@@ -616,4 +692,9 @@ void BaseLocationManager::sortBaseLocationPtrs()
 	}
 	m_baseLocationPtrs = sortedBaseLocationPtrs;
 	m_areBaseLocationPtrsSorted = true;
+}
+
+bool BaseLocationManager::isInProximityOfResources(int x, int y) const
+{
+	return m_resourceProximity[x][y];
 }
