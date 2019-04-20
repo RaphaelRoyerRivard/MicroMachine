@@ -770,7 +770,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		}
 
 		auto fleePosition = CCPosition();
-		if (!canAttackNow && unit->health / unit->health_max < 0.5f)
+		const bool injured = unit->health / unit->health_max < 0.5f;
+		const bool shouldKite = unitRange > Util::GetAttackRangeForTarget(unitTarget, unit, m_bot) && Util::getSpeedOfUnit(unit, m_bot) > Util::getSpeedOfUnit(unitTarget, m_bot);
+		if (!canAttackNow && (injured || shouldKite))
 		{
 			fleePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, m_bot);
 		}
