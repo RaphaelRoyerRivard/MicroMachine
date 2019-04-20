@@ -374,6 +374,8 @@ bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit) const
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
 		return false;
+	if (Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit->is_flying, m_bot))
+		return false;
 	const uint32_t availableFrame = nextPathFindingFrameForUnit.find(rangedUnit) != nextPathFindingFrameForUnit.end() ? nextPathFindingFrameForUnit.at(rangedUnit) : m_bot.GetGameLoop();
 	return m_bot.GetGameLoop() >= availableFrame;
 }

@@ -180,7 +180,8 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 	if (target)
 	{
 		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
-		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > targetRange + 1.f;
+		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot);
+		
 	}
 	std::list<CCPosition> path = FindOptimalPath(unit, goal, maxRange, false, false, getCloser, false, false, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
@@ -255,7 +256,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
 
-	while (!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE * (bot.Config().TournamentMode ? 3 : 1))
+	while (!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE * (bot.Config().TournamentMode || exitOnInfluence ? 3 : 1))
 	{
 		IMNode* currentNode = getLowestCostNode(opened);
 		opened.erase(currentNode);
@@ -418,7 +419,7 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 		++i;
 		returnPos = position;
 		//we want to retun a node close to the current position
-		if (i >= 2)
+		if (i >= 3)
 			break;
 	}
 
@@ -429,6 +430,10 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 		const float terrainHeightDiff = abs(bot.Map().terrainHeight(rangedUnit->pos.x, rangedUnit->pos.y) - bot.Map().terrainHeight(returnPos.x, returnPos.y));
 		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > CLIFF_MIN_HEIGHT_DIFFERENCE)
 			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
+	}
+	if (Util::DistSq(rangedUnit->pos, returnPos) < 2*2)
+	{
+		returnPos = Normalized(returnPos - rangedUnit->pos) + rangedUnit->pos;
 	}
 #ifndef PUBLIC_RELEASE
 	if (bot.Config().DrawHarassInfo)
