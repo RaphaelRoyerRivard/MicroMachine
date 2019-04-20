@@ -1387,7 +1387,7 @@ void BuildingManager::updateBaseBuildings()
 		if (!building.getType().isBuilding())
 		{
 			continue;
-		}		
+		}
 
 		if (building.isCompleted())
 		{

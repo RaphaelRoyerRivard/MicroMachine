@@ -15,6 +15,7 @@ class BaseLocationManager
     std::map<int, const BaseLocation *>             m_playerStartingBaseLocations;
     std::map<int, std::set<BaseLocation *>>			m_occupiedBaseLocations;
     std::vector<std::vector<BaseLocation *>>        m_tileBaseLocations;
+	std::vector<std::vector<bool>>					m_resourceProximity;
 
 	void sortBaseLocationPtrs();
 
@@ -25,6 +26,7 @@ public:
     void onStart();
     void onFrame();
     void drawBaseLocations();
+	void drawResourceProxity();
 
 	BaseLocation * getBaseLocation(const CCPosition & pos) const;
     const std::vector<const BaseLocation *> & getBaseLocations() const;
@@ -42,5 +44,5 @@ public:
 	const BaseLocation* getBaseForDepotPosition(const CCTilePosition position) const;
 	const BaseLocation* getBaseForDepot(const Unit depot) const;
 	const BaseLocation* getBaseContainingPosition(const CCPosition position, int player) const;
-
+	bool isInProximityOfResources(int x, int y) const;
 };

@@ -24,7 +24,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 1,
         "EnemyRace"                 : "Random",
-        "MapFile"                   : "Urzagol.SC2Map",
+        "MapFile"                   : "Artana.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -56,7 +56,14 @@
 		"Reminiscence.SC2Map",
 		"Sanglune.SC2Map",
 		"TheTimelessVoid.SC2Map",
-		"Urzagol.SC2Map"
+		"Urzagol.SC2Map",
+		"Acropolis.SC2Map",
+		"Artana.SC2Map",
+		"CrystalCavern.SC2Map",
+		"DigitalFrontier.SC2Map",
+		"OldSunshine.SC2Map",
+		"Treachery.SC2Map",
+		"Triton.SC2Map"
 	],
         
     "Micro" :
@@ -128,7 +135,8 @@
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
 		"DrawDamageHealthRatio"		: false,
-        "DrawRangedUnitActions"     : false
+        "DrawRangedUnitActions"     : false,
+		"DrawResourcesProximity"	: false
     },
     
     "Modules" :

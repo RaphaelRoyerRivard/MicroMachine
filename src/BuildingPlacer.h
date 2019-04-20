@@ -25,7 +25,9 @@ public:
     void onStart();
 
     // determines whether we can build at a given location
+	bool canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const;
     bool canBuildHere(int bx, int by, const Building & b, bool ignoreReservedTiles = false) const;
+	bool canBuildHere(int bx, int by, const UnitType & type, bool ignoreReservedTiles) const;
     bool canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const;
 
     // returns a build location near a building's desired location

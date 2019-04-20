@@ -208,6 +208,7 @@ void WorkerManager::handleGasWorkers()
 	const int ressourceTreshold = 300;
 	int previousGasWorkersTarget = gasWorkersTarget;
 
+
 	switch (gasWorkersTarget)
 	{
 		case 0:
@@ -282,7 +283,7 @@ void WorkerManager::handleGasWorkers()
 				//if the base is destroyed, remove the gas workers
 				for (int i = 0; i < numAssigned; i++)
 				{
-					auto gasWorker = getGasWorker(geyser, true);
+					auto gasWorker = getGasWorker(geyser, false, false);
 					m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
 				}
 			}
@@ -319,7 +320,7 @@ void WorkerManager::handleGasWorkers()
 								break;
 							}
 
-							auto gasWorker = getGasWorker(geyser, true);
+							auto gasWorker = getGasWorker(geyser, true, true);
 							if (gasWorker.isValid())
 							{
 								if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
@@ -1096,17 +1097,46 @@ Unit WorkerManager::getMineralWorker(Unit refinery) const
     return getClosestMineralWorkerTo(refinery.getPosition());
 }
 
-Unit WorkerManager::getGasWorker(Unit refinery, bool checkReturningCargo) const
+Unit WorkerManager::getGasWorker(Unit refinery, bool checkReturningCargo, bool checkInsideRefinery) const
 {
 	auto workers = m_workerData.getAssignedWorkersRefinery(refinery);
-	if (checkReturningCargo)
+	if (checkReturningCargo || checkInsideRefinery)
 	{
 		for (auto & worker : workers)
 		{
-			if (!isReturningCargo(worker))
+			if (checkInsideRefinery)
 			{
-				return worker;
+				//Skip workers inside the geyser
+				if (isInsideGeyser(worker))
+				{
+					continue;
+				}
 			}
+			if (checkReturningCargo)
+			{
+				//Skip workers returning cargo
+				if (isReturningCargo(worker))
+				{
+					continue;
+				}
+			}
+			return worker;
+		}
+	}
+
+	//If we found no suitable workers (so probably 1 returning cargo and 1 inside the geyser OR only 1 worker), then return the returning one if exist
+	if (checkReturningCargo && checkInsideRefinery)
+	{
+		for (auto & worker : workers)
+		{
+			//Skip workers inside the geyser
+			if (isInsideGeyser(worker))
+			{
+				continue;
+			}
+
+			//Return the worker returning cargo in priority over the worker inside the geyser
+			return worker;
 		}
 	}
 	return workers[0];
@@ -1272,6 +1302,21 @@ bool WorkerManager::isFree(Unit worker) const
 		return false;
 	int job = m_workerData.getWorkerJob(worker);
     return job == WorkerJobs::Minerals || job == WorkerJobs::Idle || job == WorkerJobs::None;
+}
+
+bool WorkerManager::isInsideGeyser(Unit worker) const
+{
+	int job = m_workerData.getWorkerJob(worker);
+	if (job == WorkerJobs::Gas)
+	{
+		auto loop = m_bot.GetGameLoop();
+		if (worker.getUnitPtr()->last_seen_game_loop != m_bot.GetGameLoop())
+		{
+			return true;
+		}
+		return false;
+	}
+	return false;
 }
 
 bool WorkerManager::isWorkerScout(Unit worker) const

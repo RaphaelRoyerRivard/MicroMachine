@@ -32,24 +32,51 @@ void BuildingPlacer::onStart()
 	}
 }
 
+bool BuildingPlacer::canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const
+{
+	UnitType depot = Util::GetRessourceDepotType();
+	if (canBuildHere(bx, by, depot, true))
+	{
+		// check the reserve map
+		for (int x = bx - 2; x <= bx + 2; x++)
+		{
+			for (int y = by - 2; y <= by + 2; y++)
+			{
+				if (m_bot.Bases().isInProximityOfResources(x, y))
+				{
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
 // makes final checks to see if a building can be built at a certain location
 bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b, bool ignoreReservedTiles) const
+{
+	return canBuildHere(bx, by, b.type, ignoreReservedTiles);
+}
+
+// makes final checks to see if a building can be built at a certain location
+bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ignoreReservedTiles) const
 {
 	//TODO: Unused, it is outdated, check canBuildHereWithSpace instead
 	BOT_ASSERT(true, "Unused, it is outdated, check canBuildHereWithSpace instead");
 
 	// if it overlaps a base location return false
-	if (!ignoreReservedTiles && tileOverlapsBaseLocation(bx, by, b.type))
+	if (!ignoreReservedTiles && tileOverlapsBaseLocation(bx, by, type))
 	{
 		return false;
 	}
 
     // check the reserve map
-    for (int x = bx; x < bx + b.type.tileWidth(); x++)
+    for (int x = bx; x < bx + type.tileWidth(); x++)
     {
-        for (int y = by; y < by + b.type.tileHeight(); y++)
+        for (int y = by; y < by + type.tileHeight(); y++)
         {
-            if ((!ignoreReservedTiles && m_reserveMap[x][y]) || !buildable(b.type, x, y, ignoreReservedTiles))
+            if ((!ignoreReservedTiles && m_reserveMap[x][y]) || !buildable(type, x, y, ignoreReservedTiles))
             {
                 return false;
             }
