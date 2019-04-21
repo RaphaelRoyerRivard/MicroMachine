@@ -97,11 +97,22 @@ void RangedManager::executeMicro()
     }
 }
 
-int RangedManager::getAttackDuration(const sc2::Unit* unit) const
+int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* target) const
 {
 	int attackFrameCount = 2;
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
 		attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
+	const CCPosition targetDirection = Util::Normalized(target->pos - unit->pos);
+	const CCPosition facingVector = Util::getFacingVector(unit);
+	const float dot = sc2::Dot2D(targetDirection, facingVector);
+	if (dot <= -0.8f)
+	{		
+		attackFrameCount += 2;
+	}
+	else if (dot <= -0.4f)
+	{
+		attackFrameCount += 1;
+	}
 	return attackFrameCount;
 }
 
@@ -240,7 +251,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StartProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 	if (targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
 	{
-		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit));
+		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit, target));
 		PlanAction(rangedUnit, action);
 		m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 
@@ -638,7 +649,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 				}
 
 				const bool canAttackNow = range <= targetDist && rangedUnit->weapon_cooldown <= 0.f;
-				const int attackDuration = canAttackNow ? getAttackDuration(rangedUnit) : 0;
+				const int attackDuration = canAttackNow ? getAttackDuration(rangedUnit, target) : 0;
 				const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, false, attackDuration);
 				// Attack the target
 				PlanAction(rangedUnit, action);
@@ -786,7 +797,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		else
 		{
 			// Attack the target
-			const int attackDuration = canAttackNow ? getAttackDuration(unit) : 0;
+			const int attackDuration = canAttackNow ? getAttackDuration(unit, unitTarget) : 0;
 			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, false, attackDuration);
 			PlanAction(unit, action);
 		}
@@ -1208,7 +1219,7 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
 				const float refineryDist = Util::DistSq(refinery, target->pos);
 				if(refineryDist < 2.5 * 2.5)
 				{
-					const CCPosition facingVector = CCPosition(cos(target->facing), sin(target->facing));
+					const CCPosition facingVector = Util::getFacingVector(target);
 					if(Dot2D(facingVector, refinery.getPosition() - target->pos) > 0.99f)
 					{
 						workerBonus *= 0.5f;

@@ -122,7 +122,7 @@ private:
 	bool isCommandDone = false;
 	bool m_harassMode = false;
 
-	int getAttackDuration(const sc2::Unit* unit) const;
+	int getAttackDuration(const sc2::Unit* unit, const sc2::Unit* target) const;
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	bool ShouldSkipFrame(const sc2::Unit * rangedUnit) const;

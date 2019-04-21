@@ -157,6 +157,7 @@ namespace Util
 	float getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCBot & m_bot);
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
 	float getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
+	CCPosition getFacingVector(const sc2::Unit * unit);
 
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
     

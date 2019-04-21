@@ -1420,6 +1420,11 @@ float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * zergBonus;
 }
 
+CCPosition Util::getFacingVector(const sc2::Unit * unit)
+{
+	return CCPosition(cos(unit->facing), sin(unit->facing));
+}
+
 bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 {
 	std::vector<sc2::UnitTypeID> detectorTypes = {
