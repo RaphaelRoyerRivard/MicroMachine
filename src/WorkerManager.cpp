@@ -295,7 +295,18 @@ void WorkerManager::handleGasWorkers()
 					if (numAssigned < gasWorkersTarget)
 					{
 						// if it's less than we want it to be, fill 'er up
-						for (int i = 0; i<(gasWorkersTarget - numAssigned); ++i)
+						bool hasWorkerOnItsWay = false;
+						auto refineryWorkers = m_workerData.getAssignedWorkersRefinery(geyser);
+						for (auto worker : refineryWorkers)
+						{
+							if (!isInsideGeyser(worker) && !isReturningCargo(worker))
+							{
+								hasWorkerOnItsWay = true;
+								break;
+							}
+						}
+
+						if (numAssigned == 0 || !hasWorkerOnItsWay)
 						{
 							auto mineralWorker = getMineralWorker(geyser);
 							if (mineralWorker.isValid() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyser.getPosition(), m_bot))
