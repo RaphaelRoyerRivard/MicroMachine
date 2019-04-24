@@ -119,6 +119,8 @@ private:
 	std::map<const sc2::Unit *, uint32_t> nextAvailableKD8ChargeFrameForReaper;
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
 	std::set<const sc2::Unit *> unitsBeingRepaired;
+	std::set<sc2::Tag> toggledCyclones;
+	float lockonAbilityCastingRange;
 	bool isCommandDone = false;
 	bool m_harassMode = false;
 

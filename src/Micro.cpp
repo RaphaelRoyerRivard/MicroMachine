@@ -70,3 +70,10 @@ MicroActionType Micro::SmartAbility(const sc2::Unit * unit, const sc2::AbilityID
 	bot.Actions()->UnitCommand(unit, abilityID, target);
 	return MicroActionType::AbilityTarget;
 }
+
+MicroActionType Micro::SmartToggleAutoCast(const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot)
+{
+	BOT_ASSERT(unit != nullptr, "Unit using smart toggle auto cast is null");
+	bot.Actions()->ToggleAutocast(unit->tag, abilityID);
+	return MicroActionType::ToggleAbility;
+}

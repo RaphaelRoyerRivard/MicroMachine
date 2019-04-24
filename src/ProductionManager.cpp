@@ -509,6 +509,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
 						}
 					}
+
 					//Building
 					bool hasPicked = false;
 					MetaType toBuild;
@@ -560,6 +561,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					auto metaTypeInfantryWeapon = queueUpgrade(MetaTypeEnum::TerranInfantryWeaponsLevel1);
 				}*/
+
+#ifndef NO_UNITS
+				/*if (!m_queue.contains(MetaTypeEnum::Cyclone))
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
+				}*/
+#endif
 
 #ifndef NO_UNITS
 				if (!m_queue.contains(MetaTypeEnum::Banshee))

@@ -18,6 +18,7 @@ const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
+const int CYCLONE_LOCKON_FRAME_COUNT = 9;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_COOLDOWN = 342;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
@@ -27,7 +28,16 @@ const float VIKING_LANDING_DISTANCE_FROM_GOAL = 10.f;
 const int ACTION_REEXECUTION_FREQUENCY = 50;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
-{ }
+{
+	for(auto& ability : bot.Observation()->GetAbilityData())
+	{
+		if(ability.ability_id == sc2::ABILITY_ID::EFFECT_LOCKON)
+		{
+			lockonAbilityCastingRange = ability.cast_range;
+			break;
+		}
+	}
+}
 
 void RangedManager::setTargets(const std::vector<Unit> & targets)
 {
@@ -102,6 +112,8 @@ int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* tar
 	int attackFrameCount = 2;
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
 		attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+		attackFrameCount = CYCLONE_LOCKON_FRAME_COUNT;
 	const CCPosition targetDirection = Util::Normalized(target->pos - unit->pos);
 	const CCPosition facingVector = Util::getFacingVector(unit);
 	const float dot = sc2::Dot2D(targetDirection, facingVector);
@@ -161,6 +173,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
 	const bool isRaven = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
 	const bool isViking = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
+	const bool isCyclone = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE;
 
 #ifndef PUBLIC_RELEASE
 	if (m_bot.Config().DrawHarassInfo)
@@ -170,6 +183,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 	if (ShouldSkipFrame(rangedUnit))
 		return;
+
+	if (isCyclone && toggledCyclones.find(rangedUnit->tag) == toggledCyclones.end())
+	{
+		Micro::SmartToggleAutoCast(rangedUnit, sc2::ABILITY_ID::EFFECT_LOCKON, m_bot);
+		toggledCyclones.insert(rangedUnit->tag);
+		return;
+	}
 
 	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
 	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
@@ -226,17 +246,39 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 
+	if(isCyclone)
+	{
+		for(auto& order : rangedUnit->orders)
+		{
+			if (order.ability_id != sc2::ABILITY_ID::ATTACK &&order.ability_id != sc2::ABILITY_ID::MOVE)
+			{
+				std::cout << "Cyclone order - Ability id: " << order.ability_id << ", progress: " << order.progress << ", pos: (" << order.target_pos.x << ", " << order.target_pos.y << "), target tag: " << order.target_unit_tag << std::endl;
+				return;
+			}
+		}
+	}
+
 	bool targetInAttackRange = false;
 	float unitAttackRange = 0.f;
 	if (target)
 	{
-		unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+		if(isCyclone)
+			unitAttackRange = lockonAbilityCastingRange + rangedUnit->radius + target->radius;
+		else
+			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 		targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;
 
 #ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
 			m_bot.Map().drawLine(rangedUnit->pos, target->pos, targetInAttackRange ? sc2::Colors::Green : sc2::Colors::Yellow);
 #endif
+	}
+
+	if (isCyclone && targetInAttackRange)
+	{
+		const auto action = RangedUnitAction(MicroActionType::AbilityTarget, target, unitShouldHeal, CYCLONE_LOCKON_FRAME_COUNT);
+		PlanAction(rangedUnit, action);
+		return;
 	}
 
 	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
@@ -1120,7 +1162,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 			targetPriorities.insert(std::pair<float, const sc2::Unit*>(priority, target));
     }
 
-	if (m_harassMode)
+	if (m_harassMode && rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_CYCLONE)
 	{
 		for(auto it = targetPriorities.rbegin(); it != targetPriorities.rend(); ++it)
 		{
