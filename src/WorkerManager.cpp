@@ -274,9 +274,11 @@ void WorkerManager::handleGasWorkers()
         // if that unit is a refinery
         if (geyser.isCompleted() && geyser.getUnitPtr()->vespene_contents > 0)
         {
+			auto geyserPosition = geyser.getPosition();
+
             // get the number of workers currently assigned to it
             int numAssigned = m_workerData.getNumAssignedWorkers(geyser);
-			auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
+			auto base = m_bot.Bases().getBaseContainingPosition(geyserPosition, Players::Self);
 
 			if (base == nullptr)
 			{
@@ -295,12 +297,28 @@ void WorkerManager::handleGasWorkers()
 					if (numAssigned < gasWorkersTarget)
 					{
 						// if it's less than we want it to be, fill 'er up
-						for (int i = 0; i<(gasWorkersTarget - numAssigned); ++i)
+						bool shouldAssignThisWorker = true;
+						CCPosition positionWorkerOnItsWay = CCPosition(0, 0);
+						auto refineryWorkers = m_workerData.getAssignedWorkersRefinery(geyser);
+						for (auto & worker : refineryWorkers)
+						{
+							if (!isInsideGeyser(worker) && !isReturningCargo(worker))
+							{
+								shouldAssignThisWorker = false;
+								positionWorkerOnItsWay = worker.getPosition();
+								break;
+							}
+						}
+
+						if (shouldAssignThisWorker)
 						{
 							auto mineralWorker = getMineralWorker(geyser);
-							if (mineralWorker.isValid() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyser.getPosition(), m_bot))
+							if (mineralWorker.isValid())
 							{
-								m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
+								if (Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyserPosition, m_bot))
+								{
+									m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
+								}
 							}
 						}
 					}
