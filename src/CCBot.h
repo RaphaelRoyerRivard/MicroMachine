@@ -121,7 +121,7 @@ public:
           BotConfig & Config();
           WorkerManager & Workers();
 		  BuildingManager & Buildings();
-    const BaseLocationManager & Bases() const;
+		  BaseLocationManager & Bases();
 		  CombatAnalyzer & CombatAnalyzer();
 		  GameCommander & Commander();
     const MapTools & Map() const;

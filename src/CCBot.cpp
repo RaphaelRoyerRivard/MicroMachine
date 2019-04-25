@@ -633,7 +633,7 @@ StrategyManager & CCBot::Strategy()
     return m_strategy;
 }
 
-const BaseLocationManager & CCBot::Bases() const
+BaseLocationManager & CCBot::Bases()
 {
     return m_bases;
 }

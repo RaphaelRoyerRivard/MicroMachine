@@ -20,6 +20,7 @@ class BaseLocation
     std::vector<Unit>           m_minerals;
 	Unit						m_resourceDepot;
 	bool						m_isUnderAttack;
+	bool						m_isBlocked;
 
 	CCTilePosition				m_centerOfMinerals;
 
@@ -57,6 +58,8 @@ public:
 	void setResourceDepot(Unit resourceDepot) { m_resourceDepot = resourceDepot; }
 	bool isUnderAttack() const { return m_isUnderAttack; }
 	void setIsUnderAttack(bool isUnderAttack) { m_isUnderAttack = isUnderAttack; }
+	bool isBlocked() const { return m_isBlocked; }
+	void setIsBlocked(bool isBlocked) { m_isBlocked = isBlocked; }
 	const CCTilePosition getCenterOfMinerals() const;
     bool isOccupiedByPlayer(CCPlayer player) const;
     bool isExplored() const;

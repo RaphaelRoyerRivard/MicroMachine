@@ -222,6 +222,7 @@ void BaseLocationManager::onFrame()
         baseLocation.setPlayerOccupying(Players::Self, false);
 		baseLocation.setResourceDepot({});
         baseLocation.setPlayerOccupying(Players::Enemy, false);
+		baseLocation.setIsBlocked(false);
     }
 	m_bot.StopProfiling("0.6.2   resetBaseLocations");
 
@@ -648,6 +649,17 @@ const BaseLocation* BaseLocationManager::getBaseForDepot(const Unit depot) const
 		}
 	}
 	return nullptr;
+}
+
+void BaseLocationManager::SetPositionAsBlocked(const CCPosition position, bool isBlocked)
+{
+	for (auto & base : m_baseLocationData)
+	{
+		if (base.containsPosition(position))
+		{
+			base.setIsBlocked(isBlocked);
+		}
+	}
 }
 
 const BaseLocation* BaseLocationManager::getBaseContainingPosition(const CCPosition position, int player) const

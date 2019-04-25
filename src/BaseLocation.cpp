@@ -293,7 +293,8 @@ void BaseLocation::draw()
     ss << "Start Loc:    " << (isStartLocation() ? "true" : "false") << "\n";
     ss << "Minerals:     " << m_mineralPositions.size() << "\n";
     ss << "Geysers:      " << m_geyserPositions.size() << "\n";
-	ss << "Under attack: " << m_isUnderAttack << "\n";
+	ss << "Under attack: " << (m_isUnderAttack ? "true" : "false") << "\n";
+	ss << "Blocked:      " << (m_isBlocked ? "true" : "false") << "\n";
     ss << "Occupied By:  ";
 
     if (isOccupiedByPlayer(Players::Self))
