@@ -11,7 +11,7 @@ CombatAnalyzer::CombatAnalyzer(CCBot & bot)
 void CombatAnalyzer::onStart()
 {
 	m_bot.Commander();
-	if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss)
+	if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss)//Observers
 		AREA_UNDER_DETECTION_DURATION *= 2;
 }
 
@@ -185,7 +185,7 @@ void CombatAnalyzer::lowPriorityChecks()
 	auto combatAirUnitCount = m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BANSHEE, true) +
 		m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT, true) + 
 		m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, true);
-	if (combatAirUnitCount >= 5)
+	if (combatAirUnitCount >= 4)
 	{
 		auto & production = m_bot.Commander().Production();
 		if (!production.isTechQueuedOrStarted(MetaTypeEnum::TerranShipWeaponsLevel1))
