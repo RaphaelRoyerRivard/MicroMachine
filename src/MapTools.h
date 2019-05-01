@@ -34,7 +34,6 @@ class MapTools
         
     void printMap();
 
-    float   terrainHeight(const CCPosition & point) const;
     bool    canBuild(int tileX, int tileY);
     bool    canWalk(int tileX, int tileY);
 	bool isInCameraFrustum(int x, int y) const;
@@ -54,6 +53,7 @@ public:
 	CCPosition mapMin() const { return m_min; }
 	CCPosition mapMax() const { return m_max; }
 	CCPosition center() const { return CCPosition(m_totalWidth / 2.f, m_totalHeight / 2.f); }
+	float   terrainHeight(const CCPosition & point) const;
 	float	terrainHeight(CCTilePosition tile) const;
     float   terrainHeight(float x, float y) const;
 
