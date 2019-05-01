@@ -117,7 +117,10 @@ private:
 	std::map<const sc2::Unit *, RangedUnitAction> unitActions;
 	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
 	std::map<const sc2::Unit *, uint32_t> nextAvailableKD8ChargeFrameForReaper;
+	std::map<const sc2::Unit *, uint32_t> nextAvailableLockOnFrameForCyclone;
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
+	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> lockOnCastedFrame;
+	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> lockOnTargets;
 	std::set<const sc2::Unit *> unitsBeingRepaired;
 	std::set<sc2::Tag> toggledCyclones;
 	float lockonAbilityCastingRange;
@@ -128,6 +131,7 @@ private:
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	bool ShouldSkipFrame(const sc2::Unit * rangedUnit) const;
+	bool IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started) const;
 	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit) const;
 	bool ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger) const;
 	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger);
@@ -150,7 +154,7 @@ private:
 	bool MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const;
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	float getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const;
-	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets);
+	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits = false) const;
 	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
 	void CleanActions(sc2::Units &rangedUnits);
 	void ExecuteActions();

@@ -88,7 +88,7 @@ namespace Util
 
 		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
 		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
-		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, const sc2::Unit* target, float maxRange, CCBot & bot);
+		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
 		CCPosition FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
 		float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);

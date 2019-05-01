@@ -174,16 +174,15 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	return success;
 }
 
-CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, const sc2::Unit* target, float maxRange, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, CCBot & bot)
 {
 	bool getCloser = false;
 	if (target)
 	{
 		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
 		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot);
-		
 	}
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, maxRange, false, false, getCloser, false, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, maxRange, false, false, getCloser, ignoreInfluence, false, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
@@ -282,8 +281,9 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			}
 			if (!shouldTriggerExit)
 			{
-				shouldTriggerExit = (considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot)) &&
-					!HasEffectInfluenceOnTile(currentNode, unit, bot) &&
+				shouldTriggerExit = (ignoreInfluence ||
+					(considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot)) &&
+					!HasEffectInfluenceOnTile(currentNode, unit, bot)) &&
 					Util::Dist(Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
 
 				if(getCloser && shouldTriggerExit)
@@ -433,7 +433,7 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 	}
 	if (Util::DistSq(rangedUnit->pos, returnPos) < 2*2)
 	{
-		returnPos = Normalized(returnPos - rangedUnit->pos) + rangedUnit->pos;
+		returnPos = Normalized(returnPos - rangedUnit->pos) * 2 + rangedUnit->pos;
 	}
 #ifndef PUBLIC_RELEASE
 	if (bot.Config().DrawHarassInfo)
