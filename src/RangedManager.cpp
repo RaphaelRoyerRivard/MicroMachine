@@ -676,7 +676,18 @@ bool RangedManager::ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::
 	if (rangedUnit->weapon_cooldown > 0.f)
 		return false;
 
-	bool inRangeOfThreat = false;
+	if (IsInRangeOfSlowerUnit(rangedUnit, target))
+		return false;
+
+	for (auto & threat : threats)
+	{
+		if (IsInRangeOfSlowerUnit(rangedUnit, threat))
+			return false;
+	}
+
+	return true;
+
+	/*bool inRangeOfThreat = false;
 	bool isCloseThreatFaster = false;
 	for (auto & threat : threats)
 	{
@@ -700,7 +711,24 @@ bool RangedManager::ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::
 		}
 	}
 
-	return !inRangeOfThreat || isCloseThreatFaster;
+	return !inRangeOfThreat || isCloseThreatFaster;*/
+}
+
+bool RangedManager::IsInRangeOfSlowerUnit(const sc2::Unit * rangedUnit, const sc2::Unit * target) const
+{
+	const float targetSpeed = Util::getSpeedOfUnit(target, m_bot);
+	const float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
+	const float speedDiff = targetSpeed - rangedUnitSpeed;
+	if (speedDiff >= 0.f)
+		return false;	// Target is faster (or equal)
+	const float targetRange = Util::GetAttackRangeForTarget(target, rangedUnit, m_bot);
+	const float targetRangeWithBuffer = targetRange + std::max(HARASS_THREAT_RANGE_BUFFER, speedDiff);
+	const float squareDistance = Util::DistSq(rangedUnit->pos, target->pos);
+	if (squareDistance > targetRangeWithBuffer * targetRangeWithBuffer)
+		return false;	// Target is far
+	if (squareDistance > targetRange * targetRange && targetSpeed == 0.f)
+		return false;	// Target is somewhat close but cannot move
+	return true;
 }
 
 CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange, bool unitShouldHeal) const

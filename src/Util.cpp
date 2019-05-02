@@ -431,9 +431,9 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > CLIFF_MIN_HEIGHT_DIFFERENCE)
 			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
 	}
-	if (Util::DistSq(rangedUnit->pos, returnPos) < 2*2)
+	if (Util::DistSq(rangedUnit->pos, returnPos) < 3*3)
 	{
-		returnPos = Normalized(returnPos - rangedUnit->pos) * 2 + rangedUnit->pos;
+		returnPos = Normalized(returnPos - rangedUnit->pos) * 3 + rangedUnit->pos;
 	}
 #ifndef PUBLIC_RELEASE
 	if (bot.Config().DrawHarassInfo)

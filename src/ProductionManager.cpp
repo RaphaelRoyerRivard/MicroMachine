@@ -563,10 +563,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}*/
 
 #ifndef NO_UNITS
-				/*if (!m_queue.contains(MetaTypeEnum::Cyclone))
+				if (!m_queue.contains(MetaTypeEnum::Cyclone))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
-				}*/
+				}
 #endif
 
 #ifndef NO_UNITS
@@ -584,7 +584,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 
 #ifndef NO_UNITS
-				if ((m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
+				if ((m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
 				}
