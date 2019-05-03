@@ -630,6 +630,7 @@ void BuildingManager::constructAssignedBuildings()
 
 		// TODO: not sure if this is the correct way to tell if the building is constructing
 		Unit builderUnit = b.builderUnit;
+		bool isTryingToBuild = false;
 
 		//Prevent order spam 
 		if (b.buildCommandGiven && builderUnit.isValid())
@@ -731,6 +732,10 @@ void BuildingManager::constructAssignedBuildings()
 					else
 					{
 						b.builderUnit.build(b.type, b.finalPosition);
+						if (b.buildCommandGiven)
+						{
+							m_bot.Bases().SetPositionAsBlocked(Util::GetPosition(b.finalPosition), true);
+						}
 					}
 				}
 
