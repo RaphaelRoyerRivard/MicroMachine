@@ -18,6 +18,7 @@ const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
+const int CYCLONE_ATTACK_FRAME_COUNT = 1;
 const int CYCLONE_LOCKON_CAST_FRAME_COUNT = 9;
 const int CYCLONE_LOCKON_CHANNELING_FRAME_COUNT = 342;
 const int CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT = 98;
@@ -115,7 +116,7 @@ int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* tar
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
 		attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
 	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
-		attackFrameCount = CYCLONE_LOCKON_CAST_FRAME_COUNT;
+		attackFrameCount = CYCLONE_ATTACK_FRAME_COUNT;
 	const CCPosition targetDirection = Util::Normalized(target->pos - unit->pos);
 	const CCPosition facingVector = Util::getFacingVector(unit);
 	const float dot = sc2::Dot2D(targetDirection, facingVector);
@@ -355,7 +356,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
-	if (shouldAttack && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats, unitShouldHeal))
+	if (shouldAttack && !unitShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 		return;
@@ -686,32 +687,6 @@ bool RangedManager::ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::
 	}
 
 	return true;
-
-	/*bool inRangeOfThreat = false;
-	bool isCloseThreatFaster = false;
-	for (auto & threat : threats)
-	{
-		const float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
-		const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
-		const float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
-		const float speedDiff = threatSpeed - rangedUnitSpeed;
-		const float threatRangeWithBuffer = threatRange + std::max(HARASS_THREAT_RANGE_BUFFER, speedDiff);
-		const float squareDistance = Util::DistSq(rangedUnit->pos, threat->pos);
-		if (squareDistance <= threatRangeWithBuffer * threatRangeWithBuffer)
-		{
-			if (squareDistance > threatRange * threatRange && threatSpeed == 0.f)
-				continue;	// if our unit is just out of the range of a combat building, it's ok
-
-			inRangeOfThreat = true;
-			if (threatSpeed > rangedUnitSpeed)
-			{
-				isCloseThreatFaster = true;
-				break;
-			}
-		}
-	}
-
-	return !inRangeOfThreat || isCloseThreatFaster;*/
 }
 
 bool RangedManager::IsInRangeOfSlowerUnit(const sc2::Unit * rangedUnit, const sc2::Unit * target) const
@@ -756,7 +731,7 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 	return dirVec;
 }
 
-bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats, bool unitShouldHeal)
+bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats)
 {
 	if (threats.empty())
 		return false;
@@ -776,7 +751,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	}
 
 	// Check if unit can fight cloaked
-	if(!unitShouldHeal && rangedUnit->energy >= 5 && (rangedUnit->cloak == sc2::Unit::Cloaked || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ShouldBansheeCloak(rangedUnit, false))))
+	if(rangedUnit->energy >= 5 && (rangedUnit->cloak == sc2::Unit::Cloaked || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ShouldBansheeCloak(rangedUnit, false))))
 	{
 		// If the unit is at an undetected position
 		if (!Util::IsPositionUnderDetection(rangedUnit->pos, m_bot))
@@ -873,13 +848,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		// If the unit has a target, add it to the close units and calculate its power 
 		if(unitTarget)
 		{
-			// If the unit should heal and is not alone or it is alone against multiple enemies, don't fight and let it back to heal
-			if (unitShouldHeal && (unit != rangedUnit || threats.size() > 1))
-			{
-				m_harassMode = true;
-				return false;
-			}
-
 			closeUnits.push_back(unit);
 			closeUnitsTarget.insert_or_assign(unit, unitTarget);
 			unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
