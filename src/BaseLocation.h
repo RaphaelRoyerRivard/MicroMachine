@@ -47,7 +47,7 @@ public:
     bool isStartLocation() const;
     bool isPlayerStartLocation(CCPlayer player) const;
     bool isMineralOnly() const;
-    bool containsPosition(const CCPosition & pos) const;
+    bool containsPosition(const CCPosition & pos, int maxDistance = 0) const;
 	const CCTilePosition & getTurretPosition() const;
     const CCTilePosition & getDepotPosition() const;
 	int getOptimalMineralWorkerCount() const;

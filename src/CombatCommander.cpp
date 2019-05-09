@@ -13,6 +13,7 @@ const size_t ScoutDefensePriority = 5;
 const size_t DropPriority = 5;
 
 const float DefaultOrderRadius = 25;			//Order radius is the threat awareness range of units in the squad
+const float WorkerRushDefenseOrderRadius = 100;
 const float MainAttackOrderRadius = 15;
 const float HarassOrderRadius = 15;
 const float ScoutOrderRadius = 6;				//Small number to prevent the scout from targeting far units instead of going to the next base location
@@ -22,6 +23,8 @@ const float MainAttackRegroupCooldown = 200;	//Min number of frames required to 
 const float MainAttackMinRetreatDuration = 50;	//Max number of frames allowed for a regroup order
 
 const size_t BLOCKED_TILES_UPDATE_FREQUENCY = 24;
+const uint32_t WORKER_RUSH_DETECTION_COOLDOWN = 30 * 24;
+const size_t MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE = 15;
 
 CombatCommander::CombatCommander(CCBot & bot)
     : m_bot(bot)
@@ -561,8 +564,11 @@ void CombatCommander::updateWorkerFleeSquad()
 		const CCTilePosition tile = Util::GetTilePosition(worker.getPosition());
 		const bool flyingThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), false, m_bot);
 		const bool groundThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), true, m_bot);
-		// Check if the worker needs to flee
-		if ((flyingThreat && !groundThreat) || Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot))
+		const bool injured = worker.getHitPointsPercentage() < m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT * 100;
+		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
+		if ((flyingThreat && !groundThreat)
+			|| Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
+			|| (groundThreat && injured && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))
 		{
 			// Put it in the squad if it is not defending or already in the squad
 			if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
@@ -779,15 +785,18 @@ void CombatCommander::updateScoutDefenseSquad()
 
     // get all of the enemy units in this region
     std::vector<Unit> enemyUnitsInRegion;
-    for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
-    {
-        if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
-        {
-            enemyUnitsInRegion.push_back(unit);
-			if (enemyUnitsInRegion.size() > 1)
-				break;
-        }
-    }
+	if (m_bot.GetCurrentFrame() < 120 * 24)	// No need to have a scout defense after 2 min
+	{
+		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+		{
+			if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
+			{
+				enemyUnitsInRegion.push_back(unit);
+				if (enemyUnitsInRegion.size() > 1)
+					break;
+			}
+		}
+	}
 
     // if there's an enemy worker in our region
     if (enemyUnitsInRegion.size() == 1)
@@ -1029,20 +1038,20 @@ void CombatCommander::updateDefenseSquads()
 	bool earlyRushed = false;
 	// TODO instead of separing by bases, we should separate by clusters
 	std::list<RegionArmyInformation> regions;
-    // for each of our occupied regions
-    const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-    for (BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
-    {
-        // don't defend inside the enemy region, this will end badly when we are stealing gas or cannon rushing
-        if (myBaseLocation == enemyBaseLocation)
-        {
-            continue;
-        }
+	// for each of our occupied regions
+	const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+	for (BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+	{
+		// don't defend inside the enemy region, this will end badly when we are stealing gas or cannon rushing
+		if (myBaseLocation == enemyBaseLocation)
+		{
+			continue;
+		}
 
 		m_bot.StartProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		auto region = RegionArmyInformation(myBaseLocation, m_bot);
 
-        const CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotPosition());
+		const CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotPosition());
 
 		const int numDefendersPerEnemyResourceDepot = 6; // This is a minimum
 		const int numDefendersPerEnemyCanon = 4; // This is a minimum
@@ -1053,44 +1062,44 @@ void CombatCommander::updateDefenseSquads()
 		int numEnemyGroundInRegion = 0;
 		float minEnemyDistance = 0;
 		Unit closestEnemy;
-        bool firstWorker = true;
-        for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
-        {
-            // if it's an overlord, don't worry about it for defense, we don't care what they see
-            if (unit.getType().isOverlord())
-            {
-                continue;
-            }
+		bool firstWorker = true;
+		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+		{
+			// if it's an overlord, don't worry about it for defense, we don't care what they see
+			if (unit.getType().isOverlord())
+			{
+				continue;
+			}
 
 			// if the unit is not targetable, we do not need to defend against it (shade, kd8 charge, disruptor's ball, etc.)
 			if (!UnitType::isTargetable(unit.getAPIUnitType()))
 				continue;
 
-            if (myBaseLocation->containsPosition(unit.getPosition()))
-            {
-                //we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
-                if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392)	// first 3 minutes
-                {
+			if (myBaseLocation->containsPosition(unit.getPosition(), m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
+			{
+				//we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
+				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392)	// first 3 minutes
+				{
 					if (firstWorker)
 					{
 						firstWorker = false;
 						continue;
 					}
 					workerRushed = true;
-                }
-				else if(!earlyRushed && m_bot.GetGameLoop() < 7320)	// first 5 minutes
+				}
+				else if (!earlyRushed && m_bot.GetGameLoop() < 7320)	// first 5 minutes
 				{
 					earlyRushed = true;
 				}
 
-				if(!unit.getType().isWorker())
+				if (!unit.getType().isWorker())
 				{
 					unitOtherThanWorker = true;
 					workerRushed = false;
 				}
 
 				const float enemyDistance = Util::DistSq(unit.getPosition(), basePosition);
-				if(!closestEnemy.isValid() || enemyDistance < minEnemyDistance)
+				if (!closestEnemy.isValid() || enemyDistance < minEnemyDistance)
 				{
 					minEnemyDistance = enemyDistance;
 					closestEnemy = unit;
@@ -1119,22 +1128,22 @@ void CombatCommander::updateDefenseSquads()
 				}
 
 				region.enemyUnits.push_back(unit);
-            }
-        }
+			}
+		}
 
 		std::stringstream squadName;
 		squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
 
 		myBaseLocation->setIsUnderAttack(!region.enemyUnits.empty());
 		m_bot.StopProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
-		if(region.enemyUnits.empty())
-        {
+		if (region.enemyUnits.empty())
+		{
 			m_bot.StartProfiling("0.10.4.2.2.3      clearRegion");
-            // if a defense squad for this region exists, remove it
-            if (m_squadData.squadExists(squadName.str()))
-            {
-                m_squadData.getSquad(squadName.str()).clear();
-            }
+			// if a defense squad for this region exists, remove it
+			if (m_squadData.squadExists(squadName.str()))
+			{
+				m_squadData.getSquad(squadName.str()).clear();
+			}
 
 			if (Util::IsTerran(m_bot.GetSelfRace()))
 			{
@@ -1161,29 +1170,29 @@ void CombatCommander::updateDefenseSquads()
 			}
 			m_bot.StopProfiling("0.10.4.2.2.3      clearRegion");
 
-            // and return, nothing to defend here
-            continue;
-        }
+			// and return, nothing to defend here
+			continue;
+		}
 
 		m_bot.StartProfiling("0.10.4.2.2.3      createSquad");
-		const SquadOrder defendRegion(SquadOrderTypes::Defend, closestEnemy.getPosition(), DefaultOrderRadius, "Defend Region!");
-        // if we don't have a squad assigned to this region already, create one
-        if (!m_squadData.squadExists(squadName.str()))
-        {
+		const SquadOrder defendRegion(SquadOrderTypes::Defend, closestEnemy.getPosition(), m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : DefaultOrderRadius, "Defend Region!");
+		// if we don't have a squad assigned to this region already, create one
+		if (!m_squadData.squadExists(squadName.str()))
+		{
 			m_squadData.addSquad(squadName.str(), Squad(squadName.str(), defendRegion, BaseDefensePriority, m_bot));
-        }
+		}
 
-        // assign units to the squad
-        if (m_squadData.squadExists(squadName.str()))
-        {
-            Squad & defenseSquad = m_squadData.getSquad(squadName.str());
+		// assign units to the squad
+		if (m_squadData.squadExists(squadName.str()))
+		{
+			Squad & defenseSquad = m_squadData.getSquad(squadName.str());
 			defenseSquad.setSquadOrder(defendRegion);
 			region.squad = &defenseSquad;
-        }
-        else
-        {
-            BOT_ASSERT(false, "Squad should have existed: %s", squadName.str().c_str());
-        }
+		}
+		else
+		{
+			BOT_ASSERT(false, "Squad should have existed: %s", squadName.str().c_str());
+		}
 		m_bot.StopProfiling("0.10.4.2.2.3      createSquad");
 
 		m_bot.StartProfiling("0.10.4.2.2.4      calculateRegionInformation");
@@ -1193,7 +1202,7 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.StopProfiling("0.10.4.2.2.4      calculateRegionInformation");
 
 		//Protect our SCVs and lift our base
-		if(Util::IsTerran(m_bot.GetSelfRace()))
+		if (Util::IsTerran(m_bot.GetSelfRace()))
 		{
 			const Unit& base = myBaseLocation->getResourceDepot();
 			if (base.isValid())
@@ -1208,9 +1217,17 @@ void CombatCommander::updateDefenseSquads()
 					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 			}
 		}
-    }
+	}
 
-	m_bot.Strategy().setIsWorkerRushed(workerRushed);
+	if (workerRushed)
+	{
+		m_lastWorkerRushDetectionFrame = m_bot.GetCurrentFrame();
+		m_bot.Strategy().setIsWorkerRushed(true);
+	}
+	else if (m_bot.GetCurrentFrame() > m_lastWorkerRushDetectionFrame + WORKER_RUSH_DETECTION_COOLDOWN)
+	{
+		m_bot.Strategy().setIsWorkerRushed(false);
+	}
 	m_bot.Strategy().setIsEarlyRushed(earlyRushed);
 
 	// If we have at least one region under attack
@@ -1289,6 +1306,7 @@ void CombatCommander::updateDefenseSquads()
 
 			// We take the region that needs the most support
 			auto regionIterator = regions.begin();
+			auto & squad = *regionIterator->squad;
 			bool stopCheckingForGroundSupport = false;
 			bool stopCheckingForAirSupport = false;
 
@@ -1385,7 +1403,6 @@ void CombatCommander::updateDefenseSquads()
 			}
 
 			// Assign it to the squad
-			auto & squad = *regionIterator->squad;
 			if(m_squadData.canAssignUnitToSquad(unit, squad))
 			{
 				// We affect that unit to the region

@@ -13,7 +13,7 @@ public:
     MeleeManager(CCBot & bot);
     void setTargets(const std::vector<Unit> & targets);
     void executeMicro();
-    int getAttackPriority(Unit attacker, const Unit & unit);
-    Unit getTarget(Unit meleeUnit, const std::vector<Unit> & targets);
+    float getAttackPriority(const sc2::Unit* attacker, const sc2::Unit* target) const;
+    Unit getTarget(Unit meleeUnit, const std::vector<Unit> & targets) const;
     bool meleeUnitShouldRetreat(Unit meleeUnit, const std::vector<Unit> & targets);
 };

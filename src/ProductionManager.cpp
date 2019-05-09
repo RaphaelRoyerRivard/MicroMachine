@@ -626,14 +626,18 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::WORKER_RUSH_DEFENSE:
 			{
-				if (!m_queue.contains(MetaTypeEnum::Reaper))
+				m_queue.removeAllOfType(MetaTypeEnum::Refinery);
+				if(m_bot.GetFreeGas() >= 50)
 				{
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
+					m_queue.removeAllOfType(MetaTypeEnum::Marine);
+					if(!m_queue.contains(MetaTypeEnum::Reaper))
+					{
+						m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
+					}
 				}
-
-				if (!m_queue.contains(MetaTypeEnum::Refinery) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false) == 0)
+				else if (!m_queue.contains(MetaTypeEnum::Marine))
 				{
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Refinery, false);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
 				}
 				return;
 			}
@@ -1738,14 +1742,18 @@ int ProductionManager::getExtraGas()
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResources(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
 {
-    return (m_bot.Data(type).mineralCost <= m_bot.GetFreeMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= m_bot.GetFreeGas() - additionalReservedGas);
+	const bool meetsRequiredMinerals = m_bot.Data(type).mineralCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetMinerals() : m_bot.GetFreeMinerals()) - additionalReservedMineral;
+	const bool meetsRequiredGas = m_bot.Data(type).gasCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetGas() : m_bot.GetFreeGas()) - additionalReservedGas;
+	return meetsRequiredMinerals && meetsRequiredGas;
 }
 
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, int additionalMineral, int additionalGas, int additionalReservedMineral, int additionalReservedGas)
 {
 	assert("Addons cannot use extra ressources", m_bot.Data(type).isAddon);
-	return (m_bot.Data(type).mineralCost <= m_bot.GetFreeMinerals() + additionalMineral - additionalReservedMineral) && (m_bot.Data(type).gasCost <= m_bot.GetFreeGas() + additionalGas - additionalReservedGas);
+	const bool meetsRequiredMinerals = m_bot.Data(type).mineralCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetMinerals() : m_bot.GetFreeMinerals()) + additionalMineral - additionalReservedMineral;
+	const bool meetsRequiredGas = m_bot.Data(type).gasCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetGas() : m_bot.GetFreeGas()) + additionalGas - additionalReservedGas;
+	return meetsRequiredMinerals && meetsRequiredGas;
 }
 
 bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker, int additionalReservedMineral, int additionalReservedGas)
