@@ -43,7 +43,8 @@ class ProductionManager
 	void	fixBuildOrderDeadlock(BuildOrderItem & item);
 	void	lowPriorityChecks();
 	bool	currentlyHasRequirement(MetaType currentItem) const;
-	bool	hasRequired(const MetaType& metaType, bool checkInQueue);
+	bool	hasRequired(const MetaType& metaType, bool checkInQueue) const;
+	bool	hasRequirement(const UnitType& unitType, bool checkInQueue) const;
 	bool	hasProducer(const MetaType& metaType, bool checkInQueue);
 
 public:

@@ -39,6 +39,7 @@ class MetaTypeEnum
 		static MetaType Medivac;
 		static MetaType Raven;
 		static MetaType Cyclone;
+		static MetaType Battlecruiser;
 				//Upgrades
 		static MetaType TerranInfantryWeaponsLevel1;
 		static MetaType TerranInfantryWeaponsLevel2;

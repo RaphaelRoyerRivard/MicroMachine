@@ -590,6 +590,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 #endif
 
+#ifndef NO_UNITS
+				if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
+				}
+#endif
+
 				if(m_bot.Strategy().enemyHasMetabolicBoost())
 				{
 					const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
@@ -714,9 +721,15 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 	// check to see if we have the prerequisites for the item
     if (!hasRequired(item.type, true))
     {
-        std::cout << item.type.getName() << " needs a requirement: " << typeData.requiredUnits[0].getName() << "\n";
-		BuildOrderItem requiredItem = m_queue.queueItem(BuildOrderItem(MetaType(typeData.requiredUnits[0], m_bot), 0, item.blocking));
-        fixBuildOrderDeadlock(requiredItem);
+		for (auto & required : typeData.requiredUnits)
+		{
+			if (!hasRequirement(required, true))
+			{
+				std::cout << item.type.getName() << " needs a requirement: " << required.getName() << "\n";
+				BuildOrderItem requiredItem = m_queue.queueItem(BuildOrderItem(MetaType(required, m_bot), 0, item.blocking));
+				fixBuildOrderDeadlock(requiredItem);
+			}
+		}
         return;
     }
 
@@ -914,7 +927,7 @@ bool ProductionManager::currentlyHasRequirement(MetaType currentItem) const
 	return true;
 }
 
-bool ProductionManager::hasRequired(const MetaType& metaType, bool checkInQueue)
+bool ProductionManager::hasRequired(const MetaType& metaType, bool checkInQueue) const
 {
 	const TypeData& typeData = m_bot.Data(metaType);
 
@@ -923,12 +936,23 @@ bool ProductionManager::hasRequired(const MetaType& metaType, bool checkInQueue)
 
 	for (auto & required : typeData.requiredUnits)
 	{
-		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false, true) > 0 || m_bot.Buildings().isBeingBuilt(required))
-			return true;
-
-		if (checkInQueue && m_queue.contains(MetaType(required, m_bot)))
-			return true;
+		if (!hasRequirement(required, checkInQueue))
+			return false;
 	}
+
+	return true;
+}
+
+bool ProductionManager::hasRequirement(const UnitType& unitType, bool checkInQueue) const
+{
+	if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, unitType, false, true) > 0)
+		return true;
+
+	if (m_bot.Buildings().isBeingBuilt(unitType))
+		return true;
+
+	if (checkInQueue && m_queue.contains(MetaType(unitType, m_bot)))
+		return true;
 
 	return false;
 }
