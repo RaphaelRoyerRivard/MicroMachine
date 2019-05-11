@@ -187,6 +187,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (ShouldSkipFrame(rangedUnit))
 		return;
 
+	if (rangedUnit->is_selected)
+		int a = 0;
+
 	if (isCyclone)
 	{
 		const auto it = lockOnCastedFrame.find(rangedUnit);
@@ -697,6 +700,8 @@ bool RangedManager::IsInRangeOfSlowerUnit(const sc2::Unit * rangedUnit, const sc
 	if (speedDiff >= 0.f)
 		return false;	// Target is faster (or equal)
 	const float targetRange = Util::GetAttackRangeForTarget(target, rangedUnit, m_bot);
+	if (targetRange == 0.f)
+		return false;	// Target cannot attack our unit
 	const float targetRangeWithBuffer = targetRange + std::max(HARASS_THREAT_RANGE_BUFFER, speedDiff);
 	const float squareDistance = Util::DistSq(rangedUnit->pos, target->pos);
 	if (squareDistance > targetRangeWithBuffer * targetRangeWithBuffer)
