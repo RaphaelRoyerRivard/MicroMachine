@@ -723,11 +723,12 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     {
 		for (auto & required : typeData.requiredUnits)
 		{
-			if (!hasRequirement(required, true))
+			if (!hasRequiredUnit(required, true))
 			{
 				std::cout << item.type.getName() << " needs a requirement: " << required.getName() << "\n";
 				BuildOrderItem requiredItem = m_queue.queueItem(BuildOrderItem(MetaType(required, m_bot), 0, item.blocking));
 				fixBuildOrderDeadlock(requiredItem);
+				break;
 			}
 		}
         return;
@@ -936,14 +937,14 @@ bool ProductionManager::hasRequired(const MetaType& metaType, bool checkInQueue)
 
 	for (auto & required : typeData.requiredUnits)
 	{
-		if (!hasRequirement(required, checkInQueue))
+		if (!hasRequiredUnit(required, checkInQueue))
 			return false;
 	}
 
 	return true;
 }
 
-bool ProductionManager::hasRequirement(const UnitType& unitType, bool checkInQueue) const
+bool ProductionManager::hasRequiredUnit(const UnitType& unitType, bool checkInQueue) const
 {
 	if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, unitType, false, true) > 0)
 		return true;

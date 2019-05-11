@@ -44,7 +44,7 @@ class ProductionManager
 	void	lowPriorityChecks();
 	bool	currentlyHasRequirement(MetaType currentItem) const;
 	bool	hasRequired(const MetaType& metaType, bool checkInQueue) const;
-	bool	hasRequirement(const UnitType& unitType, bool checkInQueue) const;
+	bool	hasRequiredUnit(const UnitType& unitType, bool checkInQueue) const;
 	bool	hasProducer(const MetaType& metaType, bool checkInQueue);
 
 public:
