@@ -17,7 +17,6 @@ protected:
     std::vector<Unit> m_targets;
 
     virtual void executeMicro() = 0;
-    void trainSubUnits(const Unit & unit) const;
 
 public:
 
@@ -33,4 +32,5 @@ public:
 	float getAverageTargetsSpeed() const;
     float getSquadPower() const;
     float getTargetsPower(const std::vector<Unit>& units) const;
+	float getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, bool filterHighRangeUnits) const;
 };
