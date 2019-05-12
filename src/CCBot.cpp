@@ -507,11 +507,14 @@ void CCBot::clearDeadUnits()
 	{
 		auto tag = pair.first;
 		auto& unit = pair.second;
-		if (!unit.isAlive())
+		if (!unit.isAlive() ||
+			unit.getPlayer() == Players::Enemy)	// In case of one of our units get neural parasited, its alliance will switch)
 		{
 			unitsToRemove.push_back(tag);
 			if (unit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 				m_KD8ChargesSpawnFrame.erase(tag);
+			if (unit.getPlayer() == Players::Enemy)
+				m_parasitedUnits.insert(unit.getUnitPtr()->tag);
 		}
 	}
 	// Remove dead ally units
@@ -527,13 +530,17 @@ void CCBot::clearDeadUnits()
 	{
 		auto& unit = pair.second;
 		// Remove dead unit or old snapshot
-		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
+		if (!unit.isAlive() || 
+			unit.getPlayer() == Players::Self ||	// In case of one of our units get neural parasited, its alliance will switch
+			(unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
 			&& m_map.isVisible(unit.getPosition())
 			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
 		{
-			auto unitPtr = unit.getUnitPtr();
+			const auto unitPtr = unit.getUnitPtr();
 			unitsToRemove.push_back(unitPtr->tag);
 			this->CombatAnalyzer().increaseDeadEnemy(unitPtr->unit_type);
+			if (unit.getPlayer() == Players::Self)
+				m_parasitedUnits.erase(unitPtr->tag);
 		}
 	}
 	// Remove dead enemy units
@@ -667,6 +674,9 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);
 
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player1, 2);
+	//Debug()->DebugGiveAllTech();
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation, player1, 10);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 20);
@@ -950,6 +960,11 @@ const std::vector<Unit> & CCBot::GetKnownEnemyUnits(sc2::UnitTypeID type)
 std::map<sc2::Tag, Unit> & CCBot::GetNeutralUnits()
 {
 	return m_neutralUnits;
+}
+
+bool CCBot::IsParasited(const sc2::Unit * unit) const
+{
+	return Util::Contains(unit->tag, m_parasitedUnits);
 }
 
 const CCPosition CCBot::GetStartLocation() const

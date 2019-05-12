@@ -18,6 +18,10 @@ const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
+const int BATTLECRUISER_TELEPORT_FRAME_COUNT = 98;
+const int BATTLECRUISER_TELEPORT_COOLDOWN_FRAME_COUNT = 1733;
+const int BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT = 74;
+const int BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT = 1050;
 const int CYCLONE_ATTACK_FRAME_COUNT = 1;
 const int CYCLONE_LOCKON_CAST_FRAME_COUNT = 9;
 const int CYCLONE_LOCKON_CHANNELING_FRAME_COUNT = 342;
@@ -177,6 +181,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isRaven = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
 	const bool isViking = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
 	const bool isCyclone = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE;
+	const bool isBattlecruiser = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER;
 
 #ifndef PUBLIC_RELEASE
 	if (m_bot.Config().DrawHarassInfo)
@@ -238,6 +243,20 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (unitShouldHeal)
 	{
 		goal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
+		if(isBattlecruiser)
+		{
+			const int currentFrame = m_bot.GetCurrentFrame();
+			const auto it = nextAvailableTeleportFrameForBattlecruiser.find(rangedUnit);
+			// If the teleport ability is not on cooldown
+			if(it == nextAvailableTeleportFrameForBattlecruiser.end() || currentFrame >= it->second)
+			{
+				const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_TACTICALJUMP, goal, true, BATTLECRUISER_TELEPORT_FRAME_COUNT);
+				PlanAction(rangedUnit, action);
+				nextAvailableTeleportFrameForBattlecruiser.insert_or_assign(rangedUnit, currentFrame + BATTLECRUISER_TELEPORT_COOLDOWN_FRAME_COUNT);
+				m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
+				return;
+			}
+		}
 	}
 	else if(isRaven)
 	{
@@ -275,6 +294,11 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	// if there is no potential target or threat, move to objective (max distance is not considered when defending)
 	if(MoveToGoal(rangedUnit, threats, target, goal, squaredDistanceToGoal, unitShouldHeal))
+	{
+		return;
+	}
+
+	if(ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, threats))
 	{
 		return;
 	}
@@ -576,7 +600,7 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 			}
 		}
 		//if unit is damaged enough to go back for repair
-		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE)
+		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE / (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && m_bot.GetGameLoop() >= nextAvailableTeleportFrameForBattlecruiser[rangedUnit] ? 2.f : 1.f))
 		{
 			unitsBeingRepaired.insert(rangedUnit);
 			return true;
@@ -666,7 +690,7 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
 #endif
 
-		const bool moveWithoutAttack = squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings();
+		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings());
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 		const auto action = RangedUnitAction(moveWithoutAttack ? MicroActionType::Move : MicroActionType::AttackMove, goal, unitShouldHeal, actionDuration);
 		PlanAction(rangedUnit, action);
@@ -922,7 +946,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 
 		auto fleePosition = CCPosition();
 		const bool injured = unit->health / unit->health_max < 0.5f;
-		const bool shouldKite = unitRange > Util::GetAttackRangeForTarget(unitTarget, unit, m_bot) && Util::getSpeedOfUnit(unit, m_bot) > Util::getSpeedOfUnit(unitTarget, m_bot);
+		const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > Util::GetAttackRangeForTarget(unitTarget, unit, m_bot) && Util::getSpeedOfUnit(unit, m_bot) > Util::getSpeedOfUnit(unitTarget, m_bot));
 		if (!canAttackNow && (injured || shouldKite))
 		{
 			fleePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, m_bot);
@@ -947,6 +971,16 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	return currentUnitHasACommand;
 }
 
+bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats)
+{
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && ExecuteYamatoCannonLogic(rangedUnit, threats))
+	{
+		return true;
+	}
+
+	return false;
+}
+
 bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats)
 {
 	if (ExecuteKD8ChargeLogic(rangedUnit, threats))
@@ -956,6 +990,61 @@ bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2:
 
 	if (ExecuteAutoTurretLogic(rangedUnit, threats))
 	{
+		return true;
+	}
+
+	return false;
+}
+
+bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats)
+{
+	const size_t currentFrame = m_bot.GetCurrentFrame();
+	if(queryYamatoAvailability.find(battlecruiser) != queryYamatoAvailability.end())
+	{
+		queryYamatoAvailability.erase(battlecruiser);
+		bool found = false;
+		const auto availableAbilities = m_bot.Query()->GetAbilitiesForUnit(battlecruiser);
+		for (const auto ability : availableAbilities.abilities)
+		{
+			if (ability.ability_id.ToType() == sc2::ABILITY_ID::EFFECT_YAMATOGUN)
+			{
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+		{
+			nextAvailableYamatoCannonFrameForBattlecruiser.insert_or_assign(battlecruiser, currentFrame + BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT);
+			return false;
+		}
+	}
+
+	const auto it = nextAvailableYamatoCannonFrameForBattlecruiser.find(battlecruiser);
+	if (it != nextAvailableYamatoCannonFrameForBattlecruiser.end() && currentFrame < it->second)
+		return false;
+
+	const sc2::Unit* target = nullptr;
+	float maxDps = 0.f;
+	for (const auto threat : threats)
+	{
+		const float threatDistance = Util::DistSq(battlecruiser->pos, threat->pos);
+		const float threatHp = threat->health + threat->shield;
+		if (threatDistance <= 10.f * 10.f && threatHp >= 120.f)
+		{
+			const float dps = Util::GetDpsForTarget(threat, battlecruiser, m_bot);
+			if(dps > maxDps || (dps == maxDps && threatHp > target->health + target->shield))
+			{
+				maxDps = dps;
+				target = threat;
+			}
+		}
+	}
+	
+	if(target)
+	{
+		const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_YAMATOGUN, target, true, BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT);
+		PlanAction(battlecruiser, action);
+		queryYamatoAvailability.insert(battlecruiser);
 		return true;
 	}
 
@@ -1300,6 +1389,9 @@ float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Un
     BOT_ASSERT(target, "null unit in getAttackPriority");
 
 	if (!UnitType::isTargetable(target->unit_type))
+		return 0.f;
+
+	if (m_bot.IsParasited(target))
 		return 0.f;
 
 	// Ignoring invisible creep tumors

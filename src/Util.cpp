@@ -335,11 +335,29 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				if (neighborPosition == CCTilePosition())
 					continue;
 
-				const float neighborDistance = Dist(currentNode->position, neighborPosition);
-				const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
-				const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(neighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetCombatInfluenceOnTile(neighborPosition, unit, bot));
-				const float nodeCost = (influenceOnTile + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
-				const float totalCost = currentNode->cost + nodeCost;
+				int neighborX = unit->radius >= 1.f ? -1 : 0;
+				int neighborY = unit->radius >= 1.f ? -1 : 0;
+				const int maxNeighborX = unit->radius >= 1.f ? 1 : 0;
+				const int maxNeighborY = unit->radius >= 1.f ? 1 : 0;
+				const CCPosition mapMin = bot.Map().mapMin();
+				const CCPosition mapMax = bot.Map().mapMax();
+				float totalCost = 0.f;
+				// These other loops are used to consider the influence in adjacent tiles in the case of a unit with a big radius
+				for (; neighborX <= maxNeighborX; ++neighborX)
+				{
+					for (; neighborY <= maxNeighborY; ++neighborY)
+					{
+						const CCTilePosition currentNeighborPosition = CCTilePosition(neighborPosition.x + neighborX, neighborPosition.y + neighborY);
+						if (currentNeighborPosition.x < mapMin.x || currentNeighborPosition.y < mapMin.y || currentNeighborPosition.x >= mapMax.x || currentNeighborPosition.y >= mapMax.y)
+							continue;	// out of bounds check
+
+						const float neighborDistance = Dist(currentNode->position, currentNeighborPosition);
+						const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(currentNeighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
+						const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(currentNeighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetCombatInfluenceOnTile(currentNeighborPosition, unit, bot));
+						const float nodeCost = (influenceOnTile + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
+						totalCost += currentNode->cost + nodeCost;
+					}
+				}
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
 				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
 
@@ -1046,6 +1064,11 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 		if (where != sc2::Weapon::TargetType::Air)
 			range = 3.f;
 	}
+	else if (unitType == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+	{
+		range = 6.f;
+	}
+
 
 	return range;
 }
@@ -1327,6 +1350,13 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	{
 		if (where != sc2::Weapon::TargetType::Air)
 			dps = 200.f;
+	}
+	else if(unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+	{
+		if (where == sc2::Weapon::TargetType::Air)
+			dps = 31.1f;
+		else
+			dps = 49.8f;
 	}
 
     return dps;

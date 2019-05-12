@@ -118,10 +118,13 @@ private:
 	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
 	std::map<const sc2::Unit *, uint32_t> nextAvailableKD8ChargeFrameForReaper;
 	std::map<const sc2::Unit *, uint32_t> nextAvailableLockOnFrameForCyclone;
+	std::map<const sc2::Unit *, uint32_t> nextAvailableTeleportFrameForBattlecruiser;
+	std::map<const sc2::Unit *, uint32_t> nextAvailableYamatoCannonFrameForBattlecruiser;
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> lockOnCastedFrame;
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> lockOnTargets;
 	std::set<const sc2::Unit *> unitsBeingRepaired;
+	std::set<const sc2::Unit *> queryYamatoAvailability;
 	std::set<sc2::Tag> toggledCyclones;
 	float lockonAbilityCastingRange;
 	bool isCommandDone = false;
@@ -143,7 +146,9 @@ private:
 	bool IsInRangeOfSlowerUnit(const sc2::Unit * rangedUnit, const sc2::Unit * target) const;
 	CCPosition GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange, bool unitShouldHeal) const;
 	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats);
+	bool ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats);
 	bool ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats);
+	bool ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats);
 	bool CanUseKD8Charge(const sc2::Unit * reaper) const;
 	bool ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::Units & threats);
 	bool ShouldBuildAutoTurret(const sc2::Unit * raven, const sc2::Units & threats) const;

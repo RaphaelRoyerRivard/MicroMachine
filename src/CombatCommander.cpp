@@ -696,7 +696,8 @@ void CombatCommander::updateHarassSquads()
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BANSHEE
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_RAVEN)
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_RAVEN
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
 			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
 		{
 			if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION)

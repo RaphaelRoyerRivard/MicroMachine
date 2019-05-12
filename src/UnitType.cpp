@@ -505,6 +505,7 @@ bool UnitType::isRepairable() const
 		case sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
 		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINE:
 		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
+		case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
 			return true;
 		default:
 			return false;

@@ -61,6 +61,7 @@ class MetaTypeEnum
 		static MetaType BansheeCloak;
 		static MetaType HyperflightRotors;
 		static MetaType HiSecAutoTracking;
+		static MetaType YamatoCannon;
 
 		//PROTOSS
 			//Buildings
