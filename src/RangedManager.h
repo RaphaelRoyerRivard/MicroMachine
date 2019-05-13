@@ -116,10 +116,7 @@ public:
 private:
 	std::map<const sc2::Unit *, RangedUnitAction> unitActions;
 	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
-	std::map<const sc2::Unit *, uint32_t> nextAvailableKD8ChargeFrameForReaper;
-	std::map<const sc2::Unit *, uint32_t> nextAvailableLockOnFrameForCyclone;
-	std::map<const sc2::Unit *, uint32_t> nextAvailableTeleportFrameForBattlecruiser;
-	std::map<const sc2::Unit *, uint32_t> nextAvailableYamatoCannonFrameForBattlecruiser;
+	std::map<sc2::ABILITY_ID, std::map<const sc2::Unit *, uint32_t>> nextAvailableAbility;
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> lockOnCastedFrame;
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> lockOnTargets;
@@ -127,9 +124,10 @@ private:
 	std::set<const sc2::Unit *> queryYamatoAvailability;
 	std::set<sc2::Tag> toggledCyclones;
 	float lockonAbilityCastingRange;
-	bool isCommandDone = false;
 	bool m_harassMode = false;
 
+	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
+	void setNextFrameAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit, uint32_t nextAvailableFrame);
 	int getAttackDuration(const sc2::Unit* unit, const sc2::Unit* target) const;
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
 	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);

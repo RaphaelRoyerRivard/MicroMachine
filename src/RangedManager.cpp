@@ -19,7 +19,7 @@ const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 const int BATTLECRUISER_TELEPORT_FRAME_COUNT = 98;
-const int BATTLECRUISER_TELEPORT_COOLDOWN_FRAME_COUNT = 1733;
+const int BATTLECRUISER_TELEPORT_COOLDOWN_FRAME_COUNT = 1733 + BATTLECRUISER_TELEPORT_FRAME_COUNT;
 const int BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT = 74;
 const int BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT = 1050;
 const int CYCLONE_ATTACK_FRAME_COUNT = 1;
@@ -27,8 +27,8 @@ const int CYCLONE_LOCKON_CAST_FRAME_COUNT = 9;
 const int CYCLONE_LOCKON_CHANNELING_FRAME_COUNT = 342;
 const int CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT = 98;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
-const int REAPER_KD8_CHARGE_COOLDOWN = 342;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
+const int REAPER_KD8_CHARGE_COOLDOWN = 342 + REAPER_KD8_CHARGE_FRAME_COUNT;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 40;
 const float VIKING_LANDING_DISTANCE_FROM_GOAL = 10.f;
@@ -112,6 +112,21 @@ void RangedManager::executeMicro()
 	{
 		BOT_ASSERT(false, "Ranged micro is not harass mode");
     }
+}
+
+bool RangedManager::isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const
+{
+	const auto abilityIt = nextAvailableAbility.find(abilityId);
+	if (abilityIt == nextAvailableAbility.end())
+		return true;
+
+	const auto unitIt = abilityIt->second.find(rangedUnit);
+	return unitIt == abilityIt->second.end() || m_bot.GetCurrentFrame() >= unitIt->second;
+}
+
+void RangedManager::setNextFrameAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit, uint32_t nextAvailableFrame)
+{
+	nextAvailableAbility[abilityId][rangedUnit] = nextAvailableFrame;
 }
 
 int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* target) const
@@ -245,14 +260,12 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		goal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
 		if(isBattlecruiser)
 		{
-			const int currentFrame = m_bot.GetCurrentFrame();
-			const auto it = nextAvailableTeleportFrameForBattlecruiser.find(rangedUnit);
 			// If the teleport ability is not on cooldown
-			if(it == nextAvailableTeleportFrameForBattlecruiser.end() || currentFrame >= it->second)
+			if(isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit))
 			{
 				const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_TACTICALJUMP, goal, true, BATTLECRUISER_TELEPORT_FRAME_COUNT);
 				PlanAction(rangedUnit, action);
-				nextAvailableTeleportFrameForBattlecruiser.insert_or_assign(rangedUnit, currentFrame + BATTLECRUISER_TELEPORT_COOLDOWN_FRAME_COUNT);
+				setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit, m_bot.GetCurrentFrame() + BATTLECRUISER_TELEPORT_COOLDOWN_FRAME_COUNT);
 				m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 				return;
 			}
@@ -308,7 +321,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if(isCyclone)
 	{
 		const uint32_t currentFrame = m_bot.GetCurrentFrame();
-		if (nextAvailableLockOnFrameForCyclone[rangedUnit] <= currentFrame)
+		if(isAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, rangedUnit))
 		{
 			// Lock-On ability is not on cooldown
 			const auto it = lockOnTargets.find(rangedUnit);
@@ -317,7 +330,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				if (IsCycloneLockOnCanceled(rangedUnit, true))
 				{
 					lockOnTargets.erase(rangedUnit);
-					nextAvailableLockOnFrameForCyclone.insert_or_assign(rangedUnit, currentFrame + CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT);
+					setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, rangedUnit, currentFrame + CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT);
 				}
 				else
 				{
@@ -337,7 +350,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		else
 		{
 			if(m_bot.Config().DrawHarassInfo)
-				m_bot.Map().drawCircle(rangedUnit->pos, float(nextAvailableLockOnFrameForCyclone[rangedUnit] - currentFrame) / CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT, sc2::Colors::Red);
+				m_bot.Map().drawCircle(rangedUnit->pos, float(nextAvailableAbility[sc2::ABILITY_ID::EFFECT_LOCKON][rangedUnit] - currentFrame) / CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT, sc2::Colors::Red);
 		}
 	}
 
@@ -600,7 +613,7 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 			}
 		}
 		//if unit is damaged enough to go back for repair
-		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE / (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && m_bot.GetGameLoop() >= nextAvailableTeleportFrameForBattlecruiser[rangedUnit] ? 2.f : 1.f))
+		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE / (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit) ? 2.f : 1.f))
 		{
 			unitsBeingRepaired.insert(rangedUnit);
 			return true;
@@ -1014,13 +1027,12 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		}
 		if (!found)
 		{
-			nextAvailableYamatoCannonFrameForBattlecruiser.insert_or_assign(battlecruiser, currentFrame + BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT);
+			setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_YAMATOGUN, battlecruiser, currentFrame + BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT);
 			return false;
 		}
 	}
 
-	const auto it = nextAvailableYamatoCannonFrameForBattlecruiser.find(battlecruiser);
-	if (it != nextAvailableYamatoCannonFrameForBattlecruiser.end() && currentFrame < it->second)
+	if (!isAbilityAvailable(sc2::ABILITY_ID::EFFECT_YAMATOGUN, battlecruiser))
 		return false;
 
 	const sc2::Unit* target = nullptr;
@@ -1053,12 +1065,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 
 bool RangedManager::CanUseKD8Charge(const sc2::Unit * reaper) const
 {
-	if (reaper->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
-	{
-		const uint32_t availableFrame = nextAvailableKD8ChargeFrameForReaper.find(reaper) != nextAvailableKD8ChargeFrameForReaper.end() ? nextAvailableKD8ChargeFrameForReaper.at(reaper) : 0;
-		return m_bot.GetGameLoop() >= availableFrame;
-	}
-	return false;
+	return reaper->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && isAbilityAvailable(sc2::ABILITY_ID::EFFECT_KD8CHARGE, reaper);
 }
 
 bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::Units & threats)
@@ -1097,10 +1104,8 @@ bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::U
 		if (distToExpectedPosition <= rangedUnitRange * rangedUnitRange)
 		{
 			const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, true, REAPER_KD8_CHARGE_FRAME_COUNT);
-			if (PlanAction(reaper, action))
-			{
-				nextAvailableKD8ChargeFrameForReaper[reaper] = m_bot.GetGameLoop() + REAPER_KD8_CHARGE_COOLDOWN;
-			}
+			PlanAction(reaper, action);
+			setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_KD8CHARGE, reaper, m_bot.GetGameLoop() + REAPER_KD8_CHARGE_COOLDOWN);
 			return true;
 		}
 	}
