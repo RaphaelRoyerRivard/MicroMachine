@@ -7,6 +7,7 @@ const float CLIFF_MAX_HEIGHT_DIFFERENCE = 2.5f;
 const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
 const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
+const float CYCLONE_PATHFINDING_TILE_DOWN_RAMP_COST = 1.f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
@@ -353,8 +354,9 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 
 						const float neighborDistance = Dist(currentNode->position, currentNeighborPosition);
 						const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(currentNeighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
+						const float heightCost = (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE && bot.Map().terrainHeight(currentNeighborPosition) < bot.Map().terrainHeight(currentNode->position)) ? CYCLONE_PATHFINDING_TILE_DOWN_RAMP_COST : 0.f;
 						const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(currentNeighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetCombatInfluenceOnTile(currentNeighborPosition, unit, bot));
-						const float nodeCost = (influenceOnTile + creepCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
+						const float nodeCost = (influenceOnTile + creepCost + heightCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
 						totalCost += currentNode->cost + nodeCost;
 					}
 				}
