@@ -27,6 +27,7 @@ class MetaTypeEnum
 		static MetaType Refinery;
 		static MetaType EngineeringBay;
 		static MetaType MissileTurret;
+		static MetaType FusionCore;
 			//Units
 		static MetaType SCV;
 		static MetaType Marine;

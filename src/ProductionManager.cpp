@@ -562,12 +562,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 
-				/*int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
-				if (reaperCount > 3)
-				{
-					auto metaTypeInfantryWeapon = queueUpgrade(MetaTypeEnum::TerranInfantryWeaponsLevel1);
-				}*/
-
 #ifndef NO_UNITS
 				if (!m_queue.contains(MetaTypeEnum::Cyclone))
 				{
@@ -575,8 +569,20 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 #endif
 
+				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
+				if(m_bot.GetCurrentFrame() >= 9400 && baseCount >= 3)	// around 7 minutes
+				{
+					//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
 #ifndef NO_UNITS
-				if (!m_queue.contains(MetaTypeEnum::Banshee))
+					if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
+					}
+#endif
+				}
+
+#ifndef NO_UNITS
+				if (!m_queue.contains(MetaTypeEnum::Banshee) && !hasFusionCore)
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
@@ -593,13 +599,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if ((m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
-				}
-#endif
-
-#ifndef NO_UNITS
-				if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
 				}
 #endif
 

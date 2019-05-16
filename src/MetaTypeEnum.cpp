@@ -21,6 +21,7 @@ MetaType MetaTypeEnum::SupplyDepot;
 MetaType MetaTypeEnum::Refinery;
 MetaType MetaTypeEnum::EngineeringBay;
 MetaType MetaTypeEnum::MissileTurret;
+MetaType MetaTypeEnum::FusionCore;
 	//Units
 MetaType MetaTypeEnum::SCV;
 MetaType MetaTypeEnum::Marine;
@@ -120,6 +121,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::Refinery = MetaType("Refinery", m_bot);
 	MetaTypeEnum::EngineeringBay = MetaType("EngineeringBay", m_bot);
 	MetaTypeEnum::MissileTurret = MetaType("MissileTurret", m_bot);
+	MetaTypeEnum::FusionCore = MetaType("FusionCore", m_bot);
 		//Units
 	MetaTypeEnum::SCV = MetaType("SCV", m_bot);
 	MetaTypeEnum::Marine = MetaType("Marine", m_bot);
