@@ -322,8 +322,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit, target));
 		PlanAction(rangedUnit, action);
 		m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
-
-		m_bot.CombatAnalyzer().increaseTotalDamage(Util::GetDpsForTarget(rangedUnit, target, m_bot), rangedUnit->unit_type);
+		const float damageDealth = isBattlecruiser ? Util::GetDpsForTarget(rangedUnit, target, m_bot) / 22.4f : Util::GetDamageForTarget(rangedUnit, target, m_bot);
+		m_bot.CombatAnalyzer().increaseTotalDamage(damageDealth, rangedUnit->unit_type);
 		return;
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
@@ -451,6 +451,7 @@ bool RangedManager::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
 
 bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
 {
+	// Check if Lock-On casting is canceled or over
 	const auto it = lockOnCastedFrame.find(cyclone);
 	if (it != lockOnCastedFrame.end())
 	{
@@ -487,11 +488,25 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
 		}
 	}
 
+	// Toggle off the auto-cast of Lock-On
 	if (toggledCyclones.find(cyclone->tag) == toggledCyclones.end())
 	{
 		Micro::SmartToggleAutoCast(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON, m_bot);
 		toggledCyclones.insert(cyclone->tag);
 		return true;
+	}
+
+	// Let the CombatAnalyzer know of the damage the Cyclones are doing with their Lock-On ability
+	for (const auto lockOnTarget : lockOnTargets)
+	{
+		auto damagePerFrame = 400.f / 14.3f / 22.4f;
+		if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
+		{
+			const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(lockOnTarget.second.first->unit_type, m_bot);
+			if (Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes))
+				damagePerFrame *= 2;
+		}
+		m_bot.CombatAnalyzer().increaseTotalDamage(damagePerFrame, cyclone->unit_type);
 	}
 
 	return false;
@@ -1084,7 +1099,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			PlanAction(unit, action);
 		}
 		if (unit == rangedUnit)
+		{
+			const float damageDealth = Util::GetDpsForTarget(rangedUnit, unitTarget, m_bot) / 22.4f;
+			m_bot.CombatAnalyzer().increaseTotalDamage(damageDealth, rangedUnit->unit_type);
 			currentUnitHasACommand = true;
+		}
 	}
 	return currentUnitHasACommand;
 }
@@ -1123,6 +1142,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		if(!QueryIsAbilityAvailable(battlecruiser, sc2::ABILITY_ID::EFFECT_YAMATOGUN))
 		{
 			setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_YAMATOGUN, battlecruiser, currentFrame + BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT);
+			m_bot.CombatAnalyzer().increaseTotalDamage(200.f, battlecruiser->unit_type);
 			return false;
 		}
 	}

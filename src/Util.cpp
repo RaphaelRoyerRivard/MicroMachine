@@ -1343,11 +1343,6 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 		if (where != sc2::Weapon::TargetType::Air)
 			dps = 15.f;
 	}
-	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
-	{
-		if (where != sc2::Weapon::TargetType::Air)
-			dps = 15.f;
-	}
 	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
 	{
 		if (where != sc2::Weapon::TargetType::Air)
@@ -1362,6 +1357,77 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	}
 
     return dps;
+}
+
+float Util::GetDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
+{
+	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
+	float damage = GetSpecialCaseDamage(unit, bot, expectedWeaponType);
+	if (damage == 0.f)
+	{
+		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+		sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
+			{
+				float weaponDamage = weapon.damage_;
+				for (auto & damageBonus : weapon.damage_bonus)
+				{
+					if (std::find(targetTypeData.attributes.begin(), targetTypeData.attributes.end(), damageBonus.attribute) != targetTypeData.attributes.end())
+						weaponDamage += damageBonus.bonus;
+				}
+				weaponDamage -= targetTypeData.armor;
+				weaponDamage *= weapon.attacks;
+				if (weaponDamage > damage)
+					damage = weaponDamage;
+			}
+		}
+	}
+
+	return damage;
+}
+
+float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where)
+{
+	float damage = 0.f;
+
+	if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELING || unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			damage = 20.f;
+	}
+	else if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+	{
+		damage = 0.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			damage = 5.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED)
+	{
+		damage = 125.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
+	{
+		damage = 0.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
+	{
+		if (where != sc2::Weapon::TargetType::Air)
+			damage = 200.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+	{
+		if (where == sc2::Weapon::TargetType::Air)
+			damage = 5.f;
+		else
+			damage = 8.f;
+	}
+
+	return damage;
 }
 
 // get threats to our harass unit
