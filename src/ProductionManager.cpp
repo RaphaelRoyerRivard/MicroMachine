@@ -553,6 +553,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					queueTech(MetaTypeEnum::YamatoCannon);
 				}
 
+				const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
+				if (!isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && cycloneCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
+				{
+					queueTech(MetaTypeEnum::MagFieldAccelerator);
+				}
+
 #ifndef NO_UNITS
 				if (!m_bot.Strategy().enemyHasMetabolicBoost() && !m_queue.contains(MetaTypeEnum::Reaper) && m_bot.CombatAnalyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 3)
 				{
@@ -1544,7 +1550,7 @@ void ProductionManager::validateUpgradesProgress()
 			else if (progress > 0.99f)//About to finish, lets consider it done.
 			{
 				toRemove.push_back(upgrade.first);
-				completUpgrades.push_back(upgrade.first);
+				completUpgrades.insert(upgrade.first);
 				Util::DebugLog(__FUNCTION__, "upgrade finished " + upgrade.first.getName(), m_bot);
 			}
 			else
@@ -1627,7 +1633,8 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 	}
 	else if (item.type.isUpgrade())
 	{
-		Micro::SmartAbility(producer.getUnitPtr(), m_bot.Data(item.type.getUpgrade()).buildAbility, m_bot);
+		const auto data = m_bot.Data(item.type.getUpgrade());
+		Micro::SmartAbility(producer.getUnitPtr(), data.buildAbility, m_bot);
 
 #if _DEBUG
 		if (isTechStarted(item.type))

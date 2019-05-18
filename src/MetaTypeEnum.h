@@ -63,6 +63,7 @@ class MetaTypeEnum
 		static MetaType HyperflightRotors;
 		static MetaType HiSecAutoTracking;
 		static MetaType YamatoCannon;
+		static MetaType MagFieldAccelerator;
 
 		//PROTOSS
 			//Buildings

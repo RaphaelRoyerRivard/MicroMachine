@@ -822,16 +822,23 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				const float dist = Util::Dist(cyclone->pos, threat->pos);
 				if (dist > 10.f)
 					continue;
-				if (shouldHeal && dist > partialLockOnRange + target->radius)
+				if (shouldHeal && dist > partialLockOnRange + threat->radius)
 					continue;
-				//TODO add armored score
 				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 2.f);
 				const auto healthScore = 0.25f * (threat->health + threat->shield * 1.5f);
+				const auto energyScore = 0.25f * threat->energy;
+				const auto detectorScore = 15 * (threat->detect_range > 0.f);
 				const auto threatRange = Util::GetAttackRangeForTarget(threat, cyclone, m_bot);
 				const auto threatDps = Util::GetDpsForTarget(threat, cyclone, m_bot);
 				const float powerScore = threatRange * threatDps * 3.f;
 				const float speedScore = Util::getSpeedOfUnit(threat, m_bot) * 5.f;
-				const float score = powerScore + speedScore - healthScore - distanceScore;
+				auto armoredScore = 0.f;
+				if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
+				{
+					const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
+					armoredScore = 15 * Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes);
+				}
+				const float score = energyScore + detectorScore + armoredScore + powerScore + speedScore - healthScore - distanceScore;
 				if(!bestTarget || score > bestScore)
 				{
 					bestTarget = threat;

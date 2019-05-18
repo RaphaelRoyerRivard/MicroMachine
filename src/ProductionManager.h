@@ -19,7 +19,7 @@ class ProductionManager
 	std::list<MetaType> incompletUpgradesMetatypes;
 	std::map<MetaType, Unit> incompletUpgrades;
 	std::map<MetaType, float> incompletUpgradesProgress;
-	std::list<MetaType> completUpgrades;
+	std::set<MetaType> completUpgrades;
 	std::list<std::list<MetaType>> possibleUpgrades;//Does not include tech
 	std::list<std::list<MetaType>> reversePossibleUpgrades;//Does not include tech
 	std::map<std::string, MetaType> alternateUpgrades;//Tech do not have alternate upgrades
