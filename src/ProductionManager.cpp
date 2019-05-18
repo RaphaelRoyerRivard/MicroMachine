@@ -542,7 +542,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					queueTech(MetaTypeEnum::BansheeCloak);
 				}
 
-				if (!isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && bansheeCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
+				if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && bansheeCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
 				{
 					queueTech(MetaTypeEnum::HyperflightRotors);
 				}

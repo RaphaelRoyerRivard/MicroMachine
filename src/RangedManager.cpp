@@ -848,7 +848,10 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			if (bestTarget)
 				target = bestTarget;
 			if (!target)
+			{
 				shouldUseLockOn = false;
+				shouldAttack = true;
+			}
 		}
 
 		if(target)
@@ -856,7 +859,10 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			const auto type = UnitType(target->unit_type, m_bot);
 			// Prevent the use of Lock-On on passive buildings
 			if (type.isBuilding() && !type.isAttackingBuilding())
+			{
 				shouldUseLockOn = false;
+				shouldAttack = true;
+			}
 		}
 	}
 
