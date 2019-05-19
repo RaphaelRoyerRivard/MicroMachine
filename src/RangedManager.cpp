@@ -155,8 +155,8 @@ int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* tar
 	const CCPosition facingVector = Util::getFacingVector(unit);
 	const float dot = sc2::Dot2D(targetDirection, facingVector);
 	const float value = 1 - dot;
-	const int multiplier = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? 1 : unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE ? 4 : 2;
-	attackFrameCount += value * multiplier;
+	const int rotationMultiplier = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? 1 : unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER? 4 : 2;
+	attackFrameCount += value * rotationMultiplier;
 	return attackFrameCount;
 }
 
@@ -263,7 +263,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	bool cycloneShouldUseLockOn = false;
 	if (isCyclone)
 	{
-		target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, threats, target);
+		target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
 	}
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
@@ -496,13 +496,14 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
 		return true;
 	}
 
-	// Let the CombatAnalyzer know of the damage the Cyclones are doing with their Lock-On ability
-	for (const auto lockOnTarget : lockOnTargets)
+	// Let the CombatAnalyzer know of the damage the Cyclone is doing with its Lock-On ability
+	const auto lockOnTarget = lockOnTargets.find(cyclone);
+	if(lockOnTarget != lockOnTargets.end())
 	{
 		auto damagePerFrame = 400.f / 14.3f / 22.4f;
 		if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
 		{
-			const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(lockOnTarget.second.first->unit_type, m_bot);
+			const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(lockOnTarget->first->unit_type, m_bot);
 			if (Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes))
 				damagePerFrame *= 2;
 		}
@@ -772,7 +773,7 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 	return dirVec;
 }
 
-const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, const sc2::Units & threats, const sc2::Unit * target)
+const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * target)
 {
 	const uint32_t currentFrame = m_bot.GetCurrentFrame();
 	//const bool queryAbilityAvailable = QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON);
@@ -832,8 +833,24 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			float bestScore = 0.f;
 			for(const auto threat : threats)
 			{
-				if (m_bot.Map().terrainHeight(threat->pos) > cycloneHeight)
-					continue;
+				const float threatHeight = m_bot.Map().terrainHeight(threat->pos);
+				if (threatHeight > cycloneHeight)
+				{
+					bool hasGoodViewOfUnit = false;
+					for (const auto rangedUnit : rangedUnits)
+					{
+						if (rangedUnit == cyclone)
+							continue;
+						const float distSq = Util::DistSq(rangedUnit->pos, threat->pos);
+						if(distSq <= 7.f * 7.f && (rangedUnit->is_flying || m_bot.Map().terrainHeight(rangedUnit->pos) >= threatHeight))
+						{
+							hasGoodViewOfUnit = true;
+							break;
+						}
+					}
+					if(!hasGoodViewOfUnit)
+						continue;
+				}
 				const float dist = Util::Dist(cyclone->pos, threat->pos);
 				if (dist > 10.f)
 					continue;
