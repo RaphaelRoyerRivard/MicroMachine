@@ -1,5 +1,8 @@
 #include "Util.h"
 #include "CCBot.h"
+#include <libvoxelbot/combat/simulator.h>
+#include <libvoxelbot/combat/combat_environment.h>
+#include <libvoxelbot/combat/combat_upgrades.h>
 
 const float EPSILON = 1e-5;
 const float CLIFF_MIN_HEIGHT_DIFFERENCE = 1.f;
@@ -137,7 +140,7 @@ bool Util::PathFinding::SetContainsNode(const std::set<IMNode*> & set, IMNode* n
 	return false;
 }
 
-bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, CCBot & bot)
+bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot)
 {
 	if (!unit)
 	{
@@ -161,7 +164,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	if(foundIndex >= 0 && bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
 		return releventResult.m_result;
 
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, 3.f, true, false, false, false, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, addBuffer ? 3.f : 1.f, true, false, false, false, false, bot);
 	const bool success = !path.empty();
 	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
 	if(foundIndex >= 0)
@@ -1916,4 +1919,38 @@ void Util::Log(const std::string & function, CCBot & bot)
 void Util::Log(const std::string & function, const std::string & message, CCBot & bot)
 {
 	file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
+}
+
+bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits)
+{
+	//initMappings();
+	/*CombatPredictor simulator;
+	simulator.init();
+
+	CombatState state;
+	for (const auto unit : units)
+		state.units.push_back(makeUnit(1, unit->unit_type));
+	for (const auto enemyUnit : enemyUnits)
+		state.units.push_back(makeUnit(2, enemyUnit->unit_type));
+
+	CombatUpgrades player1upgrades = {};
+
+	CombatUpgrades player2upgrades = {};
+
+	state.environment = &simulator.getCombatEnvironment(player1upgrades, player2upgrades);
+
+	CombatSettings settings;
+	// Simulate for at most 100 *game* seconds
+	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
+	settings.maxTime = 100;
+	CombatResult outcome = simulator.predict_engage(state, settings);
+	std::cout << outcome.state.toString() << std::endl;
+	for (auto& unit : outcome.state.units) {
+		std::cout << getUnitData(unit.type).name << " ended up with " << unit.health << " hp" << std::endl;
+	}
+	const int winner = outcome.state.owner_with_best_outcome();
+	std::cout << "Winner player is " << winner << std::endl;
+	std::cout << "Battle concluded after " << outcome.time << " seconds" << std::endl;
+	return winner == 1;*/
+	return true;
 }

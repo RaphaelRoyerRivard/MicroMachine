@@ -315,7 +315,7 @@ void WorkerManager::handleGasWorkers()
 							auto mineralWorker = getMineralWorker(geyser);
 							if (mineralWorker.isValid())
 							{
-								if (Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyserPosition, m_bot))
+								if (Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyserPosition, true, m_bot))
 								{
 									m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
 								}
@@ -659,7 +659,7 @@ void WorkerManager::handleRepairWorkers()
 		{
 			auto position = building.getPosition();
 			auto worker = getClosestMineralWorkerTo(position);
-			if (worker.isValid() && Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), position, m_bot))
+			if (worker.isValid() && Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), position, true, m_bot))
 			{
 				setRepairWorker(worker, building);
 				buildingAutomaticallyRepaired.push_back(building);
@@ -824,7 +824,7 @@ void WorkerManager::lowPriorityChecks()
 				for (auto it = dispatchedWorkers.begin(); it != dispatchedWorkers.end(); it++)
 				{
 					//Dont move workers if its not safe
-					if (!Util::PathFinding::IsPathToGoalSafe(it->getUnitPtr(), base->getPosition(), m_bot))
+					if (!Util::PathFinding::IsPathToGoalSafe(it->getUnitPtr(), base->getPosition(), true, m_bot))
 					{
 						continue;
 					}

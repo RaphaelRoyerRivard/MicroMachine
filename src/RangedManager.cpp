@@ -1052,7 +1052,12 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 
 	bool currentUnitHasACommand = false;
 	// If we can beat the enemy
+	m_bot.StartProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
+	//const bool winSimulation = Util::SimulateCombat(rangedUnits, threats);
+	m_bot.StopProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
 	const bool shouldFight = unitsPower >= targetsPower;
+	/*if (winSimulation != shouldFight)
+		std::cout << "Simulation: " << winSimulation << ", formula: " << shouldFight << std::endl;*/
 	// For each of our close units
 	for (auto & unitAndTarget : closeUnitsTarget)
 	{

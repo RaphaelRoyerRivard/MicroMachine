@@ -548,7 +548,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 			return false;
 		}
 		m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
-		if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+		if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
 		{
 			//TODO checks twice if the path is safe for no reason if we get the same build location, should change location or change builder
 
@@ -565,7 +565,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 			// grab the worker unit from WorkerManager which is closest to this final position
 			builderUnit = m_bot.Workers().getBuilder(b, false);
 			//Test if worker path is safe
-			if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+			if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
 			{
 				return false;
 			}
@@ -886,7 +886,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 					Util::DebugLog(__FUNCTION__, "Worker is invalid", m_bot);
 					continue;
 				}
-				if (!Util::PathFinding::IsPathToGoalSafe(newBuilderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+				if (!Util::PathFinding::IsPathToGoalSafe(newBuilderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
 				{
 					continue;
 				}
@@ -991,7 +991,7 @@ bool BuildingManager::addBuildingTask(Building & b)
 	if (b.builderUnit.isValid())
 	{
 		//Check if path is safe
-		if (!Util::PathFinding::IsPathToGoalSafe(b.builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), m_bot))
+		if (!Util::PathFinding::IsPathToGoalSafe(b.builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
 		{
 			return false;
 		}

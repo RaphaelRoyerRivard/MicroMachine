@@ -87,7 +87,7 @@ namespace Util
 		static std::map<sc2::Tag, std::vector<SafePathResult>> m_lastPathFindingResultsForUnit;
 
 		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
-		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
+		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
 		CCPosition FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
@@ -231,4 +231,6 @@ namespace Util
 	CCPositionType DistSq(const Unit & unit, const CCPosition & p2);
 	CCPositionType DistSq(const Unit & unit, const Unit & unit2);
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
+
+	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits);
 };
