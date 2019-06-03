@@ -72,6 +72,7 @@ class CCBot
 	std::map<std::string, Profiler> m_profilingTimes;
 	std::mutex m_command_mutex;
 	bool m_concede;
+	bool m_saidHallucinationLine;
 
 	//KeyState
 	bool key1 = false;

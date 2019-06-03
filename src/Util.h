@@ -2,6 +2,7 @@
 
 #include "Common.h"
 #include "UnitType.h"
+#include <libvoxelbot/combat/simulator.h>
 
 class CCBot;
 class Unit;
@@ -12,6 +13,7 @@ namespace Util
 	static std::vector<std::string> displayedError;
 	static std::ofstream file;
 	static std::string mapName;
+	static CombatPredictor* m_simulator;
 
 	//used for optimisation
 	static UnitType refineryType;

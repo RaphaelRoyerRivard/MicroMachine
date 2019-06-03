@@ -915,8 +915,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	if (threats.empty())
 		return false;
 
-	float unitsPower = 0.f;
-	float targetsPower = 0.f;
+	//float unitsPower = 0.f;
+	//float targetsPower = 0.f;
 	sc2::Units closeUnits;
 	std::map<const sc2::Unit*, const sc2::Unit*> closeUnitsTarget;
 
@@ -1029,7 +1029,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			closeUnits.push_back(unit);
 			closeUnitsTarget.insert_or_assign(unit, unitTarget);
-			unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
+			//unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
 		}
 	}
 
@@ -1044,8 +1044,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
 		if (threatSpeed > maxThreatSpeed)
 			maxThreatSpeed = threatSpeed;
-		const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
-		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
+		//const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
+		//targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
 	}
 
 	m_harassMode = true;
@@ -1053,11 +1053,12 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	bool currentUnitHasACommand = false;
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
-	//const bool winSimulation = Util::SimulateCombat(rangedUnits, threats);
+	const bool winSimulation = Util::SimulateCombat(closeUnits, threats);
 	m_bot.StopProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
-	const bool shouldFight = unitsPower >= targetsPower;
-	/*if (winSimulation != shouldFight)
-		std::cout << "Simulation: " << winSimulation << ", formula: " << shouldFight << std::endl;*/
+	//const bool formulaWin = unitsPower >= targetsPower;
+	const bool shouldFight = winSimulation;	//winSimulation || formulaWin;
+	/*if (winSimulation != formulaWin)
+		std::cout << "Simulation: " << winSimulation << ", formula: " << formulaWin << std::endl;*/
 	// For each of our close units
 	for (auto & unitAndTarget : closeUnitsTarget)
 	{

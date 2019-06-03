@@ -781,13 +781,17 @@ void WorkerManager::lowPriorityChecks()
 			int extra = workerCount - optimalWorkers;
 			for (auto & worker : workers)///TODO order by closest to the target base location
 			{
-				if (m_bot.Workers().isFree(worker) && m_workerData.getWorkerDepot(worker).getID() == depot.getID())
+				if (m_bot.Workers().isFree(worker))
 				{
-					dispatchedWorkers.push_back(worker);
-					extra--;
-					if (extra <= 0)
+					const auto workerDepot = m_workerData.getWorkerDepot(worker);
+					if (workerDepot.isValid() && workerDepot.getID() == depot.getID())
 					{
-						break;
+						dispatchedWorkers.push_back(worker);
+						extra--;
+						if (extra <= 0)
+						{
+							break;
+						}
 					}
 				}
 			}

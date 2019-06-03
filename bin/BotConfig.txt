@@ -23,7 +23,7 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
+        "EnemyRace"                 : "Terran",
         "MapFile"                   : "Artana.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
@@ -134,7 +134,7 @@
         "DrawInfluenceMaps"         : true,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
-		"DrawDamageHealthRatio"		: false,
+		"DrawDamageHealthRatio"		: true,
         "DrawRangedUnitActions"     : false,
 		"DrawResourcesProximity"	: false
     },

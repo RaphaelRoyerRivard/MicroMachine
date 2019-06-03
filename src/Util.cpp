@@ -1923,34 +1923,42 @@ void Util::Log(const std::string & function, const std::string & message, CCBot 
 
 bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits)
 {
-	//initMappings();
-	/*CombatPredictor simulator;
-	simulator.init();
+	if(!m_simulator)
+	{
+		initMappings();
+		m_simulator = new CombatPredictor();
+		m_simulator->init();
+	}
 
 	CombatState state;
-	for (const auto unit : units)
-		state.units.push_back(makeUnit(1, unit->unit_type));
-	for (const auto enemyUnit : enemyUnits)
-		state.units.push_back(makeUnit(2, enemyUnit->unit_type));
+	for(int i=0; i<2; ++i)
+	{
+		const sc2::Units & playerUnits = i == 0 ? units : enemyUnits;
+		for (const auto unit : playerUnits)
+		{
+			// Since bunkers deal no damage in the simulation, we swap them for 4 Marines with extra health
+			if(unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+			{
+				const int owner = i + 1;
+				for(int j=0; j < 4; ++j)
+					state.units.push_back(CombatUnit(owner, sc2::UNIT_TYPEID::TERRAN_MARINE, 200, false));
+			}
+			else
+				state.units.push_back(CombatUnit(*unit));
+		}
+	}
 
 	CombatUpgrades player1upgrades = {};
 
 	CombatUpgrades player2upgrades = {};
 
-	state.environment = &simulator.getCombatEnvironment(player1upgrades, player2upgrades);
+	state.environment = &m_simulator->getCombatEnvironment(player1upgrades, player2upgrades);
 
 	CombatSettings settings;
 	// Simulate for at most 100 *game* seconds
 	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
 	settings.maxTime = 100;
-	CombatResult outcome = simulator.predict_engage(state, settings);
-	std::cout << outcome.state.toString() << std::endl;
-	for (auto& unit : outcome.state.units) {
-		std::cout << getUnitData(unit.type).name << " ended up with " << unit.health << " hp" << std::endl;
-	}
+	CombatResult outcome = m_simulator->predict_engage(state, settings);
 	const int winner = outcome.state.owner_with_best_outcome();
-	std::cout << "Winner player is " << winner << std::endl;
-	std::cout << "Battle concluded after " << outcome.time << " seconds" << std::endl;
-	return winner == 1;*/
-	return true;
+	return winner == 1;
 }
