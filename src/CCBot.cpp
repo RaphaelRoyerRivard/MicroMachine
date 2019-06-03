@@ -1021,6 +1021,14 @@ void CCBot::drawProfilingInfo()
 		}
 
 		std::string profilingInfo = "Profiling info (ms)";
+		if (m_config.IsRealTime)
+		{
+			int skipped = m_gameLoop - m_previousGameLoop - 1;
+			m_skippedFrames += skipped;
+			profilingInfo += "\nTotal skipped " + std::to_string(m_skippedFrames) + " frames.";
+			profilingInfo += "\nSkipped " + std::to_string(skipped) + " frames since last loop.";
+			m_previousGameLoop = m_gameLoop;
+		}
 		for (auto & mapPair : m_profilingTimes)
 		{
 			const std::string& key = mapPair.first;

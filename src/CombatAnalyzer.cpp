@@ -457,3 +457,23 @@ void CombatAnalyzer::increaseDeadEnemy(sc2::UNIT_TYPEID type)
 {
 	deadEnemiesCountByType[type]++;
 }
+
+bool CombatAnalyzer::shouldProduceGroundAntiGround()
+{
+	return false;
+}
+
+bool CombatAnalyzer::shouldProduceGroundAntiAir()
+{
+	return false;
+}
+
+bool CombatAnalyzer::shouldProduceAirAntiGround()
+{
+	return false;
+}
+
+bool CombatAnalyzer::shouldProduceAirAntiAir()
+{
+	return false;
+}

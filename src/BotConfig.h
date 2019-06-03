@@ -34,7 +34,7 @@ public:
 
 	bool AllowDebug;
 	bool AllowKeyControl;
-    bool DrawGameInfo;
+	bool IsRealTime;
     bool DrawTileInfo;
     bool DrawBaseLocationInfo;
     bool DrawWalkableSectors;

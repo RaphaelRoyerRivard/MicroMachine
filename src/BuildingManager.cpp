@@ -732,7 +732,7 @@ void BuildingManager::constructAssignedBuildings()
 					else
 					{
 						b.builderUnit.build(b.type, b.finalPosition);
-						if (b.buildCommandGiven)
+						if (b.type.isResourceDepot() && b.buildCommandGiven)//if ressource depot position is blocked by a unit, wait
 						{
 							m_bot.Bases().SetPositionAsBlocked(Util::GetPosition(b.finalPosition), true);
 						}

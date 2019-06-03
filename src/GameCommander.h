@@ -41,9 +41,6 @@ public:
     void setScoutUnits();
     void setCombatUnits();
 
-    void drawDebugInterface();
-    void drawGameInformation(int x, int y);
-
     bool shouldSendInitialScout();
 
     void onUnitCreate(const Unit & unit);
