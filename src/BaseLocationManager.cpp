@@ -544,7 +544,7 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool check
 		}*/
 		
 		//Check if buildable (creep check), using CC for building size, should work for all races.
-		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, Building(MetaTypeEnum::CommandCenter.getUnitType(), tile)))
+		if (checkBuildable && !base->isBlocked() && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, Building(MetaTypeEnum::CommandCenter.getUnitType(), tile)))
 		{
 			continue;
 		}

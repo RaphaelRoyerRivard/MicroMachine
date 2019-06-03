@@ -670,7 +670,7 @@ void WorkerManager::handleRepairWorkers()
 
 void WorkerManager::repairCombatBuildings()
 {
-	const float repairAt = 0.9f; //90% health
+	const float repairAt = 0.95f; //95% health
 	const int maxReparator = 5; //Turret and bunkers only
 
 	if (m_bot.GetSelfRace() != CCRace::Terran)

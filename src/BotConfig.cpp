@@ -25,7 +25,6 @@ BotConfig::BotConfig()
     BatchReplayMode = false;
     NbBatchReplay = 1;
 
-    DrawGameInfo = true;
     DrawProductionInfo = true;
     DrawTileInfo = false;
     DrawWalkableSectors = false;
@@ -176,12 +175,13 @@ void BotConfig::readConfigFile()
     if (j.count("Debug") && j["Debug"].is_object())
     {
         const json & debug = j["Debug"];
+		const json & info = j["SC2API"];
 		JSONTools::ReadBool("AllowDebug", debug, AllowDebug);
 		if (AllowDebug)
 		{
 			JSONTools::ReadBool("AllowKeyControl", debug, AllowKeyControl);
 
-			JSONTools::ReadBool("DrawGameInfo", debug, DrawGameInfo);
+			JSONTools::ReadBool("PlayAsHuman", info, IsRealTime);
 			JSONTools::ReadBool("DrawTileInfo", debug, DrawTileInfo);
 			JSONTools::ReadBool("DrawBaseLocationInfo", debug, DrawBaseLocationInfo);
 			JSONTools::ReadBool("DrawStartingRamp", debug, DrawStartingRamp);

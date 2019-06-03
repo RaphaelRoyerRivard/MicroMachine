@@ -68,4 +68,8 @@ public:
 	void checkUnitsState();
 	void checkUnitState(Unit unit);
 	void increaseDeadEnemy(sc2::UNIT_TYPEID type);
+	bool shouldProduceGroundAntiGround();
+	bool shouldProduceGroundAntiAir();
+	bool shouldProduceAirAntiGround();
+	bool shouldProduceAirAntiAir();
 };

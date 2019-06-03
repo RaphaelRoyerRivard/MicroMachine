@@ -1,6 +1,6 @@
 #pragma once
 //#define PUBLIC_RELEASE
-//#define NO_UNITS
+#define NO_UNITS
 //#define NO_PRODUCTION
 
 #ifdef PUBLIC_RELEASE
@@ -39,6 +39,8 @@ class CCBot
 	};
 
 	uint32_t				m_gameLoop;
+	uint32_t				m_previousGameLoop;
+	uint32_t				m_skippedFrames;
     MapTools                m_map;
     BaseLocationManager     m_bases;
     UnitInfoManager         m_unitInfo;
