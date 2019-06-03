@@ -292,7 +292,11 @@ void CombatAnalyzer::UpdateRatio()
 	std::vector<std::pair<sc2::UNIT_TYPEID, std::string>> checkedTypes = {
 		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_REAPER, "Reaper"),
 		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_BANSHEE, "Banshee"),
-		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_CYCLONE, "Cyclone")
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_CYCLONE, "Cyclone"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, "VikingFighter"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT, "VikingAssault"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, "Battlecruiser"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_HELLION, "Hellion")
 	};
 
 	for (auto type : checkedTypes)
