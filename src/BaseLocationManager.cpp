@@ -222,7 +222,6 @@ void BaseLocationManager::onFrame()
         baseLocation.setPlayerOccupying(Players::Self, false);
 		baseLocation.setResourceDepot({});
         baseLocation.setPlayerOccupying(Players::Enemy, false);
-		baseLocation.setIsBlocked(false);
     }
 	m_bot.StopProfiling("0.6.2   resetBaseLocations");
 
@@ -384,7 +383,7 @@ void BaseLocationManager::drawBaseLocations()
     }
 
     // draw a purple sphere at the next expansion location
-    CCTilePosition nextExpansionPosition = getNextExpansionPosition(Players::Self);
+    CCTilePosition nextExpansionPosition = getNextExpansionPosition(Players::Self, false, false);
 
     m_bot.Map().drawCircle(Util::GetPosition(nextExpansionPosition), 1, CCColor(255, 0, 255));
     m_bot.Map().drawText(Util::GetPosition(nextExpansionPosition), "Next Expansion Location", CCColor(255, 0, 255));
@@ -495,7 +494,7 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 	return m_bot.Buildings().getBuildingCountOfType(baseTypes, isCompleted);
 }
 
-const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBuildable) const
+const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocked, bool checkBuildable) const
 {
 	//[expand]
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
@@ -518,33 +517,16 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool check
 			continue;
 		}
 
-		// get the tile position of the base
-		auto tile = base->getDepotPosition();
-
-		//COMMENTED, this isn't required anymore since the check is in canBuildHere
-		/*bool buildingInTheWay = false; // TODO: check if there are any units on the tile
-		for (auto unit : m_bot.GetUnits())
-		{
-			if (unit.isValid() && (unit.getPlayer() == Players::Self || unit.getPlayer() == Players::Enemy) && unit.getType().isBuilding())
-			{
-				int height = unit.getType().tileHeight() * 0.5;
-				int width = unit.getType().tileWidth() * 0.5;
-				//tile position is always at the center, but if its an odd width or height, it picks the bottom left '+' of the center
-				//Check if the position of the building is within the border of the ressource depot
-				if (tile.x + 3 >= unit.getTilePosition().x - width && tile.x - 2 <= unit.getTilePosition().x + width && tile.y + 3 >= unit.getTilePosition().y - height && tile.y - 2 <= unit.getTilePosition().y + height)
-				{
-					buildingInTheWay = true;
-					break;
-				}
-			}
-		}
-		if (buildingInTheWay)
+		if (checkBlocked && base->isBlocked())
 		{
 			continue;
-		}*/
+		}
+
+		// get the tile position of the base
+		auto tile = base->getDepotPosition();
 		
 		//Check if buildable (creep check), using CC for building size, should work for all races.
-		if (checkBuildable && !base->isBlocked() && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, Building(MetaTypeEnum::CommandCenter.getUnitType(), tile)))
+		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, Building(MetaTypeEnum::CommandCenter.getUnitType(), tile)))
 		{
 			continue;
 		}
@@ -580,9 +562,9 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool check
 	return closestBase;
 }
 
-CCTilePosition BaseLocationManager::getNextExpansionPosition(int player, bool checkBuildable) const
+CCTilePosition BaseLocationManager::getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable) const
 {
-	auto closestBase = getNextExpansion(player);
+	auto closestBase = getNextExpansion(player, checkBlocked, checkBuildable);
 	return closestBase ? closestBase->getDepotPosition() : CCTilePosition(0, 0);
 }
 
@@ -651,7 +633,7 @@ const BaseLocation* BaseLocationManager::getBaseForDepot(const Unit depot) const
 	return nullptr;
 }
 
-void BaseLocationManager::SetPositionAsBlocked(const CCPosition position, bool isBlocked)
+void BaseLocationManager::SetLocationAsBlocked(const CCPosition position, bool isBlocked)
 {
 	for (auto & base : m_baseLocationData)
 	{
@@ -659,6 +641,14 @@ void BaseLocationManager::SetPositionAsBlocked(const CCPosition position, bool i
 		{
 			base.setIsBlocked(isBlocked);
 		}
+	}
+}
+
+void BaseLocationManager::ClearBlockedLocations()
+{
+	for (auto & baseLocation : m_baseLocationData)
+	{
+		baseLocation.setIsBlocked(false);
 	}
 }
 
