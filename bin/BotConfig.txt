@@ -24,7 +24,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Terran",
-        "MapFile"                   : "Artana.SC2Map",
+        "MapFile"                   : "NewRepugnancyLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -38,12 +38,14 @@
 		"BlueshiftLE.SC2Map",
 		"CatalystLE.SC2Map",
 		"CeruleanFallLE.SC2Map",
+		"CyberForestLE.SC2Map",
 		"DarknessSanctuary.SC2Map",
 		"DarknessSanctuaryLE.SC2Map",
 		"DreamcatcherLE.SC2Map",
 		"FractureLE.SC2Map",
 		"InterloperLE.SC2Map",
 		"KairosJunctionLE.SC2Map",
+		"KingsCoveLE.SC2Map",
 		"LostAndFoundLE.SC2Map",
 		"MechDepotLE.SC2Map",
 		"ParaSiteLE.SC2Map",
@@ -63,7 +65,8 @@
 		"DigitalFrontier.SC2Map",
 		"OldSunshine.SC2Map",
 		"Treachery.SC2Map",
-		"Triton.SC2Map"
+		"Triton.SC2Map",
+		"NewRepugnancyLE.SC2Map"
 	],
         
     "Micro" :
