@@ -7,6 +7,7 @@ const size_t WorkerFleePriority = 0;
 const size_t BackupPriority = 1;
 const size_t HarassPriority = 2;
 const size_t AttackPriority = 2;
+const size_t ClearExpandPriority = 3;
 const size_t ScoutPriority = 3;
 const size_t BaseDefensePriority = 4;
 const size_t ScoutDefensePriority = 5;
@@ -102,6 +103,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		m_bot.StartProfiling("0.10.4.2.2    updateDefenseSquads");
         updateDefenseSquads();
 		m_bot.StopProfiling("0.10.4.2.2    updateDefenseSquads");
+		updateClearExpandSquads();
 		updateScoutSquad();
 		updateHarassSquads();
 		updateAttackSquads();
@@ -633,9 +635,75 @@ void CombatCommander::updateBackupSquads()
     }
 }
 
+void CombatCommander::updateClearExpandSquads()
+{
+	// reset clear expand squads
+	for (const auto & kv : m_squadData.getSquads())
+	{
+		const Squad & squad = kv.second;
+		if (squad.getName().find("Clear Expand") != std::string::npos)
+		{
+			m_squadData.getSquad(squad.getName()).clear();
+		}
+	}
+
+	for(const auto baseLocation : m_bot.Bases().getBaseLocations())
+	{
+		if(baseLocation->isBlocked())
+		{
+			const auto basePosition = baseLocation->getPosition();
+			std::stringstream squadName;
+			squadName << "Clear Expand " << basePosition.x << " " << basePosition.y;
+
+			const SquadOrder clearExpand(SquadOrderTypes::Attack, basePosition, DefaultOrderRadius, "Clear Blocked Expand");
+			// if we don't have a squad assigned to this blocked expand already, create one
+			if (!m_squadData.squadExists(squadName.str()))
+			{
+				m_squadData.addSquad(squadName.str(), Squad(squadName.str(), clearExpand, BaseDefensePriority, m_bot));
+			}
+
+			// assign units to the squad
+			Squad & clearExpandSquad = m_squadData.getSquad(squadName.str());
+			clearExpandSquad.setSquadOrder(clearExpand);
+
+			// add closest unit in squad
+			Unit closestUnit;
+			float distance = 0.f;
+			for (auto & unitPair : m_bot.GetAllyUnits())
+			{
+				const auto & unit = unitPair.second;
+
+				if (!unit.isValid())
+					continue;
+				if (unit.getType().isBuilding())
+					continue;
+				if (unit.getType().isWorker())
+					continue;
+				if (!m_squadData.canAssignUnitToSquad(unit, clearExpandSquad))
+					continue;
+
+				if(Util::CanUnitAttackGround(unit.getUnitPtr(), m_bot))
+				{
+					const float dist = Util::DistSq(unit, basePosition);
+					if(!closestUnit.isValid() || dist < distance)
+					{
+						distance = dist;
+						closestUnit = unit;
+					}
+				}
+			}
+
+			if(closestUnit.isValid())
+			{
+				clearExpandSquad.addUnit(closestUnit);
+			}
+		}
+	}
+}
+
 void CombatCommander::updateScoutSquad()
 {
-	if (m_bot.GetCurrentFrame() < 5856)	//around 4:00
+	if (m_bot.GetCurrentFrame() < 6048)	//around 4:30
 		return;
 
 	Squad & scoutSquad = m_squadData.getSquad("Scout");

@@ -38,6 +38,7 @@ class CombatCommander
 	void			lowerSupplyDepots();
     void            updateDefenseSquads();
     void            updateBackupSquads();
+	void			updateClearExpandSquads();
 	void            updateScoutSquad();
 	void            updateHarassSquads();
 	void            updateAttackSquads();
