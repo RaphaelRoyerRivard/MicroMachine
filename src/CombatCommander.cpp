@@ -1482,7 +1482,7 @@ void CombatCommander::updateDefenseSquads()
 			}
 			else
 			{
-				Util::Log(__FUNCTION__, "Cannot assign unit of type " + unit.getType().getName() + " to squad " + squad.getName(), m_bot);
+				Util::Log(__FUNCTION__, "Cannot assign unit of type " + unit.getType().getName() + " to squad " + squad.getName() + ", it is already in squad " + m_squadData.getUnitSquad(unit)->getName(), m_bot);
 			}
 
 			// We remove that unit from the score maps of all regions
