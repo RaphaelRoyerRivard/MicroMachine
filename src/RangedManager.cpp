@@ -200,6 +200,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (!rangedUnit)
 		return;
 
+	const bool isMarine = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE;
 	const bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
 	const bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
 	const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
@@ -218,7 +219,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 
 	if (rangedUnit->is_selected)
-		int a = 0;
+		m_bot.Strategy();
 
 	if (isCyclone && MonitorCyclone(rangedUnit))
 		return;
@@ -240,7 +241,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if (isBattlecruiser && TeleportBattlecruiser(rangedUnit, goal))
 			return;
 	}
-	else if(isRaven)
+	else if(isMarine || isRaven)
 	{
 		goal = GetBestSupportPosition(rangedUnit, rangedUnits);
 	}
@@ -615,8 +616,10 @@ bool RangedManager::TeleportBattlecruiser(const sc2::Unit * battlecruiser, CCPos
 
 CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const
 {
-	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = {sc2::UNIT_TYPEID::TERRAN_RAVEN};
-	const auto clusters = Util::GetUnitClusters(rangedUnits, typesToIgnore, m_bot);
+	const bool isRaven = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
+	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = { sc2::UNIT_TYPEID::TERRAN_RAVEN };
+	const std::vector<sc2::UNIT_TYPEID> typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
+	const auto clusters = Util::GetUnitClusters(rangedUnits, isRaven ? typesToIgnore : typesToConsider, isRaven, m_bot);
 	const Util::UnitCluster* closestBiggestCluster = nullptr;
 	float distance = 0.f;
 	for(const auto & cluster : clusters)

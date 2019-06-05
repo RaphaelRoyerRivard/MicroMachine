@@ -731,27 +731,31 @@ CCPosition Util::CalcCenter(const std::vector<Unit> & units)
     return CCPosition(cx / units.size(), cy / units.size());
 }
 
-std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & typesToIgnore, CCBot & bot)
+std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, CCBot & bot)
 {
+	auto & unitClusters = ignoreSpecialTypes ? m_unitClusters : m_specialUnitClusters;
+	auto & lastUnitClusterFrame = ignoreSpecialTypes ? m_lastUnitClusterFrame : m_lastSpecialUnitClusterFrame;
 	// Return the saved clusters if they were calculated not long ago
-	if(bot.GetCurrentFrame() - m_lastUnitClusterFrame < UNIT_CLUSTERING_COOLDOWN)
-	{
-		return m_unitClusters;
-	}
+	const auto currentFrame = bot.GetCurrentFrame();
+	if (currentFrame - lastUnitClusterFrame < UNIT_CLUSTERING_COOLDOWN)
+		return unitClusters;
 
-	m_unitClusters.clear();
+	unitClusters.clear();
+	lastUnitClusterFrame = currentFrame;
 
 	for (const auto unit : units)
 	{
-		if(Contains(unit->unit_type, typesToIgnore))
-		{
-			continue;
-		}
+		const bool specialUnit = Contains(unit->unit_type, specialTypes);
+		if(specialUnit && ignoreSpecialTypes)
+			continue;	// We want to ignore that type of unit
+		if(!specialUnit && !ignoreSpecialTypes)
+			continue;	// We want to consider only the special types and this is not one
+		
 		std::vector<UnitCluster*> clustersToMerge;
 		UnitCluster* mainCluster = nullptr;
 
 		// Check the clusters to find if the unit is already part of a cluster and to check if it can be part of an existing cluster
-		for (auto & cluster : m_unitClusters)
+		for (auto & cluster : unitClusters)
 		{
 			for(const auto clusterUnit : cluster.m_units)
 			{
@@ -785,11 +789,11 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 			}
 
 			// Remove emptied clusters from the list
-			auto clusterIt = m_unitClusters.begin();
-			while (clusterIt != m_unitClusters.end())
+			auto clusterIt = unitClusters.begin();
+			while (clusterIt != unitClusters.end())
 			{
 				if (clusterIt->m_units.empty())
-					m_unitClusters.erase(clusterIt++);
+					unitClusters.erase(clusterIt++);
 				else
 					++clusterIt;
 			}
@@ -798,11 +802,11 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 		// If the unit was not already in a cluster, create one for it
 		if(!mainCluster)
 		{
-			m_unitClusters.emplace_back(UnitCluster(unit->pos, { unit }));
+			unitClusters.emplace_back(UnitCluster(unit->pos, { unit }));
 		}
 	}
 
-	for (auto & cluster : m_unitClusters)
+	for (auto & cluster : unitClusters)
 	{
 		CCPosition center;
 		for(const auto unit : cluster.m_units)
@@ -811,10 +815,8 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 		}
 		cluster.m_center = CCPosition(center.x / cluster.m_units.size(), center.y / cluster.m_units.size());
 	}
-	
-	//std::sort(m_unitClusters.begin(), m_unitClusters.end(), std::greater<>());	//doesn't work
 
-	return m_unitClusters;
+	return unitClusters;
 }
 
 void Util::CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits)

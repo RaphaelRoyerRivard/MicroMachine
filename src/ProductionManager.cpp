@@ -490,6 +490,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
 			{
+				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
 				//if (productionScore < (float)baseCount)
 				{
 					if (productionBuildingAddonCount < productionBuildingCount)
@@ -515,7 +516,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					MetaType toBuild;
 					const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
 					const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-					if (barracksCount < 1)
+					if (barracksCount < 1 || (hasFusionCore && barracksCount * 2 < baseCount))
 					{
 						toBuild = MetaTypeEnum::Barracks;
 						hasPicked = true;
@@ -575,7 +576,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 #endif
 
-				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
 				if(m_bot.GetCurrentFrame() >= 9400 && baseCount >= 3)	// around 7 minutes
 				{
 					//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
@@ -583,6 +583,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
+					}
+
+					if (hasFusionCore && !m_queue.contains(MetaTypeEnum::Marine))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
 					}
 #endif
 				}

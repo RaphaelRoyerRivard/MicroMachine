@@ -53,7 +53,9 @@ namespace Util
 	};
 
 	static std::list<UnitCluster> m_unitClusters;
+	static std::list<UnitCluster> m_specialUnitClusters;
 	static uint32_t m_lastUnitClusterFrame;
+	static uint32_t m_lastSpecialUnitClusterFrame;
 
     struct IsUnit 
     {
@@ -130,7 +132,7 @@ namespace Util
 	template< typename O, typename S>
 	typename S::iterator Find(O object, S structure) { return std::find(structure.begin(), structure.end(), object); }
 
-	std::list<UnitCluster> & GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & typesToIgnore, CCBot & bot);
+	std::list<UnitCluster> & GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, CCBot & bot);
 
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);

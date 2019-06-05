@@ -106,8 +106,8 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		updateClearExpandSquads();
 		updateScoutSquad();
 		updateHarassSquads();
-		updateAttackSquads();
-        updateBackupSquads();
+		//updateAttackSquads();
+        //updateBackupSquads();
     }
 	m_bot.StopProfiling("0.10.4.2    updateSquads");
 
@@ -751,14 +751,15 @@ void CombatCommander::updateHarassSquads()
 {
 	Squad & harassSquad = m_squadData.getSquad("Harass");
 	std::vector<Unit*> idleHellions;
-	std::vector<Unit*> idleBanshees;
+	std::vector<Unit*> idleMarines;
 	for (auto & unit : m_combatUnits)
 	{
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
 
 		// put high mobility units in the harass squad
 		const sc2::UnitTypeID unitTypeId = unit.getType().getAPIUnitType();
-		if ((unitTypeId == sc2::UNIT_TYPEID::TERRAN_REAPER
+		if ((unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_REAPER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
@@ -770,8 +771,8 @@ void CombatCommander::updateHarassSquads()
 		{
 			if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION)
 				idleHellions.push_back(&unit);
-			/*else if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
-				idleBanshees.push_back(&unit);*/
+			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE)
+				idleMarines.push_back(&unit);
 			else
 				m_squadData.assignUnitToSquad(unit, harassSquad);
 		}
@@ -783,13 +784,14 @@ void CombatCommander::updateHarassSquads()
 			m_squadData.assignUnitToSquad(*hellion, harassSquad);
 		}
 	}
-	/*if (idleBanshees.size() >= 3)
+	const auto battlecruisers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
+	if (idleMarines.size() >= 10 && battlecruisers > 0)
 	{
-		for (auto banshee : idleBanshees)
+		for (auto marine : idleMarines)
 		{
-			m_squadData.assignUnitToSquad(*banshee, harassSquad);
+			m_squadData.assignUnitToSquad(*marine, harassSquad);
 		}
-	}*/
+	}
 
 	if (harassSquad.getUnits().empty())
 		return;
