@@ -14,6 +14,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     , m_right                (std::numeric_limits<CCPositionType>::lowest())
     , m_top                  (std::numeric_limits<CCPositionType>::lowest())
     , m_bottom               (std::numeric_limits<CCPositionType>::max())
+	, m_isBlocked			 (false)
 {
     m_isPlayerStartLocation[0] = false;
     m_isPlayerStartLocation[1] = false;

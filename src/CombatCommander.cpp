@@ -695,7 +695,7 @@ void CombatCommander::updateClearExpandSquads()
 
 			if(closestUnit.isValid())
 			{
-				clearExpandSquad.addUnit(closestUnit);
+				m_squadData.assignUnitToSquad(closestUnit.getUnitPtr(), clearExpandSquad);
 			}
 		}
 	}

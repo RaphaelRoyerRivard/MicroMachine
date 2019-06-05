@@ -105,18 +105,19 @@ void SquadData::drawSquadInformation()
 
 void SquadData::verifySquadUniqueMembership()
 {
-    std::vector<Unit> assigned;
+    std::map<Unit, std::string> assigned;
 
     for (const auto & kv : m_squads)
     {
         for (auto & unit : kv.second.getUnits())
         {
-            if (std::find(assigned.begin(), assigned.end(), unit) != assigned.end())
+			const auto it = assigned.find(unit);
+			if(it != assigned.end())
             {
-                std::cout << "Warning: Unit is in at least two squads: " << unit.getID() << "\n";
+                std::cout << "Warning: A " << unit.getType().getName() << " is in at least two squads: " << kv.second.getName() << " and " << it->second << "\n";
             }
 
-            assigned.push_back(unit);
+            assigned.insert_or_assign(unit, kv.second.getName());
         }
     }
 }
