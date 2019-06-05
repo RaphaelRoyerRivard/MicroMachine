@@ -469,7 +469,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			if (!m_queue.contains(MetaTypeEnum::OrbitalCommand) && !m_queue.contains(MetaTypeEnum::PlanetaryFortress))
 			{
 				const size_t orbitalCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::OrbitalCommand.getUnitType(), false, true);
-				if (orbitalCount < 3)
+				if (true/*orbitalCount < 3*/)//TODO This is temporary logic. Always build Orbital
 				{
 					m_queue.queueAsHighestPriority(MetaTypeEnum::OrbitalCommand, false);
 				}

@@ -744,9 +744,13 @@ void BuildingManager::constructAssignedBuildings()
 					else
 					{
 						b.builderUnit.build(b.type, b.finalPosition);
-						if (b.type.isResourceDepot() && b.buildCommandGiven)//if ressource depot position is blocked by a unit, wait
+						if (b.type.isResourceDepot() && b.buildCommandGiven)//if ressource depot position is blocked by a unit, send elsewhere
 						{
-							m_bot.Bases().SetPositionAsBlocked(Util::GetPosition(b.finalPosition), true);
+							m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true);
+							b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
+							b.buildCommandGiven = false;
+
+							continue;
 						}
 					}
 				}
@@ -839,6 +843,12 @@ void BuildingManager::checkForStartedConstruction()
 				{
 					// free this space
 					m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
+				}
+
+				//Clear blocked locations when starting an expansion
+				if (b.type.isResourceDepot())
+				{
+					m_bot.Bases().ClearBlockedLocations();
 				}
 
 				// only one building will match
@@ -1216,7 +1226,7 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool che
 	else if (b.type.isResourceDepot())
     {
 		m_bot.StartProfiling("0.8.3.1.2 getNextExpansionPosition");
-		buildingLocation = m_bot.Bases().getNextExpansionPosition(Players::Self, true);
+		buildingLocation = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
 		m_bot.StopProfiling("0.8.3.1.2 getNextExpansionPosition");
     }
 	else
