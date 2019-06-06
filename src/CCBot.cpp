@@ -412,7 +412,7 @@ void CCBot::setUnits()
 						if (unit.getType().isBuilding() && !m_strategy.enemyOnlyHasFlyingBuildings())
 						{
 							bool enemyHasGroundUnit = false;
-							for(auto & knownEnemyTypes : m_knownEnemyUnitsPerType)
+							for(auto & knownEnemyTypes : m_enemyUnitsPerType)
 							{
 								if(!knownEnemyTypes.second.empty())
 								{
@@ -481,14 +481,21 @@ void CCBot::setUnits()
         m_allUnits.push_back(unit);
     }
 
+	int armoredEnemies = 0;
 	m_knownEnemyUnits.clear();
-	m_knownEnemyUnitsPerType.clear();
+	m_enemyUnitsPerType.clear();
 	for(auto& enemyUnitPair : m_enemyUnits)
 	{
 		bool ignoreEnemyUnit = false;
 		const Unit& enemyUnit = enemyUnitPair.second;
 		const sc2::Unit* enemyUnitPtr = enemyUnit.getUnitPtr();
 		const bool isBurrowedWidowMine = enemyUnitPtr->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED;
+
+		m_enemyUnitsPerType[enemyUnitPtr->unit_type].push_back(enemyUnit);
+
+		if (enemyUnit.isArmored() && !enemyUnit.getType().isBuilding())
+			++armoredEnemies;
+
 		// If the unit is not were we last saw it, ignore it
 		//TODO when the unit is cloaked or burrowed, check if the tile is inside detection range, in that case, we should ignore the unit because it is not there anymore
 		if (GetGameLoop() != enemyUnitPtr->last_seen_game_loop && Map().isVisible(enemyUnit.getPosition()) && !isBurrowedWidowMine)
@@ -503,11 +510,11 @@ void CCBot::setUnits()
 		if (!ignoreEnemyUnit)
 		{
 			m_knownEnemyUnits.push_back(enemyUnit);
-			m_knownEnemyUnitsPerType[enemyUnitPtr->unit_type].push_back(enemyUnit);
 		}
 	}
 
-	m_strategy.setEnemyHasMassZerglings(m_knownEnemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
+	m_strategy.setEnemyHasMassZerglings(m_enemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
+	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= 5);
 #else
     for (auto & unit : BWAPI::Broodwar->getAllUnits())
     {
@@ -971,7 +978,7 @@ const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
 
 const std::vector<Unit> & CCBot::GetKnownEnemyUnits(sc2::UnitTypeID type)
 {
-	return m_knownEnemyUnitsPerType[type];
+	return m_enemyUnitsPerType[type];
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetNeutralUnits()

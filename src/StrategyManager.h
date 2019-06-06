@@ -49,6 +49,7 @@ class StrategyManager
 	bool m_enemyHasMassZerglings = false;
 	bool m_enemyHasHiSecAutoTracking = false;
 	bool m_enemyOnlyHasFlyingBuildings = false;
+	bool m_enemyHasSeveralArmoredUnits = false;
 	bool m_focusBuildings = false;
 	std::set<sc2::UPGRADE_ID> m_completedUpgrades;
 
@@ -87,6 +88,8 @@ public:
 	void setEnemyHasHiSecAutoTracking(bool enemyHasHiSecAutoTracking) { m_enemyHasHiSecAutoTracking = enemyHasHiSecAutoTracking; }
 	bool enemyOnlyHasFlyingBuildings() const { return m_enemyOnlyHasFlyingBuildings; }
 	void setEnemyOnlyHasFlyingBuildings(bool enemyOnlyHasFlyingBuildings) { m_enemyOnlyHasFlyingBuildings = enemyOnlyHasFlyingBuildings; }
+	bool enemyHasSeveralArmoredUnits() const { return m_enemyHasSeveralArmoredUnits; }
+	void setEnemyHasSeveralArmoredUnits(bool enemyHasSeveralArmoredUnits) { m_enemyHasSeveralArmoredUnits = enemyHasSeveralArmoredUnits; }
 	bool shouldFocusBuildings() const { return m_focusBuildings; }
 	void setFocusBuildings(bool focusBuildings) { m_focusBuildings = focusBuildings; }
 	const std::set<sc2::UPGRADE_ID> & getCompletedUpgrades() const { return m_completedUpgrades; };

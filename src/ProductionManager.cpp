@@ -521,12 +521,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						toBuild = MetaTypeEnum::Barracks;
 						hasPicked = true;
 					}
-					else if (m_bot.Strategy().enemyHasMetabolicBoost() && factoryCount * 2 < baseCount)
+					else if (m_bot.Strategy().enemyHasMassZerglings() && factoryCount * 2 < baseCount)
 					{
 						toBuild = MetaTypeEnum::Factory;
 						hasPicked = true;
 					}
-					else if (starportCount < baseCount * (m_bot.Strategy().enemyHasMetabolicBoost() ? 1 : 2))
+					else if (starportCount < baseCount * (m_bot.Strategy().enemyHasMassZerglings() ? 1 : 2))
 					{
 						toBuild = MetaTypeEnum::Starport;
 						hasPicked = true;
@@ -554,27 +554,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					queueTech(MetaTypeEnum::YamatoCannon);
 				}
 
-				const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
-				if (!isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && cycloneCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
-				{
-					queueTech(MetaTypeEnum::MagFieldAccelerator);
-				}
-
 #ifndef NO_UNITS
-				if (!m_bot.Strategy().enemyHasMetabolicBoost() && !m_queue.contains(MetaTypeEnum::Reaper) && m_bot.CombatAnalyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 3)
+				if (!m_bot.Strategy().enemyHasMassZerglings() && !m_queue.contains(MetaTypeEnum::Reaper) && m_bot.CombatAnalyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1)
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
 #endif
 
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
-
-#ifndef NO_UNITS
-				if (!m_queue.contains(MetaTypeEnum::Cyclone))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
-				}
-#endif
 
 				if(m_bot.GetCurrentFrame() >= 9400 && baseCount >= 3)	// around 7 minutes
 				{
@@ -606,19 +593,36 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 #endif
 
-#ifndef NO_UNITS
-				if ((m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
+				if (m_bot.Strategy().enemyHasMassZerglings())
 				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
-				}
+					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
+#ifndef NO_UNITS
+					if (m_bot.Strategy().enemyHasMassZerglings() && !m_queue.contains(MetaTypeEnum::Hellion))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
+					}
 #endif
 
-				if(m_bot.Strategy().enemyHasMetabolicBoost())
-				{
 					const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
 					if (hellionCount >= 2 && !isTechQueuedOrStarted(MetaTypeEnum::InfernalPreIgniter) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HIGHCAPACITYBARRELS))
 					{
 						queueTech(MetaTypeEnum::InfernalPreIgniter);
+					}
+				}
+				else
+				{
+					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
+#ifndef NO_UNITS
+					if (!m_queue.contains(MetaTypeEnum::Cyclone))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
+					}
+#endif
+
+					const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
+					if (cycloneCount > 0 && m_bot.Strategy().enemyHasSeveralArmoredUnits() && !isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
+					{
+						queueTech(MetaTypeEnum::MagFieldAccelerator);
 					}
 				}
 
