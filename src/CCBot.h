@@ -61,6 +61,7 @@ class CCBot
 	std::map<sc2::Tag, Unit> m_allyUnits;
 	std::map<sc2::Tag, Unit> m_enemyUnits;
 	std::map<sc2::Tag, Unit> m_neutralUnits;
+	std::set<sc2::Tag> m_parasitedUnits;
 	std::map<sc2::Tag, std::pair<CCPosition, uint32_t>> m_lastSeenPosUnits;
 	std::map<sc2::Tag, CCPosition> m_previousFrameEnemyPos;
 	std::map<sc2::Tag, uint32_t> m_KD8ChargesSpawnFrame;
@@ -73,6 +74,7 @@ class CCBot
 	std::map<std::string, Profiler> m_profilingTimes;
 	std::mutex m_command_mutex;
 	bool m_concede;
+	bool m_saidHallucinationLine;
 
 	//KeyState
 	bool key1 = false;
@@ -166,6 +168,7 @@ public:
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
 	const std::vector<Unit> & GetKnownEnemyUnits(sc2::UnitTypeID type);
 	std::map<sc2::Tag, Unit> & GetNeutralUnits();
+	bool IsParasited(const sc2::Unit * unit) const;
 	std::map<sc2::Tag, CCPosition> & GetPreviousFrameEnemyPos() { return m_previousFrameEnemyPos; }
     const std::vector<CCPosition> & GetStartLocations() const;
     const std::vector<CCPosition> & GetEnemyStartLocations() const;

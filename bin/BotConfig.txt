@@ -134,10 +134,10 @@
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : true,
-        "DrawInfluenceMaps"         : false,
+        "DrawInfluenceMaps"         : true,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
-		"DrawDamageHealthRatio"		: false,
+		"DrawDamageHealthRatio"		: true,
         "DrawRangedUnitActions"     : false,
 		"DrawResourcesProximity"	: false
     },

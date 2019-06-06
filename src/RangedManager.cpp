@@ -18,16 +18,29 @@ const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
+const int BATTLECRUISER_TELEPORT_FRAME_COUNT = 90;
+const int BATTLECRUISER_TELEPORT_COOLDOWN_FRAME_COUNT = 1591 + BATTLECRUISER_TELEPORT_FRAME_COUNT;
+const int BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT = 68;
+const int BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT = 1591;
+const int CYCLONE_ATTACK_FRAME_COUNT = 1;
+const int CYCLONE_LOCKON_CAST_FRAME_COUNT = 9;
+const int CYCLONE_LOCKON_CHANNELING_FRAME_COUNT = 321 + CYCLONE_LOCKON_CAST_FRAME_COUNT;
+const int CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT = 97;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
-const int REAPER_KD8_CHARGE_COOLDOWN = 342;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
+const int REAPER_KD8_CHARGE_COOLDOWN = 314 + REAPER_KD8_CHARGE_FRAME_COUNT + 7;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 40;
 const float VIKING_LANDING_DISTANCE_FROM_GOAL = 10.f;
 const int ACTION_REEXECUTION_FREQUENCY = 50;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
-{ }
+{
+	for(auto& ability : bot.Observation()->GetAbilityData())
+	{
+		abilityCastingRanges.insert_or_assign(ability.ability_id, ability.cast_range);
+	}
+}
 
 void RangedManager::setTargets(const std::vector<Unit> & targets)
 {
@@ -97,11 +110,53 @@ void RangedManager::executeMicro()
     }
 }
 
-int RangedManager::getAttackDuration(const sc2::Unit* unit) const
+bool RangedManager::isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit)
 {
+	const auto abilityIt = nextAvailableAbility.find(abilityId);
+	if (abilityIt == nextAvailableAbility.end())
+		return true;
+
+	const auto unitIt = abilityIt->second.find(rangedUnit);
+	if (unitIt == abilityIt->second.end())
+		return true;
+
+	if (m_bot.GetCurrentFrame() < unitIt->second)
+		return false;
+
+	// Query once when we think the ability is available
+	if(QueryIsAbilityAvailable(rangedUnit, abilityId))
+	{
+		// If it is, remove the unit from the map to prevent further queries
+		abilityIt->second.erase(unitIt);
+		return true;
+	}
+
+	// Otherwise, wait a bit
+	unitIt->second += 22;
+	return false;
+}
+
+void RangedManager::setNextFrameAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit, uint32_t nextAvailableFrame)
+{
+	nextAvailableAbility[abilityId][rangedUnit] = nextAvailableFrame;
+}
+
+int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* target) const
+{
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+		return 0;
+
 	int attackFrameCount = 2;
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
 		attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+		attackFrameCount = CYCLONE_ATTACK_FRAME_COUNT;
+	const CCPosition targetDirection = Util::Normalized(target->pos - unit->pos);
+	const CCPosition facingVector = Util::getFacingVector(unit);
+	const float dot = sc2::Dot2D(targetDirection, facingVector);
+	const float value = 1 - dot;
+	const int rotationMultiplier = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? 1 : unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER? 4 : 2;
+	attackFrameCount += value * rotationMultiplier;
 	return attackFrameCount;
 }
 
@@ -145,11 +200,14 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (!rangedUnit)
 		return;
 
+	const bool isMarine = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE;
 	const bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
 	const bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
 	const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
 	const bool isRaven = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
 	const bool isViking = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
+	const bool isCyclone = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE;
+	const bool isBattlecruiser = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER;
 
 #ifndef PUBLIC_RELEASE
 	if (m_bot.Config().DrawHarassInfo)
@@ -158,6 +216,12 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 	if (ShouldSkipFrame(rangedUnit))
+		return;
+
+	if (rangedUnit->is_selected)
+		m_bot.Strategy();
+
+	if (isCyclone && MonitorCyclone(rangedUnit))
 		return;
 
 	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
@@ -174,32 +238,34 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (unitShouldHeal)
 	{
 		goal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
+		if (isBattlecruiser && TeleportBattlecruiser(rangedUnit, goal))
+			return;
 	}
-	else if(isRaven)
+	else if(isMarine || isRaven)
 	{
 		goal = GetBestSupportPosition(rangedUnit, rangedUnits);
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
-	m_bot.StartProfiling("0.10.4.1.5.1.3          CheckBuffs");
 	// If our unit is targeted by an enemy Cyclone's Lock-On ability, it should back until the effect wears off
-	for(const auto buff : rangedUnit->buffs)
+	if (IsLockedOn(rangedUnit))
 	{
-		if(buff == sc2::BUFF_ID::LOCKON)
+		// Banshee in danger should cloak itself
+		if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, true))
 		{
-			// Banshee in danger should cloak itself
-			if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, true))
-			{
-				m_bot.StopProfiling("0.10.4.1.5.1.3          CheckBuffs");
-				return;
-			}
-
-			goal = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getPosition();
-			unitShouldHeal = true;
-			break;
+			return;
 		}
+
+		goal = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getPosition();
+		unitShouldHeal = true;
 	}
-	m_bot.StopProfiling("0.10.4.1.5.1.3          CheckBuffs");
+
+	bool shouldAttack = true;
+	bool cycloneShouldUseLockOn = false;
+	if (isCyclone)
+	{
+		target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
+	}
 
 	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
 
@@ -215,11 +281,19 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 
+	if(ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, threats))
+	{
+		return;
+	}
+
 	bool targetInAttackRange = false;
 	float unitAttackRange = 0.f;
 	if (target)
 	{
-		unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+		if(cycloneShouldUseLockOn)
+			unitAttackRange = abilityCastingRanges[sc2::ABILITY_ID::EFFECT_LOCKON] + rangedUnit->radius + target->radius;
+		else
+			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 		targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;
 
 #ifndef PUBLIC_RELEASE
@@ -228,9 +302,15 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 #endif
 	}
 
+	if (cycloneShouldUseLockOn && targetInAttackRange)
+	{
+		LockOnTarget(rangedUnit, target, unitShouldHeal);
+		return;
+	}
+
 	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
-	if (ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats, unitShouldHeal))
+	if (shouldAttack && !unitShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 		return;
@@ -238,13 +318,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 
 	m_bot.StartProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
-	if (targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
+	if (shouldAttack && targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
 	{
-		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit));
+		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit, target));
 		PlanAction(rangedUnit, action);
 		m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
-
-		m_bot.CombatAnalyzer().increaseTotalDamage(Util::GetDpsForTarget(rangedUnit, target, m_bot), rangedUnit->unit_type);
+		const float damageDealth = isBattlecruiser ? Util::GetDpsForTarget(rangedUnit, target, m_bot) / 22.4f : Util::GetDamageForTarget(rangedUnit, target, m_bot);
+		m_bot.CombatAnalyzer().increaseTotalDamage(damageDealth, rangedUnit->unit_type);
 		return;
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
@@ -259,10 +339,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
 
 	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
-	if (AllowUnitToPathFind(rangedUnit))
+	if (cycloneShouldUseLockOn || AllowUnitToPathFind(rangedUnit))
 	{
 		const CCPosition pathFindEndPos = target && !unitShouldHeal ? target->pos : goal;
-		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, target, target ? unitAttackRange : 3.f, m_bot);
+		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, target, target ? unitAttackRange : 3.f, cycloneShouldUseLockOn, m_bot);
 		if (closePositionInPath != CCPosition())
 		{
 			const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
@@ -370,6 +450,95 @@ bool RangedManager::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
 	return m_bot.GetGameLoop() < availableFrame;
 }
 
+bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
+{
+	// Check if Lock-On casting is canceled or over
+	const auto it = lockOnCastedFrame.find(cyclone);
+	if (it != lockOnCastedFrame.end())
+	{
+		const uint32_t currentFrame = m_bot.GetCurrentFrame();
+		// If the Cyclone is still casting the Lock On ability
+		if (it->second.second + CYCLONE_LOCKON_CAST_FRAME_COUNT > currentFrame)
+		{
+			if (IsCycloneLockOnCanceled(cyclone, false))
+			{
+				// Query the game to make sure the Lock-On has really been canceled while casting
+				if(QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON))
+				{
+					lockOnCastedFrame.erase(cyclone);
+					lockOnTargets.erase(cyclone);
+				}
+				else
+				{
+					// The unit died right after the Lock-On was cast
+					lockOnCastedFrame.erase(cyclone);
+					lockOnTargets.erase(cyclone);
+					setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone, currentFrame + CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT);
+				}
+			}
+			else
+			{
+				if (m_bot.Config().DrawHarassInfo)
+					m_bot.Map().drawLine(cyclone->pos, it->second.first->pos, sc2::Colors::Red);
+				return true;
+			}
+		}
+		else
+		{
+			lockOnCastedFrame.erase(cyclone);
+		}
+	}
+
+	// Toggle off the auto-cast of Lock-On
+	if (toggledCyclones.find(cyclone->tag) == toggledCyclones.end())
+	{
+		Micro::SmartToggleAutoCast(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON, m_bot);
+		toggledCyclones.insert(cyclone->tag);
+		return true;
+	}
+
+	// Let the CombatAnalyzer know of the damage the Cyclone is doing with its Lock-On ability
+	const auto lockOnTarget = lockOnTargets.find(cyclone);
+	if(lockOnTarget != lockOnTargets.end())
+	{
+		auto damagePerFrame = 400.f / 14.3f / 22.4f;
+		if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
+		{
+			const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(lockOnTarget->first->unit_type, m_bot);
+			if (Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes))
+				damagePerFrame *= 2;
+		}
+		m_bot.CombatAnalyzer().increaseTotalDamage(damagePerFrame, cyclone->unit_type);
+	}
+
+	return false;
+}
+
+bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started) const
+{
+	const uint32_t currentFrame = m_bot.GetCurrentFrame();
+	const auto it = started ? lockOnTargets.find(cyclone) : lockOnCastedFrame.find(cyclone);
+	const auto & pair = it->second;
+	const sc2::Unit * lockOnTarget = pair.first;
+	const uint32_t frameCast = pair.second;
+
+	// The effect is over
+	if (started && currentFrame >= frameCast + CYCLONE_LOCKON_CHANNELING_FRAME_COUNT)
+		return true;
+	
+	// The target is dead or not visible
+	if (lockOnTarget == nullptr || !lockOnTarget->is_alive || lockOnTarget->last_seen_game_loop != currentFrame)
+		return true;
+	
+	// The target is too far
+	if (Util::Dist(cyclone->pos, lockOnTarget->pos) > 15.f + cyclone->radius + lockOnTarget->radius)
+		return true;
+
+	// TODO some spells from the enemy could stop our Cyclone's lock-on (like the Pheonix levitation)
+
+	return false;
+}
+
 bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit) const
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION)
@@ -397,8 +566,6 @@ bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inD
 		PlanAction(banshee, action);
 		return true;
 	}
-	/*else if(threats.empty() && banshee->cloak == sc2::Unit::Cloaked)
-	Micro::SmartAbility(banshee, sc2::ABILITY_ID::BEHAVIOR_CLOAKOFF, m_bot);*/
 	return false;
 }
 
@@ -422,7 +589,7 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 			}
 		}
 		//if unit is damaged enough to go back for repair
-		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE)
+		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE / (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit) ? 2.f : 1.f))
 		{
 			unitsBeingRepaired.insert(rangedUnit);
 			return true;
@@ -432,10 +599,27 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 	return rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && rangedUnit->health / rangedUnit->health_max < 0.66f;
 }
 
+bool RangedManager::TeleportBattlecruiser(const sc2::Unit * battlecruiser, CCPosition location)
+{
+	// If the teleport ability is not on cooldown
+	if (isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, battlecruiser))
+	{
+		const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_TACTICALJUMP, location, true, BATTLECRUISER_TELEPORT_FRAME_COUNT);
+		PlanAction(battlecruiser, action);
+		setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, battlecruiser, m_bot.GetCurrentFrame() + BATTLECRUISER_TELEPORT_COOLDOWN_FRAME_COUNT);
+		m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
+		return true;
+	}
+
+	return false;
+}
+
 CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const
 {
-	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = {sc2::UNIT_TYPEID::TERRAN_RAVEN};
-	const auto clusters = Util::GetUnitClusters(rangedUnits, typesToIgnore, m_bot);
+	const bool isRaven = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
+	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = { sc2::UNIT_TYPEID::TERRAN_RAVEN };
+	const std::vector<sc2::UNIT_TYPEID> typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
+	const auto clusters = Util::GetUnitClusters(rangedUnits, isRaven ? typesToIgnore : typesToConsider, isRaven, m_bot);
 	const Util::UnitCluster* closestBiggestCluster = nullptr;
 	float distance = 0.f;
 	for(const auto & cluster : clusters)
@@ -463,6 +647,16 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 		return closestBiggestCluster->m_center;
 	}
 	return m_order.getPosition();
+}
+
+bool RangedManager::IsLockedOn(const sc2::Unit * rangedUnit) const
+{
+	for(const auto buff : rangedUnit->buffs)
+	{
+		if (buff.ToType() == sc2::BUFF_ID::LOCKON)
+			return true;
+	}
+	return false;
 }
 
 bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal)
@@ -512,7 +706,7 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
 #endif
 
-		const bool moveWithoutAttack = squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings();
+		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings());
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 		const auto action = RangedUnitAction(moveWithoutAttack ? MicroActionType::Move : MicroActionType::AttackMove, goal, unitShouldHeal, actionDuration);
 		PlanAction(rangedUnit, action);
@@ -526,31 +720,35 @@ bool RangedManager::ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::
 	if (rangedUnit->weapon_cooldown > 0.f)
 		return false;
 
-	bool inRangeOfThreat = false;
-	bool isCloseThreatFaster = false;
+	if (IsInRangeOfSlowerUnit(rangedUnit, target))
+		return false;
+
 	for (auto & threat : threats)
 	{
-		const float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
-		const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
-		const float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
-		const float speedDiff = threatSpeed - rangedUnitSpeed;
-		const float threatRangeWithBuffer = threatRange + std::max(HARASS_THREAT_RANGE_BUFFER, speedDiff);
-		const float squareDistance = Util::DistSq(rangedUnit->pos, threat->pos);
-		if (squareDistance <= threatRangeWithBuffer * threatRangeWithBuffer)
-		{
-			if (squareDistance > threatRange * threatRange && threatSpeed == 0.f)
-				continue;	// if our unit is just out of the range of a combat building, it's ok
-
-			inRangeOfThreat = true;
-			if (threatSpeed > rangedUnitSpeed)
-			{
-				isCloseThreatFaster = true;
-				break;
-			}
-		}
+		if (IsInRangeOfSlowerUnit(rangedUnit, threat))
+			return false;
 	}
 
-	return !inRangeOfThreat || isCloseThreatFaster;
+	return true;
+}
+
+bool RangedManager::IsInRangeOfSlowerUnit(const sc2::Unit * rangedUnit, const sc2::Unit * target) const
+{
+	const float targetSpeed = Util::getSpeedOfUnit(target, m_bot);
+	const float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
+	const float speedDiff = targetSpeed - rangedUnitSpeed;
+	if (speedDiff >= 0.f)
+		return false;	// Target is faster (or equal)
+	const float targetRange = Util::GetAttackRangeForTarget(target, rangedUnit, m_bot);
+	if (targetRange == 0.f)
+		return false;	// Target cannot attack our unit
+	const float targetRangeWithBuffer = targetRange + std::max(HARASS_THREAT_RANGE_BUFFER, speedDiff);
+	const float squareDistance = Util::DistSq(rangedUnit->pos, target->pos);
+	if (squareDistance > targetRangeWithBuffer * targetRangeWithBuffer)
+		return false;	// Target is far
+	if (squareDistance > targetRange * targetRange && targetSpeed == 0.f)
+		return false;	// Target is somewhat close but cannot move
+	return true;
 }
 
 CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange, bool unitShouldHeal) const
@@ -578,13 +776,150 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 	return dirVec;
 }
 
-bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats, bool unitShouldHeal)
+const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * target)
+{
+	const uint32_t currentFrame = m_bot.GetCurrentFrame();
+	//const bool queryAbilityAvailable = QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON);
+	const bool abilityAvailable = isAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone);
+	if (abilityAvailable)
+	{
+		// Lock-On ability is not on cooldown
+		const auto it = lockOnTargets.find(cyclone);
+		if (it != lockOnTargets.end())
+		{
+			if (IsCycloneLockOnCanceled(cyclone, true))
+			{
+				lockOnTargets.erase(cyclone);
+				setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone, currentFrame + CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT);
+			}
+			else
+			{
+				if (m_bot.Config().DrawHarassInfo)
+					m_bot.Map().drawLine(cyclone->pos, it->second.first->pos, sc2::Colors::Green);
+				// Attacking would cancel our lock-on
+				shouldAttack = false;
+			}
+		}
+		else
+		{
+			// The Cyclone could attack, but it should use its lock-on ability
+			shouldAttack = false;
+			shouldUseLockOn = true;
+		}
+	}
+	else
+	{
+		if (m_bot.Config().DrawHarassInfo)
+			m_bot.Map().drawCircle(cyclone->pos, float(nextAvailableAbility[sc2::ABILITY_ID::EFFECT_LOCKON][cyclone] - currentFrame) / CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT, sc2::Colors::Red);
+	}
+
+	/*if (queryAbilityAvailable != abilityAvailable)
+	{
+		if (abilityAvailable && shouldAttack)
+			std::cout << "1";
+		else if (abilityAvailable && shouldUseLockOn)
+			std::cout << "2";
+		else if (!abilityAvailable)
+			std::cout << "3";
+		else
+			std::cout << "4";
+	}*/
+
+	// Check if the Cyclone would have a better Lock-On target
+	if (shouldUseLockOn)
+	{
+		if (!threats.empty())
+		{
+			const auto cycloneHeight = m_bot.Map().terrainHeight(cyclone->pos);
+			const auto partialLockOnRange = abilityCastingRanges[sc2::ABILITY_ID::EFFECT_LOCKON] + cyclone->radius;
+			const sc2::Unit * bestTarget = nullptr;
+			float bestScore = 0.f;
+			for(const auto threat : threats)
+			{
+				const float threatHeight = m_bot.Map().terrainHeight(threat->pos);
+				if (threatHeight > cycloneHeight)
+				{
+					bool hasGoodViewOfUnit = false;
+					for (const auto rangedUnit : rangedUnits)
+					{
+						if (rangedUnit == cyclone)
+							continue;
+						const float distSq = Util::DistSq(rangedUnit->pos, threat->pos);
+						if(distSq <= 7.f * 7.f && (rangedUnit->is_flying || m_bot.Map().terrainHeight(rangedUnit->pos) >= threatHeight))
+						{
+							hasGoodViewOfUnit = true;
+							break;
+						}
+					}
+					if(!hasGoodViewOfUnit)
+						continue;
+				}
+				const float dist = Util::Dist(cyclone->pos, threat->pos);
+				if (dist > 10.f)
+					continue;
+				if (shouldHeal && dist > partialLockOnRange + threat->radius)
+					continue;
+				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 2.f);
+				const auto healthScore = 0.25f * (threat->health + threat->shield * 1.5f);
+				const auto energyScore = 0.25f * threat->energy;
+				const auto detectorScore = 15 * (threat->detect_range > 0.f);
+				const auto threatRange = Util::GetAttackRangeForTarget(threat, cyclone, m_bot);
+				const auto threatDps = Util::GetDpsForTarget(threat, cyclone, m_bot);
+				const float powerScore = threatRange * threatDps * 3.f;
+				const float speedScore = Util::getSpeedOfUnit(threat, m_bot) * 5.f;
+				auto armoredScore = 0.f;
+				if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
+				{
+					const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
+					armoredScore = 15 * Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes);
+				}
+				const float score = energyScore + detectorScore + armoredScore + powerScore + speedScore - healthScore - distanceScore;
+				if(!bestTarget || score > bestScore)
+				{
+					bestTarget = threat;
+					bestScore = score;
+				}
+			}
+			if (bestTarget)
+				target = bestTarget;
+			if (!target)
+			{
+				shouldUseLockOn = false;
+				shouldAttack = true;
+			}
+		}
+
+		if(target)
+		{
+			const auto type = UnitType(target->unit_type, m_bot);
+			// Prevent the use of Lock-On on passive buildings
+			if (type.isBuilding() && !type.isAttackingBuilding())
+			{
+				shouldUseLockOn = false;
+				shouldAttack = true;
+			}
+		}
+	}
+
+	return target;
+}
+
+void RangedManager::LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * target, bool unitShouldHeal)
+{
+	const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_LOCKON, target, unitShouldHeal, 0);
+	PlanAction(cyclone, action);
+	const auto pair = std::pair<const sc2::Unit *, uint32_t>(target, m_bot.GetGameLoop());
+	lockOnCastedFrame.insert_or_assign(cyclone, pair);
+	lockOnTargets.insert_or_assign(cyclone, pair);
+}
+
+bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats)
 {
 	if (threats.empty())
 		return false;
 
-	float unitsPower = 0.f;
-	float targetsPower = 0.f;
+	//float unitsPower = 0.f;
+	//float targetsPower = 0.f;
 	sc2::Units closeUnits;
 	std::map<const sc2::Unit*, const sc2::Unit*> closeUnitsTarget;
 
@@ -598,7 +933,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	}
 
 	// Check if unit can fight cloaked
-	if(!unitShouldHeal && rangedUnit->energy >= 5 && (rangedUnit->cloak == sc2::Unit::Cloaked || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ShouldBansheeCloak(rangedUnit, false))))
+	if(rangedUnit->energy >= 5 && (rangedUnit->cloak == sc2::Unit::Cloaked || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ShouldBansheeCloak(rangedUnit, false))))
 	{
 		// If the unit is at an undetected position
 		if (!Util::IsPositionUnderDetection(rangedUnit->pos, m_bot))
@@ -638,7 +973,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 				}
 
 				const bool canAttackNow = range <= targetDist && rangedUnit->weapon_cooldown <= 0.f;
-				const int attackDuration = canAttackNow ? getAttackDuration(rangedUnit) : 0;
+				const int attackDuration = canAttackNow ? getAttackDuration(rangedUnit, target) : 0;
 				const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, false, attackDuration);
 				// Attack the target
 				PlanAction(rangedUnit, action);
@@ -695,16 +1030,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		// If the unit has a target, add it to the close units and calculate its power 
 		if(unitTarget)
 		{
-			// If the unit should heal and is not alone or it is alone against multiple enemies, don't fight and let it back to heal
-			if (unitShouldHeal && (unit != rangedUnit || threats.size() > 1))
-			{
-				m_harassMode = true;
-				return false;
-			}
-
 			closeUnits.push_back(unit);
 			closeUnitsTarget.insert_or_assign(unit, unitTarget);
-			unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
+			//unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
 		}
 	}
 
@@ -719,15 +1047,21 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
 		if (threatSpeed > maxThreatSpeed)
 			maxThreatSpeed = threatSpeed;
-		const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
-		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
+		//const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
+		//targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
 	}
 
 	m_harassMode = true;
 
 	bool currentUnitHasACommand = false;
 	// If we can beat the enemy
-	const bool shouldFight = unitsPower >= targetsPower;
+	m_bot.StartProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
+	const bool winSimulation = Util::SimulateCombat(closeUnits, threats);
+	m_bot.StopProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
+	//const bool formulaWin = unitsPower >= targetsPower;
+	const bool shouldFight = winSimulation;	//winSimulation || formulaWin;
+	/*if (winSimulation != formulaWin)
+		std::cout << "Simulation: " << winSimulation << ", formula: " << formulaWin << std::endl;*/
 	// For each of our close units
 	for (auto & unitAndTarget : closeUnitsTarget)
 	{
@@ -770,7 +1104,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		}
 
 		auto fleePosition = CCPosition();
-		if (!canAttackNow && unit->health / unit->health_max < 0.5f)
+		const bool injured = unit->health / unit->health_max < 0.5f;
+		const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > Util::GetAttackRangeForTarget(unitTarget, unit, m_bot) && Util::getSpeedOfUnit(unit, m_bot) > Util::getSpeedOfUnit(unitTarget, m_bot));
+		if (!canAttackNow && (injured || shouldKite))
 		{
 			fleePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, m_bot);
 		}
@@ -784,14 +1120,28 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		else
 		{
 			// Attack the target
-			const int attackDuration = canAttackNow ? getAttackDuration(unit) : 0;
+			const int attackDuration = canAttackNow ? getAttackDuration(unit, unitTarget) : 0;
 			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, false, attackDuration);
 			PlanAction(unit, action);
 		}
 		if (unit == rangedUnit)
+		{
+			const float damageDealth = Util::GetDpsForTarget(rangedUnit, unitTarget, m_bot) / 22.4f;
+			m_bot.CombatAnalyzer().increaseTotalDamage(damageDealth, rangedUnit->unit_type);
 			currentUnitHasACommand = true;
+		}
 	}
 	return currentUnitHasACommand;
+}
+
+bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats)
+{
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && ExecuteYamatoCannonLogic(rangedUnit, threats))
+	{
+		return true;
+	}
+
+	return false;
 }
 
 bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats)
@@ -809,14 +1159,66 @@ bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2:
 	return false;
 }
 
-bool RangedManager::CanUseKD8Charge(const sc2::Unit * reaper) const
+bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats)
 {
-	if (reaper->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+	const size_t currentFrame = m_bot.GetCurrentFrame();
+	if(queryYamatoAvailability.find(battlecruiser) != queryYamatoAvailability.end())
 	{
-		const uint32_t availableFrame = nextAvailableKD8ChargeFrameForReaper.find(reaper) != nextAvailableKD8ChargeFrameForReaper.end() ? nextAvailableKD8ChargeFrameForReaper.at(reaper) : 0;
-		return m_bot.GetGameLoop() >= availableFrame;
+		queryYamatoAvailability.erase(battlecruiser);
+		if(!QueryIsAbilityAvailable(battlecruiser, sc2::ABILITY_ID::EFFECT_YAMATOGUN))
+		{
+			setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_YAMATOGUN, battlecruiser, currentFrame + BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT);
+			m_bot.CombatAnalyzer().increaseTotalDamage(200.f, battlecruiser->unit_type);
+			return false;
+		}
+	}
+
+	if (!isAbilityAvailable(sc2::ABILITY_ID::EFFECT_YAMATOGUN, battlecruiser))
+		return false;
+
+	const sc2::Unit* target = nullptr;
+	float maxDps = 0.f;
+	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN);
+	for (const auto threat : threats)
+	{
+		const float threatDistance = Util::DistSq(battlecruiser->pos, threat->pos);
+		const float threatHp = threat->health + threat->shield;
+		if (threatDistance <= yamatoRange * yamatoRange && threatHp >= 120.f)
+		{
+			const float dps = Util::GetDpsForTarget(threat, battlecruiser, m_bot);
+			if(dps > maxDps || (dps == maxDps && threatHp > target->health + target->shield))
+			{
+				maxDps = dps;
+				target = threat;
+			}
+		}
+	}
+	
+	if(target)
+	{
+		const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_YAMATOGUN, target, true, BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT);
+		PlanAction(battlecruiser, action);
+		queryYamatoAvailability.insert(battlecruiser);
+		return true;
+	}
+
+	return false;
+}
+
+bool RangedManager::QueryIsAbilityAvailable(const sc2::Unit* unit, sc2::ABILITY_ID abilityId) const
+{
+	const auto & availableAbilities = m_bot.Query()->GetAbilitiesForUnit(unit);
+	for (const auto & ability : availableAbilities.abilities)
+	{
+		if (ability.ability_id.ToType() == abilityId)
+			return true;
 	}
 	return false;
+}
+
+bool RangedManager::CanUseKD8Charge(const sc2::Unit * reaper)
+{
+	return reaper->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && isAbilityAvailable(sc2::ABILITY_ID::EFFECT_KD8CHARGE, reaper);
 }
 
 bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::Units & threats)
@@ -850,15 +1252,13 @@ bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::U
 		if (!m_bot.Map().isWalkable(expectedThreatPosition))
 			continue;
 		const float distToExpectedPosition = Util::DistSq(reaper->pos, expectedThreatPosition);
-		const float rangedUnitRange = Util::GetAttackRangeForTarget(reaper, threat, m_bot);
+		const float kd8Range = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_KD8CHARGE);
 		// Check if we have enough reach to throw at the threat
-		if (distToExpectedPosition <= rangedUnitRange * rangedUnitRange)
+		if (distToExpectedPosition <= kd8Range * kd8Range)
 		{
 			const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_KD8CHARGE, expectedThreatPosition, true, REAPER_KD8_CHARGE_FRAME_COUNT);
-			if (PlanAction(reaper, action))
-			{
-				nextAvailableKD8ChargeFrameForReaper[reaper] = m_bot.GetGameLoop() + REAPER_KD8_CHARGE_COOLDOWN;
-			}
+			PlanAction(reaper, action);
+			setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_KD8CHARGE, reaper, m_bot.GetGameLoop() + REAPER_KD8_CHARGE_COOLDOWN);
 			return true;
 		}
 	}
@@ -892,6 +1292,15 @@ bool RangedManager::ExecuteAutoTurretLogic(const sc2::Unit * raven, const sc2::U
 
 	if(Util::DistSq(turretPosition, raven->pos) < 2.75f * 2.75)
 	{
+		//check all the enemy units to see if there is none blocking that location
+		for(auto & enemy : m_bot.GetKnownEnemyUnits())
+		{
+			if (enemy.isFlying() || enemy.getType().isBuilding())
+				continue;	// flying units do not block and buildings are already managed in getBuildLocationNear
+			const float minDist = enemy.getUnitPtr()->radius + 1.5f;
+			if (Util::DistSq(enemy, turretPosition) < minDist * minDist)
+				return false;
+		}
 		const auto action = RangedUnitAction(MicroActionType::AbilityPosition, sc2::ABILITY_ID::EFFECT_AUTOTURRET, turretPosition, true, 0);
 		PlanAction(raven, action);
 		return true;
@@ -1073,7 +1482,7 @@ CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vect
 }
 
 // get a target for the ranged unit to attack
-const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets)
+const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits) const
 {
     BOT_ASSERT(rangedUnit, "null ranged unit in getTarget");
 
@@ -1093,12 +1502,15 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		if (target->last_seen_game_loop != m_bot.GetGameLoop())
 			continue;
 
-		float priority = getAttackPriority(rangedUnit, target);
+		if (filterHigherUnits && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos))
+			continue;
+
+		float priority = getAttackPriority(rangedUnit, target, m_harassMode);
 		if(priority > 0.f)
 			targetPriorities.insert(std::pair<float, const sc2::Unit*>(priority, target));
     }
 
-	if (m_harassMode)
+	if (m_harassMode && rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_CYCLONE)
 	{
 		for(auto it = targetPriorities.rbegin(); it != targetPriorities.rend(); ++it)
 		{
@@ -1128,96 +1540,6 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 	if (targetPriorities.empty())
 		return nullptr;
 	return (*targetPriorities.rbegin()).second;		//return last target because it's the one with the highest priority
-}
-
-float RangedManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target) const
-{
-    BOT_ASSERT(target, "null unit in getAttackPriority");
-
-	if (!UnitType::isTargetable(target->unit_type))
-		return 0.f;
-
-	// Ignoring invisible creep tumors
-	const uint32_t lastGameLoop = m_bot.GetGameLoop() - 1;
-	if ((target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMOR
-		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED
-		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN)
-		&& target->last_seen_game_loop < lastGameLoop)
-	{
-		return 0.f;
-	}
-
-	float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot);
-	float targetRange = Util::GetAttackRangeForTarget(target, attacker, m_bot);
-
-	if (m_harassMode)
-	{
-		if (targetRange + HARASS_MIN_RANGE_DIFFERENCE_FOR_TARGET > attackerRange)
-			return 0.f;
-	}
-
-	float unitDps = Util::GetDpsForTarget(attacker, target, m_bot);
-	if (unitDps == 0.f)	//Do not attack targets on which we would do no damage
-		return 0.f;
-
-	float healthValue = pow(target->health + target->shield, 0.5f);		//the more health a unit has, the less it is prioritized
-	const float distance = Util::Dist(attacker->pos, target->pos) + attacker->radius + target->radius;
-	float distanceValue = 1.f;
-	if (distance > attackerRange)
-		distanceValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
-
-	float invisModifier = 1.f;
-	if (target->cloak == sc2::Unit::CloakedDetected)
-		invisModifier = 2.f;
-	else if (target->is_burrowed && target->unit_type != sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED)
-		invisModifier = 2.f;
-	
-	Unit targetUnit(target, m_bot);
-    if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
-    {
-        float targetDps = Util::GetDpsForTarget(target, attacker, m_bot);
-        if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-        {
-            //We manually reduce the dps of the bunker because it only serve as a shield, units will spawn out of it when destroyed
-			targetDps = 5.f;
-        }
-		float workerBonus = 1.f;
-		if(targetUnit.getType().isWorker() && m_order.getType() != SquadOrderTypes::Defend)
-		{
-			if (attacker->unit_type != sc2::UNIT_TYPEID::TERRAN_HELLION)
-			{
-				workerBonus = 2.f;
-			}
-
-			// Reduce priority for workers that are going in a refinery
-			const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
-			const auto enemyRefineryType = UnitType::getEnemyRefineryType(enemyRace);
-			for(auto & refinery : m_bot.GetKnownEnemyUnits(enemyRefineryType))
-			{
-				const float refineryDist = Util::DistSq(refinery, target->pos);
-				if(refineryDist < 2.5 * 2.5)
-				{
-					const CCPosition facingVector = CCPosition(cos(target->facing), sin(target->facing));
-					if(Dot2D(facingVector, refinery.getPosition() - target->pos) > 0.99f)
-					{
-						workerBonus *= 0.5f;
-					}
-				}
-			}
-		}
-
-
-		float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;								//targets that cannot hit our unit are less prioritized
-		if(targetUnit.getType().isAttackingBuilding())
-		{
-			nonThreateningModifier = targetDps == 0.f ? 1.f : 0.5f;		//for buildings, we prefer targetting them with units that will not get attacked back
-		}
-		const float flyingDetectorModifier = target->is_flying && UnitType::isDetector(target->unit_type) ? 2.f : 1.f;
-		const float minionModifier = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR ? 0.1f : 1.f;	//units that can be respawned should be less prioritized
-        return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier;
-    }
-
-	return (distanceValue * 50 - healthValue) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
 }
 
 // according to http://wiki.teamliquid.net/starcraft2/Range

@@ -182,10 +182,12 @@ void CombatAnalyzer::lowPriorityChecks()
 	//TODO handle dead ally units
 
 	//Upgrades
-	auto combatAirUnitCount = m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BANSHEE, true) +
-		m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT, true) + 
-		m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, true);
-	if (combatAirUnitCount >= 4)
+	const auto combatVehicleCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true) +
+		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), true, true);
+	const auto combatShipCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), true, true) +
+		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true) +
+		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
+	if (combatVehicleCount + combatShipCount >= 4)
 	{
 		auto & production = m_bot.Commander().Production();
 		if (!production.isTechQueuedOrStarted(MetaTypeEnum::TerranShipWeaponsLevel1))
@@ -290,7 +292,11 @@ void CombatAnalyzer::UpdateRatio()
 	std::vector<std::pair<sc2::UNIT_TYPEID, std::string>> checkedTypes = {
 		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_REAPER, "Reaper"),
 		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_BANSHEE, "Banshee"),
-		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_CYCLONE, "Cyclone")
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_CYCLONE, "Cyclone"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, "VikingFighter"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT, "VikingAssault"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, "Battlecruiser"),
+		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_HELLION, "Hellion")
 	};
 
 	for (auto type : checkedTypes)

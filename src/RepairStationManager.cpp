@@ -95,6 +95,10 @@ bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocatio
 
 	if (!resourceDepot.isCompleted() && !resourceDepot.getType().isMorphedBuilding())
 		return false;
+	
+	int workerCount = m_bot.Workers().getWorkerData().getNumAssignedWorkers(resourceDepot);
+	if (workerCount < 3)
+		return false;
 
 	return true;
 }

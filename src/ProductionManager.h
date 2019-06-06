@@ -19,7 +19,6 @@ class ProductionManager
 	std::list<MetaType> incompletUpgradesMetatypes;
 	std::map<MetaType, Unit> incompletUpgrades;
 	std::map<MetaType, float> incompletUpgradesProgress;
-	std::list<MetaType> completUpgrades;
 	std::list<std::list<MetaType>> possibleUpgrades;//Does not include tech
 	std::list<std::list<MetaType>> reversePossibleUpgrades;//Does not include tech
 	std::map<std::string, MetaType> alternateUpgrades;//Tech do not have alternate upgrades
@@ -43,7 +42,8 @@ class ProductionManager
 	void	fixBuildOrderDeadlock(BuildOrderItem & item);
 	void	lowPriorityChecks();
 	bool	currentlyHasRequirement(MetaType currentItem) const;
-	bool	hasRequired(const MetaType& metaType, bool checkInQueue);
+	bool	hasRequired(const MetaType& metaType, bool checkInQueue) const;
+	bool	hasRequiredUnit(const UnitType& unitType, bool checkInQueue) const;
 	bool	hasProducer(const MetaType& metaType, bool checkInQueue);
 
 public:

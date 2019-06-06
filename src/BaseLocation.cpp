@@ -14,6 +14,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     , m_right                (std::numeric_limits<CCPositionType>::lowest())
     , m_top                  (std::numeric_limits<CCPositionType>::lowest())
     , m_bottom               (std::numeric_limits<CCPositionType>::max())
+	, m_isBlocked			 (false)
 {
     m_isPlayerStartLocation[0] = false;
     m_isPlayerStartLocation[1] = false;
@@ -231,7 +232,7 @@ bool BaseLocation::isPlayerStartLocation(CCPlayer player) const
     return m_isPlayerStartLocation.at(player);
 }
 
-bool BaseLocation::containsPosition(const CCPosition & pos) const
+bool BaseLocation::containsPosition(const CCPosition & pos, int maxDistance) const
 {
     if (!m_bot.Map().isValidPosition(pos) || (pos.x == 0 && pos.y == 0))
     {
@@ -239,7 +240,7 @@ bool BaseLocation::containsPosition(const CCPosition & pos) const
     }
 
 	int groundDistance = getGroundDistance(pos);
-    return groundDistance > 0 && groundDistance < NearBaseLocationTileDistance;
+    return groundDistance > 0 && groundDistance < (maxDistance > 0 ? maxDistance : NearBaseLocationTileDistance);
 }
 
 const std::vector<Unit> & BaseLocation::getGeysers() const

@@ -27,6 +27,7 @@ class MetaTypeEnum
 		static MetaType Refinery;
 		static MetaType EngineeringBay;
 		static MetaType MissileTurret;
+		static MetaType FusionCore;
 			//Units
 		static MetaType SCV;
 		static MetaType Marine;
@@ -38,6 +39,8 @@ class MetaTypeEnum
 		static MetaType Viking;
 		static MetaType Medivac;
 		static MetaType Raven;
+		static MetaType Cyclone;
+		static MetaType Battlecruiser;
 				//Upgrades
 		static MetaType TerranInfantryWeaponsLevel1;
 		static MetaType TerranInfantryWeaponsLevel2;
@@ -59,6 +62,8 @@ class MetaTypeEnum
 		static MetaType BansheeCloak;
 		static MetaType HyperflightRotors;
 		static MetaType HiSecAutoTracking;
+		static MetaType YamatoCannon;
+		static MetaType MagFieldAccelerator;
 
 		//PROTOSS
 			//Buildings

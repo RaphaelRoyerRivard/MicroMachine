@@ -30,6 +30,7 @@ class CombatCommander
 	int				m_currentBaseExplorationIndex;
 	int				m_currentBaseScoutingIndex;
 	std::vector<const BaseLocation*> m_visitedBaseLocations;
+	uint32_t			m_lastWorkerRushDetectionFrame = 0;
 
     void            updateScoutDefenseSquad();
 	void            updateDefenseBuildings();
@@ -37,6 +38,7 @@ class CombatCommander
 	void			lowerSupplyDepots();
     void            updateDefenseSquads();
     void            updateBackupSquads();
+	void			updateClearExpandSquads();
 	void            updateScoutSquad();
 	void            updateHarassSquads();
 	void            updateAttackSquads();

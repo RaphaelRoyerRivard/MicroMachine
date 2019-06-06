@@ -490,6 +490,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		{
 			case StrategyPostBuildOrder::TERRAN_REAPER :
 			{
+				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
 				//if (productionScore < (float)baseCount)
 				{
 					if (productionBuildingAddonCount < productionBuildingCount)
@@ -509,12 +510,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
 						}
 					}
+
 					//Building
 					bool hasPicked = false;
 					MetaType toBuild;
 					const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
 					const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-					if (barracksCount < 1)
+					if (barracksCount < 1 || (hasFusionCore && barracksCount * 2 < baseCount))
 					{
 						toBuild = MetaTypeEnum::Barracks;
 						hasPicked = true;
@@ -541,9 +543,21 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					queueTech(MetaTypeEnum::BansheeCloak);
 				}
 
-				if (!isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && bansheeCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
+				if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && bansheeCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
 				{
 					queueTech(MetaTypeEnum::HyperflightRotors);
+				}
+
+				const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
+				if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && battlecruiserCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
+				{
+					queueTech(MetaTypeEnum::YamatoCannon);
+				}
+
+				const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
+				if (!isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && cycloneCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
+				{
+					queueTech(MetaTypeEnum::MagFieldAccelerator);
 				}
 
 #ifndef NO_UNITS
@@ -555,14 +569,31 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 
-				/*int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
-				if (reaperCount > 3)
+#ifndef NO_UNITS
+				if (!m_queue.contains(MetaTypeEnum::Cyclone))
 				{
-					auto metaTypeInfantryWeapon = queueUpgrade(MetaTypeEnum::TerranInfantryWeaponsLevel1);
-				}*/
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
+				}
+#endif
+
+				if(m_bot.GetCurrentFrame() >= 9400 && baseCount >= 3)	// around 7 minutes
+				{
+					//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
+#ifndef NO_UNITS
+					if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
+					}
+
+					if (hasFusionCore && !m_queue.contains(MetaTypeEnum::Marine))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+					}
+#endif
+				}
 
 #ifndef NO_UNITS
-				if (!m_queue.contains(MetaTypeEnum::Banshee))
+				if (!m_queue.contains(MetaTypeEnum::Banshee) && !hasFusionCore)
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 				}
@@ -576,7 +607,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 
 #ifndef NO_UNITS
-				if ((m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
+				if ((m_bot.Strategy().enemyHasMetabolicBoost() || m_bot.Strategy().enemyHasMassZerglings()) && !m_queue.contains(MetaTypeEnum::Hellion))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
 				}
@@ -618,14 +649,18 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::WORKER_RUSH_DEFENSE:
 			{
-				if (!m_queue.contains(MetaTypeEnum::Reaper))
+				m_queue.removeAllOfType(MetaTypeEnum::Refinery);
+				if(m_bot.GetFreeGas() >= 50)
 				{
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
+					m_queue.removeAllOfType(MetaTypeEnum::Marine);
+					if(!m_queue.contains(MetaTypeEnum::Reaper))
+					{
+						m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
+					}
 				}
-
-				if (!m_queue.contains(MetaTypeEnum::Refinery) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false) == 0)
+				else if (!m_queue.contains(MetaTypeEnum::Marine))
 				{
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Refinery, false);
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
 				}
 				return;
 			}
@@ -702,9 +737,16 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 	// check to see if we have the prerequisites for the item
     if (!hasRequired(item.type, true))
     {
-        std::cout << item.type.getName() << " needs a requirement: " << typeData.requiredUnits[0].getName() << "\n";
-		BuildOrderItem requiredItem = m_queue.queueItem(BuildOrderItem(MetaType(typeData.requiredUnits[0], m_bot), 0, item.blocking));
-        fixBuildOrderDeadlock(requiredItem);
+		for (auto & required : typeData.requiredUnits)
+		{
+			if (!hasRequiredUnit(required, true))
+			{
+				std::cout << item.type.getName() << " needs a requirement: " << required.getName() << "\n";
+				BuildOrderItem requiredItem = m_queue.queueItem(BuildOrderItem(MetaType(required, m_bot), 0, item.blocking));
+				fixBuildOrderDeadlock(requiredItem);
+				break;
+			}
+		}
         return;
     }
 
@@ -902,7 +944,7 @@ bool ProductionManager::currentlyHasRequirement(MetaType currentItem) const
 	return true;
 }
 
-bool ProductionManager::hasRequired(const MetaType& metaType, bool checkInQueue)
+bool ProductionManager::hasRequired(const MetaType& metaType, bool checkInQueue) const
 {
 	const TypeData& typeData = m_bot.Data(metaType);
 
@@ -911,12 +953,23 @@ bool ProductionManager::hasRequired(const MetaType& metaType, bool checkInQueue)
 
 	for (auto & required : typeData.requiredUnits)
 	{
-		if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, required, false, true) > 0 || m_bot.Buildings().isBeingBuilt(required))
-			return true;
-
-		if (checkInQueue && m_queue.contains(MetaType(required, m_bot)))
-			return true;
+		if (!hasRequiredUnit(required, checkInQueue))
+			return false;
 	}
+
+	return true;
+}
+
+bool ProductionManager::hasRequiredUnit(const UnitType& unitType, bool checkInQueue) const
+{
+	if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, unitType, false, true) > 0)
+		return true;
+
+	if (m_bot.Buildings().isBeingBuilt(unitType))
+		return true;
+
+	if (checkInQueue && m_queue.contains(MetaType(unitType, m_bot)))
+		return true;
 
 	return false;
 }
@@ -1340,10 +1393,11 @@ bool ProductionManager::queueUpgrade(const MetaType & type, bool balanceUpgrades
 	}
 
 	std::list<MetaType> startedOrFinished = incompletUpgradesMetatypes;
+	const auto & completedUpgrades = m_bot.Strategy().getCompletedUpgrades();
 	//Merge completUpgrades into startOrFinished because list.merge empties the second list for no reason
-	for (auto & completUpgrade : completUpgrades)
+	for (auto & completedUpgrade : completedUpgrades)
 	{
-		startedOrFinished.push_back(completUpgrade);
+		startedOrFinished.emplace_back(MetaType(CCUpgrade(completedUpgrade), m_bot));
 	}
 
 	for (auto & upCategory : possibleUpgrades)
@@ -1386,7 +1440,7 @@ bool ProductionManager::queueUpgrade(const MetaType & type, bool balanceUpgrades
 							}
 
 							//if we didn't queue it, but it is not completed, it has to be in progress so we don't queue anything.
-							if (std::find(completUpgrades.begin(), completUpgrades.end(), alternateUpgrade) == completUpgrades.end())
+							if (!m_bot.Strategy().isUpgradeCompleted(alternateUpgrade.getUpgrade()))
 							{
 								return false;
 							}
@@ -1427,19 +1481,19 @@ bool ProductionManager::queueUpgrade(const MetaType & type, bool balanceUpgrades
 bool ProductionManager::isTechQueuedOrStarted(const MetaType & type)
 {
 	return std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), type) != incompletUpgradesMetatypes.end()
-		|| std::find(completUpgrades.begin(), completUpgrades.end(), type) != completUpgrades.end()
+		|| m_bot.Strategy().isUpgradeCompleted(type.getUpgrade())
 		|| m_queue.contains(type);
 }
 
 bool ProductionManager::isTechStarted(const MetaType & type)
 {
 	return std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), type) != incompletUpgradesMetatypes.end()
-		|| std::find(completUpgrades.begin(), completUpgrades.end(), type) != completUpgrades.end();
+		|| m_bot.Strategy().isUpgradeCompleted(type.getUpgrade());
 }
 
 bool ProductionManager::isTechFinished(const MetaType & type)
 {
-	return std::find(completUpgrades.begin(), completUpgrades.end(), type) != completUpgrades.end();
+	return m_bot.Strategy().isUpgradeCompleted(type.getUpgrade());
 }
 
 void ProductionManager::queueTech(const MetaType & type)
@@ -1502,7 +1556,6 @@ void ProductionManager::validateUpgradesProgress()
 			else if (progress > 0.99f)//About to finish, lets consider it done.
 			{
 				toRemove.push_back(upgrade.first);
-				completUpgrades.push_back(upgrade.first);
 				Util::DebugLog(__FUNCTION__, "upgrade finished " + upgrade.first.getName(), m_bot);
 			}
 			else
@@ -1585,7 +1638,8 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 	}
 	else if (item.type.isUpgrade())
 	{
-		Micro::SmartAbility(producer.getUnitPtr(), m_bot.Data(item.type.getUpgrade()).buildAbility, m_bot);
+		const auto data = m_bot.Data(item.type.getUpgrade());
+		Micro::SmartAbility(producer.getUnitPtr(), data.buildAbility, m_bot);
 
 #if _DEBUG
 		if (isTechStarted(item.type))
@@ -1730,14 +1784,18 @@ int ProductionManager::getExtraGas()
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResources(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
 {
-    return (m_bot.Data(type).mineralCost <= m_bot.GetFreeMinerals() - additionalReservedMineral) && (m_bot.Data(type).gasCost <= m_bot.GetFreeGas() - additionalReservedGas);
+	const bool meetsRequiredMinerals = m_bot.Data(type).mineralCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetMinerals() : m_bot.GetFreeMinerals()) - additionalReservedMineral;
+	const bool meetsRequiredGas = m_bot.Data(type).gasCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetGas() : m_bot.GetFreeGas()) - additionalReservedGas;
+	return meetsRequiredMinerals && meetsRequiredGas;
 }
 
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, int additionalMineral, int additionalGas, int additionalReservedMineral, int additionalReservedGas)
 {
 	assert("Addons cannot use extra ressources", m_bot.Data(type).isAddon);
-	return (m_bot.Data(type).mineralCost <= m_bot.GetFreeMinerals() + additionalMineral - additionalReservedMineral) && (m_bot.Data(type).gasCost <= m_bot.GetFreeGas() + additionalGas - additionalReservedGas);
+	const bool meetsRequiredMinerals = m_bot.Data(type).mineralCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetMinerals() : m_bot.GetFreeMinerals()) + additionalMineral - additionalReservedMineral;
+	const bool meetsRequiredGas = m_bot.Data(type).gasCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetGas() : m_bot.GetFreeGas()) + additionalGas - additionalReservedGas;
+	return meetsRequiredMinerals && meetsRequiredGas;
 }
 
 bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker, int additionalReservedMineral, int additionalReservedGas)

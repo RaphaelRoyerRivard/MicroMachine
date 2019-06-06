@@ -13,6 +13,7 @@ CCBot::CCBot(std::string botVersion)
 	, m_gameCommander(*this)
 	, m_techTree(*this)
 	, m_concede(false)
+	, m_saidHallucinationLine(false)
 {
 	if(botVersion != "")
 		Actions()->SendChat(botVersion);
@@ -25,6 +26,7 @@ void CCBot::OnUnitCreated(const sc2::Unit*) {}
 void CCBot::OnUnitIdle(const sc2::Unit*) {}
 void CCBot::OnUpgradeCompleted(sc2::UpgradeID upgrade)
 {
+	Util::DebugLog(__FUNCTION__, "Upgrade " + upgrade.to_string() + " completed", *this);
 	m_strategy.setUpgradeCompleted(upgrade);
 }
 void CCBot::OnBuildingConstructionComplete(const sc2::Unit*) {}
@@ -290,6 +292,7 @@ void CCBot::setUnits()
 	m_unitCount.clear();
 	m_unitCompletedCount.clear();
 #ifdef SC2API
+	bool firstPhoenix = true;
 	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
     for (auto & unitptr : Observation()->GetUnits())
     {
@@ -391,6 +394,20 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_OVERSEER:
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
 						break;
+					case sc2::UNIT_TYPEID::PROTOSS_PHOENIX:
+						if (unitptr->last_seen_game_loop != GetCurrentFrame())
+							break;
+						if (firstPhoenix)
+						{
+							if (!m_saidHallucinationLine)
+							{
+								Actions()->SendChat("Am I hallucinating?");
+								m_saidHallucinationLine = true;
+							}
+							firstPhoenix = false;
+							break;
+						}
+						// no break because more than one Phoenix probably means that there is a real fleet
 					default:
 						if (unit.getType().isBuilding() && !m_strategy.enemyOnlyHasFlyingBuildings())
 						{
@@ -434,7 +451,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_SPIRE:
 					case sc2::UNIT_TYPEID::ZERG_HIVE:
 						m_strategy.setShouldProduceAntiAir(true);
-						Actions()->SendChat("You are finally ready to produce air units :o took you long enough");
+						Actions()->SendChat("Going for air units? Your fleet will be not match for mine!");
 					default:
 						break;
 					}
@@ -507,11 +524,14 @@ void CCBot::clearDeadUnits()
 	{
 		auto tag = pair.first;
 		auto& unit = pair.second;
-		if (!unit.isAlive())
+		if (!unit.isAlive() ||
+			unit.getPlayer() == Players::Enemy)	// In case of one of our units get neural parasited, its alliance will switch)
 		{
 			unitsToRemove.push_back(tag);
 			if (unit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 				m_KD8ChargesSpawnFrame.erase(tag);
+			if (unit.getPlayer() == Players::Enemy)
+				m_parasitedUnits.insert(unit.getUnitPtr()->tag);
 		}
 	}
 	// Remove dead ally units
@@ -527,13 +547,17 @@ void CCBot::clearDeadUnits()
 	{
 		auto& unit = pair.second;
 		// Remove dead unit or old snapshot
-		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
+		if (!unit.isAlive() || 
+			unit.getPlayer() == Players::Self ||	// In case of one of our units get neural parasited, its alliance will switch
+			(unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
 			&& m_map.isVisible(unit.getPosition())
 			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
 		{
-			auto unitPtr = unit.getUnitPtr();
+			const auto unitPtr = unit.getUnitPtr();
 			unitsToRemove.push_back(unitPtr->tag);
 			this->CombatAnalyzer().increaseDeadEnemy(unitPtr->unit_type);
+			if (unit.getPlayer() == Players::Self)
+				m_parasitedUnits.erase(unitPtr->tag);
 		}
 	}
 	// Remove dead enemy units
@@ -658,12 +682,22 @@ void CCBot::IssueCheats()
 	//IMPORTANT: Players::Enemy doesn't work with the cheats if the second player isn't human. We need to use the player id (player 1 vs player 2)
 	//¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
 
+	const int player1 = 1;
+	const int player2 = 2;
 	//Liberator
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation, Players::Enemy, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ORACLE, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);
+
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player1, 2);
+	//Debug()->DebugGiveAllTech();
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation, player1, 10);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 20);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation, 1, 8);
 
 	//Workers
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, Players::Enemy, 10);
@@ -943,6 +977,11 @@ const std::vector<Unit> & CCBot::GetKnownEnemyUnits(sc2::UnitTypeID type)
 std::map<sc2::Tag, Unit> & CCBot::GetNeutralUnits()
 {
 	return m_neutralUnits;
+}
+
+bool CCBot::IsParasited(const sc2::Unit * unit) const
+{
+	return Util::Contains(unit->tag, m_parasitedUnits);
 }
 
 const CCPosition CCBot::GetStartLocation() const

@@ -256,21 +256,10 @@ void Squad::addUnitsToMicroManagers()
     {
         BOT_ASSERT(unit.isValid(), "null unit in addUnitsToMicroManagers()");
 
-        if (unit.getType().isTank())
-        {
-            tankUnits.push_back(unit);
-        }
-        // TODO: detectors
-        /*else if (unit.getType().isDetector() && !unit.getType().isBuilding())
-        {
-            detectorUnits.push_back(unit);
-        }*/
-        // select ranged _units
-        else if (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) >= 2.5f || unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_RAVEN)
+        if (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) >= 2.5f || unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_RAVEN)
         {
             rangedUnits.push_back(unit);
         }
-        // select melee _units
         else
         {
             meleeUnits.push_back(unit);
@@ -279,7 +268,6 @@ void Squad::addUnitsToMicroManagers()
 
     m_meleeManager.setUnits(meleeUnits);
     m_rangedManager.setUnits(rangedUnits);
-    //m_tankManager.setUnits(tankUnits);
 }
 
 bool Squad::needsToRetreat()

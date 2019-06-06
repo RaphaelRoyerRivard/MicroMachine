@@ -2,6 +2,7 @@
 
 #include "Common.h"
 #include "UnitType.h"
+#include <libvoxelbot/combat/simulator.h>
 
 class CCBot;
 class Unit;
@@ -12,6 +13,7 @@ namespace Util
 	static std::vector<std::string> displayedError;
 	static std::ofstream file;
 	static std::string mapName;
+	static CombatPredictor* m_simulator;
 
 	//used for optimisation
 	static UnitType refineryType;
@@ -51,7 +53,9 @@ namespace Util
 	};
 
 	static std::list<UnitCluster> m_unitClusters;
+	static std::list<UnitCluster> m_specialUnitClusters;
 	static uint32_t m_lastUnitClusterFrame;
+	static uint32_t m_lastSpecialUnitClusterFrame;
 
     struct IsUnit 
     {
@@ -87,8 +91,8 @@ namespace Util
 		static std::map<sc2::Tag, std::vector<SafePathResult>> m_lastPathFindingResultsForUnit;
 
 		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
-		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
-		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, const sc2::Unit* target, float maxRange, CCBot & bot);
+		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot);
+		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
 		CCPosition FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
 		float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);
@@ -128,7 +132,7 @@ namespace Util
 	template< typename O, typename S>
 	typename S::iterator Find(O object, S structure) { return std::find(structure.begin(), structure.end(), object); }
 
-	std::list<UnitCluster> & GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & typesToIgnore, CCBot & bot);
+	std::list<UnitCluster> & GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, CCBot & bot);
 
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);
@@ -152,11 +156,14 @@ namespace Util
 	float GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetType, CCBot & bot);
     float GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
     float GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
+	float GetDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
+	float GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
 	std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot);
 	float getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCBot & m_bot);
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
 	float getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
+	CCPosition getFacingVector(const sc2::Unit * unit);
 
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
     
@@ -228,4 +235,6 @@ namespace Util
 	CCPositionType DistSq(const Unit & unit, const CCPosition & p2);
 	CCPositionType DistSq(const Unit & unit, const Unit & unit2);
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
+
+	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits);
 };
