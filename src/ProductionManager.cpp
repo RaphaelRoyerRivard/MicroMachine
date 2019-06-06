@@ -516,7 +516,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					MetaType toBuild;
 					const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
 					const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-					if (barracksCount < 1 || (hasFusionCore && barracksCount * 2 < baseCount))
+					if (barracksCount < 1 || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < baseCount))
 					{
 						toBuild = MetaTypeEnum::Barracks;
 						hasPicked = true;
@@ -555,7 +555,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if (!m_bot.Strategy().enemyHasMassZerglings() && !m_queue.contains(MetaTypeEnum::Reaper) && m_bot.CombatAnalyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1)
+				if (!m_bot.Strategy().enemyHasMassZerglings() && !m_queue.contains(MetaTypeEnum::Reaper) && m_bot.CombatAnalyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
@@ -572,7 +572,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
 					}
 
-					if (hasFusionCore && !m_queue.contains(MetaTypeEnum::Marine))
+					if (hasFusionCore && m_bot.GetFreeMinerals() >= 400 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
 					}
@@ -1529,10 +1529,10 @@ void ProductionManager::validateUpgradesProgress()
 			case sc2::UNIT_TYPEID::ZERG_EVOLUTIONCHAMBER:
 			case sc2::UNIT_TYPEID::ZERG_SPIRE:
 			case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
-				found = true;// Skip because the buildAbility is, for example, RESEARCH_TERRANSHIPWEAPONS = 3699 instead of RESEARCH_TERRANSHIPWEAPONSLEVEL1 = 861
 				if (!unitPtr->orders.empty())
 				{
 					progress = unitPtr->orders.at(0).progress;
+					found = true;// Skip because the buildAbility is, for example, RESEARCH_TERRANSHIPWEAPONS = 3699 instead of RESEARCH_TERRANSHIPWEAPONSLEVEL1 = 861
 				}
 				break;
 
