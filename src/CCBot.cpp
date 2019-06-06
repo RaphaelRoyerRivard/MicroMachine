@@ -26,6 +26,7 @@ void CCBot::OnUnitCreated(const sc2::Unit*) {}
 void CCBot::OnUnitIdle(const sc2::Unit*) {}
 void CCBot::OnUpgradeCompleted(sc2::UpgradeID upgrade)
 {
+	Util::DebugLog(__FUNCTION__, "Upgrade " + upgrade.to_string() + " completed", *this);
 	m_strategy.setUpgradeCompleted(upgrade);
 }
 void CCBot::OnBuildingConstructionComplete(const sc2::Unit*) {}

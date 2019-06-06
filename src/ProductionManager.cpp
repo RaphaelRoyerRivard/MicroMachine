@@ -1393,10 +1393,11 @@ bool ProductionManager::queueUpgrade(const MetaType & type, bool balanceUpgrades
 	}
 
 	std::list<MetaType> startedOrFinished = incompletUpgradesMetatypes;
+	const auto & completedUpgrades = m_bot.Strategy().getCompletedUpgrades();
 	//Merge completUpgrades into startOrFinished because list.merge empties the second list for no reason
-	for (auto & completUpgrade : completUpgrades)
+	for (auto & completedUpgrade : completedUpgrades)
 	{
-		startedOrFinished.push_back(completUpgrade);
+		startedOrFinished.emplace_back(MetaType(CCUpgrade(completedUpgrade), m_bot));
 	}
 
 	for (auto & upCategory : possibleUpgrades)
@@ -1439,7 +1440,7 @@ bool ProductionManager::queueUpgrade(const MetaType & type, bool balanceUpgrades
 							}
 
 							//if we didn't queue it, but it is not completed, it has to be in progress so we don't queue anything.
-							if (std::find(completUpgrades.begin(), completUpgrades.end(), alternateUpgrade) == completUpgrades.end())
+							if (!m_bot.Strategy().isUpgradeCompleted(alternateUpgrade.getUpgrade()))
 							{
 								return false;
 							}
@@ -1480,19 +1481,19 @@ bool ProductionManager::queueUpgrade(const MetaType & type, bool balanceUpgrades
 bool ProductionManager::isTechQueuedOrStarted(const MetaType & type)
 {
 	return std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), type) != incompletUpgradesMetatypes.end()
-		|| std::find(completUpgrades.begin(), completUpgrades.end(), type) != completUpgrades.end()
+		|| m_bot.Strategy().isUpgradeCompleted(type.getUpgrade())
 		|| m_queue.contains(type);
 }
 
 bool ProductionManager::isTechStarted(const MetaType & type)
 {
 	return std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), type) != incompletUpgradesMetatypes.end()
-		|| std::find(completUpgrades.begin(), completUpgrades.end(), type) != completUpgrades.end();
+		|| m_bot.Strategy().isUpgradeCompleted(type.getUpgrade());
 }
 
 bool ProductionManager::isTechFinished(const MetaType & type)
 {
-	return std::find(completUpgrades.begin(), completUpgrades.end(), type) != completUpgrades.end();
+	return m_bot.Strategy().isUpgradeCompleted(type.getUpgrade());
 }
 
 void ProductionManager::queueTech(const MetaType & type)
@@ -1555,7 +1556,6 @@ void ProductionManager::validateUpgradesProgress()
 			else if (progress > 0.99f)//About to finish, lets consider it done.
 			{
 				toRemove.push_back(upgrade.first);
-				completUpgrades.insert(upgrade.first);
 				Util::DebugLog(__FUNCTION__, "upgrade finished " + upgrade.first.getName(), m_bot);
 			}
 			else
