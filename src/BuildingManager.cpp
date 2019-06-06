@@ -908,7 +908,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 					Util::DebugLog(__FUNCTION__, "Worker is invalid for building " + b.type.getName(), m_bot);
 					continue;
 				}
-				if (!Util::PathFinding::IsPathToGoalSafe(newBuilderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
+				if (!Util::PathFinding::IsPathToGoalSafe(newBuilderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), true, m_bot))
 				{
 					continue;
 				}
