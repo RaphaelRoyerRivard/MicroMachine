@@ -237,7 +237,11 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
 	if (unitShouldHeal)
 	{
-		goal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
+		CCPosition healGoal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
+		if (healGoal != CCPosition())
+			goal = healGoal;
+		else
+			Util::DisplayError("RangedManager healGoal is (0, 0)", "", m_bot, false);
 		if (isBattlecruiser && TeleportBattlecruiser(rangedUnit, goal))
 			return;
 	}
