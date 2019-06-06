@@ -858,7 +858,7 @@ void BuildingManager::checkForStartedConstruction()
 	}
 }
 
-// STEP 5: IF WE ARE TERRAN, THIS MATTERS, SO: LOL
+// STEP 5: IF WE ARE TERRAN, THIS MATTERS
 void BuildingManager::checkForDeadTerranBuilders()
 {
 	if (!Util::IsTerran(m_bot.GetSelfRace()))

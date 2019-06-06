@@ -403,6 +403,7 @@ void WorkerManager::handleIdleWorkers()
     {
         if (!worker.isValid()) { continue; }
 
+		bool needsOrder = false;
 		int workerJob = m_workerData.getWorkerJob(worker);
 		bool idle = worker.isIdle();
         if (idle &&
@@ -414,7 +415,7 @@ void WorkerManager::handleIdleWorkers()
 			(workerJob != WorkerJobs::Build))//Prevent premoved builder from going Idle if they lack the ressources, also prevents refinery builder from going Idle
 		{
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
-			workerJob = WorkerJobs::Idle;
+			needsOrder = true;
 		}
 		else if (workerJob == WorkerJobs::Build)
 		{
@@ -453,12 +454,12 @@ void WorkerManager::handleIdleWorkers()
 				{
 					//return mining
 					m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
-					workerJob = WorkerJobs::Idle;
 				}
+				needsOrder = true;
 			}
 		}
 
-		if (workerJob == WorkerJobs::Idle)
+		if (needsOrder)
 		{
 			if (!worker.isAlive())
 			{
