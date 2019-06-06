@@ -1374,119 +1374,9 @@ std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
 	return trainers;
 }
 
-bool ProductionManager::queueUpgrade(const MetaType & type, bool balanceUpgrades, bool ifFinishedTryHigherLevel)
-{
-	assert(true, "deprecated");
-
-	MetaType previousUpgradeName;
-	auto upgradeName = type;
-	bool started = false;
-	bool categoryFound = false;
-
-	//If upgrade is currently queued, we don't have to queue anything
-	if (m_queue.contains(upgradeName))
-	{
-		return false;
-	}
-	for (const auto & incompletUpgrade : incompletUpgradesMetatypes)//If startedUpgrades.contains
-	{
-		if (incompletUpgrade == upgradeName)
-		{
-			return false;
-		}
-	}
-
-	std::list<MetaType> startedOrFinished = incompletUpgradesMetatypes;
-	const auto & completedUpgrades = m_bot.Strategy().getCompletedUpgrades();
-	//Merge completUpgrades into startOrFinished because list.merge empties the second list for no reason
-	for (auto & completedUpgrade : completedUpgrades)
-	{
-		startedOrFinished.emplace_back(MetaType(CCUpgrade(completedUpgrade), m_bot));
-	}
-
-	for (auto & upCategory : possibleUpgrades)
-	{
-		for (auto & potentialUpgrade : upCategory)
-		{
-			if (started)
-			{
-				//if upgrade is already being research, just cancel.
-				if (m_queue.contains(potentialUpgrade))
-				{
-					return false;
-				}
-				if (std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), potentialUpgrade) != incompletUpgradesMetatypes.end())
-				{
-					return false;
-				}
-				previousUpgradeName = upgradeName;
-				upgradeName = potentialUpgrade;
-				started = false;
-			}
-			if (potentialUpgrade == upgradeName)
-			{
-				categoryFound = true;
-
-				if (m_queue.contains(potentialUpgrade))
-				{
-					return false;
-				}
-				for (const auto & startedUpgrade : startedOrFinished)//If startedUpgrades.contains
-				{
-					if (startedUpgrade == upgradeName)
-					{
-						if (balanceUpgrades)
-						{
-							auto alternateUpgrade = alternateUpgrades[type.getName()];
-							if (queueUpgrade(alternateUpgrade, false, false))
-							{
-								return true;
-							}
-
-							//if we didn't queue it, but it is not completed, it has to be in progress so we don't queue anything.
-							if (!m_bot.Strategy().isUpgradeCompleted(alternateUpgrade.getUpgrade()))
-							{
-								return false;
-							}
-						}
-						if (ifFinishedTryHigherLevel)
-						{
-							started = true;
-							previousUpgradeName = potentialUpgrade;
-							break;
-						}
-						return false;
-					}
-				}
-				if (!started)//if not started, start it.
-				{
-					//Can't merge both if since [empty] isn't a MetaType.
-					bool isPreviousUpgradeViable = previousUpgradeName.getName() != "MetaType" && !isTechQueuedOrStarted(previousUpgradeName);
-					if (isPreviousUpgradeViable	|| (!isPreviousUpgradeViable && !isTechQueuedOrStarted(potentialUpgrade)))
-					{
-						queueTech(potentialUpgrade);
-						return true;
-					}
-					//Did not finish previous upgrade.
-					break;
-				}
-				//if started, return the next one.
-			}
-		}
-		if (categoryFound)
-		{
-			//Finished everything in the category
-			break;
-		}
-	}
-	return false;
-}
-
 bool ProductionManager::isTechQueuedOrStarted(const MetaType & type)
 {
-	return std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), type) != incompletUpgradesMetatypes.end()
-		|| m_bot.Strategy().isUpgradeCompleted(type.getUpgrade())
-		|| m_queue.contains(type);
+	return isTechStarted(type) || m_queue.contains(type);
 }
 
 bool ProductionManager::isTechStarted(const MetaType & type)
@@ -1518,7 +1408,13 @@ void ProductionManager::validateUpgradesProgress()
 	{
 		bool found = false;
 		float progress = 0.f;
-		auto unitPtr = upgrade.second.getUnitPtr();
+		auto unit = upgrade.second;
+		if (!unit.isValid() || !unit.getUnitPtr()->is_alive)
+		{
+			toRemove.push_back(upgrade.first);
+		}
+
+		auto unitPtr = unit.getUnitPtr();
 		
 		switch ((sc2::UNIT_TYPEID)upgrade.second.getType().getAPIUnitType())
 		{
@@ -1531,6 +1427,7 @@ void ProductionManager::validateUpgradesProgress()
 			case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
 				if (!unitPtr->orders.empty())
 				{
+					found = true;// Skip because the buildAbility is, for example, RESEARCH_TERRANSHIPWEAPONS = 3699 instead of RESEARCH_TERRANSHIPWEAPONSLEVEL1 = 861
 					progress = unitPtr->orders.at(0).progress;
 					found = true;// Skip because the buildAbility is, for example, RESEARCH_TERRANSHIPWEAPONS = 3699 instead of RESEARCH_TERRANSHIPWEAPONSLEVEL1 = 861
 				}
