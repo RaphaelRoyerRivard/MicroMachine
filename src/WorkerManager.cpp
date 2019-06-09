@@ -48,6 +48,131 @@ void WorkerManager::onFrame()
 	m_bot.StopProfiling("0.7.7   handleRepairWorkers");
 }
 
+void WorkerManager::lowPriorityChecks()
+{
+	int currentFrame = m_bot.GetCurrentFrame();
+	if (currentFrame % 48)
+	{
+		return;
+	}
+
+	//Detect depleted geysers
+	for (auto & geyser : m_bot.GetAllyGeyserUnits())
+	{
+		//if Depleted
+		if (geyser.getUnitPtr()->vespene_contents == 0)
+		{
+			//remove workers from depleted geyser
+			auto workers = m_workerData.getAssignedWorkersRefinery(geyser);
+			for (auto & worker : workers)
+			{
+				m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
+			}
+		}
+	}
+
+	//Worker split between bases (transfer worker)
+	if (m_bot.Bases().getBaseCount(Players::Self, true) <= 1)
+	{//No point trying to split workers
+		return;
+	}
+	bool needTransfer = false;
+	auto workers = getWorkers();
+	WorkerData workerData = m_bot.Workers().getWorkerData();
+	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+	std::list<Unit> dispatchedWorkers;
+	for (auto & base : bases)
+	{
+		auto basePosition = base->getPosition();
+		int optimalWorkers = base->getOptimalMineralWorkerCount();
+		auto depot = getDepotAtBasePosition(basePosition);
+		int workerCount = m_workerData.getNumAssignedWorkers(depot);
+		if (workerCount > optimalWorkers)
+		{
+			int extra = workerCount - optimalWorkers;
+			for (auto & worker : workers)///TODO order by closest to the target base location
+			{
+				if (m_bot.Workers().isFree(worker))
+				{
+					const auto workerDepot = m_workerData.getWorkerDepot(worker);
+					if (workerDepot.isValid() && workerDepot.getID() == depot.getID())
+					{
+						dispatchedWorkers.push_back(worker);
+						extra--;
+						if (extra <= 0)
+						{
+							break;
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			needTransfer = true;
+		}
+	}
+
+	//Dispatch workers to bases missing some
+	if (needTransfer)
+	{
+		for (auto & base : bases)
+		{
+			if (base->isUnderAttack())
+			{
+				continue;
+			}
+
+			auto depot = getDepotAtBasePosition(base->getPosition());
+			if (!depot.isValid() || depot.isBeingConstructed())
+			{
+				continue;
+			}
+
+			int workerCount = m_workerData.getNumAssignedWorkers(depot);
+			int optimalWorkers = base->getMinerals().size() * 2;
+			if (workerCount < optimalWorkers)
+			{
+				std::vector<Unit> toRemove;
+				int needed = optimalWorkers - workerCount;
+				int moved = 0;
+				for (auto it = dispatchedWorkers.begin(); it != dispatchedWorkers.end(); it++)
+				{
+					//Dont move workers if its not safe
+					if (!Util::PathFinding::IsPathToGoalSafe(it->getUnitPtr(), base->getPosition(), true, m_bot))
+					{
+						continue;
+					}
+
+					m_workerData.setWorkerJob(*it, WorkerJobs::Minerals, depot, true);
+					toRemove.push_back(*it);
+					moved++;
+					if (moved >= needed)
+					{
+						break;
+					}
+				}
+
+				//remove already dispatched workers
+				for (auto worker : toRemove)
+				{
+					auto it = find(dispatchedWorkers.begin(), dispatchedWorkers.end(), worker);
+					if (it != dispatchedWorkers.end())
+					{
+						dispatchedWorkers.erase(it);
+					}
+				}
+				if (dispatchedWorkers.empty())
+				{
+					break;
+				}
+			}
+		}
+	}
+
+	workerData.validateRepairStationWorkers();
+}
+
 void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)
 {
     m_workerData.setWorkerJob(worker, WorkerJobs::Repair, unitToRepair);
@@ -491,7 +616,7 @@ void WorkerManager::handleIdleWorkers()
 
 void WorkerManager::handleRepairWorkers()
 {
-	const int REPAIR_STATION_MIN_MINERAL = 15;//Also affects the automatic building repairing
+	const int REPAIR_STATION_MIN_MINERAL = 10;//Also affects the automatic building repairing
 
     // Only terran worker can repair
     if (!Util::IsTerran(m_bot.GetSelfRace()))
@@ -561,8 +686,8 @@ void WorkerManager::handleRepairWorkers()
 	const int REPAIR_STATION_WORKER_ZONE_SIZE = 10;
 
 	/* Chart of repair worker based on minerals
-	0: 15 mineral-
-	1: 25 mineral+
+	0: 10 mineral-
+	1: 10 mineral+
 	2: 40 mineral+
 	3: 60 mineral+
 	4: 80 mineral+
@@ -621,6 +746,14 @@ void WorkerManager::handleRepairWorkers()
 					if (distanceSquare < REPAIR_STATION_WORKER_ZONE_SIZE * REPAIR_STATION_WORKER_ZONE_SIZE)
 					{
 						setRepairWorker(worker, *it);
+
+						//Add worker to the list of repair station worker for this base
+						auto & baseRepairWorkers = workerData.getRepairStationWorkers()[base];
+						if ((std::find(baseRepairWorkers.begin(), baseRepairWorkers.end(), worker) == baseRepairWorkers.end()))
+						{
+							baseRepairWorkers.push_back(worker);
+						}
+
 						repairWorkers++;
 						++it;
 						if (it == unitsToRepair.end())
@@ -733,129 +866,6 @@ void WorkerManager::repairCombatBuildings()
 					}
 				}
 				break;
-		}
-	}
-}
-
-void WorkerManager::lowPriorityChecks()
-{
-	int currentFrame = m_bot.GetCurrentFrame();
-	if (currentFrame % 48)
-	{
-		return;
-	}
-
-	//Detect depleted geysers
-	for (auto & geyser : m_bot.GetAllyGeyserUnits())
-	{
-		//if Depleted
-		if (geyser.getUnitPtr()->vespene_contents == 0)
-		{
-			//remove workers from depleted geyser
-			auto workers = m_workerData.getAssignedWorkersRefinery(geyser);
-			for (auto & worker : workers)
-			{
-				m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
-			}
-		}
-	}
-
-	//Worker split between bases (transfer worker)
-	if (m_bot.Bases().getBaseCount(Players::Self, true) <= 1)
-	{//No point trying to split workers
-		return;
-	}
-	bool needTransfer = false;
-	auto workers = getWorkers();
-	WorkerData workerData = m_bot.Workers().getWorkerData();
-	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
-	std::list<Unit> dispatchedWorkers;
-	for (auto & base : bases)
-	{
-		auto basePosition = base->getPosition();
-		int optimalWorkers = base->getOptimalMineralWorkerCount();
-		auto depot = getDepotAtBasePosition(basePosition);
-		int workerCount = m_workerData.getNumAssignedWorkers(depot);
-		if (workerCount > optimalWorkers)
-		{
-			int extra = workerCount - optimalWorkers;
-			for (auto & worker : workers)///TODO order by closest to the target base location
-			{
-				if (m_bot.Workers().isFree(worker))
-				{
-					const auto workerDepot = m_workerData.getWorkerDepot(worker);
-					if (workerDepot.isValid() && workerDepot.getID() == depot.getID())
-					{
-						dispatchedWorkers.push_back(worker);
-						extra--;
-						if (extra <= 0)
-						{
-							break;
-						}
-					}
-				}
-			}
-		}
-		else
-		{
-			needTransfer = true;
-		}
-	}
-
-	//Dispatch workers to bases missing some
-	if (needTransfer)
-	{
-		for (auto & base : bases)
-		{
-			if (base->isUnderAttack())
-			{
-				continue;
-			}
-
-			auto depot = getDepotAtBasePosition(base->getPosition());
-			if (!depot.isValid() || depot.isBeingConstructed())
-			{
-				continue;
-			}
-
-			int workerCount = m_workerData.getNumAssignedWorkers(depot);
-			int optimalWorkers = base->getMinerals().size() * 2;
-			if (workerCount < optimalWorkers)
-			{
-				std::vector<Unit> toRemove;
-				int needed = optimalWorkers - workerCount;
-				int moved = 0;
-				for (auto it = dispatchedWorkers.begin(); it != dispatchedWorkers.end(); it++)
-				{
-					//Dont move workers if its not safe
-					if (!Util::PathFinding::IsPathToGoalSafe(it->getUnitPtr(), base->getPosition(), true, m_bot))
-					{
-						continue;
-					}
-
-					m_workerData.setWorkerJob(*it, WorkerJobs::Minerals, depot, true);
-					toRemove.push_back(*it);
-					moved++;
-					if (moved >= needed)
-					{
-						break;
-					}
-				}
-
-				//remove already dispatched workers
-				for (auto worker : toRemove)
-				{
-					auto it = find(dispatchedWorkers.begin(), dispatchedWorkers.end(), worker);
-					if (it != dispatchedWorkers.end())
-					{
-						dispatchedWorkers.erase(it);
-					}
-				}
-				if (dispatchedWorkers.empty())
-				{
-					break;
-				}
-			}
 		}
 	}
 }

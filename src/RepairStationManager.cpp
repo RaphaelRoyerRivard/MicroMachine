@@ -80,6 +80,8 @@ CCPosition RepairStationManager::getBestRepairStationForUnit(const sc2::Unit* un
 
 bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack)
 {
+	const int MINIMUM_WORKER_COUNT = 3;
+
 	if (!baseLocation)
 		return false;
 
@@ -96,8 +98,10 @@ bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocatio
 	if (!resourceDepot.isCompleted() && !resourceDepot.getType().isMorphedBuilding())
 		return false;
 	
-	int workerCount = m_bot.Workers().getWorkerData().getNumAssignedWorkers(resourceDepot);
-	if (workerCount < 3)
+	auto workerData = m_bot.Workers().getWorkerData();
+	int workerCount = workerData.getNumAssignedWorkers(resourceDepot);
+	int repairWorkerCount = workerData.getRepairStationWorkers()[baseLocation].size();
+	if (workerCount + repairWorkerCount < MINIMUM_WORKER_COUNT)
 		return false;
 
 	return true;
