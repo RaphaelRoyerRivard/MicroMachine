@@ -1,6 +1,7 @@
 #include "WorkerData.h"
 #include "Util.h"
 #include "CCBot.h"
+#include "BaseLocation.h"
 #include <iostream>
 #include <sstream>
 
@@ -87,18 +88,21 @@ void WorkerData::updateWorker(const Unit & unit)
     }
 }
 
-void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool mineralWorkerTargetJobUnit)
+void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit, bool mineralWorkerTargetJobUnit)
 {
+	//Handle stopping a job
+	int previousJob = getWorkerJob(worker);
 	const int spamOrderDuring = 90;//1 second is 24.4 frames, 90 / 15 is 6 attemps.
-	if (getWorkerJob(unit) == WorkerJobs::Gas)
+	if (previousJob == WorkerJobs::Gas)
 	{
-		m_reorderedGasWorker[unit] = std::pair<Unit, int>(jobUnit, spamOrderDuring);
+		m_reorderedGasWorker[worker] = std::pair<Unit, int>(jobUnit, spamOrderDuring);
 	}
 
-	clearPreviousJob(unit);
-    m_workerJobMap[unit] = job;
+	clearPreviousJob(worker);
+    m_workerJobMap[worker] = job;
     m_workerJobCount[job]++;
 
+	//Handle starting a job
     if (job == WorkerJobs::Minerals)
     {
         // if we haven't assigned anything to this depot yet, set its worker count to 0
@@ -111,9 +115,9 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool min
         m_depots.insert(jobUnit);
 
         // increase the worker count of this depot
-		if (unit.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_MULE)
+		if (worker.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_MULE)
 		{
-			m_workerDepotMap[unit] = jobUnit;
+			m_workerDepotMap[worker] = jobUnit;
 			m_depotWorkerCount[jobUnit]++;
 		}
 
@@ -121,19 +125,19 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool min
 		Unit mineralToMine;
 		if (!mineralWorkerTargetJobUnit)
 		{
-			mineralToMine = getMineralToMine(unit);
+			mineralToMine = getMineralToMine(worker);
 		}
 		else
 		{
 			mineralToMine = getMineralToMine(jobUnit);
 		}
 
-        unit.rightClick(mineralToMine);
+        worker.rightClick(mineralToMine);
     }
     else if (job == WorkerJobs::Gas)
     {
 		BOT_ASSERT(jobUnit.getType().isRefinery(), "JobUnit should be refinery");
-		BOT_ASSERT(unit.getType().isWorker(), "Unit should be worker");
+		BOT_ASSERT(worker.getType().isWorker(), "Unit should be worker");
         // if we haven't assigned any workers to this refinery yet set count to 0
         if (m_refineryWorkerCount.find(jobUnit) == m_refineryWorkerCount.end())
         {
@@ -142,17 +146,17 @@ void WorkerData::setWorkerJob(const Unit & unit, int job, Unit jobUnit, bool min
 
         // increase the count of workers assigned to this refinery
         m_refineryWorkerCount[jobUnit] += 1;
-        m_workerRefineryMap[unit] = jobUnit;
-		m_refineryWorkerMap[jobUnit].push_back(unit);
+        m_workerRefineryMap[worker] = jobUnit;
+		m_refineryWorkerMap[jobUnit].push_back(worker);
 		
         // right click the refinery to start harvesting
-        unit.rightClick(jobUnit);
+        worker.rightClick(jobUnit);
     }
     else if (job == WorkerJobs::Repair)
     {
-        unit.repair(jobUnit);
-        m_workerRepairing[jobUnit].insert(unit);
-        m_workerRepairTarget[unit] = jobUnit;
+        worker.repair(jobUnit);
+        m_workerRepairing[jobUnit].insert(worker);
+        m_workerRepairTarget[worker] = jobUnit;
     }
     else if (job == WorkerJobs::Scout)
     {
@@ -391,6 +395,32 @@ void WorkerData::drawDepotDebugInfo()
 const std::set<Unit> & WorkerData::getWorkers() const
 {
     return m_workers;
+}
+
+std::map<const BaseLocation*, std::list<Unit>>& WorkerData::getRepairStationWorkers()
+{
+	return m_repairStationWorkers;
+}
+
+void WorkerData::validateRepairStationWorkers()
+{
+	for (auto & station : m_repairStationWorkers)
+	{
+		//Could validate the depot is valid and is alive, else clear everything for that base location
+
+		std::list<Unit> toRemove;
+		for (auto & worker : station.second)
+		{
+ 			if (!worker.isValid() || !worker.isAlive() || getWorkerJob(worker) != WorkerJobs::Repair)
+			{
+				toRemove.push_back(worker);
+			}
+		}
+		for (auto remove : toRemove)
+		{
+			station.second.remove(remove);
+		}
+	}
 }
 
 Unit WorkerData::getWorkerRepairTarget(const Unit & unit) const

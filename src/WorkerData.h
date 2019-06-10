@@ -1,6 +1,7 @@
 #pragma once
 #include "Common.h"
 #include "Unit.h"
+#include "BaseLocation.h"
 
 class CCBot;
 
@@ -22,7 +23,8 @@ class WorkerData
     std::map<Unit, Unit>    m_workerRefineryMap;
 	std::map<Unit, std::vector<Unit>> m_refineryWorkerMap;
     std::map<Unit, Unit>    m_workerDepotMap;
-    std::map<Unit, std::set<Unit>>    m_workerRepairing;
+    std::map<Unit, std::set<Unit>> m_workerRepairing;
+	std::map<const BaseLocation*, std::list<Unit>> m_repairStationWorkers;
     std::map<Unit, Unit>    m_workerRepairTarget;
 	std::map<Unit, std::pair<Unit, int>> m_reorderedGasWorker;
 
@@ -49,6 +51,8 @@ public:
     Unit    getWorkerDepot(const Unit & unit) const;
     const char * getJobCode(const Unit & unit);
     const std::set<Unit> & getWorkers() const;
+	std::map<const BaseLocation*, std::list<Unit>>& getRepairStationWorkers();
+	void validateRepairStationWorkers();
     Unit getWorkerRepairTarget(const Unit & unit) const;
 	int getWorkerRepairingTargetCount(const Unit & unit);
 	std::map<Unit, std::pair<Unit, int>> & getReorderedGasWorkers();
