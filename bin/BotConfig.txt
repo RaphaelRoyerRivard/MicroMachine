@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.4.0",
+        "BotVersion"                : "1.5.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,7 +24,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Terran",
-        "MapFile"                   : "NewRepugnancyLE.SC2Map",
+        "MapFile"                   : "KingsCoveLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -126,7 +126,7 @@
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
         "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : false,
+        "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
