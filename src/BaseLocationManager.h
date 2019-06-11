@@ -24,6 +24,7 @@ public:
     BaseLocationManager(CCBot & bot);
     
     void onStart();
+	bool affectToCluster(std::vector<std::vector<Unit>> & resourceClusters, Unit & resource, float maxDistanceWithCluster) const;
     void onFrame();
     void drawBaseLocations();
 	void drawResourceProxity();
