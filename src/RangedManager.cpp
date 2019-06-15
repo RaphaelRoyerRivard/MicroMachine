@@ -1422,34 +1422,37 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 
 	if (!rangedUnit->is_flying)
 	{
-		const CCPosition mapMin = m_bot.Map().mapMin();
-		const CCPosition mapMax = m_bot.Map().mapMax();
-		bool canMoveAtInitialDistanceOrFarther = true;
+		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+		{
+			const CCPosition mapMin = m_bot.Map().mapMin();
+			const CCPosition mapMax = m_bot.Map().mapMax();
+			bool canMoveAtInitialDistanceOrFarther = true;
 
-		// Check if we can move in the direction of the vector
-		// We check if we are moving towards and close to an unpathable position
-		while (!m_bot.Observation()->IsPathable(moveTo))
-		{
-			++moveDistance;
-			moveTo = rangedUnit->pos + directionVector * moveDistance;
-			// If moveTo is out of the map, stop checking farther and switch to influence map navigation
-			if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
+			// Check if we can move in the direction of the vector
+			// We check if we are moving towards and close to an unpathable position
+			while (!m_bot.Observation()->IsPathable(moveTo))
 			{
-				canMoveAtInitialDistanceOrFarther = false;
-				break;
+				++moveDistance;
+				moveTo = rangedUnit->pos + directionVector * moveDistance;
+				// If moveTo is out of the map, stop checking farther and switch to influence map navigation
+				if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
+				{
+					canMoveAtInitialDistanceOrFarther = false;
+					break;
+				}
 			}
-		}
-		if (canMoveAtInitialDistanceOrFarther)
-		{
-			outPathableTile = moveTo;
-			return true;
+			if (canMoveAtInitialDistanceOrFarther)
+			{
+				outPathableTile = moveTo;
+				return true;
+			}
 		}
 
 		// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
-		moveDistance = initialMoveDistance;
-		while (moveDistance > 2)
+		moveDistance = 3;
+		while (moveDistance <= initialMoveDistance)
 		{
-			--moveDistance;
+			++moveDistance;
 			moveTo = rangedUnit->pos + directionVector * moveDistance;
 			if (m_bot.Observation()->IsPathable(moveTo))
 			{
