@@ -312,6 +312,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		}
 		if (shouldTriggerExit)
 		{
+			// TODO review this block, looks weird
 			// If it exits on influence, we need to check if there is actually influence on the current tile. If so, we do not return a valid path
 			if (!exitOnInfluence || (!HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot)))
 			{
@@ -375,7 +376,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				const auto directionVector = GetPosition(neighborPosition) - GetPosition(currentNode->position);
 				float turnCost = 1 - GetDotProduct(facingVector, directionVector) * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
 				if (unit->radius >= 1.f)
-					turnCost *= 9;	// Node cost considers 9 tiles, so if we want the turn cost to has a proportional weight for big units, we need to multiply it
+					turnCost *= 9;	// Node cost considers 9 tiles, so if we want the turn cost to have a proportional weight for big units, we need to multiply it
 				totalCost += turnCost;
 
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);

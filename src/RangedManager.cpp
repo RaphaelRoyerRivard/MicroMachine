@@ -343,6 +343,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
 
 	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 	if (cycloneShouldUseLockOn || AllowUnitToPathFind(rangedUnit))
 	{
 		const CCPosition pathFindEndPos = target && !unitShouldHeal ? target->pos : goal;
@@ -353,6 +354,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			const auto action = RangedUnitAction(MicroActionType::Move, closePositionInPath, unitShouldHeal, actionDuration);
 			PlanAction(rangedUnit, action);
 			m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+			m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 			return;
 		}
 		else
@@ -361,6 +363,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+	m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 
 	m_bot.StartProfiling("0.10.4.1.5.1.8          PotentialFields");
 	bool useInfluenceMap = false;

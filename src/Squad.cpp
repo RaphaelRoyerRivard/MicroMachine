@@ -112,9 +112,9 @@ void Squad::onFrame()
 			m_bot.StartProfiling("0.10.4.1.4      ExecuteMeleeMicro");
             m_meleeManager.executeMicro();
 			m_bot.StopProfiling("0.10.4.1.4      ExecuteMeleeMicro");
-			m_bot.StartProfiling("0.10.4.1.5      ExecuteRangedMicro");
+			m_bot.StartProfiling("0.10.4.1.5      ExecuteRangedMicro " + m_name);
             m_rangedManager.executeMicro();
-			m_bot.StopProfiling("0.10.4.1.5      ExecuteRangedMicro");
+			m_bot.StopProfiling("0.10.4.1.5      ExecuteRangedMicro " + m_name);
         }
     }
 

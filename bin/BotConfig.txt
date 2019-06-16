@@ -82,7 +82,7 @@
         "MaxWorkerRepairDistance"   : 20,
         "ScoutHarassEnemy"          : true,
         "EnableMultiThreading"      : false,
-        "TournamentMode"            : false
+        "TournamentMode"            : true
     },
     
     "UCTConsideringDurations" :
@@ -130,7 +130,7 @@
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
-        "DrawHarassInfo"            : false,
+        "DrawHarassInfo"            : true,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : true,
