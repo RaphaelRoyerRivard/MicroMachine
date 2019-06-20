@@ -475,8 +475,52 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
     double minGeyserDistanceFromHome = std::numeric_limits<double>::max();
     CCPosition homePosition = m_bot.GetStartLocation();
 	auto& depots = m_bot.GetAllyDepotUnits();
+	auto& bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 
-    for (auto & geyser : m_bot.UnitInfo().getUnits(Players::Neutral))
+	for (auto & base : bases)
+	{
+		for (auto & geyser : base->getGeysers())
+		{
+
+			CCPosition geyserPos(geyser.getPosition());
+
+			//Check if refinery is already assigned to a building task (m_building)
+			auto assigned = false;
+			for (auto & refinery : m_bot.GetAllyUnits(Util::GetRefineryType().getAPIUnitType()))
+			{
+				auto a = Util::GetTilePosition(geyserPos);
+				auto b = refinery.getTilePosition();
+				if (Util::GetTilePosition(geyserPos) == refinery.getTilePosition())
+				{
+					assigned = true;
+					break;
+				}
+			}
+			if (assigned)
+			{
+				continue;
+			}
+			/*if (m_bot.Query()->Placement(sc2::ABILITY_ID::BUILD_REFINERY, geyserPos))
+			{
+				return Util::GetTilePosition(geyserPos);
+			}
+			continue;*/
+
+			const double homeDistance = Util::DistSq(geyser, homePosition);
+			if (homeDistance < minGeyserDistanceFromHome)
+			{
+				if (m_bot.Query()->Placement(sc2::ABILITY_ID::BUILD_REFINERY, geyserPos))
+				{
+					minGeyserDistanceFromHome = homeDistance;
+					closestGeyser = geyserPos;
+				}
+			}
+			break;
+		}
+	}
+
+	//OLD way of doing it
+    /*for (auto & geyser : m_bot.UnitInfo().getUnits(Players::Neutral))
     {
         if (!geyser.getType().isGeyser())
         {
@@ -529,11 +573,11 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 				break;
 			}
 		}
-    }
+    }*/
 	m_bot.StopProfiling("getRefineryPosition");
 
 #ifdef SC2API
-    return CCTilePosition((int)closestGeyser.x, (int)closestGeyser.y);
+    return Util::GetTilePosition(closestGeyser);
 #else
     return CCTilePosition(closestGeyser);
 #endif

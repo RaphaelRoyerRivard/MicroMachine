@@ -408,7 +408,10 @@ void ProductionManager::manageBuildOrderQueue()
 					}
 					else
 					{
-						Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
+						if (currentItem.type.getUnitType().getAPIUnitType() != Util::GetRefineryType().getAPIUnitType())//Supresses the refinery related errors
+						{
+							Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
+						}
 					}
 					m_bot.StopProfiling("2.2.4     Build with premovement");
 				}
@@ -482,7 +485,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		// We want to wait for our first Banshee to build our second CC, otherwise we might have difficulty defending it **COMMENTED**
 		else if (depotCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) && starportCount > 0)
 		{
-			m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
+			int workerCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
+			int fields = m_bot.Bases().getAccessibleMineralFieldCount();
+			const int WORKER_OFFSET = 5;//Start building earlier because we will be producing more of them while be build.
+			if (workerCount > fields * 2 - WORKER_OFFSET)
+			{
+				m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
+			}
 		}
 
 		// Strategy base logic

@@ -753,7 +753,7 @@ void WorkerManager::handleRepairWorkers()
 						{
 							baseRepairWorkers.push_back(worker);
 						}
-
+						 
 						repairWorkers++;
 						++it;
 						if (it == unitsToRepair.end())
@@ -778,17 +778,9 @@ void WorkerManager::handleRepairWorkers()
 		}
 
 		auto percentage = building.getHitPointsPercentage();
-		//Skip building being repaired
-		if (std::find(buildingAutomaticallyRepaired.begin(), buildingAutomaticallyRepaired.end(), building) != buildingAutomaticallyRepaired.end())
-		{
-			if (percentage >= MAX_HEALTH)
-			{
-				buildingAutomaticallyRepaired.remove(building);
-			}
-			continue;
-		}
+		auto repairCount = getWorkerData().getWorkerRepairingTargetCount(building);
 
-		if (percentage <= MIN_HEALTH && m_workerData.getWorkerRepairingTargetCount(building) < MAX_WORKER_PER_BUILDING)
+		if (percentage <= MIN_HEALTH && repairCount < MAX_WORKER_PER_BUILDING)
 		{
 			auto position = building.getPosition();
 			auto worker = getClosestMineralWorkerTo(position);
@@ -796,6 +788,13 @@ void WorkerManager::handleRepairWorkers()
 			{
 				setRepairWorker(worker, building);
 				buildingAutomaticallyRepaired.push_back(building);
+			}
+		}
+		else if (percentage >= MAX_HEALTH)
+		{
+			if (std::find(buildingAutomaticallyRepaired.begin(), buildingAutomaticallyRepaired.end(), building) != buildingAutomaticallyRepaired.end())
+			{
+				buildingAutomaticallyRepaired.remove(building);
 			}
 		}
 	}

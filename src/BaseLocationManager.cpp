@@ -18,7 +18,7 @@ void BaseLocationManager::onStart()
     
     // a BaseLocation will be anything where there are minerals to mine
     // so we will first look over all minerals and cluster them based on some distance
-    const CCPositionType clusterDistanceSq = Util::TileToPosition(12*12);
+    const CCPositionType clusterDistanceSq = Util::TileToPosition(12*12);//Can't be lower than 12 or some minerals/geysers will not be detected as part of a cluster.
 
 	//Initialize resource proximity map
 	const size_t mapWidth = m_bot.Map().totalWidth();
@@ -74,14 +74,14 @@ void BaseLocationManager::onStart()
         bool foundCluster = false;
         for (auto & cluster : resourceClusters)
         {
-            float distSq = Util::DistSq(mineral.second, Util::CalcCenter(cluster));
-            
+			float distSq = Util::DistSq(mineral.second, Util::CalcCenter(cluster));
             // quick initial air distance check to eliminate most resources
             if (distSq < clusterDistanceSq)
             {
                 // now do a more expensive ground distance check
                 //float groundDist = dist; //m_bot.Map().getGroundDistance(mineral.pos, Util::CalcCenter(cluster));
                 //if (groundDist >= 0 && groundDist < clusterDistance)
+				//if(m_bot.Map().terrainHeight(cluster[0].getTilePosition()) == m_bot.Map().terrainHeight(mineral.second.getTilePosition()))
                 {
                     cluster.push_back(mineral.second);
                     foundCluster = true;
@@ -699,4 +699,14 @@ void BaseLocationManager::sortBaseLocationPtrs()
 bool BaseLocationManager::isInProximityOfResources(int x, int y) const
 {
 	return m_resourceProximity[x][y];
+}
+
+int BaseLocationManager::getAccessibleMineralFieldCount() const
+{
+	int count = 0;
+	for (auto & base : getOccupiedBaseLocations(Players::Self))
+	{
+		count += base->getMinerals().size();
+	}
+	return count;
 }

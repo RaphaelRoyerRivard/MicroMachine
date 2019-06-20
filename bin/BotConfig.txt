@@ -24,7 +24,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Terran",
-        "MapFile"                   : "NewRepugnancyLE.SC2Map",
+        "MapFile"                   : "KingsCoveLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50

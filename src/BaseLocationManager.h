@@ -47,4 +47,5 @@ public:
 	void ClearBlockedLocations();
 	const BaseLocation* getBaseContainingPosition(const CCPosition position, int player) const;
 	bool isInProximityOfResources(int x, int y) const;
+	int getAccessibleMineralFieldCount() const;
 };

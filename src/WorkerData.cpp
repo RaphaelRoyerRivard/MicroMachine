@@ -36,7 +36,7 @@ void WorkerData::updateAllWorkerData()
     }
 
     // for each of our Workers
-    for (auto worker : getWorkers())
+    for (auto & worker : getWorkers())
     {
         // if it's idle
 		auto job = getWorkerJob(worker);
@@ -59,7 +59,7 @@ void WorkerData::updateAllWorkerData()
 
     // remove any worker units which no longer exist in the game
     std::vector<Unit> workersDestroyed;
-    for (auto worker : getWorkers())
+    for (auto & worker : getWorkers())
     {
 		if (!worker.isValid() || !worker.isAlive())
         {
@@ -67,9 +67,9 @@ void WorkerData::updateAllWorkerData()
         }
     }
 
-    for (auto worker : workersDestroyed)
+    for (auto & worker : workersDestroyed)
     {
-        workerDestroyed(worker);
+        workerDestroyed(worker);		
     }
 }
 
@@ -77,6 +77,15 @@ void WorkerData::workerDestroyed(const Unit & unit)
 {
     clearPreviousJob(unit);
     m_workers.erase(unit);
+
+	for (auto & building : m_workerRepairing)
+	{
+		if (building.second.find(unit) != building.second.end())
+		{
+			//worker is no longer repairing
+			building.second.erase(unit);
+		}
+	}
 }
 
 void WorkerData::updateWorker(const Unit & unit)
