@@ -18,7 +18,7 @@ void BaseLocationManager::onStart()
     
     // a BaseLocation will be anything where there are minerals to mine
     // so we will first look over all minerals and cluster them based on some distance
-    const CCPositionType clusterDistanceSq = Util::TileToPosition(12*12);//Can't be lower than 12 or some minerals/geysers will not be detected as part of a cluster.
+    const CCPositionType maxClusterDistanceSq = Util::TileToPosition(12*12);//Can't be lower than 12 or some minerals/geysers will not be detected as part of a cluster.
 
 	//Initialize resource proximity map
 	const size_t mapWidth = m_bot.Map().totalWidth();
@@ -71,26 +71,7 @@ void BaseLocationManager::onStart()
         if (mineral.getUnitPtr()->getResources() < 100) { continue; }
 #endif
 
-        bool foundCluster = false;
-        for (auto & cluster : resourceClusters)
-        {
-			float distSq = Util::DistSq(mineral.second, Util::CalcCenter(cluster));
-            // quick initial air distance check to eliminate most resources
-            if (distSq < clusterDistanceSq)
-            {
-                // now do a more expensive ground distance check
-                //float groundDist = dist; //m_bot.Map().getGroundDistance(mineral.pos, Util::CalcCenter(cluster));
-                //if (groundDist >= 0 && groundDist < clusterDistance)
-				//if(m_bot.Map().terrainHeight(cluster[0].getTilePosition()) == m_bot.Map().terrainHeight(mineral.second.getTilePosition()))
-                {
-                    cluster.push_back(mineral.second);
-                    foundCluster = true;
-                    break;
-                }
-            }
-        }
-
-        if (!foundCluster)
+        if (!affectToCluster(resourceClusters, mineral.second, maxClusterDistanceSq))
         {
             resourceClusters.push_back(std::vector<Unit>());
             resourceClusters.back().push_back(mineral.second);
@@ -120,17 +101,7 @@ void BaseLocationManager::onStart()
 			}
 		}
 
-        for (auto & cluster : resourceClusters)
-        {
-            //int groundDist = m_bot.Map().getGroundDistance(geyser.pos, Util::CalcCenter(cluster));
-            float groundDistSq = Util::DistSq(geyser.second, Util::CalcCenter(cluster));
-
-            if (/*groundDist >= 0 &&*/ groundDistSq < clusterDistanceSq)
-            {
-                cluster.push_back(geyser.second);
-                break;
-            }
-        }
+		affectToCluster(resourceClusters, geyser.second, maxClusterDistanceSq + 10);
     }
 
 	//Initialise the influence map so we can use the blocked tiles influence to  place the turrets
@@ -198,6 +169,30 @@ void BaseLocationManager::onStart()
     // construct the sets of occupied base locations
     m_occupiedBaseLocations[Players::Self] = std::set<BaseLocation *>();
     m_occupiedBaseLocations[Players::Enemy] = std::set<BaseLocation *>();
+}
+
+bool BaseLocationManager::affectToCluster(std::vector<std::vector<Unit>> & resourceClusters, Unit & resource, float maxDistanceWithCluster) const
+{
+	bool foundCluster = false;
+	for (auto & cluster : resourceClusters)
+	{
+		const auto clusterCenter = Util::CalcCenter(cluster);
+		const float distSq = Util::DistSq(resource, clusterCenter);
+
+		// quick initial air distance check to eliminate most resources
+		if (distSq < maxDistanceWithCluster)
+		{
+
+			// make sure the mineral is on the same terrain height as the cluster
+			if (std::abs(m_bot.Map().terrainHeight(resource.getPosition()) - m_bot.Map().terrainHeight(clusterCenter)) < 1.f)
+			{
+				cluster.push_back(resource);
+				foundCluster = true;
+				break;
+			}
+		}
+	}
+	return foundCluster;
 }
 
 void BaseLocationManager::onFrame()

@@ -44,7 +44,7 @@ void WorkerData::updateAllWorkerData()
         {
             setWorkerJob(worker, WorkerJobs::Idle);
         }
-		else if (job == WorkerJobs::Build)//Handle refinery builder
+		else if (job == WorkerJobs::Build)// Builders that have a harvest order won't go build, so we need to make them stop
 		{
 			auto orders = worker.getUnitPtr()->orders;
 			if (!orders.empty() && !m_bot.Workers().isReturningCargo(worker) && orders[0].ability_id == 3666)//3666 = HARVEST_GATHER

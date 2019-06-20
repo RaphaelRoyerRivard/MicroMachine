@@ -659,7 +659,7 @@ void CombatCommander::updateClearExpandSquads()
 			// if we don't have a squad assigned to this blocked expand already, create one
 			if (!m_squadData.squadExists(squadName.str()))
 			{
-				m_squadData.addSquad(squadName.str(), Squad(squadName.str(), clearExpand, BaseDefensePriority, m_bot));
+				m_squadData.addSquad(squadName.str(), Squad(squadName.str(), clearExpand, ClearExpandPriority, m_bot));
 			}
 
 			// assign units to the squad

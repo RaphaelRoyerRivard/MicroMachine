@@ -68,7 +68,7 @@ class CCBot
 	std::vector<Unit>       m_allUnits;
 	std::vector<Unit>       m_knownEnemyUnits;
     std::vector<CCPosition> m_enemyBaseLocations;
-	std::map<sc2::UNIT_TYPEID, std::vector<Unit>> m_knownEnemyUnitsPerType;
+	std::map<sc2::UNIT_TYPEID, std::vector<Unit>> m_enemyUnitsPerType;
 	std::map<sc2::UNIT_TYPEID, std::vector<Unit>> m_allyUnitsPerType;
 	CCRace selfRace;
 	std::map<std::string, Profiler> m_profilingTimes;

@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.4.0",
+        "BotVersion"                : "1.5.1",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -82,7 +82,7 @@
         "MaxWorkerRepairDistance"   : 20,
         "ScoutHarassEnemy"          : true,
         "EnableMultiThreading"      : false,
-        "TournamentMode"            : false
+        "TournamentMode"            : true
     },
     
     "UCTConsideringDurations" :
@@ -115,7 +115,7 @@
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
-        "DrawBaseLocationInfo"      : false,
+        "DrawBaseLocationInfo"      : true,
         "DrawStartingRamp"		    : false,
         "DrawWall"		   			: false,
         "DrawTileInfo"              : false,
@@ -126,11 +126,11 @@
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
         "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : false,
+        "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
-        "DrawHarassInfo"            : false,
+        "DrawHarassInfo"            : true,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : true,

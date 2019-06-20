@@ -10,6 +10,7 @@ const float CLIFF_MAX_HEIGHT_DIFFERENCE = 2.5f;
 const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
 const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
+const float PATHFINDING_TURN_COST = 3.f;
 const float CYCLONE_PATHFINDING_TILE_DOWN_RAMP_COST = 1.f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
@@ -311,6 +312,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		}
 		if (shouldTriggerExit)
 		{
+			// TODO review this block, looks weird
 			// If it exits on influence, we need to check if there is actually influence on the current tile. If so, we do not return a valid path
 			if (!exitOnInfluence || (!HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot)))
 			{
@@ -346,6 +348,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				const CCPosition mapMin = bot.Map().mapMin();
 				const CCPosition mapMax = bot.Map().mapMax();
 				float totalCost = 0.f;
+
 				// These other loops are used to consider the influence in adjacent tiles in the case of a unit with a big radius
 				for (; neighborX <= maxNeighborX; ++neighborX)
 				{
@@ -363,6 +366,19 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 						totalCost += currentNode->cost + nodeCost;
 					}
 				}
+
+				// Consider turning cost to prevent our units from wiggling while fleeing
+				CCPosition facingVector;
+				if (currentNode->parent == nullptr)
+					facingVector = Util::getFacingVector(unit);
+				else
+					facingVector = GetPosition(currentNode->position) - GetPosition(currentNode->parent->position);
+				const auto directionVector = GetPosition(neighborPosition) - GetPosition(currentNode->position);
+				float turnCost = 1 - GetDotProduct(facingVector, directionVector) * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
+				if (unit->radius >= 1.f)
+					turnCost *= 9;	// Node cost considers 9 tiles, so if we want the turn cost to have a proportional weight for big units, we need to multiply it
+				totalCost += turnCost;
+
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
 				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
 
