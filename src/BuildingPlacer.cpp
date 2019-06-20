@@ -479,6 +479,11 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 
 	for (auto & base : bases)
 	{
+		if (base->isUnderAttack())
+		{
+			continue;
+		}
+
 		for (auto & geyser : base->getGeysers())
 		{
 
