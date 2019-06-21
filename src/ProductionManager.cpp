@@ -487,7 +487,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		{
 			int workerCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
 			int fields = m_bot.Bases().getAccessibleMineralFieldCount();
-			const int WORKER_OFFSET = 5;//Start building earlier because we will be producing more of them while be build.
+			const int WORKER_OFFSET = 10;//Start building earlier because we will be producing more of them while be build.
 			if (workerCount > fields * 2 - WORKER_OFFSET)
 			{
 				m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
