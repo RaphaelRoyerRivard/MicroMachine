@@ -746,18 +746,20 @@ void BuildingManager::constructAssignedBuildings()
 						b.builderUnit.build(b.type, b.finalPosition);
 						if (b.type.isResourceDepot() && b.buildCommandGiven)//if ressource depot position is blocked by a unit, send elsewhere
 						{
-							// We want the worker to be close so it doesn't flag the base as blocked by error
-							const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
-							// If we can't build here, we can flag it as blocked
-							//bool tilesBuildable = m_bot.Buildings().getBuildingPlacer().canBuildHere(b.finalPosition.x, b.finalPosition.y, b, false);
-							const bool tilesBuildable = m_bot.Buildings().getBuildingPlacer().canBuildHereWithSpace(b.finalPosition.x, b.finalPosition.y, b, 0, false, false);
-							if (closeEnough || tilesBuildable)
+							if (m_bot.GetMinerals() >= b.type.mineralPrice())
 							{
-								m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true);
-								b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
-								b.buildCommandGiven = false;
+								// We want the worker to be close so it doesn't flag the base as blocked by error
+								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
+								// If we can't build here, we can flag it as blocked
+								const bool tilesBuildable = m_bot.Buildings().getBuildingPlacer().canBuildHereWithSpace(b.finalPosition.x, b.finalPosition.y, b, 0, false, false);
+								if (closeEnough || tilesBuildable)
+								{
+									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true);
+									b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
+									b.buildCommandGiven = false;
 
-								continue;
+									continue;
+								}
 							}
 						}
 					}
