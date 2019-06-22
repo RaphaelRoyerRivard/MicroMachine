@@ -1550,6 +1550,13 @@ CCPosition Util::getFacingVector(const sc2::Unit * unit)
 
 bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 {
+	const auto & enemyScans = bot.Commander().Combat().GetEnemyScans();
+	for(const auto & enemyScan : enemyScans)
+	{
+		if (Util::DistSq(position, enemyScan) <= 13 * 13)
+			return true;
+	}
+
 	std::vector<sc2::UnitTypeID> detectorTypes = {
 		sc2::UNIT_TYPEID::TERRAN_MISSILETURRET,
 		sc2::UNIT_TYPEID::TERRAN_RAVEN,

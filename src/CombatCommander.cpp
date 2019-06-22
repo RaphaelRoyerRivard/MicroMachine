@@ -275,6 +275,7 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 
 void CombatCommander::updateInfluenceMapsWithEffects()
 {
+	m_enemyScans.clear();
 	auto & effectDataVector = m_bot.Observation()->GetEffectData();
 	for (auto & effect : m_bot.Observation()->GetEffects())
 	{
@@ -303,6 +304,8 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 				targetType = sc2::Weapon::TargetType::Ground;
 				break;
 			case 6:	// Scanner Sweep
+				for (const auto & pos : effect.positions)
+					m_enemyScans.push_back(pos);
 				continue;
 			case 7: // Nuke Dot
 				radius = 8.f;

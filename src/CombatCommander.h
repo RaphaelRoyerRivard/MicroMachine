@@ -24,6 +24,7 @@ class CombatCommander
 	std::vector<std::vector<float>> m_groundEffectInfluenceMap;
 	std::vector<std::vector<float>> m_airEffectInfluenceMap;
 	std::vector<std::vector<bool>> m_blockedTiles;
+	std::vector<CCPosition> m_enemyScans;
 	
     bool            m_initialized;
     bool            m_attackStarted;
@@ -78,6 +79,7 @@ public:
 	void lowPriorityCheck();
 
 	std::map<Unit, std::pair<CCPosition, uint32_t>> & GetInvisibleSighting();
+	const std::vector<CCPosition> & GetEnemyScans() { return m_enemyScans; }
 
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
 	float getTotalGroundInfluence(CCTilePosition tilePosition) const;
