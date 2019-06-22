@@ -367,17 +367,21 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 					}
 				}
 
-				// Consider turning cost to prevent our units from wiggling while fleeing
-				CCPosition facingVector;
-				if (currentNode->parent == nullptr)
-					facingVector = Util::getFacingVector(unit);
-				else
-					facingVector = GetPosition(currentNode->position) - GetPosition(currentNode->parent->position);
-				const auto directionVector = GetPosition(neighborPosition) - GetPosition(currentNode->position);
-				float turnCost = 1 - GetDotProduct(facingVector, directionVector) * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
-				if (unit->radius >= 1.f)
-					turnCost *= 9;	// Node cost considers 9 tiles, so if we want the turn cost to have a proportional weight for big units, we need to multiply it
-				totalCost += turnCost;
+				// Consider turning cost to prevent our units from wiggling while fleeing, but not for workers that want to know if the path is safe
+				if (!exitOnInfluence)
+				{
+					CCPosition facingVector;
+					if (currentNode->parent == nullptr)
+						facingVector = Util::getFacingVector(unit);
+					else
+						facingVector = GetPosition(currentNode->position) - GetPosition(currentNode->parent->position);
+					const auto directionVector = GetPosition(neighborPosition) - GetPosition(currentNode->position);
+					const auto dotProduct = GetDotProduct(facingVector, directionVector);
+					float turnCost = (1 - dotProduct) * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
+					if (unit->radius >= 1.f)
+						turnCost *= 9;	// Node cost considers 9 tiles, so if we want the turn cost to have a proportional weight for big units, we need to multiply it
+					totalCost += turnCost;
+				}
 
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
 				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
