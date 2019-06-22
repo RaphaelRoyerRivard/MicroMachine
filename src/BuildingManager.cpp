@@ -749,7 +749,8 @@ void BuildingManager::constructAssignedBuildings()
 							// We want the worker to be close so it doesn't flag the base as blocked by error
 							bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
 							// If we can't build here, we can flag it as blocked
-							bool tilesBuildable = m_bot.Buildings().getBuildingPlacer().canBuildHere(b.finalPosition.x, b.finalPosition.y, b, false);
+							//bool tilesBuildable = m_bot.Buildings().getBuildingPlacer().canBuildHere(b.finalPosition.x, b.finalPosition.y, b, false);
+							const bool tilesBuildable = m_bot.Buildings().getBuildingPlacer().canBuildHereWithSpace(b.finalPosition.x, b.finalPosition.y, b, 0, false, false);
 							if (closeEnough || tilesBuildable)
 							{
 								m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true);

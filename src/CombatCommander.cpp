@@ -777,7 +777,7 @@ void CombatCommander::updateHarassSquads()
 				m_squadData.assignUnitToSquad(unit, harassSquad);
 		}
 	}
-	if(idleHellions.size() >= 10)
+	if(idleHellions.size() >= Util::HELLION_SQUAD_COUNT)
 	{
 		for (auto hellion : idleHellions)
 		{
