@@ -466,7 +466,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	{
 		// Logic for building Orbital Commands and Refineries
 		UnitType depot = Util::GetRessourceDepotType();
-		const size_t depotCount = m_bot.Buildings().countBoughtButNotBeingBuilt(depot.getAPIUnitType());
+		const size_t boughtDepotCount = m_bot.Buildings().countBoughtButNotBeingBuilt(depot.getAPIUnitType());
 		const size_t completedDepotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, depot, true, true);
 		if(m_bot.GetSelfRace() == CCRace::Terran && completedDepotCount > 0)
 		{
@@ -484,12 +484,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 		// We want to wait for our first Banshee to build our second CC, otherwise we might have difficulty defending it **COMMENTED**
-		else if (depotCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) && starportCount > 0)
+		else if (boughtDepotCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) && starportCount > 0)
 		{
-			int workerCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
-			int fields = m_bot.Bases().getAccessibleMineralFieldCount();
+			const bool enoughMinerals = m_bot.GetFreeMinerals() >= 600;
+			const int workerCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
+			const int mineralPatches = m_bot.Bases().getAccessibleMineralFieldCount();
 			const int WORKER_OFFSET = 10;//Start building earlier because we will be producing more of them while be build.
-			if (workerCount > fields * 2 - WORKER_OFFSET)
+			const bool enoughWorkers = workerCount > mineralPatches * 2 - WORKER_OFFSET;
+			if (enoughMinerals || enoughWorkers)
 			{
 				m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
 			}
