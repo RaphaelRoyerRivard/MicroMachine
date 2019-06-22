@@ -252,15 +252,15 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
+	const int maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = Util::GetTilePosition(unit->pos);
-	//const bool flee = !exitOnInfluence && maxRange == 0.f;
 	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
 
-	while (!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE * (bot.Config().TournamentMode || exitOnInfluence ? 3 : 1))
+	while (!opened.empty() && closed.size() < maxExploredNode)
 	{
 		IMNode* currentNode = getLowestCostNode(opened);
 		opened.erase(currentNode);
