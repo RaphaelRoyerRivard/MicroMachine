@@ -36,10 +36,6 @@ const int ACTION_REEXECUTION_FREQUENCY = 50;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 {
-	for(auto& ability : bot.Observation()->GetAbilityData())
-	{
-		abilityCastingRanges.insert_or_assign(ability.ability_id, ability.cast_range);
-	}
 }
 
 void RangedManager::setTargets(const std::vector<Unit> & targets)
@@ -112,6 +108,7 @@ void RangedManager::executeMicro()
 
 bool RangedManager::isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit)
 {
+	auto & nextAvailableAbility = m_bot.Commander().Combat().getNextAvailableAbility();
 	const auto abilityIt = nextAvailableAbility.find(abilityId);
 	if (abilityIt == nextAvailableAbility.end())
 		return true;
@@ -138,7 +135,7 @@ bool RangedManager::isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Uni
 
 void RangedManager::setNextFrameAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit, uint32_t nextAvailableFrame)
 {
-	nextAvailableAbility[abilityId][rangedUnit] = nextAvailableFrame;
+	m_bot.Commander().Combat().getNextAvailableAbility()[abilityId][rangedUnit] = nextAvailableFrame;
 }
 
 int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* target) const
@@ -295,7 +292,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (target)
 	{
 		if(cycloneShouldUseLockOn)
-			unitAttackRange = abilityCastingRanges[sc2::ABILITY_ID::EFFECT_LOCKON] + rangedUnit->radius + target->radius;
+			unitAttackRange = m_bot.Commander().Combat().getAbilityCastingRanges()[sc2::ABILITY_ID::EFFECT_LOCKON] + rangedUnit->radius + target->radius;
 		else
 			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 		targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;
@@ -459,7 +456,24 @@ bool RangedManager::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
 
 bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
 {
+	// Toggle off the auto-cast of Lock-On on the second frame of existence of the Cyclone (just to make sure there is no bug with the toggle)
+	auto & newCyclones = m_bot.Commander().Combat().getNewCyclones();
+	auto & toggledCyclones = m_bot.Commander().Combat().getToggledCyclones();
+	if(!Util::Contains(cyclone->tag, newCyclones))
+	{
+		newCyclones.insert(cyclone->tag);
+	}
+	else if (!Util::Contains(cyclone->tag, toggledCyclones))
+	{
+		const auto action = RangedUnitAction(MicroActionType::ToggleAbility, sc2::ABILITY_ID::EFFECT_LOCKON, true, 0);
+		PlanAction(cyclone, action);
+		toggledCyclones.insert(cyclone->tag);
+		return true;
+	}
+
 	// Check if Lock-On casting is canceled or over
+	auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
+	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 	const auto it = lockOnCastedFrame.find(cyclone);
 	if (it != lockOnCastedFrame.end())
 	{
@@ -496,14 +510,6 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
 		}
 	}
 
-	// Toggle off the auto-cast of Lock-On
-	if (toggledCyclones.find(cyclone->tag) == toggledCyclones.end())
-	{
-		Micro::SmartToggleAutoCast(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON, m_bot);
-		toggledCyclones.insert(cyclone->tag);
-		return true;
-	}
-
 	// Let the CombatAnalyzer know of the damage the Cyclone is doing with its Lock-On ability
 	const auto lockOnTarget = lockOnTargets.find(cyclone);
 	if(lockOnTarget != lockOnTargets.end())
@@ -523,6 +529,8 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
 
 bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started) const
 {
+	auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
+	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 	const uint32_t currentFrame = m_bot.GetCurrentFrame();
 	const auto it = started ? lockOnTargets.find(cyclone) : lockOnCastedFrame.find(cyclone);
 	const auto & pair = it->second;
@@ -578,6 +586,7 @@ bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inD
 
 bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 {
+	auto & unitsBeingRepaired = m_bot.Commander().Combat().getUnitsBeingRepaired();
 	UnitType unitType(rangedUnit->unit_type, m_bot);
 	if (unitType.isRepairable())
 	{
@@ -790,6 +799,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 	const bool abilityAvailable = isAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone);
 	if (abilityAvailable)
 	{
+		auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 		// Lock-On ability is not on cooldown
 		const auto it = lockOnTargets.find(cyclone);
 		if (it != lockOnTargets.end())
@@ -817,7 +827,10 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 	else
 	{
 		if (m_bot.Config().DrawHarassInfo)
+		{
+			auto & nextAvailableAbility = m_bot.Commander().Combat().getNextAvailableAbility();
 			m_bot.Map().drawCircle(cyclone->pos, float(nextAvailableAbility[sc2::ABILITY_ID::EFFECT_LOCKON][cyclone] - currentFrame) / CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT, sc2::Colors::Red);
+		}
 	}
 
 	/*if (queryAbilityAvailable != abilityAvailable)
@@ -838,6 +851,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 		if (!threats.empty())
 		{
 			const auto cycloneHeight = m_bot.Map().terrainHeight(cyclone->pos);
+			auto & abilityCastingRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
 			const auto partialLockOnRange = abilityCastingRanges[sc2::ABILITY_ID::EFFECT_LOCKON] + cyclone->radius;
 			const sc2::Unit * bestTarget = nullptr;
 			float bestScore = 0.f;
@@ -916,6 +930,8 @@ void RangedManager::LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * ta
 	const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_LOCKON, target, unitShouldHeal, 0);
 	PlanAction(cyclone, action);
 	const auto pair = std::pair<const sc2::Unit *, uint32_t>(target, m_bot.GetGameLoop());
+	auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
+	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 	lockOnCastedFrame.insert_or_assign(cyclone, pair);
 	lockOnTargets.insert_or_assign(cyclone, pair);
 }
@@ -1169,6 +1185,7 @@ bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2:
 bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats)
 {
 	const size_t currentFrame = m_bot.GetCurrentFrame();
+	auto & queryYamatoAvailability = m_bot.Commander().Combat().getQueryYamatoAvailability();
 	if(queryYamatoAvailability.find(battlecruiser) != queryYamatoAvailability.end())
 	{
 		queryYamatoAvailability.erase(battlecruiser);
@@ -1185,6 +1202,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 
 	const sc2::Unit* target = nullptr;
 	float maxDps = 0.f;
+	auto & abilityCastingRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
 	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN);
 	for (const auto threat : threats)
 	{
@@ -1236,6 +1254,8 @@ bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::U
 		return false;
 	}
 
+	auto & abilityCastingRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
+	const float kd8Range = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_KD8CHARGE);
 	for (const auto threat : threats)
 	{
 		if (threat->is_flying)
@@ -1259,7 +1279,6 @@ bool RangedManager::ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::U
 		if (!m_bot.Map().isWalkable(expectedThreatPosition))
 			continue;
 		const float distToExpectedPosition = Util::DistSq(reaper->pos, expectedThreatPosition);
-		const float kd8Range = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_KD8CHARGE);
 		// Check if we have enough reach to throw at the threat
 		if (distToExpectedPosition <= kd8Range * kd8Range)
 		{
@@ -1669,6 +1688,9 @@ void RangedManager::ExecuteActions()
 			break;
 		case MicroActionType::RightClick:
 			Micro::SmartRightClick(rangedUnit, action.target, m_bot);
+			break;
+		case MicroActionType::ToggleAbility:
+			Micro::SmartToggleAutoCast(rangedUnit, action.abilityID, m_bot);
 			break;
 		default:
 			const int type = action.microActionType;

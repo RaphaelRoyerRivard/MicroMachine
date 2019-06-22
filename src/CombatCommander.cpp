@@ -35,11 +35,15 @@ CombatCommander::CombatCommander(CCBot & bot)
 	, m_currentBaseExplorationIndex(0)
 	, m_currentBaseScoutingIndex(0)
 {
-
 }
 
 void CombatCommander::onStart()
 {
+	for (auto& ability : m_bot.Observation()->GetAbilityData())
+	{
+		m_abilityCastingRanges.insert_or_assign(ability.ability_id, ability.cast_range);
+	}
+
     m_squadData.clearSquadData();
 
 	// the squad that consists of units waiting for the squad to be big enough to begin the main attack
