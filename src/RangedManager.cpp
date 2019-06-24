@@ -433,7 +433,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 
 	// Banshee in danger should cloak itself if low on hp
-	if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
+	if (isBanshee && unitShouldHeal && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
 	{
 		return;
 	}
