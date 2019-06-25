@@ -106,7 +106,7 @@ void RangedManager::executeMicro()
     }
 }
 
-bool RangedManager::isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit)
+bool RangedManager::isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const
 {
 	auto & nextAvailableAbility = m_bot.Commander().Combat().getNextAvailableAbility();
 	const auto abilityIt = nextAvailableAbility.find(abilityId);
@@ -550,6 +550,15 @@ bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool star
 		return true;
 
 	// TODO some spells from the enemy could stop our Cyclone's lock-on (like the Pheonix levitation)
+
+	// Sometimes, even though the target is perfectly valid, the Lock-On command won't work.
+	// Since the Lock-On ability is supposed to become unavailable the next frame it is cast, we know it didn't work if it is still available
+	if (currentFrame == frameCast + 1)
+	{
+		const bool lockOnAvailable = QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON);
+		if (lockOnAvailable)
+			return true;
+	}
 
 	return false;
 }

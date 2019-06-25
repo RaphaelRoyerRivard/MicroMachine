@@ -119,7 +119,7 @@ private:
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
 	bool m_harassMode = false;
 
-	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit);
+	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
 	void setNextFrameAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit, uint32_t nextAvailableFrame);
 	int getAttackDuration(const sc2::Unit* unit, const sc2::Unit* target) const;
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
