@@ -560,8 +560,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					queueTech(MetaTypeEnum::HyperflightRotors);
 				}
 
-				const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
-				if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && battlecruiserCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
+				//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), false, true);
+				if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && hasFusionCore && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
 				{
 					queueTech(MetaTypeEnum::YamatoCannon);
 				}

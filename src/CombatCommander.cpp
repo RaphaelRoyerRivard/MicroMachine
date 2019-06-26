@@ -759,6 +759,7 @@ void CombatCommander::updateHarassSquads()
 	Squad & harassSquad = m_squadData.getSquad("Harass");
 	std::vector<Unit*> idleHellions;
 	std::vector<Unit*> idleMarines;
+	std::vector<Unit*> idleVikings;
 	for (auto & unit : m_combatUnits)
 	{
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
@@ -780,6 +781,8 @@ void CombatCommander::updateHarassSquads()
 				idleHellions.push_back(&unit);
 			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE)
 				idleMarines.push_back(&unit);
+			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+				idleVikings.push_back(&unit);
 			else
 				m_squadData.assignUnitToSquad(unit, harassSquad);
 		}
@@ -797,6 +800,14 @@ void CombatCommander::updateHarassSquads()
 		for (auto marine : idleMarines)
 		{
 			m_squadData.assignUnitToSquad(*marine, harassSquad);
+		}
+	}
+	const auto tempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
+	if(idleVikings.size() >= tempestCount * 5)
+	{
+		for (auto viking : idleVikings)
+		{
+			m_squadData.assignUnitToSquad(*viking, harassSquad);
 		}
 	}
 
