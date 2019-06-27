@@ -474,7 +474,7 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
     CCPosition closestGeyser(0, 0);
     double minGeyserDistanceFromHome = std::numeric_limits<double>::max();
     CCPosition homePosition = m_bot.GetStartLocation();
-	auto& depots = m_bot.GetAllyDepotUnits();
+	//auto& depots = m_bot.GetAllyDepotUnits();
 	auto& bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 
 	for (auto & base : bases)
@@ -486,15 +486,12 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 
 		for (auto & geyser : base->getGeysers())
 		{
-
 			CCPosition geyserPos(geyser.getPosition());
 
 			//Check if refinery is already assigned to a building task (m_building)
 			auto assigned = false;
 			for (auto & refinery : m_bot.GetAllyUnits(Util::GetRefineryType().getAPIUnitType()))
 			{
-				auto a = Util::GetTilePosition(geyserPos);
-				auto b = refinery.getTilePosition();
 				if (Util::GetTilePosition(geyserPos) == refinery.getTilePosition())
 				{
 					assigned = true;

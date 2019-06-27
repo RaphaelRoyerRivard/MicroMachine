@@ -29,8 +29,7 @@ void ProductionManager::onStart()
 	supplyProvider = Util::GetSupplyProvider();
 	supplyProviderType = MetaType(supplyProvider, m_bot);
 
-	workerType = Util::GetWorkerType();
-	workerMetatype = MetaType(workerType, m_bot);
+	workerMetatype = MetaType(Util::GetWorkerType(), m_bot);
 	
 	switch (m_bot.GetSelfRace())
 	{
