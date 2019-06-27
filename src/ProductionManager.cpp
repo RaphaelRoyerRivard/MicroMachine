@@ -441,6 +441,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	if (m_bot.Config().AllowDebug && m_bot.GetCurrentFrame() % 10)
 		return;
 
+	const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
 	const float productionScore = getProductionScore();
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
@@ -464,7 +465,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	{
 		// Logic for building Orbital Commands and Refineries
 		UnitType depot = Util::GetRessourceDepotType();
-		const size_t depotCount = m_bot.Buildings().countBoughtButNotBeingBuilt(depot.getAPIUnitType());
+		const size_t boughtDepotCount = m_bot.Buildings().countBoughtButNotBeingBuilt(depot.getAPIUnitType());
 		const size_t completedDepotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, depot, true, true);
 		if(m_bot.GetSelfRace() == CCRace::Terran && completedDepotCount > 0)
 		{
@@ -482,12 +483,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 		// We want to wait for our first Banshee to build our second CC, otherwise we might have difficulty defending it **COMMENTED**
-		else if (depotCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) && starportCount > 0)
+		else if (boughtDepotCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) && starportCount > 0)
 		{
-			int workerCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
-			int fields = m_bot.Bases().getAccessibleMineralFieldCount();
-			const int WORKER_OFFSET = 5;//Start building earlier because we will be producing more of them while be build.
-			if (workerCount > fields * 2 - WORKER_OFFSET)
+			const bool enoughMinerals = m_bot.GetFreeMinerals() >= 600;
+			const int workerCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
+			const int mineralPatches = m_bot.Bases().getAccessibleMineralFieldCount();
+			const int WORKER_OFFSET = 10;//Start building earlier because we will be producing more of them while be build.
+			const bool enoughWorkers = workerCount > mineralPatches * 2 - WORKER_OFFSET;
+			if (enoughMinerals || enoughWorkers)
 			{
 				m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
 			}
@@ -556,8 +559,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					queueTech(MetaTypeEnum::HyperflightRotors);
 				}
 
-				const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
-				if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && battlecruiserCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
+				//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), false, true);
+				if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && hasFusionCore && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
 				{
 					queueTech(MetaTypeEnum::YamatoCannon);
 				}
@@ -595,23 +598,25 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 
 #ifndef NO_UNITS
-				if (bansheeCount >= 3 && (m_bot.GetPlayerRace(Players::Enemy) == sc2::Terran || m_bot.Strategy().enemyHasInvisible()) && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
+				if ((m_bot.Strategy().enemyHasInvisible() || (enemyRace == sc2::Terran && bansheeCount >= 3)) && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
 				{
 					m_queue.queueAsHighestPriority(MetaTypeEnum::Raven, false);
 				}
 #endif
 
-				if (m_bot.Strategy().enemyHasMassZerglings())
+				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
+				const bool massZergling = m_bot.Strategy().enemyHasMassZerglings();
+				// Against Zerg, produce at least 2 Hellions and then do more only if enemy has mass zerglings 
+				if (enemyRace == sc2::Race::Zerg && (hellionCount < 2 || massZergling))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 #ifndef NO_UNITS
-					if (m_bot.Strategy().enemyHasMassZerglings() && !m_queue.contains(MetaTypeEnum::Hellion))
+					if (!m_queue.contains(MetaTypeEnum::Hellion))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
 					}
 #endif
 
-					const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
 					if (hellionCount >= 2 && !isTechQueuedOrStarted(MetaTypeEnum::InfernalPreIgniter) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HIGHCAPACITYBARRELS))
 					{
 						queueTech(MetaTypeEnum::InfernalPreIgniter);

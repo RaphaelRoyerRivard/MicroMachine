@@ -9,6 +9,7 @@ class Unit;
 
 namespace Util
 {
+	static int HELLION_SQUAD_COUNT = 10;
 	static const int DELAY_BETWEEN_ERROR = 120;
 	static std::vector<std::string> displayedError;
 	static std::ofstream file;

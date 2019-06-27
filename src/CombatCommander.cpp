@@ -35,11 +35,15 @@ CombatCommander::CombatCommander(CCBot & bot)
 	, m_currentBaseExplorationIndex(0)
 	, m_currentBaseScoutingIndex(0)
 {
-
 }
 
 void CombatCommander::onStart()
 {
+	for (auto& ability : m_bot.Observation()->GetAbilityData())
+	{
+		m_abilityCastingRanges.insert_or_assign(ability.ability_id, ability.cast_range);
+	}
+
     m_squadData.clearSquadData();
 
 	// the squad that consists of units waiting for the squad to be big enough to begin the main attack
@@ -275,6 +279,7 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 
 void CombatCommander::updateInfluenceMapsWithEffects()
 {
+	m_enemyScans.clear();
 	auto & effectDataVector = m_bot.Observation()->GetEffectData();
 	for (auto & effect : m_bot.Observation()->GetEffects())
 	{
@@ -303,6 +308,8 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 				targetType = sc2::Weapon::TargetType::Ground;
 				break;
 			case 6:	// Scanner Sweep
+				for (const auto & pos : effect.positions)
+					m_enemyScans.push_back(pos);
 				continue;
 			case 7: // Nuke Dot
 				radius = 8.f;
@@ -752,6 +759,7 @@ void CombatCommander::updateHarassSquads()
 	Squad & harassSquad = m_squadData.getSquad("Harass");
 	std::vector<Unit*> idleHellions;
 	std::vector<Unit*> idleMarines;
+	std::vector<Unit*> idleVikings;
 	for (auto & unit : m_combatUnits)
 	{
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
@@ -773,11 +781,13 @@ void CombatCommander::updateHarassSquads()
 				idleHellions.push_back(&unit);
 			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE)
 				idleMarines.push_back(&unit);
+			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+				idleVikings.push_back(&unit);
 			else
 				m_squadData.assignUnitToSquad(unit, harassSquad);
 		}
 	}
-	if(idleHellions.size() >= 10)
+	if(idleHellions.size() >= Util::HELLION_SQUAD_COUNT)
 	{
 		for (auto hellion : idleHellions)
 		{
@@ -790,6 +800,14 @@ void CombatCommander::updateHarassSquads()
 		for (auto marine : idleMarines)
 		{
 			m_squadData.assignUnitToSquad(*marine, harassSquad);
+		}
+	}
+	const auto tempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
+	if(idleVikings.size() >= tempestCount * 5)
+	{
+		for (auto viking : idleVikings)
+		{
+			m_squadData.assignUnitToSquad(*viking, harassSquad);
 		}
 	}
 

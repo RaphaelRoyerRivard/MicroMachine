@@ -91,7 +91,7 @@ void Squad::onFrame()
     else*/ // otherwise, execute micro
     {
 		//m_rangedManager.setHarassMode(m_order.getType() == SquadOrderTypes::Harass);
-		m_rangedManager.setHarassMode(true);	//TODO fix behavior tree bugs instead of always using harass mode
+		m_rangedManager.setHarassMode(true);
         // Nothing to do if we have no units
         //if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend || m_order.getType() == SquadOrderTypes::Harass))
 		if (!m_units.empty() && m_order.getType() != SquadOrderTypes::Idle)
@@ -160,8 +160,9 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (m_order.getType() == SquadOrderTypes::Defend)
 		{
 			addUnit = Util::DistSq(enemyUnit, m_order.getPosition()) < m_order.getRadius() * m_order.getRadius();
-		} // if the order is to harass, we care about every unit around each of our units
-		else if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Harass)
+		} 
+		// if the order is to harass, we care about every unit around each of our units
+		if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Harass || (m_order.getType() == SquadOrderTypes::Defend && !addUnit))
 		{
 			for (auto & unit : m_units)
 			{

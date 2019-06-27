@@ -23,8 +23,8 @@
         "PlayAsHuman"               : false,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Terran",
-        "MapFile"                   : "KingsCoveLE.SC2Map",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "DreamcatcherLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -82,7 +82,7 @@
         "MaxWorkerRepairDistance"   : 20,
         "ScoutHarassEnemy"          : true,
         "EnableMultiThreading"      : false,
-        "TournamentMode"            : true
+        "TournamentMode"            : false
     },
     
     "UCTConsideringDurations" :

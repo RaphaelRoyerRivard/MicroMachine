@@ -24,6 +24,15 @@ class CombatCommander
 	std::vector<std::vector<float>> m_groundEffectInfluenceMap;
 	std::vector<std::vector<float>> m_airEffectInfluenceMap;
 	std::vector<std::vector<bool>> m_blockedTiles;
+	std::vector<CCPosition> m_enemyScans;
+	std::map<sc2::ABILITY_ID, std::map<const sc2::Unit *, uint32_t>> m_nextAvailableAbility;
+	std::map<sc2::ABILITY_ID, float> m_abilityCastingRanges;
+	std::set<const sc2::Unit *> m_unitsBeingRepaired;
+	std::set<const sc2::Unit *> m_queryYamatoAvailability;
+	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnCastedFrame;
+	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnTargets;
+	std::set<sc2::Tag> m_newCyclones;
+	std::set<sc2::Tag> m_toggledCyclones;
 	
     bool            m_initialized;
     bool            m_attackStarted;
@@ -78,7 +87,15 @@ public:
 	void lowPriorityCheck();
 
 	std::map<Unit, std::pair<CCPosition, uint32_t>> & GetInvisibleSighting();
-
+	const std::vector<CCPosition> & GetEnemyScans() const { return m_enemyScans; }
+	std::map<sc2::ABILITY_ID, std::map<const sc2::Unit *, uint32_t>> & getNextAvailableAbility() { return m_nextAvailableAbility; }
+	std::map<sc2::ABILITY_ID, float> & getAbilityCastingRanges() { return m_abilityCastingRanges; }
+	std::set<const sc2::Unit *> & getUnitsBeingRepaired() { return m_unitsBeingRepaired; }
+	std::set<const sc2::Unit *> & getQueryYamatoAvailability() { return m_queryYamatoAvailability; }
+	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> & getLockOnCastedFrame() { return m_lockOnCastedFrame; }
+	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> & getLockOnTargets() { return m_lockOnTargets; }
+	std::set<sc2::Tag> & getNewCyclones() { return m_newCyclones; }
+	std::set<sc2::Tag> & getToggledCyclones() { return m_toggledCyclones; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
 	float getTotalGroundInfluence(CCTilePosition tilePosition) const;
 	float getTotalAirInfluence(CCTilePosition tilePosition) const;

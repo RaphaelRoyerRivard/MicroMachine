@@ -252,15 +252,15 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
+	const int maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = Util::GetTilePosition(unit->pos);
-	//const bool flee = !exitOnInfluence && maxRange == 0.f;
 	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
 
-	while (!opened.empty() && closed.size() < HARASS_PATHFINDING_MAX_EXPLORED_NODE * (bot.Config().TournamentMode || exitOnInfluence ? 3 : 1))
+	while (!opened.empty() && closed.size() < maxExploredNode)
 	{
 		IMNode* currentNode = getLowestCostNode(opened);
 		opened.erase(currentNode);
@@ -367,17 +367,21 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 					}
 				}
 
-				// Consider turning cost to prevent our units from wiggling while fleeing
-				CCPosition facingVector;
-				if (currentNode->parent == nullptr)
-					facingVector = Util::getFacingVector(unit);
-				else
-					facingVector = GetPosition(currentNode->position) - GetPosition(currentNode->parent->position);
-				const auto directionVector = GetPosition(neighborPosition) - GetPosition(currentNode->position);
-				float turnCost = 1 - GetDotProduct(facingVector, directionVector) * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
-				if (unit->radius >= 1.f)
-					turnCost *= 9;	// Node cost considers 9 tiles, so if we want the turn cost to have a proportional weight for big units, we need to multiply it
-				totalCost += turnCost;
+				// Consider turning cost to prevent our units from wiggling while fleeing, but not for workers that want to know if the path is safe
+				if (!exitOnInfluence)
+				{
+					CCPosition facingVector;
+					if (currentNode->parent == nullptr)
+						facingVector = Util::getFacingVector(unit);
+					else
+						facingVector = GetPosition(currentNode->position) - GetPosition(currentNode->parent->position);
+					const auto directionVector = GetPosition(neighborPosition) - GetPosition(currentNode->position);
+					const auto dotProduct = GetDotProduct(facingVector, directionVector);
+					float turnCost = (1 - dotProduct) * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
+					if (unit->radius >= 1.f)
+						turnCost *= 9;	// Node cost considers 9 tiles, so if we want the turn cost to have a proportional weight for big units, we need to multiply it
+					totalCost += turnCost;
+				}
 
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
 				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
@@ -1546,6 +1550,13 @@ CCPosition Util::getFacingVector(const sc2::Unit * unit)
 
 bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 {
+	const auto & enemyScans = bot.Commander().Combat().GetEnemyScans();
+	for(const auto & enemyScan : enemyScans)
+	{
+		if (Util::DistSq(position, enemyScan) <= 13 * 13)
+			return true;
+	}
+
 	std::vector<sc2::UnitTypeID> detectorTypes = {
 		sc2::UNIT_TYPEID::TERRAN_MISSILETURRET,
 		sc2::UNIT_TYPEID::TERRAN_RAVEN,
