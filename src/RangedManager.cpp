@@ -268,21 +268,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
 	}
 
-	const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
-
-	// check if the viking should morph
-	if(isViking && ExecuteVikingMorphLogic(rangedUnit, squaredDistanceToGoal, target, unitShouldHeal))
+	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, goal, unitShouldHeal))
 	{
 		return;
 	}
 
 	// if there is no potential target or threat, move to objective (max distance is not considered when defending)
-	if(MoveToGoal(rangedUnit, threats, target, goal, squaredDistanceToGoal, unitShouldHeal))
-	{
-		return;
-	}
-
-	if(ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, threats))
+	if(MoveToGoal(rangedUnit, threats, target, goal, unitShouldHeal))
 	{
 		return;
 	}
@@ -684,10 +676,11 @@ bool RangedManager::IsLockedOn(const sc2::Unit * rangedUnit) const
 	return false;
 }
 
-bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squaredDistanceToGoal, const sc2::Unit* target, bool unitShouldHeal)
+bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, bool unitShouldHeal)
 {
 	bool morph = false;
 	sc2::AbilityID morphAbility = 0;
+	const auto squaredDistanceToGoal = Util::DistSq(viking->pos, goal);
 	if(unitShouldHeal)
 	{
 		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
@@ -720,7 +713,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, float squa
 	return morph;
 }
 
-bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, float squaredDistanceToGoal, bool unitShouldHeal)
+bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, bool unitShouldHeal)
 {
 	if ((!target ||
 		(m_order.getType() != SquadOrderTypes::Defend && Util::DistSq(rangedUnit->pos, target->pos) > m_order.getRadius() * m_order.getRadius()))
@@ -731,6 +724,7 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Blue);
 #endif
 
+		const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
 		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings());
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 		const auto action = RangedUnitAction(moveWithoutAttack ? MicroActionType::Move : MicroActionType::AttackMove, goal, unitShouldHeal, actionDuration);
@@ -1166,11 +1160,21 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	return currentUnitHasACommand;
 }
 
-bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats)
+bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, CCPosition goal, bool unitShouldHeal)
 {
-	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && ExecuteYamatoCannonLogic(rangedUnit, threats))
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 	{
-		return true;
+		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, unitShouldHeal))
+			return true;
+	}
+
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+	{
+		if (ExecuteOffensiveTeleportLogic(rangedUnit, threats, goal))
+			return true;
+
+		if (ExecuteYamatoCannonLogic(rangedUnit, threats))
+			return true;
 	}
 
 	return false;
@@ -1187,6 +1191,18 @@ bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2:
 	{
 		return true;
 	}
+
+	return false;
+}
+
+bool RangedManager::ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats, CCPosition goal)
+{
+	if (!threats.empty())
+		return false;
+
+	const auto distSq = Util::DistSq(battlecruiser->pos, goal);
+	if (distSq >= 50 * 50)
+		return TeleportBattlecruiser(battlecruiser, goal);
 
 	return false;
 }
@@ -1212,12 +1228,17 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	const sc2::Unit* target = nullptr;
 	float maxDps = 0.f;
 	auto & abilityCastingRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
+	auto & yamatoTargets = m_bot.Commander().Combat().getYamatoTargets();
 	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN);
 	for (const auto threat : threats)
 	{
 		const float threatDistance = Util::DistSq(battlecruiser->pos, threat->pos);
 		const float threatHp = threat->health + threat->shield;
-		if (threatDistance <= yamatoRange * yamatoRange && threatHp >= 120.f)
+		unsigned yamatos = 0;
+		const auto & it = yamatoTargets.find(threat);
+		if (it != yamatoTargets.end())
+			yamatos = it->second.size();
+		if (threatDistance <= yamatoRange * yamatoRange && threatHp >= 120.f + 240.f * yamatos)
 		{
 			const float dps = Util::GetDpsForTarget(threat, battlecruiser, m_bot);
 			if(dps > maxDps || (dps == maxDps && threatHp > target->health + target->shield))
@@ -1233,6 +1254,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_YAMATOGUN, target, true, BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT);
 		PlanAction(battlecruiser, action);
 		queryYamatoAvailability.insert(battlecruiser);
+		yamatoTargets[target][battlecruiser] = currentFrame + BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT + 20;
 		return true;
 	}
 

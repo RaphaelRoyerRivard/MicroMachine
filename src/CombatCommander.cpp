@@ -82,12 +82,41 @@ bool CombatCommander::isSquadUpdateFrame()
     return true;
 }
 
+void CombatCommander::clearYamatoTargets()
+{
+	for(auto & targetPair : m_yamatoTargets)
+	{
+		const auto target = targetPair.first;
+		if (!target || !target->is_alive)
+		{
+			m_yamatoTargets.erase(target);
+			continue;
+		}
+
+		auto & battlecruiserPairs = targetPair.second;
+		for (const auto & battlecruiserPair : battlecruiserPairs)
+		{
+			const auto battlecruiser = battlecruiserPair.first;
+			const auto finishFrame = battlecruiserPair.second;
+			if(!battlecruiser || !battlecruiser->is_alive || m_bot.GetCurrentFrame() >= finishFrame)
+			{
+				battlecruiserPairs.erase(battlecruiser);
+			}
+		}
+
+		if(battlecruiserPairs.empty())
+			m_yamatoTargets.erase(target);
+	}
+}
+
 void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 {
     if (!m_attackStarted)
     {
         m_attackStarted = shouldWeStartAttacking();
     }
+
+	clearYamatoTargets();
 
     m_combatUnits = combatUnits;
 
