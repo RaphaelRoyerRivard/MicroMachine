@@ -487,26 +487,33 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 		for (auto & geyser : base->getGeysers())
 		{
 			CCPosition geyserPos(geyser.getPosition());
+			CCTilePosition geyserTilePos = Util::GetTilePosition(geyserPos);
 
 			//Check if refinery is already assigned to a building task (m_building)
 			auto assigned = false;
 			for (auto & refinery : m_bot.GetAllyUnits(Util::GetRefineryType().getAPIUnitType()))
 			{
-				if (Util::GetTilePosition(geyserPos) == refinery.getTilePosition())
+				if (geyserTilePos == refinery.getTilePosition())
 				{
 					assigned = true;
 					break;
+				}
+			}
+			if (!assigned)
+			{
+				for (auto & b : m_bot.Buildings().getBuildings())
+				{
+					if (b.buildCommandGiven && b.finalPosition == geyserTilePos)
+					{
+						assigned = true;
+						break;
+					}
 				}
 			}
 			if (assigned)
 			{
 				continue;
 			}
-			/*if (m_bot.Query()->Placement(sc2::ABILITY_ID::BUILD_REFINERY, geyserPos))
-			{
-				return Util::GetTilePosition(geyserPos);
-			}
-			continue;*/
 
 			const double homeDistance = Util::DistSq(geyser, homePosition);
 			if (homeDistance < minGeyserDistanceFromHome)

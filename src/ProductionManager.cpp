@@ -496,6 +496,20 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 
+		if (!m_queue.contains(workerMetatype))//check queue
+		{
+			const int maxWorkersPerBase = 27;//21 mineral (to prepare for the next expansion), 6 gas
+			const int maxWorkers = maxWorkersPerBase * 3;//maximum of 3 bases.
+			const int workerCount = m_bot.Workers().getNumWorkers();
+			if (baseCount * maxWorkersPerBase > workerCount && workerCount < maxWorkers)
+			{
+				if (currentStrategy != StrategyPostBuildOrder::WORKER_RUSH_DEFENSE)//check strategy
+				{
+					m_queue.queueItem(BuildOrderItem(workerMetatype, 2, false));
+				}
+			}
+		}
+
 		// Strategy base logic
 		switch (currentStrategy)
 		{
@@ -686,20 +700,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			default:
 			{
 				assert("This strategy doesn't exist.");
-			}
-		}
-	}
-	
-	if (!m_queue.contains(workerMetatype))//check queue
-	{
-		const int maxWorkersPerBase = 27;//21 mineral (to prepare for the next expansion), 6 gas
-		const int maxWorkers = maxWorkersPerBase * 3;//maximum of 3 bases.
-		const int workerCount = m_bot.Workers().getNumWorkers();
-		if (baseCount * maxWorkersPerBase > workerCount && workerCount < maxWorkers)
-		{
-			if (currentStrategy != StrategyPostBuildOrder::WORKER_RUSH_DEFENSE)//check strategy
-			{
-				m_queue.queueItem(BuildOrderItem(workerMetatype, 2, false));
 			}
 		}
 	}
