@@ -29,8 +29,7 @@ void ProductionManager::onStart()
 	supplyProvider = Util::GetSupplyProvider();
 	supplyProviderType = MetaType(supplyProvider, m_bot);
 
-	workerType = Util::GetWorkerType();
-	workerMetatype = MetaType(workerType, m_bot);
+	workerMetatype = MetaType(Util::GetWorkerType(), m_bot);
 	
 	switch (m_bot.GetSelfRace())
 	{
@@ -215,7 +214,7 @@ void ProductionManager::manageBuildOrderQueue()
 	bool isSupplyCap = false;
 
 	//Dont reserve ressources for worker or less important things
-	if (highestPriority <= 2)//2 == scv priority
+	if (true)//highestPriority < 0)//Highest priority is 0 when queue is empty
 	{
 		lowestMineralReq = 0;
 		lowestGasReq = 0;
@@ -446,7 +445,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const float productionScore = getProductionScore();
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
-	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, true);
+	const auto totalBaseCount = m_bot.Bases().getBaseCount(Players::Self, false);
+	const auto finishedBaseCount = m_bot.Bases().getBaseCount(Players::Self, true);
 	const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
 	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 
@@ -454,7 +454,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	// build supply if we need some
 	const auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
-	if(m_bot.GetCurrentSupply() + 1.65 * getUnitTrainingBuildings(m_bot.GetSelfRace()).size() + baseCount > supplyWithAdditionalSupplyDepot
+	if(m_bot.GetCurrentSupply() + 1.65 * getUnitTrainingBuildings(m_bot.GetSelfRace()).size() + finishedBaseCount > supplyWithAdditionalSupplyDepot
 		&& !m_queue.contains(supplyProviderType)
 		&& supplyWithAdditionalSupplyDepot < 200
 		&& !m_bot.Strategy().isWorkerRushed())
@@ -497,6 +497,20 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 
+		if (!m_queue.contains(workerMetatype))//check queue
+		{
+			const int maxWorkersPerBase = 27;//21 mineral (to prepare for the next expansion), 6 gas
+			const int maxWorkers = maxWorkersPerBase * 3;//maximum of 3 bases.
+			const int workerCount = m_bot.Workers().getNumWorkers();
+			if (totalBaseCount * maxWorkersPerBase > workerCount && workerCount < maxWorkers)
+			{
+				if (currentStrategy != StrategyPostBuildOrder::WORKER_RUSH_DEFENSE)//check strategy
+				{
+					m_queue.queueItem(BuildOrderItem(workerMetatype, -1, false));
+				}
+			}
+		}
+
 		// Strategy base logic
 		switch (currentStrategy)
 		{
@@ -528,17 +542,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					MetaType toBuild;
 					const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
 					const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-					if (barracksCount < 1 || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < baseCount))
+					if (barracksCount < 1 || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount))
 					{
 						toBuild = MetaTypeEnum::Barracks;
 						hasPicked = true;
 					}
-					else if (m_bot.Strategy().enemyHasMassZerglings() && factoryCount * 2 < baseCount)
+					else if (m_bot.Strategy().enemyHasMassZerglings() && factoryCount * 2 < finishedBaseCount)
 					{
 						toBuild = MetaTypeEnum::Factory;
 						hasPicked = true;
 					}
-					else if (starportCount < baseCount * (m_bot.Strategy().enemyHasMassZerglings() ? 1 : 2))
+					else if (starportCount < finishedBaseCount * (m_bot.Strategy().enemyHasMassZerglings() ? 1 : 2))
 					{
 						toBuild = MetaTypeEnum::Starport;
 						hasPicked = true;
@@ -575,7 +589,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 
-				if(m_bot.GetCurrentFrame() >= 9400 && baseCount >= 3)	// around 7 minutes
+				if(m_bot.GetCurrentFrame() >= 9400 && finishedBaseCount >= 3)	// around 7 minutes
 				{
 					//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
 #ifndef NO_UNITS
@@ -687,20 +701,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			default:
 			{
 				assert("This strategy doesn't exist.");
-			}
-		}
-	}
-	
-	if (!m_queue.contains(workerMetatype))//check queue
-	{
-		const int maxWorkersPerBase = 27;//21 mineral (to prepare for the next expansion), 6 gas
-		const int maxWorkers = maxWorkersPerBase * 3;//maximum of 3 bases.
-		const int workerCount = m_bot.Workers().getNumWorkers();
-		if (baseCount * maxWorkersPerBase > workerCount && workerCount < maxWorkers)
-		{
-			if (currentStrategy != StrategyPostBuildOrder::WORKER_RUSH_DEFENSE)//check strategy
-			{
-				m_queue.queueItem(BuildOrderItem(workerMetatype, 2, false));
 			}
 		}
 	}
