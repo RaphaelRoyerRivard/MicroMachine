@@ -1564,8 +1564,8 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     {
         BOT_ASSERT(target, "null target unit in getTarget");
 
-		// We don't want to target an enemy in the fog (sometimes it could be good, but often it isn't)
-		if (target->last_seen_game_loop != m_bot.GetGameLoop())
+		// We don't want to target an enemy in the fog other than a worker (sometimes it could be good, but often it isn't)
+		if (!UnitType(target->unit_type, m_bot).isWorker() && target->last_seen_game_loop != m_bot.GetGameLoop())
 			continue;
 
 		if (filterHigherUnits && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos))
