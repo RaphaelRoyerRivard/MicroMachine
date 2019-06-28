@@ -283,8 +283,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	float unitAttackRange = 0.f;
 	if (target)
 	{
-		if(cycloneShouldUseLockOn)
+		if (cycloneShouldUseLockOn)
 			unitAttackRange = m_bot.Commander().Combat().getAbilityCastingRanges()[sc2::ABILITY_ID::EFFECT_LOCKON] + rangedUnit->radius + target->radius;
+		else if (!shouldAttack)
+			unitAttackRange = 14.f + rangedUnit->radius + target->radius;
 		else
 			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 		targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;

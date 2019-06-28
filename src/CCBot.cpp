@@ -490,6 +490,7 @@ void CCBot::setUnits()
 		const Unit& enemyUnit = enemyUnitPair.second;
 		const sc2::Unit* enemyUnitPtr = enemyUnit.getUnitPtr();
 		const bool isBurrowedWidowMine = enemyUnitPtr->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED;
+		const bool isSiegedSiegeTank = enemyUnitPtr->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED;
 
 		m_enemyUnitsPerType[enemyUnitPtr->unit_type].push_back(enemyUnit);
 
@@ -498,7 +499,7 @@ void CCBot::setUnits()
 
 		// If the unit is not were we last saw it, ignore it
 		//TODO when the unit is cloaked or burrowed, check if the tile is inside detection range, in that case, we should ignore the unit because it is not there anymore
-		if (GetGameLoop() != enemyUnitPtr->last_seen_game_loop && Map().isVisible(enemyUnit.getPosition()) && !isBurrowedWidowMine)
+		if (GetGameLoop() != enemyUnitPtr->last_seen_game_loop && Map().isVisible(enemyUnit.getPosition()) && !isBurrowedWidowMine && !isSiegedSiegeTank)
 		{
 			ignoreEnemyUnit = true;
 		}
