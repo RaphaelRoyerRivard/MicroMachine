@@ -739,7 +739,7 @@ void CombatCommander::updateClearExpandSquads()
 
 void CombatCommander::updateScoutSquad()
 {
-	if (m_bot.GetCurrentFrame() < 6048)	//around 4:30
+	if (!m_bot.Strategy().enemyHasMassZerglings() && m_bot.GetCurrentFrame() < 4704)	//around 3:30, or as soon as enemy has a lot of lings
 		return;
 
 	Squad & scoutSquad = m_squadData.getSquad("Scout");

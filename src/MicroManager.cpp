@@ -93,9 +93,9 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 
 	const float healthValue = pow(target->health + target->shield, 0.5f);		//the more health a unit has, the less it is prioritized
 	const float distance = Util::Dist(attacker->pos, target->pos) + attacker->radius + target->radius;
-	float distanceValue = 1.f;
+	float proximityValue = 1.f;
 	if (distance > attackerRange)
-		distanceValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
+		proximityValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
 
 	float invisModifier = 1.f;
 	if (target->cloak == sc2::Unit::CloakedDetected)
@@ -131,12 +131,13 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 					const CCPosition facingVector = Util::getFacingVector(target);
 					if (Dot2D(facingVector, refinery.getPosition() - target->pos) > 0.99f)
 					{
+						if (m_bot.Config().DrawHarassInfo)
+							m_bot.Map().drawCircle(targetUnit.getPosition(), 0.5f, sc2::Colors::Red);
 						workerBonus *= 0.5f;
 					}
 				}
 			}
 		}
-
 
 		float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;								//targets that cannot hit our unit are less prioritized
 		if (targetUnit.getType().isAttackingBuilding())
@@ -145,8 +146,8 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		}
 		const float flyingDetectorModifier = target->is_flying && UnitType::isDetector(target->unit_type) ? 2.f : 1.f;
 		const float minionModifier = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR ? 0.1f : 1.f;	//units that can be respawned should be less prioritized
-		return (targetDps + unitDps - healthValue + distanceValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier;
+		return (targetDps + unitDps - healthValue + proximityValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier;
 	}
 
-	return (distanceValue * 50 - healthValue) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
+	return (proximityValue * 50 - healthValue) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
 }
