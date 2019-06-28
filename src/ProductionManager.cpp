@@ -499,6 +499,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 		if (!m_queue.contains(workerMetatype))//check queue
 		{
+			//[Worker limit][Max worker]
 			const int maxWorkersPerBase = 27;//21 mineral (to prepare for the next expansion), 6 gas
 			const int maxWorkers = maxWorkersPerBase * 3;//maximum of 3 bases.
 			const int workerCount = m_bot.Workers().getNumWorkers();
@@ -506,7 +507,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			{
 				if (currentStrategy != StrategyPostBuildOrder::WORKER_RUSH_DEFENSE)//check strategy
 				{
-					m_queue.queueItem(BuildOrderItem(workerMetatype, -1, false));
+					m_queue.queueItem(BuildOrderItem(workerMetatype, 1, false));
 				}
 			}
 		}
