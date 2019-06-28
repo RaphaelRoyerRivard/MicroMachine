@@ -1108,6 +1108,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 		const bool canAttackNow = unitRange * unitRange >= Util::DistSq(unit->pos, unitTarget->pos) && unit->weapon_cooldown <= 0.f;
 
+		// Even if the fight would be lost, should still attack if it can, but only if it is slower than the fastest enemy
 		if (!shouldFight && (!canAttackNow || Util::getSpeedOfUnit(unit, m_bot) > maxThreatSpeed))
 		{
 			continue;
@@ -1136,7 +1137,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		auto fleePosition = CCPosition();
 		const bool injured = unit->health / unit->health_max < 0.5f;
 		const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > Util::GetAttackRangeForTarget(unitTarget, unit, m_bot) && Util::getSpeedOfUnit(unit, m_bot) > Util::getSpeedOfUnit(unitTarget, m_bot));
-		if (!canAttackNow && (injured || shouldKite))
+		if (!canAttackNow && (injured || shouldKite) && AllowUnitToPathFind(unit))
 		{
 			fleePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, m_bot);
 		}
@@ -1242,7 +1243,8 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		const auto & it = yamatoTargets.find(threat);
 		if (it != yamatoTargets.end())
 			yamatos = it->second.size();
-		if (threatDistance <= yamatoRange * yamatoRange && threatHp >= 120.f + 240.f * yamatos)
+		// TODO find a way of targetting multiple yamato onto the same target if it has a lot of HP
+		if (threatDistance <= yamatoRange * yamatoRange && yamatos == 0 && threatHp >= 120.f && threatHp <= 240.f) //+ 240.f * yamatos)
 		{
 			const float dps = Util::GetDpsForTarget(threat, battlecruiser, m_bot);
 			if(dps > maxDps || (dps == maxDps && threatHp > target->health + target->shield))
