@@ -63,6 +63,7 @@ class CombatCommander
 	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy) const;
 
 	CCPosition		exploreMap();
+	CCPosition		GetClosestEnemyBaseLocation();
 	CCPosition		GetNextBaseLocationToScout();
 
     void            updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy);

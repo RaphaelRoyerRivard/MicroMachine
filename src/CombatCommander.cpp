@@ -843,7 +843,7 @@ void CombatCommander::updateHarassSquads()
 	if (harassSquad.getUnits().empty())
 		return;
 
-	SquadOrder harassOrder(SquadOrderTypes::Harass, getMainAttackLocation(), HarassOrderRadius, "Harass");
+	SquadOrder harassOrder(SquadOrderTypes::Harass, GetClosestEnemyBaseLocation(), HarassOrderRadius, "Harass");
 	harassSquad.setSquadOrder(harassOrder);
 }
 
@@ -1878,6 +1878,30 @@ CCPosition CombatCommander::exploreMap()
 	return basePosition;
 }
 
+CCPosition CombatCommander::GetClosestEnemyBaseLocation()
+{
+	const auto base = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+	if (!base)
+		return getMainAttackLocation();
+
+	BaseLocation * closestEnemyBase = nullptr;
+	float closestDistance = 0.f;
+	const auto & baseLocations = m_bot.Bases().getOccupiedBaseLocations(Players::Enemy);
+	for(const auto baseLocation : baseLocations)
+	{
+		const auto dist = Util::DistSq(baseLocation->getPosition(), base->getPosition());
+		if(!closestEnemyBase || dist < closestDistance)
+		{
+			closestEnemyBase = baseLocation;
+			closestDistance = dist;
+		}
+	}
+
+	if (!closestEnemyBase)
+		return getMainAttackLocation();
+	return closestEnemyBase->getPosition();
+}
+
 CCPosition CombatCommander::GetNextBaseLocationToScout()
 {
 	const auto & baseLocations = m_bot.Bases().getBaseLocations();
@@ -1917,7 +1941,7 @@ CCPosition CombatCommander::GetNextBaseLocationToScout()
 	}
 	if(targetBasePosition == CCPosition())
 	{
-		targetBasePosition = getMainAttackLocation();
+		targetBasePosition = GetClosestEnemyBaseLocation();
 	}
 	return targetBasePosition;
 }

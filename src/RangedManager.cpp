@@ -883,14 +883,16 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 					continue;
 				if (shouldHeal && dist > partialLockOnRange + threat->radius)
 					continue;
-				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 2.f);
+				// The lower the better
+				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 2.5f);
 				const auto healthScore = 0.25f * (threat->health + threat->shield * 1.5f);
+				// The higher the better
 				const auto energyScore = 0.25f * threat->energy;
 				const auto detectorScore = 15 * (threat->detect_range > 0.f);
 				const auto threatRange = Util::GetAttackRangeForTarget(threat, cyclone, m_bot);
 				const auto threatDps = Util::GetDpsForTarget(threat, cyclone, m_bot);
 				const float powerScore = threatRange * threatDps * 3.f;
-				const float speedScore = Util::getSpeedOfUnit(threat, m_bot) * 5.f;
+				const float speedScore = Util::getSpeedOfUnit(threat, m_bot) * 6.f;
 				auto armoredScore = 0.f;
 				if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
 				{
