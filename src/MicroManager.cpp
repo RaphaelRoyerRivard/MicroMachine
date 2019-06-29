@@ -138,6 +138,21 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 				}
 			}
 		}
+		if (targetUnit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_SCV)
+		{
+			const auto & enemyBuildingsUnderConstruction = m_bot.GetEnemyBuildingsUnderConstruction();
+			for(const auto & enemyBuildingUnderConstruction : enemyBuildingsUnderConstruction)
+			{
+				CCTilePosition bottomLeft, topRight;
+				enemyBuildingUnderConstruction.getBuildingLimits(bottomLeft, topRight);
+				const auto targetPosition = targetUnit.getPosition();
+				if(targetPosition.x >= bottomLeft.x - 0.5f && targetPosition.x <= topRight.x + 0.5f && targetPosition.y >= bottomLeft.y - 0.5f && targetPosition.y <= topRight.y + 0.5f)
+				{
+					workerBonus *= 2.f;
+					m_bot.Map().drawCircle(targetPosition, 0.5f, sc2::Colors::Green);
+				}
+			}
+		}
 
 		float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;								//targets that cannot hit our unit are less prioritized
 		if (targetUnit.getType().isAttackingBuilding())

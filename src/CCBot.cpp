@@ -483,6 +483,7 @@ void CCBot::setUnits()
 
 	int armoredEnemies = 0;
 	m_knownEnemyUnits.clear();
+	m_enemyBuildingsUnderConstruction.clear();
 	m_enemyUnitsPerType.clear();
 	for(auto& enemyUnitPair : m_enemyUnits)
 	{
@@ -493,6 +494,9 @@ void CCBot::setUnits()
 		const bool isSiegedSiegeTank = enemyUnitPtr->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED;
 
 		m_enemyUnitsPerType[enemyUnitPtr->unit_type].push_back(enemyUnit);
+
+		if (enemyUnit.getType().isBuilding() && enemyUnit.getBuildPercentage() < 1)
+			m_enemyBuildingsUnderConstruction.push_back(enemyUnit);
 
 		if (enemyUnit.isArmored() && !enemyUnit.getType().isBuilding())
 			++armoredEnemies;
@@ -695,7 +699,7 @@ void CCBot::IssueCheats()
 	//Debug()->DebugGiveAllTech();
 
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player1, 2);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);

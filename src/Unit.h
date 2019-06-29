@@ -89,4 +89,5 @@ public:
     void morph          (const UnitType & type) const;
 	bool useAbility(const sc2::ABILITY_ID abilityId) const;
 	sc2::AvailableAbilities getAbilities() const;
+	void getBuildingLimits(CCTilePosition & bottomLeft, CCTilePosition & topRight) const;
 };

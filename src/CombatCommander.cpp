@@ -455,31 +455,13 @@ void CombatCommander::updateInfluenceMap(float dps, float range, float speed, co
 
 void CombatCommander::updateBlockedTilesWithUnit(const Unit& unit)
 {
-	const CCTilePosition centerTile = Util::GetTilePosition(unit.getPosition());
-	const int size = floor(unit.getUnitPtr()->radius * 2);
-	const int flooredHalfSize = floor(size / 2.f);
-	const int ceiledHalfSize = ceil(size / 2.f);
-	int minX = centerTile.x - flooredHalfSize;
-	const int maxX = centerTile.x + ceiledHalfSize;
-	int minY = centerTile.y - flooredHalfSize;
-	const int maxY = centerTile.y + ceiledHalfSize;
+	CCTilePosition bottomLeft;
+	CCTilePosition topRight;
+	unit.getBuildingLimits(bottomLeft, topRight);
 
-	//special cases
-	if (unit.getType().isAttackingBuilding())
+	for(int x = bottomLeft.x; x < topRight.x; ++x)
 	{
-		//attacking buildings have a smaller radius, so we must increase the min to cover more tiles
-		minX = centerTile.x - ceiledHalfSize;
-		minY = centerTile.y - ceiledHalfSize;
-	}
-	else if (unit.getType().isMineral())
-	{
-		//minerals are rectangles instead of squares
-		minY = centerTile.y;
-	}
-
-	for(int x = minX; x < maxX; ++x)
-	{
-		for(int y = minY; y < maxY; ++y)
+		for(int y = bottomLeft.y; y < topRight.y; ++y)
 		{
 			m_blockedTiles[x][y] = true;
 		}

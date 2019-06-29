@@ -767,3 +767,31 @@ bool Unit::isCounterToUnit(const Unit& unit) const
 	const bool isAttacked = isFlying() ? Util::CanUnitAttackAir(unit.getUnitPtr(), *m_bot) : Util::CanUnitAttackGround(unit.getUnitPtr(), *m_bot);
 	return !isAttacked;
 }
+
+void Unit::getBuildingLimits(CCTilePosition & bottomLeft, CCTilePosition & topRight) const
+{
+	const CCTilePosition centerTile = Util::GetTilePosition(getPosition());
+	const int size = floor(getUnitPtr()->radius * 2);
+	const int flooredHalfSize = floor(size / 2.f);
+	const int ceiledHalfSize = ceil(size / 2.f);
+	int minX = centerTile.x - flooredHalfSize;
+	const int maxX = centerTile.x + ceiledHalfSize;
+	int minY = centerTile.y - flooredHalfSize;
+	const int maxY = centerTile.y + ceiledHalfSize;
+
+	//special cases
+	if (getType().isAttackingBuilding())
+	{
+		//attacking buildings have a smaller radius, so we must increase the min to cover more tiles
+		minX = centerTile.x - ceiledHalfSize;
+		minY = centerTile.y - ceiledHalfSize;
+	}
+	else if (getType().isMineral())
+	{
+		//minerals are rectangles instead of squares
+		minY = centerTile.y;
+	}
+
+	bottomLeft = CCTilePosition(minX, minY);
+	topRight = CCTilePosition(maxX, maxY);
+}
