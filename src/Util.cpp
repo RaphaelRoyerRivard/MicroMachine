@@ -10,8 +10,8 @@ const float CLIFF_MAX_HEIGHT_DIFFERENCE = 2.5f;
 const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
 const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
-const float PATHFINDING_TURN_COST = 3.f;
-const float CYCLONE_PATHFINDING_TILE_DOWN_RAMP_COST = 1.f;
+const float PATHFINDING_TURN_COST = 5.f;
+const float PATHFINDING_TILE_DOWN_RAMP_COST = 5.f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
@@ -165,7 +165,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	if(foundIndex >= 0 && bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
 		return releventResult.m_result;
 
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, addBuffer ? 3.f : 1.f, true, false, false, false, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, false, bot);
 	const bool success = !path.empty();
 	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
 	if(foundIndex >= 0)
@@ -179,7 +179,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	return success;
 }
 
-CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, CCBot & bot)
 {
 	bool getCloser = false;
 	if (target)
@@ -187,20 +187,20 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
 		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot);
 	}
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, maxRange, false, false, getCloser, ignoreInfluence, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, false, getCloser, ignoreInfluence, false, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, 0.f, false, false, false, false, true, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), 0.f, false, false, false, false, true, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
 	const float range = GetAttackRangeForTarget(unit, target, bot);
-	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, range, false, false, false, false, true, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, CCPosition(), range, false, false, false, false, true, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
@@ -211,7 +211,7 @@ CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit
  */
 float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot)
 {
-	const auto path = FindOptimalPath(unit, goal, 2.f, !ignoreInfluence, false, false, ignoreInfluence, false, bot);
+	const auto path = FindOptimalPath(unit, goal, CCPosition(), 2.f, !ignoreInfluence, false, false, ignoreInfluence, false, bot);
 	if (path.empty())
 	{
 		return -1.f;
@@ -232,7 +232,7 @@ float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosit
 
 CCPosition Util::PathFinding::FindOptimalPathPosition(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot)
 {
-	auto path = FindOptimalPath(unit, goal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, false, false, bot);
+	auto path = FindOptimalPath(unit, goal, CCPosition(), maxRange, exitOnInfluence, considerOnlyEffects, getCloser, false, false, bot);
 	if(path.empty())
 	{
 		return {};
@@ -240,23 +240,28 @@ CCPosition Util::PathFinding::FindOptimalPathPosition(const sc2::Unit * unit, CC
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
-CCPosition Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPathToDodgeEffectAwayFromGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot)
 {
-	std::list<CCPosition> path = Util::PathFinding::FindOptimalPath(unit, goal, range, false, true, false, false, false, bot);
+	goal = unit->pos + (unit->pos - goal);
+	std::list<CCPosition> path = Util::PathFinding::FindOptimalPath(unit, goal, CCPosition(), range, false, true, false, false, false, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
-std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, CCBot & bot)
+std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, CCBot & bot)
 {
 	std::list<CCPosition> path;
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
+	const auto & lockOnTargets = bot.Commander().Combat().getLockOnTargets();
+	const bool unitShouldAvoidDownCliffs = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE && unit->health / unit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE && lockOnTargets.find(unit) != lockOnTargets.end();
+	const bool bigUnit = unit->radius >= 1.f;
 	const int maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = Util::GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
+	const CCTilePosition secondaryGoalPosition = Util::GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
 	opened.insert(start);
 
@@ -312,7 +317,6 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		}
 		if (shouldTriggerExit)
 		{
-			// TODO review this block, looks weird
 			// If it exits on influence, we need to check if there is actually influence on the current tile. If so, we do not return a valid path
 			if (!exitOnInfluence || (!HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot)))
 			{
@@ -341,10 +345,10 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				if (neighborPosition == CCTilePosition())
 					continue;
 
-				int neighborX = unit->radius >= 1.f ? -1 : 0;
-				int neighborY = unit->radius >= 1.f ? -1 : 0;
-				const int maxNeighborX = unit->radius >= 1.f ? 1 : 0;
-				const int maxNeighborY = unit->radius >= 1.f ? 1 : 0;
+				int neighborX = bigUnit ? -1 : 0;
+				int neighborY = bigUnit ? -1 : 0;
+				const int maxNeighborX = bigUnit ? 1 : 0;
+				const int maxNeighborY = bigUnit ? 1 : 0;
 				const CCPosition mapMin = bot.Map().mapMin();
 				const CCPosition mapMax = bot.Map().mapMax();
 				float totalCost = 0.f;
@@ -360,7 +364,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 
 						const float neighborDistance = Dist(currentNode->position, currentNeighborPosition);
 						const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(currentNeighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
-						const float heightCost = (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE && bot.Map().terrainHeight(currentNeighborPosition) < bot.Map().terrainHeight(currentNode->position)) ? CYCLONE_PATHFINDING_TILE_DOWN_RAMP_COST : 0.f;
+						const float heightCost = (unitShouldAvoidDownCliffs && bot.Map().terrainHeight(currentNeighborPosition) < bot.Map().terrainHeight(currentNode->position)) ? PATHFINDING_TILE_DOWN_RAMP_COST : 0.f;
 						const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(currentNeighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetCombatInfluenceOnTile(currentNeighborPosition, unit, bot));
 						const float nodeCost = (influenceOnTile + creepCost + heightCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
 						totalCost += currentNode->cost + nodeCost;
@@ -377,13 +381,14 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 						facingVector = GetPosition(currentNode->position) - GetPosition(currentNode->parent->position);
 					const auto directionVector = GetPosition(neighborPosition) - GetPosition(currentNode->position);
 					const auto dotProduct = GetDotProduct(facingVector, directionVector);
-					float turnCost = (1 - dotProduct) * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
-					if (unit->radius >= 1.f)
+					const auto turnValue = std::min(1.f, 1 - dotProduct);
+					float turnCost = turnValue * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
+					if (bigUnit)
 						turnCost *= 9;	// Node cost considers 9 tiles, so if we want the turn cost to have a proportional weight for big units, we need to multiply it
 					totalCost += turnCost;
 				}
 
-				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition);
+				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition, secondaryGoalPosition);
 				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
 
 				if (SetContainsNode(closed, neighbor, false))
@@ -501,9 +506,12 @@ std::list<CCPosition> Util::PathFinding::GetPositionListFromPath(IMNode* current
 	return returnPositions;
 }
 
-float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to)
+float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to, CCTilePosition secondaryGoal)
 {
-	return Util::Dist(from, to) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER;
+	float heuristic = Util::Dist(from, to) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER;
+	if(secondaryGoal != CCTilePosition())
+		heuristic += Util::Dist(from, secondaryGoal) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER / 2;
+	return heuristic;
 }
 
 bool Util::PathFinding::HasInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot)
@@ -513,6 +521,20 @@ bool Util::PathFinding::HasInfluenceOnTile(const CCTilePosition position, bool i
 
 bool Util::PathFinding::HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, bool fromGround, CCBot & bot)
 {
+	if (unit->radius >= 1.f)
+	{
+		float totalInfluence = 0.f;
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
+			{
+				const auto position = CCTilePosition(node->position.x + x, node->position.y + y);
+				totalInfluence += GetCombatInfluenceOnTile(position, unit->is_flying, fromGround, bot);
+			}
+		}
+		return totalInfluence != 0.f;
+	}
+
 	return GetCombatInfluenceOnTile(node->position, unit->is_flying, fromGround, bot) != 0.f;
 }
 
@@ -523,6 +545,20 @@ bool Util::PathFinding::HasCombatInfluenceOnTile(const CCTilePosition position, 
 
 bool Util::PathFinding::HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
 {
+	if(unit->radius >= 1.f)
+	{
+		float totalInfluence = 0.f;
+		for (int x = -1; x <= 1; ++x)
+		{
+			for(int y = -1; y <= 1; ++y)
+			{
+				const auto position = CCTilePosition(node->position.x + x, node->position.y + y);
+				totalInfluence += GetCombatInfluenceOnTile(position, unit->is_flying, bot);
+			}
+		}
+		return totalInfluence != 0.f;
+	}
+
 	return GetCombatInfluenceOnTile(node->position, unit->is_flying, bot) != 0.f;
 }
 
@@ -533,7 +569,21 @@ bool Util::PathFinding::HasCombatInfluenceOnTile(const CCTilePosition position, 
 
 float Util::PathFinding::GetTotalInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
 {
-	return GetTotalInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
+	if (unit->radius >= 1.f)
+	{
+		float totalInfluence = 0.f;
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
+			{
+				const auto position = CCTilePosition(tile.x + x, tile.y + y);
+				totalInfluence += GetTotalInfluenceOnTile(position, unit->is_flying, bot);
+			}
+		}
+		return totalInfluence;
+	}
+
+	return GetTotalInfluenceOnTile(tile, unit->is_flying, bot);
 }
 
 float Util::PathFinding::GetTotalInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot)
@@ -543,7 +593,21 @@ float Util::PathFinding::GetTotalInfluenceOnTile(CCTilePosition tile, bool isFly
 
 float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
 {
-	return GetCombatInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
+	if (unit->radius >= 1.f)
+	{
+		float totalInfluence = 0.f;
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
+			{
+				const auto position = CCTilePosition(tile.x + x, tile.y + y);
+				totalInfluence += GetCombatInfluenceOnTile(position, unit->is_flying, bot);
+			}
+		}
+		return totalInfluence;
+	}
+
+	return GetCombatInfluenceOnTile(tile, unit->is_flying, bot);
 }
 
 float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot)
@@ -553,7 +617,21 @@ float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, bool isFl
 
 float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, bool fromGround, CCBot & bot)
 {
-	return GetCombatInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
+	if (unit->radius >= 1.f)
+	{
+		float totalInfluence = 0.f;
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
+			{
+				const auto position = CCTilePosition(tile.x + x, tile.y + y);
+				totalInfluence += GetCombatInfluenceOnTile(position, unit->is_flying, fromGround, bot);
+			}
+		}
+		return totalInfluence;
+	}
+
+	return GetCombatInfluenceOnTile(tile, unit->is_flying, fromGround, bot);
 }
 
 float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, bool fromGround, CCBot & bot)
@@ -587,6 +665,20 @@ bool Util::PathFinding::IsUnitOnTileWithInfluence(const sc2::Unit * unit, CCBot 
 
 float Util::PathFinding::GetEffectInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
 {
+	if (unit->radius >= 1.f)
+	{
+		float totalInfluence = 0.f;
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
+			{
+				const auto position = CCTilePosition(tile.x + x, tile.y + y);
+				totalInfluence += GetEffectInfluenceOnTile(position, unit->is_flying, bot);
+			}
+		}
+		return totalInfluence;
+	}
+
 	return GetEffectInfluenceOnTile(tile, unit->is_flying, bot);
 }
 
@@ -1095,7 +1187,11 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		range = 6.f;
 	}
-
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
+	{
+		if (where == sc2::Weapon::TargetType::Ground)
+			range = 4.f;
+	}
 
 	return range;
 }
@@ -1380,6 +1476,11 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 		else
 			dps = 49.8f;
 	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
+	{
+		if (where == sc2::Weapon::TargetType::Ground)
+			dps = 12.7;
+	}
 
     return dps;
 }
@@ -1450,6 +1551,11 @@ float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapo
 			damage = 5.f;
 		else
 			damage = 8.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
+	{
+		if (where == sc2::Weapon::TargetType::Ground)
+			damage = 10.f;
 	}
 
 	return damage;

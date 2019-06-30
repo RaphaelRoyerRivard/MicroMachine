@@ -6,7 +6,6 @@
 #include <string>
 #include <thread>
 
-const float HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE = 0.3f;
 const float HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE = 7.f;
 const float HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE = 10.f;
 const float HARASS_FRIENDLY_ATTRACTION_INTENSITY = 1.5f;
@@ -152,7 +151,7 @@ int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* tar
 	const CCPosition facingVector = Util::getFacingVector(unit);
 	const float dot = sc2::Dot2D(targetDirection, facingVector);
 	const float value = 1 - dot;
-	const int rotationMultiplier = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? 1 : unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER? 4 : 2;
+	const int rotationMultiplier = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER ? 4 : 2;
 	attackFrameCount += value * rotationMultiplier;
 	return attackFrameCount;
 }
@@ -239,7 +238,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			goal = healGoal;
 		else
 			Util::DisplayError("RangedManager healGoal is (0, 0)", "", m_bot, false);
-		if (isBattlecruiser && TeleportBattlecruiser(rangedUnit, goal))
+		if (isBattlecruiser && Util::DistSq(rangedUnit->pos, goal) > 15.f * 15.f && TeleportBattlecruiser(rangedUnit, goal))
 			return;
 	}
 	else if(isMarine || isRaven)
@@ -338,7 +337,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (cycloneShouldUseLockOn || AllowUnitToPathFind(rangedUnit))
 	{
 		const CCPosition pathFindEndPos = target && !unitShouldHeal ? target->pos : goal;
-		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, target, target ? unitAttackRange : 3.f, cycloneShouldUseLockOn, m_bot);
+		const CCPosition secondaryGoal = !shouldAttack ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target
+		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, target ? unitAttackRange : 3.f, cycloneShouldUseLockOn, m_bot);
 		if (closePositionInPath != CCPosition())
 		{
 			const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
@@ -608,7 +608,7 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 			}
 		}
 		//if unit is damaged enough to go back for repair
-		else if (rangedUnit->health / rangedUnit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE / (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit) ? 2.f : 1.f))
+		else if (rangedUnit->health / rangedUnit->health_max < Util::HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE / (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit) ? 2.f : 1.f))
 		{
 			unitsBeingRepaired.insert(rangedUnit);
 			return true;
@@ -987,7 +987,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 				// If the unit is standing on effect influence, get it out of there before fighting
 				if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit, m_bot) > 0.f)
 				{
-					CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(rangedUnit, target->pos, range, m_bot);
+					CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectAwayFromGoal(rangedUnit, target->pos, range, m_bot);
 					if (movePosition != CCPosition())
 					{
 						const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, 0);
@@ -1117,7 +1117,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		// If the unit is standing on effect influence, get it out of it before fighting
 		if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), unit, m_bot) > 0.f)
 		{
-			CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectTowardsGoal(unit, unitTarget->pos, unitRange, m_bot);
+			CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectAwayFromGoal(unit, unitTarget->pos, unitRange, m_bot);
 			if (movePosition != CCPosition())
 			{
 				const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
