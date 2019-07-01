@@ -320,8 +320,7 @@ void ProductionManager::manageBuildOrderQueue()
 					for(auto & productionBuilding : productionBuildings)
 					{
 						//Check if this building is idle
-						auto & orders = productionBuilding.getUnitPtr()->orders;
-						if(orders.empty() || orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+						if(productionBuilding.isProductionBuildingIdle())
 						{
 							idleProductionBuilding = true;
 							break;
@@ -561,7 +560,22 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 					if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
 					{
-						m_queue.queueAsLowestPriority(toBuild, false);
+						bool idleProductionBuilding = false;
+						const auto & productionBuildings = m_bot.GetAllyUnits(toBuild.getUnitType().getAPIUnitType());
+						const int totalProductionBuildings = m_bot.UnitInfo().getUnitTypeCount(Players::Self, toBuild.getUnitType(), false, true);
+						if (productionBuildings.size() == totalProductionBuildings)
+						{
+							for (const auto & productionBuilding : productionBuildings)
+							{
+								if (productionBuilding.isProductionBuildingIdle())
+								{
+									idleProductionBuilding = true;
+									break;
+								}
+							}
+							if (!idleProductionBuilding)
+								m_queue.queueAsLowestPriority(toBuild, false);
+						}
 					}
 				}
 

@@ -237,6 +237,20 @@ sc2::Tag Unit::getAddonTag() const
 	return m_unit->add_on_tag;
 }
 
+bool Unit::isProductionBuildingIdle() const
+{
+	if(getType().isBuilding())
+	{
+		//Check if this building is idle
+		auto & orders = getUnitPtr()->orders;
+		if (orders.empty() || orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 int Unit::getWeaponCooldown() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");

@@ -848,37 +848,32 @@ Unit CCBot::GetUnit(const CCUnitID & tag) const
 
 int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed)
 { 
-	if (completed && m_unitCompletedCount.find(type) != m_unitCompletedCount.end())
-	{
-		return m_unitCompletedCount.at(type);
-	}
-	else if (!completed)
-	{
-		int total = 0;
+	auto completedCount = 0;
+	if (m_unitCompletedCount.find(type) != m_unitCompletedCount.end())
+		completedCount = m_unitCompletedCount.at(type);
+	
+	if (completed)
+		return completedCount;
 
-		auto unitType = UnitType(type, *this);
-		if (unitType.isBuilding())
+	int total = completedCount;
+
+	auto unitType = UnitType(type, *this);
+	if (unitType.isBuilding())
+	{
+		total += m_buildings.countBeingBuilt(unitType);
+	}
+	else //is unit
+	{
+		for (auto building : m_buildings.getFinishedBuildings())
 		{
-			total += m_buildings.countBoughtButNotBeingBuilt(type);
-		}
-		else//is unit
-		{
-			for (auto building : m_buildings.getFinishedBuildings())
+			if (building.isConstructing(unitType))
 			{
-				if (building.isConstructing(unitType))
-				{
-					total++;
-				}
+				total++;
 			}
 		}
-		
-		if (m_unitCount.find(type) != m_unitCount.end())
-		{
-			total += m_unitCount.at(type);
-		}
-		return total;
 	}
-	return 0;
+	
+	return total;
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()

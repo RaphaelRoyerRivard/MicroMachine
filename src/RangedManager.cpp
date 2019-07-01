@@ -337,7 +337,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (cycloneShouldUseLockOn || AllowUnitToPathFind(rangedUnit))
 	{
 		const CCPosition pathFindEndPos = target && !unitShouldHeal ? target->pos : goal;
-		const CCPosition secondaryGoal = !shouldAttack ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target
+		const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target
 		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, target ? unitAttackRange : 3.f, cycloneShouldUseLockOn, m_bot);
 		if (closePositionInPath != CCPosition())
 		{
