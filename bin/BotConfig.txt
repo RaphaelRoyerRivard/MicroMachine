@@ -16,11 +16,12 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.5.2",
+        "BotVersion"                : "1.5.3",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
+        "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Terran",

@@ -838,18 +838,6 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 		}
 	}
 
-	/*if (queryAbilityAvailable != abilityAvailable)
-	{
-		if (abilityAvailable && shouldAttack)
-			std::cout << "1";
-		else if (abilityAvailable && shouldUseLockOn)
-			std::cout << "2";
-		else if (!abilityAvailable)
-			std::cout << "3";
-		else
-			std::cout << "4";
-	}*/
-
 	// Check if the Cyclone would have a better Lock-On target
 	if (shouldUseLockOn)
 	{
@@ -881,8 +869,8 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 						continue;
 				}
 				const float dist = Util::Dist(cyclone->pos, threat->pos);
-				if (dist > 10.f)
-					continue;
+				/*if (dist > 10.f)
+					continue;*/
 				if (shouldHeal && dist > partialLockOnRange + threat->radius)
 					continue;
 				// The lower the better
@@ -948,8 +936,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	if (threats.empty())
 		return false;
 
-	//float unitsPower = 0.f;
-	//float targetsPower = 0.f;
+	float unitsPower = 0.f;
+	float targetsPower = 0.f;
 	sc2::Units closeUnits;
 	std::map<const sc2::Unit*, const sc2::Unit*> closeUnitsTarget;
 
@@ -1062,7 +1050,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			closeUnits.push_back(unit);
 			closeUnitsTarget.insert_or_assign(unit, unitTarget);
-			//unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
+			unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
 		}
 	}
 
@@ -1077,8 +1065,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
 		if (threatSpeed > maxThreatSpeed)
 			maxThreatSpeed = threatSpeed;
-		//const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
-		//targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
+		const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
+		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
 	}
 
 	m_harassMode = true;
@@ -1088,8 +1076,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	m_bot.StartProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
 	const bool winSimulation = Util::SimulateCombat(closeUnits, threats);
 	m_bot.StopProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
-	//const bool formulaWin = unitsPower >= targetsPower;
-	const bool shouldFight = winSimulation;	//winSimulation || formulaWin;
+	const bool formulaWin = unitsPower >= targetsPower;
+	const bool shouldFight = winSimulation && formulaWin;
+	//std::cout << (shouldFight ? "Win" : "Lose") << std::endl;
 	/*if (winSimulation != formulaWin)
 		std::cout << "Simulation: " << winSimulation << ", formula: " << formulaWin << std::endl;*/
 	// For each of our close units

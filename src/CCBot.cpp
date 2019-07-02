@@ -73,11 +73,6 @@ void CCBot::OnGameStart() //full start
 	Util::SetAllowDebug(Config().AllowDebug);
 	Util::CreateLog(*this);
 	selfRace = GetPlayerRace(Players::Self);
-
-	if(Config().AllowDebug)
-	{
-		IssueCheats();
-	}
     
     setUnits();
     m_techTree.onStart();
@@ -90,6 +85,11 @@ void CCBot::OnGameStart() //full start
 	m_repairStations.onStart();
 	m_combatAnalyzer.onStart();
     m_gameCommander.onStart();
+
+	if (Config().AllowDebug)
+	{
+		IssueCheats();
+	}
 
 	StartProfiling("0 Starcraft II");
 }
@@ -503,12 +503,15 @@ void CCBot::setUnits()
 
 		// If the unit is not were we last saw it, ignore it
 		//TODO when the unit is cloaked or burrowed, check if the tile is inside detection range, in that case, we should ignore the unit because it is not there anymore
-		if (GetGameLoop() != enemyUnitPtr->last_seen_game_loop && Map().isVisible(enemyUnit.getPosition()) && !isBurrowedWidowMine && !isSiegedSiegeTank)
+		if (GetGameLoop() != enemyUnitPtr->last_seen_game_loop && Map().isVisible(enemyUnit.getPosition()) && !isBurrowedWidowMine)
 		{
 			ignoreEnemyUnit = true;
 		}
-		// If mobile unit is not seen for too long (around 4s), ignore it
-		else if (!enemyUnit.getType().isBuilding() && (!isBurrowedWidowMine || enemyUnitPtr->last_seen_game_loop + 1500 < GetGameLoop()) && enemyUnitPtr->last_seen_game_loop + 100 < GetGameLoop())
+		// If mobile unit is not seen for too long (around 4s, or 67s for burrowed widow mines and 22s for sieged tanks), ignore it
+		else if (!enemyUnit.getType().isBuilding()
+			&& (!isBurrowedWidowMine || enemyUnitPtr->last_seen_game_loop + 1500 < GetGameLoop())
+			&& (!isSiegedSiegeTank || enemyUnitPtr->last_seen_game_loop + 500 < GetGameLoop())
+			&& enemyUnitPtr->last_seen_game_loop + 100 < GetGameLoop())
 		{
 			ignoreEnemyUnit = true;
 		}
@@ -703,7 +706,9 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);
-
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, Map().center(), player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, Map().center(), player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);

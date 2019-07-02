@@ -112,6 +112,7 @@ int main(int argc, char* argv[])
     sc2::Difficulty enemyDifficulty = sc2::Difficulty::Easy;
     bool PlayVsItSelf = false;
     bool PlayerOneIsHuman = false;
+	bool ForceStepMode = false;
 
     if (j.count("SC2API") && j["SC2API"].is_object())
     {
@@ -140,7 +141,8 @@ int main(int argc, char* argv[])
 
         JSONTools::ReadInt("StepSize", info, stepSize);
         JSONTools::ReadInt("EnemyDifficulty", info, enemyDifficulty);
-        JSONTools::ReadBool("PlayAsHuman", info, PlayerOneIsHuman);
+		JSONTools::ReadBool("PlayAsHuman", info, PlayerOneIsHuman);
+		JSONTools::ReadBool("ForceStepMode", info, ForceStepMode);
         JSONTools::ReadBool("PlayVsItSelf", info, PlayVsItSelf);
     }
     else
@@ -198,8 +200,7 @@ int main(int argc, char* argv[])
     //          Setting this = N means the bot's onFrame gets called once every N frames
     //          The bot may crash or do unexpected things if its logic is not called every frame
     coordinator.SetStepSize(stepSize);
-    coordinator.SetRealtime(PlayerOneIsHuman);
-    //coordinator.SetRealtime(true);
+    coordinator.SetRealtime(PlayerOneIsHuman && !ForceStepMode);
 
     coordinator.SetParticipants({
         spectatingPlayer,
