@@ -382,7 +382,7 @@ void CCBot::setUnits()
 					}
 				}
 			}
-			if (!m_strategy.shouldProduceAntiAir())
+			if (!m_strategy.shouldProduceAntiAirDefense())
 			{
 				// If unit is flying and not part of the following list, we should produce Anti Air units
 				if (unitptr->is_flying)
@@ -408,6 +408,13 @@ void CCBot::setUnits()
 							break;
 						}
 						// no break because more than one Phoenix probably means that there is a real fleet
+					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
+					case sc2::UNIT_TYPEID::ZERG_MUTALISK:
+						m_strategy.setShouldProduceAntiAirDefense(true);
+						m_strategy.setShouldProduceAntiAirOffense(true);
+						Actions()->SendChat("Planning on harassing with air units? That's MY strategy! >:(");
+						break;
 					default:
 						if (unit.getType().isBuilding() && !m_strategy.enemyOnlyHasFlyingBuildings())
 						{
@@ -431,14 +438,14 @@ void CCBot::setUnits()
 						}
 						else
 						{
-							m_strategy.setShouldProduceAntiAir(true);
+							m_strategy.setShouldProduceAntiAirOffense(true);
 							Actions()->SendChat("What!? Air units? I'm not ready! :s");
 						}
 					}
 				}
 
 				// If the opponent has built a building that can produce flying units, we should produce Anti Air units
-				if (unit.getType().isBuilding())
+				if (!m_strategy.shouldProduceAntiAirOffense() && unit.getType().isBuilding())
 				{
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{
@@ -450,7 +457,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
 					case sc2::UNIT_TYPEID::ZERG_SPIRE:
 					case sc2::UNIT_TYPEID::ZERG_HIVE:
-						m_strategy.setShouldProduceAntiAir(true);
+						m_strategy.setShouldProduceAntiAirOffense(true);
 						Actions()->SendChat("Going for air units? Your fleet will be not match for mine!");
 					default:
 						break;

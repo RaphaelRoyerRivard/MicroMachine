@@ -43,7 +43,8 @@ class StrategyManager
     const BuildOrder                m_emptyBuildOrder;
 	bool m_workerRushed = false;
 	bool m_earlyRushed = false;
-	bool m_shouldProduceAntiAir = false;
+	bool m_shouldProduceAntiAirOffense = false;
+	bool m_shouldProduceAntiAirDefense = false;
 	bool m_enemyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
 	bool m_enemyHasMassZerglings = false;
@@ -76,8 +77,10 @@ public:
 	void setIsWorkerRushed(bool workerRushed) { m_workerRushed = workerRushed; }
 	bool isEarlyRushed() const { return m_earlyRushed; }
 	void setIsEarlyRushed(bool earlyRushed) { m_earlyRushed = earlyRushed; }
-	bool shouldProduceAntiAir() const { return m_shouldProduceAntiAir; }
-	void setShouldProduceAntiAir(bool shouldProduceAntiAir) { m_shouldProduceAntiAir = shouldProduceAntiAir; }
+	bool shouldProduceAntiAirOffense() const { return m_shouldProduceAntiAirOffense; }
+	void setShouldProduceAntiAirOffense(bool shouldProduceAntiAirOffense) { m_shouldProduceAntiAirOffense = shouldProduceAntiAirOffense; }
+	bool shouldProduceAntiAirDefense() const { return m_shouldProduceAntiAirDefense; }
+	void setShouldProduceAntiAirDefense(bool shouldProduceAntiAir) { m_shouldProduceAntiAirDefense = shouldProduceAntiAirDefense; }
 	bool enemyHasInvisible() const { return m_enemyHasInvisible; }
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }

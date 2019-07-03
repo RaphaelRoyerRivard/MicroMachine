@@ -670,7 +670,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				if (m_bot.Strategy().shouldProduceAntiAir())
+				if (m_bot.Strategy().shouldProduceAntiAirDefense() && !isTechQueuedOrStarted(MetaTypeEnum::HiSecAutoTracking) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HISECAUTOTRACKING))
+				{
+					queueTech(MetaTypeEnum::HiSecAutoTracking);
+				}
+				
+				if (m_bot.Strategy().shouldProduceAntiAirOffense())
 				{
 #ifndef NO_UNITS
 					if (vikingCount < bansheeCount && !m_queue.contains(MetaTypeEnum::Viking))
@@ -678,11 +683,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
 #endif
-
-					if (!isTechQueuedOrStarted(MetaTypeEnum::HiSecAutoTracking) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HISECAUTOTRACKING))
-					{
-						queueTech(MetaTypeEnum::HiSecAutoTracking);
-					}
 				}
 				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings())
 				{
@@ -867,21 +867,21 @@ void ProductionManager::lowPriorityChecks()
 
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
-	bool shouldProduceAntiAir = m_bot.Strategy().shouldProduceAntiAir();
-	if (shouldProduceAntiAir || m_bot.Strategy().enemyHasInvisible())
+	const bool shouldProduceAntiAirDefense = m_bot.Strategy().shouldProduceAntiAirDefense();
+	const bool shouldProduceAntiInvis = m_bot.Strategy().enemyHasInvisible();
+	if (shouldProduceAntiAirDefense || shouldProduceAntiInvis)
 	{
-		auto engeneeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
-		if (engeneeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
+		const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
+		if (engineeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
 		{
 			const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 			if (starportCount > 0)
 			{
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
-				if (vikingCount == 0)
+				if (vikingCount > 0)
 				{
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Viking, false);
+					m_queue.queueAsLowestPriority(MetaTypeEnum::EngineeringBay, false);
 				}
-				m_queue.queueAsLowestPriority(MetaTypeEnum::EngineeringBay, false);
 			}
 			else
 			{
@@ -891,8 +891,8 @@ void ProductionManager::lowPriorityChecks()
 
 		if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::MissileTurret.getUnitType()))
 		{
-			int engeneeringCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), true, true);
-			if (engeneeringCount > 0)
+			const int completedEngineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), true, true);
+			if (completedEngineeringBayCount > 0)
 			{
 				for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
 				{
