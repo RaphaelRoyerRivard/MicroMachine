@@ -80,7 +80,7 @@ public:
 	bool shouldProduceAntiAirOffense() const { return m_shouldProduceAntiAirOffense; }
 	void setShouldProduceAntiAirOffense(bool shouldProduceAntiAirOffense) { m_shouldProduceAntiAirOffense = shouldProduceAntiAirOffense; }
 	bool shouldProduceAntiAirDefense() const { return m_shouldProduceAntiAirDefense; }
-	void setShouldProduceAntiAirDefense(bool shouldProduceAntiAir) { m_shouldProduceAntiAirDefense = shouldProduceAntiAirDefense; }
+	void setShouldProduceAntiAirDefense(bool shouldProduceAntiAirDefense) { m_shouldProduceAntiAirDefense = shouldProduceAntiAirDefense; }
 	bool enemyHasInvisible() const { return m_enemyHasInvisible; }
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }

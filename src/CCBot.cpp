@@ -436,7 +436,7 @@ void CCBot::setUnits()
 								Actions()->SendChat("Lifting your buildings won't save them for long.");
 							}
 						}
-						else
+						else if(m_strategy.shouldProduceAntiAirOffense())
 						{
 							m_strategy.setShouldProduceAntiAirOffense(true);
 							Actions()->SendChat("What!? Air units? I'm not ready! :s");
@@ -528,6 +528,18 @@ void CCBot::setUnits()
 		}
 	}
 
+	StartProfiling("0.2.1   identifyEnemyRepairingSCVs");
+	identifyEnemyRepairingSCVs();
+	StopProfiling("0.2.1   identifyEnemyRepairingSCVs");
+
+	StartProfiling("0.2.2   identifyEnemySCVBuilders");
+	identifyEnemySCVBuilders();
+	StopProfiling("0.2.2   identifyEnemySCVBuilders");
+
+	StartProfiling("0.2.3   identifyEnemyWorkersGoingIntoRefinery");
+	identifyEnemyWorkersGoingIntoRefinery();
+	StopProfiling("0.2.3   identifyEnemyWorkersGoingIntoRefinery");
+
 	m_strategy.setEnemyHasMassZerglings(m_enemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
 	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= 5);
 #else
@@ -536,6 +548,117 @@ void CCBot::setUnits()
         m_allUnits.push_back(Unit(unit, *this));
     }
 #endif
+}
+
+void CCBot::identifyEnemyRepairingSCVs()
+{
+	m_enemyUnitsBeingRepaired.clear();
+	m_enemyRepairingSCVs.clear();
+
+	const auto & enemySCVs = m_enemyUnitsPerType[sc2::UNIT_TYPEID::TERRAN_SCV];
+	if (enemySCVs.empty())
+		return;
+
+	for(const auto & enemyUnitTypePair : m_enemyUnitsPerType)
+	{
+		const auto unitType = UnitType(enemyUnitTypePair.first, *this);
+		// if this type of unit is not repairable
+		if (!unitType.isRepairable())
+			continue;
+		// we don't care about SCVs repairing other SCVs
+		if (unitType.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV)
+			continue;
+
+		for(const auto & enemyUnit : enemyUnitTypePair.second)
+		{
+			// if the unit is not currently visible
+			if (enemyUnit.getUnitPtr()->last_seen_game_loop != m_gameLoop)
+				continue;
+			// if the unit is not currently visible (not a snapshot)
+			if (!enemyUnit.isVisible())
+				continue;
+			// if the unit is not injured
+			if (enemyUnit.getHitPointsPercentage() >= 100.f)
+				continue;
+			// if the unit is a building under construction
+			if (unitType.isBuilding() && !enemyUnit.isCompleted())
+				continue;
+
+			for(const auto & SCV : enemySCVs)
+			{
+				// if the SCV is not currently visible
+				if (SCV.getUnitPtr()->last_seen_game_loop != m_gameLoop)
+					continue;
+				// if SCV is too far from unit
+				const auto distSq = Util::DistSq(enemyUnit, SCV);
+				const auto maxDist = enemyUnit.getUnitPtr()->radius + SCV.getUnitPtr()->radius + 1;
+				if (distSq > maxDist * maxDist)
+					continue;
+
+				if (Util::isUnitFacingAnother(SCV.getUnitPtr(), enemyUnit.getUnitPtr()))
+				{
+					m_enemyUnitsBeingRepaired[enemyUnit.getUnitPtr()].insert(SCV.getUnitPtr());
+					m_enemyRepairingSCVs.insert(SCV.getUnitPtr());
+				}
+			}
+		}
+	}
+}
+
+void CCBot::identifyEnemySCVBuilders()
+{
+	m_enemySCVBuilders.clear();
+
+	const auto & enemySCVs = m_enemyUnitsPerType[sc2::UNIT_TYPEID::TERRAN_SCV];
+	if (enemySCVs.empty())
+		return;
+
+	for (const auto & enemyBuildingUnderConstruction : m_enemyBuildingsUnderConstruction)
+	{
+		CCTilePosition bottomLeft, topRight;
+		enemyBuildingUnderConstruction.getBuildingLimits(bottomLeft, topRight);
+		for (const auto & SCV : enemySCVs)
+		{
+			// if the SCV is not currently visible
+			if (SCV.getUnitPtr()->last_seen_game_loop != m_gameLoop)
+				continue;
+
+			const auto scvPosition = SCV.getPosition();
+			if (scvPosition.x >= bottomLeft.x - 0.5f && scvPosition.x <= topRight.x + 0.5f && scvPosition.y >= bottomLeft.y - 0.5f && scvPosition.y <= topRight.y + 0.5f)
+			{
+				m_enemySCVBuilders.insert(SCV.getUnitPtr());
+				break;
+			}
+		}
+	}
+}
+
+void CCBot::identifyEnemyWorkersGoingIntoRefinery()
+{
+	m_enemyWorkersGoingInRefinery.clear();
+
+	const auto & enemySCVs = m_enemyUnitsPerType[sc2::UNIT_TYPEID::TERRAN_SCV];
+	if (enemySCVs.empty())
+		return;
+
+	const auto enemyRace = GetPlayerRace(Players::Enemy);
+	const auto enemyRefineryType = UnitType::getEnemyRefineryType(enemyRace);
+	for (auto & refinery : m_enemyUnitsPerType[enemyRefineryType])
+	{
+		for (const auto & SCV : enemySCVs)
+		{
+			const float refineryDist = Util::DistSq(refinery, SCV);
+			if (refineryDist < pow(refinery.getUnitPtr()->radius + SCV.getUnitPtr()->radius + 1, 2))
+			{
+				if (Util::isUnitFacingAnother(SCV.getUnitPtr(), refinery.getUnitPtr()))
+				{
+					m_enemyWorkersGoingInRefinery.insert(SCV.getUnitPtr());
+					break;
+				}
+			}
+		}
+	}
+
 }
 
 void CCBot::clearDeadUnits()

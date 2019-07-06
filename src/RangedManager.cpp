@@ -587,6 +587,34 @@ bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inD
 	return false;
 }
 
+bool RangedManager::ShouldBansheeUncloak(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal) const
+{
+	if (banshee->cloak != sc2::Unit::Cloaked)
+		return false;
+
+	if (!unitShouldHeal)
+		return false;
+
+	if (!threats.empty())
+		return false;
+
+	if (!Util::PathFinding::IsPathToGoalSafe(banshee, goal, false, m_bot))
+		return false;
+	
+	return true;
+}
+
+bool RangedManager::ExecuteBansheeUncloakLogic(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal)
+{
+	if (ShouldBansheeUncloak(banshee, goal, threats, unitShouldHeal))
+	{
+		const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::BEHAVIOR_CLOAKOFF, true, 0);
+		PlanAction(banshee, action);
+		return true;
+	}
+	return false;
+}
+
 bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
 {
 	auto & unitsBeingRepaired = m_bot.Commander().Combat().getUnitsBeingRepaired();
@@ -966,7 +994,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			}
 			if(canFightCloaked)
 			{
-				if (ExecuteBansheeCloakLogic(rangedUnit, false))
+				if (Util::PathFinding::HasCombatInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit, m_bot) && ExecuteBansheeCloakLogic(rangedUnit, false))
 				{
 					m_harassMode = true;
 					return true;
@@ -1159,6 +1187,12 @@ bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * range
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 	{
 		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, unitShouldHeal))
+			return true;
+	}
+
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
+	{
+		if (ExecuteBansheeUncloakLogic(rangedUnit, goal, threats, unitShouldHeal))
 			return true;
 	}
 

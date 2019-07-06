@@ -1841,8 +1841,8 @@ CCPosition CombatCommander::getMainAttackLocation()
 CCPosition CombatCommander::exploreMap()
 {
 	// Hack to prevent our units from hugging observers that they can't kill 
-	if (!m_bot.Strategy().shouldProduceAntiAir())
-		m_bot.Strategy().setShouldProduceAntiAir(true);
+	if (!m_bot.Strategy().shouldProduceAntiAirOffense())
+		m_bot.Strategy().setShouldProduceAntiAirOffense(true);
 
 	const CCPosition basePosition = Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
 	for (auto & unit : m_combatUnits)

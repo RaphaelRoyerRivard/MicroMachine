@@ -130,6 +130,8 @@ private:
 	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit) const;
 	bool ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger) const;
 	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger);
+	bool ShouldBansheeUncloak(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal) const;
+	bool ExecuteBansheeUncloakLogic(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal);
 	bool ShouldUnitHeal(const sc2::Unit * rangedUnit);
 	bool TeleportBattlecruiser(const sc2::Unit * battlecruiser, CCPosition location);
 	CCPosition GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const;

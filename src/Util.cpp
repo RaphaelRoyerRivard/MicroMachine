@@ -1566,6 +1566,7 @@ std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const st
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
+	const auto & enemyUnitsBeingRepaired = bot.GetEnemyUnitsBeingRepaired();
 	std::vector<const sc2::Unit *> threats;
 
 	// for each possible threat
@@ -1578,7 +1579,20 @@ std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const st
 		//But this is not working so well for melee units, we keep every units in a radius of min threat range
 		const float threatRange = getThreatRange(unit, targetUnit, bot);
 		if (Util::DistSq(unit->pos, targetUnit->pos) < threatRange * threatRange)
+		{
 			threats.push_back(targetUnit);
+
+			// We check if that threat is being repaired
+			const auto & it = enemyUnitsBeingRepaired.find(targetUnit);
+			if(it != enemyUnitsBeingRepaired.end())
+			{
+				// If so, we consider all the SCVs repairing it as threats
+				for(const auto enemyRepairingSCV : it->second)
+				{
+					threats.push_back(enemyRepairingSCV);
+				}
+			}
+		}
 	}
 
 	return threats;
@@ -1652,6 +1666,13 @@ float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 CCPosition Util::getFacingVector(const sc2::Unit * unit)
 {
 	return CCPosition(cos(unit->facing), sin(unit->facing));
+}
+
+bool Util::isUnitFacingAnother(const sc2::Unit * unitA, const sc2::Unit * unitB)
+{
+	CCPosition facingVector = getFacingVector(unitA);
+	CCPosition unitsVector = unitB->pos - unitA->pos;
+	return sc2::Dot2D(facingVector, unitsVector) > 0.99f;
 }
 
 bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)

@@ -106,12 +106,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	Unit targetUnit(target, m_bot);
 	if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
 	{
-		float targetDps = Util::GetDpsForTarget(target, attacker, m_bot);
-		if (target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-		{
-			//We manually reduce the dps of the bunker because it only serve as a shield, units will spawn out of it when destroyed
-			targetDps = 5.f;
-		}
+		const float targetDps = Util::GetDpsForTarget(target, attacker, m_bot);
 		float workerBonus = 1.f;
 		if (targetUnit.getType().isWorker() && m_order.getType() != SquadOrderTypes::Defend)
 		{
@@ -121,36 +116,29 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 			}
 
 			// Reduce priority for workers that are going in a refinery
-			const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
-			const auto enemyRefineryType = UnitType::getEnemyRefineryType(enemyRace);
-			for (auto & refinery : m_bot.GetKnownEnemyUnits(enemyRefineryType))
+			if (Util::Contains(targetUnit.getUnitPtr(), m_bot.GetEnemyWorkersGoingInRefinery()))
 			{
-				const float refineryDist = Util::DistSq(refinery, target->pos);
-				if (refineryDist < 2.5 * 2.5)
-				{
-					const CCPosition facingVector = Util::getFacingVector(target);
-					if (Dot2D(facingVector, refinery.getPosition() - target->pos) > 0.99f)
-					{
-						if (m_bot.Config().DrawHarassInfo)
-							m_bot.Map().drawCircle(targetUnit.getPosition(), 0.5f, sc2::Colors::Red);
-						workerBonus *= 0.5f;
-					}
-				}
+				workerBonus *= 0.5f;
+				if (m_bot.Config().DrawHarassInfo)
+					m_bot.Map().drawCircle(targetUnit.getPosition(), 0.5f, sc2::Colors::Red);
 			}
 		}
 		if (targetUnit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_SCV)
 		{
-			const auto & enemyBuildingsUnderConstruction = m_bot.GetEnemyBuildingsUnderConstruction();
-			for(const auto & enemyBuildingUnderConstruction : enemyBuildingsUnderConstruction)
+			// Add a bonus if the SCV is building
+			if (Util::Contains(targetUnit.getUnitPtr(), m_bot.GetEnemySCVBuilders()))
 			{
-				CCTilePosition bottomLeft, topRight;
-				enemyBuildingUnderConstruction.getBuildingLimits(bottomLeft, topRight);
-				const auto targetPosition = targetUnit.getPosition();
-				if(targetPosition.x >= bottomLeft.x - 0.5f && targetPosition.x <= topRight.x + 0.5f && targetPosition.y >= bottomLeft.y - 0.5f && targetPosition.y <= topRight.y + 0.5f)
-				{
-					workerBonus *= 2.f;
-					m_bot.Map().drawCircle(targetPosition, 0.5f, sc2::Colors::Green);
-				}
+				workerBonus *= 2.f;
+				if (m_bot.Config().DrawHarassInfo)
+					m_bot.Map().drawCircle(targetUnit.getPosition(), 0.5f, sc2::Colors::Green);
+			}
+
+			// Add a bonus if the SCV is repairing
+			else if (Util::Contains(targetUnit.getUnitPtr(), m_bot.GetEnemyRepairingSCVs()))
+			{
+				workerBonus *= 2.f;
+				if (m_bot.Config().DrawHarassInfo)
+					m_bot.Map().drawCircle(targetUnit.getPosition(), 0.5f, sc2::Colors::Green);
 			}
 		}
 
@@ -163,6 +151,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		const float minionModifier = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR ? 0.1f : 1.f;	//units that can be respawned should be less prioritized
 		const auto & yamatoTargets = m_bot.Commander().Combat().getYamatoTargets();
 		const float yamatoTargetModifier = yamatoTargets.find(target) != yamatoTargets.end() ? 0.1f : 1.f;
+		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
 		return (targetDps + unitDps - healthValue + proximityValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier * yamatoTargetModifier;
 	}
 

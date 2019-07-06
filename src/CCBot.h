@@ -71,6 +71,10 @@ class CCBot
     std::vector<CCPosition> m_enemyBaseLocations;
 	std::map<sc2::UNIT_TYPEID, std::vector<Unit>> m_enemyUnitsPerType;
 	std::map<sc2::UNIT_TYPEID, std::vector<Unit>> m_allyUnitsPerType;
+	std::map<const sc2::Unit *, std::set<const sc2::Unit *>> m_enemyUnitsBeingRepaired;
+	std::set<const sc2::Unit *> m_enemyRepairingSCVs;
+	std::set<const sc2::Unit *> m_enemySCVBuilders;
+	std::set<const sc2::Unit *> m_enemyWorkersGoingInRefinery;
 	CCRace selfRace;
 	std::map<std::string, Profiler> m_profilingTimes;
 	std::mutex m_command_mutex;
@@ -91,6 +95,9 @@ class CCBot
 
 	void checkKeyState();
 	void setUnits();
+	void identifyEnemyRepairingSCVs();
+	void identifyEnemySCVBuilders();
+	void identifyEnemyWorkersGoingIntoRefinery();
 	void clearDeadUnits();
 	void updatePreviousFrameEnemyUnitPos();
 	void checkForConcede();
@@ -166,6 +173,10 @@ public:
 	const std::vector<Unit> GetAllyDepotUnits();//Cannot be by reference, vector created in function
 	const std::vector<Unit> GetAllyGeyserUnits();//Cannot be by reference, vector created in function
 	std::map<sc2::Tag, Unit> & GetEnemyUnits();
+	const std::map<const sc2::Unit *, std::set<const sc2::Unit *>> & GetEnemyUnitsBeingRepaired() const { return m_enemyUnitsBeingRepaired; }
+	const std::set<const sc2::Unit *> & GetEnemyRepairingSCVs() const { return m_enemyRepairingSCVs; }
+	const std::set<const sc2::Unit *> & GetEnemySCVBuilders() const { return m_enemySCVBuilders; }
+	const std::set<const sc2::Unit *> & GetEnemyWorkersGoingInRefinery() const { return m_enemyWorkersGoingInRefinery; }
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
 	const std::vector<Unit> & GetKnownEnemyUnits(sc2::UnitTypeID type);
 	const std::vector<Unit> & GetEnemyBuildingsUnderConstruction() const { return m_enemyBuildingsUnderConstruction; }

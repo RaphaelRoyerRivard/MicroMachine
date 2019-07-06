@@ -166,6 +166,7 @@ namespace Util
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
 	float getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
 	CCPosition getFacingVector(const sc2::Unit * unit);
+	bool isUnitFacingAnother(const sc2::Unit * unitA, const sc2::Unit * unitB);
 
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
     
