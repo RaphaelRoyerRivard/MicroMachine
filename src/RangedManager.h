@@ -118,6 +118,7 @@ private:
 	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
 	bool m_harassMode = false;
+	std::map<const sc2::Unit *, CCPosition> m_cycloneFlyingHelpers;
 
 	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
 	void setNextFrameAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit, uint32_t nextAvailableFrame);
@@ -132,7 +133,7 @@ private:
 	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger);
 	bool ShouldBansheeUncloak(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal) const;
 	bool ExecuteBansheeUncloakLogic(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal);
-	bool ShouldUnitHeal(const sc2::Unit * rangedUnit);
+	bool ShouldUnitHeal(const sc2::Unit * rangedUnit) const;
 	bool TeleportBattlecruiser(const sc2::Unit * battlecruiser, CCPosition location);
 	CCPosition GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const;
 	bool IsLockedOn(const sc2::Unit * rangedUnit) const;
@@ -163,4 +164,5 @@ private:
 	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
 	void CleanActions(sc2::Units &rangedUnits);
 	void ExecuteActions();
+	void CalcBestFlyingCycloneHelpers();
 };

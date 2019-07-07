@@ -9,7 +9,7 @@ class Unit;
 
 namespace Util
 {
-	static int HELLION_SQUAD_COUNT = 10;
+	static size_t HELLION_SQUAD_COUNT = 10;
 	static float HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE = 0.3f;
 	static const int DELAY_BETWEEN_ERROR = 120;
 	static std::vector<std::string> displayedError;
@@ -54,8 +54,7 @@ namespace Util
 		}
 	};
 
-	static std::list<UnitCluster> m_unitClusters;
-	static std::list<UnitCluster> m_specialUnitClusters;
+	static std::map<std::string, std::list<UnitCluster>> m_unitClusters;
 	static uint32_t m_lastUnitClusterFrame;
 	static uint32_t m_lastSpecialUnitClusterFrame;
 
@@ -134,8 +133,9 @@ namespace Util
 	template< typename O, typename S>
 	typename S::iterator Find(O object, S structure) { return std::find(structure.begin(), structure.end(), object); }
 
-	std::list<UnitCluster> & GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, CCBot & bot);
-
+	std::list<UnitCluster> GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, CCBot & bot);
+	std::list<UnitCluster> & GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, std::string queryName, CCBot & bot);
+	
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);
 

@@ -162,6 +162,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	CleanActions(rangedUnits);
 	m_bot.StopProfiling("0.10.4.1.5.0        CleanActions");
 
+	m_bot.StartProfiling("0.10.4.1.5.3        CalcBestFlyingCycloneHelpers");
+	CalcBestFlyingCycloneHelpers();
+	m_bot.StopProfiling("0.10.4.1.5.3        CalcBestFlyingCycloneHelpers");
+
 	m_bot.StartProfiling("0.10.4.1.5.1        HarassLogicForUnit");
 	if (m_bot.Config().EnableMultiThreading)
 	{
@@ -229,6 +233,19 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	CCPosition goal = m_order.getPosition();
 
+	// Check if unit is chosen to be a Cyclone helper
+	const auto it = m_cycloneFlyingHelpers.find(rangedUnit);
+	const bool isCycloneHelper = it != m_cycloneFlyingHelpers.end();
+	if (isCycloneHelper)
+	{
+		goal = it->second;
+		if (m_bot.Config().DrawHarassInfo)
+		{
+			m_bot.Map().drawCircle(rangedUnit->pos, 0.75f, sc2::Colors::Purple);
+			m_bot.Map().drawLine(rangedUnit->pos, it->second, sc2::Colors::Purple);
+		}
+	}
+
 	m_bot.StartProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 	bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
 	if (unitShouldHeal)
@@ -241,7 +258,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if (isBattlecruiser && Util::DistSq(rangedUnit->pos, goal) > 15.f * 15.f && TeleportBattlecruiser(rangedUnit, goal))
 			return;
 	}
-	else if(isMarine || isRaven)
+	else if (!isCycloneHelper && (isMarine || isRaven))
 	{
 		goal = GetBestSupportPosition(rangedUnit, rangedUnits);
 	}
@@ -336,7 +353,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 	if (cycloneShouldUseLockOn || AllowUnitToPathFind(rangedUnit))
 	{
-		const CCPosition pathFindEndPos = target && !unitShouldHeal ? target->pos : goal;
+		const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
 		const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target
 		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, target ? unitAttackRange : 3.f, cycloneShouldUseLockOn, m_bot);
 		if (closePositionInPath != CCPosition())
@@ -435,7 +452,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
 	// If close to an unpathable position or in danger
 	// Use influence map to find safest path
-	CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, m_bot);
+	const CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, m_bot);
 	//safeTile = AttenuateZigzag(rangedUnit, threats, safeTile, summedFleeVec);	//if we decomment this, we must not break in the threat check loop
 	const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 	PlanAction(rangedUnit, action);
@@ -615,7 +632,7 @@ bool RangedManager::ExecuteBansheeUncloakLogic(const sc2::Unit * banshee, CCPosi
 	return false;
 }
 
-bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit)
+bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit) const
 {
 	auto & unitsBeingRepaired = m_bot.Commander().Combat().getUnitsBeingRepaired();
 	UnitType unitType(rangedUnit->unit_type, m_bot);
@@ -666,7 +683,8 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	const bool isRaven = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
 	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = { sc2::UNIT_TYPEID::TERRAN_RAVEN };
 	const std::vector<sc2::UNIT_TYPEID> typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
-	const auto clusters = Util::GetUnitClusters(rangedUnits, isRaven ? typesToIgnore : typesToConsider, isRaven, m_bot);
+	const auto clusterQueryName = isRaven ? "Raven" : "Other";
+	const auto clusters = Util::GetUnitClusters(rangedUnits, isRaven ? typesToIgnore : typesToConsider, isRaven, clusterQueryName, m_bot);
 	const Util::UnitCluster* closestBiggestCluster = nullptr;
 	float distance = 0.f;
 	for(const auto & cluster : clusters)
@@ -1764,6 +1782,119 @@ void RangedManager::ExecuteActions()
 		if (action.duration > 0)
 		{
 			nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + action.duration;
+		}
+	}
+}
+
+void RangedManager::CalcBestFlyingCycloneHelpers()
+{
+	m_cycloneFlyingHelpers.clear();
+
+	// Get the Cyclones and their potential flying helpers in the squad
+	std::set<const sc2::Unit *> cyclones;
+	std::set<const sc2::Unit *> potentialFlyingCycloneHelpers;
+	for (const auto unit : m_units)
+	{
+		const auto unitPtr = unit.getUnitPtr();
+		const auto type = unitPtr->unit_type;
+
+		if (ShouldUnitHeal(unitPtr) || IsLockedOn(unitPtr))
+			continue;
+
+		if(type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+		{
+			cyclones.insert(unitPtr);
+		}
+		else if (unit.isFlying())
+		{
+			potentialFlyingCycloneHelpers.insert(unitPtr);
+		}
+	}
+
+	if (cyclones.empty())
+		return;
+
+	// Gather Cyclones' targets
+	const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+	std::set<const sc2::Unit *> targets;
+	for(const auto & cyclone : lockOnTargets)
+	{
+		// The Cyclone's target will need to be followed
+		targets.insert(cyclone.second.first);
+		// Cyclone does not need to be followed anymore because it has a target
+		cyclones.erase(cyclone.first);
+	}
+
+	// Find clusters of targets to use less potential helpers
+	sc2::Units targetsVector;
+	for (const auto target : targets)
+		targetsVector.push_back(target);
+	const auto targetClusters = Util::GetUnitClusters(targetsVector, {}, false, m_bot);
+
+	// Choose the best air unit to keep vision of Cyclone's targets
+	for (const auto & targetCluster : targetClusters)
+	{
+		const sc2::Unit * closestHelper = nullptr;
+		float smallestDistSq = 0.f;
+		for(const auto potentialHelper : potentialFlyingCycloneHelpers)
+		{
+			const float distSq = Util::DistSq(targetCluster.m_center, potentialHelper->pos);
+			if(!closestHelper || distSq < smallestDistSq)
+			{
+				closestHelper = potentialHelper;
+				smallestDistSq = distSq;
+			}
+		}
+		if (closestHelper)
+		{
+			m_cycloneFlyingHelpers.insert_or_assign(closestHelper, targetCluster.m_center);
+			potentialFlyingCycloneHelpers.erase(closestHelper);
+		}
+	}
+
+	// If there are Cyclones without target, follow them to give them vision
+	if(!cyclones.empty() && m_cycloneFlyingHelpers.size() < potentialFlyingCycloneHelpers.size())
+	{
+		// Do not concider Cyclones without target that are already near a helper
+		sc2::Units cyclonesVector;
+		for (const auto cyclone : cyclones)
+		{
+			bool covered = false;
+			for (const auto & helper : m_cycloneFlyingHelpers)
+			{
+				if (Util::DistSq(helper.first->pos, cyclone->pos) < 7.f * 7.f)
+				{
+					// that cyclone doesn't need help from another flying unit
+					covered = true;
+					break;
+				}
+			}
+			if (!covered)
+				cyclonesVector.push_back(cyclone);
+		}
+
+		// Find clusters of Cyclones without target to use less potential helpers
+		const auto cycloneClusters = Util::GetUnitClusters(cyclonesVector, { sc2::UNIT_TYPEID::TERRAN_CYCLONE }, false, m_bot);
+
+		// Choose the best air unit to give vision to Cyclones without target
+		for(const auto & cycloneCluster : cycloneClusters)
+		{
+			const sc2::Unit * closestHelper = nullptr;
+			float smallestDistSq = 0.f;
+			for (const auto potentialHelper : potentialFlyingCycloneHelpers)
+			{
+				const float distSq = Util::DistSq(potentialHelper->pos, cycloneCluster.m_center);
+				if(!closestHelper || distSq < smallestDistSq)
+				{
+					closestHelper = potentialHelper;
+					smallestDistSq = distSq;
+				}
+			}
+			if (closestHelper)
+			{
+				m_cycloneFlyingHelpers.insert_or_assign(closestHelper, cycloneCluster.m_center);
+				potentialFlyingCycloneHelpers.erase(closestHelper);
+			}
 		}
 	}
 }

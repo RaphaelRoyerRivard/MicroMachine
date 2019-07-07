@@ -24,9 +24,9 @@ public:
 
     const std::vector<Unit> & getUnits() const;
     void setUnits(const std::vector<Unit> & u);
-    inline std::vector <Unit> getTargets() const { return m_targets; }
-    virtual void setTargets(const std::vector<Unit> & targets) = 0;
-    inline void setOrder(SquadOrder order) { m_order = order; }
+	std::vector <Unit> getTargets() const { return m_targets; }
+	virtual void setTargets(const std::vector<Unit> & targets) = 0;
+    void setOrder(SquadOrder order) { m_order = order; }
     void regroup(const CCPosition & regroupPosition) const;
 	float getAverageSquadSpeed() const;
 	float getAverageTargetsSpeed() const;

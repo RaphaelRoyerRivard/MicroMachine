@@ -771,6 +771,7 @@ void CombatCommander::updateHarassSquads()
 	std::vector<Unit*> idleHellions;
 	std::vector<Unit*> idleMarines;
 	std::vector<Unit*> idleVikings;
+	std::vector<Unit*> idleCyclones;
 	for (auto & unit : m_combatUnits)
 	{
 		BOT_ASSERT(unit.isValid(), "null unit in combat units");
@@ -794,6 +795,8 @@ void CombatCommander::updateHarassSquads()
 				idleMarines.push_back(&unit);
 			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 				idleVikings.push_back(&unit);
+			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+				idleCyclones.push_back(&unit);
 			else
 				m_squadData.assignUnitToSquad(unit, harassSquad);
 		}
@@ -819,6 +822,20 @@ void CombatCommander::updateHarassSquads()
 		for (auto viking : idleVikings)
 		{
 			m_squadData.assignUnitToSquad(*viking, harassSquad);
+		}
+	}
+	if(!idleCyclones.empty())
+	{
+		for (const auto & unit : harassSquad.getUnits())
+		{
+			if (unit.isFlying())
+			{
+				for (auto cyclone : idleCyclones)
+				{
+					m_squadData.assignUnitToSquad(*cyclone, harassSquad);
+				}
+				break;
+			}
 		}
 	}
 

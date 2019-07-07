@@ -13,7 +13,7 @@ class Squad
     CCBot &             m_bot;
 
     std::string         m_name;
-    std::vector<Unit>   m_units;
+	std::vector<Unit>   m_units;
     std::vector<Unit>   m_targets;
 
 	int					m_lastRegroupFrame;

@@ -31,7 +31,7 @@ class CombatCommander
 	std::set<const sc2::Unit *> m_queryYamatoAvailability;
 	std::map<const sc2::Unit *, std::map<const sc2::Unit *, uint32_t>> m_yamatoTargets;	// <target, <bc, frame>>
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnCastedFrame;
-	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnTargets;	// <cyclone, target, frame>>
+	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnTargets;	// <cyclone, <target, frame>>
 	std::set<sc2::Tag> m_newCyclones;
 	std::set<sc2::Tag> m_toggledCyclones;
 	

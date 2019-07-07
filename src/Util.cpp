@@ -345,31 +345,19 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				if (neighborPosition == CCTilePosition())
 					continue;
 
-				int neighborX = bigUnit ? -1 : 0;
-				int neighborY = bigUnit ? -1 : 0;
-				const int maxNeighborX = bigUnit ? 1 : 0;
-				const int maxNeighborY = bigUnit ? 1 : 0;
 				const CCPosition mapMin = bot.Map().mapMin();
 				const CCPosition mapMax = bot.Map().mapMax();
 				float totalCost = 0.f;
 
-				// These other loops are used to consider the influence in adjacent tiles in the case of a unit with a big radius
-				for (; neighborX <= maxNeighborX; ++neighborX)
-				{
-					for (; neighborY <= maxNeighborY; ++neighborY)
-					{
-						const CCTilePosition currentNeighborPosition = CCTilePosition(neighborPosition.x + neighborX, neighborPosition.y + neighborY);
-						if (currentNeighborPosition.x < mapMin.x || currentNeighborPosition.y < mapMin.y || currentNeighborPosition.x >= mapMax.x || currentNeighborPosition.y >= mapMax.y)
-							continue;	// out of bounds check
+				if (neighborPosition.x < mapMin.x || neighborPosition.y < mapMin.y || neighborPosition.x >= mapMax.x || neighborPosition.y >= mapMax.y)
+					continue;	// out of bounds check
 
-						const float neighborDistance = Dist(currentNode->position, currentNeighborPosition);
-						const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(currentNeighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
-						const float heightCost = (unitShouldAvoidDownCliffs && bot.Map().terrainHeight(currentNeighborPosition) < bot.Map().terrainHeight(currentNode->position)) ? PATHFINDING_TILE_DOWN_RAMP_COST : 0.f;
-						const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(currentNeighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetCombatInfluenceOnTile(currentNeighborPosition, unit, bot));
-						const float nodeCost = (influenceOnTile + creepCost + heightCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
-						totalCost += currentNode->cost + nodeCost;
-					}
-				}
+				const float neighborDistance = Dist(currentNode->position, neighborPosition);
+				const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
+				const float heightCost = (unitShouldAvoidDownCliffs && bot.Map().terrainHeight(neighborPosition) < bot.Map().terrainHeight(currentNode->position)) ? PATHFINDING_TILE_DOWN_RAMP_COST : 0.f;
+				const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(neighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetCombatInfluenceOnTile(neighborPosition, unit, bot));
+				const float nodeCost = (influenceOnTile + creepCost + heightCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
+				totalCost += currentNode->cost + nodeCost;
 
 				// Consider turning cost to prevent our units from wiggling while fleeing, but not for workers that want to know if the path is safe
 				if (!exitOnInfluence)
@@ -382,9 +370,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 					const auto directionVector = GetPosition(neighborPosition) - GetPosition(currentNode->position);
 					const auto dotProduct = GetDotProduct(facingVector, directionVector);
 					const auto turnValue = std::min(1.f, 1 - dotProduct);
-					float turnCost = turnValue * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
-					if (bigUnit)
-						turnCost *= 9;	// Node cost considers 9 tiles, so if we want the turn cost to have a proportional weight for big units, we need to multiply it
+					const float turnCost = turnValue * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
 					totalCost += turnCost;
 				}
 
@@ -843,13 +829,18 @@ CCPosition Util::CalcCenter(const std::vector<Unit> & units)
     return CCPosition(cx / units.size(), cy / units.size());
 }
 
-std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, CCBot & bot)
+std::list<Util::UnitCluster> Util::GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, CCBot & bot)
 {
-	auto & unitClusters = ignoreSpecialTypes ? m_unitClusters : m_specialUnitClusters;
+	return GetUnitClusters(units, specialTypes, ignoreSpecialTypes, "", bot);
+}
+
+std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, std::string query, CCBot & bot)
+{
+	auto & unitClusters = m_unitClusters[query];
 	auto & lastUnitClusterFrame = ignoreSpecialTypes ? m_lastUnitClusterFrame : m_lastSpecialUnitClusterFrame;
 	// Return the saved clusters if they were calculated not long ago
 	const auto currentFrame = bot.GetCurrentFrame();
-	if (currentFrame - lastUnitClusterFrame < UNIT_CLUSTERING_COOLDOWN)
+	if (query != "" && currentFrame - lastUnitClusterFrame < UNIT_CLUSTERING_COOLDOWN)
 		return unitClusters;
 
 	unitClusters.clear();
@@ -1671,7 +1662,7 @@ CCPosition Util::getFacingVector(const sc2::Unit * unit)
 bool Util::isUnitFacingAnother(const sc2::Unit * unitA, const sc2::Unit * unitB)
 {
 	CCPosition facingVector = getFacingVector(unitA);
-	CCPosition unitsVector = unitB->pos - unitA->pos;
+	CCPosition unitsVector = Util::Normalized(unitB->pos - unitA->pos);
 	return sc2::Dot2D(facingVector, unitsVector) > 0.99f;
 }
 

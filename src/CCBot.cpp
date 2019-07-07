@@ -436,7 +436,7 @@ void CCBot::setUnits()
 								Actions()->SendChat("Lifting your buildings won't save them for long.");
 							}
 						}
-						else if(m_strategy.shouldProduceAntiAirOffense())
+						else if(!m_strategy.shouldProduceAntiAirOffense())
 						{
 							m_strategy.setShouldProduceAntiAirOffense(true);
 							Actions()->SendChat("What!? Air units? I'm not ready! :s");
@@ -565,8 +565,8 @@ void CCBot::identifyEnemyRepairingSCVs()
 		// if this type of unit is not repairable
 		if (!unitType.isRepairable())
 			continue;
-		// we don't care about SCVs repairing other SCVs
-		if (unitType.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV)
+		// we don't care about SCVs repairing passive buildings because we will always target the SCVs instead
+		if (!unitType.isCombatUnit())
 			continue;
 
 		for(const auto & enemyUnit : enemyUnitTypePair.second)
@@ -979,7 +979,6 @@ Unit CCBot::GetUnit(const CCUnitID & tag) const
     return Unit(BWAPI::Broodwar->getUnit(tag), *(CCBot *)this);
 #endif
 }
-
 
 int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed)
 { 
