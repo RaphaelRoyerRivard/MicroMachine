@@ -62,9 +62,6 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const Building & b, bool ignor
 // makes final checks to see if a building can be built at a certain location
 bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ignoreReservedTiles) const
 {
-	//TODO: Unused, it is outdated, check canBuildHereWithSpace instead
-	BOT_ASSERT(true, "Unused, it is outdated, check canBuildHereWithSpace instead");
-
 	// if it overlaps a base location return false
 	if (!ignoreReservedTiles && tileOverlapsBaseLocation(bx, by, type))
 	{
@@ -72,14 +69,27 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ig
 	}
 
     // check the reserve map
+	auto buildingTerrainHeight = -1;
     for (int x = bx; x < bx + type.tileWidth(); x++)
     {
         for (int y = by; y < by + type.tileHeight(); y++)
         {
+			//Validate reserved tiles and buildable
             if ((!ignoreReservedTiles && m_reserveMap[x][y]) || !buildable(type, x, y, ignoreReservedTiles))
             {
                 return false;
             }
+
+			//Validate terrain height
+			int terrainHeight = Util::TerainHeight(m_bot.Observation()->GetGameInfo(), x, y);
+			if (buildingTerrainHeight == -1)
+			{
+				buildingTerrainHeight = terrainHeight;
+			}
+			else if (buildingTerrainHeight != terrainHeight)
+			{
+				return false;
+			}
         }
     }
 	return true;
@@ -116,16 +126,29 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
 	}
 	
     // if we can't build here, or space is reserved, we can't build here
+	auto buildingTerrainHeight = -1;
     for (int x = startx; x < endx; x++)
     {
         for (int y = starty; y < endy; y++)
         {
             if (!b.type.isRefinery())
             {
+				//Validate reserved tiles and buildable
                 if ((!ignoreReserved && m_reserveMap[x][y]) || !buildable(b.type, x, y))
                 {
                     return false;
                 }
+
+				//Validate terrain height
+				int terrainHeight = Util::TerainHeight(m_bot.Observation()->GetGameInfo(), x, y);
+				if (buildingTerrainHeight == -1)
+				{
+					buildingTerrainHeight = terrainHeight;
+				}
+				else if (buildingTerrainHeight != terrainHeight)
+				{
+					return false;
+				}
             }
         }
     }
@@ -141,7 +164,15 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
 			{
 				for (int y = 0; y < 2; y++)
 				{
+					//Validate reserved tiles and buildable
 					if ((!ignoreReserved && m_reserveMap[startx + width + x][starty + y]) || !buildable(b.type, startx + width + x, starty + y, false))
+					{
+						return false;
+					}
+
+					//Validate terrain height, addon should be same height as the building so not reseting 'buildingTerrainHeight'
+					int terrainHeight = Util::TerainHeight(m_bot.Observation()->GetGameInfo(), startx + width + x, starty + y);
+					if (buildingTerrainHeight != terrainHeight)
 					{
 						return false;
 					}
