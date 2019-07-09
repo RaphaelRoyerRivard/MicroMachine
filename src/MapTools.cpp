@@ -52,6 +52,7 @@ void MapTools::onStart()
     m_sectorNumber   = vvi(m_totalWidth, std::vector<int>(m_totalHeight, 0));
     m_terrainHeight  = vvf(m_totalWidth, std::vector<float>(m_totalHeight, 0.0f));
 
+	auto & info = m_bot.Observation()->GetGameInfo();
     // Set the boolean grid data from the Map
     for (int x = m_min.x; x < m_max.x; ++x)
     {
@@ -60,7 +61,17 @@ void MapTools::onStart()
             m_buildable[x][y]       = canBuild(x, y);
             m_depotBuildable[x][y]  = canBuild(x, y);
             m_walkable[x][y]        = m_buildable[x][y] || canWalk(x, y);
-            m_terrainHeight[x][y]   = terrainHeight(CCPosition((CCPositionType)x, (CCPositionType)y));
+
+			if (x < m_min.x || x >= m_max.x || y < m_min.y || y >= m_max.y)
+			{
+				m_terrainHeight[x][y] = 0.0f;
+			}
+			else
+			{
+				assert(info.terrain_height.data.size() == info.width * info.height);
+				unsigned char encodedHeight = info.terrain_height.data[x + ((info.height - 1) - y) * info.width];
+				m_terrainHeight[x][y] = -100.0f + 200.0f * float(encodedHeight) / 255.0f;
+			}
         }
     }
 
@@ -257,6 +268,16 @@ bool MapTools::isPowered(int tileX, int tileY) const
     return false;
 #else
     return BWAPI::Broodwar->hasPower(BWAPI::TilePosition(tileX, tileY));
+#endif
+}
+
+float MapTools::terrainHeight(const CCPosition & point) const
+{
+#ifdef SC2API
+	sc2::Point2DI pointI((int)point.x, (int)point.y);
+	return m_terrainHeight[pointI.x][pointI.y];
+#else
+	return 0;
 #endif
 }
 
@@ -586,26 +607,6 @@ bool MapTools::canBuild(int tileX, int tileY)
     return BWAPI::Broodwar->isBuildable(BWAPI::TilePosition(tileX, tileY));
 #endif
 }
-
-float MapTools::terrainHeight(const CCPosition & point) const
-{
-#ifdef SC2API
-    auto & info = m_bot.Observation()->GetGameInfo();
-    sc2::Point2DI pointI((int)point.x, (int)point.y);
-	if (pointI.x < m_min.x || pointI.x >= m_max.x || pointI.y < m_min.y || pointI.y >= m_max.y)
-    {
-        return 0.0f;
-    }
-
-    assert(info.terrain_height.data.size() == info.width * info.height);
-    unsigned char encodedHeight = info.terrain_height.data[pointI.x + ((info.height - 1) - pointI.y) * info.width];
-    float decodedHeight = -100.0f + 200.0f * float(encodedHeight) / 255.0f;
-    return decodedHeight;
-#else
-    return 0;
-#endif
-}
-
 
 void MapTools::draw() const
 {

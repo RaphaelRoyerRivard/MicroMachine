@@ -22,6 +22,10 @@ namespace Util
 	static UnitType depotType;
 	static UnitType workerType;
 	static UnitType supplyType;
+	static const sc2::GameInfo * gameInfo;
+	static std::vector<std::vector<bool>> pathable;
+	static std::vector<std::vector<bool>> placement;
+	static std::vector<std::vector<float>> terrainHeight;
 
 	static bool allowDebug;
 	
@@ -122,7 +126,7 @@ namespace Util
 		float GetEffectInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 	}
 
-	void Initialize(CCBot & bot, CCRace race);
+	void Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo);
 	void SetAllowDebug(bool _allowDebug);
 
 	void SetMapName(std::string _mapName);
@@ -192,10 +196,10 @@ namespace Util
     
     // Kevin-provided helper functions
     void    VisualizeGrids(const sc2::ObservationInterface* obs, sc2::DebugInterface* debug);
-    float   TerainHeight(const sc2::GameInfo& info, const sc2::Point2D& point);
-	float	TerainHeight(const sc2::GameInfo & info, const int x, const int y);
-    bool    Placement(const sc2::GameInfo& info, const sc2::Point2D& point);
-    bool    Pathable(const sc2::GameInfo& info, const sc2::Point2D& point);
+    float   TerainHeight(const sc2::Point2D& point);
+	float	TerainHeight(const int x, const int y);
+    bool    Placement(const sc2::Point2D& point);
+    bool    Pathable(const sc2::Point2D& point);
 
 
     CCRace          GetRaceFromString(const std::string & str);
@@ -226,7 +230,7 @@ namespace Util
 #ifdef SC2API
     sc2::BuffID     GetBuffFromName(const std::string & name, CCBot & bot);
     sc2::AbilityID  GetAbilityFromName(const std::string & name, CCBot & bot);
-    sc2::Point2DI   ConvertWorldToCamera(const sc2::GameInfo& game_info, const sc2::Point2D camera_world, const sc2::Point2D& world);
+    sc2::Point2DI   ConvertWorldToCamera(const sc2::Point2D camera_world, const sc2::Point2D& world);
 #endif
 
     float Dist(const Unit & unit, const CCPosition & p2);

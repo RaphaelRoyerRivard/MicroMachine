@@ -81,7 +81,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ig
             }
 
 			//Validate terrain height
-			int terrainHeight = Util::TerainHeight(m_bot.Observation()->GetGameInfo(), x, y);
+			int terrainHeight = Util::TerainHeight(x, y);
 			if (buildingTerrainHeight == -1)
 			{
 				buildingTerrainHeight = terrainHeight;
@@ -140,7 +140,7 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
                 }
 
 				//Validate terrain height
-				int terrainHeight = Util::TerainHeight(m_bot.Observation()->GetGameInfo(), x, y);
+				int terrainHeight = Util::TerainHeight(x, y);
 				if (buildingTerrainHeight == -1)
 				{
 					buildingTerrainHeight = terrainHeight;
@@ -171,7 +171,7 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
 					}
 
 					//Validate terrain height, addon should be same height as the building so not reseting 'buildingTerrainHeight'
-					int terrainHeight = Util::TerainHeight(m_bot.Observation()->GetGameInfo(), startx + width + x, starty + y);
+					int terrainHeight = Util::TerainHeight(startx + width + x, starty + y);
 					if (buildingTerrainHeight != terrainHeight)
 					{
 						return false;
