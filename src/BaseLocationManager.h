@@ -27,6 +27,7 @@ public:
 	bool affectToCluster(std::vector<std::vector<Unit>> & resourceClusters, Unit & resource, float maxDistanceWithCluster) const;
     void onFrame();
     void drawBaseLocations();
+	void drawTileBaseLocationAssociations() const;
 	void drawResourceProxity();
 
 	BaseLocation * getBaseLocation(const CCPosition & pos) const;

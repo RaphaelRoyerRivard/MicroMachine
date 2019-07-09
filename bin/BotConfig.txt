@@ -25,13 +25,22 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Terran",
-        "MapFile"                   : "Random",
+        "MapFile"                   : "CyberForestLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
     },
+    
+    "RandomMaps":
+    [
+        "CyberForestLE.SC2Map",
+        "KairosJunctionLE.SC2Map",
+        "KingsCoveLE.SC2Map",
+        "Acropolis.SC2Map",
+        "NewRepugnancyLE.SC2Map"
+    ],
 	
-	"RandomMaps":
+	"AllRandomMaps":
 	[
 		"16BitLE.SC2Map",
 		"AcidPlantLE.SC2Map",
@@ -117,6 +126,7 @@
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
         "DrawBaseLocationInfo"      : true,
+        "DrawBaseTiles"             : true,
         "DrawStartingRamp"		    : false,
         "DrawWall"		   			: false,
         "DrawTileInfo"              : false,

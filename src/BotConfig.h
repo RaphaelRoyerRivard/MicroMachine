@@ -37,6 +37,7 @@ public:
 	bool IsRealTime;
     bool DrawTileInfo;
     bool DrawBaseLocationInfo;
+	bool DrawBaseTiles;
     bool DrawWalkableSectors;
 	bool DrawBuildableSectors;
     bool DrawResourceInfo;

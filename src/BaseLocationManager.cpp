@@ -201,6 +201,8 @@ void BaseLocationManager::onFrame()
     drawBaseLocations();
 	m_bot.StopProfiling("0.6.0   drawBaseLocations");
 
+	drawTileBaseLocationAssociations();
+
 	drawResourceProxity();
 
 	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
@@ -382,6 +384,27 @@ void BaseLocationManager::drawBaseLocations()
 
     m_bot.Map().drawCircle(Util::GetPosition(nextExpansionPosition), 1, CCColor(255, 0, 255));
     m_bot.Map().drawText(Util::GetPosition(nextExpansionPosition), "Next Expansion Location", CCColor(255, 0, 255));
+}
+
+void BaseLocationManager::drawTileBaseLocationAssociations() const
+{
+	if (!m_bot.Config().DrawBaseTiles)
+	{
+		return;
+	}
+
+	for (size_t x = 0; x < m_tileBaseLocations.size(); ++x)
+	{
+		const auto & xRow = m_tileBaseLocations.at(x);
+		for (size_t y = 0; y < xRow.size(); ++y)
+		{
+			const auto baseLocation = xRow[y];
+			if (baseLocation)
+			{
+				m_bot.Map().drawLine(CCPosition(x, y), Util::GetPosition(baseLocation->getDepotPosition()), sc2::Colors::White);
+			}
+		}
+	}
 }
 
 void BaseLocationManager::drawResourceProxity()

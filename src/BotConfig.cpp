@@ -184,6 +184,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("PlayAsHuman", info, IsRealTime);
 			JSONTools::ReadBool("DrawTileInfo", debug, DrawTileInfo);
 			JSONTools::ReadBool("DrawBaseLocationInfo", debug, DrawBaseLocationInfo);
+			JSONTools::ReadBool("DrawBaseTiles", debug, DrawBaseTiles);
 			JSONTools::ReadBool("DrawStartingRamp", debug, DrawStartingRamp);
 			JSONTools::ReadBool("DrawWall", debug, DrawWall);
 			JSONTools::ReadBool("DrawWalkableSectors", debug, DrawWalkableSectors);
