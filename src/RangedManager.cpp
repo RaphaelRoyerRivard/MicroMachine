@@ -234,15 +234,16 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	CCPosition goal = m_order.getPosition();
 
 	// Check if unit is chosen to be a Cyclone helper
-	const auto it = m_cycloneFlyingHelpers.find(rangedUnit);
-	const bool isCycloneHelper = it != m_cycloneFlyingHelpers.end();
+	const auto cycloneFlyingHelperIt = m_cycloneFlyingHelpers.find(rangedUnit);
+	const bool isCycloneHelper = cycloneFlyingHelperIt != m_cycloneFlyingHelpers.end();
 	if (isCycloneHelper)
 	{
-		goal = it->second;
+		goal = cycloneFlyingHelperIt->second;
 		if (m_bot.Config().DrawHarassInfo)
 		{
 			m_bot.Map().drawCircle(rangedUnit->pos, 0.75f, sc2::Colors::Purple);
-			m_bot.Map().drawLine(rangedUnit->pos, it->second, sc2::Colors::Purple);
+			m_bot.Map().drawLine(rangedUnit->pos, goal, sc2::Colors::Purple);
+			m_bot.Map().drawCircle(goal, 0.5f, sc2::Colors::Purple);
 		}
 	}
 
@@ -282,6 +283,19 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (isCyclone)
 	{
 		target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
+
+		if (!shouldAttack && cycloneShouldUseLockOn)
+		{
+			const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
+			if (cycloneWithHelperIt != m_cyclonesWithHelper.end())
+			{
+				const auto cycloneFlyingHelper = cycloneWithHelperIt->second;
+				if (Util::DistSq(rangedUnit->pos, cycloneFlyingHelper->pos) > 7.f * 7.f)
+				{
+					goal = cycloneFlyingHelper->pos;
+				}
+			}
+		}
 	}
 
 	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, goal, unitShouldHeal))
@@ -1789,6 +1803,7 @@ void RangedManager::ExecuteActions()
 void RangedManager::CalcBestFlyingCycloneHelpers()
 {
 	m_cycloneFlyingHelpers.clear();
+	m_cyclonesWithHelper.clear();
 
 	// Get the Cyclones and their potential flying helpers in the squad
 	std::set<const sc2::Unit *> cyclones;
@@ -1847,8 +1862,21 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 		}
 		if (closestHelper)
 		{
-			m_cycloneFlyingHelpers.insert_or_assign(closestHelper, targetCluster.m_center);
+			// Remove the helper from the set because it is now taken
 			potentialFlyingCycloneHelpers.erase(closestHelper);
+			// Save the helper
+			m_cycloneFlyingHelpers.insert_or_assign(closestHelper, targetCluster.m_center);
+			// Associate the helper with every Cyclone that had a target in that target cluster
+			for(const auto target : targetCluster.m_units)
+			{
+				for(const auto & cyclone : lockOnTargets)
+				{
+					if(target == cyclone.second.first)
+					{
+						m_cyclonesWithHelper.insert_or_assign(cyclone.first, closestHelper);
+					}
+				}
+			}
 		}
 	}
 
@@ -1892,8 +1920,15 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 			}
 			if (closestHelper)
 			{
-				m_cycloneFlyingHelpers.insert_or_assign(closestHelper, cycloneCluster.m_center);
+				// Remove the helper from the set because it is now taken
 				potentialFlyingCycloneHelpers.erase(closestHelper);
+				// Save the helper
+				m_cycloneFlyingHelpers.insert_or_assign(closestHelper, cycloneCluster.m_center);
+				// Associate the helper with every Cyclone in that Cyclone cluster
+				for(const auto cyclone : cycloneCluster.m_units)
+				{
+					m_cyclonesWithHelper.insert_or_assign(cyclone, closestHelper);
+				}
 			}
 		}
 	}

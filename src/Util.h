@@ -29,9 +29,9 @@ namespace Util
 	struct UnitCluster
 	{
 		CCPosition m_center;
-		std::vector<const sc2::Unit *> m_units;
+		sc2::Units m_units;
 
-		UnitCluster(CCPosition center, std::vector<const sc2::Unit *> units)
+		UnitCluster(CCPosition center, sc2::Units units)
 			: m_center(center)
 			, m_units(units)
 		{};
