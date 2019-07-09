@@ -37,7 +37,7 @@ void CCBot::OnNuclearLaunchDetected() {}
 void CCBot::OnGameStart() //full start
 {
     m_config.readConfigFile();
-	Util::Initialize(*this, GetPlayerRace(Players::Self));
+	Util::Initialize(*this, GetPlayerRace(Players::Self), Observation()->GetGameInfo());
 
     // add all the possible start locations on the map
 #ifdef SC2API
