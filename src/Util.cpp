@@ -1861,6 +1861,19 @@ float Util::TerainHeight(const sc2::GameInfo & info, const sc2::Point2D & point)
     return decodedHeight;
 }
 
+float Util::TerainHeight(const sc2::GameInfo & info, const int x, const int y)
+{
+	if (x < 0 || x >= info.width || y < 0 || y >= info.width)
+	{
+		return 0.0f;
+	}
+
+	assert(info.terrain_height.data.size() == info.width * info.height);
+	unsigned char encodedHeight = info.terrain_height.data[x + ((info.height - 1) - y) * info.width];
+	float decodedHeight = -100.0f + 200.0f * float(encodedHeight) / 255.0f;
+	return decodedHeight;
+}
+
 void Util::VisualizeGrids(const sc2::ObservationInterface * obs, sc2::DebugInterface * debug) 
 {
     const sc2::GameInfo& info = obs->GetGameInfo();

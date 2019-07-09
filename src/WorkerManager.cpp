@@ -1323,7 +1323,26 @@ void WorkerManager::drawWorkerInformation()
 
     for (auto & worker : m_workerData.getWorkers())
     {
-        m_bot.Map().drawText(worker.getPosition(), m_workerData.getJobCode(worker));
+		auto code = m_workerData.getJobCode(worker);
+		if (strcmp(code, "B") == 0)
+		{
+			std::string buildingType = "UNKNOWN";
+			for (auto b : m_bot.Buildings().getBuildings())
+			{
+				if (b.builderUnit.getID() == worker.getID())
+				{
+					buildingType = b.type.getName();
+					break;
+				}
+			}
+			std::ostringstream oss;
+			oss << code << " (" << buildingType << ")";
+			m_bot.Map().drawText(worker.getPosition(), oss.str());
+		}
+		else
+		{
+			m_bot.Map().drawText(worker.getPosition(), code);
+		}
     }
 }
  
