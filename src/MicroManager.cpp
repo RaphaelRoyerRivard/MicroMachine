@@ -92,7 +92,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		return 0.f;
 
 	const float healthValue = pow(target->health + target->shield, 0.5f);		//the more health a unit has, the less it is prioritized
-	const float distance = Util::Dist(attacker->pos, target->pos) + attacker->radius + target->radius;
+	const float distance = Util::Dist(attacker->pos, target->pos);
 	float proximityValue = 1.f;
 	if (distance > attackerRange)
 		proximityValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
@@ -110,10 +110,10 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		float workerBonus = 1.f;
 		if (targetUnit.getType().isWorker() && m_order.getType() != SquadOrderTypes::Defend)
 		{
-			if (attacker->unit_type != sc2::UNIT_TYPEID::TERRAN_HELLION)
+			/*if (attacker->unit_type != sc2::UNIT_TYPEID::TERRAN_HELLION)
 			{
 				workerBonus = 2.f;
-			}
+			}*/
 
 			// Reduce priority for workers that are going in a refinery
 			if (Util::Contains(targetUnit.getUnitPtr(), m_bot.GetEnemyWorkersGoingInRefinery()))
@@ -152,7 +152,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		const auto & yamatoTargets = m_bot.Commander().Combat().getYamatoTargets();
 		const float yamatoTargetModifier = yamatoTargets.find(target) != yamatoTargets.end() ? 0.1f : 1.f;
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
-		return (targetDps + unitDps - healthValue + proximityValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier * yamatoTargetModifier;
+		return (targetDps + unitDps - healthValue + proximityValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier;
 	}
 
 	return (proximityValue * 50 - healthValue) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
