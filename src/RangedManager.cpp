@@ -25,6 +25,7 @@ const int CYCLONE_ATTACK_FRAME_COUNT = 1;
 const int CYCLONE_LOCKON_CAST_FRAME_COUNT = 9;
 const int CYCLONE_LOCKON_CHANNELING_FRAME_COUNT = 321 + CYCLONE_LOCKON_CAST_FRAME_COUNT;
 const int CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT = 97;
+const float CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER = 5.f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
 const int REAPER_KD8_CHARGE_COOLDOWN = 314 + REAPER_KD8_CHARGE_FRAME_COUNT + 7;
@@ -1890,7 +1891,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 			bool covered = false;
 			for (const auto & helper : m_cycloneFlyingHelpers)
 			{
-				if (Util::DistSq(helper.first->pos, cyclone->pos) < 7.f * 7.f)
+				if (Util::DistSq(helper.first->pos, cyclone->pos) < CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER * CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER)
 				{
 					// that cyclone doesn't need help from another flying unit
 					covered = true;

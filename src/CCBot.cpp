@@ -451,7 +451,7 @@ void CCBot::setUnits()
 					{
 					case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 					case sc2::UNIT_TYPEID::TERRAN_FUSIONCORE:
-					//case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
+					case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
 					//case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
 					case sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON:
 					case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
@@ -829,6 +829,7 @@ void CCBot::IssueCheats()
 
 	const int player1 = 1;
 	const int player2 = 2;
+	const auto mapCenter = Map().center();
 	//Debug()->DebugGiveAllTech();
 
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player1, 2);
@@ -836,8 +837,8 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, Map().center(), player1, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, Map().center(), player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKSHRINE, mapCenter, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player1, 2);
