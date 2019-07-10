@@ -1688,9 +1688,29 @@ CCPosition Util::getFacingVector(const sc2::Unit * unit)
 
 bool Util::isUnitFacingAnother(const sc2::Unit * unitA, const sc2::Unit * unitB)
 {
-	CCPosition facingVector = getFacingVector(unitA);
-	CCPosition unitsVector = Util::Normalized(unitB->pos - unitA->pos);
+	const CCPosition facingVector = getFacingVector(unitA);
+	const CCPosition unitsVector = Util::Normalized(unitB->pos - unitA->pos);
 	return sc2::Dot2D(facingVector, unitsVector) > 0.99f;
+}
+
+bool Util::isUnitLockedOn(const sc2::Unit * unit)
+{
+	return unitHasBuff(unit, sc2::BUFF_ID::LOCKON);
+}
+
+bool Util::isUnitLifted(const sc2::Unit * unit)
+{
+	return unitHasBuff(unit, sc2::BUFF_ID::GRAVITONBEAM);
+}
+
+bool Util::unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId)
+{
+	for (const auto buff : unit->buffs)
+	{
+		if (buff.ToType() == buffId)
+			return true;
+	}
+	return false;
 }
 
 bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)

@@ -171,6 +171,9 @@ namespace Util
 	float getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
 	CCPosition getFacingVector(const sc2::Unit * unit);
 	bool isUnitFacingAnother(const sc2::Unit * unitA, const sc2::Unit * unitB);
+	bool isUnitLockedOn(const sc2::Unit * unit);
+	bool isUnitLifted(const sc2::Unit * unit);
+	bool unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId);
 
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
     

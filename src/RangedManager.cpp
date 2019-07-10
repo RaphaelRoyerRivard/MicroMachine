@@ -267,7 +267,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
 	// If our unit is targeted by an enemy Cyclone's Lock-On ability, it should back until the effect wears off
-	if (IsLockedOn(rangedUnit))
+	if (Util::isUnitLockedOn(rangedUnit))
 	{
 		// Banshee in danger should cloak itself
 		if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, true))
@@ -285,13 +285,14 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
 
-		if (!shouldAttack && cycloneShouldUseLockOn)
+		// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
+		if (cycloneShouldUseLockOn)
 		{
 			const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
 			if (cycloneWithHelperIt != m_cyclonesWithHelper.end())
 			{
 				const auto cycloneFlyingHelper = cycloneWithHelperIt->second;
-				if (Util::DistSq(rangedUnit->pos, cycloneFlyingHelper->pos) > 7.f * 7.f)
+				if (Util::DistSq(rangedUnit->pos, cycloneFlyingHelper->pos) > CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER * CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER)
 				{
 					goal = cycloneFlyingHelper->pos;
 				}
@@ -330,7 +331,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	if (cycloneShouldUseLockOn && targetInAttackRange)
 	{
-		LockOnTarget(rangedUnit, target, unitShouldHeal);
+		LockOnTarget(rangedUnit, target);
 		return;
 	}
 
@@ -575,7 +576,9 @@ bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool star
 	if (Util::Dist(cyclone->pos, lockOnTarget->pos) > 15.f + cyclone->radius + lockOnTarget->radius)
 		return true;
 
-	// TODO some spells from the enemy could stop our Cyclone's lock-on (like the Pheonix levitation)
+	// The target is being lifted by a Pheonix
+	if (Util::isUnitLifted(cyclone))
+		return true;
 
 	// Sometimes, even though the target is perfectly valid, the Lock-On command won't work.
 	// Since the Lock-On ability is supposed to become unavailable the next frame it is cast, we know it didn't work if it is still available
@@ -727,16 +730,6 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 		return closestBiggestCluster->m_center;
 	}
 	return m_order.getPosition();
-}
-
-bool RangedManager::IsLockedOn(const sc2::Unit * rangedUnit) const
-{
-	for(const auto buff : rangedUnit->buffs)
-	{
-		if (buff.ToType() == sc2::BUFF_ID::LOCKON)
-			return true;
-	}
-	return false;
 }
 
 bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, bool unitShouldHeal)
@@ -981,15 +974,21 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 	return target;
 }
 
-void RangedManager::LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * target, bool unitShouldHeal)
+void RangedManager::LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * target)
 {
-	const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_LOCKON, target, unitShouldHeal, 0);
+	const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_LOCKON, target, true, 0);
 	PlanAction(cyclone, action);
 	const auto pair = std::pair<const sc2::Unit *, uint32_t>(target, m_bot.GetGameLoop());
 	auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 	lockOnCastedFrame.insert_or_assign(cyclone, pair);
 	lockOnTargets.insert_or_assign(cyclone, pair);
+}
+
+bool RangedManager::CycloneHasTarget(const sc2::Unit * cyclone) const
+{
+	const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+	return lockOnTargets.find(cyclone) != lockOnTargets.end();
 }
 
 bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats)
@@ -1089,6 +1088,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		}
 		// Ignore units that should heal to not consider them in the power calculation
 		if (unit != rangedUnit && ShouldUnitHeal(unit))
+		{
+			continue;
+		}
+		// Ignore Cyclones that have a target to not cancel their Lock-On
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE && CycloneHasTarget(unit))
 		{
 			continue;
 		}
@@ -1814,7 +1818,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 		const auto unitPtr = unit.getUnitPtr();
 		const auto type = unitPtr->unit_type;
 
-		if (ShouldUnitHeal(unitPtr) || IsLockedOn(unitPtr))
+		if (ShouldUnitHeal(unitPtr) || Util::isUnitLockedOn(unitPtr))
 			continue;
 
 		if(type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
@@ -1884,7 +1888,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 	// If there are Cyclones without target, follow them to give them vision
 	if(!cyclones.empty() && m_cycloneFlyingHelpers.size() < potentialFlyingCycloneHelpers.size())
 	{
-		// Do not concider Cyclones without target that are already near a helper
+		// Do not consider Cyclones without target that are already near a helper
 		sc2::Units cyclonesVector;
 		for (const auto cyclone : cyclones)
 		{
