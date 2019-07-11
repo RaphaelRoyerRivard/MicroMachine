@@ -17,6 +17,9 @@ class BaseLocationManager
     std::vector<std::vector<BaseLocation *>>        m_tileBaseLocations;
 	std::vector<std::vector<bool>>					m_resourceProximity;
 
+	const int NearBaseLocationTileDistance = 38;
+	const float TerrainHeightCostMultiplier = 5.f;
+
 	void sortBaseLocationPtrs();
 
 public:
@@ -42,6 +45,7 @@ public:
 	const BaseLocation* getNextExpansion(int player, bool checkBlocked, bool checkBuildable) const;
 	CCTilePosition getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable) const;
 	CCTilePosition getBasePosition(int player, int index) const;
+	BaseLocation* getClosestBase(const CCPosition position, bool checkContains) const;
 	CCTilePosition getClosestBasePosition(const sc2::Unit* unit, int player = Players::Self, bool shiftTowardsResourceDepot = false, bool checkContainsMinerals = false, bool checkUnderAttack = false) const;
 	const BaseLocation* getBaseForDepotPosition(const CCTilePosition position) const;
 	const BaseLocation* getBaseForDepot(const Unit depot) const;

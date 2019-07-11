@@ -4,8 +4,6 @@
 #include <sstream>
 #include <iostream>
 
-const int NearBaseLocationTileDistance = 30;
-
 BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & resources)
     : m_bot(bot)
     , m_baseID               (baseID)
@@ -76,7 +74,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     // check to see if this is a start location for the map, only need to check enemy locations.
     for (auto & pos : m_bot.GetEnemyStartLocations())
     {
-        if (containsPosition(pos))
+        if (containsPositionApproximative(pos))
         {
             m_isStartLocation = true;
             m_depotPosition = Util::GetTilePosition(pos);
@@ -91,7 +89,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 		for (auto & unit : m_bot.GetAllyUnits(Util::GetRessourceDepotType().getAPIUnitType()))
 		{
 			CCPosition pos = unit.getPosition();
-			if (unit.getType().isResourceDepot() && containsPosition(pos))
+			if (unit.getType().isResourceDepot() && containsPositionApproximative(pos))
 			{
 				m_isPlayerStartLocation[Players::Self] = true;
 				m_isStartLocation = true;
@@ -232,15 +230,25 @@ bool BaseLocation::isPlayerStartLocation(CCPlayer player) const
     return m_isPlayerStartLocation.at(player);
 }
 
-bool BaseLocation::containsPosition(const CCPosition & pos, int maxDistance) const
+bool BaseLocation::containsPositionApproximative(const CCPosition & pos, int maxDistance) const
+{
+	if (!m_bot.Map().isValidPosition(pos) || (pos.x == 0 && pos.y == 0))
+	{
+		return false;
+	}
+
+	int groundDistance = getGroundDistance(pos);
+	return groundDistance > 0 && groundDistance < (maxDistance > 0 ? maxDistance : ApproximativeBaseLocationTileDistance);
+}
+
+bool BaseLocation::containsPosition(const CCPosition & pos) const
 {
     if (!m_bot.Map().isValidPosition(pos) || (pos.x == 0 && pos.y == 0))
     {
         return false;
     }
 
-	int groundDistance = getGroundDistance(pos);
-    return groundDistance > 0 && groundDistance < (maxDistance > 0 ? maxDistance : NearBaseLocationTileDistance);
+	return m_bot.Bases().getBaseLocation(pos) == this;
 }
 
 const std::vector<Unit> & BaseLocation::getGeysers() const

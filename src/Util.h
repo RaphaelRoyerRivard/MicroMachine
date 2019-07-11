@@ -24,9 +24,9 @@ namespace Util
 	static UnitType workerType;
 	static UnitType supplyType;
 	static const sc2::GameInfo * gameInfo;
-	static std::vector<std::vector<bool>> pathable;
-	static std::vector<std::vector<bool>> placement;
-	static std::vector<std::vector<float>> terrainHeight;
+	static std::vector<std::vector<bool>> _pathable;
+	static std::vector<std::vector<bool>> _placement;
+	static std::vector<std::vector<float>> _terrainHeight;
 
 	static bool allowDebug;
 	
@@ -198,8 +198,9 @@ namespace Util
     
     // Kevin-provided helper functions
     void    VisualizeGrids(const sc2::ObservationInterface* obs, sc2::DebugInterface* debug);
-    float   TerainHeight(const sc2::Point2D& point);
-	float	TerainHeight(const int x, const int y);
+    float   TerrainHeight(const sc2::Point2D& point);
+	float	TerrainHeight(const CCTilePosition pos);
+	float	TerrainHeight(const int x, const int y);
     bool    Placement(const sc2::Point2D& point);
     bool    Pathable(const sc2::Point2D& point);
 

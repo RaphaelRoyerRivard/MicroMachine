@@ -12,7 +12,7 @@ DistanceMap::DistanceMap()
 }
 
 int DistanceMap::getDistance(int tileX, int tileY) const
-{ 
+{  
     BOT_ASSERT(tileX < m_width && tileY < m_height, "Index out of range: X = %d, Y = %d", tileX, tileY);
     return m_dist[tileX][tileY]; 
 }
