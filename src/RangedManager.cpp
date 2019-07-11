@@ -1221,11 +1221,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 
 bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, CCPosition goal, bool unitShouldHeal)
 {
-	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+	/*if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 	{
 		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, unitShouldHeal))
 			return true;
-	}
+	}*/
 
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 	{

@@ -1898,7 +1898,10 @@ CCPosition CombatCommander::GetClosestEnemyBaseLocation()
 
 	if (!closestEnemyBase)
 		return getMainAttackLocation();
-	return closestEnemyBase->getPosition();
+
+	const auto depotPosition = Util::GetPosition(closestEnemyBase->getDepotPosition());
+	const auto position = depotPosition + Util::Normalized(depotPosition - closestEnemyBase->getPosition()) * 3.f;
+	return position;
 }
 
 CCPosition CombatCommander::GetNextBaseLocationToScout()
