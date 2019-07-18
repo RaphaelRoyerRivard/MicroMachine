@@ -674,10 +674,26 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit) const
 			}
 		}
 		//if unit is damaged enough to go back for repair
-		else if (rangedUnit->health / rangedUnit->health_max < Util::HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE / (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit) ? 2.f : 1.f))
+		else
 		{
-			unitsBeingRepaired.insert(rangedUnit);
-			return true;
+			float percentageMultiplier = 1.f;
+			switch(rangedUnit->unit_type.ToType())
+			{
+				case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
+					if (isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit))
+						percentageMultiplier = 0.5f;	//BCs can fight longer since they can teleport back to safety
+					break;
+				case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
+					percentageMultiplier = 1.5f;
+					break;
+				default:
+					break;
+			}
+			if (rangedUnit->health / rangedUnit->health_max < Util::HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE * percentageMultiplier)
+			{
+				unitsBeingRepaired.insert(rangedUnit);
+				return true;
+			}
 		}
 	}
 
@@ -1095,7 +1111,12 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			continue;
 		}
 		// Ignore Cyclones that have a target to not cancel their Lock-On
-		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE && CycloneHasTarget(unit))
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)// && CycloneHasTarget(unit))
+		{
+			continue;
+		}
+		// We don't want flying helpers to take damage so Cyclones can keep vision for longer periods
+		if (m_cycloneFlyingHelpers.find(rangedUnit) != m_cycloneFlyingHelpers.end())
 		{
 			continue;
 		}
@@ -1139,16 +1160,33 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 
 	m_harassMode = true;
 
+	auto allyVikings = 0;
+	auto enemyTempests = 0;
+	for (const auto ally : closeUnits)
+	{
+		if (ally->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+			++allyVikings;
+	}
+	for (const auto threat : threats)
+	{
+		if (threat->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST)
+			++enemyTempests;
+	}
+
 	bool currentUnitHasACommand = false;
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
 	const bool winSimulation = Util::SimulateCombat(closeUnits, threats);
 	m_bot.StopProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
 	const bool formulaWin = unitsPower >= targetsPower;
-	const bool shouldFight = winSimulation && formulaWin;
-	//std::cout << (shouldFight ? "Win" : "Lose") << std::endl;
-	/*if (winSimulation != formulaWin)
-		std::cout << "Simulation: " << winSimulation << ", formula: " << formulaWin << std::endl;*/
+	bool shouldFight = winSimulation && formulaWin;
+
+	if(allyVikings > 0 && enemyTempests > 0)
+	{
+		shouldFight = winSimulation;
+		//Util::DebugLog(__FUNCTION__, std::to_string(allyVikings) + " Vikings vs " + std::to_string(enemyTempests) + " Tempests : Simulation predicts a " + (winSimulation ? "win" : "lose") + " and our power ratio is " + std::to_string(unitsPower / targetsPower), m_bot);
+	}
+
 	// For each of our close units
 	for (auto & unitAndTarget : closeUnitsTarget)
 	{
@@ -1187,7 +1225,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			}
 			else
 			{
-				Util::DisplayError("Could not find an escape path towards target", "", m_bot);
+				Util::DisplayError("Could not find an escape path", "", m_bot);
 			}
 		}
 
