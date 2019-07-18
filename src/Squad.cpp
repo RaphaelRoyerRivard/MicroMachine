@@ -514,7 +514,29 @@ int Squad::squadUnitsNear(const CCPosition & p) const
 
 const std::vector<Unit> & Squad::getUnits() const
 {
-    return m_units;
+	return m_units;
+}
+
+size_t Squad::getUnitCountOfType(sc2::UNIT_TYPEID unitType) const
+{
+	size_t units = 0;
+	for (const auto & unit : m_units)
+	{
+		if (unit.getAPIUnitType() == unitType)
+			++units;
+	}
+	return units;
+}
+
+std::vector<Unit> Squad::getUnitsOfType(sc2::UNIT_TYPEID unitType) const
+{
+	std::vector<Unit> units;
+	for(const auto & unit : m_units)
+	{
+		if (unit.getAPIUnitType() == unitType)
+			units.push_back(unit);
+	}
+	return units;
 }
 
 const SquadOrder & Squad::getSquadOrder()	const

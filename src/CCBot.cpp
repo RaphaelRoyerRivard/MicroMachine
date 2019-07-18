@@ -1130,6 +1130,9 @@ const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
 	return m_knownEnemyUnits;
 }
 
+/*
+ * Despite its confusing name, m_enemyUnitsPerType stores all enemies
+ */
 const std::vector<Unit> & CCBot::GetKnownEnemyUnits(sc2::UnitTypeID type)
 {
 	return m_enemyUnitsPerType[type];

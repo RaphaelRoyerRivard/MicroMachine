@@ -764,17 +764,22 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 			morph = true;
 		}
 	}
-	else if (squaredDistanceToGoal < VIKING_LANDING_DISTANCE_FROM_GOAL * VIKING_LANDING_DISTANCE_FROM_GOAL && !target)
+	else 
 	{
-		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
-			&& Util::PathFinding::GetCombatInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f
-			&& Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f)
+		const bool closeToGoal = squaredDistanceToGoal < VIKING_LANDING_DISTANCE_FROM_GOAL * VIKING_LANDING_DISTANCE_FROM_GOAL;
+		if (closeToGoal && !target)
 		{
-			morphAbility = sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE;
-			morph = true;
+			if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
+				&& !m_bot.Strategy().enemyHasProtossHighTechAir()
+				&& Util::PathFinding::GetCombatInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f
+				&& Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f)
+			{
+				morphAbility = sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE;
+				morph = true;
+			}
 		}
 		//TODO should morph to assault mode if there are close flying units
-		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT && !m_bot.Strategy().shouldFocusBuildings())
+		else if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT && !target && !m_bot.Strategy().shouldFocusBuildings())
 		{
 			morphAbility = sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE;
 			morph = true;
@@ -1262,11 +1267,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 
 bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, CCPosition goal, bool unitShouldHeal)
 {
-	/*if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 	{
 		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, unitShouldHeal))
 			return true;
-	}*/
+	}
 
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 	{

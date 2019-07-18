@@ -415,9 +415,11 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	const float dps = ground ? Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirDps(enemyUnit.getUnitPtr(), m_bot);
 	if (dps == 0.f)
 		return;
-	const float range = ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirAttackRange(enemyUnit.getUnitPtr(), m_bot);
+	float range = ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirAttackRange(enemyUnit.getUnitPtr(), m_bot);
 	if (range == 0.f)
 		return;
+	if (!ground && enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_TEMPEST)
+		range += 2;
 	const float speed = std::max(1.5f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
 	updateInfluenceMap(dps, range, speed, enemyUnit.getPosition(), ground, !enemyUnit.isFlying(), false);
 }
@@ -817,11 +819,35 @@ void CombatCommander::updateHarassSquads()
 		}
 	}
 	const auto tempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
-	if(idleVikings.size() >= tempestCount * 5)
+	const auto VIKING_TEMPEST_RATIO = 2.5f;
+	if(idleVikings.size() >= tempestCount * VIKING_TEMPEST_RATIO)
 	{
 		for (auto viking : idleVikings)
 		{
 			m_squadData.assignUnitToSquad(*viking, harassSquad);
+		}
+	} 
+	else
+	{
+		const auto harassVikings = harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER);
+		// If we have enough Vikings overall we can send them to fight
+		if(harassVikings.size() + idleVikings.size() >= tempestCount * VIKING_TEMPEST_RATIO)
+		{
+			for (auto viking : idleVikings)
+			{
+				m_squadData.assignUnitToSquad(*viking, harassSquad);
+			}
+		}
+		else
+		{
+			// Otherwise we remove our Vikings from the Harass Squad when they are close to our base
+			for (const auto & viking : harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER))
+			{
+				if(Util::DistSq(viking, m_bot.GetStartLocation()) < 10.f * 10.f)
+				{
+					harassSquad.removeUnit(viking);
+				}
+			}
 		}
 	}
 	if(!idleCyclones.empty())
