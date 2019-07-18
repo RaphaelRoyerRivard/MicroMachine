@@ -45,6 +45,7 @@ class StrategyManager
 	bool m_earlyRushed = false;
 	bool m_shouldProduceAntiAirOffense = false;
 	bool m_shouldProduceAntiAirDefense = false;
+	bool m_enemyHasProtossHighTechAir = false;
 	bool m_enemyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
 	bool m_enemyHasMassZerglings = false;
@@ -81,6 +82,8 @@ public:
 	void setShouldProduceAntiAirOffense(bool shouldProduceAntiAirOffense) { m_shouldProduceAntiAirOffense = shouldProduceAntiAirOffense; }
 	bool shouldProduceAntiAirDefense() const { return m_shouldProduceAntiAirDefense; }
 	void setShouldProduceAntiAirDefense(bool shouldProduceAntiAirDefense) { m_shouldProduceAntiAirDefense = shouldProduceAntiAirDefense; }
+	bool enemyHasProtossHighTechAir() const { return m_enemyHasProtossHighTechAir; }
+	void setEnemyHasProtossHighTechAir(bool enemyHasHighTechAir) { m_enemyHasProtossHighTechAir = enemyHasHighTechAir; }
 	bool enemyHasInvisible() const { return m_enemyHasInvisible; }
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }

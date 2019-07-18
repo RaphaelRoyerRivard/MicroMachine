@@ -479,6 +479,19 @@ void CCBot::setUnits()
 					}
 				}
 			}
+			if(!m_strategy.enemyHasProtossHighTechAir())
+			{
+				switch (sc2::UNIT_TYPEID(unitptr->unit_type))
+				{
+				case sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON:
+				case sc2::UNIT_TYPEID::PROTOSS_TEMPEST:
+				case sc2::UNIT_TYPEID::PROTOSS_CARRIER:
+					m_strategy.setEnemyHasProtossHighTechAir(true);
+					Actions()->SendChat("OP strat detected, panic mode activated");
+				default:
+					break;
+				}
+			}
 			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, std::pair<CCPosition, uint32_t>(unitptr->pos, GetGameLoop()));
 		}
 		else //if(unitptr->alliance == sc2::Unit::Neutral)
