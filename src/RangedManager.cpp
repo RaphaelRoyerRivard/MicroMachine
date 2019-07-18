@@ -297,6 +297,25 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 					goal = cycloneFlyingHelper->pos;
 				}
 			}
+			else if (!m_cycloneFlyingHelpers.empty())
+			{
+				float minDistSq = 0.f;
+				const sc2::Unit* closestHelper = nullptr;
+				for(const auto & flyingHelper : m_cycloneFlyingHelpers)
+				{
+					const float distSq = Util::DistSq(rangedUnit->pos, flyingHelper.first->pos);
+					if(!closestHelper || distSq < minDistSq)
+					{
+						minDistSq = distSq;
+						closestHelper = flyingHelper.first;
+					}
+				}
+				goal = closestHelper->pos;
+			}
+			else
+			{
+				goal = m_bot.GetStartLocation();
+			}
 		}
 	}
 
