@@ -379,6 +379,7 @@ void CCBot::setUnits()
 						// This is a Speedling!!!
 						m_strategy.setEnemyHasMetabolicBoost(true);
 						Actions()->SendChat("Speedlings won't save you my friend");
+						Util::DebugLog(__FUNCTION__, "Metabolic Boost detected", *this);
 					}
 				}
 			}
@@ -394,6 +395,14 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_OVERSEER:
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
 						break;
+					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
+					case sc2::UNIT_TYPEID::ZERG_MUTALISK:
+						m_strategy.setShouldProduceAntiAirDefense(true);
+						m_strategy.setShouldProduceAntiAirOffense(true);
+						Actions()->SendChat("Planning on harassing with air units? That's MY strategy! >:(");
+						Util::DebugLog(__FUNCTION__, "Air Harass detected: " + unit.getType().getName(), *this);
+						break;
 					case sc2::UNIT_TYPEID::PROTOSS_PHOENIX:
 						if (unitptr->last_seen_game_loop != GetCurrentFrame())
 							break;
@@ -403,18 +412,12 @@ void CCBot::setUnits()
 							{
 								Actions()->SendChat("Am I hallucinating?");
 								m_saidHallucinationLine = true;
+								Util::DebugLog(__FUNCTION__, "Hallucination (maybe) detected: " + unit.getType().getName(), *this);
 							}
 							firstPhoenix = false;
 							break;
 						}
 						// no break because more than one Phoenix probably means that there is a real fleet
-					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
-					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
-					case sc2::UNIT_TYPEID::ZERG_MUTALISK:
-						m_strategy.setShouldProduceAntiAirDefense(true);
-						m_strategy.setShouldProduceAntiAirOffense(true);
-						Actions()->SendChat("Planning on harassing with air units? That's MY strategy! >:(");
-						break;
 					default:
 						if (unit.getType().isBuilding() && !m_strategy.enemyOnlyHasFlyingBuildings())
 						{
@@ -434,12 +437,14 @@ void CCBot::setUnits()
 							{
 								m_strategy.setEnemyOnlyHasFlyingBuildings(true);
 								Actions()->SendChat("Lifting your buildings won't save them for long.");
+								Util::DebugLog(__FUNCTION__, "Lifted building detected: " + unit.getType().getName(), *this);
 							}
 						}
 						else if(!m_strategy.shouldProduceAntiAirOffense())
 						{
 							m_strategy.setShouldProduceAntiAirOffense(true);
 							Actions()->SendChat("What!? Air units? I'm not ready! :s");
+							Util::DebugLog(__FUNCTION__, "Air unit detected: " + unit.getType().getName(), *this);
 						}
 					}
 				}
@@ -459,6 +464,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_HIVE:
 						m_strategy.setShouldProduceAntiAirOffense(true);
 						Actions()->SendChat("Going for air units? Your fleet will be not match for mine!");
+						Util::DebugLog(__FUNCTION__, "Air production building detected: " + unit.getType().getName(), *this);
 					default:
 						break;
 					}
@@ -474,6 +480,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::PROTOSS_DARKSHRINE:
 						m_strategy.setEnemyHasInvisible(true);
 						Actions()->SendChat("Planning on striking me with cloaked units?");
+						Util::DebugLog(__FUNCTION__, "Invis production building detected: " + unit.getType().getName(), *this);
 					default:
 						break;
 					}
@@ -488,6 +495,7 @@ void CCBot::setUnits()
 				case sc2::UNIT_TYPEID::PROTOSS_CARRIER:
 					m_strategy.setEnemyHasProtossHighTechAir(true);
 					Actions()->SendChat("OP strat detected, panic mode activated");
+					Util::DebugLog(__FUNCTION__, "High tech air strat detected: " + unit.getType().getName(), *this);
 				default:
 					break;
 				}

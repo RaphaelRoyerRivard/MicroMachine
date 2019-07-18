@@ -1853,7 +1853,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 	sc2::Units targetsVector;
 	for (const auto target : targets)
 		targetsVector.push_back(target);
-	const auto targetClusters = Util::GetUnitClusters(targetsVector, {}, false, m_bot);
+	const auto targetClusters = Util::GetUnitClusters(targetsVector, {}, true, m_bot);
 
 	// Choose the best air unit to keep vision of Cyclone's targets
 	for (const auto & targetCluster : targetClusters)

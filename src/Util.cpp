@@ -867,7 +867,7 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 	auto & lastUnitClusterFrame = ignoreSpecialTypes ? m_lastUnitClusterFrame : m_lastSpecialUnitClusterFrame;
 	// Return the saved clusters if they were calculated not long ago
 	const auto currentFrame = bot.GetCurrentFrame();
-	if (query != "" && currentFrame - lastUnitClusterFrame < UNIT_CLUSTERING_COOLDOWN)
+	if (!query.empty() && currentFrame - lastUnitClusterFrame < UNIT_CLUSTERING_COOLDOWN)
 		return unitClusters;
 
 	unitClusters.clear();
@@ -875,11 +875,14 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 
 	for (const auto unit : units)
 	{
-		const bool specialUnit = Contains(unit->unit_type, specialTypes);
-		if(specialUnit && ignoreSpecialTypes)
-			continue;	// We want to ignore that type of unit
-		if(!specialUnit && !ignoreSpecialTypes)
-			continue;	// We want to consider only the special types and this is not one
+		if (!specialTypes.empty())
+		{
+			const bool specialUnit = Contains(unit->unit_type, specialTypes);
+			if(specialUnit && ignoreSpecialTypes)
+				continue;	// We want to ignore that type of unit
+			if(!specialUnit && !ignoreSpecialTypes)
+				continue;	// We want to consider only the special types and this is not one
+		}
 		
 		std::vector<UnitCluster*> clustersToMerge;
 		UnitCluster* mainCluster = nullptr;
