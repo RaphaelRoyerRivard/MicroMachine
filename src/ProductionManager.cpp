@@ -687,7 +687,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (m_bot.Strategy().shouldProduceAntiAirOffense())
 				{
 #ifndef NO_UNITS
-					if (vikingCount < bansheeCount && !m_queue.contains(MetaTypeEnum::Viking))
+					if ((vikingCount < bansheeCount || stopBanshees) && !m_queue.contains(MetaTypeEnum::Viking))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}

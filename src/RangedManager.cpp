@@ -1265,6 +1265,10 @@ bool RangedManager::ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruise
 	if (!threats.empty())
 		return false;
 
+	// TODO Instead of not teleporting, teleport on the Tempests or Carriers
+	if (m_bot.Strategy().enemyHasProtossHighTechAir())
+		return false;
+
 	const auto distSq = Util::DistSq(battlecruiser->pos, goal);
 	if (distSq >= 50 * 50)
 		return TeleportBattlecruiser(battlecruiser, goal);
