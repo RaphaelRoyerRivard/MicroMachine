@@ -589,6 +589,9 @@ bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool star
 			return true;
 	}
 
+	if (currentFrame >= frameCast + CYCLONE_LOCKON_CHANNELING_FRAME_COUNT && cyclone->engaged_target_tag == sc2::NullTag)
+		return true;
+
 	return false;
 }
 
@@ -1809,10 +1812,24 @@ void RangedManager::ExecuteActions()
 	}
 }
 
+void RangedManager::CleanLockOnTargets() const
+{
+	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+	for (auto it = lockOnTargets.cbegin(), next_it = it; it != lockOnTargets.cend(); it = next_it)
+	{
+		++next_it;
+		if (!it->first->is_alive)
+		{
+			lockOnTargets.erase(it);
+		}
+	}
+}
+
 void RangedManager::CalcBestFlyingCycloneHelpers()
 {
 	m_cycloneFlyingHelpers.clear();
 	m_cyclonesWithHelper.clear();
+	CleanLockOnTargets();
 
 	// Get the Cyclones and their potential flying helpers in the squad
 	std::set<const sc2::Unit *> cyclones;

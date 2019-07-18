@@ -165,5 +165,6 @@ private:
 	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
 	void CleanActions(sc2::Units &rangedUnits);
 	void ExecuteActions();
+	void CleanLockOnTargets() const;
 	void CalcBestFlyingCycloneHelpers();
 };

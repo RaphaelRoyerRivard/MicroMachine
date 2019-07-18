@@ -704,7 +704,6 @@ void CCBot::clearDeadUnits()
 	for (auto tag : unitsToRemove)
 	{
 		m_allyUnits.erase(tag);
-		std::cout << "Dead ally unit removed from map" << std::endl;
 	}
 
 	unitsToRemove.clear();
@@ -730,7 +729,6 @@ void CCBot::clearDeadUnits()
 	for (auto tag : unitsToRemove)
 	{
 		m_enemyUnits.erase(tag);
-		std::cout << "Dead enemy unit removed from map" << std::endl;
 	}
 
 	unitsToRemove.clear();
@@ -747,7 +745,6 @@ void CCBot::clearDeadUnits()
 	for (auto tag : unitsToRemove)
 	{
 		m_neutralUnits.erase(tag);
-		//std::cout << "Dead neutral unit removed from map" << std::endl;	//happens too often
 	}
 }
 

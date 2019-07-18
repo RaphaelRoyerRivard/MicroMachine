@@ -1777,8 +1777,6 @@ CCPosition CombatCommander::getMainAttackLocation()
         // If the enemy base hasn't been seen yet, go there.
         if (!m_bot.Map().isExplored(enemyBasePosition))
         {
-			if (m_bot.GetCurrentFrame() % 25 == 0)
-				std::cout << m_bot.GetCurrentFrame() << ": Unexplored enemy base" << std::endl;
             return enemyBasePosition;
         }
         else
@@ -1788,8 +1786,6 @@ CCPosition CombatCommander::getMainAttackLocation()
             {
                 if (enemyUnit.getType().isBuilding() && Util::Dist(enemyUnit, enemyBasePosition) < 15)
                 {
-					if (m_bot.GetCurrentFrame() % 25 == 0)
-						std::cout << m_bot.GetCurrentFrame() << ": Visible enemy building" << std::endl;
                     return enemyBasePosition;
                 }
             }
@@ -1824,8 +1820,6 @@ CCPosition CombatCommander::getMainAttackLocation()
     }
 	if (lowestDistance >= 0.f)
 	{
-		if (m_bot.GetCurrentFrame() % 25 == 0)
-			std::cout << m_bot.GetCurrentFrame() << ": Memory enemy building" << std::endl;
 		return closestEnemyPosition;
 	}
 
@@ -1846,8 +1840,6 @@ CCPosition CombatCommander::getMainAttackLocation()
     }
 	if (lowestDistance >= 0.f)
 	{
-		if (m_bot.GetCurrentFrame() % 25 == 0)
-			std::cout << m_bot.GetCurrentFrame() << ": Memory enemy unit" << std::endl;
 		return closestEnemyPosition;
 	}
 
@@ -1867,13 +1859,9 @@ CCPosition CombatCommander::exploreMap()
 		if (Util::DistSq(unit.getPosition(), basePosition) < 3.f * 3.f)
 		{
 			m_currentBaseExplorationIndex = (m_currentBaseExplorationIndex + 1) % m_bot.Bases().getBaseLocations().size();
-			if (m_bot.GetCurrentFrame() % 25 == 0)
-				std::cout << m_bot.GetCurrentFrame() << ": Explore map, base index increased to " << m_currentBaseExplorationIndex << std::endl;
 			return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
 		}
 	}
-	if (m_bot.GetCurrentFrame() % 25 == 0)
-		std::cout << m_bot.GetCurrentFrame() << ": Explore map, base index " << m_currentBaseExplorationIndex << std::endl;
 	return basePosition;
 }
 
