@@ -311,7 +311,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				if (target)
 				{
 					const float lockOnRange = m_bot.Commander().Combat().getAbilityCastingRanges().at(sc2::ABILITY_ID::EFFECT_LOCKON) + rangedUnit->radius + target->radius;
-					if (!Util::DistSq(rangedUnit->pos, target->pos) > lockOnRange * lockOnRange)
+					if (Util::DistSq(rangedUnit->pos, target->pos) > lockOnRange * lockOnRange)
 					{
 						target = nullptr;
 					}
@@ -414,7 +414,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
 		const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target
-		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, target ? unitAttackRange : 3.f, cycloneShouldUseLockOn, m_bot);
+		const bool ignoreInfluence = cycloneShouldUseLockOn && target;
+		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, target ? unitAttackRange : 3.f, ignoreInfluence, m_bot);
 		if (closePositionInPath != CCPosition())
 		{
 			const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
