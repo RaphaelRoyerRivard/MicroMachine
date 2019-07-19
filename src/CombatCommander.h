@@ -34,6 +34,7 @@ class CombatCommander
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnTargets;	// <cyclone, <target, frame>>
 	std::set<sc2::Tag> m_newCyclones;
 	std::set<sc2::Tag> m_toggledCyclones;
+	bool m_hasEnoughVikingsAgainstTempests = true;
 	
     bool            m_initialized;
     bool            m_attackStarted;
@@ -113,6 +114,7 @@ public:
 	float getGroundEffectInfluence(CCTilePosition tilePosition) const;
 	float getAirEffectInfluence(CCTilePosition tilePosition) const;
 	bool isTileBlocked(int x, int y);
+	bool hasEnoughVikingsAgainstTempests() const { return m_hasEnoughVikingsAgainstTempests; }
 
 	void initInfluenceMaps();
 	CCPosition getMainAttackLocation();

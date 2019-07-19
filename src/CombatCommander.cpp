@@ -826,12 +826,14 @@ void CombatCommander::updateHarassSquads()
 		{
 			m_squadData.assignUnitToSquad(*viking, harassSquad);
 		}
+		m_hasEnoughVikingsAgainstTempests = true;
 	} 
 	else
 	{
 		const auto harassVikings = harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER);
 		// If we have enough Vikings overall we can send them to fight
-		if(harassVikings.size() + idleVikings.size() >= tempestCount * VIKING_TEMPEST_RATIO)
+		m_hasEnoughVikingsAgainstTempests = harassVikings.size() + idleVikings.size() >= tempestCount * VIKING_TEMPEST_RATIO;
+		if (m_hasEnoughVikingsAgainstTempests)
 		{
 			for (auto viking : idleVikings)
 			{
@@ -840,6 +842,7 @@ void CombatCommander::updateHarassSquads()
 		}
 		else
 		{
+			m_hasEnoughVikingsAgainstTempests = false;
 			// Otherwise we remove our Vikings from the Harass Squad when they are close to our base
 			for (const auto & viking : harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER))
 			{

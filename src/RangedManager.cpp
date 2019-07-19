@@ -264,6 +264,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		goal = GetBestSupportPosition(rangedUnit, rangedUnits);
 	}
+	else if (isViking && !isCycloneHelper && !m_bot.Commander().Combat().hasEnoughVikingsAgainstTempests())
+	{
+		goal = m_bot.GetStartLocation();
+	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
 	// If our unit is targeted by an enemy Cyclone's Lock-On ability, it should back until the effect wears off
@@ -285,36 +289,56 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
 
-		// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
-		if (cycloneShouldUseLockOn)
+		const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
+		const bool hasFlyingHelper = cycloneWithHelperIt != m_cyclonesWithHelper.end();
+
+		if (!unitShouldHeal)
 		{
-			const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
-			if (cycloneWithHelperIt != m_cyclonesWithHelper.end())
+			// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
+			if (cycloneShouldUseLockOn && hasFlyingHelper)
 			{
 				const auto cycloneFlyingHelper = cycloneWithHelperIt->second;
+				// If the flying helper is too far, go towards it
 				if (Util::DistSq(rangedUnit->pos, cycloneFlyingHelper->pos) > CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER * CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER)
 				{
 					goal = cycloneFlyingHelper->pos;
 				}
 			}
-			else if (!m_cycloneFlyingHelpers.empty())
+
+			if (!hasFlyingHelper)
 			{
+				// If the target is too far, we don't want to chase it, we just leave
+				if (target)
+				{
+					const float lockOnRange = m_bot.Commander().Combat().getAbilityCastingRanges().at(sc2::ABILITY_ID::EFFECT_LOCKON) + rangedUnit->radius + target->radius;
+					if (!Util::DistSq(rangedUnit->pos, target->pos) > lockOnRange * lockOnRange)
+					{
+						target = nullptr;
+					}
+				}
+				// Find the closest flying helper on the map
 				float minDistSq = 0.f;
 				const sc2::Unit* closestHelper = nullptr;
-				for(const auto & flyingHelper : m_cycloneFlyingHelpers)
+				for (const auto & flyingHelper : m_cycloneFlyingHelpers)
 				{
 					const float distSq = Util::DistSq(rangedUnit->pos, flyingHelper.first->pos);
-					if(!closestHelper || distSq < minDistSq)
+					if (!closestHelper || distSq < minDistSq)
 					{
 						minDistSq = distSq;
 						closestHelper = flyingHelper.first;
 					}
 				}
-				goal = closestHelper->pos;
-			}
-			else
-			{
-				goal = m_bot.GetStartLocation();
+				// If there is one
+				if (closestHelper)
+				{
+					goal = closestHelper->pos;
+				}
+				else
+				{
+					// Otherwise go back to base, it's too dangerous to go alone
+					goal = m_bot.GetStartLocation();
+					unitShouldHeal = true;
+				}
 			}
 		}
 	}
@@ -1037,6 +1061,9 @@ bool RangedManager::CycloneHasTarget(const sc2::Unit * cyclone) const
 bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats)
 {
 	if (threats.empty())
+		return false;
+
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
 		return false;
 
 	float unitsPower = 0.f;
