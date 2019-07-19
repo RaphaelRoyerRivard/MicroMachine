@@ -37,9 +37,9 @@ class BaseLocation
     CCPositionType              m_bottom;
     bool                        m_isStartLocation;
 	bool						m_snapshotsRemoved = false;
-    
-public:
 
+	const int ApproximativeBaseLocationTileDistance = 30;
+public:
     BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & resources);
     
     int getGroundDistance(const CCPosition & pos) const;
@@ -47,7 +47,8 @@ public:
     bool isStartLocation() const;
     bool isPlayerStartLocation(CCPlayer player) const;
     bool isMineralOnly() const;
-    bool containsPosition(const CCPosition & pos, int maxDistance = 0) const;
+	bool containsPositionApproximative(const CCPosition & pos, int maxDistance = 0) const;
+    bool containsPosition(const CCPosition & pos) const;
 	const CCTilePosition & getTurretPosition() const;
     const CCTilePosition & getDepotPosition() const;
 	int getOptimalMineralWorkerCount() const;

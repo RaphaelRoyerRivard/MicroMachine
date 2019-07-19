@@ -119,28 +119,28 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 	Util::gameInfo = &_gameInfo;
 
 	assert(gameInfo->pathing_grid.data.size() == gameInfo->width * gameInfo->height);
-	pathable = std::vector<std::vector<bool>>(gameInfo->width);
-	placement = std::vector<std::vector<bool>>(gameInfo->width);
-	terrainHeight = std::vector<std::vector<float>>(gameInfo->width);
+	_pathable = std::vector<std::vector<bool>>(gameInfo->width);
+	_placement = std::vector<std::vector<bool>>(gameInfo->width);
+	_terrainHeight = std::vector<std::vector<float>>(gameInfo->width);
 	for (int x = 0; x < gameInfo->width; x++)
 	{
-		pathable[x] = std::vector<bool>(gameInfo->height);
-		placement[x] = std::vector<bool>(gameInfo->height);
-		terrainHeight[x] = std::vector<float>(gameInfo->height);
+		_pathable[x] = std::vector<bool>(gameInfo->height);
+		_placement[x] = std::vector<bool>(gameInfo->height);
+		_terrainHeight[x] = std::vector<float>(gameInfo->height);
 		for (int y = 0; y < gameInfo->height; y++)
 		{
 			auto index = x + ((gameInfo->height - 1) - y) * gameInfo->width;
 			//Pathable
 			unsigned char encodedPathing = gameInfo->pathing_grid.data[index];
-			pathable[x][y] = encodedPathing == 255 ? false : true;
+			_pathable[x][y] = encodedPathing == 255 ? false : true;
 
 			//Placement
 			unsigned char encodedPlacement = gameInfo->placement_grid.data[index];
-			placement[x][y] = encodedPlacement == 255 ? true : false;	
+			_placement[x][y] = encodedPlacement == 255 ? true : false;	
 
 			//Terrain height
 			unsigned char encodedHeight = gameInfo->terrain_height.data[index];
-			terrainHeight[x][y] = -100.0f + 200.0f * float(encodedHeight) / 255.0f;
+			_terrainHeight[x][y] = -100.0f + 200.0f * float(encodedHeight) / 255.0f;
 		}
 	}
 }
@@ -1637,7 +1637,9 @@ float Util::getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCB
 	const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 	const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 	const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
-	const float heightBonus = unit->is_flying ? 0.f : Util::TerainHeight(threat->pos) > Util::TerainHeight(unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
+
+	const float heightBonus = unit->is_flying ? 0.f : Util::TerrainHeight(threat->pos) > Util::TerrainHeight(unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
+
 	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + HARASS_THREAT_RANGE_BUFFER;
 	return threatRange;
 }
@@ -1868,39 +1870,44 @@ sc2::Point2D Util::CalcPerpendicularVector(const sc2::Point2D & vector)
     return sc2::Point2D(vector.y, -vector.x);
 }
 
-bool Util::Pathable(const sc2::Point2D & point) 
+bool Util::Pathable(const sc2::Point2D & point)
 {
 	sc2::Point2DI pointI((int)point.x, (int)point.y);
 	if (pointI.x < 0 || pointI.x >= gameInfo->width || pointI.y < 0 || pointI.y >= gameInfo->width)
 	{
 		return false;
 	}
-	return pathable[pointI.x][pointI.y];
+	return _pathable[pointI.x][pointI.y];
 }
 
-bool Util::Placement(const sc2::Point2D & point) 
+bool Util::Placement(const sc2::Point2D & point)
 {
 	sc2::Point2DI pointI((int)point.x, (int)point.y);
 	if (pointI.x < 0 || pointI.x >= gameInfo->width || pointI.y < 0 || pointI.y >= gameInfo->width)
 	{
 		return false;
 	}
-    return placement[pointI.x][pointI.y];
+    return _placement[pointI.x][pointI.y];
 }
 
-float Util::TerainHeight(const sc2::Point2D & point) 
+float Util::TerrainHeight(const sc2::Point2D & point)
 {
 	sc2::Point2DI pointI((int)point.x, (int)point.y);
 	if (pointI.x < 0 || pointI.x >= gameInfo->width || pointI.y < 0 || pointI.y >= gameInfo->width)
 	{
 		return 0.0f;
 	}
-	return terrainHeight[pointI.x][pointI.y];
+	return _terrainHeight[pointI.x][pointI.y];
 }
 
-float Util::TerainHeight(const int x, const int y)
+float Util::TerrainHeight(const CCTilePosition pos)
 {
-	return terrainHeight[x][y];
+	return _terrainHeight[pos.x][pos.y];
+}
+
+float Util::TerrainHeight(const int x, const int y)
+{
+	return _terrainHeight[x][y];
 }
 
 void Util::VisualizeGrids(const sc2::ObservationInterface * obs, sc2::DebugInterface * debug) 
@@ -1915,7 +1922,7 @@ void Util::VisualizeGrids(const sc2::ObservationInterface * obs, sc2::DebugInter
             // Draw in the center of each 1x1 cell
             sc2::Point2D point(x + 0.5f, y + 0.5f);
 
-            float height = TerainHeight(sc2::Point2D(x, y));
+            float height = TerrainHeight(sc2::Point2D(x, y));
             bool placable = Placement( sc2::Point2D(x, y));
             //bool pathable = Pathable(info, sc2::Point2D(x, y));
 

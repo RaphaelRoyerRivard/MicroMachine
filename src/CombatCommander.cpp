@@ -1221,7 +1221,7 @@ void CombatCommander::updateDefenseSquads()
 			if (!UnitType::isTargetable(unit.getAPIUnitType()))
 				continue;
 
-			if (myBaseLocation->containsPosition(unit.getPosition(), m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
+			if (myBaseLocation->containsPositionApproximative(unit.getPosition(), m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
 			{
 				//we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
 				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392)	// first 3 minutes

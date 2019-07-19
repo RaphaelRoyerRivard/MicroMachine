@@ -152,17 +152,35 @@ void BaseLocationManager::onStart()
     {
         for (int y = mapMin.y; y < mapMax.y; ++y)
         {
-            for (auto & baseLocation : m_baseLocationData)
-            {
-                CCPosition pos(Util::TileToPosition(x + 0.5f), Util::TileToPosition(y + 0.5f));
+			float minDistance = 0.f;
+			CCPosition pos(Util::TileToPosition(x + 0.5f), Util::TileToPosition(y + 0.5f));
+			for (auto & base : m_baseLocationData)
+			{
+				if (minDistance > 0 && Util::DistSq(pos, Util::GetPosition(base.getDepotPosition())) > minDistance)
+				{
+					continue;
+				}
+				
+				float groundDistance = base.getGroundDistance(pos);
+				if (groundDistance <= 0)
+				{
+					continue;
+				}
 
-                if (baseLocation.containsPosition(pos))
-                {
-                    m_tileBaseLocations[x][y] = &baseLocation;
-                    
-                    break;
-                }
-            }
+				float heightDiff = abs(Util::TerrainHeight(pos) - Util::TerrainHeight(base.getDepotPosition()));
+				groundDistance += heightDiff * TerrainHeightCostMultiplier;
+				if (groundDistance >= (BaseLocationManager::NearBaseLocationTileDistance))
+				{
+					continue;
+				}
+
+				float groundDistanceSq = groundDistance * groundDistance;
+				if (minDistance == 0.f || groundDistanceSq < minDistance)
+				{
+					minDistance = groundDistanceSq;//to be able to use DistSq above
+					m_tileBaseLocations[x][y] = &base;
+				}
+			}
         }
     }
 
@@ -597,6 +615,27 @@ CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
 	CCTilePosition position = m_baseLocationPtrs[index]->getDepotPosition();
 	BOT_ASSERT(position.x != 0.f || position.y != 0.f, "Base location is 0,0");
 	return position;
+}
+
+BaseLocation* BaseLocationManager::getClosestBase(const CCPosition position, bool checkContains) const
+{
+	BaseLocation* closestBase;
+	float minDistance = 0.f;
+	for (auto base : m_baseLocationData)
+	{
+		if (checkContains && !base.containsPosition(position))
+		{
+			continue;
+		}
+
+		const float dist = base.getGroundDistance(position);
+		if (minDistance == 0.f || dist < minDistance)
+		{
+			minDistance = dist;
+			closestBase = &base;
+		}
+	}
+	return closestBase;
 }
 
 CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player, bool shiftTowardsResourceDepot, bool checkContainsMinerals, bool checkUnderAttack) const
