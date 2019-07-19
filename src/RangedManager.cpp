@@ -343,7 +343,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
-	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, goal, unitShouldHeal))
+	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, goal, unitShouldHeal, isCycloneHelper))
 	{
 		return;
 	}
@@ -795,7 +795,7 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	return m_order.getPosition();
 }
 
-bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, bool unitShouldHeal)
+bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, bool unitShouldHeal, bool isCycloneHelper)
 {
 	bool morph = false;
 	sc2::AbilityID morphAbility = 0;
@@ -815,6 +815,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 		{
 			if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
 				&& !m_bot.Strategy().enemyHasProtossHighTechAir()
+				&& !isCycloneHelper
 				&& Util::PathFinding::GetCombatInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f
 				&& Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f)
 			{
@@ -1312,11 +1313,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	return currentUnitHasACommand;
 }
 
-bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, CCPosition goal, bool unitShouldHeal)
+bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 	{
-		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, unitShouldHeal))
+		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, unitShouldHeal, isCycloneHelper))
 			return true;
 	}
 
