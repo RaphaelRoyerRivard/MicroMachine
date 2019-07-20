@@ -12,6 +12,7 @@ const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float PATHFINDING_TURN_COST = 5.f;
 const float PATHFINDING_TILE_DOWN_RAMP_COST = 5.f;
+const float PATHFINDING_SECONDARY_GOAL_COST = 20.f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
@@ -380,10 +381,17 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 					continue;	// out of bounds check
 
 				const float neighborDistance = Dist(currentNode->position, neighborPosition);
-				const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(Util::GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
-				const float heightCost = (unitShouldAvoidDownCliffs && bot.Map().terrainHeight(neighborPosition) < bot.Map().terrainHeight(currentNode->position)) ? PATHFINDING_TILE_DOWN_RAMP_COST : 0.f;
+				const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
+				const float heightCost = (unitShouldAvoidDownCliffs && TerrainHeight(neighborPosition) < TerrainHeight(currentNode->position)) ? PATHFINDING_TILE_DOWN_RAMP_COST : 0.f;
 				const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(neighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetCombatInfluenceOnTile(neighborPosition, unit, bot));
-				const float nodeCost = (influenceOnTile + creepCost + heightCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
+				float secondaryGoalCost = 0.f;
+				if(secondaryGoal != CCPosition())
+				{
+					const auto neighborDirection = Normalized(GetPosition(neighborPosition) - GetPosition(currentNode->position));
+					const auto secondaryGoalDirection = Normalized(secondaryGoal - GetPosition(currentNode->position));
+					secondaryGoalCost = GetDotProduct(neighborDirection, secondaryGoalDirection) * -PATHFINDING_SECONDARY_GOAL_COST;
+				}
+				const float nodeCost = (influenceOnTile + creepCost + heightCost + secondaryGoalCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
 				totalCost += currentNode->cost + nodeCost;
 
 				// Consider turning cost to prevent our units from wiggling while fleeing, but not for workers that want to know if the path is safe
@@ -391,7 +399,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				{
 					CCPosition facingVector;
 					if (currentNode->parent == nullptr)
-						facingVector = Util::getFacingVector(unit);
+						facingVector = getFacingVector(unit);
 					else
 						facingVector = GetPosition(currentNode->position) - GetPosition(currentNode->parent->position);
 					const auto directionVector = GetPosition(neighborPosition) - GetPosition(currentNode->position);
@@ -867,7 +875,7 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 	auto & lastUnitClusterFrame = ignoreSpecialTypes ? m_lastUnitClusterFrame : m_lastSpecialUnitClusterFrame;
 	// Return the saved clusters if they were calculated not long ago
 	const auto currentFrame = bot.GetCurrentFrame();
-	if (query != "" && currentFrame - lastUnitClusterFrame < UNIT_CLUSTERING_COOLDOWN)
+	if (!query.empty() && currentFrame - lastUnitClusterFrame < UNIT_CLUSTERING_COOLDOWN)
 		return unitClusters;
 
 	unitClusters.clear();
@@ -875,11 +883,14 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 
 	for (const auto unit : units)
 	{
-		const bool specialUnit = Contains(unit->unit_type, specialTypes);
-		if(specialUnit && ignoreSpecialTypes)
-			continue;	// We want to ignore that type of unit
-		if(!specialUnit && !ignoreSpecialTypes)
-			continue;	// We want to consider only the special types and this is not one
+		if (!specialTypes.empty())
+		{
+			const bool specialUnit = Contains(unit->unit_type, specialTypes);
+			if(specialUnit && ignoreSpecialTypes)
+				continue;	// We want to ignore that type of unit
+			if(!specialUnit && !ignoreSpecialTypes)
+				continue;	// We want to consider only the special types and this is not one
+		}
 		
 		std::vector<UnitCluster*> clustersToMerge;
 		UnitCluster* mainCluster = nullptr;
@@ -1099,6 +1110,9 @@ sc2::Point2D Util::Normalized(const sc2::Point2D& point)
     return sc2::Point2D(point.x, point.y);
 }
 
+/**
+ * Returns a value between 1 (in the same direction) and -1 (opposite direction).
+ */
 float Util::GetDotProduct(const sc2::Point2D& v1, const sc2::Point2D& v2)
 {
     sc2::Point2D v1n = Normalized(v1);
@@ -1634,8 +1648,9 @@ float Util::getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCB
 	const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 	const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 	const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
-	const sc2::GameInfo gameInfo = m_bot.Observation()->GetGameInfo();
+
 	const float heightBonus = unit->is_flying ? 0.f : Util::TerrainHeight(threat->pos) > Util::TerrainHeight(unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
+
 	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + HARASS_THREAT_RANGE_BUFFER;
 	return threatRange;
 }
@@ -1688,9 +1703,29 @@ CCPosition Util::getFacingVector(const sc2::Unit * unit)
 
 bool Util::isUnitFacingAnother(const sc2::Unit * unitA, const sc2::Unit * unitB)
 {
-	CCPosition facingVector = getFacingVector(unitA);
-	CCPosition unitsVector = Util::Normalized(unitB->pos - unitA->pos);
+	const CCPosition facingVector = getFacingVector(unitA);
+	const CCPosition unitsVector = Util::Normalized(unitB->pos - unitA->pos);
 	return sc2::Dot2D(facingVector, unitsVector) > 0.99f;
+}
+
+bool Util::isUnitLockedOn(const sc2::Unit * unit)
+{
+	return unitHasBuff(unit, sc2::BUFF_ID::LOCKON);
+}
+
+bool Util::isUnitLifted(const sc2::Unit * unit)
+{
+	return unitHasBuff(unit, sc2::BUFF_ID::GRAVITONBEAM);
+}
+
+bool Util::unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId)
+{
+	for (const auto buff : unit->buffs)
+	{
+		if (buff.ToType() == buffId)
+			return true;
+	}
+	return false;
 }
 
 bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)

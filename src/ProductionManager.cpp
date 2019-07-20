@@ -579,16 +579,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				if (!isTechQueuedOrStarted(MetaTypeEnum::BansheeCloak) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
-				{
-					queueTech(MetaTypeEnum::BansheeCloak);
-				}
-
-				if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && bansheeCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
-				{
-					queueTech(MetaTypeEnum::HyperflightRotors);
-				}
-
 				//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), false, true);
 				if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && hasFusionCore && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
 				{
@@ -614,20 +604,39 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
 					}
 
-					if (hasFusionCore && m_bot.GetFreeMinerals() >= 400 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
+					if (hasFusionCore && m_bot.GetFreeMinerals() >= 450 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
 					}
 #endif
 				}
 
-#ifndef NO_UNITS
-				if (!m_queue.contains(MetaTypeEnum::Banshee) && !hasFusionCore)
+				const bool stopBanshees = hasFusionCore || m_bot.Strategy().enemyHasProtossHighTechAir();
+				if (stopBanshees)
 				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
+					m_queue.removeAllOfType(MetaTypeEnum::Banshee);
+					m_queue.removeAllOfType(MetaTypeEnum::BansheeCloak);
+					m_queue.removeAllOfType(MetaTypeEnum::HyperflightRotors);
 				}
-#endif
+				else
+				{
+					if (!isTechQueuedOrStarted(MetaTypeEnum::BansheeCloak) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
+					{
+						queueTech(MetaTypeEnum::BansheeCloak);
+					}
 
+					if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && bansheeCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
+					{
+						queueTech(MetaTypeEnum::HyperflightRotors);
+					}
+
+#ifndef NO_UNITS
+					if (!m_queue.contains(MetaTypeEnum::Banshee))
+					{
+						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
+					}
+#endif
+				}
 #ifndef NO_UNITS
 				if ((m_bot.Strategy().enemyHasInvisible() || (enemyRace == sc2::Terran && bansheeCount >= 3)) && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
 				{
@@ -678,7 +687,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (m_bot.Strategy().shouldProduceAntiAirOffense())
 				{
 #ifndef NO_UNITS
-					if (vikingCount < bansheeCount && !m_queue.contains(MetaTypeEnum::Viking))
+					if ((vikingCount < bansheeCount || stopBanshees) && !m_queue.contains(MetaTypeEnum::Viking))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
@@ -818,7 +827,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #ifndef NO_UNITS
 				if (!m_queue.contains(MetaTypeEnum::Viking))
 				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, -1, false));
 				}
 #endif
 				break;
@@ -1003,7 +1012,7 @@ void ProductionManager::lowPriorityChecks()
 		if (engineeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
 		{
 			const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-			if (starportCount > 0)
+			if (!shouldProduceAntiInvis && starportCount > 0)
 			{
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 				if (vikingCount > 0)

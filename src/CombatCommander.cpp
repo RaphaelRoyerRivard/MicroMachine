@@ -415,9 +415,11 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	const float dps = ground ? Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirDps(enemyUnit.getUnitPtr(), m_bot);
 	if (dps == 0.f)
 		return;
-	const float range = ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirAttackRange(enemyUnit.getUnitPtr(), m_bot);
+	float range = ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirAttackRange(enemyUnit.getUnitPtr(), m_bot);
 	if (range == 0.f)
 		return;
+	if (!ground && enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_TEMPEST)
+		range += 2;
 	const float speed = std::max(1.5f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
 	updateInfluenceMap(dps, range, speed, enemyUnit.getPosition(), ground, !enemyUnit.isFlying(), false);
 }
@@ -817,11 +819,38 @@ void CombatCommander::updateHarassSquads()
 		}
 	}
 	const auto tempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
-	if(idleVikings.size() >= tempestCount * 5)
+	const auto VIKING_TEMPEST_RATIO = 2.5f;
+	if(idleVikings.size() >= tempestCount * VIKING_TEMPEST_RATIO)
 	{
 		for (auto viking : idleVikings)
 		{
 			m_squadData.assignUnitToSquad(*viking, harassSquad);
+		}
+		m_hasEnoughVikingsAgainstTempests = true;
+	} 
+	else
+	{
+		const auto harassVikings = harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER);
+		// If we have enough Vikings overall we can send them to fight
+		m_hasEnoughVikingsAgainstTempests = harassVikings.size() + idleVikings.size() >= tempestCount * VIKING_TEMPEST_RATIO;
+		if (m_hasEnoughVikingsAgainstTempests)
+		{
+			for (auto viking : idleVikings)
+			{
+				m_squadData.assignUnitToSquad(*viking, harassSquad);
+			}
+		}
+		else
+		{
+			m_hasEnoughVikingsAgainstTempests = false;
+			// Otherwise we remove our Vikings from the Harass Squad when they are close to our base
+			for (const auto & viking : harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER))
+			{
+				if(Util::DistSq(viking, m_bot.GetStartLocation()) < 10.f * 10.f)
+				{
+					harassSquad.removeUnit(viking);
+				}
+			}
 		}
 	}
 	if(!idleCyclones.empty())
@@ -1777,8 +1806,6 @@ CCPosition CombatCommander::getMainAttackLocation()
         // If the enemy base hasn't been seen yet, go there.
         if (!m_bot.Map().isExplored(enemyBasePosition))
         {
-			if (m_bot.GetCurrentFrame() % 25 == 0)
-				std::cout << m_bot.GetCurrentFrame() << ": Unexplored enemy base" << std::endl;
             return enemyBasePosition;
         }
         else
@@ -1788,8 +1815,6 @@ CCPosition CombatCommander::getMainAttackLocation()
             {
                 if (enemyUnit.getType().isBuilding() && Util::Dist(enemyUnit, enemyBasePosition) < 15)
                 {
-					if (m_bot.GetCurrentFrame() % 25 == 0)
-						std::cout << m_bot.GetCurrentFrame() << ": Visible enemy building" << std::endl;
                     return enemyBasePosition;
                 }
             }
@@ -1824,8 +1849,6 @@ CCPosition CombatCommander::getMainAttackLocation()
     }
 	if (lowestDistance >= 0.f)
 	{
-		if (m_bot.GetCurrentFrame() % 25 == 0)
-			std::cout << m_bot.GetCurrentFrame() << ": Memory enemy building" << std::endl;
 		return closestEnemyPosition;
 	}
 
@@ -1846,8 +1869,6 @@ CCPosition CombatCommander::getMainAttackLocation()
     }
 	if (lowestDistance >= 0.f)
 	{
-		if (m_bot.GetCurrentFrame() % 25 == 0)
-			std::cout << m_bot.GetCurrentFrame() << ": Memory enemy unit" << std::endl;
 		return closestEnemyPosition;
 	}
 
@@ -1867,13 +1888,9 @@ CCPosition CombatCommander::exploreMap()
 		if (Util::DistSq(unit.getPosition(), basePosition) < 3.f * 3.f)
 		{
 			m_currentBaseExplorationIndex = (m_currentBaseExplorationIndex + 1) % m_bot.Bases().getBaseLocations().size();
-			if (m_bot.GetCurrentFrame() % 25 == 0)
-				std::cout << m_bot.GetCurrentFrame() << ": Explore map, base index increased to " << m_currentBaseExplorationIndex << std::endl;
 			return Util::GetPosition(m_bot.Bases().getBasePosition(Players::Enemy, m_currentBaseExplorationIndex));
 		}
 	}
-	if (m_bot.GetCurrentFrame() % 25 == 0)
-		std::cout << m_bot.GetCurrentFrame() << ": Explore map, base index " << m_currentBaseExplorationIndex << std::endl;
 	return basePosition;
 }
 
@@ -1898,7 +1915,10 @@ CCPosition CombatCommander::GetClosestEnemyBaseLocation()
 
 	if (!closestEnemyBase)
 		return getMainAttackLocation();
-	return closestEnemyBase->getPosition();
+
+	const auto depotPosition = Util::GetPosition(closestEnemyBase->getDepotPosition());
+	const auto position = depotPosition + Util::Normalized(depotPosition - closestEnemyBase->getPosition()) * 3.f;
+	return position;
 }
 
 CCPosition CombatCommander::GetNextBaseLocationToScout()

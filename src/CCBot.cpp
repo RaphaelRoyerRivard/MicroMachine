@@ -379,6 +379,7 @@ void CCBot::setUnits()
 						// This is a Speedling!!!
 						m_strategy.setEnemyHasMetabolicBoost(true);
 						Actions()->SendChat("Speedlings won't save you my friend");
+						Util::DebugLog(__FUNCTION__, "Metabolic Boost detected", *this);
 					}
 				}
 			}
@@ -394,6 +395,14 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_OVERSEER:
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
 						break;
+					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
+					case sc2::UNIT_TYPEID::ZERG_MUTALISK:
+						m_strategy.setShouldProduceAntiAirDefense(true);
+						m_strategy.setShouldProduceAntiAirOffense(true);
+						Actions()->SendChat("Planning on harassing with air units? That's MY strategy! >:(");
+						Util::DebugLog(__FUNCTION__, "Air Harass detected: " + unit.getType().getName(), *this);
+						break;
 					case sc2::UNIT_TYPEID::PROTOSS_PHOENIX:
 						if (unitptr->last_seen_game_loop != GetCurrentFrame())
 							break;
@@ -403,18 +412,12 @@ void CCBot::setUnits()
 							{
 								Actions()->SendChat("Am I hallucinating?");
 								m_saidHallucinationLine = true;
+								Util::DebugLog(__FUNCTION__, "Hallucination (maybe) detected: " + unit.getType().getName(), *this);
 							}
 							firstPhoenix = false;
 							break;
 						}
 						// no break because more than one Phoenix probably means that there is a real fleet
-					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
-					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
-					case sc2::UNIT_TYPEID::ZERG_MUTALISK:
-						m_strategy.setShouldProduceAntiAirDefense(true);
-						m_strategy.setShouldProduceAntiAirOffense(true);
-						Actions()->SendChat("Planning on harassing with air units? That's MY strategy! >:(");
-						break;
 					default:
 						if (unit.getType().isBuilding() && !m_strategy.enemyOnlyHasFlyingBuildings())
 						{
@@ -434,12 +437,14 @@ void CCBot::setUnits()
 							{
 								m_strategy.setEnemyOnlyHasFlyingBuildings(true);
 								Actions()->SendChat("Lifting your buildings won't save them for long.");
+								Util::DebugLog(__FUNCTION__, "Lifted building detected: " + unit.getType().getName(), *this);
 							}
 						}
 						else if(!m_strategy.shouldProduceAntiAirOffense())
 						{
 							m_strategy.setShouldProduceAntiAirOffense(true);
 							Actions()->SendChat("What!? Air units? I'm not ready! :s");
+							Util::DebugLog(__FUNCTION__, "Air unit detected: " + unit.getType().getName(), *this);
 						}
 					}
 				}
@@ -451,7 +456,7 @@ void CCBot::setUnits()
 					{
 					case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 					case sc2::UNIT_TYPEID::TERRAN_FUSIONCORE:
-					//case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
+					case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
 					//case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
 					case sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON:
 					case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
@@ -459,6 +464,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_HIVE:
 						m_strategy.setShouldProduceAntiAirOffense(true);
 						Actions()->SendChat("Going for air units? Your fleet will be not match for mine!");
+						Util::DebugLog(__FUNCTION__, "Air production building detected: " + unit.getType().getName(), *this);
 					default:
 						break;
 					}
@@ -474,9 +480,24 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::PROTOSS_DARKSHRINE:
 						m_strategy.setEnemyHasInvisible(true);
 						Actions()->SendChat("Planning on striking me with cloaked units?");
+						Util::DebugLog(__FUNCTION__, "Invis production building detected: " + unit.getType().getName(), *this);
 					default:
 						break;
 					}
+				}
+			}
+			if(!m_strategy.enemyHasProtossHighTechAir())
+			{
+				switch (sc2::UNIT_TYPEID(unitptr->unit_type))
+				{
+				case sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON:
+				case sc2::UNIT_TYPEID::PROTOSS_TEMPEST:
+				case sc2::UNIT_TYPEID::PROTOSS_CARRIER:
+					m_strategy.setEnemyHasProtossHighTechAir(true);
+					Actions()->SendChat("OP strat detected, panic mode activated");
+					Util::DebugLog(__FUNCTION__, "High tech air strat detected: " + unit.getType().getName(), *this);
+				default:
+					break;
 				}
 			}
 			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, std::pair<CCPosition, uint32_t>(unitptr->pos, GetGameLoop()));
@@ -683,7 +704,6 @@ void CCBot::clearDeadUnits()
 	for (auto tag : unitsToRemove)
 	{
 		m_allyUnits.erase(tag);
-		std::cout << "Dead ally unit removed from map" << std::endl;
 	}
 
 	unitsToRemove.clear();
@@ -709,7 +729,6 @@ void CCBot::clearDeadUnits()
 	for (auto tag : unitsToRemove)
 	{
 		m_enemyUnits.erase(tag);
-		std::cout << "Dead enemy unit removed from map" << std::endl;
 	}
 
 	unitsToRemove.clear();
@@ -726,7 +745,6 @@ void CCBot::clearDeadUnits()
 	for (auto tag : unitsToRemove)
 	{
 		m_neutralUnits.erase(tag);
-		//std::cout << "Dead neutral unit removed from map" << std::endl;	//happens too often
 	}
 }
 
@@ -829,6 +847,7 @@ void CCBot::IssueCheats()
 
 	const int player1 = 1;
 	const int player2 = 2;
+	const auto mapCenter = Map().center();
 	//Debug()->DebugGiveAllTech();
 
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player1, 2);
@@ -836,8 +855,9 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, Map().center(), player1, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, Map().center(), player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, mapCenter, player2, 3);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, mapCenter, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter + CCPosition(3, 3), player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player1, 2);
@@ -1110,6 +1130,9 @@ const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
 	return m_knownEnemyUnits;
 }
 
+/*
+ * Despite its confusing name, m_enemyUnitsPerType stores all enemies
+ */
 const std::vector<Unit> & CCBot::GetKnownEnemyUnits(sc2::UnitTypeID type)
 {
 	return m_enemyUnitsPerType[type];

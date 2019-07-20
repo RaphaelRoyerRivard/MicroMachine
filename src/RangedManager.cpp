@@ -25,6 +25,7 @@ const int CYCLONE_ATTACK_FRAME_COUNT = 1;
 const int CYCLONE_LOCKON_CAST_FRAME_COUNT = 9;
 const int CYCLONE_LOCKON_CHANNELING_FRAME_COUNT = 321 + CYCLONE_LOCKON_CAST_FRAME_COUNT;
 const int CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT = 97;
+const float CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER = 5.f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
 const int REAPER_KD8_CHARGE_COOLDOWN = 314 + REAPER_KD8_CHARGE_FRAME_COUNT + 7;
@@ -263,10 +264,14 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		goal = GetBestSupportPosition(rangedUnit, rangedUnits);
 	}
+	else if (isViking && !isCycloneHelper && !m_bot.Commander().Combat().hasEnoughVikingsAgainstTempests())
+	{
+		goal = m_bot.GetStartLocation();
+	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
 	// If our unit is targeted by an enemy Cyclone's Lock-On ability, it should back until the effect wears off
-	if (IsLockedOn(rangedUnit))
+	if (Util::isUnitLockedOn(rangedUnit))
 	{
 		// Banshee in danger should cloak itself
 		if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, true))
@@ -284,21 +289,61 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
 
-		if (!shouldAttack && cycloneShouldUseLockOn)
+		const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
+		const bool hasFlyingHelper = cycloneWithHelperIt != m_cyclonesWithHelper.end();
+
+		if (!unitShouldHeal)
 		{
-			const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
-			if (cycloneWithHelperIt != m_cyclonesWithHelper.end())
+			// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
+			if (cycloneShouldUseLockOn && hasFlyingHelper)
 			{
 				const auto cycloneFlyingHelper = cycloneWithHelperIt->second;
-				if (Util::DistSq(rangedUnit->pos, cycloneFlyingHelper->pos) > 7.f * 7.f)
+				// If the flying helper is too far, go towards it
+				if (Util::DistSq(rangedUnit->pos, cycloneFlyingHelper->pos) > CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER * CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER)
 				{
 					goal = cycloneFlyingHelper->pos;
+				}
+			}
+
+			if (!hasFlyingHelper)
+			{
+				// If the target is too far, we don't want to chase it, we just leave
+				if (target)
+				{
+					const float lockOnRange = m_bot.Commander().Combat().getAbilityCastingRanges().at(sc2::ABILITY_ID::EFFECT_LOCKON) + rangedUnit->radius + target->radius;
+					if (Util::DistSq(rangedUnit->pos, target->pos) > lockOnRange * lockOnRange)
+					{
+						target = nullptr;
+					}
+				}
+				// Find the closest flying helper on the map
+				float minDistSq = 0.f;
+				const sc2::Unit* closestHelper = nullptr;
+				for (const auto & flyingHelper : m_cycloneFlyingHelpers)
+				{
+					const float distSq = Util::DistSq(rangedUnit->pos, flyingHelper.first->pos);
+					if (!closestHelper || distSq < minDistSq)
+					{
+						minDistSq = distSq;
+						closestHelper = flyingHelper.first;
+					}
+				}
+				// If there is one
+				if (closestHelper)
+				{
+					goal = closestHelper->pos;
+				}
+				else
+				{
+					// Otherwise go back to base, it's too dangerous to go alone
+					goal = m_bot.GetStartLocation();
+					unitShouldHeal = true;
 				}
 			}
 		}
 	}
 
-	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, goal, unitShouldHeal))
+	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, goal, unitShouldHeal, isCycloneHelper))
 	{
 		return;
 	}
@@ -329,7 +374,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	if (cycloneShouldUseLockOn && targetInAttackRange)
 	{
-		LockOnTarget(rangedUnit, target, unitShouldHeal);
+		LockOnTarget(rangedUnit, target);
 		return;
 	}
 
@@ -369,7 +414,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
 		const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target
-		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, target ? unitAttackRange : 3.f, cycloneShouldUseLockOn, m_bot);
+		const bool ignoreInfluence = cycloneShouldUseLockOn && target;
+		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, target ? unitAttackRange : 3.f, ignoreInfluence, m_bot);
 		if (closePositionInPath != CCPosition())
 		{
 			const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
@@ -574,7 +620,9 @@ bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool star
 	if (Util::Dist(cyclone->pos, lockOnTarget->pos) > 15.f + cyclone->radius + lockOnTarget->radius)
 		return true;
 
-	// TODO some spells from the enemy could stop our Cyclone's lock-on (like the Pheonix levitation)
+	// The target is being lifted by a Pheonix
+	if (Util::isUnitLifted(cyclone))
+		return true;
 
 	// Sometimes, even though the target is perfectly valid, the Lock-On command won't work.
 	// Since the Lock-On ability is supposed to become unavailable the next frame it is cast, we know it didn't work if it is still available
@@ -584,6 +632,9 @@ bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool star
 		if (lockOnAvailable)
 			return true;
 	}
+
+	if (currentFrame >= frameCast + CYCLONE_LOCKON_CHANNELING_FRAME_COUNT && cyclone->engaged_target_tag == sc2::NullTag)
+		return true;
 
 	return false;
 }
@@ -667,10 +718,26 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit) const
 			}
 		}
 		//if unit is damaged enough to go back for repair
-		else if (rangedUnit->health / rangedUnit->health_max < Util::HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE / (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit) ? 2.f : 1.f))
+		else
 		{
-			unitsBeingRepaired.insert(rangedUnit);
-			return true;
+			float percentageMultiplier = 1.f;
+			switch(rangedUnit->unit_type.ToType())
+			{
+				case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
+					if (isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit))
+						percentageMultiplier = 0.5f;	//BCs can fight longer since they can teleport back to safety
+					break;
+				case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
+					percentageMultiplier = 1.5f;
+					break;
+				default:
+					break;
+			}
+			if (rangedUnit->health / rangedUnit->health_max < Util::HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE * percentageMultiplier)
+			{
+				unitsBeingRepaired.insert(rangedUnit);
+				return true;
+			}
 		}
 	}
 
@@ -728,17 +795,7 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	return m_order.getPosition();
 }
 
-bool RangedManager::IsLockedOn(const sc2::Unit * rangedUnit) const
-{
-	for(const auto buff : rangedUnit->buffs)
-	{
-		if (buff.ToType() == sc2::BUFF_ID::LOCKON)
-			return true;
-	}
-	return false;
-}
-
-bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, bool unitShouldHeal)
+bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, bool unitShouldHeal, bool isCycloneHelper)
 {
 	bool morph = false;
 	sc2::AbilityID morphAbility = 0;
@@ -751,17 +808,23 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 			morph = true;
 		}
 	}
-	else if (squaredDistanceToGoal < VIKING_LANDING_DISTANCE_FROM_GOAL * VIKING_LANDING_DISTANCE_FROM_GOAL && !target)
+	else 
 	{
-		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
-			&& Util::PathFinding::GetCombatInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f
-			&& Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f)
+		const bool closeToGoal = squaredDistanceToGoal < VIKING_LANDING_DISTANCE_FROM_GOAL * VIKING_LANDING_DISTANCE_FROM_GOAL;
+		if (closeToGoal && !target)
 		{
-			morphAbility = sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE;
-			morph = true;
+			if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
+				&& !m_bot.Strategy().enemyHasProtossHighTechAir()
+				&& !isCycloneHelper
+				&& Util::PathFinding::GetCombatInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f
+				&& Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f)
+			{
+				morphAbility = sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE;
+				morph = true;
+			}
 		}
 		//TODO should morph to assault mode if there are close flying units
-		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT && !m_bot.Strategy().shouldFocusBuildings())
+		else if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT && !target && !m_bot.Strategy().shouldFocusBuildings())
 		{
 			morphAbility = sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE;
 			morph = true;
@@ -980,9 +1043,9 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 	return target;
 }
 
-void RangedManager::LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * target, bool unitShouldHeal)
+void RangedManager::LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * target)
 {
-	const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_LOCKON, target, unitShouldHeal, 0);
+	const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_LOCKON, target, true, 0);
 	PlanAction(cyclone, action);
 	const auto pair = std::pair<const sc2::Unit *, uint32_t>(target, m_bot.GetGameLoop());
 	auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
@@ -991,9 +1054,18 @@ void RangedManager::LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * ta
 	lockOnTargets.insert_or_assign(cyclone, pair);
 }
 
+bool RangedManager::CycloneHasTarget(const sc2::Unit * cyclone) const
+{
+	const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+	return lockOnTargets.find(cyclone) != lockOnTargets.end();
+}
+
 bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats)
 {
 	if (threats.empty())
+		return false;
+
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
 		return false;
 
 	float unitsPower = 0.f;
@@ -1091,6 +1163,16 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			continue;
 		}
+		// Ignore Cyclones that have a target to not cancel their Lock-On
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)// && CycloneHasTarget(unit))
+		{
+			continue;
+		}
+		// We don't want flying helpers to take damage so Cyclones can keep vision for longer periods
+		if (m_cycloneFlyingHelpers.find(rangedUnit) != m_cycloneFlyingHelpers.end())
+		{
+			continue;
+		}
 
 		// Check if it can attack the selected target
 		const bool canAttackTarget = target->is_flying ? Util::CanUnitAttackAir(unit, m_bot) : Util::CanUnitAttackGround(unit, m_bot);
@@ -1131,16 +1213,33 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 
 	m_harassMode = true;
 
+	auto allyVikings = 0;
+	auto enemyTempests = 0;
+	for (const auto ally : closeUnits)
+	{
+		if (ally->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+			++allyVikings;
+	}
+	for (const auto threat : threats)
+	{
+		if (threat->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST)
+			++enemyTempests;
+	}
+
 	bool currentUnitHasACommand = false;
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
 	const bool winSimulation = Util::SimulateCombat(closeUnits, threats);
 	m_bot.StopProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
 	const bool formulaWin = unitsPower >= targetsPower;
-	const bool shouldFight = winSimulation && formulaWin;
-	//std::cout << (shouldFight ? "Win" : "Lose") << std::endl;
-	/*if (winSimulation != formulaWin)
-		std::cout << "Simulation: " << winSimulation << ", formula: " << formulaWin << std::endl;*/
+	bool shouldFight = winSimulation && formulaWin;
+
+	if(allyVikings > 0 && enemyTempests > 0)
+	{
+		shouldFight = winSimulation;
+		//Util::DebugLog(__FUNCTION__, std::to_string(allyVikings) + " Vikings vs " + std::to_string(enemyTempests) + " Tempests : Simulation predicts a " + (winSimulation ? "win" : "lose") + " and our power ratio is " + std::to_string(unitsPower / targetsPower), m_bot);
+	}
+
 	// For each of our close units
 	for (auto & unitAndTarget : closeUnitsTarget)
 	{
@@ -1179,7 +1278,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			}
 			else
 			{
-				Util::DisplayError("Could not find an escape path towards target", "", m_bot);
+				Util::DisplayError("Could not find an escape path", "", m_bot);
 			}
 		}
 
@@ -1214,11 +1313,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	return currentUnitHasACommand;
 }
 
-bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, CCPosition goal, bool unitShouldHeal)
+bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 	{
-		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, unitShouldHeal))
+		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, unitShouldHeal, isCycloneHelper))
 			return true;
 	}
 
@@ -1258,6 +1357,10 @@ bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2:
 bool RangedManager::ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats, CCPosition goal)
 {
 	if (!threats.empty())
+		return false;
+
+	// TODO Instead of not teleporting, teleport on the Tempests or Carriers
+	if (m_bot.Strategy().enemyHasProtossHighTechAir())
 		return false;
 
 	const auto distSq = Util::DistSq(battlecruiser->pos, goal);
@@ -1800,10 +1903,24 @@ void RangedManager::ExecuteActions()
 	}
 }
 
+void RangedManager::CleanLockOnTargets() const
+{
+	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+	for (auto it = lockOnTargets.cbegin(), next_it = it; it != lockOnTargets.cend(); it = next_it)
+	{
+		++next_it;
+		if (!it->first->is_alive)
+		{
+			lockOnTargets.erase(it);
+		}
+	}
+}
+
 void RangedManager::CalcBestFlyingCycloneHelpers()
 {
 	m_cycloneFlyingHelpers.clear();
 	m_cyclonesWithHelper.clear();
+	CleanLockOnTargets();
 
 	// Get the Cyclones and their potential flying helpers in the squad
 	std::set<const sc2::Unit *> cyclones;
@@ -1813,7 +1930,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 		const auto unitPtr = unit.getUnitPtr();
 		const auto type = unitPtr->unit_type;
 
-		if (ShouldUnitHeal(unitPtr) || IsLockedOn(unitPtr))
+		if (ShouldUnitHeal(unitPtr) || Util::isUnitLockedOn(unitPtr))
 			continue;
 
 		if(type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
@@ -1844,7 +1961,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 	sc2::Units targetsVector;
 	for (const auto target : targets)
 		targetsVector.push_back(target);
-	const auto targetClusters = Util::GetUnitClusters(targetsVector, {}, false, m_bot);
+	const auto targetClusters = Util::GetUnitClusters(targetsVector, {}, true, m_bot);
 
 	// Choose the best air unit to keep vision of Cyclone's targets
 	for (const auto & targetCluster : targetClusters)
@@ -1883,14 +2000,14 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 	// If there are Cyclones without target, follow them to give them vision
 	if(!cyclones.empty() && m_cycloneFlyingHelpers.size() < potentialFlyingCycloneHelpers.size())
 	{
-		// Do not concider Cyclones without target that are already near a helper
+		// Do not consider Cyclones without target that are already near a helper
 		sc2::Units cyclonesVector;
 		for (const auto cyclone : cyclones)
 		{
 			bool covered = false;
 			for (const auto & helper : m_cycloneFlyingHelpers)
 			{
-				if (Util::DistSq(helper.first->pos, cyclone->pos) < 7.f * 7.f)
+				if (Util::DistSq(helper.first->pos, cyclone->pos) < CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER * CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER)
 				{
 					// that cyclone doesn't need help from another flying unit
 					covered = true;
