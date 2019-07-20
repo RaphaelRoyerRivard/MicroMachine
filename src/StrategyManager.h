@@ -25,11 +25,9 @@ struct Strategy
 
 struct StrategyPostBuildOrder {
 	const static int NO_STRATEGY = -1;
-	const static int TERRAN_REAPER = 0;
-	const static int TERRAN_ANTI_SPEEDLING = 1;//Also plans towards mutalisk
-	const static int TERRAN_MARINE_MARAUDER = 2;
+	const static int TERRAN_CLASSIC = 0;
+	const static int TERRAN_VS_PROTOSS = 1;
 	const static int WORKER_RUSH_DEFENSE = 3;
-	const static int TERRAN_ANTI_AIR = 4;
 };
 
 class StrategyManager

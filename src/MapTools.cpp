@@ -467,7 +467,7 @@ bool MapTools::isBuildable(int tileX, int tileY) const
         return false;
     }
 
-	return m_buildable[tileX - 1][tileY - 1];
+	return m_buildable[tileX][tileY];
 }
 
 
@@ -478,7 +478,7 @@ bool MapTools::isBuildable(CCTilePosition & tile) const
 		return false;
 	}
 
-	return m_buildable[tile.x - 1][tile.y - 1];
+	return m_buildable[tile.x][tile.y];
 }
 
 bool MapTools::canBuildTypeAtPosition(int tileX, int tileY, const UnitType & type) const
@@ -488,16 +488,6 @@ bool MapTools::canBuildTypeAtPosition(int tileX, int tileY, const UnitType & typ
 #else
     return BWAPI::Broodwar->canBuildHere(BWAPI::TilePosition(tileX, tileY), type.getAPIUnitType());
 #endif
-}
-
-bool MapTools::isWallBuildable(const CCTilePosition & tile) const
-{
-	if (!isValidTile(tile.x, tile.y))
-	{
-		return false;
-	}
-
-	return m_buildable[tile.x][tile.y];
 }
 
 void MapTools::printMap()

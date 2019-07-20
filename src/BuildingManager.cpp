@@ -108,7 +108,7 @@ void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::l
 	checkedTiles.push_front(currentTile);
 	if (m_bot.Map().isWalkable(currentTile))
 	{
-		if (m_bot.Map().isWallBuildable(currentTile))
+		if (m_bot.Map().isBuildable(currentTile))
 		{
 			FindRampTiles(rampTiles, checkedTiles, CCTilePosition(currentTile.x + 1, currentTile.y));
 			FindRampTiles(rampTiles, checkedTiles, CCTilePosition(currentTile.x - 1, currentTile.y));
@@ -187,7 +187,7 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 		CCTilePosition above = CCTilePosition(tile.x + 1, tile.y);
 		CCTilePosition left = CCTilePosition(tile.x, tile.y - 1);
 		CCTilePosition right = CCTilePosition(tile.x, tile.y + 1);
-		if (m_bot.Map().isWallBuildable(below) && m_bot.Map().isWalkable(below) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(below))
+		if (m_bot.Map().isBuildable(below) && m_bot.Map().isWalkable(below) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(below))
 		{//we need to block this tile
 			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), below) == tilesToBlock.end())
 			{
@@ -195,7 +195,7 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 			}
 		}
 		
-		if (m_bot.Map().isWallBuildable(above) && m_bot.Map().isWalkable(above) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(above))
+		if (m_bot.Map().isBuildable(above) && m_bot.Map().isWalkable(above) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(above))
 		{//we need to block this tile
 			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), above) == tilesToBlock.end())
 			{
@@ -203,7 +203,7 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 			}
 		}
 
-		if (m_bot.Map().isWallBuildable(left) && m_bot.Map().isWalkable(left) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(left))
+		if (m_bot.Map().isBuildable(left) && m_bot.Map().isWalkable(left) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(left))
 		{//we need to block this tile
 			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), left) == tilesToBlock.end())
 			{
@@ -211,7 +211,7 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 			}
 		}
 
-		if (m_bot.Map().isWallBuildable(right) && m_bot.Map().isWalkable(right) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(right))
+		if (m_bot.Map().isBuildable(right) && m_bot.Map().isWalkable(right) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(right))
 		{//we need to block this tile
 			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), right) == tilesToBlock.end())
 			{
@@ -308,10 +308,10 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 	std::list<CCTilePosition> buildingTiles;
 	for (auto tile : tilesToBlock)
 	{
-		if (m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x - 1, tile.y)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y - 1)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x - 1, tile.y - 1)))
+		if (m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y - 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y - 1)))
 		{
 			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x - 1, tile.y - 1)))
 			{
@@ -319,10 +319,10 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 				continue;
 			}
 		}
-		if (m_bot.Map().isWallBuildable(CCTilePosition(tile.x + 1, tile.y)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x + 1, tile.y - 1)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y - 1)))
+		if (m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y - 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y - 1)))
 		{
 			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x, tile.y - 1)))
 			{
@@ -330,10 +330,10 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 				continue;
 			}
 		}
-		if (m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y + 1)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x - 1, tile.y + 1)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x - 1, tile.y)))
+		if (m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y + 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y + 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y)))
 		{
 			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x - 1, tile.y)))
 			{
@@ -341,10 +341,10 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 				continue;
 			}
 		}
-		if (m_bot.Map().isWallBuildable(CCTilePosition(tile.x + 1, tile.y + 1)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y + 1)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x + 1, tile.y)) &&
-			m_bot.Map().isWallBuildable(CCTilePosition(tile.x, tile.y)))
+		if (m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y + 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y + 1)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x + 1, tile.y)) &&
+			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)))
 		{
 			if (ValidateSupplyDepotPosition(buildingTiles, CCTilePosition(tile.x, tile.y)))
 			{
@@ -373,7 +373,7 @@ bool BuildingManager::ValidateSupplyDepotPosition(std::list<CCTilePosition> buil
 	possibleTiles.push_back(CCTilePosition(possibleTile.x + 1, possibleTile.y + 1));
 
 	for (auto tile : buildingTiles)
-	{//(std::find(my_list.begin(), my_list.end(), my_var) != my_list.end())
+	{
 		std::list<CCTilePosition> tiles;
 		tiles.push_back(CCTilePosition(tile.x, tile.y));
 		tiles.push_back(CCTilePosition(tile.x + 1, tile.y));
@@ -1155,7 +1155,6 @@ void BuildingManager::drawWall()
 	for (auto building : m_wallBuildingPosition)
 	{
 		m_bot.Map().drawTile(building.x, building.y, CCColor(255, 0, 0));
-		break;
 	}
 }
 
