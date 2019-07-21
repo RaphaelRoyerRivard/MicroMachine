@@ -389,7 +389,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				{
 					const auto neighborDirection = Normalized(GetPosition(neighborPosition) - GetPosition(currentNode->position));
 					const auto secondaryGoalDirection = Normalized(secondaryGoal - GetPosition(currentNode->position));
-					secondaryGoalCost = GetDotProduct(neighborDirection, secondaryGoalDirection) * -PATHFINDING_SECONDARY_GOAL_COST;
+					secondaryGoalCost = (1 - GetDotProduct(neighborDirection, secondaryGoalDirection)) * PATHFINDING_SECONDARY_GOAL_COST;
 				}
 				const float nodeCost = (influenceOnTile + creepCost + heightCost + secondaryGoalCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
 				totalCost += currentNode->cost + nodeCost;
@@ -1650,8 +1650,9 @@ float Util::getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCB
 	const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
 
 	const float heightBonus = unit->is_flying ? 0.f : Util::TerrainHeight(threat->pos) > Util::TerrainHeight(unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
-
-	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + HARASS_THREAT_RANGE_BUFFER;
+	const float tempestAirBonus = threat->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && unit->is_flying ? 2.f : 0.f;
+	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + tempestAirBonus + HARASS_THREAT_RANGE_BUFFER;
+	
 	return threatRange;
 }
 

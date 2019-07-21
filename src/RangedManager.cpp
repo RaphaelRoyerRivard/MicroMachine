@@ -285,14 +285,51 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	bool shouldAttack = true;
 	bool cycloneShouldUseLockOn = false;
+	bool cycloneShouldStayCloseToTarget = false;
 	if (isCyclone)
 	{
 		target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
 
+		// If the Cyclone has a its Lock-On on a target with a big range (like a Tempest or Tank)
+		if (!shouldAttack && !cycloneShouldUseLockOn)
+		{
+			const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+			const auto it = lockOnTargets.find(rangedUnit);
+			if (it != lockOnTargets.end())
+			{
+				const auto lockOnTarget = it->second.first;
+				const auto enemyRange = Util::GetAttackRangeForTarget(lockOnTarget, rangedUnit, m_bot);
+				if(enemyRange >= 10.f)
+				{
+					// We check if we have another unit that is close to it, but if not, the Cyclone should stay close to it
+					bool closeAlly = false;
+					for (const auto ally : rangedUnits)
+					{
+						if (ally == rangedUnit)
+							continue;
+						if (Util::DistSq(ally->pos, lockOnTarget->pos) > 7.f * 7.f)
+							continue;
+						// If the ally could survive at least 2 seconds close to the target
+						if (ally->health >= Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(ally->pos), ally, m_bot) * 2.f)
+						{
+							closeAlly = true;
+							break;
+						}
+					}
+					if (!closeAlly)
+					{
+						cycloneShouldStayCloseToTarget = true;
+						unitShouldHeal = false;
+						target = lockOnTarget;
+					}
+				}
+			}
+		}
+
 		const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
 		const bool hasFlyingHelper = cycloneWithHelperIt != m_cyclonesWithHelper.end();
 
-		if (!unitShouldHeal)
+		if (!unitShouldHeal && !cycloneShouldStayCloseToTarget)
 		{
 			// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
 			if (cycloneShouldUseLockOn && hasFlyingHelper)
@@ -360,6 +397,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		if (cycloneShouldUseLockOn)
 			unitAttackRange = m_bot.Commander().Combat().getAbilityCastingRanges()[sc2::ABILITY_ID::EFFECT_LOCKON] + rangedUnit->radius + target->radius;
+		else if (cycloneShouldStayCloseToTarget)
+			unitAttackRange = 5.f;	// We want to stay close to the unit so we keep our Lock-On for a longer period
 		else if (!shouldAttack)
 			unitAttackRange = 14.f + rangedUnit->radius + target->radius;
 		else
@@ -410,12 +449,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-	if (cycloneShouldUseLockOn || AllowUnitToPathFind(rangedUnit))
+	if (cycloneShouldUseLockOn || cycloneShouldStayCloseToTarget || AllowUnitToPathFind(rangedUnit))
 	{
 		const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
-		const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target
-		const bool ignoreInfluence = cycloneShouldUseLockOn && target;
-		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, target ? unitAttackRange : 3.f, ignoreInfluence, m_bot);
+		const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
+		const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
+		const float maxRange = target ? unitAttackRange : 3.f;
+		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, m_bot);
 		if (closePositionInPath != CCPosition())
 		{
 			const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;

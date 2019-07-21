@@ -856,9 +856,9 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, mapCenter, player2, 3);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, mapCenter, player2, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter + CCPosition(3, 3), player1, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, mapCenter - CCPosition(3, 0), player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter + CCPosition(3, 0), player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter + CCPosition(3, 0), player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
