@@ -51,6 +51,7 @@ BotConfig::BotConfig()
 	DrawDamageHealthRatio = false;
 	DrawRangedUnitActions = false;
 	DrawResourcesProximity = false;
+	DrawCombatInformation = false;
 
     KiteWithRangedUnits = true;
     ScoutHarassEnemy = true;
@@ -210,6 +211,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawDamageHealthRatio", debug, DrawDamageHealthRatio);
 			JSONTools::ReadBool("DrawRangedUnitActions", debug, DrawRangedUnitActions);
 			JSONTools::ReadBool("DrawResourcesProximity", debug, DrawResourcesProximity);
+			JSONTools::ReadBool("DrawCombatInformation", debug, DrawCombatInformation);
 		}
     }
 

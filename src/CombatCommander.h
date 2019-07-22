@@ -35,6 +35,8 @@ class CombatCommander
 	std::set<sc2::Tag> m_newCyclones;
 	std::set<sc2::Tag> m_toggledCyclones;
 	bool m_hasEnoughVikingsAgainstTempests = true;
+	bool m_biggerArmy = false;
+	bool m_winAttackSimulation = false;
 	
     bool            m_initialized;
     bool            m_attackStarted;
@@ -79,6 +81,7 @@ class CombatCommander
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
 	void			updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect);
 	void			updateBlockedTilesWithUnit(const Unit& unit);
+	void			drawCombatInformation();
 	void			drawInfluenceMaps();
 	void			drawBlockedTiles();
 
@@ -115,10 +118,11 @@ public:
 	float getAirEffectInfluence(CCTilePosition tilePosition) const;
 	bool isTileBlocked(int x, int y);
 	bool hasEnoughVikingsAgainstTempests() const { return m_hasEnoughVikingsAgainstTempests; }
+	bool winAttackSimulation() const { return m_winAttackSimulation; }
+	bool hasBiggerArmy() const { return m_biggerArmy; }
 
 	void initInfluenceMaps();
 	CCPosition getMainAttackLocation();
 	void updateBlockedTilesWithNeutral();
-    void drawSquadInformation();
 };
 

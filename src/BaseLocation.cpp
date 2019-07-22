@@ -237,8 +237,24 @@ bool BaseLocation::containsPositionApproximative(const CCPosition & pos, int max
 		return false;
 	}
 
-	int groundDistance = getGroundDistance(pos);
+	const int groundDistance = getGroundDistance(pos);
 	return groundDistance > 0 && groundDistance < (maxDistance > 0 ? maxDistance : ApproximativeBaseLocationTileDistance);
+}
+
+bool BaseLocation::containsUnitApproximative(const Unit & unit, int maxDistance) const
+{
+	if (!unit.isValid())
+	{
+		return false;
+	}
+
+	if (unit.isFlying())
+	{
+		maxDistance = maxDistance > 0 ? maxDistance : ApproximativeBaseLocationTileDistance;
+		return Util::DistSq(unit, Util::GetPosition(m_depotPosition)) < maxDistance * maxDistance;
+	}
+
+	return containsPositionApproximative(unit.getPosition(), maxDistance);
 }
 
 bool BaseLocation::containsPosition(const CCPosition & pos) const

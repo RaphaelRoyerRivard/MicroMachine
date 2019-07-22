@@ -129,7 +129,7 @@ private:
 	bool ShouldSkipFrame(const sc2::Unit * rangedUnit) const;
 	bool MonitorCyclone(const sc2::Unit * cyclone);
 	bool IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started) const;
-	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit) const;
+	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit, bool checkInfluence = true) const;
 	bool ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger) const;
 	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger);
 	bool ShouldBansheeUncloak(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal) const;

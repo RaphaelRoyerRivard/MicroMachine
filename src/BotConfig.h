@@ -63,6 +63,7 @@ public:
 	bool DrawDamageHealthRatio;
 	bool DrawRangedUnitActions;
 	bool DrawResourcesProximity;
+	bool DrawCombatInformation;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;

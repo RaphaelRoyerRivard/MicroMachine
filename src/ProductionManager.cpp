@@ -593,11 +593,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 #endif
 
+				const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 
-				if(m_bot.GetCurrentFrame() >= 9400 && finishedBaseCount >= 3)	// around 7 minutes
+				if(finishedBaseCount >= 3)
 				{
-					//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
 #ifndef NO_UNITS
 					if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
 					{
@@ -687,7 +687,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (m_bot.Strategy().shouldProduceAntiAirOffense())
 				{
 #ifndef NO_UNITS
-					if ((vikingCount < bansheeCount || stopBanshees) && !m_queue.contains(MetaTypeEnum::Viking))
+					if ((vikingCount < bansheeCount || vikingCount < battlecruiserCount * 2.5f || (!hasFusionCore && stopBanshees)) && !m_queue.contains(MetaTypeEnum::Viking))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
@@ -706,14 +706,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case StrategyPostBuildOrder::TERRAN_VS_PROTOSS:
 			{
+				const auto vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 				const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
 
 				if (productionBuildingAddonCount < productionBuildingCount)
 				{//Addon
-					MetaType toBuild;
-					const int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
-					if (starportCount > starportAddonCount)
+					const int starportReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
+					if (starportCount > starportReactorCount && vikingCount > 0)
 					{
 						if (!m_queue.contains(MetaTypeEnum::StarportReactor))
 						{
@@ -735,7 +734,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				bool hasPicked = false;
 				MetaType toBuild;
 				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-				if (barracksCount < 1 || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount))
+				if (barracksCount < 1)
 				{
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
@@ -745,7 +744,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					toBuild = MetaTypeEnum::Starport;
 					hasPicked = true;
 				}
-				else
+				else if (factoryCount < finishedBaseCount)
 				{
 					toBuild = MetaTypeEnum::Factory;
 					hasPicked = true;
@@ -771,12 +770,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), false, true);
-				if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && hasFusionCore && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
-				{
-					queueTech(MetaTypeEnum::YamatoCannon);
-				}
-
 				const int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
 #ifndef NO_UNITS
 				if (reaperCount == 0 && !m_queue.contains(MetaTypeEnum::Reaper))
@@ -784,22 +777,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
 #endif
-
-				if (m_bot.GetCurrentFrame() >= 9400 && finishedBaseCount >= 3)	// around 7 minutes
-				{
-					//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
-#ifndef NO_UNITS
-					if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
-					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
-					}
-
-					if (hasFusionCore && m_bot.GetFreeMinerals() >= 400 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
-					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
-					}
-#endif
-				}
 
 #ifndef NO_UNITS
 				if (m_bot.Strategy().enemyHasInvisible() && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
@@ -813,8 +790,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
 				}
 
-				const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
-				if (cycloneCount > 2 && !isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
+				const auto cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
+				if (cycloneCount > 0 && !isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
 				{
 					queueTech(MetaTypeEnum::MagFieldAccelerator);
 				}
@@ -825,7 +802,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if (!m_queue.contains(MetaTypeEnum::Viking))
+				if ((vikingCount * 2 < cycloneCount || m_bot.Strategy().enemyHasProtossHighTechAir()) && !m_queue.contains(MetaTypeEnum::Viking))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, -1, false));
 				}

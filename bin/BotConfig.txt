@@ -136,12 +136,12 @@
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
-        "DrawSquadInfo"             : false,
+        "DrawSquadInfo"             : true,
         "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
-        "DrawHarassInfo"            : true,
+        "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : true,
@@ -150,7 +150,8 @@
 		"DrawRepairStation"			: false,
 		"DrawDamageHealthRatio"		: true,
         "DrawRangedUnitActions"     : false,
-		"DrawResourcesProximity"	: false
+        "DrawResourcesProximity"    : false,
+        "DrawCombatInformation"     : true
     },
     
     "Modules" :

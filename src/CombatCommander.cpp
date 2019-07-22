@@ -142,6 +142,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		//updateAttackSquads();
         //updateBackupSquads();
     }
+	drawCombatInformation();
 	m_bot.StopProfiling("0.10.4.2    updateSquads");
 
 	m_bot.StartProfiling("0.10.4.1    m_squadData.onFrame");
@@ -795,7 +796,7 @@ void CombatCommander::updateHarassSquads()
 				idleHellions.push_back(&unit);
 			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE)
 				idleMarines.push_back(&unit);
-			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 				idleVikings.push_back(&unit);
 			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
 				idleCyclones.push_back(&unit);
@@ -830,9 +831,9 @@ void CombatCommander::updateHarassSquads()
 	} 
 	else
 	{
-		const auto harassVikings = harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER);
+		/*const auto harassVikings = harassSquad.getUnitCountOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER) + harassSquad.getUnitCountOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT);
 		// If we have enough Vikings overall we can send them to fight
-		m_hasEnoughVikingsAgainstTempests = harassVikings.size() + idleVikings.size() >= tempestCount * VIKING_TEMPEST_RATIO;
+		m_hasEnoughVikingsAgainstTempests = harassVikings + idleVikings.size() >= tempestCount * VIKING_TEMPEST_RATIO;
 		if (m_hasEnoughVikingsAgainstTempests)
 		{
 			for (auto viking : idleVikings)
@@ -840,11 +841,14 @@ void CombatCommander::updateHarassSquads()
 				m_squadData.assignUnitToSquad(*viking, harassSquad);
 			}
 		}
-		else
+		else*/
 		{
 			m_hasEnoughVikingsAgainstTempests = false;
+			auto vikings = harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER);
+			auto vikingsAssault = harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT);
+			vikings.insert(vikings.end(), vikingsAssault.begin(), vikingsAssault.end());
 			// Otherwise we remove our Vikings from the Harass Squad when they are close to our base
-			for (const auto & viking : harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER))
+			for (const auto & viking : vikings)
 			{
 				if(Util::DistSq(viking, m_bot.GetStartLocation()) < 10.f * 10.f)
 				{
@@ -871,7 +875,28 @@ void CombatCommander::updateHarassSquads()
 	if (harassSquad.getUnits().empty())
 		return;
 
-	SquadOrder harassOrder(SquadOrderTypes::Harass, GetClosestEnemyBaseLocation(), HarassOrderRadius, "Harass");
+	sc2::Units allyUnits;
+	auto allySupply = 0;
+	for (const auto & unit : harassSquad.getUnits())
+	{
+		allyUnits.push_back(unit.getUnitPtr());
+		allySupply += unit.getType().supplyRequired();
+	}
+	sc2::Units enemyUnits;
+	auto enemySupply = 0;
+	for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
+	{
+		const auto & enemyUnit = enemyUnitPair.second;
+		if (enemyUnit.getType().isCombatUnit() && !enemyUnit.getType().isBuilding())
+		{
+			enemyUnits.push_back(enemyUnit.getUnitPtr());
+			enemySupply += enemyUnit.getType().supplyRequired();
+		}
+	}
+	m_winAttackSimulation = Util::SimulateCombat(allyUnits, enemyUnits);
+	m_biggerArmy = allySupply >= enemySupply;
+
+	const SquadOrder harassOrder(SquadOrderTypes::Harass, GetClosestEnemyBaseLocation(), HarassOrderRadius, "Harass");
 	harassSquad.setSquadOrder(harassOrder);
 }
 
@@ -1221,7 +1246,7 @@ void CombatCommander::updateDefenseSquads()
 			if (!UnitType::isTargetable(unit.getAPIUnitType()))
 				continue;
 
-			if (myBaseLocation->containsPositionApproximative(unit.getPosition(), m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
+			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
 			{
 				//we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
 				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392)	// first 3 minutes
@@ -1484,10 +1509,10 @@ void CombatCommander::updateDefenseSquads()
 					{
 						// We check if the unit is in an offensive squad
 						const auto scoredUnit = Unit(scorePair.first, m_bot);
-						const auto squad = m_squadData.getUnitSquad(scoredUnit);
-						if (squad)
+						const auto unitSquad = m_squadData.getUnitSquad(scoredUnit);
+						if (unitSquad)
 						{
-							const auto & squadOrder = squad->getSquadOrder();
+							const auto & squadOrder = unitSquad->getSquadOrder();
 							if (squadOrder.getType() == SquadOrderTypes::Attack || squadOrder.getType() == SquadOrderTypes::Harass)
 							{
 								// If the unit is closer to its squad order objective than the base to defend, we won't send back that unit to defend
@@ -1790,9 +1815,14 @@ bool CombatCommander::isTileBlocked(int x, int y)
 	return m_blockedTiles[x][y];
 }
 
-void CombatCommander::drawSquadInformation()
+void CombatCommander::drawCombatInformation()
 {
-    m_squadData.drawSquadInformation();
+    if (m_bot.Config().DrawCombatInformation)
+    {
+		const auto str = "Bigger army: " + std::to_string(m_biggerArmy) + "\nWin simulation: " + std::to_string(m_winAttackSimulation);
+		const auto color = m_biggerArmy && m_winAttackSimulation ? sc2::Colors::Green : m_biggerArmy || m_winAttackSimulation ? sc2::Colors::Yellow : sc2::Colors::Red;
+		m_bot.Map().drawTextScreen(0.25f, 0.01f, str, color);
+    }
 }
 
 CCPosition CombatCommander::getMainAttackLocation()
