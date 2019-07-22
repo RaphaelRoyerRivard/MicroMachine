@@ -1223,10 +1223,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		}
 		//TODO decide if we want only synchronized units or also desynchronized ones
 		// Ignore units that are currently executing an action
-		if(unitAction.executed && !unitAction.finished)
+		/*if(unitAction.executed && !unitAction.finished)
 		{
 			continue;
-		}
+		}*/
 		// Ignore units that are not ready to perform an action
 		if(ShouldSkipFrame(unit))
 		{
