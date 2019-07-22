@@ -785,12 +785,19 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 #endif
 
+				//const int thorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Thor.getUnitType(), false, true);
+				//const auto hasArmory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Armory.getUnitType(), true, true) > 0;
+				const auto cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
+				/*if (hasArmory && !m_queue.contains(MetaTypeEnum::Thor))
+				{
+					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Thor, 1, false));
+				}*/
+
 				if (!m_queue.contains(MetaTypeEnum::Cyclone))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
 				}
 
-				const auto cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
 				if (cycloneCount > 0 && !isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
 				{
 					queueTech(MetaTypeEnum::MagFieldAccelerator);

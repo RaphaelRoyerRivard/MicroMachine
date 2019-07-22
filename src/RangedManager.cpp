@@ -31,6 +31,7 @@ const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
 const int REAPER_KD8_CHARGE_COOLDOWN = 314 + REAPER_KD8_CHARGE_FRAME_COUNT + 7;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 40;
+const int THOR_MORPH_FRAME_COUNT = 40;
 const float VIKING_LANDING_DISTANCE_FROM_GOAL = 10.f;
 const int ACTION_REEXECUTION_FREQUENCY = 50;
 
@@ -894,6 +895,23 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 	return morph;
 }
 
+bool RangedManager::ExecuteThorMorphLogic(const sc2::Unit * thor)
+{
+	bool morph = false;
+	sc2::AbilityID morphAbility = 0;
+	if (thor->unit_type == sc2::UNIT_TYPEID::TERRAN_THOR)
+	{
+		morphAbility = sc2::ABILITY_ID::MORPH_THORHIGHIMPACTMODE;
+		morph = true;
+	}
+	if (morph)
+	{
+		const auto action = RangedUnitAction(MicroActionType::Ability, morphAbility, true, THOR_MORPH_FRAME_COUNT);
+		morph = PlanAction(thor, action);
+	}
+	return morph;
+}
+
 bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, bool unitShouldHeal)
 {
 	if ((!target ||
@@ -1409,6 +1427,12 @@ bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * range
 			return true;
 
 		if (ExecuteYamatoCannonLogic(rangedUnit, threats))
+			return true;
+	}
+
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_THOR || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_THORAP)
+	{
+		if (ExecuteThorMorphLogic(rangedUnit))
 			return true;
 	}
 

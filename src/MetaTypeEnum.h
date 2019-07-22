@@ -28,6 +28,7 @@ class MetaTypeEnum
 		static MetaType EngineeringBay;
 		static MetaType MissileTurret;
 		static MetaType FusionCore;
+		static MetaType Armory;
 			//Units
 		static MetaType SCV;
 		static MetaType Marine;
@@ -41,6 +42,7 @@ class MetaTypeEnum
 		static MetaType Raven;
 		static MetaType Cyclone;
 		static MetaType Battlecruiser;
+		static MetaType Thor;
 				//Upgrades
 		static MetaType TerranInfantryWeaponsLevel1;
 		static MetaType TerranInfantryWeaponsLevel2;

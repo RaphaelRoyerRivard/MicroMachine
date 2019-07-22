@@ -22,6 +22,7 @@ MetaType MetaTypeEnum::Refinery;
 MetaType MetaTypeEnum::EngineeringBay;
 MetaType MetaTypeEnum::MissileTurret;
 MetaType MetaTypeEnum::FusionCore;
+MetaType MetaTypeEnum::Armory;
 	//Units
 MetaType MetaTypeEnum::SCV;
 MetaType MetaTypeEnum::Marine;
@@ -35,6 +36,7 @@ MetaType MetaTypeEnum::Medivac;
 MetaType MetaTypeEnum::Raven;
 MetaType MetaTypeEnum::Cyclone;
 MetaType MetaTypeEnum::Battlecruiser;
+MetaType MetaTypeEnum::Thor;
 	//Upgrades
 MetaType MetaTypeEnum::TerranInfantryWeaponsLevel1;
 MetaType MetaTypeEnum::TerranInfantryWeaponsLevel2;
@@ -123,6 +125,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::EngineeringBay = MetaType("EngineeringBay", m_bot);
 	MetaTypeEnum::MissileTurret = MetaType("MissileTurret", m_bot);
 	MetaTypeEnum::FusionCore = MetaType("FusionCore", m_bot);
+	MetaTypeEnum::Armory = MetaType("Armory", m_bot);
 		//Units
 	MetaTypeEnum::SCV = MetaType("SCV", m_bot);
 	MetaTypeEnum::Marine = MetaType("Marine", m_bot);
@@ -136,6 +139,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::Raven = MetaType("Raven", m_bot);
 	MetaTypeEnum::Cyclone = MetaType("Cyclone", m_bot);
 	MetaTypeEnum::Battlecruiser = MetaType("Battlecruiser", m_bot);
+	MetaTypeEnum::Thor = MetaType("Thor", m_bot);
 		//Upgrades
 	MetaTypeEnum::TerranInfantryWeaponsLevel1 = MetaType("TerranInfantryWeaponsLevel1", m_bot);
 	MetaTypeEnum::TerranInfantryWeaponsLevel2 = MetaType("TerranInfantryWeaponsLevel2", m_bot);
