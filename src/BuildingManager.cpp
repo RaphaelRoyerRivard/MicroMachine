@@ -19,13 +19,16 @@ void BuildingManager::onStart()
 
 void BuildingManager::onFirstFrame()
 {
-	//Ramp wall location
-	std::list<CCTilePosition> checkedTiles;
-	FindRampTiles(m_rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
-	FindMainRamp(m_rampTiles);
+	if (m_bot.GetPlayerRace(Players::Enemy) != sc2::Race::Protoss)
+	{
+		//Ramp wall location
+		std::list<CCTilePosition> checkedTiles;
+		FindRampTiles(m_rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
+		FindMainRamp(m_rampTiles);
 
-	auto tilesToBlock = FindRampTilesToPlaceBuilding(m_rampTiles);
-	PlaceSupplyDepots(tilesToBlock);
+		auto tilesToBlock = FindRampTilesToPlaceBuilding(m_rampTiles);
+		PlaceSupplyDepots(tilesToBlock);
+	}
 }
 
 // gets called every frame from GameCommander
