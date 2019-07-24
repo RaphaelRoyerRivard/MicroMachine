@@ -364,6 +364,8 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 		auto position = CCTilePosition(building.x + 1, building.y + 1);
 		m_nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(position);
 		m_wallBuildingPosition.push_back(position);
+
+		m_buildingPlacer.reserveTiles(position.x, position.y, 2, 2);
 	}
 }
 
