@@ -396,6 +396,16 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
+	const auto distSqToTarget = target ? Util::DistSq(rangedUnit->pos, target->pos) : 0.f;
+	if (isReaper && !unitShouldHeal && !m_bot.Strategy().shouldFocusBuildings() && (!target || distSqToTarget > 10.f * 10.f) && m_order.getType() == SquadOrderTypes::Harass)
+	{
+		const auto enemyStartingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+		if (enemyStartingBase)
+		{
+			goal = enemyStartingBase->getPosition();
+		}
+	}
+
 	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, goal, unitShouldHeal, isCycloneHelper))
 	{
 		return;
@@ -419,7 +429,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			unitAttackRange = 14.f + rangedUnit->radius + target->radius;
 		else
 			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
-		targetInAttackRange = Util::DistSq(rangedUnit->pos, target->pos) <= unitAttackRange * unitAttackRange;
+		targetInAttackRange = distSqToTarget <= unitAttackRange * unitAttackRange;
 
 #ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)

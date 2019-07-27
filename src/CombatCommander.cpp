@@ -763,8 +763,7 @@ void CombatCommander::updateScoutSquad()
 		return;
 	}
 
-	//TODO the squad order should be Scout, but in that case it should be supported by the RangedManager
-	const SquadOrder scoutOrder(SquadOrderTypes::Harass, GetNextBaseLocationToScout(), ScoutOrderRadius, "Scout");
+	const SquadOrder scoutOrder(SquadOrderTypes::Scout, GetNextBaseLocationToScout(), ScoutOrderRadius, "Scout");
 	scoutSquad.setSquadOrder(scoutOrder);
 }
 
@@ -1845,7 +1844,7 @@ CCPosition CombatCommander::getMainAttackLocation()
             // if it has been explored, go there if there are any visible enemy units there
             for (auto & enemyUnit : m_bot.UnitInfo().getUnits(Players::Enemy))
             {
-                if (enemyUnit.getType().isBuilding() && Util::Dist(enemyUnit, enemyBasePosition) < 15)
+                if (enemyUnit.getType().isBuilding() && Util::DistSq(enemyUnit, enemyBasePosition) < 6.f * 6.f)
                 {
                     return enemyBasePosition;
                 }
