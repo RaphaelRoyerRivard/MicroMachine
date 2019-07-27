@@ -54,6 +54,12 @@ public:
     bool isBeingConstructed() const;
     bool isCloaked() const;
     bool isFlying() const;
+	bool isLight() const;
+	bool isArmored() const;
+	bool isBiological() const;
+	bool isMechanical() const;
+	bool isPsionic() const;
+	bool isMassive() const;
     bool isAlive() const;
     bool isPowered() const;
     bool isIdle() const;
@@ -64,14 +70,19 @@ public:
 	bool isAddonTraining() const;
     bool isConstructing(const UnitType & type) const;
 	bool isConstructingAnything() const;
+	bool isCounterToUnit(const Unit& unit) const;
 	sc2::Tag getAddonTag() const;
+	bool isProductionBuildingIdle() const;
 
     void stop           () const;
     void attackUnit     (const Unit & target) const;
     void attackMove     (const CCPosition & targetPosition) const;
     void move           (const CCPosition & targetPosition) const;
     void move           (const CCTilePosition & targetTilePosition) const;
+	void patrol			(const CCPosition & targetPosition) const;
+	void patrol			(const CCTilePosition & targetPosition) const;
 	void rightClick     (const Unit & target) const;
+	void rightClick		(const CCPosition position) const;
     void repair         (const Unit & target) const;
     void build          (const UnitType & buildingType, CCTilePosition pos) const;
     void buildTarget    (const UnitType & buildingType, const Unit & target) const;
@@ -79,4 +90,5 @@ public:
     void morph          (const UnitType & type) const;
 	bool useAbility(const sc2::ABILITY_ID abilityId) const;
 	sc2::AvailableAbilities getAbilities() const;
+	void getBuildingLimits(CCTilePosition & bottomLeft, CCTilePosition & topRight) const;
 };

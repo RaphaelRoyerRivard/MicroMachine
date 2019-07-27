@@ -153,10 +153,12 @@ bool UnitType::isResourceDepot() const
 
 bool UnitType::isRefinery() const
 {
+	//TODO Doesn't handle protoss and zerg rich geysers
 #ifdef SC2API
     switch (m_type.ToType()) 
     {
         case sc2::UNIT_TYPEID::TERRAN_REFINERY      : return true;
+		case sc2::UNIT_TYPEID::TERRAN_RICHREFINERY	: return true;//Rich terran refinery
         case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR  : return true;
         case sc2::UNIT_TYPEID::ZERG_EXTRACTOR       : return true;
         default: return false;
@@ -166,22 +168,49 @@ bool UnitType::isRefinery() const
 #endif
 }
 
+sc2::UNIT_TYPEID UnitType::getEnemyRefineryType(sc2::Race enemyRace)
+{
+	switch (enemyRace)
+	{
+	case sc2::Terran: return sc2::UNIT_TYPEID::TERRAN_REFINERY;
+	case sc2::Protoss: return sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR;
+	case sc2::Zerg: return sc2::UNIT_TYPEID::ZERG_EXTRACTOR;
+	default: return sc2::UNIT_TYPEID::INVALID;
+	}
+}
+
+bool UnitType::isTargetable(sc2::UnitTypeID unitTypeId)
+{
+	switch(unitTypeId.ToType())
+	{
+	case sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT:
+	case sc2::UNIT_TYPEID::TERRAN_KD8CHARGE:
+	case sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED:
+		return false;
+	default:
+		return true;
+	}
+}
+
+bool UnitType::isDetector(sc2::UnitTypeID unitTypeId)
+{
+	switch (unitTypeId.ToType())
+	{
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+		case sc2::UNIT_TYPEID::ZERG_OVERSEER:
+		case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET:
+		case sc2::UNIT_TYPEID::ZERG_SPORECRAWLER:
+		case sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON:
+		case sc2::UNIT_TYPEID::TERRAN_RAVEN:
+			return true;
+		default:
+			return false;
+	}
+}
+
 bool UnitType::isDetector() const
 {
-#ifdef SC2API
-    switch (m_type.ToType())
-    {
-        case sc2::UNIT_TYPEID::PROTOSS_OBSERVER        : return true;
-        case sc2::UNIT_TYPEID::ZERG_OVERSEER           : return true;
-        case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET    : return true;
-        case sc2::UNIT_TYPEID::ZERG_SPORECRAWLER       : return true;
-        case sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON    : return true;
-        case sc2::UNIT_TYPEID::TERRAN_RAVEN            : return true;
-        default: return false;
-    }
-#else
-    return m_type.isDetector();
-#endif
+	return isDetector(m_type);
 }
 
 bool UnitType::isGeyser() const
@@ -269,7 +298,7 @@ bool UnitType::isCreepTumor() const
 CCPositionType UnitType::getAttackRange() const
 {
 #ifdef SC2API
-    return Util::GetMaxAttackRange(m_bot->Observation()->GetUnitTypeData()[m_type]);
+    return Util::GetMaxAttackRange(m_bot->Observation()->GetUnitTypeData()[m_type], *m_bot);
 #else
     // TODO: this is ground weapon range right now
     return m_type.groundWeapon().maxRange();
@@ -339,6 +368,7 @@ int UnitType::supplyRequired() const
 int UnitType::mineralPrice() const
 {
 #ifdef SC2API
+	BOT_ASSERT(m_type != 0, "Invalid type id");
     return (int)m_bot->Observation()->GetUnitTypeData()[m_type].mineral_cost;
 #else
     return m_type.mineralPrice();
@@ -348,6 +378,7 @@ int UnitType::mineralPrice() const
 int UnitType::gasPrice() const
 {
 #ifdef SC2API
+	BOT_ASSERT(m_type != 0, "Invalid type id");
     return (int)m_bot->Observation()->GetUnitTypeData()[m_type].vespene_cost;
 #else
     return m_type.gasPrice();
@@ -474,6 +505,7 @@ bool UnitType::isRepairable() const
 		case sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
 		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINE:
 		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
+		case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
 			return true;
 		default:
 			return false;

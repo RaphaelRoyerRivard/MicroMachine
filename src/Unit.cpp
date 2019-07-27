@@ -144,15 +144,10 @@ float Unit::getBuildPercentage() const
 CCPlayer Unit::getPlayer() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
-#ifdef SC2API
-    if (m_unit->alliance == sc2::Unit::Alliance::Self) { return 0; }
-    else if (m_unit->alliance == sc2::Unit::Alliance::Enemy) { return 1; }
-    else { return 2; }
-#else
-    if (m_unit->getPlayer() == BWAPI::Broodwar->self()) { return 0; }
-    else if (m_unit->getPlayer() == BWAPI::Broodwar->enemy()) { return 1; }
-    else { return 2; }
-#endif
+
+    if (m_unit->alliance == sc2::Unit::Alliance::Self) { return Players::Self; }
+    else if (m_unit->alliance == sc2::Unit::Alliance::Enemy) { return Players::Enemy; }
+    else { return Players::Neutral; }
 }
 
 sc2::Tag Unit::getTag() const
@@ -220,8 +215,7 @@ bool Unit::isAddonTraining() const
 {
 	BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API
-	return m_unit->orders.size() > 1;
-	
+	return m_unit->orders.size() > 1;	
 #else
 	return false;
 #endif
@@ -241,6 +235,20 @@ sc2::Tag Unit::getAddonTag() const
 {
 	BOT_ASSERT(isValid(), "Unit is not valid");
 	return m_unit->add_on_tag;
+}
+
+bool Unit::isProductionBuildingIdle() const
+{
+	if(getType().isBuilding())
+	{
+		//Check if this building is idle
+		auto & orders = getUnitPtr()->orders;
+		if (orders.empty() || orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 int Unit::getWeaponCooldown() const
@@ -273,11 +281,246 @@ bool Unit::isFlying() const
 #endif
 }
 
+bool Unit::isLight() const
+{
+	switch ((sc2::UNIT_TYPEID)getAPIUnitType())
+	{
+		case sc2::UNIT_TYPEID::TERRAN_SCV:
+		case sc2::UNIT_TYPEID::PROTOSS_PROBE:
+		case sc2::UNIT_TYPEID::ZERG_DRONE:
+		case sc2::UNIT_TYPEID::PROTOSS_ZEALOT:
+		case sc2::UNIT_TYPEID::PROTOSS_SENTRY:
+		case sc2::UNIT_TYPEID::PROTOSS_HIGHTEMPLAR:
+		case sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR:
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+		case sc2::UNIT_TYPEID::PROTOSS_PHOENIX:
+		case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
+		case sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR:
+		case sc2::UNIT_TYPEID::PROTOSS_ADEPT:
+		case sc2::UNIT_TYPEID::TERRAN_MARINE:
+		case sc2::UNIT_TYPEID::TERRAN_REAPER:
+		case sc2::UNIT_TYPEID::TERRAN_HELLION:
+		case sc2::UNIT_TYPEID::TERRAN_RAVEN:
+		case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+		case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
+		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINE:
+		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
+		case sc2::UNIT_TYPEID::TERRAN_POINTDEFENSEDRONE:			
+		case sc2::UNIT_TYPEID::ZERG_LARVA:
+		case sc2::UNIT_TYPEID::ZERG_ZERGLING:
+		case sc2::UNIT_TYPEID::ZERG_BANELINGBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_HYDRALISK:
+		case sc2::UNIT_TYPEID::ZERG_HYDRALISKBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_BROODLING:
+		case sc2::UNIT_TYPEID::ZERG_CHANGELING:
+		case sc2::UNIT_TYPEID::ZERG_INFESTEDTERRANSEGG:
+		case sc2::UNIT_TYPEID::ZERG_INFESTORTERRAN:
+		case sc2::UNIT_TYPEID::ZERG_MUTALISK:
+		case sc2::UNIT_TYPEID::ZERG_LOCUSTMP:
+		case sc2::UNIT_TYPEID::ZERG_LOCUSTMPFLYING:
+			return true;
+		default:
+			return false;
+	}
+}
+
+bool Unit::isArmored() const
+{
+
+	switch ((sc2::UNIT_TYPEID)getAPIUnitType())
+	{
+		case sc2::UNIT_TYPEID::PROTOSS_STALKER:
+		case sc2::UNIT_TYPEID::PROTOSS_IMMORTAL:
+		case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS:
+		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISM:
+		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISMPHASING:
+		case sc2::UNIT_TYPEID::PROTOSS_VOIDRAY:
+		case sc2::UNIT_TYPEID::PROTOSS_CARRIER:
+		case sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIP:
+		case sc2::UNIT_TYPEID::PROTOSS_TEMPEST:
+		case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
+		case sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR:
+		case sc2::UNIT_TYPEID::TERRAN_MARAUDER:
+		case sc2::UNIT_TYPEID::TERRAN_SIEGETANK:
+		case sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED:
+		case sc2::UNIT_TYPEID::TERRAN_THOR:
+		case sc2::UNIT_TYPEID::TERRAN_THORAP:
+		case sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT:
+		case sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
+		case sc2::UNIT_TYPEID::TERRAN_MEDIVAC:
+		case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
+		case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
+		case sc2::UNIT_TYPEID::TERRAN_LIBERATOR:
+		case sc2::UNIT_TYPEID::TERRAN_LIBERATORAG:
+		case sc2::UNIT_TYPEID::TERRAN_AUTOTURRET:
+		case sc2::UNIT_TYPEID::ZERG_ROACH:
+		case sc2::UNIT_TYPEID::ZERG_ROACHBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_INFESTOR:
+		case sc2::UNIT_TYPEID::ZERG_INFESTORBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_ULTRALISK:
+		case sc2::UNIT_TYPEID::ZERG_OVERLORD:
+		case sc2::UNIT_TYPEID::ZERG_OVERSEER:
+		case sc2::UNIT_TYPEID::ZERG_CORRUPTOR:
+		case sc2::UNIT_TYPEID::ZERG_BROODLORD:
+		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTMP:
+		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTBURROWEDMP:
+		case sc2::UNIT_TYPEID::ZERG_VIPER:
+		case sc2::UNIT_TYPEID::ZERG_LURKERMP:
+		case sc2::UNIT_TYPEID::ZERG_LURKERMPBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_NYDUSCANAL:
+		case sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK:
+			return true;
+		default:
+			return false;
+	}
+}
+
+bool Unit::isBiological() const
+{
+
+	switch ((sc2::UNIT_TYPEID)getAPIUnitType())
+	{
+	case sc2::UNIT_TYPEID::TERRAN_SCV:
+	case sc2::UNIT_TYPEID::ZERG_DRONE:
+		case sc2::UNIT_TYPEID::PROTOSS_ZEALOT:
+		case sc2::UNIT_TYPEID::PROTOSS_HIGHTEMPLAR:
+		case sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR:
+		case sc2::UNIT_TYPEID::PROTOSS_ADEPT:
+		case sc2::UNIT_TYPEID::TERRAN_MARINE:
+		case sc2::UNIT_TYPEID::TERRAN_MARAUDER:
+		case sc2::UNIT_TYPEID::TERRAN_REAPER:
+		case sc2::UNIT_TYPEID::TERRAN_GHOST:
+		case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
+		case sc2::UNIT_TYPEID::ZERG_QUEEN:
+		case sc2::UNIT_TYPEID::ZERG_QUEENBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_ZERGLING:
+		case sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_BANELING:
+		case sc2::UNIT_TYPEID::ZERG_BANELINGBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_ROACH:
+		case sc2::UNIT_TYPEID::ZERG_ROACHBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_HYDRALISK:
+		case sc2::UNIT_TYPEID::ZERG_HYDRALISKBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_INFESTOR:
+		case sc2::UNIT_TYPEID::ZERG_INFESTORBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_ULTRALISK:
+		case sc2::UNIT_TYPEID::ZERG_OVERLORD:
+		case sc2::UNIT_TYPEID::ZERG_OVERSEER:
+		case sc2::UNIT_TYPEID::ZERG_MUTALISK:
+		case sc2::UNIT_TYPEID::ZERG_CORRUPTOR:
+		case sc2::UNIT_TYPEID::PROTOSS_STALKER:
+		case sc2::UNIT_TYPEID::ZERG_BROODLORD:
+		case sc2::UNIT_TYPEID::ZERG_VIPER:
+		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTMP:
+		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTBURROWEDMP:
+		case sc2::UNIT_TYPEID::ZERG_RAVAGER:
+		case sc2::UNIT_TYPEID::ZERG_LURKERMP:
+		case sc2::UNIT_TYPEID::ZERG_LURKERMPBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_BROODLING:
+		case sc2::UNIT_TYPEID::ZERG_EGG:
+		case sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON:
+		case sc2::UNIT_TYPEID::ZERG_BROODLORDCOCOON:
+		case sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON:
+		case sc2::UNIT_TYPEID::ZERG_TRANSPORTOVERLORDCOCOON:
+			return true;
+		default:
+			return false;
+	}
+}
+
+bool Unit::isMechanical() const
+{
+
+	switch ((sc2::UNIT_TYPEID)getAPIUnitType())
+	{
+		case sc2::UNIT_TYPEID::PROTOSS_STALKER:
+		case sc2::UNIT_TYPEID::PROTOSS_SENTRY:
+		case sc2::UNIT_TYPEID::PROTOSS_IMMORTAL:
+		case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS:
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISM:
+		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISMPHASING:
+		case sc2::UNIT_TYPEID::PROTOSS_PHOENIX:
+		case sc2::UNIT_TYPEID::PROTOSS_VOIDRAY:
+		case sc2::UNIT_TYPEID::PROTOSS_CARRIER:
+		case sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR:
+		case sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIP:
+		case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
+		case sc2::UNIT_TYPEID::PROTOSS_TEMPEST:
+		case sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR:
+		case sc2::UNIT_TYPEID::TERRAN_HELLION:
+		case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
+		case sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT:
+		case sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
+		case sc2::UNIT_TYPEID::TERRAN_MEDIVAC:
+		case sc2::UNIT_TYPEID::TERRAN_RAVEN:
+		case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+		case sc2::UNIT_TYPEID::TERRAN_SIEGETANK:
+		case sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED:
+		case sc2::UNIT_TYPEID::TERRAN_THOR:
+		case sc2::UNIT_TYPEID::TERRAN_THORAP:
+		case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
+		case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
+		case sc2::UNIT_TYPEID::TERRAN_LIBERATOR:
+		case sc2::UNIT_TYPEID::TERRAN_LIBERATORAG:
+		case sc2::UNIT_TYPEID::TERRAN_POINTDEFENSEDRONE:
+			return true;
+		default:
+			return false;
+	}
+}
+
+bool Unit::isPsionic() const
+{
+
+	switch ((sc2::UNIT_TYPEID)getAPIUnitType())
+	{
+		case sc2::UNIT_TYPEID::PROTOSS_SENTRY:
+		case sc2::UNIT_TYPEID::PROTOSS_HIGHTEMPLAR:
+		case sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR:
+		case sc2::UNIT_TYPEID::PROTOSS_ARCHON:
+		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISM:
+		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISMPHASING:
+		case sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIP:
+		case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
+		case sc2::UNIT_TYPEID::TERRAN_GHOST:
+		case sc2::UNIT_TYPEID::ZERG_QUEEN:
+		case sc2::UNIT_TYPEID::ZERG_QUEENBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_INFESTOR:
+		case sc2::UNIT_TYPEID::ZERG_INFESTORBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_VIPER:
+			return true;
+		default:
+			return false;
+	}
+}
+
+bool Unit::isMassive() const
+{
+
+	switch ((sc2::UNIT_TYPEID)getAPIUnitType())
+	{
+		case sc2::UNIT_TYPEID::TERRAN_THOR:
+		case sc2::UNIT_TYPEID::TERRAN_THORAP:
+		case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
+		case sc2::UNIT_TYPEID::ZERG_ULTRALISK:
+		case sc2::UNIT_TYPEID::ZERG_BROODLORD:
+		case sc2::UNIT_TYPEID::PROTOSS_ARCHON:
+		case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS:
+		case sc2::UNIT_TYPEID::PROTOSS_CARRIER:
+		case sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIP:
+		case sc2::UNIT_TYPEID::PROTOSS_TEMPEST:
+			return true;
+		default:
+			return false;
+	}
+}
+
 bool Unit::isAlive() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API
-    return m_unit->is_alive;
+	return m_unit->is_alive;
 #else
     return m_unit->getHitPoints() > 0;
 #endif
@@ -374,6 +617,18 @@ void Unit::move(const CCTilePosition & targetPosition) const
 #endif
 }
 
+void Unit::patrol(const CCPosition & targetPosition) const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::PATROL, targetPosition);
+}
+
+void Unit::patrol(const CCTilePosition & targetPosition) const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::PATROL, CCPosition((float)targetPosition.x, (float)targetPosition.y));
+}
+
 void Unit::rightClick(const Unit & target) const
 {
 	BOT_ASSERT(isValid(), "Unit is not valid");
@@ -382,6 +637,11 @@ void Unit::rightClick(const Unit & target) const
 #else
 	m_unit->rightClick(target.getUnitPtr());
 #endif
+}
+
+void Unit::rightClick(const CCPosition position) const
+{
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::SMART, sc2::Point2D(position.x, position.y));
 }
 
 void Unit::repair(const Unit & target) const
@@ -493,9 +753,59 @@ bool Unit::isConstructingAnything() const
 {
 #ifdef SC2API
 	BOT_ASSERT(isValid(), "Cannot check if unit is constructing because unit ptr is null");
+	auto orders = getUnitPtr()->orders;
+	if (orders.size() > 0)
+	{
+		auto tag = getTag();
+		for (auto & b : m_bot->Buildings().getBuildings())
+		{
+			if (b.builderUnit.isValid() && b.builderUnit.getTag() == tag && orders.at(0).ability_id != sc2::ABILITY_ID::PATROL)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 
-	return (getUnitPtr()->orders.size() > 0);
+	return false;
 #else
 	return m_unit->isConstructing();
 #endif
+}
+
+bool Unit::isCounterToUnit(const Unit& unit) const
+{
+	const bool canAttack = unit.isFlying() ? Util::CanUnitAttackAir(m_unit, *m_bot) : Util::CanUnitAttackGround(m_unit, *m_bot);
+	if (!canAttack)
+		return false;
+	const bool isAttacked = isFlying() ? Util::CanUnitAttackAir(unit.getUnitPtr(), *m_bot) : Util::CanUnitAttackGround(unit.getUnitPtr(), *m_bot);
+	return !isAttacked;
+}
+
+void Unit::getBuildingLimits(CCTilePosition & bottomLeft, CCTilePosition & topRight) const
+{
+	const CCTilePosition centerTile = Util::GetTilePosition(getPosition());
+	const int size = floor(getUnitPtr()->radius * 2);
+	const int flooredHalfSize = floor(size / 2.f);
+	const int ceiledHalfSize = ceil(size / 2.f);
+	int minX = centerTile.x - flooredHalfSize;
+	const int maxX = centerTile.x + ceiledHalfSize;
+	int minY = centerTile.y - flooredHalfSize;
+	const int maxY = centerTile.y + ceiledHalfSize;
+
+	//special cases
+	if (getType().isAttackingBuilding())
+	{
+		//attacking buildings have a smaller radius, so we must increase the min to cover more tiles
+		minX = centerTile.x - ceiledHalfSize;
+		minY = centerTile.y - ceiledHalfSize;
+	}
+	else if (getType().isMineral())
+	{
+		//minerals are rectangles instead of squares
+		minY = centerTile.y;
+	}
+
+	bottomLeft = CCTilePosition(minX, minY);
+	topRight = CCTilePosition(maxX, maxY);
 }

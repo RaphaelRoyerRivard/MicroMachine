@@ -9,8 +9,12 @@ class CCBot;
 class MapTools
 {
     CCBot & m_bot;
-    int     m_width;
-    int     m_height;
+	int     m_totalWidth;
+	int     m_totalHeight;
+	int     m_width;
+	int     m_height;
+	CCPosition m_min;
+	CCPosition m_max;
     float   m_maxZ;
     int     m_frame;
     
@@ -30,7 +34,6 @@ class MapTools
         
     void printMap();
 
-    float   terrainHeight(const CCPosition & point) const;
     bool    canBuild(int tileX, int tileY);
     bool    canWalk(int tileX, int tileY);
 	bool isInCameraFrustum(int x, int y) const;
@@ -43,8 +46,14 @@ public:
     void    onFrame();
     void    draw() const;
 
-    int     width() const;
-    int     height() const;
+	int     totalWidth() const { return m_totalWidth; }
+	int     totalHeight() const { return m_totalHeight; }
+	int     width() const { return m_width; }
+	int     height() const { return m_height; }
+	CCPosition mapMin() const { return m_min; }
+	CCPosition mapMax() const { return m_max; }
+	CCPosition center() const { return CCPosition(m_totalWidth / 2.f, m_totalHeight / 2.f); }
+	float   terrainHeight(const CCPosition & point) const;
 	float	terrainHeight(CCTilePosition tile) const;
     float   terrainHeight(float x, float y) const;
 
@@ -81,7 +90,7 @@ public:
     bool    isWalkable(const CCPosition & pos) const;
     
     bool    isBuildable(int tileX, int tileY) const;
-    bool    isBuildable(const CCTilePosition & tile) const;
+	bool	isBuildable(CCTilePosition & tile) const;
     bool    isDepotBuildableTile(int tileX, int tileY) const;
 
     // returns a list of all tiles on the map, sorted by 4-direcitonal walk distance from the given position

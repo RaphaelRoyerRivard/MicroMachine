@@ -1,5 +1,4 @@
 #include "MetaTypeEnum.h"
-#include "Util.h"
 #include "CCBot.h"
 
 //TERRAN
@@ -22,7 +21,10 @@ MetaType MetaTypeEnum::SupplyDepot;
 MetaType MetaTypeEnum::Refinery;
 MetaType MetaTypeEnum::EngineeringBay;
 MetaType MetaTypeEnum::MissileTurret;
+MetaType MetaTypeEnum::FusionCore;
+MetaType MetaTypeEnum::Armory;
 	//Units
+MetaType MetaTypeEnum::SCV;
 MetaType MetaTypeEnum::Marine;
 MetaType MetaTypeEnum::Marauder;
 MetaType MetaTypeEnum::Reaper;
@@ -31,6 +33,10 @@ MetaType MetaTypeEnum::WidowMine;
 MetaType MetaTypeEnum::Banshee;
 MetaType MetaTypeEnum::Viking;
 MetaType MetaTypeEnum::Medivac;
+MetaType MetaTypeEnum::Raven;
+MetaType MetaTypeEnum::Cyclone;
+MetaType MetaTypeEnum::Battlecruiser;
+MetaType MetaTypeEnum::Thor;
 	//Upgrades
 MetaType MetaTypeEnum::TerranInfantryWeaponsLevel1;
 MetaType MetaTypeEnum::TerranInfantryWeaponsLevel2;
@@ -52,6 +58,8 @@ MetaType MetaTypeEnum::InfernalPreIgniter;
 MetaType MetaTypeEnum::BansheeCloak;
 MetaType MetaTypeEnum::HyperflightRotors;
 MetaType MetaTypeEnum::HiSecAutoTracking;
+MetaType MetaTypeEnum::YamatoCannon;
+MetaType MetaTypeEnum::MagFieldAccelerator;
 
 //PROTOSS
 	//Buildings
@@ -116,7 +124,10 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::Refinery = MetaType("Refinery", m_bot);
 	MetaTypeEnum::EngineeringBay = MetaType("EngineeringBay", m_bot);
 	MetaTypeEnum::MissileTurret = MetaType("MissileTurret", m_bot);
+	MetaTypeEnum::FusionCore = MetaType("FusionCore", m_bot);
+	MetaTypeEnum::Armory = MetaType("Armory", m_bot);
 		//Units
+	MetaTypeEnum::SCV = MetaType("SCV", m_bot);
 	MetaTypeEnum::Marine = MetaType("Marine", m_bot);
 	MetaTypeEnum::Marauder = MetaType("Marauder", m_bot);
 	MetaTypeEnum::Reaper = MetaType("Reaper", m_bot);
@@ -125,6 +136,10 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::Banshee = MetaType("Banshee", m_bot);
 	MetaTypeEnum::Viking = MetaType("VikingFighter", m_bot);
 	MetaTypeEnum::Medivac = MetaType("Medivac", m_bot);
+	MetaTypeEnum::Raven = MetaType("Raven", m_bot);
+	MetaTypeEnum::Cyclone = MetaType("Cyclone", m_bot);
+	MetaTypeEnum::Battlecruiser = MetaType("Battlecruiser", m_bot);
+	MetaTypeEnum::Thor = MetaType("Thor", m_bot);
 		//Upgrades
 	MetaTypeEnum::TerranInfantryWeaponsLevel1 = MetaType("TerranInfantryWeaponsLevel1", m_bot);
 	MetaTypeEnum::TerranInfantryWeaponsLevel2 = MetaType("TerranInfantryWeaponsLevel2", m_bot);
@@ -146,6 +161,8 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::BansheeCloak = MetaType("BansheeCloak", m_bot);
 	MetaTypeEnum::HyperflightRotors = MetaType("BansheeSpeed", m_bot);
 	MetaTypeEnum::HiSecAutoTracking = MetaType("HiSecAutoTracking", m_bot);
+	MetaTypeEnum::YamatoCannon = MetaType("BattlecruiserEnableSpecializations", m_bot);
+	MetaTypeEnum::MagFieldAccelerator = MetaType("CycloneLockOnDamageUpgrade", m_bot);
 	
 	//PROTOSS
 		//Buildings

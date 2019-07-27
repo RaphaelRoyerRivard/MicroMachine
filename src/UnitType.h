@@ -18,6 +18,10 @@ public:
 
     UnitType();
 
+	static sc2::UNIT_TYPEID getEnemyRefineryType(sc2::Race enemyRace);
+	static bool isTargetable(sc2::UnitTypeID unitTypeId);
+	static bool isDetector(sc2::UnitTypeID unitTypeId);
+
 #ifdef SC2API
     UnitType(const sc2::UnitTypeID & type, CCBot & bot);
     sc2::UnitTypeID getAPIUnitType() const;
@@ -39,7 +43,7 @@ public:
     bool isCombatUnit() const;
     bool isSupplyProvider() const;
     bool isResourceDepot() const;
-    bool isRefinery() const;
+	bool isRefinery() const;
     bool isDetector() const;
     bool isGeyser() const;
     bool isMineral() const;

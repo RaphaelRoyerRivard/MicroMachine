@@ -11,6 +11,7 @@
 #include <array>
 #include "json/json.hpp"
 #include "MetaTypeEnum.h"
+#include "sc2api/sc2_score.h"
 
 using json = nlohmann::json;
 

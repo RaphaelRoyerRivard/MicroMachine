@@ -49,21 +49,15 @@ const Strategy & StrategyManager::getCurrentStrategy() const
 
 const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
 {
-	//return StrategyPostBuildOrder::TERRAN_REAPER;
-	/*if (m_shouldProduceAntiAir)
-	{
-		return StrategyPostBuildOrder::TERRAN_ANTI_AIR;
-	}*/
-	if (m_enemyHasMetabolicBoost)
-	{
-		return StrategyPostBuildOrder::TERRAN_ANTI_SPEEDLING;
-	}
 	if (m_bot.Strategy().isWorkerRushed())
 	{
 		return StrategyPostBuildOrder::WORKER_RUSH_DEFENSE;
 	}
-	//return StrategyPostBuildOrder::TERRAN_MARINE_MARAUDER;
-	return StrategyPostBuildOrder::TERRAN_REAPER;
+	if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss)
+	{
+		return StrategyPostBuildOrder::TERRAN_VS_PROTOSS;
+	}
+	return StrategyPostBuildOrder::TERRAN_CLASSIC;
 }
 
 const BuildOrder & StrategyManager::getOpeningBookBuildOrder() const
@@ -79,11 +73,6 @@ bool StrategyManager::scoutConditionIsMet() const
 bool StrategyManager::attackConditionIsMet() const
 {
     return getCurrentStrategy().m_attackCondition.eval();
-}
-
-bool StrategyManager::shouldExpandNow() const
-{
-    return false;
 }
 
 void StrategyManager::addStrategy(const std::string & name, const Strategy & strategy)

@@ -60,13 +60,15 @@ void Squad::onFrame()
     updateUnits();
 	m_bot.StopProfiling("0.10.4.1.1      updateUnits");
 
-    if (m_order.getType() == SquadOrderTypes::Retreat)
+    /*if (m_order.getType() == SquadOrderTypes::Retreat)
     {
 		m_bot.StartProfiling("0.10.4.1.2      SquadOrderTypes::Retreat");
         CCPosition retreatPosition = calcRetreatPosition();
 
+#ifndef PUBLIC_RELEASE
 		if(m_bot.Config().DrawSquadInfo)
 			m_bot.Map().drawCircle(retreatPosition, 3, CCColor(255, 0, 255));
+#endif
 
         m_meleeManager.regroup(retreatPosition);
         m_rangedManager.regroup(retreatPosition);
@@ -77,20 +79,23 @@ void Squad::onFrame()
 		m_bot.StartProfiling("0.10.4.1.2      SquadOrderTypes::Regroup");
         CCPosition regroupPosition = calcCenter();
 
+#ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawSquadInfo)
 			m_bot.Map().drawCircle(regroupPosition, 3, CCColor(0, 0, 255));
+#endif
 
         m_meleeManager.regroup(regroupPosition);
         m_rangedManager.regroup(regroupPosition);
 		m_bot.StopProfiling("0.10.4.1.2      SquadOrderTypes::Regroup");
     }
-    else // otherwise, execute micro
+    else*/ // otherwise, execute micro
     {
 		//m_rangedManager.setHarassMode(m_order.getType() == SquadOrderTypes::Harass);
-		m_rangedManager.setHarassMode(true);	//TODO fix behavior tree bugs instead of always using harass mode
+		m_rangedManager.setHarassMode(true);
         // Nothing to do if we have no units
-        if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend || m_order.getType() == SquadOrderTypes::Harass))
-        {
+        //if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend || m_order.getType() == SquadOrderTypes::Harass))
+		if (!m_units.empty() && m_order.getType() != SquadOrderTypes::Idle)
+		{
 			m_bot.StartProfiling("0.10.4.1.3      SetSquadTargets");
             std::vector<Unit> targets = calcTargets();
 
@@ -107,12 +112,13 @@ void Squad::onFrame()
 			m_bot.StartProfiling("0.10.4.1.4      ExecuteMeleeMicro");
             m_meleeManager.executeMicro();
 			m_bot.StopProfiling("0.10.4.1.4      ExecuteMeleeMicro");
-			m_bot.StartProfiling("0.10.4.1.5      ExecuteRangedMicro");
+			m_bot.StartProfiling("0.10.4.1.5      ExecuteRangedMicro " + m_name);
             m_rangedManager.executeMicro();
-			m_bot.StopProfiling("0.10.4.1.5      ExecuteRangedMicro");
+			m_bot.StopProfiling("0.10.4.1.5      ExecuteRangedMicro " + m_name);
         }
     }
 
+#ifndef PLUBLIC_RELEASE
 	if (m_bot.Config().DrawSquadInfo)
 	{
 		CCPosition center = calcCenter();
@@ -120,6 +126,7 @@ void Squad::onFrame()
 		for (auto & unit : m_units)
 			m_bot.Map().drawLine(unit.getPosition(), center);
 	}
+#endif
 }
 
 std::vector<Unit> Squad::calcVisibleTargets()
@@ -142,8 +149,10 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (visibilityFilter && !enemyUnit.isVisible())
 			continue;
 
+#ifndef PUBLIC_RELEASE
 		if(m_bot.Config().DrawMemoryInfo)
 			m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.4f, sc2::Colors::Gray);
+#endif
 
 		bool addUnit = false;
 
@@ -151,8 +160,9 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (m_order.getType() == SquadOrderTypes::Defend)
 		{
 			addUnit = Util::DistSq(enemyUnit, m_order.getPosition()) < m_order.getRadius() * m_order.getRadius();
-		} // if the order is to harass, we care about every unit around each of our units
-		else if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Harass)
+		} 
+		// if the order is to harass, we care about every unit around each of our units
+		if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Harass || (m_order.getType() == SquadOrderTypes::Defend && !addUnit))
 		{
 			for (auto & unit : m_units)
 			{
@@ -167,8 +177,10 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (addUnit)
 		{
 			targets.push_back(enemyUnit);
+#ifndef PUBLIC_RELEASE
 			if(m_bot.Config().DrawMemoryInfo)
 				m_bot.Map().drawCircle(enemyUnit.getPosition(), 0.5f, sc2::Colors::Blue);
+#endif
 		}
 	}
     
@@ -245,21 +257,10 @@ void Squad::addUnitsToMicroManagers()
     {
         BOT_ASSERT(unit.isValid(), "null unit in addUnitsToMicroManagers()");
 
-        if (unit.getType().isTank())
-        {
-            tankUnits.push_back(unit);
-        }
-        // TODO: detectors
-        else if (unit.getType().isDetector() && !unit.getType().isBuilding())
-        {
-            detectorUnits.push_back(unit);
-        }
-        // select ranged _units
-        else if (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) >= 2.5f)
+        if (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) >= 2.5f || unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_RAVEN)
         {
             rangedUnits.push_back(unit);
         }
-        // select melee _units
         else
         {
             meleeUnits.push_back(unit);
@@ -268,7 +269,6 @@ void Squad::addUnitsToMicroManagers()
 
     m_meleeManager.setUnits(meleeUnits);
     m_rangedManager.setUnits(rangedUnits);
-    //m_tankManager.setUnits(tankUnits);
 }
 
 bool Squad::needsToRetreat()
@@ -384,7 +384,12 @@ void Squad::setSquadOrder(const SquadOrder & so)
 
 bool Squad::containsUnit(const Unit & unit) const
 {
-    return std::find(m_units.begin(), m_units.end(), unit) != m_units.end();
+	for(const auto & squadUnit : m_units)
+	{
+		if (squadUnit.getUnitPtr()->tag == unit.getUnitPtr()->tag)
+			return true;
+	}
+	return false;
 }
 
 void Squad::clear()
@@ -509,7 +514,29 @@ int Squad::squadUnitsNear(const CCPosition & p) const
 
 const std::vector<Unit> & Squad::getUnits() const
 {
-    return m_units;
+	return m_units;
+}
+
+size_t Squad::getUnitCountOfType(sc2::UNIT_TYPEID unitType) const
+{
+	size_t units = 0;
+	for (const auto & unit : m_units)
+	{
+		if (unit.getAPIUnitType() == unitType)
+			++units;
+	}
+	return units;
+}
+
+std::vector<Unit> Squad::getUnitsOfType(sc2::UNIT_TYPEID unitType) const
+{
+	std::vector<Unit> units;
+	for(const auto & unit : m_units)
+	{
+		if (unit.getAPIUnitType() == unitType)
+			units.push_back(unit);
+	}
+	return units;
 }
 
 const SquadOrder & Squad::getSquadOrder()	const
@@ -519,7 +546,7 @@ const SquadOrder & Squad::getSquadOrder()	const
 
 void Squad::addUnit(const Unit & unit)
 {
-    m_units.push_back(unit);
+	m_units.push_back(unit);
 }
 
 void Squad::removeUnit(const Unit & unit)

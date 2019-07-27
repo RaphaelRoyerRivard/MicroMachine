@@ -35,21 +35,56 @@ void MeleeManager::executeMicro()
         // if the order is to attack or defend
         if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend)
         {
-            // run away if we meet the retreat critereon
-            if (meleeUnitShouldRetreat(meleeUnit, m_targets))
+            if (!m_targets.empty())
             {
-                CCPosition fleeTo(Util::GetPosition(m_bot.Bases().getClosestBasePosition(meleeUnit.getUnitPtr())));
+				// If it is a worker that just attacked, we want it to mineral walk back
+				if (meleeUnit.getType().isWorker() && meleeUnit.getUnitPtr()->weapon_cooldown > 10.f)
+				{
+					Micro::SmartRightClick(meleeUnit.getUnitPtr(), m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getMinerals()[0].getUnitPtr(), m_bot);
+				}
+				else
+				{
+					// find the best target for this meleeUnit
+					Unit target = getTarget(meleeUnit, m_targets);
+					const sc2::Unit* repairTarget = nullptr;
+					// If the melee unit is a worker
+					if (meleeUnit.getType().isWorker() && m_bot.GetMinerals() > 0)
+					{
+						const float range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
+						const float distSq = Util::DistSq(meleeUnit, target);
+						// If the worker is too far from its target to attack it
+						if (meleeUnit.getUnitPtr()->weapon_cooldown > 0.f || distSq > range * range)
+						{
+							// Check all other workers to check if there is one injured close enough to repair it
+							for (auto & otherWorker : meleeUnits)
+							{
+								if (otherWorker == meleeUnit)
+									continue;
+								if (!otherWorker.getType().isWorker())
+									continue;
+								if (otherWorker.getHitPointsPercentage() > 99.f)
+									continue;
 
-                meleeUnit.move(fleeTo);
-            }
-            // if there are targets
-            else if (!m_targets.empty())
-            {
-                // find the best target for this meleeUnit
-                Unit target = getTarget(meleeUnit, m_targets);
+								const float otherWorkerDistSq = Util::DistSq(meleeUnit, otherWorker);
+								if (otherWorkerDistSq <= range * range)
+								{
+									repairTarget = otherWorker.getUnitPtr();
+									break;
+								}
+							}
+						}
+					}
 
-                // attack it
-				Micro::SmartAttackUnit(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
+					if (repairTarget)
+					{
+						Micro::SmartRepair(meleeUnit.getUnitPtr(), repairTarget, m_bot);
+					}
+					else
+					{
+						// attack the target
+						Micro::SmartAttackUnit(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
+					}
+				}
             }
             // if there are no targets
             else
@@ -62,63 +97,47 @@ void MeleeManager::executeMicro()
                 }
             }
         }
+		else if(m_order.getType() == SquadOrderTypes::Retreat)
+		{
+			const BaseLocation* closestBaseLocation = m_bot.Bases().getClosestOccupiedBaseLocationForUnit(meleeUnit);
+			if (closestBaseLocation)
+			{
+				CCPosition fleePosition = Util::PathFinding::FindOptimalPathToSafety(meleeUnit.getUnitPtr(), closestBaseLocation->getPosition(), m_bot);
+				if (fleePosition != CCPosition())
+				{
+					Micro::SmartMove(meleeUnit.getUnitPtr(), fleePosition, m_bot);
+				}
+			}
+		}
 
-        if (m_bot.Config().DrawUnitTargetInfo)
+        /*if (m_bot.Config().DrawUnitTargetInfo)
         {
             // TODO: draw the line to the unit's target
-        }
+        }*/
     }
 }
 
 // get a target for the meleeUnit to attack
-Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets)
+Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets) const
 {
     BOT_ASSERT(meleeUnit.isValid(), "null melee unit in getTarget");
 
-    int highPriority = 0;
-    double closestDist = std::numeric_limits<double>::max();
-    Unit closestTarget;
+    float highestPriority = 0.f;
+    Unit bestTarget;
 
     // for each target possiblity
     for (auto & targetUnit : targets)
     {
         BOT_ASSERT(targetUnit.isValid(), "null target unit in getTarget");
 
-        const int priority = getAttackPriority(meleeUnit, targetUnit);
-        const float distance = Util::DistSq(meleeUnit, targetUnit);
+        const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), false);
 
-        // if it's a higher priority, or it's closer, set it
-        if (!closestTarget.isValid() || (priority > highPriority) || (priority == highPriority && distance < closestDist))
+        if (!bestTarget.isValid() || priority > highestPriority)
         {
-            closestDist = distance;
-            highPriority = priority;
-            closestTarget = targetUnit;
+			highestPriority = priority;
+            bestTarget = targetUnit;
         }
     }
 
-    return closestTarget;
-}
-
-// get the attack priority of a type in relation to a zergling
-int MeleeManager::getAttackPriority(Unit attacker, const Unit & unit)
-{
-    BOT_ASSERT(unit.isValid(), "null unit in getAttackPriority");
-
-    if (unit.getType().isCombatUnit())
-    {
-        return 10;
-    }
-
-    if (unit.getType().isWorker())
-    {
-        return 9;
-    }
-
-    return 1;
-}
-
-bool MeleeManager::meleeUnitShouldRetreat(Unit meleeUnit, const std::vector<Unit> & targets)
-{
-    // TODO: should melee units ever retreat?
-    return false;
+    return bestTarget;
 }

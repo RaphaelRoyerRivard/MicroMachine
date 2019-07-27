@@ -4,8 +4,6 @@
 #include <sstream>
 #include <iostream>
 
-const int NearBaseLocationTileDistance = 30;
-
 BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & resources)
     : m_bot(bot)
     , m_baseID               (baseID)
@@ -14,6 +12,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     , m_right                (std::numeric_limits<CCPositionType>::lowest())
     , m_top                  (std::numeric_limits<CCPositionType>::lowest())
     , m_bottom               (std::numeric_limits<CCPositionType>::max())
+	, m_isBlocked			 (false)
 {
     m_isPlayerStartLocation[0] = false;
     m_isPlayerStartLocation[1] = false;
@@ -75,7 +74,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     // check to see if this is a start location for the map, only need to check enemy locations.
     for (auto & pos : m_bot.GetEnemyStartLocations())
     {
-        if (containsPosition(pos))
+        if (containsPositionApproximative(pos))
         {
             m_isStartLocation = true;
             m_depotPosition = Util::GetTilePosition(pos);
@@ -83,24 +82,28 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
         }
     }
     
-    // if this base location position is near our own resource depot, it's our start location
-    for (auto & unit : m_bot.GetAllyUnits())
-    {
-		CCPosition pos = unit.second.getPosition();
-        if (unit.second.getType().isResourceDepot() && containsPosition(pos))
-        {
-            m_isPlayerStartLocation[Players::Self] = true;
-            m_isStartLocation = true;
-            m_isPlayerOccupying[Players::Self] = true;
-			m_depotPosition = Util::GetTilePosition(pos);
-            break;
-        }
-    }
+	//if its not an enemy start baselocation
+	if (!m_isStartLocation)
+	{
+		// if this base location position is near our own resource depot, it's our start location
+		for (auto & unit : m_bot.GetAllyUnits(Util::GetRessourceDepotType().getAPIUnitType()))
+		{
+			CCPosition pos = unit.getPosition();
+			if (unit.getType().isResourceDepot() && containsPositionApproximative(pos))
+			{
+				m_isPlayerStartLocation[Players::Self] = true;
+				m_isStartLocation = true;
+				m_isPlayerOccupying[Players::Self] = true;
+				m_depotPosition = Util::GetTilePosition(pos);
+				break;
+			}
+		}
+	}
     
     // if it's not a start location, we need to calculate the depot position
     if (!isStartLocation())
     {
-        UnitType depot = Util::GetTownHall(m_bot.GetSelfRace(), m_bot);
+        
 #ifdef SC2API
         int offsetX = 0;
         int offsetY = 0;
@@ -116,8 +119,8 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
             // this means we are positioning the center of the resouce depot
             CCTilePosition buildTile(tile.x - offsetX, tile.y - offsetY);
 
-            if (m_bot.Map().canBuildTypeAtPosition(buildTile.x, buildTile.y, depot))
-            {
+            if(m_bot.Buildings().getBuildingPlacer().canBuildDepotHere(tile.x, tile.y, m_minerals, m_geysers))
+			{
                 m_depotPosition = buildTile;
                 break;
             }
@@ -125,7 +128,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     }
 
 	Building b(MetaTypeEnum::MissileTurret.getUnitType(), m_centerOfMinerals);
-	m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true);;
+	m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true, false);;
 }
 
 const CCTilePosition & BaseLocation::getTurretPosition() const
@@ -136,7 +139,21 @@ const CCTilePosition & BaseLocation::getTurretPosition() const
 // TODO: calculate the actual depot position
 const CCTilePosition & BaseLocation::getDepotPosition() const
 {
-    return m_depotPosition;
+	    return m_depotPosition;
+}
+
+int BaseLocation::getOptimalMineralWorkerCount() const
+{
+	const int minimumMineral = 50;//at 50, its basically empty.
+	int optimalWorkers = 0;
+	for (auto & mineral : getMinerals())
+	{
+		if (mineral.getUnitPtr()->mineral_contents > minimumMineral)
+		{
+			optimalWorkers += 2;
+		}
+	}
+	return optimalWorkers;
 }
 
 void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
@@ -213,6 +230,33 @@ bool BaseLocation::isPlayerStartLocation(CCPlayer player) const
     return m_isPlayerStartLocation.at(player);
 }
 
+bool BaseLocation::containsPositionApproximative(const CCPosition & pos, int maxDistance) const
+{
+	if (!m_bot.Map().isValidPosition(pos) || (pos.x == 0 && pos.y == 0))
+	{
+		return false;
+	}
+
+	const int groundDistance = getGroundDistance(pos);
+	return groundDistance > 0 && groundDistance < (maxDistance > 0 ? maxDistance : ApproximativeBaseLocationTileDistance);
+}
+
+bool BaseLocation::containsUnitApproximative(const Unit & unit, int maxDistance) const
+{
+	if (!unit.isValid())
+	{
+		return false;
+	}
+
+	if (unit.isFlying())
+	{
+		maxDistance = maxDistance > 0 ? maxDistance : ApproximativeBaseLocationTileDistance;
+		return Util::DistSq(unit, Util::GetPosition(m_depotPosition)) < maxDistance * maxDistance;
+	}
+
+	return containsPositionApproximative(unit.getPosition(), maxDistance);
+}
+
 bool BaseLocation::containsPosition(const CCPosition & pos) const
 {
     if (!m_bot.Map().isValidPosition(pos) || (pos.x == 0 && pos.y == 0))
@@ -220,7 +264,7 @@ bool BaseLocation::containsPosition(const CCPosition & pos) const
         return false;
     }
 
-    return getGroundDistance(pos) > 0 && getGroundDistance(pos) < NearBaseLocationTileDistance;
+	return m_bot.Bases().getBaseLocation(pos) == this;
 }
 
 const std::vector<Unit> & BaseLocation::getGeysers() const
@@ -274,6 +318,8 @@ void BaseLocation::draw()
     ss << "Start Loc:    " << (isStartLocation() ? "true" : "false") << "\n";
     ss << "Minerals:     " << m_mineralPositions.size() << "\n";
     ss << "Geysers:      " << m_geyserPositions.size() << "\n";
+	ss << "Under attack: " << (m_isUnderAttack ? "true" : "false") << "\n";
+	ss << "Blocked:      " << (m_isBlocked ? "true" : "false") << "\n";
     ss << "Occupied By:  ";
 
     if (isOccupiedByPlayer(Players::Self))
@@ -292,15 +338,15 @@ void BaseLocation::draw()
     // draw the base bounding box
     m_bot.Map().drawBox(m_left, m_top, m_right, m_bottom);
 
-    for (CCPositionType x=m_left; x < m_right; x += Util::TileToPosition(1.0f))
+    /*for (CCPositionType x=m_left; x < m_right; x += Util::TileToPosition(1.0f))
     {
-        //m_bot.Map().drawLine(x, m_top, x, m_bottom, CCColor(160, 160, 160));
+        m_bot.Map().drawLine(x, m_top, x, m_bottom, CCColor(160, 160, 160));
     }
 
     for (CCPositionType y=m_bottom; y<m_top; y += Util::TileToPosition(1.0f))
     {
-        //m_bot.Map().drawLine(m_left, y, m_right, y, CCColor(160, 160, 160));
-    }
+        m_bot.Map().drawLine(m_left, y, m_right, y, CCColor(160, 160, 160));
+    }*/
 
     for (auto & mineralPos : m_mineralPositions)
     {
@@ -312,12 +358,17 @@ void BaseLocation::draw()
         m_bot.Map().drawCircle(geyserPos, radius, CCColor(0, 255, 0));
     }
 
+	/*for (auto & g : m_geysers)
+	{
+		m_bot.Map().drawTile(g.getTilePosition(), CCColor(0, 255, 0));
+	}*/
+
     if (m_isStartLocation)
     {
         m_bot.Map().drawCircle(Util::GetPosition(m_depotPosition), radius, CCColor(255, 0, 0));
     }
 
-    m_bot.Map().drawTile(m_depotPosition.x, m_depotPosition.y, CCColor(0, 0, 255)); 
+    m_bot.Map().drawTile(m_depotPosition.x, m_depotPosition.y, CCColor(0, 0, 255));
 
     //m_distanceMap.draw(m_bot);
 }

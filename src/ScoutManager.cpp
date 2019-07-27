@@ -37,6 +37,9 @@ void ScoutManager::setWorkerScout(const Unit & unit)
 
 void ScoutManager::drawScoutInformation()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
     if (!m_bot.Config().DrawScoutInfo)
     {
         return;

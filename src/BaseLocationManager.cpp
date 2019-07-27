@@ -5,84 +5,110 @@
 
 BaseLocationManager::BaseLocationManager(CCBot & bot)
     : m_bot(bot)
+	, m_areBaseLocationPtrsSorted(false)
 {
     
 }
 
 void BaseLocationManager::onStart()
 {
-    m_tileBaseLocations = std::vector<std::vector<BaseLocation *>>(m_bot.Map().width(), std::vector<BaseLocation *>(m_bot.Map().height(), nullptr));
+    m_tileBaseLocations = std::vector<std::vector<BaseLocation *>>(m_bot.Map().totalWidth(), std::vector<BaseLocation *>(m_bot.Map().totalHeight(), nullptr));
     m_playerStartingBaseLocations[Players::Self]  = nullptr;
     m_playerStartingBaseLocations[Players::Enemy] = nullptr;
     
     // a BaseLocation will be anything where there are minerals to mine
     // so we will first look over all minerals and cluster them based on some distance
-    const CCPositionType clusterDistanceSq = Util::TileToPosition(12*12);
+    const CCPositionType maxClusterDistanceSq = Util::TileToPosition(12*12);//Can't be lower than 12 or some minerals/geysers will not be detected as part of a cluster.
+
+	//Initialize resource proximity map
+	const size_t mapWidth = m_bot.Map().totalWidth();
+	const size_t mapHeight = m_bot.Map().totalHeight();
+	m_resourceProximity.resize(mapWidth);
+	for (size_t x = 0; x < mapWidth; ++x)
+	{
+		auto& m_resourceProximityRow = m_resourceProximity[x];
+		m_resourceProximityRow.resize(mapHeight);
+		for (size_t y = 0; y < mapHeight; ++y)
+		{
+			m_resourceProximityRow[y] = false;
+		}
+	}
     
     // stores each cluster of resources based on some ground distance
     std::vector<std::vector<Unit>> resourceClusters;
-    for (auto & mineral : m_bot.GetUnits())
-    {
-        // skip minerals that don't have more than 100 starting minerals
-        // these are probably stupid map-blocking minerals to confuse us
-        if (!mineral.getType().isMineral())
-        {
-            continue;
-        }
+	for (auto & mineral : m_bot.GetNeutralUnits())
+	{
+		// skip minerals that don't have more than 100 starting minerals
+		// these are probably stupid map-blocking minerals to confuse us
+		if (!mineral.second.getType().isMineral())
+		{
+			continue;
+		}
+
+		//calculate resource proximity for minerals
+		int x = mineral.second.getTilePosition().x;
+		int y = mineral.second.getTilePosition().y;
+		for (int xShift = 0; xShift < 2; xShift++)//Right side, then same check for the left side of the mineral patch
+		{
+			x -= xShift;
+			for (int i = x - 3; i <= x + 3; i++)
+			{
+				for (int j = y - 3; j <= y + 3; j++)
+				{
+					bool xLimit = abs(x - i) == 3;
+					bool yLimit = abs(y - j) == 3;
+					if (xLimit && yLimit)
+					{
+						continue;
+					}
+					m_resourceProximity[i][j] = true;
+				}
+			}
+		}
 
 #ifndef SC2API
         // for BWAPI we have to eliminate minerals that have low resource counts
         if (mineral.getUnitPtr()->getResources() < 100) { continue; }
 #endif
 
-        bool foundCluster = false;
-        for (auto & cluster : resourceClusters)
-        {
-            float distSq = Util::DistSq(mineral, Util::CalcCenter(cluster));
-            
-            // quick initial air distance check to eliminate most resources
-            if (distSq < clusterDistanceSq)
-            {
-                // now do a more expensive ground distance check
-                //float groundDist = dist; //m_bot.Map().getGroundDistance(mineral.pos, Util::CalcCenter(cluster));
-                //if (groundDist >= 0 && groundDist < clusterDistance)
-                {
-                    cluster.push_back(mineral);
-                    foundCluster = true;
-                    break;
-                }
-            }
-        }
-
-        if (!foundCluster)
+        if (!affectToCluster(resourceClusters, mineral.second, maxClusterDistanceSq))
         {
             resourceClusters.push_back(std::vector<Unit>());
-            resourceClusters.back().push_back(mineral);
+            resourceClusters.back().push_back(mineral.second);
         }
     }
 
     // add geysers only to existing resource clusters
-    for (auto & geyser : m_bot.GetUnits())
+    for (auto & geyser : m_bot.GetNeutralUnits())
     {
-        if (!geyser.getType().isGeyser())
+        if (!geyser.second.getType().isGeyser())
         {
             continue;
         }
 
-        for (auto & cluster : resourceClusters)
-        {
-            //int groundDist = m_bot.Map().getGroundDistance(geyser.pos, Util::CalcCenter(cluster));
-            float groundDistSq = Util::DistSq(geyser, Util::CalcCenter(cluster));
+		//calculate resource proximity for geysers
+		int x = geyser.second.getTilePosition().x;
+		int y = geyser.second.getTilePosition().y;
+		for (int i = x - 4; i <= x + 4; i++)
+		{
+			for (int j = y - 4; j <= y + 4; j++)
+			{
+				if(abs(x-i) == 4 && abs(y-j) == 4)
+				{
+					continue;
+				}
+				m_resourceProximity[i][j] = true;
+			}
+		}
 
-            if (/*groundDist >= 0 &&*/ groundDistSq < clusterDistanceSq)
-            {
-                cluster.push_back(geyser);
-                break;
-            }
-        }
+		affectToCluster(resourceClusters, geyser.second, maxClusterDistanceSq + 10);
     }
 
-    // add the base locations if there are more than 4 resouces in the cluster
+	//Initialise the influence map so we can use the blocked tiles influence to  place the turrets
+	m_bot.Commander().Combat().initInfluenceMaps();
+	m_bot.Commander().Combat().updateBlockedTilesWithNeutral();
+
+	// add the base locations if there are more than 4 resouces in the cluster
     int baseID = 0;
     for (auto & cluster : resourceClusters)
     {
@@ -119,60 +145,42 @@ void BaseLocationManager::onStart()
 		Util::DisplayError("Invalid setup detected.", "0x0000000", m_bot);
 	}
 
-	//Sorting base locations from closest to opponent's starting base to farthest
-	struct SortClosestToOpponentStartingLocation
-	{
-		const std::vector<const BaseLocation *> & startingBaseLocations;
-
-		SortClosestToOpponentStartingLocation(const std::vector<const BaseLocation *> & bases) : startingBaseLocations(bases) { }
-
-		inline bool operator() (const BaseLocation * baseLocationPtr1, const BaseLocation * baseLocationPtr2)
-		{
-			float dist1 = 0.f, dist2 = 0.f;
-
-			for (const BaseLocation* startingBaseLocation : startingBaseLocations)
+    // construct the map of tile positions to base locations
+	const CCPosition mapMin = m_bot.Map().mapMin();
+	const CCPosition mapMax = m_bot.Map().mapMax();
+    for (int x = mapMin.x; x < mapMax.x; ++x)
+    {
+        for (int y = mapMin.y; y < mapMax.y; ++y)
+        {
+			float minDistance = 0.f;
+			CCPosition pos(Util::TileToPosition(x + 0.5f), Util::TileToPosition(y + 0.5f));
+			for (auto & base : m_baseLocationData)
 			{
-				//TODO not sure why first starting base location in the vector is not a player base (should be opponent's but is set to false)
-				if (!startingBaseLocation->isPlayerStartLocation(Players::Self))
+				if (minDistance > 0 && Util::DistSq(pos, Util::GetPosition(base.getDepotPosition())) > minDistance)
 				{
-					// get the tile position of the bases
-					auto tile1 = baseLocationPtr1->getPosition();
-					auto tile2 = baseLocationPtr2->getPosition();
+					continue;
+				}
+				
+				float groundDistance = base.getGroundDistance(pos);
+				if (groundDistance <= 0)
+				{
+					continue;
+				}
 
-					// the base's distance from opponent starting base
-					int dist1 = startingBaseLocation->getGroundDistance(tile1);
-					int dist2 = startingBaseLocation->getGroundDistance(tile2);
+				float heightDiff = abs(Util::TerrainHeight(pos) - Util::TerrainHeight(base.getDepotPosition()));
+				groundDistance += heightDiff * TerrainHeightCostMultiplier;
+				if (groundDistance >= (BaseLocationManager::NearBaseLocationTileDistance))
+				{
+					continue;
+				}
 
-					if (dist1 < 0)
-						dist1 = INT_MAX;
-					if (dist2 < 0)
-						dist2 = INT_MAX;
-
-					break;
+				float groundDistanceSq = groundDistance * groundDistance;
+				if (minDistance == 0.f || groundDistanceSq < minDistance)
+				{
+					minDistance = groundDistanceSq;//to be able to use DistSq above
+					m_tileBaseLocations[x][y] = &base;
 				}
 			}
-
-			return dist1 < dist2;
-		}
-	};
-    sort(m_baseLocationPtrs.begin(), m_baseLocationPtrs.end(), SortClosestToOpponentStartingLocation(m_startingBaseLocations));
-
-    // construct the map of tile positions to base locations
-    for (int x=0; x < m_bot.Map().width(); ++x)
-    {
-        for (int y=0; y < m_bot.Map().height(); ++y)
-        {
-            for (auto & baseLocation : m_baseLocationData)
-            {
-                CCPosition pos(Util::TileToPosition(x + 0.5f), Util::TileToPosition(y + 0.5f));
-
-                if (baseLocation.containsPosition(pos))
-                {
-                    m_tileBaseLocations[x][y] = &baseLocation;
-                    
-                    break;
-                }
-            }
         }
     }
 
@@ -181,15 +189,48 @@ void BaseLocationManager::onStart()
     m_occupiedBaseLocations[Players::Enemy] = std::set<BaseLocation *>();
 }
 
+bool BaseLocationManager::affectToCluster(std::vector<std::vector<Unit>> & resourceClusters, Unit & resource, float maxDistanceWithCluster) const
+{
+	bool foundCluster = false;
+	for (auto & cluster : resourceClusters)
+	{
+		const auto clusterCenter = Util::CalcCenter(cluster);
+		const float distSq = Util::DistSq(resource, clusterCenter);
+
+		// quick initial air distance check to eliminate most resources
+		if (distSq < maxDistanceWithCluster)
+		{
+
+			// make sure the mineral is on the same terrain height as the cluster
+			if (std::abs(m_bot.Map().terrainHeight(resource.getPosition()) - m_bot.Map().terrainHeight(clusterCenter)) < 1.f)
+			{
+				cluster.push_back(resource);
+				foundCluster = true;
+				break;
+			}
+		}
+	}
+	return foundCluster;
+}
+
 void BaseLocationManager::onFrame()
-{   
+{
+	m_bot.StartProfiling("0.6.0   drawBaseLocations");
     drawBaseLocations();
+	m_bot.StopProfiling("0.6.0   drawBaseLocations");
+
+	drawTileBaseLocationAssociations();
+
+	drawResourceProxity();
 
 	if (m_bot.Bases().getPlayerStartingBaseLocation(Players::Self) == nullptr)
 	{
+		m_bot.StartProfiling("0.6.1   FixNullPlayerStartingBaseLocation");
 		FixNullPlayerStartingBaseLocation();
+		m_bot.StopProfiling("0.6.1   FixNullPlayerStartingBaseLocation");
 	}
 
+	m_bot.StartProfiling("0.6.2   resetBaseLocations");
     // reset the player occupation information for each location
     for (auto & baseLocation : m_baseLocationData)
     {
@@ -197,25 +238,30 @@ void BaseLocationManager::onFrame()
 		baseLocation.setResourceDepot({});
         baseLocation.setPlayerOccupying(Players::Enemy, false);
     }
+	m_bot.StopProfiling("0.6.2   resetBaseLocations");
 
+	m_bot.StartProfiling("0.6.3   updateBaseLocations");
     // for each unit on the map, update which base location it may be occupying
-    for (auto & unit : m_bot.UnitInfo().getUnits(Players::Self))
+    for (auto & unit : m_bot.Buildings().getBaseBuildings())
     {
-        // we only care about resource depots
-        if (!unit.getType().isResourceDepot())
-            continue;
+		if (!unit.getType().isResourceDepot())
+		{
+			continue;
+		}
 
         BaseLocation * baseLocation = getBaseLocation(unit.getPosition());
 
         if (baseLocation != nullptr)
         {
-            baseLocation->setPlayerOccupying(unit.getPlayer(), true);
+            baseLocation->setPlayerOccupying(Players::Self, true);
 			baseLocation->setResourceDepot(unit);
         }
     }
+	m_bot.StopProfiling("0.6.3   updateBaseLocations");
 
+	m_bot.StartProfiling("0.6.4   updateEnemyBaseLocations");
     // update enemy base occupations
-    for (const auto & kv : m_bot.UnitInfo().getUnitInfoMap(Players::Enemy))
+    /*for (const auto & kv : m_bot.UnitInfo().getUnitInfoMap(Players::Enemy))
     {
         const UnitInfo & ui = kv.second;
 
@@ -230,7 +276,22 @@ void BaseLocationManager::onFrame()
         {
             baseLocation->setPlayerOccupying(Players::Enemy, true);
         }
-    }
+    }*/
+	for (auto & unit : m_bot.GetKnownEnemyUnits())
+	{
+		// we only care about resource depots
+		if (!unit.getType().isResourceDepot())
+			continue;
+
+		BaseLocation * baseLocation = getBaseLocation(unit.getPosition());
+
+		if (baseLocation != nullptr)
+		{
+			baseLocation->setPlayerOccupying(Players::Enemy, true);
+			baseLocation->setResourceDepot(unit);
+		}
+	}
+	m_bot.StopProfiling("0.6.4   updateEnemyBaseLocations");
 
     // update the starting locations of the enemy player
     // this will happen one of two ways:
@@ -238,6 +299,7 @@ void BaseLocationManager::onFrame()
     // 1. we've seen the enemy base directly, so the baselocation will know
     if (m_playerStartingBaseLocations[Players::Enemy] == nullptr)
     {
+		m_bot.StartProfiling("0.6.5   updateEnemyStartingBaseLocation");
         for (auto & baseLocation : m_baseLocationData)
         {
             if (baseLocation.isPlayerStartLocation(Players::Enemy))
@@ -245,11 +307,13 @@ void BaseLocationManager::onFrame()
                 m_playerStartingBaseLocations[Players::Enemy] = &baseLocation;
             }
         }
+		m_bot.StopProfiling("0.6.5   updateEnemyStartingBaseLocation");
     }
 
     // 2. we've explored every other start location and haven't seen the enemy yet
     if (m_playerStartingBaseLocations[Players::Enemy] == nullptr)
     {
+		m_bot.StartProfiling("0.6.6   updateEnemyStartingBaseLocation2");
         int numStartLocations = (int)getStartingBaseLocations().size();
         int numExploredLocations = 0;
         BaseLocation * unexplored = nullptr;
@@ -277,8 +341,10 @@ void BaseLocationManager::onFrame()
             m_playerStartingBaseLocations[Players::Enemy] = unexplored;
             unexplored->setPlayerOccupying(Players::Enemy, true);
         }
+		m_bot.StopProfiling("0.6.6   updateEnemyStartingBaseLocation2");
     }
 
+	m_bot.StartProfiling("0.6.7   setOccupiedBaseLocations");
     // update the occupied base locations for each player
     m_occupiedBaseLocations[Players::Self] = std::set<BaseLocation *>();
     m_occupiedBaseLocations[Players::Enemy] = std::set<BaseLocation *>();
@@ -294,6 +360,12 @@ void BaseLocationManager::onFrame()
             m_occupiedBaseLocations[Players::Enemy].insert(&baseLocation);
         }
     }
+	m_bot.StopProfiling("0.6.7   setOccupiedBaseLocations");
+
+	if(!m_areBaseLocationPtrsSorted && m_playerStartingBaseLocations[Players::Enemy] != nullptr)
+	{
+		sortBaseLocationPtrs();
+	}
 
     // draw the debug information for each base location
     
@@ -312,6 +384,9 @@ BaseLocation * BaseLocationManager::getBaseLocation(const CCPosition & pos) cons
 
 void BaseLocationManager::drawBaseLocations()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
     if (!m_bot.Config().DrawBaseLocationInfo)
     {
         return;
@@ -323,10 +398,55 @@ void BaseLocationManager::drawBaseLocations()
     }
 
     // draw a purple sphere at the next expansion location
-    CCTilePosition nextExpansionPosition = getNextExpansionPosition(Players::Self);
+    CCTilePosition nextExpansionPosition = getNextExpansionPosition(Players::Self, false, false);
 
     m_bot.Map().drawCircle(Util::GetPosition(nextExpansionPosition), 1, CCColor(255, 0, 255));
     m_bot.Map().drawText(Util::GetPosition(nextExpansionPosition), "Next Expansion Location", CCColor(255, 0, 255));
+}
+
+void BaseLocationManager::drawTileBaseLocationAssociations() const
+{
+	if (!m_bot.Config().DrawBaseTiles)
+	{
+		return;
+	}
+
+	for (size_t x = 0; x < m_tileBaseLocations.size(); ++x)
+	{
+		const auto & xRow = m_tileBaseLocations.at(x);
+		for (size_t y = 0; y < xRow.size(); ++y)
+		{
+			const auto baseLocation = xRow[y];
+			if (baseLocation)
+			{
+				m_bot.Map().drawLine(CCPosition(x, y), Util::GetPosition(baseLocation->getDepotPosition()), sc2::Colors::White);
+			}
+		}
+	}
+}
+
+void BaseLocationManager::drawResourceProxity()
+{
+#ifdef PUBLIC_RELESE
+	return;
+#endif
+	if (!m_bot.Config().DrawResourcesProximity)
+	{
+		return;
+	}
+
+	const size_t mapWidth = m_bot.Map().totalWidth();
+	const size_t mapHeight = m_bot.Map().totalHeight();
+	for (int x = 0; x < mapWidth - 1; x++)
+	{
+		for (int y = 0; y < mapHeight - 1; y++)
+		{
+			if (m_resourceProximity[x][y])
+			{
+				m_bot.Map().drawTile(x, y, CCColor(255, 255, 255));
+			}
+		}
+	}
 }
 
 const std::vector<const BaseLocation *> & BaseLocationManager::getBaseLocations() const
@@ -376,35 +496,54 @@ const std::set<BaseLocation *> & BaseLocationManager::getOccupiedBaseLocations(i
     return m_occupiedBaseLocations.at(player);
 }
 
+BaseLocation * BaseLocationManager::getClosestOccupiedBaseLocationForUnit(const Unit unit) const
+{
+	BaseLocation* closestBase = nullptr;
+	float minDistance = 0.f;
+	for (auto baseLocation : m_bot.Bases().getOccupiedBaseLocations(unit.getPlayer()))
+	{
+		const float distance = Util::DistSq(unit, baseLocation->getPosition());
+		if (!closestBase || distance < minDistance)
+		{
+			closestBase = baseLocation;
+			minDistance = distance;
+		}
+	}
+	return closestBase;
+}
+
 int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 {
+	std::vector<sc2::UNIT_TYPEID> baseTypes;
 	switch (m_bot.GetSelfRace())
 	{
 		case CCRace::Terran:
-		{
-			return m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND , sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS }, isCompleted);
-		}
+			baseTypes = { sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND , sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS };
+			break;
 		case CCRace::Protoss:
-		{
-			return m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, isCompleted);
-		}
+			baseTypes = { sc2::UNIT_TYPEID::PROTOSS_NEXUS };
+			break;
 		case CCRace::Zerg:
-		{
-			return m_bot.Buildings().getBuildingCountOfType({ sc2::UNIT_TYPEID::ZERG_HATCHERY, sc2::UNIT_TYPEID::ZERG_LAIR , sc2::UNIT_TYPEID::ZERG_HIVE }, isCompleted);
-		}
+			baseTypes = { sc2::UNIT_TYPEID::ZERG_HATCHERY, sc2::UNIT_TYPEID::ZERG_LAIR , sc2::UNIT_TYPEID::ZERG_HIVE };
+			break;
 	}
-	return 0;
+	return m_bot.Buildings().getBuildingCountOfType(baseTypes, isCompleted);
 }
 
-const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBuildable) const
+const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocked, bool checkBuildable) const
 {
+	//[expand]
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
+
+	auto otherPlayer = player == Players::Self ? Players::Enemy : Players::Self;
+	const BaseLocation * enemyHomeBase = getPlayerStartingBaseLocation(otherPlayer);
 	BOT_ASSERT(homeBase, "No home base detected");
 
 	const BaseLocation * closestBase = nullptr;
 	int minDistance = std::numeric_limits<int>::max();
 
 	CCPosition homeTile = homeBase->getPosition();
+	CCPosition enemyHomeTile = enemyHomeBase == nullptr? homeTile : enemyHomeBase->getPosition();
 
 	for (auto & base : getBaseLocations())
 	{
@@ -414,29 +553,13 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool check
 			continue;
 		}
 
-		// get the tile position of the base
-		auto tile = base->getDepotPosition();
-
-		bool buildingInTheWay = false; // TODO: check if there are any units on the tile
-		for (auto unit : m_bot.GetUnits())
-		{
-			if (unit.isValid() && (unit.getPlayer() == Players::Self || unit.getPlayer() == Players::Enemy) && unit.getType().isBuilding())
-			{
-				int height = unit.getType().tileHeight() * 0.5;
-				int width = unit.getType().tileWidth() * 0.5;
-				//tile position is always at the center, but if its an odd width or height, it picks the bottom left '+' of the center
-				//Check if the position of the building is within the border of the ressource depot
-				if (tile.x + 3 >= unit.getTilePosition().x - width && tile.x - 2 <= unit.getTilePosition().x + width && tile.y + 3 >= unit.getTilePosition().y - height && tile.y - 2 <= unit.getTilePosition().y + height)
-				{
-					buildingInTheWay = true;
-					break;
-				}
-			}
-		}
-		if (buildingInTheWay)
+		if (checkBlocked && base->isBlocked())
 		{
 			continue;
 		}
+
+		// get the tile position of the base
+		auto tile = base->getDepotPosition();
 		
 		//Check if buildable (creep check), using CC for building size, should work for all races.
 		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, Building(MetaTypeEnum::CommandCenter.getUnitType(), tile)))
@@ -453,19 +576,31 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool check
 			continue;
 		}
 
-		if (!closestBase || distanceFromHome < minDistance)
+		int distanceFromEnemyHome = 0;
+		if (enemyHomeBase != nullptr)
+		{
+			distanceFromEnemyHome = enemyHomeBase->getGroundDistance(tile);
+
+			// if it is not connected, ignore
+			if (distanceFromEnemyHome < 0)
+			{
+				distanceFromEnemyHome = 0;
+			}
+		}		
+
+		if (!closestBase || distanceFromHome - distanceFromEnemyHome < minDistance)
 		{
 			closestBase = base;
-			minDistance = distanceFromHome;
+			minDistance = distanceFromHome - distanceFromEnemyHome;
 		}
 	}
 
 	return closestBase;
 }
 
-CCTilePosition BaseLocationManager::getNextExpansionPosition(int player, bool checkBuildable) const
+CCTilePosition BaseLocationManager::getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable) const
 {
-	auto closestBase = getNextExpansion(player);
+	auto closestBase = getNextExpansion(player, checkBlocked, checkBuildable);
 	return closestBase ? closestBase->getDepotPosition() : CCTilePosition(0, 0);
 }
 
@@ -482,15 +617,34 @@ CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
 	return position;
 }
 
-CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player, bool shiftTowardsResourceDepot) const
+BaseLocation* BaseLocationManager::getClosestBase(const CCPosition position, bool checkContains) const
 {
-	const int mapWidth = m_bot.Map().width();
-	const int mapHeight = m_bot.Map().height();
-	CCTilePosition closestBase(mapWidth / 2.f, mapHeight / 2.f);
+	BaseLocation* closestBase;
+	float minDistance = 0.f;
+	for (auto base : m_baseLocationData)
+	{
+		if (checkContains && !base.containsPosition(position))
+		{
+			continue;
+		}
+
+		const float dist = base.getGroundDistance(position);
+		if (minDistance == 0.f || dist < minDistance)
+		{
+			minDistance = dist;
+			closestBase = &base;
+		}
+	}
+	return closestBase;
+}
+
+CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit, int player, bool shiftTowardsResourceDepot, bool checkContainsMinerals, bool checkUnderAttack) const
+{
+	CCTilePosition closestBase = Util::GetTilePosition(m_bot.Map().center());
 	float minDistance = 0.f;
 	for (auto & base : m_baseLocationData)
 	{
-		if (!base.isOccupiedByPlayer(player))
+		if (!base.isOccupiedByPlayer(player) || (checkContainsMinerals && base.getMinerals().size() == 0) || (checkUnderAttack && base.isUnderAttack()))
 			continue;
 
 		const float dist = Util::DistSq(base.getPosition(), unit->pos);
@@ -510,4 +664,106 @@ CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit
 		}
 	}
 	return closestBase;
+}
+
+const BaseLocation* BaseLocationManager::getBaseForDepotPosition(const CCTilePosition position) const
+{
+	for (auto & base : m_baseLocationData)
+	{
+		if (base.getDepotPosition() == position)
+		{
+			return &base;
+		}
+	}
+	return nullptr;
+}
+
+const BaseLocation* BaseLocationManager::getBaseForDepot(const Unit depot) const
+{
+	for (auto & base : m_baseLocationData)
+	{
+		if (base.getDepotPosition() == depot.getTilePosition())
+		{
+			return &base;
+		}
+	}
+	return nullptr;
+}
+
+void BaseLocationManager::SetLocationAsBlocked(const CCPosition position, bool isBlocked)
+{
+	for (auto & base : m_baseLocationData)
+	{
+		if (base.containsPosition(position))
+		{
+			base.setIsBlocked(isBlocked);
+		}
+	}
+}
+
+void BaseLocationManager::ClearBlockedLocations()
+{
+	for (auto & baseLocation : m_baseLocationData)
+	{
+		baseLocation.setIsBlocked(false);
+	}
+}
+
+const BaseLocation* BaseLocationManager::getBaseContainingPosition(const CCPosition position, int player) const
+{
+	for (auto & base : m_baseLocationData)
+	{
+		if (!base.isOccupiedByPlayer(player))
+			continue;
+
+		if (base.containsPosition(position))
+		{
+			return &base;
+		}
+	}
+	return nullptr;
+}
+
+void BaseLocationManager::sortBaseLocationPtrs()
+{
+	//Sorting base locations from closest to opponent's starting base to farthest
+	std::vector<const BaseLocation *> sortedBaseLocationPtrs;
+	std::map<const BaseLocation *, float> baseLocationDistances;
+	const BaseLocation * enemyStartingBaseLocation = m_playerStartingBaseLocations[Players::Enemy];
+	for(const auto baseLocation : m_baseLocationPtrs)
+	{
+		baseLocationDistances.insert_or_assign(baseLocation, Util::DistSq(enemyStartingBaseLocation->getPosition(), baseLocation->getPosition()));
+	}
+	while(!baseLocationDistances.empty())
+	{
+		float smallestDistance = 0.f;
+		const BaseLocation * baseLocation = nullptr;
+		for(const auto baseLocationDistancePair : baseLocationDistances)
+		{
+			if(!baseLocation || baseLocationDistancePair.second < smallestDistance)
+			{
+				smallestDistance = baseLocationDistancePair.second;
+				baseLocation = baseLocationDistancePair.first;
+			}
+		}
+		sortedBaseLocationPtrs.push_back(baseLocation);
+		baseLocationDistances.erase(baseLocation);
+	}
+	m_baseLocationPtrs = sortedBaseLocationPtrs;
+	m_areBaseLocationPtrsSorted = true;
+}
+
+bool BaseLocationManager::isInProximityOfResources(int x, int y) const
+{
+	return m_resourceProximity[x][y];
+}
+
+int BaseLocationManager::getAccessibleMineralFieldCount() const
+{
+	int count = 0;
+	for (auto & base : getOccupiedBaseLocations(Players::Self))
+	{
+		count += base->getMinerals().size();
+	}
+	return count;
 }

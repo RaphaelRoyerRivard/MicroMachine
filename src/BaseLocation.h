@@ -20,6 +20,7 @@ class BaseLocation
     std::vector<Unit>           m_minerals;
 	Unit						m_resourceDepot;
 	bool						m_isUnderAttack;
+	bool						m_isBlocked;
 
 	CCTilePosition				m_centerOfMinerals;
 
@@ -36,9 +37,9 @@ class BaseLocation
     CCPositionType              m_bottom;
     bool                        m_isStartLocation;
 	bool						m_snapshotsRemoved = false;
-    
-public:
 
+	const int ApproximativeBaseLocationTileDistance = 30;
+public:
     BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & resources);
     
     int getGroundDistance(const CCPosition & pos) const;
@@ -46,9 +47,12 @@ public:
     bool isStartLocation() const;
     bool isPlayerStartLocation(CCPlayer player) const;
     bool isMineralOnly() const;
+	bool containsPositionApproximative(const CCPosition & pos, int maxDistance = 0) const;
+	bool containsUnitApproximative(const Unit & unit, int maxDistance = 0) const;
     bool containsPosition(const CCPosition & pos) const;
 	const CCTilePosition & getTurretPosition() const;
     const CCTilePosition & getDepotPosition() const;
+	int getOptimalMineralWorkerCount() const;
     const CCPosition & getPosition() const;
     const std::vector<Unit> & getGeysers() const;
     const std::vector<Unit> & getMinerals() const;
@@ -56,6 +60,8 @@ public:
 	void setResourceDepot(Unit resourceDepot) { m_resourceDepot = resourceDepot; }
 	bool isUnderAttack() const { return m_isUnderAttack; }
 	void setIsUnderAttack(bool isUnderAttack) { m_isUnderAttack = isUnderAttack; }
+	bool isBlocked() const { return m_isBlocked; }
+	void setIsBlocked(bool isBlocked) { m_isBlocked = isBlocked; }
 	const CCTilePosition getCenterOfMinerals() const;
     bool isOccupiedByPlayer(CCPlayer player) const;
     bool isExplored() const;

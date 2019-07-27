@@ -13,7 +13,7 @@ class Squad
     CCBot &             m_bot;
 
     std::string         m_name;
-    std::vector<Unit>   m_units;
+	std::vector<Unit>   m_units;
     std::vector<Unit>   m_targets;
 
 	int					m_lastRegroupFrame;
@@ -79,5 +79,7 @@ public:
     std::vector<Unit> calcTargets(bool visibilityFilter = false);
 
     const std::vector<Unit> & getUnits() const;
+	size_t getUnitCountOfType(sc2::UNIT_TYPEID unitType) const;
+	std::vector<Unit> getUnitsOfType(sc2::UNIT_TYPEID unitType) const;
     const SquadOrder & getSquadOrder() const;
 };

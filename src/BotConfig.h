@@ -34,9 +34,10 @@ public:
 
 	bool AllowDebug;
 	bool AllowKeyControl;
-    bool DrawGameInfo;
+	bool IsRealTime;
     bool DrawTileInfo;
     bool DrawBaseLocationInfo;
+	bool DrawBaseTiles;
     bool DrawWalkableSectors;
 	bool DrawBuildableSectors;
     bool DrawResourceInfo;
@@ -49,11 +50,9 @@ public:
 	bool DrawStartingRamp;
 	bool DrawWall;
     bool DrawEnemyUnitInfo;
-    bool DrawLastSeenTileInfo;
     bool DrawUnitTargetInfo;
     bool DrawSquadInfo;		
 	bool DrawUnitPowerInfo;
-	bool DrawFSMStateInfo;
 	bool DrawHarassInfo;
 	bool DrawMemoryInfo;
 	bool DrawUnitID;
@@ -62,6 +61,9 @@ public:
 	bool DrawBlockedTiles;
 	bool DrawRepairStation;
 	bool DrawDamageHealthRatio;
+	bool DrawRangedUnitActions;
+	bool DrawResourcesProximity;
+	bool DrawCombatInformation;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;
@@ -91,6 +93,7 @@ public:
     bool WeakestEnemy;
     bool HighestPriority;
 	bool EnableMultiThreading;
+	bool TournamentMode;
     
     int WorkersPerRefinery;
     int BuildingSpacing;

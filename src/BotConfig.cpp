@@ -25,7 +25,6 @@ BotConfig::BotConfig()
     BatchReplayMode = false;
     NbBatchReplay = 1;
 
-    DrawGameInfo = true;
     DrawProductionInfo = true;
     DrawTileInfo = false;
     DrawWalkableSectors = false;
@@ -39,11 +38,9 @@ BotConfig::BotConfig()
 	DrawStartingRamp = false;
 	DrawWall = false;
     DrawEnemyUnitInfo = false;
-    DrawLastSeenTileInfo = false;
     DrawUnitTargetInfo = false;
 	DrawSquadInfo = false;
 	DrawUnitPowerInfo = false;
-	DrawFSMStateInfo = false;
 	DrawHarassInfo = false;
 	DrawMemoryInfo = false;
 	DrawUnitID = false;
@@ -52,6 +49,9 @@ BotConfig::BotConfig()
 	DrawBlockedTiles = false;
 	DrawRepairStation = false;
 	DrawDamageHealthRatio = false;
+	DrawRangedUnitActions = false;
+	DrawResourcesProximity = false;
+	DrawCombatInformation = false;
 
     KiteWithRangedUnits = true;
     ScoutHarassEnemy = true;
@@ -124,6 +124,7 @@ void BotConfig::readConfigFile()
         JSONTools::ReadBool("WeakestEnemy", micro, WeakestEnemy);
 		JSONTools::ReadBool("HighestPriority", micro, HighestPriority);
 		JSONTools::ReadBool("EnableMultiThreading", micro, EnableMultiThreading);
+		JSONTools::ReadBool("TournamentMode", micro, TournamentMode);
     }
 
     if (j.count("UCTConsideringDurations") && j["UCTConsideringDurations"].is_object())
@@ -175,14 +176,16 @@ void BotConfig::readConfigFile()
     if (j.count("Debug") && j["Debug"].is_object())
     {
         const json & debug = j["Debug"];
+		const json & info = j["SC2API"];
 		JSONTools::ReadBool("AllowDebug", debug, AllowDebug);
 		if (AllowDebug)
 		{
 			JSONTools::ReadBool("AllowKeyControl", debug, AllowKeyControl);
 
-			JSONTools::ReadBool("DrawGameInfo", debug, DrawGameInfo);
+			JSONTools::ReadBool("PlayAsHuman", info, IsRealTime);
 			JSONTools::ReadBool("DrawTileInfo", debug, DrawTileInfo);
 			JSONTools::ReadBool("DrawBaseLocationInfo", debug, DrawBaseLocationInfo);
+			JSONTools::ReadBool("DrawBaseTiles", debug, DrawBaseTiles);
 			JSONTools::ReadBool("DrawStartingRamp", debug, DrawStartingRamp);
 			JSONTools::ReadBool("DrawWall", debug, DrawWall);
 			JSONTools::ReadBool("DrawWalkableSectors", debug, DrawWalkableSectors);
@@ -195,10 +198,8 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawBuildingInfo", debug, DrawBuildingInfo);
 			JSONTools::ReadBool("DrawModuleTimers", debug, DrawModuleTimers);
 			JSONTools::ReadBool("DrawEnemyUnitInfo", debug, DrawEnemyUnitInfo);
-			JSONTools::ReadBool("DrawLastSeenTileInfo", debug, DrawLastSeenTileInfo);
 			JSONTools::ReadBool("DrawUnitTargetInfo", debug, DrawUnitTargetInfo);
 			JSONTools::ReadBool("DrawUnitPowerInfo", debug, DrawUnitPowerInfo);
-			JSONTools::ReadBool("DrawFSMStateInfo", debug, DrawFSMStateInfo);
 			JSONTools::ReadBool("DrawReservedBuildingTiles", debug, DrawReservedBuildingTiles);
 			JSONTools::ReadBool("DrawHarassInfo", debug, DrawHarassInfo);
 			JSONTools::ReadBool("DrawMemoryInfo", debug, DrawMemoryInfo);
@@ -208,6 +209,9 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawBlockedTiles", debug, DrawBlockedTiles);
 			JSONTools::ReadBool("DrawRepairStation", debug, DrawRepairStation);
 			JSONTools::ReadBool("DrawDamageHealthRatio", debug, DrawDamageHealthRatio);
+			JSONTools::ReadBool("DrawRangedUnitActions", debug, DrawRangedUnitActions);
+			JSONTools::ReadBool("DrawResourcesProximity", debug, DrawResourcesProximity);
+			JSONTools::ReadBool("DrawCombatInformation", debug, DrawCombatInformation);
 		}
     }
 

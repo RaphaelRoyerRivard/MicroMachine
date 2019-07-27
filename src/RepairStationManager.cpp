@@ -30,7 +30,7 @@ void RepairStationManager::onFrame()
 
 	// Add the valid repair stations that are missing from the map
 	const std::vector<const BaseLocation *> & bases = m_bot.Bases().getBaseLocations();
-	for(auto base : bases)
+	for(auto & base : bases)
 	{
 		if (!isRepairStationValidForBaseLocation(base))
 			continue;
@@ -80,6 +80,11 @@ CCPosition RepairStationManager::getBestRepairStationForUnit(const sc2::Unit* un
 
 bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack)
 {
+	const int MINIMUM_WORKER_COUNT = 3;
+
+	if (!baseLocation)
+		return false;
+
 	if (!baseLocation->isOccupiedByPlayer(Players::Self))
 		return false;
 
@@ -91,6 +96,12 @@ bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocatio
 		return false;
 
 	if (!resourceDepot.isCompleted() && !resourceDepot.getType().isMorphedBuilding())
+		return false;
+	
+	auto workerData = m_bot.Workers().getWorkerData();
+	int workerCount = workerData.getNumAssignedWorkers(resourceDepot);
+	int repairWorkerCount = workerData.getRepairStationWorkers()[baseLocation].size();
+	if (workerCount + repairWorkerCount < MINIMUM_WORKER_COUNT)
 		return false;
 
 	return true;
@@ -132,6 +143,9 @@ void RepairStationManager::reservePlaceForUnit(const sc2::Unit* unit)
 
 void RepairStationManager::drawRepairStations()
 {
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
 	for(const auto & repairStation : m_repairStations)
 	{
 		m_bot.Map().drawText(repairStation.first->getPosition(), "Units to repair: " + std::to_string(repairStation.second.size()));

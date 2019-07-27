@@ -2,7 +2,7 @@
     "Bot Info" :
     {
         "BotName"                   : "MicroMachine",
-        "Authors"                   : "David Churchill, Raphael Royer-Rivard, Antoine Theberge, Benjamin Ross, Jean-Philippe Croteau, Francois Genest, Alexis Caron",
+        "Authors"                   : "Raphael Royer-Rivard, Alexis Caron, David Churchill, Antoine Theberge, Benjamin Ross, Jean-Philippe Croteau, Francois Genest",
         "PrintInfoOnStart"          : false
     },
 
@@ -16,19 +16,68 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.0.3",
+        "BotVersion"                : "1.5.5",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
+        "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "DarknessSanctuaryLE.SC2Map",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "Random",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
     },
+    
+    "RandomMaps":
+    [
+        "CyberForestLE.SC2Map",
+        "KairosJunctionLE.SC2Map",
+        "KingsCoveLE.SC2Map",
+        "Acropolis.SC2Map",
+        "NewRepugnancyLE.SC2Map"
+    ],
+	
+	"AllRandomMaps":
+	[
+		"16BitLE.SC2Map",
+		"AcidPlantLE.SC2Map",
+		"AutomatonLE.SC2Map",
+		"BlueshiftLE.SC2Map",
+		"CatalystLE.SC2Map",
+		"CeruleanFallLE.SC2Map",
+		"CyberForestLE.SC2Map",
+		"DarknessSanctuary.SC2Map",
+		"DarknessSanctuaryLE.SC2Map",
+		"DreamcatcherLE.SC2Map",
+		"FractureLE.SC2Map",
+		"InterloperLE.SC2Map",
+		"KairosJunctionLE.SC2Map",
+		"KingsCoveLE.SC2Map",
+		"LostAndFoundLE.SC2Map",
+		"MechDepotLE.SC2Map",
+		"ParaSiteLE.SC2Map",
+		"PortAleksanderLE.SC2Map",
+		"Redshift.SC2Map",
+		"StasisLE.SC2Map",
+		"Bandwidth.SC2Map",
+		"Ephemeron.SC2Map",
+		"PrimusQ9.SC2Map",
+		"Reminiscence.SC2Map",
+		"Sanglune.SC2Map",
+		"TheTimelessVoid.SC2Map",
+		"Urzagol.SC2Map",
+		"Acropolis.SC2Map",
+		"Artana.SC2Map",
+		"CrystalCavern.SC2Map",
+		"DigitalFrontier.SC2Map",
+		"OldSunshine.SC2Map",
+		"Treachery.SC2Map",
+		"Triton.SC2Map",
+		"NewRepugnancyLE.SC2Map"
+	],
         
     "Micro" :
     {
@@ -42,7 +91,8 @@
         "MaxTargetDistance"         : 20,
         "MaxWorkerRepairDistance"   : 20,
         "ScoutHarassEnemy"          : true,
-        "EnableMultiThreading"      : false
+        "EnableMultiThreading"      : false,
+        "TournamentMode"            : false
     },
     
     "UCTConsideringDurations" :
@@ -75,9 +125,10 @@
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
-        "DrawBaseLocationInfo"      : false,
-        "DrawStartingRamp"		    : false,
-        "DrawWall"		   			: false,
+        "DrawBaseLocationInfo"      : true,
+        "DrawBaseTiles"             : false,
+        "DrawStartingRamp"		    : true,
+        "DrawWall"		   			: true,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
         "DrawBuildableSectors"      : false,
@@ -85,21 +136,22 @@
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
-        "DrawLastSeenTileInfo"      : false,
-        "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : false,
+        "DrawSquadInfo"             : true,
+        "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
-        "DrawFSMStateInfo"          : false,
-        "DrawHarassInfo"            : true,
+        "DrawHarassInfo"            : false,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : true,
-        "DrawInfluenceMaps"         : false,
+        "DrawInfluenceMaps"         : true,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
-		"DrawDamageHealthRatio"		: true
+		"DrawDamageHealthRatio"		: true,
+        "DrawRangedUnitActions"     : false,
+        "DrawResourcesProximity"    : false,
+        "DrawCombatInformation"     : true
     },
     
     "Modules" :
@@ -298,6 +350,13 @@
                 "Race"              : "Terran",  
                 "OpeningBuildOrder" : ["SCV",
 										"Banshee"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
+            },
+			"Terran_ExpandTest"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter", "CommandCenter"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },

@@ -16,6 +16,9 @@ UnitState::UnitState(CCHealth hitPoints, CCHealth shields, CCHealth energy, cons
 	m_energy = energy;
 
 	unit = unitPtr;
+
+	std::vector<int> temp(REMEMBER_X_LAST_DOMMAGE_TAKEN, 0);
+	m_recentDamage = temp;
 }
 
 void UnitState::Reset()
@@ -39,6 +42,16 @@ void UnitState::Update(CCHealth hitPoints, CCHealth shields, CCHealth energy)
 	m_hitPoints = hitPoints;
 	m_shields = shields;
 	m_energy = energy;
+
+	int damage = m_previousShields - m_shields + m_previousHitPoints - m_hitPoints;
+	m_damageTaken = damage > 0 ? damage : 0;
+
+	m_totalRecentDamage -= m_recentDamage.at(REMEMBER_X_LAST_DOMMAGE_TAKEN - 1);
+	std::rotate(m_recentDamage.begin(),
+				m_recentDamage.end() - 1, // this will be the new first element
+				m_recentDamage.end());
+	m_recentDamage.at(0) = m_damageTaken;
+	m_totalRecentDamage += m_damageTaken;
 }
 
 bool UnitState::WasUpdated()
@@ -62,8 +75,12 @@ bool UnitState::WasAttacked()
 
 int UnitState::GetDamageTaken()
 {
-	int damage = m_previousShields - m_shields + m_previousHitPoints - m_hitPoints;
-	return damage > 0 ? damage : 0;
+	return m_damageTaken;
+}
+
+int UnitState::GetRecentDamageTaken()
+{
+	return m_totalRecentDamage;
 }
 
 int UnitState::GetHealed()

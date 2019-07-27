@@ -112,6 +112,7 @@ int main(int argc, char* argv[])
     sc2::Difficulty enemyDifficulty = sc2::Difficulty::Easy;
     bool PlayVsItSelf = false;
     bool PlayerOneIsHuman = false;
+	bool ForceStepMode = false;
 
     if (j.count("SC2API") && j["SC2API"].is_object())
     {
@@ -120,10 +121,28 @@ int main(int argc, char* argv[])
 		JSONTools::ReadBool("ConnectToLadder", info, connectToLadder);
         JSONTools::ReadString("BotRace", info, botRaceString);
         JSONTools::ReadString("EnemyRace", info, enemyRaceString);
+
         JSONTools::ReadString("MapFile", info, mapString);
+		//Random map
+		if (mapString.compare("Random") == 0)
+		{
+			if (j.count("RandomMaps") && j["RandomMaps"].is_array())
+			{
+				auto maps = j["RandomMaps"];
+				srand(time(NULL));//Set random seed, otherwise the result is always the same
+				int mapNumber = rand() % maps.size();
+				auto map = maps.at(mapNumber);
+				auto mapName = map.dump();//gets the string value in the json field
+				mapString = mapName.substr(1, mapName.length() - 2);//Remove quotation marks from start and end of the map name
+
+				Util::SetMapName(mapString);//Setting name in Util so we have access to it elsewhere
+			}
+		}
+
         JSONTools::ReadInt("StepSize", info, stepSize);
         JSONTools::ReadInt("EnemyDifficulty", info, enemyDifficulty);
-        JSONTools::ReadBool("PlayAsHuman", info, PlayerOneIsHuman);
+		JSONTools::ReadBool("PlayAsHuman", info, PlayerOneIsHuman);
+		JSONTools::ReadBool("ForceStepMode", info, ForceStepMode);
         JSONTools::ReadBool("PlayVsItSelf", info, PlayVsItSelf);
     }
     else
@@ -181,8 +200,7 @@ int main(int argc, char* argv[])
     //          Setting this = N means the bot's onFrame gets called once every N frames
     //          The bot may crash or do unexpected things if its logic is not called every frame
     coordinator.SetStepSize(stepSize);
-    coordinator.SetRealtime(PlayerOneIsHuman);
-    //coordinator.SetRealtime(true);
+    coordinator.SetRealtime(PlayerOneIsHuman && !ForceStepMode);
 
     coordinator.SetParticipants({
         spectatingPlayer,
@@ -192,9 +210,9 @@ int main(int argc, char* argv[])
     // Start the game.
     coordinator.LaunchStarcraft();
     coordinator.StartGame(mapString);
-
+	
     // Step forward the game simulation.
-    while (coordinator.Update() && !bot.shouldConceed())
+    while (coordinator.Update())
     {
     }
     return 0;

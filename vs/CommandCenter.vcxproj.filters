@@ -113,83 +113,11 @@
     <ClCompile Include="..\src\UnitState.cpp">
       <Filter>micro</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaAction.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaConsideringDurations.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaMove.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaPlayer.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaState.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaUnit.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AlphaBetaValue.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AttackFSMState.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\DonePullBackTransition.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\FiniteStateMachine.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\FireClosestFSMState.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\FleeFSMState.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\FocusFireFiniteStateMachine.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\KitingFiniteStateMachine.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PullBackFSMState.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ShouldAttackTransition.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ShouldFleeTransition.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ShouldPullBackTransition.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDAction.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDMove.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDNode.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDPlayer.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDState.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTCDUnit.cpp">
-      <Filter>micro\old</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UCTConsideringDurations.cpp">
-      <Filter>micro\old</Filter>
+    <ClCompile Include="..\src\CombatAnalyzer.cpp">
+      <Filter>global</Filter>
     </ClCompile>
     <ClCompile Include="..\src\RepairStationManager.cpp">
-      <Filter>micro</Filter>
+      <Filter>global</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -311,104 +239,11 @@
     <ClInclude Include="..\src\UnitState.h">
       <Filter>micro</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaAction.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaConsideringDurations.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaMove.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaPlayer.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaState.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaTimeOut.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaUnit.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AlphaBetaValue.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AttackFSMState.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\Behavior.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\BehaviorTreeBuilder.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\DonePullBackTransition.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FiniteStateMachine.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FireClosestFSMState.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FleeFSMState.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FocusFireFiniteStateMachine.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\FocusFireFSM.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\KitingFiniteStateMachine.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\KitingFSM.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\PullBackFSMState.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\RangedActions.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ShouldAttackTransition.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ShouldFleeTransition.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ShouldPullBackTransition.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDAction.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDMove.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDNode.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDPlayer.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDState.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDTimeOut.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTCDUnit.h">
-      <Filter>micro\old</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UCTConsideringDurations.h">
-      <Filter>micro\old</Filter>
+    <ClInclude Include="..\src\CombatAnalyzer.h">
+      <Filter>global</Filter>
     </ClInclude>
     <ClInclude Include="..\src\RepairStationManager.h">
-      <Filter>micro</Filter>
+      <Filter>global</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -429,9 +264,6 @@
     </Filter>
     <Filter Include="util">
       <UniqueIdentifier>{db91aa47-c051-43b3-a492-87f9619e4100}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="micro\old">
-      <UniqueIdentifier>{47be531e-0ec1-4c76-964f-b04d04a0bd73}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

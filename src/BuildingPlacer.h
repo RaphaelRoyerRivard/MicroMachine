@@ -13,7 +13,7 @@ class BuildingPlacer
     std::vector< std::vector<bool> > m_reserveMap;
 
     // queries for various BuildingPlacer data
-    bool buildable(const UnitType type, int x, int y) const;
+    bool buildable(const UnitType type, int x, int y, bool ignoreReservedTiles = false) const;
     bool isReserved(int x, int y) const;
     bool tileOverlapsBaseLocation(int x, int y, UnitType type) const;
 
@@ -25,11 +25,13 @@ public:
     void onStart();
 
     // determines whether we can build at a given location
-    bool canBuildHere(int bx, int by, const Building & b) const;
-    bool canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved = false) const;
+	bool canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const;
+    bool canBuildHere(int bx, int by, const Building & b, bool ignoreReservedTiles = false) const;
+	bool canBuildHere(int bx, int by, const UnitType & type, bool ignoreReservedTiles) const;
+    bool canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const;
 
     // returns a build location near a building's desired location
-    CCTilePosition getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved = false) const;
+    CCTilePosition getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const;
 
     void drawReservedTiles();
 
