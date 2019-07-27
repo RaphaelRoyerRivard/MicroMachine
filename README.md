@@ -1,6 +1,7 @@
 # MicroMachine: AI Bot for StarCraft II
 
-This bot is built on top of CommandCenter, a popular C++ bot that is great for beginners. The main improvements over CommandCenter is the micro management of units in combat, notably the focus fire, dancing and kiting. The current strategy is to rush with Marines with the Terran race and hope that the great micro management will be enough to overcome the defenses of the enemy early in the game.
+This Terran bot is built on top of CommandCenter, a popular C++ bot that is great for beginners. A lot of work has been put in this project and has now diverged a lot from CommandCenter.
+The biggest strength of MicroMachine is its intense micromanagement of units, notably for Reapers, Cyclones and Banshees.
 
 # CommandCenter: AI Bot for Broodwar and Starcraft II
 
