@@ -720,7 +720,7 @@ void CCBot::clearDeadUnits()
 		{
 			const auto unitPtr = unit.getUnitPtr();
 			unitsToRemove.push_back(unitPtr->tag);
-			this->CombatAnalyzer().increaseDeadEnemy(unitPtr->unit_type);
+			this->Analyzer().increaseDeadEnemy(unitPtr->unit_type);
 			if (unit.getPlayer() == Players::Self)
 				m_parasitedUnits.erase(unitPtr->tag);
 		}
@@ -825,7 +825,7 @@ BaseLocationManager & CCBot::Bases()
     return m_bases;
 }
 
-CombatAnalyzer & CCBot::CombatAnalyzer()
+CombatAnalyzer & CCBot::Analyzer()
 {
 	return m_combatAnalyzer;
 }

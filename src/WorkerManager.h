@@ -53,8 +53,8 @@ public:
     int  getNumMineralWorkers();
     int  getNumGasWorkers();
     int  getNumWorkers();
-	std::set<Unit> WorkerManager::getWorkers() const;
-	WorkerData & WorkerManager::getWorkerData() const;
+	std::set<Unit> getWorkers() const;
+	WorkerData & getWorkerData() const;
 	
 	sc2::Tag getMuleTargetTag(const Unit mule);
 	void setMuleTargetTag(const Unit mule, const sc2::Tag mineral);
@@ -79,5 +79,5 @@ public:
 	Unit getClosestGasWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f) const;
 	Unit getClosestGasWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f) const;
 	Unit getClosest(const Unit unit, const std::list<Unit> units) const;
-	//std::list<Unit> WorkerManager::orderByDistance(const std::list<Unit> units, CCPosition pos, bool closestFirst);
+	//std::list<Unit> orderByDistance(const std::list<Unit> units, CCPosition pos, bool closestFirst);
 };

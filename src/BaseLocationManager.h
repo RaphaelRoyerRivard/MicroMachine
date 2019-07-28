@@ -40,7 +40,7 @@ public:
 	BaseLocation * getClosestOccupiedBaseLocationForUnit(const Unit unit) const;
     const BaseLocation * getPlayerStartingBaseLocation(int player) const;
 	void FixNullPlayerStartingBaseLocation();
-	int BaseLocationManager::getBaseCount(int player, bool isCompleted = false) const;
+	int getBaseCount(int player, bool isCompleted = false) const;
 
 	const BaseLocation* getNextExpansion(int player, bool checkBlocked, bool checkBuildable) const;
 	CCTilePosition getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable) const;

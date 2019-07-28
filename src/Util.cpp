@@ -1759,7 +1759,7 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 			}
 		}
 	}
-	auto & areasUnderDetection = bot.CombatAnalyzer().GetAreasUnderDetection();
+	auto & areasUnderDetection = bot.Analyzer().GetAreasUnderDetection();
 	const int areaUnderDetectionSize = bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? 20 : 10;
 	for(auto & area : areasUnderDetection)
 	{

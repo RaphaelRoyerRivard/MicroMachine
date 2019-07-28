@@ -460,7 +460,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		PlanAction(rangedUnit, action);
 		m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 		const float damageDealth = isBattlecruiser ? Util::GetDpsForTarget(rangedUnit, target, m_bot) / 22.4f : Util::GetDamageForTarget(rangedUnit, target, m_bot);
-		m_bot.CombatAnalyzer().increaseTotalDamage(damageDealth, rangedUnit->unit_type);
+		m_bot.Analyzer().increaseTotalDamage(damageDealth, rangedUnit->unit_type);
 		return;
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
@@ -648,7 +648,7 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
 		}
 	}
 
-	// Let the CombatAnalyzer know of the damage the Cyclone is doing with its Lock-On ability
+	// Let the Analyzer know of the damage the Cyclone is doing with its Lock-On ability
 	const auto lockOnTarget = lockOnTargets.find(cyclone);
 	if(lockOnTarget != lockOnTargets.end())
 	{
@@ -659,7 +659,7 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
 			if (Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes))
 				damagePerFrame *= 2;
 		}
-		m_bot.CombatAnalyzer().increaseTotalDamage(damagePerFrame, cyclone->unit_type);
+		m_bot.Analyzer().increaseTotalDamage(damagePerFrame, cyclone->unit_type);
 	}
 
 	return false;
@@ -1411,7 +1411,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		if (unit == rangedUnit)
 		{
 			const float damageDealth = Util::GetDpsForTarget(rangedUnit, unitTarget, m_bot) / 22.4f;
-			m_bot.CombatAnalyzer().increaseTotalDamage(damageDealth, rangedUnit->unit_type);
+			m_bot.Analyzer().increaseTotalDamage(damageDealth, rangedUnit->unit_type);
 			currentUnitHasACommand = true;
 		}
 	}
@@ -1491,7 +1491,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		if(!QueryIsAbilityAvailable(battlecruiser, sc2::ABILITY_ID::EFFECT_YAMATOGUN))
 		{
 			setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_YAMATOGUN, battlecruiser, currentFrame + BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT);
-			m_bot.CombatAnalyzer().increaseTotalDamage(200.f, battlecruiser->unit_type);
+			m_bot.Analyzer().increaseTotalDamage(200.f, battlecruiser->unit_type);
 			return false;
 		}
 	}

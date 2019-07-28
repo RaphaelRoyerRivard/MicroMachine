@@ -20,7 +20,6 @@
 #include "GameCommander.h"
 #include "StrategyManager.h"
 #include "TechTree.h"
-#include "MetaType.h"
 #include "Unit.h"
 #include "RepairStationManager.h"
 
@@ -134,7 +133,7 @@ public:
           WorkerManager & Workers();
 		  BuildingManager & Buildings();
 		  BaseLocationManager & Bases();
-		  CombatAnalyzer & CombatAnalyzer();
+		  CombatAnalyzer & Analyzer();
 		  GameCommander & Commander();
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;
