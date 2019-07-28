@@ -1,8 +1,5 @@
 #include "BotAssert.h"
 #include <iostream>
-#ifdef _WINDOWS
-#include "StackWalker.h"
-#endif
 
 namespace Assert
 {
@@ -39,11 +36,6 @@ namespace Assert
         lastErrorMessage = messageBuffer;
 
         std::cerr << ss.str();
-
-#ifdef _WINDOWS
-		StackWalker sw;
-		sw.ShowCallstack();
-#endif
     }
 }
 

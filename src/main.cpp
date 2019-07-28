@@ -6,9 +6,6 @@
 #include <cstdio>
 #include <csignal>
 #include <cstdlib>
-#ifdef _WINDOWS
-#include "StackWalker.h"
-#endif
 
 #ifdef SC2API
 
@@ -60,11 +57,6 @@ void handler(int sig) {
 
 	// print out all the frames to stderr
 	fprintf(stderr, "Error: signal %d:\n", sig);
-
-#ifdef _WINDOWS
-	StackWalker sw;
-	sw.ShowCallstack();
-#endif
 
 	exit(1);
 }
