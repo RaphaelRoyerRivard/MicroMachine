@@ -180,6 +180,7 @@ void CCBot::checkKeyState()
 	{
 		return;
 	}
+#ifdef _WINDOWS
 	if (GetAsyncKeyState(VK_DELETE))
 	{
 		printf("Pausing...");
@@ -281,6 +282,7 @@ void CCBot::checkKeyState()
 		key0 = false;
 		m_config.DrawReservedBuildingTiles = !m_config.DrawReservedBuildingTiles;
 	}
+#endif
 }
 #pragma optimize( "checkKeyState", on )
 
