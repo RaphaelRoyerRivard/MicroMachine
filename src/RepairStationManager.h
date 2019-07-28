@@ -1,5 +1,6 @@
 #pragma once
 #include "BaseLocation.h"
+#include <list>
 
 class CCBot;
 

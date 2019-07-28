@@ -3,6 +3,7 @@
 #include "Common.h"
 #include "UnitType.h"
 #include <libvoxelbot/combat/simulator.h>
+#include <list>
 
 class CCBot;
 class Unit;

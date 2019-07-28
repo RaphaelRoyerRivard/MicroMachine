@@ -1,6 +1,7 @@
 #include "CombatCommander.h"
 #include "Util.h"
 #include "CCBot.h"
+#include <list>
 
 const size_t IdlePriority = 0;
 const size_t WorkerFleePriority = 0;

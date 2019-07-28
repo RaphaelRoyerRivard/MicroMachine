@@ -2,6 +2,7 @@
 #include "Common.h"
 #include "Unit.h"
 #include "BaseLocation.h"
+#include <list>
 
 class CCBot;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "WorkerData.h"
+#include <list>
 
 class Building;
 class CCBot;

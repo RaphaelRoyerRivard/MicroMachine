@@ -1,5 +1,6 @@
 #include "BuildOrderQueue.h"
 #include "CCBot.h"
+#include <list>
 
 BuildOrderQueue::BuildOrderQueue(CCBot & bot)
     : m_bot(bot)

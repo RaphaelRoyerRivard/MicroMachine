@@ -2,6 +2,7 @@
 
 #include "Common.h"
 #include "BuildingPlacer.h"
+#include <list>
 
 class CCBot;
 

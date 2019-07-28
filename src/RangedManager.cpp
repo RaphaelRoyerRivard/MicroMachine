@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <string>
 #include <thread>
+#include <list>
 
 const float HARASS_FRIENDLY_SUPPORT_MIN_DISTANCE = 7.f;
 const float HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE = 10.f;

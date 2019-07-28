@@ -5,6 +5,7 @@
 #include "BuildOrderQueue.h"
 #include "Unit.h"
 #include "Building.h"
+#include <list>
 
 class CCBot;
 

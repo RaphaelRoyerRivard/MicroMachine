@@ -10,6 +10,7 @@ file(GLOB BOT_SOURCES "*.cpp" "*.h" "*.hpp")
 add_definitions(-DSC2API)
 
 include_directories(SYSTEM "${SC2Api_INCLUDE_DIRS}" "/var/lib/jenkins/workspace/MicroMachine/precompiled_libvoxelbot/include")
+link_directories("/var/lib/jenkins/workspace/MicroMachine/precompiled_libvoxelbot/lib")
 
 # Show more warnings at compiletime.
 if (MSVC)
@@ -20,7 +21,7 @@ endif ()
 
 # Create the executable.
 add_executable(CommandCenter ${BOT_SOURCES})
-target_link_libraries(CommandCenter ${SC2Api_LIBRARIES} "/var/lib/jenkins/workspace/MicroMachine/precompiled_libvoxelbot/lib")
+target_link_libraries(CommandCenter ${SC2Api_LIBRARIES})
 
 if (APPLE)
     target_link_libraries(CommandCenter "-framework Carbon")

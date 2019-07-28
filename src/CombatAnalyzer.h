@@ -4,6 +4,7 @@
 #include "Common.h"
 #include "UnitState.h"
 #include "Unit.h"
+#include <list>
 
 class CCBot;
 
