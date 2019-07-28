@@ -30,7 +30,7 @@ find_path(SC2Api_Proto_INCLUDE_DIR
         "/opt/local/include"
         "/usr/local/include"
         "/usr/include"
-        "/var/lib/jenkins/workspace/MicroMachine/api/lib"
+        "/var/lib/jenkins/workspace/MicroMachine/api/include"
 )
 
 # Find Protobuf headers.
@@ -61,6 +61,7 @@ foreach(COMPONENT sc2api sc2lib sc2utils sc2protocol civetweb protobuf)
         PATHS
             "/opt/local/lib"
             "/usr/local/lib"
+            "/var/lib/jenkins/workspace/MicroMachine/api/lib"
         PATH_SUFFIXES
             "sc2api"
         NO_DEFAULT_PATH
