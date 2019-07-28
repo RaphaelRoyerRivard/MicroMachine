@@ -857,7 +857,7 @@ void ProductionManager::QueueDeadBuildings()
 			deadBuildings.push_back(unit);
 
 			//Manual find of the worker to free him.
-			auto & buildings = m_bot.Buildings().getPreviousBuildings();
+			auto buildings = m_bot.Buildings().getPreviousBuildings();
 			auto buildingsIt = buildings.begin();
 			for (; buildingsIt != buildings.end(); ++buildingsIt)
 			{
@@ -1032,7 +1032,8 @@ void ProductionManager::lowPriorityChecks()
 					{
 						m_bot.Buildings().getBuildingPlacer().freeTilesForTurrets(position);
 						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(position.x, position.y));
-						create(worker, BuildOrderItem(MetaTypeEnum::MissileTurret, 0, false), position);
+						auto boItem = BuildOrderItem(MetaTypeEnum::MissileTurret, 0, false);
+						create(worker, boItem, position);
 					}
 				}
 			}
