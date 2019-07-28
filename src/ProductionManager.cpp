@@ -449,7 +449,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
 	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 
-	const int currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
+	const auto currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 
 	// build supply if we need some
 	const auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
@@ -504,7 +504,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			const int workerCount = m_bot.Workers().getNumWorkers();
 			if (totalBaseCount * maxWorkersPerBase > workerCount && workerCount < maxWorkers)
 			{
-				if (currentStrategy != StrategyPostBuildOrder::WORKER_RUSH_DEFENSE)//check strategy
+				if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
 				{
 					m_queue.queueItem(BuildOrderItem(workerMetatype, 1, false));
 				}
@@ -514,7 +514,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		// Strategy base logic
 		switch (currentStrategy)
 		{
-			case StrategyPostBuildOrder::TERRAN_CLASSIC :
+			case TERRAN_CLASSIC :
 			{
 				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
 				//if (productionScore < (float)baseCount)
@@ -704,7 +704,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				break;
 			}
-			case StrategyPostBuildOrder::TERRAN_VS_PROTOSS:
+			case TERRAN_VS_PROTOSS:
 			{
 				const auto vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 				const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
@@ -816,7 +816,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 				break;
 			}
-			case StrategyPostBuildOrder::WORKER_RUSH_DEFENSE:
+			case WORKER_RUSH_DEFENSE:
 			{
 				m_queue.removeAllOfType(MetaTypeEnum::Refinery);
 				if(m_bot.GetFreeGas() >= 50)
@@ -833,7 +833,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				return;
 			}
-			case StrategyPostBuildOrder::NO_STRATEGY:
+			case NO_STRATEGY:
 				break;
 			default:
 			{
