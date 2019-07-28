@@ -6,14 +6,16 @@
 #include <cstdio>
 #include <csignal>
 #include <cstdlib>
+#ifdef _WINDOWS
 #include "StackWalker.h"
+#endif
 
 #ifdef SC2API
 
 #include "sc2utils/sc2_manage_process.h"
 #include "sc2api/sc2_api.h"
 #include <string>
-#ifdef _WIN32
+#ifdef _WINDOWS
 	#include <direct.h>
 	#define getcwd _getcwd // stupid MSFT "deprecation" warning
 #elif
@@ -59,8 +61,10 @@ void handler(int sig) {
 	// print out all the frames to stderr
 	fprintf(stderr, "Error: signal %d:\n", sig);
 
+#ifdef _WINDOWS
 	StackWalker sw;
 	sw.ShowCallstack();
+#endif
 
 	exit(1);
 }
