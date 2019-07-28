@@ -47,7 +47,7 @@ public:
     int     getNumAssignedWorkers(const Unit & unit);
 	std::vector<Unit> getAssignedWorkersRefinery(const Unit & unit);
     int     getWorkerJob(const Unit & unit) const;
-	int		getCountWorkerAtDepot(Unit & depot) const;
+	int		getCountWorkerAtDepot(const Unit & depot) const;
     Unit    getMineralToMine(const Unit & unit) const;
     Unit    getWorkerDepot(const Unit & unit) const;
     const char * getJobCode(const Unit & unit);

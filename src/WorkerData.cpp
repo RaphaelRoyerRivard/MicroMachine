@@ -234,7 +234,7 @@ int WorkerData::getWorkerJobCount(int job) const
     return m_workerJobCount.at(job);
 }
 
-int WorkerData::getCountWorkerAtDepot(Unit & depot) const
+int WorkerData::getCountWorkerAtDepot(const Unit & depot) const
 {
 	auto it = m_depotWorkerCount.find(depot);
 	if (it == m_depotWorkerCount.end())
