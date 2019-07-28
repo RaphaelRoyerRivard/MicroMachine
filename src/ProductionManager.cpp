@@ -1844,7 +1844,7 @@ bool ProductionManager::meetsReservedResources(const MetaType & type, int additi
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, int additionalMineral, int additionalGas, int additionalReservedMineral, int additionalReservedGas)
 {
-	assert("Addons cannot use extra ressources", m_bot.Data(type).isAddon);
+	BOT_ASSERT(!m_bot.Data(type).isAddon, "Addons cannot use extra ressources");
 	const bool meetsRequiredMinerals = m_bot.Data(type).mineralCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetMinerals() : m_bot.GetFreeMinerals()) + additionalMineral - additionalReservedMineral;
 	const bool meetsRequiredGas = m_bot.Data(type).gasCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetGas() : m_bot.GetFreeGas()) + additionalGas - additionalReservedGas;
 	return meetsRequiredMinerals && meetsRequiredGas;
