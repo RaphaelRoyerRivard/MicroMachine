@@ -18,7 +18,7 @@
 #ifdef _WINDOWS
 	#include <direct.h>
 	#define getcwd _getcwd // stupid MSFT "deprecation" warning
-#elif
+#else
 	#include <unistd.h>
 #endif
 
@@ -39,6 +39,7 @@ public:
 
 std::string getexepath()
 {
+#ifdef _WINDOWS
 	char buffer[255];
 	char *answer = getcwd(buffer, sizeof(buffer));
 	std::string s_cwd;
@@ -47,6 +48,9 @@ std::string getexepath()
 		s_cwd = answer;
 	}
 	return s_cwd;
+#else
+	return "Not available on Linux";
+#endif
 }
 
 void handler(int sig) {
@@ -72,8 +76,10 @@ void handler(int sig) {
 int main(int argc, char* argv[]) 
 {
 	signal(SIGABRT, handler);
+#ifdef _WINDOWS
 	signal(SIGABRT_COMPAT, handler);
 	signal(SIGBREAK, handler);
+#endif
 	signal(SIGFPE, handler);
 	signal(SIGILL, handler);
 	signal(SIGINT, handler);
