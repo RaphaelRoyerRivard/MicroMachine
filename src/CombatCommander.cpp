@@ -42,7 +42,7 @@ void CombatCommander::onStart()
 {
 	for (auto& ability : m_bot.Observation()->GetAbilityData())
 	{
-		m_abilityCastingRanges.insert_or_assign(ability.ability_id, ability.cast_range);
+		m_abilityCastingRanges[ability.ability_id] = ability.cast_range;
 	}
 
     m_squadData.clearSquadData();
@@ -1459,13 +1459,13 @@ void CombatCommander::updateDefenseSquads()
 				if (maxGroundDps > 0.f)
 				{
 					float regionScore = immune * 50 + maxGroundDps - distance;
-					region.unitGroundScores.insert_or_assign(unit.getUnitPtr(), regionScore);
+					region.unitGroundScores[unit.getUnitPtr()] = regionScore;
 				}
 				// If our unit would have a valid air target, we calculate the score (usefulness in that region) and add it to the list
 				if (maxAirDps > 0.f)
 				{
 					float regionScore = immune * 50 + maxAirDps - distance;
-					region.unitAirScores.insert_or_assign(unit.getUnitPtr(), regionScore);
+					region.unitAirScores[unit.getUnitPtr()] = regionScore;
 				}
 			}
 		}

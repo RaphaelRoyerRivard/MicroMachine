@@ -1135,8 +1135,8 @@ void RangedManager::LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * ta
 	const auto pair = std::pair<const sc2::Unit *, uint32_t>(target, m_bot.GetGameLoop());
 	auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
-	lockOnCastedFrame.insert_or_assign(cyclone, pair);
-	lockOnTargets.insert_or_assign(cyclone, pair);
+	lockOnCastedFrame[cyclone] = pair;
+	lockOnTargets[cyclone] = pair;
 }
 
 bool RangedManager::CycloneHasTarget(const sc2::Unit * cyclone) const
@@ -1276,7 +1276,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		if(unitTarget)
 		{
 			closeUnits.push_back(unit);
-			closeUnitsTarget.insert_or_assign(unit, unitTarget);
+			closeUnitsTarget[unit] = unitTarget;
 			unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
 		}
 	}
@@ -1909,7 +1909,7 @@ bool RangedManager::PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction act
 		return false;
 	}
 
-	unitActions.insert_or_assign(rangedUnit, action);
+	unitActions[rangedUnit] = action;
 	return true;
 }
 
@@ -2093,7 +2093,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 			// Remove the helper from the set because it is now taken
 			potentialFlyingCycloneHelpers.erase(closestHelper);
 			// Save the helper
-			m_cycloneFlyingHelpers.insert_or_assign(closestHelper, targetCluster.m_center);
+			m_cycloneFlyingHelpers[closestHelper] = targetCluster.m_center;
 			// Associate the helper with every Cyclone that had a target in that target cluster
 			for(const auto target : targetCluster.m_units)
 			{
@@ -2101,7 +2101,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 				{
 					if(target == cyclone.second.first)
 					{
-						m_cyclonesWithHelper.insert_or_assign(cyclone.first, closestHelper);
+						m_cyclonesWithHelper[cyclone.first] = closestHelper;
 					}
 				}
 			}
@@ -2151,11 +2151,11 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 				// Remove the helper from the set because it is now taken
 				potentialFlyingCycloneHelpers.erase(closestHelper);
 				// Save the helper
-				m_cycloneFlyingHelpers.insert_or_assign(closestHelper, cycloneCluster.m_center);
+				m_cycloneFlyingHelpers[closestHelper] = cycloneCluster.m_center;
 				// Associate the helper with every Cyclone in that Cyclone cluster
 				for(const auto cyclone : cycloneCluster.m_units)
 				{
-					m_cyclonesWithHelper.insert_or_assign(cyclone, closestHelper);
+					m_cyclonesWithHelper[cyclone] = closestHelper;
 				}
 			}
 		}

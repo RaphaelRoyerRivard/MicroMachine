@@ -249,7 +249,7 @@ void CombatAnalyzer::increaseTotalDamage(float damageDealt, sc2::UNIT_TYPEID uni
 	{
 		if (totalDamage.find(unittype) == totalDamage.end())
 		{
-			totalDamage.insert_or_assign(unittype, 0);
+			totalDamage[unittype] = 0;
 		}
 		totalDamage.at(unittype) += damageDealt;
 		// for total
@@ -267,7 +267,7 @@ void CombatAnalyzer::increaseTotalHealthLoss(float healthLoss, sc2::UNIT_TYPEID 
 	{
 		if (totalhealthLoss.find(unittype) == totalhealthLoss.end())
 		{
-			totalhealthLoss.insert_or_assign(unittype, 0);
+			totalhealthLoss[unittype] = 0;
 		}
 		totalhealthLoss.at(unittype) += healthLoss;
 		// for total

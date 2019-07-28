@@ -303,7 +303,7 @@ void CCBot::setUnits()
 			continue;
 		if (unitptr->alliance == sc2::Unit::Self || unitptr->alliance == sc2::Unit::Ally)
 		{
-			m_allyUnits.insert_or_assign(unitptr->tag, unit);
+			m_allyUnits[unitptr->tag] = unit;
 			m_allyUnitsPerType[unitptr->unit_type].push_back(unit);
 			bool isMorphingResourceDepot = false;
 			auto type = unit.getType();
@@ -350,19 +350,19 @@ void CCBot::setUnits()
 				auto it = m_KD8ChargesSpawnFrame.find(unitptr->tag);
 				if (it == m_KD8ChargesSpawnFrame.end())
 				{
-					m_KD8ChargesSpawnFrame.insert_or_assign(unitptr->tag, GetGameLoop());
+					m_KD8ChargesSpawnFrame[unitptr->tag] = GetGameLoop();
 				}
 				else
 				{
 					uint32_t & spawnFrame = it->second;
 					if (GetGameLoop() - spawnFrame > 10)	// Will consider our KD8 Charges to be dangerous only after a few frames
-						m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+						m_enemyUnits[unitptr->tag] = unit;
 				}
 			}
 		}
 		else if (unitptr->alliance == sc2::Unit::Enemy)
 		{
-			m_enemyUnits.insert_or_assign(unitptr->tag, unit);
+			m_enemyUnits[unitptr->tag] = unit;
 			// If the enemy zergling was seen last frame
 			if (zergEnemy && !m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
 				&& unitptr->last_seen_game_loop == GetGameLoop())
@@ -500,11 +500,11 @@ void CCBot::setUnits()
 					break;
 				}
 			}
-			m_lastSeenPosUnits.insert_or_assign(unitptr->tag, std::pair<CCPosition, uint32_t>(unitptr->pos, GetGameLoop()));
+			m_lastSeenPosUnits[unitptr->tag] = std::pair<CCPosition, uint32_t>(unitptr->pos, GetGameLoop());
 		}
 		else //if(unitptr->alliance == sc2::Unit::Neutral)
 		{
-			m_neutralUnits.insert_or_assign(unitptr->tag, unit);
+			m_neutralUnits[unitptr->tag] = unit;
 		}
         m_allUnits.push_back(unit);
     }
@@ -753,7 +753,7 @@ void CCBot::updatePreviousFrameEnemyUnitPos()
 	m_previousFrameEnemyPos.clear();
 	for (auto & unit : UnitInfo().getUnits(Players::Enemy))
 	{
-		m_previousFrameEnemyPos.insert_or_assign(unit.getUnitPtr()->tag, unit.getPosition());
+		m_previousFrameEnemyPos[unit.getUnitPtr()->tag] = unit.getPosition();
 	}
 }
 

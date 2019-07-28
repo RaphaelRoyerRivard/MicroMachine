@@ -117,7 +117,7 @@ void SquadData::verifySquadUniqueMembership()
                 std::cout << "Warning: A " << unit.getType().getName() << " is in at least two squads: " << kv.second.getName() << " and " << it->second << "\n";
             }
 
-            assigned.insert_or_assign(unit, kv.second.getName());
+            assigned[unit] = kv.second.getName();
         }
     }
 }

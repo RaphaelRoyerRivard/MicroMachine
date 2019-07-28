@@ -37,7 +37,7 @@ void RepairStationManager::onFrame()
 
 		if(m_repairStations.find(base) == m_repairStations.end())
 		{
-			m_repairStations.insert_or_assign(base, std::list<const sc2::Unit*>());
+			m_repairStations[base] = std::list<const sc2::Unit*>();
 		}
 	}
 
