@@ -127,10 +127,10 @@ void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::l
 			float rightHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x, currentTile.y + 1);
 			float leftHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x, currentTile.y - 1);
 
-			bool topIsLower = (isgreaterequal(topHeightDiff, 0.5f) && isgreaterequal(1.f, topHeightDiff));
-			bool downIsLower = (isgreaterequal(downHeightDiff, 0.5f) && isgreaterequal(1.f, downHeightDiff));
-			bool rightIsLower = (isgreaterequal(rightHeightDiff, 0.5f) && isgreaterequal(1.f, rightHeightDiff));
-			bool leftIsLower = (isgreaterequal(leftHeightDiff, 0.5f) && isgreaterequal(1.f, leftHeightDiff));
+			bool topIsLower = topHeightDiff >= 0.5f && 1.f >= topHeightDiff;
+			bool downIsLower = downHeightDiff >= 0.5f && 1.f >= downHeightDiff;
+			bool rightIsLower = rightHeightDiff >= 0.5f && 1.f >= rightHeightDiff;
+			bool leftIsLower = leftHeightDiff >= 0.5f && 1.f >= leftHeightDiff;
 
 			//Ramps tiles are 1 lower
 			if (topIsLower || downIsLower || rightIsLower || leftIsLower)
@@ -309,9 +309,9 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock)
 {
 	std::list<CCTilePosition> buildingTiles;
-	for (auto tile : tilesToBlock)
+	for (auto & tile : tilesToBlock)
 	{
-		if (m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y)) &&
+		if (m_bot.Map().isBuildable(tile) &&
 			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y)) &&
 			m_bot.Map().isBuildable(CCTilePosition(tile.x, tile.y - 1)) &&
 			m_bot.Map().isBuildable(CCTilePosition(tile.x - 1, tile.y - 1)))
@@ -591,7 +591,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 		{
 			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 			//path  is safe, we can remove it from the list
-			auto & positions = m_nextBuildingPosition.find(b.type);// .pop_front();
+			auto positions = m_nextBuildingPosition.find(b.type);// .pop_front();
 			if (positions != m_nextBuildingPosition.end())
 			{
 				for (auto & position : positions->second)

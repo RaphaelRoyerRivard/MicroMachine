@@ -471,7 +471,7 @@ bool MapTools::isBuildable(int tileX, int tileY) const
 }
 
 
-bool MapTools::isBuildable(CCTilePosition & tile) const
+bool MapTools::isBuildable(const CCTilePosition & tile) const
 {
 	if (!isValidTile(tile.x, tile.y))
 	{
