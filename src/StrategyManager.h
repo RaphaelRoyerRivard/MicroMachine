@@ -23,11 +23,11 @@ struct Strategy
     Strategy(const std::string & name, const CCRace & race, const BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition);
 };
 
-struct StrategyPostBuildOrder {
-	const static int NO_STRATEGY = -1;
-	const static int TERRAN_CLASSIC = 0;
-	const static int TERRAN_VS_PROTOSS = 1;
-	const static int WORKER_RUSH_DEFENSE = 3;
+enum StrategyPostBuildOrder {
+	NO_STRATEGY = -1,
+	TERRAN_CLASSIC = 0,
+	TERRAN_VS_PROTOSS = 1,
+	WORKER_RUSH_DEFENSE = 3
 };
 
 class StrategyManager
@@ -62,7 +62,7 @@ public:
     StrategyManager(CCBot & bot);
 
     const Strategy & getCurrentStrategy() const;
-	const int & getCurrentStrategyPostBuildOrder() const;
+	StrategyPostBuildOrder getCurrentStrategyPostBuildOrder() const;
     bool scoutConditionIsMet() const;
     bool attackConditionIsMet() const;
     void onStart();

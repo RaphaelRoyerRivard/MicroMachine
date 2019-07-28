@@ -47,17 +47,17 @@ const Strategy & StrategyManager::getCurrentStrategy() const
     return (*strategy).second;
 }
 
-const int & StrategyManager::getCurrentStrategyPostBuildOrder() const
+StrategyPostBuildOrder StrategyManager::getCurrentStrategyPostBuildOrder() const
 {
 	if (m_bot.Strategy().isWorkerRushed())
 	{
-		return StrategyPostBuildOrder::WORKER_RUSH_DEFENSE;
+		return WORKER_RUSH_DEFENSE;
 	}
 	if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss)
 	{
-		return StrategyPostBuildOrder::TERRAN_VS_PROTOSS;
+		return TERRAN_VS_PROTOSS;
 	}
-	return StrategyPostBuildOrder::TERRAN_CLASSIC;
+	return TERRAN_CLASSIC;
 }
 
 const BuildOrder & StrategyManager::getOpeningBookBuildOrder() const
