@@ -9,7 +9,7 @@ file(GLOB BOT_SOURCES "*.cpp" "*.h" "*.hpp")
 # Enable compilation of the SC2 version of the bot.
 add_definitions(-DSC2API)
 
-include_directories(SYSTEM "${SC2Api_INCLUDE_DIRS}" "/var/lib/jenkins/workspace/MicroMachine/sc2-libvoxelbot/libvoxelbot")
+include_directories(SYSTEM "${SC2Api_INCLUDE_DIRS}" "/var/lib/jenkins/workspace/MicroMachine/sc2-libvoxelbot")
 
 # Show more warnings at compiletime.
 if (MSVC)
