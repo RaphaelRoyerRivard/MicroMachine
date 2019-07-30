@@ -1,7 +1,7 @@
 # Clear the workspace
-rm -R build/
-rm -R api/
-rm -R sc2-libvoxelbot/
+rm -Rf build/
+rm -Rf api/
+rm -Rf sc2-libvoxelbot/
 
 # We need theses folders to be present
 mkdir -p build
