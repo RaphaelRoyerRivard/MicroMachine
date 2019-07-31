@@ -21,6 +21,10 @@ make -j8
 
 cd ../
 
+# Install libvoxelbot lib
+cp -R libvoxelbot /usr/local/include/sc2-libvoxelbot
+cp -R build /usr/local/include/sc2-libvoxelbot
+
 # Install SC2 API headers
 cp -R s2client-api/include/sc2api /usr/local/include
 cp -R s2client-api/include/sc2utils /usr/local/include
