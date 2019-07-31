@@ -2,10 +2,13 @@
 rm -Rf build/
 rm -Rf api/
 rm -Rf sc2-libvoxelbot/
+rm -Rf /usr/local/include
+rm -Rf /usr/local/lib
 
 # We need theses folders to be present
 mkdir -p build
 mkdir -p /usr/local/include
+mkdir -p /usr/local/include/sc2-libvoxelbot
 mkdir -p /usr/local/lib
 mkdir -p /usr/local/lib/sc2api
 
@@ -24,6 +27,8 @@ cd ../
 # Install libvoxelbot lib
 cp -R libvoxelbot /usr/local/include/sc2-libvoxelbot
 cp -R build /usr/local/include/sc2-libvoxelbot
+
+ls -la /usr/local/include/sc2-libvoxelbot
 
 # Install SC2 API headers
 cp -R s2client-api/include/sc2api /usr/local/include
