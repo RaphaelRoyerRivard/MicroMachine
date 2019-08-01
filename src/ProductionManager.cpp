@@ -740,7 +740,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
 				}
-				else if (starportCount < 1)
+				else if (starportCount < factoryCount)
 				{
 					toBuild = MetaTypeEnum::Starport;
 					hasPicked = true;
@@ -1279,13 +1279,13 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 						auto addon = m_bot.GetUnit(addonTag);
 						switch ((sc2::UNIT_TYPEID)addon.getAPIUnitType())
 						{
-						case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
-						case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
-						case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
-						{
-							addonIsReactor = true;
-							break;
-						}
+							case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+							{
+								addonIsReactor = true;
+								break;
+							}
 						}
 
 						if (unit.isTraining() && !addonIsReactor)
