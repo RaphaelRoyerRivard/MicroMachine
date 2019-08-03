@@ -30,14 +30,14 @@ else ()
 endif ()
 
 # Create the executable.
-add_executable(CommandCenter ${BOT_SOURCES})
-target_link_libraries(CommandCenter ${SC2Api_LIBRARIES} "${LIBVOXELBOT_PATH}/build/liblibvoxelbot.a")
+add_executable(MicroMachine ${BOT_SOURCES})
+target_link_libraries(MicroMachine ${SC2Api_LIBRARIES} "${LIBVOXELBOT_PATH}/build/liblibvoxelbot.a")
 
 if (APPLE)
-    target_link_libraries(CommandCenter "-framework Carbon")
+    target_link_libraries(MicroMachine "-framework Carbon")
 endif ()
 
 # Linux specific.
 if (UNIX AND NOT APPLE)
-    target_link_libraries(CommandCenter pthread dl)
+    target_link_libraries(MicroMachine pthread dl)
 endif ()

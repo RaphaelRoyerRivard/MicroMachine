@@ -1,0 +1,1 @@
+cp build/bin/MicroMachine ../Sc2LadderServer/build/bin/Bots/MicroMachine/
