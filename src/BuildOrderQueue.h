@@ -5,6 +5,7 @@
 
 class CCBot;
 
+// This namespace is to prevent build error when compiling because the libvoxelbot library also contains a BuildOrderItem
 namespace MM {
 	struct BuildOrderItem
 	{

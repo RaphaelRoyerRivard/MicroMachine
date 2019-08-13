@@ -8,7 +8,6 @@ UnitType::UnitType()
 
 }
 
-#ifdef SC2API
 UnitType::UnitType(const sc2::UnitTypeID & type, CCBot & bot)
     : m_bot(&bot)
     , m_type(type)
@@ -26,25 +25,6 @@ bool UnitType::is(const sc2::UnitTypeID & type) const
     return m_type == type;
 }
 
-#else
-UnitType::UnitType(const BWAPI::UnitType & type, CCBot & bot)
-    : m_bot(&bot)
-    , m_type(type)
-{
-    
-}
-
-BWAPI::UnitType UnitType::getAPIUnitType() const
-{
-    return m_type;
-}
-
-bool UnitType::is(const BWAPI::UnitType & type) const
-{
-    return m_type == type;
-}
-
-#endif
 bool UnitType::operator < (const UnitType & rhs) const
 {
     return m_type < rhs.m_type;

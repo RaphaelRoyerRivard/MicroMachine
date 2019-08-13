@@ -85,6 +85,7 @@ struct ConnectionOptions
 
 static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_options)
 {
+	std::cout << "Parsing arguments " << argv[0];
     sc2::ArgParser arg_parser(argv[0]);
     arg_parser.AddOptions({
         { "-g", "--GamePort", "Port of client to connect to", false },
@@ -99,10 +100,18 @@ static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_op
     if (arg_parser.Get("GamePort", GamePortStr)) {
         connect_options.GamePort = atoi(GamePortStr.c_str());
     }
+	else
+	{
+		std::cout << "GamePort option not provided.";
+	}
+
     std::string StartPortStr;
     if (arg_parser.Get("StartPort", StartPortStr)) {
         connect_options.StartPort = atoi(StartPortStr.c_str());
     }
+	{
+		std::cout << "StartPort option not provided.";
+	}
     arg_parser.Get("LadderServer", connect_options.ServerAddress);
     std::string CompOpp;
     if (arg_parser.Get("ComputerOpponent", CompOpp))
@@ -133,6 +142,7 @@ static void RunBot(int argc, char *argv[], CCBot *Agent, sc2::Race race, bool lo
 
     sc2::Coordinator coordinator;
     if (loadSettings && !coordinator.LoadSettings(argc, argv)) {
+		std::cout << "Should load settings with the coordinator, but failed.";
         return;
     }
 
