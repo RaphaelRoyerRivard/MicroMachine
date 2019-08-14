@@ -55,7 +55,7 @@ StrategyPostBuildOrder StrategyManager::getCurrentStrategyPostBuildOrder() const
 	}
 	if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss)
 	{
-		return TERRAN_VS_PROTOSS;
+		//return TERRAN_VS_PROTOSS;
 	}
 	return TERRAN_CLASSIC;
 }
