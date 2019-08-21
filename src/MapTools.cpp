@@ -247,11 +247,7 @@ bool MapTools::isVisible(int tileX, int tileY) const
 {
     if (!isValidTile(tileX, tileY)) { return false; }
 
-#ifdef SC2API
     return m_bot.Observation()->GetVisibility(CCPosition(tileX + HALF_TILE, tileY + HALF_TILE)) == sc2::Visibility::Visible;
-#else
-    return BWAPI::Broodwar->isVisible(BWAPI::TilePosition(tileX, tileY));
-#endif
 }
 
 bool MapTools::isPowered(int tileX, int tileY) const
@@ -545,7 +541,6 @@ const std::vector<CCTilePosition> & MapTools::getClosestTilesTo(const CCTilePosi
 
 bool MapTools::canWalk(int tileX, int tileY) 
 {
-#ifdef SC2API
     auto & info = m_bot.Observation()->GetGameInfo();
     sc2::Point2DI pointI(tileX, tileY);
     if (pointI.x < m_min.x || pointI.x >= m_max.x || pointI.y < m_min.y || pointI.y >= m_max.y)
@@ -553,24 +548,12 @@ bool MapTools::canWalk(int tileX, int tileY)
         return false;
     }
 
-    assert(info.pathing_grid.data.size() == info.width * info.height);
+    /*assert(info.pathing_grid.data.size() == info.width * info.height);
     unsigned char encodedPlacement = info.pathing_grid.data[pointI.x + ((info.height - 1) - pointI.y) * info.width];
     bool decodedPlacement = encodedPlacement == 255 ? false : true;
-    return decodedPlacement;
-#else
-    for (int i=0; i<4; ++i)
-    {
-        for (int j=0; j<4; ++j)
-        {
-            if (!BWAPI::Broodwar->isWalkable(tileX*4 + i, tileY*4 + j))
-            {
-                return false;
-            }
-        }
-    }
-
-    return true;
-#endif
+    return decodedPlacement;*/
+	const sc2::Point2D point(tileX, tileY);
+	Util::Pathable(point);
 }
 
 bool MapTools::isInCameraFrustum(int x, int y) const
@@ -581,7 +564,6 @@ bool MapTools::isInCameraFrustum(int x, int y) const
 
 bool MapTools::canBuild(int tileX, int tileY) 
 {
-#ifdef SC2API
     auto & info = m_bot.Observation()->GetGameInfo();
     sc2::Point2DI pointI(tileX, tileY);
     if (pointI.x < m_min.x || pointI.x >= m_max.x || pointI.y < m_min.y || pointI.y >= m_max.y)
@@ -589,13 +571,12 @@ bool MapTools::canBuild(int tileX, int tileY)
         return false;
     }
 
-    assert(info.placement_grid.data.size() == info.width * info.height);
+    /*assert(info.placement_grid.data.size() == info.width * info.height);
     unsigned char encodedPlacement = info.placement_grid.data[pointI.x + ((info.height - 1) - pointI.y) * info.width];
     bool decodedPlacement = encodedPlacement == 255 ? true : false;
-    return decodedPlacement;
-#else
-    return BWAPI::Broodwar->isBuildable(BWAPI::TilePosition(tileX, tileY));
-#endif
+    return decodedPlacement;*/
+	const sc2::Point2D point(tileX, tileY);
+	return Util::Placement(point);
 }
 
 void MapTools::draw() const

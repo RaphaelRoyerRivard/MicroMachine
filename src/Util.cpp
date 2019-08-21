@@ -82,7 +82,6 @@ struct Util::PathFinding::IMNode
 
 void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 {
-#ifdef SC2API
 	switch (race)
 	{
 		case sc2::Race::Terran:
@@ -113,16 +112,15 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 			break;
 		}
 	}
-#else
-	Util::depotType = UnitType(race.getResourceDepot(), bot);
-	Util::depotType = UnitType(race.getRefinery(), bot);
-#endif
 	Util::gameInfo = &_gameInfo;
 
-	assert(gameInfo->pathing_grid.data.size() == gameInfo->width * gameInfo->height);
+	//assert(gameInfo->pathing_grid.data.size() == gameInfo->width * gameInfo->height);
 	_pathable = std::vector<std::vector<bool>>(gameInfo->width);
 	_placement = std::vector<std::vector<bool>>(gameInfo->width);
 	_terrainHeight = std::vector<std::vector<float>>(gameInfo->width);
+	const auto pathingGrid = sc2::PathingGrid(*gameInfo);
+	const auto placementGrid = sc2::PlacementGrid(*gameInfo);
+	const auto heightMap = sc2::HeightMap(*gameInfo);
 	for (int x = 0; x < gameInfo->width; x++)
 	{
 		_pathable[x] = std::vector<bool>(gameInfo->height);
@@ -130,18 +128,22 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		_terrainHeight[x] = std::vector<float>(gameInfo->height);
 		for (int y = 0; y < gameInfo->height; y++)
 		{
-			auto index = x + ((gameInfo->height - 1) - y) * gameInfo->width;
+			auto point = sc2::Point2DI(x, y);
+			//auto index = x + ((gameInfo->height - 1) - y) * gameInfo->width;
 			//Pathable
-			unsigned char encodedPathing = gameInfo->pathing_grid.data[index];
-			_pathable[x][y] = encodedPathing == 255 ? false : true;
+			/*unsigned char encodedPathing = gameInfo->pathing_grid.data[index];
+			_pathable[x][y] = encodedPathing == 255 ? false : true;*/
+			_pathable[x][y] = pathingGrid.IsPathable(point);
 
 			//Placement
-			unsigned char encodedPlacement = gameInfo->placement_grid.data[index];
-			_placement[x][y] = encodedPlacement == 255 ? true : false;	
+			/*unsigned char encodedPlacement = gameInfo->placement_grid.data[index];
+			_placement[x][y] = encodedPlacement == 255 ? true : false;*/
+			_placement[x][y] = placementGrid.IsPlacable(point);
 
 			//Terrain height
-			unsigned char encodedHeight = gameInfo->terrain_height.data[index];
-			_terrainHeight[x][y] = -100.0f + 200.0f * float(encodedHeight) / 255.0f;
+			/*unsigned char encodedHeight = gameInfo->terrain_height.data[index];
+			_terrainHeight[x][y] = -100.0f + 200.0f * float(encodedHeight) / 255.0f;*/
+			_terrainHeight[x][y] = heightMap.TerrainHeight(point);
 		}
 	}
 }
