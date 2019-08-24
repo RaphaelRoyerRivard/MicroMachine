@@ -50,7 +50,6 @@ void MapTools::onStart()
     m_buildable      = vvb(m_totalWidth, std::vector<bool>(m_totalHeight, false));
     m_depotBuildable = vvb(m_totalWidth, std::vector<bool>(m_totalHeight, false));
     m_sectorNumber   = vvi(m_totalWidth, std::vector<int>(m_totalHeight, 0));
-    m_terrainHeight  = vvf(m_totalWidth, std::vector<float>(m_totalHeight, 0.0f));
 
 	auto & info = m_bot.Observation()->GetGameInfo();
     // Set the boolean grid data from the Map
@@ -61,17 +60,6 @@ void MapTools::onStart()
             m_buildable[x][y]       = canBuild(x, y);
             m_depotBuildable[x][y]  = canBuild(x, y);
             m_walkable[x][y]        = m_buildable[x][y] || canWalk(x, y);
-
-			if (x < m_min.x || x >= m_max.x || y < m_min.y || y >= m_max.y)
-			{
-				m_terrainHeight[x][y] = 0.0f;
-			}
-			else
-			{
-				assert(info.terrain_height.data.size() == info.width * info.height);
-				unsigned char encodedHeight = info.terrain_height.data[x + ((info.height - 1) - y) * info.width];
-				m_terrainHeight[x][y] = -100.0f + 200.0f * float(encodedHeight) / 255.0f;
-			}
         }
     }
 
@@ -269,22 +257,17 @@ bool MapTools::isPowered(int tileX, int tileY) const
 
 float MapTools::terrainHeight(const CCPosition & point) const
 {
-#ifdef SC2API
-	sc2::Point2DI pointI((int)point.x, (int)point.y);
-	return m_terrainHeight[pointI.x][pointI.y];
-#else
-	return 0;
-#endif
+	return Util::TerrainHeight(point);
 }
 
 float MapTools::terrainHeight(CCTilePosition tile) const
 {
-	return m_terrainHeight[tile.x][tile.y];
+	return Util::TerrainHeight(tile);
 }
 
 float MapTools::terrainHeight(float x, float y) const
 {
-    return m_terrainHeight[(int)x][(int)y];
+	return Util::TerrainHeight(x, y);
 }
 
 //int MapTools::getGroundDistance(const CCPosition & src, const CCPosition & dest) const
@@ -347,20 +330,14 @@ bool MapTools::isValidPosition(const CCPosition & pos) const
 
 void MapTools::drawLine(CCPositionType x1, CCPositionType y1, CCPositionType x2, CCPositionType y2, const CCColor & color) const
 {
-#ifdef SC2API
-    m_bot.Debug()->DebugLineOut(sc2::Point3D(x1, y1, terrainHeight(x1, y1) + 0.2f), sc2::Point3D(x2, y2, terrainHeight(x2, y2) + 0.2f), color);
-#else
-    BWAPI::Broodwar->drawLineMap(BWAPI::Position(x1, y1), BWAPI::Position(x2, y2), color);
-#endif
+	const auto p1Height = Util::TerrainHeight(x1, y1);
+	const auto p2Height = Util::TerrainHeight(x2, y2);
+    m_bot.Debug()->DebugLineOut(sc2::Point3D(x1, y1, p1Height + 0.2f), sc2::Point3D(x2, y2, p2Height + 0.2f), color);
 }
 
 void MapTools::drawLine(const CCPosition & p1, const CCPosition & p2, const CCColor & color) const
 {
-#ifdef SC2API
     drawLine(p1.x, p1.y, p2.x, p2.y, color);
-#else
-    BWAPI::Broodwar->drawLineMap(p1, p2, color);
-#endif
 }
 
 void MapTools::drawTile(const CCTilePosition& tilePosition, const CCColor & color, float size) const

@@ -25,9 +25,9 @@ namespace Util
 	static UnitType workerType;
 	static UnitType supplyType;
 	static const sc2::GameInfo * gameInfo;
-	static std::vector<std::vector<bool>> _pathable;
-	static std::vector<std::vector<bool>> _placement;
-	static std::vector<std::vector<float>> _terrainHeight;
+	static std::vector<std::vector<bool>> m_pathable;
+	static std::vector<std::vector<bool>> m_placement;
+	static std::vector<std::vector<float>> m_terrainHeight;
 
 	static bool allowDebug;
 	
