@@ -1170,12 +1170,23 @@ const std::vector<CCPosition> & CCBot::GetEnemyStartLocations() const
     return m_enemyBaseLocations;
 }
 
-#ifdef SC2API
 void CCBot::OnError(const std::vector<sc2::ClientError> & client_errors, const std::vector<std::string> & protocol_errors)
 {
-    
+	for (const auto & clientError : client_errors)
+	{
+		const auto errorId = int(clientError);
+		std::stringstream err;
+		err << "Client error: " << std::to_string(errorId) << std::endl;
+		Util::DebugLog(__FUNCTION__, err.str(), *this);
+	}
+	
+	for (const auto & protocolError : protocol_errors)
+	{
+		std::stringstream err;
+		err << "Protocol error error: " << protocolError << std::endl;
+		Util::DebugLog(__FUNCTION__, err.str(), *this);
+	}
 }
-#endif
 
 void CCBot::StartProfiling(const std::string & profilerName)
 {

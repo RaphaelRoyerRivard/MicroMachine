@@ -26,7 +26,6 @@ class MapTools
     std::vector<std::vector<bool>>  m_buildable;        // whether a tile is buildable (includes static resources)
     std::vector<std::vector<bool>>  m_depotBuildable;   // whether a depot is buildable on a tile (illegal within 3 tiles of static resource)
     std::vector<std::vector<int>>   m_sectorNumber;     // connectivity sector number, two tiles are ground connected if they have the same number
-    std::vector<std::vector<float>> m_terrainHeight;        // height of the map at x+0.5, y+0.5
     
     void computeConnectivity();
 
@@ -52,6 +51,7 @@ public:
 	int     height() const { return m_height; }
 	CCPosition mapMin() const { return m_min; }
 	CCPosition mapMax() const { return m_max; }
+	float	maxZ() const { return m_maxZ; }
 	CCPosition center() const { return CCPosition(m_totalWidth / 2.f, m_totalHeight / 2.f); }
 	float   terrainHeight(const CCPosition & point) const;
 	float	terrainHeight(CCTilePosition tile) const;

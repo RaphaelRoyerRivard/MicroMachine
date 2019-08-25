@@ -25,9 +25,9 @@ namespace Util
 	static UnitType workerType;
 	static UnitType supplyType;
 	static const sc2::GameInfo * gameInfo;
-	static std::vector<std::vector<bool>> _pathable;
-	static std::vector<std::vector<bool>> _placement;
-	static std::vector<std::vector<float>> _terrainHeight;
+	static std::vector<std::vector<bool>> m_pathable;
+	static std::vector<std::vector<bool>> m_placement;
+	static std::vector<std::vector<float>> m_terrainHeight;
 
 	static bool allowDebug;
 	
@@ -201,7 +201,7 @@ namespace Util
     sc2::Point2D CalcPerpendicularVector(const sc2::Point2D & vector);
     
     // Kevin-provided helper functions
-    void    VisualizeGrids(const sc2::ObservationInterface* obs, sc2::DebugInterface* debug);
+    void    VisualizeGrids(CCBot& bot);
     float   TerrainHeight(const sc2::Point2D& point);
 	float	TerrainHeight(const CCTilePosition pos);
 	float	TerrainHeight(const int x, const int y);
