@@ -141,9 +141,9 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 			m_placement[x][y] = placementGrid.IsPlacable(point);
 			
 			//Terrain height
-			unsigned char encodedHeight = gameInfo->terrain_height.data[index];
-			m_terrainHeight[x][y] = float(encodedHeight) / 8.f - 15.875f;
-			//m_terrainHeight[x][y] = heightMap.TerrainHeight(point);
+			/*unsigned char encodedHeight = gameInfo->terrain_height.data[index];
+			m_terrainHeight[x][y] = float(encodedHeight) / 8.f - 15.875f;*/
+			m_terrainHeight[x][y] = heightMap.TerrainHeight(point);
 		}
 	}
 }
