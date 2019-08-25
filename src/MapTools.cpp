@@ -398,7 +398,7 @@ void MapTools::drawCircle(CCPositionType x, CCPositionType y, CCPositionType rad
 void MapTools::drawText(const CCPosition & pos, const std::string & str, const CCColor & color) const
 {
 	if(isInCameraFrustum(pos.x, pos.y))
-		m_bot.Debug()->DebugTextOut(str, sc2::Point3D(pos.x, pos.y, m_maxZ), color);
+		m_bot.Debug()->DebugTextOut(str, sc2::Point3D(pos.x, pos.y, Util::TerrainHeight(pos)), color);
 }
 
 void MapTools::drawTextScreen(float xPerc, float yPerc, const std::string & str, const CCColor & color) const
@@ -614,7 +614,7 @@ void MapTools::draw() const
                 drawTile(x, y, color);
 				std::string terrainHeight(16, '\0');
 				std::snprintf(&terrainHeight[0], terrainHeight.size(), "%.2f", m_bot.Map().terrainHeight(x, y));
-				m_bot.Map().drawText(CCPosition(x, y), terrainHeight, m_bot.Observation()->IsPathable(CCPosition(x, y)) ? sc2::Colors::Green : sc2::Colors::Red);
+				m_bot.Map().drawText(CCPosition(x, y), terrainHeight, color);
             }
         }
     }

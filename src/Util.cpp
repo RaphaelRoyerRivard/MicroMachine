@@ -139,7 +139,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 			/*unsigned char encodedPlacement = gameInfo->placement_grid.data[index];
 			m_placement[x][y] = encodedPlacement == 255 ? true : false;*/
 			m_placement[x][y] = placementGrid.IsPlacable(point);
-
+			
 			//Terrain height
 			unsigned char encodedHeight = gameInfo->terrain_height.data[index];
 			m_terrainHeight[x][y] = float(encodedHeight) / 8.f - 15.875f;
@@ -1924,14 +1924,14 @@ float Util::TerrainHeight(const int x, const int y)
 	return m_terrainHeight[x][y];
 }
 
-void Util::VisualizeGrids(const sc2::ObservationInterface * obs, sc2::DebugInterface * debug) 
+void Util::VisualizeGrids(CCBot& bot) 
 {
-    const sc2::GameInfo& info = obs->GetGameInfo();
+    const sc2::GameInfo& info = bot.Observation()->GetGameInfo();
 
-    sc2::Point2D camera = obs->GetCameraPos();
+    sc2::Point2D camera = bot.Observation()->GetCameraPos();
     for (float x = camera.x - 8.0f; x < camera.x + 8.0f; ++x) 
     {
-        for (float y = camera.y - 8.0f; y < camera.y + 8.0f; ++y) 
+        for (float y = camera.y - 8.0f; y < camera.y + 8.0f; ++y)
         {
             // Draw in the center of each 1x1 cell
             sc2::Point2D point(x + 0.5f, y + 0.5f);
@@ -1941,11 +1941,9 @@ void Util::VisualizeGrids(const sc2::ObservationInterface * obs, sc2::DebugInter
             //bool pathable = Pathable(info, sc2::Point2D(x, y));
 
             sc2::Color color = placable ? sc2::Colors::Green : sc2::Colors::Red;
-            debug->DebugSphereOut(sc2::Point3D(point.x, point.y, height + 0.5f), 0.4f, color);
+			bot.Map().drawTile(CCTilePosition(x, y), color);
         }
     }
-
-    debug->SendDebug();
 }
 
 sc2::UnitTypeID Util::GetUnitTypeIDFromName(const std::string & name, CCBot & bot)
