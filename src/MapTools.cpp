@@ -218,12 +218,8 @@ bool MapTools::isExplored(int tileX, int tileY) const
 {
     if (!isValidTile(tileX, tileY)) { return false; }
 
-#ifdef SC2API
     sc2::Visibility vis = m_bot.Observation()->GetVisibility(CCPosition(tileX + HALF_TILE, tileY + HALF_TILE));
     return vis == sc2::Visibility::Fogged || vis == sc2::Visibility::Visible;
-#else
-    return BWAPI::Broodwar->isExplored(tileX, tileY);
-#endif
 }
 
 bool MapTools::isVisible(CCPosition pos) const
