@@ -88,7 +88,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_REFINERY, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY, bot);
+			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_REFINERYRICH, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::TERRAN_SCV, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, bot);
 			break;
@@ -97,7 +97,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY, bot);//TODO Wrong
+			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, bot);
 			break;
@@ -106,7 +106,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY, bot);//TODO Wrong
+			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, bot);
 			break;

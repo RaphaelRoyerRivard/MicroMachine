@@ -137,11 +137,15 @@ bool UnitType::isRefinery() const
 #ifdef SC2API
     switch (m_type.ToType()) 
     {
-        case sc2::UNIT_TYPEID::TERRAN_REFINERY      : return true;
-		case sc2::UNIT_TYPEID::TERRAN_RICHREFINERY	: return true;//Rich terran refinery
-        case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR  : return true;
-        case sc2::UNIT_TYPEID::ZERG_EXTRACTOR       : return true;
-        default: return false;
+        case sc2::UNIT_TYPEID::TERRAN_REFINERY:
+		case sc2::UNIT_TYPEID::TERRAN_REFINERYRICH:
+		case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR:
+		case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH:
+		case sc2::UNIT_TYPEID::ZERG_EXTRACTOR:
+		case sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH:
+    		return true;
+        default:
+    		return false;
     }
 #else
     return m_type.isRefinery();

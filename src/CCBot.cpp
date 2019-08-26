@@ -1089,21 +1089,21 @@ const std::vector<Unit> CCBot::GetAllyGeyserUnits()
 		case CCRace::Protoss:
 		{
 			auto assimilator = GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR);//cannot be by reference, because its modified
-			auto& richAssimilator = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY);//TODO wrong
+			auto& richAssimilator = GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH);
 			assimilator.insert(assimilator.end(), richAssimilator.begin(), richAssimilator.end());
 			return assimilator;
 		}
 		case CCRace::Zerg:
 		{
 			auto extractor = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_EXTRACTOR);//cannot be by reference, because its modified
-			auto& richExtractor = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY);//TODO wrong
+			auto& richExtractor = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH);
 			extractor.insert(extractor.end(), richExtractor.begin(), richExtractor.end());
 			return extractor;
 		}
 		case CCRace::Terran:
 		{
 			auto refinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERY);//cannot be by reference, because its modified
-			auto& richRefinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY);
+			auto& richRefinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERYRICH);
 			refinery.insert(refinery.end(), richRefinery.begin(), richRefinery.end());
 			return refinery;
 		}
