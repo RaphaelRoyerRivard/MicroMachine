@@ -521,12 +521,8 @@ bool MapTools::canWalk(int tileX, int tileY)
         return false;
     }
 
-    /*assert(info.pathing_grid.data.size() == info.width * info.height);
-    unsigned char encodedPlacement = info.pathing_grid.data[pointI.x + ((info.height - 1) - pointI.y) * info.width];
-    bool decodedPlacement = encodedPlacement == 255 ? false : true;
-    return decodedPlacement;*/
 	const sc2::Point2D point(tileX, tileY);
-	Util::Pathable(point);
+	return Util::Pathable(point);
 }
 
 bool MapTools::isInCameraFrustum(int x, int y) const

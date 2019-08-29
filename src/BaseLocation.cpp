@@ -103,21 +103,12 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     // if it's not a start location, we need to calculate the depot position
     if (!isStartLocation())
     {
-        
-#ifdef SC2API
-        int offsetX = 0;
-        int offsetY = 0;
-#else
-        int offsetX = 1;
-        int offsetY = 1;
-#endif
-        
         // the position of the depot will be the closest spot we can build one from the resource center
         for (auto & tile : getClosestTiles())
         {
             // the build position will be up-left of where this tile is
-            // this means we are positioning the center of the resouce depot
-            CCTilePosition buildTile(tile.x - offsetX, tile.y - offsetY);
+            // this means we are positioning the center of the resource depot
+            CCTilePosition buildTile(tile.x, tile.y);
 
             if(m_bot.Buildings().getBuildingPlacer().canBuildDepotHere(tile.x, tile.y, m_minerals, m_geysers))
 			{
