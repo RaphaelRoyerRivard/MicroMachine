@@ -315,7 +315,7 @@ void WorkerManager::handleMules()
 				muleHarvests[id].second.first++;
 				if (muleHarvests[id].second.first == 9)//Maximum of 9 harvest per mule, the mules can't finish the 10th.
 				{
-					auto position = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getDepotPosition();
+					auto position = m_bot.Map().center();
 					mule.move(position);	
 					muleHarvests.erase(id);
 				}
