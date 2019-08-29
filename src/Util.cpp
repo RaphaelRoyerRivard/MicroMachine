@@ -2090,7 +2090,7 @@ void Util::CreateLog(CCBot & bot)
 {
 	time_t now = time(0);
 	char buf[80];
-	strftime(buf, sizeof(buf), "./Log/%Y-%m-%d--%H-%M-%S.log", localtime(&now));
+	strftime(buf, sizeof(buf), "./data/%Y-%m-%d--%H-%M-%S.log", localtime(&now));
 	file.open(buf);
 
 	std::stringstream races;

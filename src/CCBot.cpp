@@ -765,6 +765,7 @@ void CCBot::checkForConcede()
 	{
 		m_concede = true;
 		Actions()->SendChat("Pineapple");
+		Util::DebugLog(__FUNCTION__, "Concede", *this);
 	}
 }
 
