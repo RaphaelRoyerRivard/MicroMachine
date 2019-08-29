@@ -19,7 +19,7 @@ void BuildingManager::onStart()
 
 void BuildingManager::onFirstFrame()
 {
-	if (m_bot.GetPlayerRace(Players::Enemy) != sc2::Race::Protoss)
+	//if (m_bot.GetPlayerRace(Players::Enemy) != sc2::Race::Protoss)
 	{
 		//Ramp wall location
 		std::list<CCTilePosition> checkedTiles;
