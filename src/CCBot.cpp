@@ -765,6 +765,7 @@ void CCBot::checkForConcede()
 	{
 		m_concede = true;
 		Actions()->SendChat("Pineapple");
+		Util::DebugLog(__FUNCTION__, "Concede", *this);
 	}
 }
 
@@ -1089,21 +1090,21 @@ const std::vector<Unit> CCBot::GetAllyGeyserUnits()
 		case CCRace::Protoss:
 		{
 			auto assimilator = GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR);//cannot be by reference, because its modified
-			auto& richAssimilator = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY);//TODO wrong
+			auto& richAssimilator = GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH);
 			assimilator.insert(assimilator.end(), richAssimilator.begin(), richAssimilator.end());
 			return assimilator;
 		}
 		case CCRace::Zerg:
 		{
 			auto extractor = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_EXTRACTOR);//cannot be by reference, because its modified
-			auto& richExtractor = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY);//TODO wrong
+			auto& richExtractor = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH);
 			extractor.insert(extractor.end(), richExtractor.begin(), richExtractor.end());
 			return extractor;
 		}
 		case CCRace::Terran:
 		{
 			auto refinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERY);//cannot be by reference, because its modified
-			auto& richRefinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY);
+			auto& richRefinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERYRICH);
 			refinery.insert(refinery.end(), richRefinery.begin(), richRefinery.end());
 			return refinery;
 		}
@@ -1170,12 +1171,23 @@ const std::vector<CCPosition> & CCBot::GetEnemyStartLocations() const
     return m_enemyBaseLocations;
 }
 
-#ifdef SC2API
 void CCBot::OnError(const std::vector<sc2::ClientError> & client_errors, const std::vector<std::string> & protocol_errors)
 {
-    
+	for (const auto & clientError : client_errors)
+	{
+		const auto errorId = int(clientError);
+		std::stringstream err;
+		err << "Client error: " << std::to_string(errorId) << std::endl;
+		Util::DebugLog(__FUNCTION__, err.str(), *this);
+	}
+	
+	for (const auto & protocolError : protocol_errors)
+	{
+		std::stringstream err;
+		err << "Protocol error error: " << protocolError << std::endl;
+		Util::DebugLog(__FUNCTION__, err.str(), *this);
+	}
 }
-#endif
 
 void CCBot::StartProfiling(const std::string & profilerName)
 {

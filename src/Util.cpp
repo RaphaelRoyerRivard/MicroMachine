@@ -88,7 +88,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_REFINERY, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY, bot);
+			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_REFINERYRICH, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::TERRAN_SCV, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, bot);
 			break;
@@ -97,7 +97,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY, bot);//TODO Wrong
+			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, bot);
 			break;
@@ -106,7 +106,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_RICHREFINERY, bot);//TODO Wrong
+			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, bot);
 			break;
@@ -115,35 +115,35 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 	Util::gameInfo = &_gameInfo;
 
 	//assert(gameInfo->pathing_grid.data.size() == gameInfo->width * gameInfo->height);
-	_pathable = std::vector<std::vector<bool>>(gameInfo->width);
-	_placement = std::vector<std::vector<bool>>(gameInfo->width);
-	_terrainHeight = std::vector<std::vector<float>>(gameInfo->width);
+	m_pathable = std::vector<std::vector<bool>>(gameInfo->width);
+	m_placement = std::vector<std::vector<bool>>(gameInfo->width);
+	m_terrainHeight = std::vector<std::vector<float>>(gameInfo->width);
 	const auto pathingGrid = sc2::PathingGrid(*gameInfo);
 	const auto placementGrid = sc2::PlacementGrid(*gameInfo);
 	const auto heightMap = sc2::HeightMap(*gameInfo);
 	for (int x = 0; x < gameInfo->width; x++)
 	{
-		_pathable[x] = std::vector<bool>(gameInfo->height);
-		_placement[x] = std::vector<bool>(gameInfo->height);
-		_terrainHeight[x] = std::vector<float>(gameInfo->height);
+		m_pathable[x] = std::vector<bool>(gameInfo->height);
+		m_placement[x] = std::vector<bool>(gameInfo->height);
+		m_terrainHeight[x] = std::vector<float>(gameInfo->height);
 		for (int y = 0; y < gameInfo->height; y++)
 		{
 			auto point = sc2::Point2DI(x, y);
-			//auto index = x + ((gameInfo->height - 1) - y) * gameInfo->width;
+			auto index = x + y * gameInfo->width;
 			//Pathable
 			/*unsigned char encodedPathing = gameInfo->pathing_grid.data[index];
-			_pathable[x][y] = encodedPathing == 255 ? false : true;*/
-			_pathable[x][y] = pathingGrid.IsPathable(point);
+			m_pathable[x][y] = encodedPathing == 255 ? false : true;*/
+			m_pathable[x][y] = pathingGrid.IsPathable(point);
 
 			//Placement
 			/*unsigned char encodedPlacement = gameInfo->placement_grid.data[index];
-			_placement[x][y] = encodedPlacement == 255 ? true : false;*/
-			_placement[x][y] = placementGrid.IsPlacable(point);
-
+			m_placement[x][y] = encodedPlacement == 255 ? true : false;*/
+			m_placement[x][y] = placementGrid.IsPlacable(point);
+			
 			//Terrain height
 			/*unsigned char encodedHeight = gameInfo->terrain_height.data[index];
-			_terrainHeight[x][y] = -100.0f + 200.0f * float(encodedHeight) / 255.0f;*/
-			_terrainHeight[x][y] = heightMap.TerrainHeight(point);
+			m_terrainHeight[x][y] = float(encodedHeight) / 8.f - 15.875f;*/
+			m_terrainHeight[x][y] = heightMap.TerrainHeight(point);
 		}
 	}
 }
@@ -1761,7 +1761,7 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 			}
 		}
 	}
-	auto & areasUnderDetection = bot.Analyzer().GetAreasUnderDetection();
+	/*auto & areasUnderDetection = bot.Analyzer().GetAreasUnderDetection();
 	const int areaUnderDetectionSize = bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? 20 : 10;
 	for(auto & area : areasUnderDetection)
 	{
@@ -1769,7 +1769,7 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 		{
 			return true;
 		}
-	}
+	}*/
 	return false;
 }
 
@@ -1891,7 +1891,7 @@ bool Util::Pathable(const sc2::Point2D & point)
 	{
 		return false;
 	}
-	return _pathable[pointI.x][pointI.y];
+	return m_pathable[pointI.x][pointI.y];
 }
 
 bool Util::Placement(const sc2::Point2D & point)
@@ -1901,7 +1901,7 @@ bool Util::Placement(const sc2::Point2D & point)
 	{
 		return false;
 	}
-    return _placement[pointI.x][pointI.y];
+    return m_placement[pointI.x][pointI.y];
 }
 
 float Util::TerrainHeight(const sc2::Point2D & point)
@@ -1911,27 +1911,27 @@ float Util::TerrainHeight(const sc2::Point2D & point)
 	{
 		return 0.0f;
 	}
-	return _terrainHeight[pointI.x][pointI.y];
+	return m_terrainHeight[pointI.x][pointI.y];
 }
 
 float Util::TerrainHeight(const CCTilePosition pos)
 {
-	return _terrainHeight[pos.x][pos.y];
+	return m_terrainHeight[pos.x][pos.y];
 }
 
 float Util::TerrainHeight(const int x, const int y)
 {
-	return _terrainHeight[x][y];
+	return m_terrainHeight[x][y];
 }
 
-void Util::VisualizeGrids(const sc2::ObservationInterface * obs, sc2::DebugInterface * debug) 
+void Util::VisualizeGrids(CCBot& bot) 
 {
-    const sc2::GameInfo& info = obs->GetGameInfo();
+    const sc2::GameInfo& info = bot.Observation()->GetGameInfo();
 
-    sc2::Point2D camera = obs->GetCameraPos();
+    sc2::Point2D camera = bot.Observation()->GetCameraPos();
     for (float x = camera.x - 8.0f; x < camera.x + 8.0f; ++x) 
     {
-        for (float y = camera.y - 8.0f; y < camera.y + 8.0f; ++y) 
+        for (float y = camera.y - 8.0f; y < camera.y + 8.0f; ++y)
         {
             // Draw in the center of each 1x1 cell
             sc2::Point2D point(x + 0.5f, y + 0.5f);
@@ -1941,11 +1941,9 @@ void Util::VisualizeGrids(const sc2::ObservationInterface * obs, sc2::DebugInter
             //bool pathable = Pathable(info, sc2::Point2D(x, y));
 
             sc2::Color color = placable ? sc2::Colors::Green : sc2::Colors::Red;
-            debug->DebugSphereOut(sc2::Point3D(point.x, point.y, height + 0.5f), 0.4f, color);
+			bot.Map().drawTile(CCTilePosition(x, y), color);
         }
     }
-
-    debug->SendDebug();
 }
 
 sc2::UnitTypeID Util::GetUnitTypeIDFromName(const std::string & name, CCBot & bot)
@@ -2092,7 +2090,7 @@ void Util::CreateLog(CCBot & bot)
 {
 	time_t now = time(0);
 	char buf[80];
-	strftime(buf, sizeof(buf), "./Log/%Y-%m-%d--%H-%M-%S.log", localtime(&now));
+	strftime(buf, sizeof(buf), "./data/%Y-%m-%d--%H-%M-%S.log", localtime(&now));
 	file.open(buf);
 
 	std::stringstream races;

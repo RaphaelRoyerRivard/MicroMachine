@@ -19,7 +19,7 @@ void BuildingManager::onStart()
 
 void BuildingManager::onFirstFrame()
 {
-	if (m_bot.GetPlayerRace(Players::Enemy) != sc2::Race::Protoss)
+	//if (m_bot.GetPlayerRace(Players::Enemy) != sc2::Race::Protoss)
 	{
 		//Ramp wall location
 		std::list<CCTilePosition> checkedTiles;
@@ -127,12 +127,12 @@ void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::l
 			float rightHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x, currentTile.y + 1);
 			float leftHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x, currentTile.y - 1);
 
-			bool topIsLower = topHeightDiff >= 0.5f && 1.f >= topHeightDiff;
-			bool downIsLower = downHeightDiff >= 0.5f && 1.f >= downHeightDiff;
-			bool rightIsLower = rightHeightDiff >= 0.5f && 1.f >= rightHeightDiff;
-			bool leftIsLower = leftHeightDiff >= 0.5f && 1.f >= leftHeightDiff;
+			bool topIsLower = topHeightDiff >= 0.2f && 0.3f >= topHeightDiff;
+			bool downIsLower = downHeightDiff >= 0.2f && 0.3f >= downHeightDiff;
+			bool rightIsLower = rightHeightDiff >= 0.2f && 0.3f >= rightHeightDiff;
+			bool leftIsLower = leftHeightDiff >= 0.2f && 0.3f >= leftHeightDiff;
 
-			//Ramps tiles are 1 lower
+			//Ramps tiles are 0.25 lower
 			if (topIsLower || downIsLower || rightIsLower || leftIsLower)
 			{
 				rampTiles.push_back(currentTile);

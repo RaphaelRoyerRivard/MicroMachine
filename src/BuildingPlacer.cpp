@@ -204,7 +204,6 @@ bool BuildingPlacer::canBuildHereWithSpace(int bx, int by, const Building & b, i
 		default:
 			break;
 	}
-	m_bot.StopProfiling("0.1 AddonLagCheck");
     return true;
 }
 

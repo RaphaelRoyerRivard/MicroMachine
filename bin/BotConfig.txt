@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.5.5",
+        "BotVersion"                : "1.6.1",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "Random",
+        "EnemyRace"                 : "Zerg",
+        "MapFile"                   : "KairosJunctionLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -125,7 +125,7 @@
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
-        "DrawBaseLocationInfo"      : true,
+        "DrawBaseLocationInfo"      : false,
         "DrawBaseTiles"             : false,
         "DrawStartingRamp"		    : true,
         "DrawWall"		   			: true,
@@ -136,22 +136,22 @@
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
-        "DrawSquadInfo"             : true,
+        "DrawSquadInfo"             : false,
         "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : false,
+        "DrawReservedBuildingTiles" : true,
         "DrawUnitPowerInfo"         : false,
-        "DrawHarassInfo"            : false,
+        "DrawHarassInfo"            : true,
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : true,
-        "DrawInfluenceMaps"         : true,
+        "DrawInfluenceMaps"         : false,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
-		"DrawDamageHealthRatio"		: true,
+		"DrawDamageHealthRatio"		: false,
         "DrawRangedUnitActions"     : false,
         "DrawResourcesProximity"    : false,
-        "DrawCombatInformation"     : true
+        "DrawCombatInformation"     : false
     },
     
     "Modules" :

@@ -23,11 +23,7 @@
 #include "Unit.h"
 #include "RepairStationManager.h"
 
-#ifdef SC2API
 class CCBot : public sc2::Agent 
-#else
-class CCBot
-#endif
 {
 	struct Profiler
 	{
@@ -102,16 +98,13 @@ class CCBot
 	void checkForConcede();
 	void drawProfilingInfo();
 
-#ifdef SC2API
     void OnError(const std::vector<sc2::ClientError> & client_errors, 
                  const std::vector<std::string> & protocol_errors = {}) override;
-#endif
 
 public:
 
 	CCBot(std::string botVersion = "");
 
-#ifdef SC2API
 	void OnGameFullStart() override;
     void OnGameStart() override;
 	void OnGameEnd() override;
@@ -124,10 +117,6 @@ public:
 	void OnNydusDetected() override;
 	void OnUnitEnterVision(const sc2::Unit*) override;
 	void OnNuclearLaunchDetected() override;
-#else
-    void OnGameStart();
-    void OnStep();
-#endif
 
           BotConfig & Config();
           WorkerManager & Workers();
