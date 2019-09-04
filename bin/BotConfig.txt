@@ -131,7 +131,7 @@
         "DrawWall"		   			: true,
         "DrawTileInfo"              : false,
         "DrawWalkableSectors"       : false,
-        "DrawBuildableSectors"      : false,
+        "DrawBuildableSectors"      : true,
         "DrawScoutInfo"             : false,
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
