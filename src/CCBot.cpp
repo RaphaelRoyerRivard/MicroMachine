@@ -851,7 +851,9 @@ void CCBot::IssueCheats()
 	const int player1 = 1;
 	const int player2 = 2;
 	const auto mapCenter = Map().center();
+	const auto offset = Util::Normalized(mapCenter - m_startLocation) * 12;
 	//Debug()->DebugGiveAllTech();
+	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
 
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player2, 2);
@@ -862,10 +864,10 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + Util::Normalized(mapCenter - m_startLocation) * 12, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, m_startLocation + Util::Normalized(mapCenter - m_startLocation) * 12, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation, player1, 5);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player1, 3);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + offset, player2, 15);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player1, 2);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation, player1, 10);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 20);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation, 1, 8);

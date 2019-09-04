@@ -427,7 +427,7 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 		}
 		m_bot.StopProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
 		m_bot.StartProfiling("0.10.4.4.2.2        saveDetectedArea");
-		if (unit.getUnitPtr()->cloak == sc2::Unit::Cloaked && !Util::IsPositionUnderDetection(unit.getPosition(), m_bot))
+		if (unit.getUnitPtr()->cloak == sc2::Unit::CloakedAllied && !Util::IsPositionUnderDetection(unit.getPosition(), m_bot))
 		{
 			m_areasUnderDetection.push_back({ unit.getPosition(), m_bot.GetGameLoop() });
 		}

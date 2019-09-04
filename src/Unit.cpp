@@ -264,11 +264,7 @@ int Unit::getWeaponCooldown() const
 bool Unit::isCloaked() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
-#ifdef SC2API
-    return m_unit->cloak;
-#else
-    return m_unit->isCloaked();
-#endif
+    return m_unit->cloak != sc2::Unit::NotCloaked && m_unit->cloak != sc2::Unit::CloakedUnknown;
 }
 
 bool Unit::isFlying() const
