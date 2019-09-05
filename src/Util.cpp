@@ -2072,7 +2072,7 @@ void Util::DisplayError(const std::string & error, const std::string & errorCode
 	std::stringstream ss;
 	ss << (isCritical ? "[CRITICAL ERROR]" : "[ERROR]") << " : " << error << " | " << errorCode;
 
-	if (allowDebug || isCritical)//Not tournament or critical
+	if (allowDebug && isCritical)
 	{
 		bot.Actions()->SendChat(ss.str());
 	}
