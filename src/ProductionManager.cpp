@@ -631,7 +631,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 
 #ifndef NO_UNITS
-					if (!m_queue.contains(MetaTypeEnum::Banshee))
+					if (/*isTechStarted(MetaTypeEnum::BansheeCloak) &&*/ !m_queue.contains(MetaTypeEnum::Banshee))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 					}
@@ -1533,11 +1533,11 @@ bool ProductionManager::isTechQueuedOrStarted(const MetaType & type)
 
 bool ProductionManager::isTechStarted(const MetaType & type)
 {
-	return std::find(incompletUpgradesMetatypes.begin(), incompletUpgradesMetatypes.end(), type) != incompletUpgradesMetatypes.end()
+	return std::find(incompleteUpgradesMetatypes.begin(), incompleteUpgradesMetatypes.end(), type) != incompleteUpgradesMetatypes.end()
 		|| m_bot.Strategy().isUpgradeCompleted(type.getUpgrade());
 }
 
-bool ProductionManager::isTechFinished(const MetaType & type)
+bool ProductionManager::isTechFinished(const MetaType & type) const
 {
 	return m_bot.Strategy().isUpgradeCompleted(type.getUpgrade());
 }
@@ -1550,17 +1550,17 @@ void ProductionManager::queueTech(const MetaType & type)
 
 void ProductionManager::validateUpgradesProgress()
 {
-	if(incompletUpgrades.empty())
+	if(incompleteUpgrades.empty())
 	{
 		return;
 	}
 
 	std::vector<MetaType> toRemove;
-	for (std::pair<const MetaType, Unit> & upgrade : incompletUpgrades)
+	for (std::pair<const MetaType, Unit> & upgrade : incompleteUpgrades)
 	{
 		bool found = false;
 		float progress = 0.f;
-		auto unit = upgrade.second;
+		auto & unit = upgrade.second;
 		if (!unit.isValid() || !unit.getUnitPtr()->is_alive)
 		{
 			toRemove.push_back(upgrade.first);
@@ -1579,14 +1579,13 @@ void ProductionManager::validateUpgradesProgress()
 			case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:
 				if (!unitPtr->orders.empty())
 				{
-					found = true;// Skip because the buildAbility is, for example, RESEARCH_TERRANSHIPWEAPONS = 3699 instead of RESEARCH_TERRANSHIPWEAPONSLEVEL1 = 861
 					progress = unitPtr->orders.at(0).progress;
 					found = true;// Skip because the buildAbility is, for example, RESEARCH_TERRANSHIPWEAPONS = 3699 instead of RESEARCH_TERRANSHIPWEAPONSLEVEL1 = 861
 				}
 				break;
 
 			default:
-				auto buildAbilityId = m_bot.Data(upgrade.first.getUpgrade()).buildAbility;
+				const auto buildAbilityId = m_bot.Data(upgrade.first.getUpgrade()).buildAbility;
 				for (auto & order : unitPtr->orders)
 				{
 					if (order.ability_id == buildAbilityId)
@@ -1601,7 +1600,7 @@ void ProductionManager::validateUpgradesProgress()
 		if (found)
 		{
 			//check if upgrade is no longer progressing (cancelled)
-			if (incompletUpgradesProgress.at(upgrade.first) >= progress)
+			if (incompleteUpgradesProgress.at(upgrade.first) >= progress)
 			{
 				toRemove.push_back(upgrade.first);
 				Util::DebugLog(__FUNCTION__, "upgrade canceled " + upgrade.first.getName(), m_bot);
@@ -1613,20 +1612,20 @@ void ProductionManager::validateUpgradesProgress()
 			}
 			else
 			{
-				incompletUpgradesProgress.at(upgrade.first) = progress;
+				incompleteUpgradesProgress.at(upgrade.first) = progress;
 			}
 		}
 		else
 		{
 			toRemove.push_back(upgrade.first);
-			Util::DebugLog(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName(), m_bot);
+			Util::DebugLog(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName() + ". Unit has " + (unitPtr->orders.empty() ? "no order" : "order of ID " + unitPtr->orders[0].ability_id.to_string()), m_bot);
 		}
 	}
 	for (auto & remove : toRemove)
 	{
-		incompletUpgrades.erase(remove);
-		incompletUpgradesMetatypes.remove(remove);
-		incompletUpgradesProgress.erase(remove);
+		incompleteUpgrades.erase(remove);
+		incompleteUpgradesMetatypes.remove(remove);
+		incompleteUpgradesProgress.erase(remove);
 	}
 }
 
@@ -1668,7 +1667,7 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		return false;
 	}
 
-	bool result;
+	bool result = false;
 	// if we're dealing with a building
 	if (item.type.isBuilding())
 	{
@@ -1700,9 +1699,9 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 			Util::DisplayError("Trying to start an already started upgrade.", "0x00000006", m_bot);
 		}
 #endif
-		incompletUpgrades.insert(std::make_pair(item.type, producer));
-		incompletUpgradesMetatypes.push_back(item.type);
-		incompletUpgradesProgress.insert(std::make_pair(item.type, 0.f));
+		incompleteUpgrades.insert(std::make_pair(item.type, producer));
+		incompleteUpgradesMetatypes.push_back(item.type);
+		incompleteUpgradesProgress.insert(std::make_pair(item.type, 0.f));
 		Util::DebugLog(__FUNCTION__, "upgrade starting " + item.type.getName(), m_bot);
 		result = true;
 	}
@@ -1907,9 +1906,9 @@ void ProductionManager::drawProductionInformation()
 	{
 		ss << underConstruction.type.getName() << "\n";
 	}
-	for (auto & incompletUpgrade : incompletUpgrades)
+	for (auto & incompleteUpgrade : incompleteUpgrades)
 	{
-		ss << incompletUpgrade.first.getName() << "\n";
+		ss << incompleteUpgrade.first.getName() << "\n";
 	}
 	m_bot.Map().drawTextScreen(0.01f, 0.4f, ss.str(), CCColor(255, 255, 0));	
 }

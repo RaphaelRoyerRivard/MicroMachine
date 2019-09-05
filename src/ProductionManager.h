@@ -17,9 +17,9 @@ class ProductionManager
 	bool m_initialBuildOrderFinished;
 	bool m_ccShouldBeInQueue = false;
 	Unit rampSupplyDepotWorker;
-	std::list<MetaType> incompletUpgradesMetatypes;
-	std::map<MetaType, Unit> incompletUpgrades;
-	std::map<MetaType, float> incompletUpgradesProgress;
+	std::list<MetaType> incompleteUpgradesMetatypes;
+	std::map<MetaType, Unit> incompleteUpgrades;
+	std::map<MetaType, float> incompleteUpgradesProgress;
 	std::list<std::list<MetaType>> possibleUpgrades;//Does not include tech
 	std::list<std::list<MetaType>> reversePossibleUpgrades;//Does not include tech
 	std::map<std::string, MetaType> alternateUpgrades;//Tech do not have alternate upgrades
@@ -67,7 +67,7 @@ public:
 	int getExtraGas();
 	bool isTechQueuedOrStarted(const MetaType & type);
 	bool isTechStarted(const MetaType & type);
-	bool isTechFinished(const MetaType & type);
+	bool isTechFinished(const MetaType & type) const;
 	void queueTech(const MetaType & type);
 	bool queueUpgrade(const MetaType & type, bool balanceUpgrades, bool ifFinishedTryHigherLevel);
 	bool meetsReservedResources(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);

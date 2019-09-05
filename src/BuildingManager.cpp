@@ -749,7 +749,7 @@ void BuildingManager::constructAssignedBuildings()
 					else
 					{
 						b.builderUnit.build(b.type, b.finalPosition);
-						if (b.type.isResourceDepot() && b.buildCommandGiven)//if ressource depot position is blocked by a unit, send elsewhere
+						if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
 						{
 							if (m_bot.GetMinerals() >= b.type.mineralPrice())
 							{
