@@ -162,7 +162,7 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 			addUnit = Util::DistSq(enemyUnit, m_order.getPosition()) < m_order.getRadius() * m_order.getRadius();
 		} 
 		// if the order is to harass, we care about every unit around each of our units
-		if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Harass || (m_order.getType() == SquadOrderTypes::Defend && !addUnit))
+		if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Harass || m_order.getType() == SquadOrderTypes::Scout || (m_order.getType() == SquadOrderTypes::Defend && !addUnit))
 		{
 			for (auto & unit : m_units)
 			{
