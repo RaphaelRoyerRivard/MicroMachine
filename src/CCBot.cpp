@@ -116,7 +116,7 @@ void CCBot::OnStep()
 	clearDeadUnits();
 	StopProfiling("0.3 clearDeadUnits");
 
-	checkForConcede();
+	//checkForConcede();
 
 	StartProfiling("0.4 m_map.onFrame");
 	m_map.onFrame();
