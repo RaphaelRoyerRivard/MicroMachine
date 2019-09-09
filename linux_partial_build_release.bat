@@ -9,7 +9,7 @@ cd build
 
 # Generate a Makefile.
 # Use 'cmake -DCMAKE_BUILD_TYPE=Debug ../' if debuginfo is needed
-cmake ../
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O3" ../
 
 # Build.
 make

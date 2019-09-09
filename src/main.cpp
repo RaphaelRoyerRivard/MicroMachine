@@ -65,11 +65,6 @@ void handler(int sig) {
 	// print out all the frames to stderr
 	fprintf(stderr, "Error: signal %d:\n", sig);
 
-#ifdef _WINDOWS
-	StackWalker sw;
-	sw.ShowCallstack();
-#endif
-
 	exit(1);
 }
 
