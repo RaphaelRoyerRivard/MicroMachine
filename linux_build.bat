@@ -17,7 +17,6 @@ if [ ! -d "sc2-libvoxelbot" ] ; then
 	git clone --recursive https://github.com/RaphaelRoyerRivard/sc2-libvoxelbot
 fi
 cd sc2-libvoxelbot
-git submodule update --force --recursive --init --remote
 mkdir build
 cd build
 cmake ../
