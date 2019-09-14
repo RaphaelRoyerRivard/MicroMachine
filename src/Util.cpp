@@ -670,6 +670,16 @@ float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, bool isFl
 	return bot.Commander().Combat().getGroundFromAirCombatInfluence(tile);
 }
 
+float Util::PathFinding::GetGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot)
+{
+	return bot.Commander().Combat().getGroundFromGroundCloakedCombatInfluence(tile);
+}
+
+float Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot)
+{
+	return bot.Commander().Combat().getGroundFromGroundCloakedCombatInfluence(tile) != 0.f;
+}
+
 bool Util::PathFinding::HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
 {
 	return GetEffectInfluenceOnTile(node->position, unit, bot) != 0.f;
