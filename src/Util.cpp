@@ -1768,15 +1768,15 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 			}
 		}
 	}
-	/*auto & areasUnderDetection = bot.Analyzer().GetAreasUnderDetection();
-	const int areaUnderDetectionSize = bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? 20 : 10;
+	auto & areasUnderDetection = bot.Analyzer().GetAreasUnderDetection();
+	const int areaUnderDetectionSize = 10;
 	for(auto & area : areasUnderDetection)
 	{
 		if(Util::DistSq(position, area.first) < areaUnderDetectionSize * areaUnderDetectionSize)
 		{
 			return true;
 		}
-	}*/
+	}
 	return false;
 }
 
