@@ -1,7 +1,7 @@
 #include "CombatAnalyzer.h"
 #include "CCBot.h"
 
-uint32_t AREA_UNDER_DETECTION_DURATION = 732;		// around 30s
+const uint32_t AREA_UNDER_DETECTION_DURATION = 112;		// 5s
 
 CombatAnalyzer::CombatAnalyzer(CCBot & bot) 
 	: m_bot(bot)
@@ -11,8 +11,6 @@ CombatAnalyzer::CombatAnalyzer(CCBot & bot)
 void CombatAnalyzer::onStart()
 {
 	m_bot.Commander();
-	if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss)//Observers
-		AREA_UNDER_DETECTION_DURATION *= 2;
 }
 
 void CombatAnalyzer::onFrame()

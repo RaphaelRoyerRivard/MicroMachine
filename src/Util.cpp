@@ -1,8 +1,5 @@
 #include "Util.h"
 #include "CCBot.h"
-#include <libvoxelbot/combat/simulator.h>
-#include <libvoxelbot/combat/combat_environment.h>
-#include <libvoxelbot/combat/combat_upgrades.h>
 
 const float EPSILON = 1e-5;
 const float CLIFF_MIN_HEIGHT_DIFFERENCE = 1.f;
@@ -668,6 +665,16 @@ float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, bool isFl
 	if (fromGround)
 		return bot.Commander().Combat().getGroundFromGroundCombatInfluence(tile);
 	return bot.Commander().Combat().getGroundFromAirCombatInfluence(tile);
+}
+
+float Util::PathFinding::GetGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot)
+{
+	return bot.Commander().Combat().getGroundFromGroundCloakedCombatInfluence(tile);
+}
+
+float Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot)
+{
+	return bot.Commander().Combat().getGroundFromGroundCloakedCombatInfluence(tile) != 0.f;
 }
 
 bool Util::PathFinding::HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
@@ -1761,15 +1768,15 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 			}
 		}
 	}
-	/*auto & areasUnderDetection = bot.Analyzer().GetAreasUnderDetection();
-	const int areaUnderDetectionSize = bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? 20 : 10;
+	auto & areasUnderDetection = bot.Analyzer().GetAreasUnderDetection();
+	const int areaUnderDetectionSize = 10;
 	for(auto & area : areasUnderDetection)
 	{
 		if(Util::DistSq(position, area.first) < areaUnderDetectionSize * areaUnderDetectionSize)
 		{
 			return true;
 		}
-	}*/
+	}
 	return false;
 }
 

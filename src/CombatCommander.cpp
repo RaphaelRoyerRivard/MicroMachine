@@ -85,7 +85,7 @@ bool CombatCommander::isSquadUpdateFrame()
 
 void CombatCommander::clearYamatoTargets()
 {
-	for(auto & targetPair : m_yamatoTargets)
+	for(auto & targetPair : m_yamatoTargets)	// m_yamatoTargets is a std::map<const sc2::Unit*, std::map<const sc2::Unit*, uint32_t>>
 	{
 		const auto target = targetPair.first;
 		if (!target || !target->is_alive)
@@ -192,6 +192,7 @@ void CombatCommander::initInfluenceMaps()
 	m_airFromAirCombatInfluenceMap.resize(mapWidth);
 	m_groundEffectInfluenceMap.resize(mapWidth);
 	m_airEffectInfluenceMap.resize(mapWidth);
+	m_groundFromGroundCloakedCombatInfluenceMap.resize(mapWidth);
 	m_blockedTiles.resize(mapWidth);
 	for(size_t x = 0; x < mapWidth; ++x)
 	{
@@ -201,6 +202,7 @@ void CombatCommander::initInfluenceMaps()
 		auto& airFromAirInfluenceMapRow = m_airFromAirCombatInfluenceMap[x];
 		auto& groundEffectInfluenceMapRow = m_groundEffectInfluenceMap[x];
 		auto& airEffectInfluenceMapRow = m_airEffectInfluenceMap[x];
+		auto& groundFromGroundCloakedCombatInfluenceMapRow = m_groundFromGroundCloakedCombatInfluenceMap[x];
 		auto& blockedTilesRow = m_blockedTiles[x];
 		groundFromGroundInfluenceMapRow.resize(mapHeight);
 		groundFromAirInfluenceMapRow.resize(mapHeight);
@@ -208,6 +210,7 @@ void CombatCommander::initInfluenceMaps()
 		airFromAirInfluenceMapRow.resize(mapHeight);
 		groundEffectInfluenceMapRow.resize(mapHeight);
 		airEffectInfluenceMapRow.resize(mapHeight);
+		groundFromGroundCloakedCombatInfluenceMapRow.resize(mapHeight);
 		blockedTilesRow.resize(mapHeight);
 		for (size_t y = 0; y < mapHeight; ++y)
 		{
@@ -217,6 +220,7 @@ void CombatCommander::initInfluenceMaps()
 			airFromAirInfluenceMapRow[y] = 0;
 			groundEffectInfluenceMapRow[y] = 0;
 			airEffectInfluenceMapRow[y] = 0;
+			groundFromGroundCloakedCombatInfluenceMapRow[y] = 0;
 			blockedTilesRow[y] = false;
 		}
 	}
@@ -235,12 +239,14 @@ void CombatCommander::resetInfluenceMaps()
 		std::vector<float> & airFromAirInfluenceMap = m_airFromAirCombatInfluenceMap[x];
 		std::vector<float> & groundEffectInfluenceMap = m_groundEffectInfluenceMap[x];
 		std::vector<float> & airEffectInfluenceMap = m_airEffectInfluenceMap[x];
+		std::vector<float> & groundFromGroundCloakedCombatInfluenceMap = m_groundFromGroundCloakedCombatInfluenceMap[x];
 		std::fill(groundFromGroundInfluenceMap.begin(), groundFromGroundInfluenceMap.end(), 0.f);
 		std::fill(groundFromAirInfluenceMap.begin(), groundFromAirInfluenceMap.end(), 0.f);
 		std::fill(airFromGroundInfluenceMap.begin(), airFromGroundInfluenceMap.end(), 0.f);
 		std::fill(airFromAirInfluenceMap.begin(), airFromAirInfluenceMap.end(), 0.f);
 		std::fill(groundEffectInfluenceMap.begin(), groundEffectInfluenceMap.end(), 0.f);
 		std::fill(airEffectInfluenceMap.begin(), airEffectInfluenceMap.end(), 0.f);
+		std::fill(groundFromGroundCloakedCombatInfluenceMap.begin(), groundFromGroundCloakedCombatInfluenceMap.end(), 0.f);
 
 		if (resetBlockedTiles)
 		{
@@ -281,7 +287,7 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 			{
 				const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
 				const float radius = Util::GetSpecialCaseRange(enemyUnit.getAPIUnitType(), sc2::Weapon::TargetType::Ground);
-				updateInfluenceMap(dps, radius, 1.f, enemyUnit.getPosition(), true, true, true);
+				updateInfluenceMap(dps, radius, 1.f, enemyUnit.getPosition(), true, true, true, false);
 			}
 			else
 			{
@@ -395,9 +401,9 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 		for(auto & pos : effect.positions)
 		{
 			if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Air)
-				updateInfluenceMap(dps, radius, 1.f, pos, false, true, true);
+				updateInfluenceMap(dps, radius, 1.f, pos, false, true, true, false);
 			if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Ground)
-				updateInfluenceMap(dps, radius, 1.f, pos, true, true, true);
+				updateInfluenceMap(dps, radius, 1.f, pos, true, true, true, false);
 		}
 	}
 }
@@ -423,10 +429,10 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	if (!ground && enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_TEMPEST)
 		range += 2;
 	const float speed = std::max(1.5f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
-	updateInfluenceMap(dps, range, speed, enemyUnit.getPosition(), ground, !enemyUnit.isFlying(), false);
+	updateInfluenceMap(dps, range, speed, enemyUnit.getPosition(), ground, !enemyUnit.isFlying(), false, enemyUnit.getUnitPtr()->cloak == sc2::Unit::Cloaked);
 }
 
-void CombatCommander::updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect)
+void CombatCommander::updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect, bool cloaked)
 {
 	const float totalRange = range + speed;
 
@@ -453,6 +459,8 @@ void CombatCommander::updateInfluenceMap(float dps, float range, float speed, co
 			if (distance > range)
 				multiplier = std::max(0.f, (speed - (distance - range)) / speed);	//value is linearly interpolated in the speed buffer zone
 			influenceMap[x][y] += dps * multiplier;
+			if (fromGround && cloaked)
+				m_groundFromGroundCloakedCombatInfluenceMap[x][y] += dps * multiplier;
 		}
 	}
 }
@@ -587,10 +595,11 @@ void CombatCommander::updateWorkerFleeSquad()
 	{
 		const CCTilePosition tile = Util::GetTilePosition(worker.getPosition());
 		const bool flyingThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), false, m_bot);
+		const bool groundCloakedThreat = Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(tile, m_bot);
 		const bool groundThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), true, m_bot);
 		const bool injured = worker.getHitPointsPercentage() < m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT * 100;
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
-		if ((flyingThreat && !groundThreat)
+		if (((flyingThreat && !groundThreat) || groundCloakedThreat)
 			|| Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
 			|| (groundThreat && injured && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))
 		{
@@ -1806,6 +1815,13 @@ float CombatCommander::getAirEffectInfluence(CCTilePosition tilePosition) const
 	if (!m_bot.Map().isValidTile(tilePosition))
 		return 0.f;
 	return m_airEffectInfluenceMap[tilePosition.x][tilePosition.y];
+}
+
+float CombatCommander::getGroundFromGroundCloakedCombatInfluence(CCTilePosition tilePosition) const
+{
+	if (!m_bot.Map().isValidTile(tilePosition))
+		return 0.f;
+	return m_groundFromGroundCloakedCombatInfluenceMap[tilePosition.x][tilePosition.y];
 }
 
 bool CombatCommander::isTileBlocked(int x, int y)

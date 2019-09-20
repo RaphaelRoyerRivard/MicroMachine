@@ -65,6 +65,17 @@ void handler(int sig) {
 	// print out all the frames to stderr
 	fprintf(stderr, "Error: signal %d:\n", sig);
 
+#ifdef _WINDOWS
+	StackWalker sw;
+	sw.ShowCallstack();
+#else
+	void *arr[30];
+	size_t size;
+	// get void*'s for all entries on the stack
+	size = backtrace(arr, 30);
+	backtrace_symbols_fd(arr, size, STDERR_FILENO);
+#endif
+
 	exit(1);
 }
 

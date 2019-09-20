@@ -92,7 +92,7 @@ float Unit::getHitPointsPercentage() const
 {
 	BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API
-	if (m_unit->health == 0)
+	if (m_unit->health == 0 || m_unit->health_max == 0)
 	{
 		return 0;
 	}

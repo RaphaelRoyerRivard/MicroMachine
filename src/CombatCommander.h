@@ -23,6 +23,7 @@ class CombatCommander
 	std::vector<std::vector<float>> m_airFromAirCombatInfluenceMap;
 	std::vector<std::vector<float>> m_groundEffectInfluenceMap;
 	std::vector<std::vector<float>> m_airEffectInfluenceMap;
+	std::vector<std::vector<float>> m_groundFromGroundCloakedCombatInfluenceMap;
 	std::vector<std::vector<bool>> m_blockedTiles;
 	std::vector<CCPosition> m_enemyScans;
 	std::map<sc2::ABILITY_ID, std::map<const sc2::Unit *, uint32_t>> m_nextAvailableAbility;
@@ -79,7 +80,7 @@ class CombatCommander
 	void			updateGroundInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateAirInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
-	void			updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect);
+	void			updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect, bool cloaked);
 	void			updateBlockedTilesWithUnit(const Unit& unit);
 	void			drawCombatInformation();
 	void			drawInfluenceMaps();
@@ -116,6 +117,7 @@ public:
 	float getAirFromAirCombatInfluence(CCTilePosition tilePosition) const;
 	float getGroundEffectInfluence(CCTilePosition tilePosition) const;
 	float getAirEffectInfluence(CCTilePosition tilePosition) const;
+	float getGroundFromGroundCloakedCombatInfluence(CCTilePosition tilePosition) const;
 	bool isTileBlocked(int x, int y);
 	bool hasEnoughVikingsAgainstTempests() const { return m_hasEnoughVikingsAgainstTempests; }
 	bool winAttackSimulation() const { return m_winAttackSimulation; }

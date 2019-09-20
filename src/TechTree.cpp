@@ -396,7 +396,7 @@ const TypeData & TechTree::getData(const UnitType & type)
 {
     if (m_unitTypeData.find(type) == m_unitTypeData.end())
     {
-        std::cout << "WARNING: Unit type not found: " << type.getName() << " (" << type.getAPIUnitType() << ")" << "\n";
+        std::cout << "WARNING: Unit type not found: " << sc2::UnitTypeToName(type.getAPIUnitType()) << " (" << type.getAPIUnitType() << ")" << "\n";
 		m_unitTypeData[UnitType(sc2::UNIT_TYPEID(type.getAPIUnitType()), m_bot)] = { sc2::Race::Random, 0, 0, 0, 0, true, false, false, false, false, false, false, 0, 0,{ UnitType() },{ UnitType() },{} };
         return m_unitTypeData[UnitType(sc2::UNIT_TYPEID(type.getAPIUnitType()), m_bot)];
     }

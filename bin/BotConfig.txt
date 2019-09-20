@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.6.4",
+        "BotVersion"                : "1.6.5",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "WintersGateLE.SC2Map",
+        "EnemyRace"                 : "Terran",
+        "MapFile"                   : "DiscoBloodbathLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -33,11 +33,13 @@
     
     "RandomMaps":
     [
-        "CyberForestLE.SC2Map",
-        "KairosJunctionLE.SC2Map",
-        "KingsCoveLE.SC2Map",
-        "Acropolis.SC2Map",
-        "NewRepugnancyLE.SC2Map"
+        "WorldofSleepersLE.SC2Map",
+        "AcropolisLE.SC2Map",
+        "WintersGateLE.SC2Map",
+        "ThunderbirdLE.SC2Map",
+        "TritonLE.SC2Map",
+        "EphemeronLE.SC2Map",
+        "DiscoBloodbathLE.SC2Map"
     ],
 	
 	"AllRandomMaps":
@@ -76,7 +78,12 @@
 		"OldSunshine.SC2Map",
 		"Treachery.SC2Map",
 		"Triton.SC2Map",
-		"NewRepugnancyLE.SC2Map"
+        "WorldofSleepersLE.SC2Map",
+        "AcropolisLE.SC2Map",
+        "WintersGateLE.SC2Map",
+        "ThunderbirdLE.SC2Map",
+        "TritonLE.SC2Map",
+        "EphemeronLE.SC2Map"
 	],
         
     "Micro" :

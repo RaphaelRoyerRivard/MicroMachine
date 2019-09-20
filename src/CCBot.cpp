@@ -474,8 +474,14 @@ void CCBot::setUnits()
 			}
 			if(!m_strategy.enemyHasInvisible())
 			{
+				if(unitptr->cloak == sc2::Unit::Cloaked)
+				{
+					m_strategy.setEnemyHasInvisible(true);
+					Actions()->SendChat("I see you are also attracted to the dark arts of invisibility.");
+					Util::DebugLog(__FUNCTION__, "Invis unit detected: " + unit.getType().getName(), *this);
+				}
 				// If the opponent has built a building that can produce invis units, we should produce Anti Invis units
-				if (unit.getType().isBuilding())
+				else if (unit.getType().isBuilding())
 				{
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{
@@ -867,10 +873,11 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + offset, player2, 15);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player1, 2);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation, player1, 10);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 20);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation, 1, 8);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation + offset, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, m_startLocation + offset, player2, 1);
 
 	//Workers
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, Players::Enemy, 10);
