@@ -1,5 +1,6 @@
 #include "Util.h"
 #include "CCBot.h"
+#include "libvoxelbot/combat/combat_upgrades.h"
 
 const float EPSILON = 1e-5;
 const float CLIFF_MIN_HEIGHT_DIFFERENCE = 1.f;
