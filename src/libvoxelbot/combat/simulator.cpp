@@ -449,7 +449,7 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
             vector<int> meleeUnitAttackCount(g2.size());
 
             if (debug) {
-                cout << "Max meleee attackers: " << surround.maxMeleeAttackers << " " << surround.maxAttackersPerDefender << " num units: " << g1.size() << endl;
+                cout << "Max melee attackers: " << surround.maxMeleeAttackers << " " << surround.maxAttackersPerDefender << " num units: " << g1.size() << endl;
             }
 
             for (size_t i = 0; i < g1.size(); i++) {
@@ -474,7 +474,10 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                         for (size_t j = 0; j < g1.size(); j++) {
                             size_t index = (j + offset) % g1.size();
                             auto& other = *g1[index];
-                            if (index != i && !hasBeenHealed[index] && other.health > 0 && other.health < other.health_max && contains(getUnitData(other.type).attributes, Attribute::Biological)) {
+							auto healed = hasBeenHealed[index];
+							auto needHealing = other.health > 0 && other.health < other.health_max;
+							auto bio = contains(getUnitData(other.type).attributes, Attribute::Biological);
+                            if (index != i && !healed && needHealing && bio) {
                                 other.modifyHealth(HEALING_PER_NORMAL_SPEED_SECOND * dt);
                                 hasBeenHealed[index] = true;
                                 changed = true;
