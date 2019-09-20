@@ -17,6 +17,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Activate dynamic linking to allow the backtrace to find symbol info
-SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "-rdynamic")  
+SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "-rdynamic")
 
 add_subdirectory("src")
