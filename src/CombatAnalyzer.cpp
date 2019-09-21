@@ -1,7 +1,7 @@
 #include "CombatAnalyzer.h"
 #include "CCBot.h"
 
-uint32_t AREA_UNDER_DETECTION_DURATION = 732;		// around 30s
+const uint32_t AREA_UNDER_DETECTION_DURATION = 112;		// 5s
 
 CombatAnalyzer::CombatAnalyzer(CCBot & bot) 
 	: m_bot(bot)
@@ -11,8 +11,6 @@ CombatAnalyzer::CombatAnalyzer(CCBot & bot)
 void CombatAnalyzer::onStart()
 {
 	m_bot.Commander();
-	if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss)//Observers
-		AREA_UNDER_DETECTION_DURATION *= 2;
 }
 
 void CombatAnalyzer::onFrame()
@@ -427,7 +425,7 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 		}
 		m_bot.StopProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
 		m_bot.StartProfiling("0.10.4.4.2.2        saveDetectedArea");
-		if (unit.getUnitPtr()->cloak == sc2::Unit::Cloaked && !Util::IsPositionUnderDetection(unit.getPosition(), m_bot))
+		if (unit.getUnitPtr()->cloak == sc2::Unit::CloakedAllied && !Util::IsPositionUnderDetection(unit.getPosition(), m_bot))
 		{
 			m_areasUnderDetection.push_back({ unit.getPosition(), m_bot.GetGameLoop() });
 		}

@@ -92,7 +92,7 @@ float Unit::getHitPointsPercentage() const
 {
 	BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API
-	if (m_unit->health == 0)
+	if (m_unit->health == 0 || m_unit->health_max == 0)
 	{
 		return 0;
 	}
@@ -264,11 +264,7 @@ int Unit::getWeaponCooldown() const
 bool Unit::isCloaked() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
-#ifdef SC2API
-    return m_unit->cloak;
-#else
-    return m_unit->isCloaked();
-#endif
+    return m_unit->cloak != sc2::Unit::NotCloaked && m_unit->cloak != sc2::Unit::CloakedUnknown;
 }
 
 bool Unit::isFlying() const

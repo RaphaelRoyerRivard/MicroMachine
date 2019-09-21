@@ -116,7 +116,7 @@ void CCBot::OnStep()
 	clearDeadUnits();
 	StopProfiling("0.3 clearDeadUnits");
 
-	checkForConcede();
+	//checkForConcede();
 
 	StartProfiling("0.4 m_map.onFrame");
 	m_map.onFrame();
@@ -474,8 +474,14 @@ void CCBot::setUnits()
 			}
 			if(!m_strategy.enemyHasInvisible())
 			{
+				if(unitptr->cloak == sc2::Unit::Cloaked)
+				{
+					m_strategy.setEnemyHasInvisible(true);
+					Actions()->SendChat("I see you are also attracted to the dark arts of invisibility.");
+					Util::DebugLog(__FUNCTION__, "Invis unit detected: " + unit.getType().getName(), *this);
+				}
 				// If the opponent has built a building that can produce invis units, we should produce Anti Invis units
-				if (unit.getType().isBuilding())
+				else if (unit.getType().isBuilding())
 				{
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{
@@ -851,7 +857,9 @@ void CCBot::IssueCheats()
 	const int player1 = 1;
 	const int player2 = 2;
 	const auto mapCenter = Map().center();
+	const auto offset = Util::Normalized(mapCenter - m_startLocation) * 12;
 	//Debug()->DebugGiveAllTech();
+	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
 
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player2, 2);
@@ -862,13 +870,14 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + Util::Normalized(mapCenter - m_startLocation) * 12, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, m_startLocation + Util::Normalized(mapCenter - m_startLocation) * 12, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation, player1, 5);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player1, 3);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + offset, player2, 15);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player1, 2);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation, player1, 10);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 20);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation, 1, 8);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation + offset, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, m_startLocation + offset, player2, 1);
 
 	//Workers
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, Players::Enemy, 10);

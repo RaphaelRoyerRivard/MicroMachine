@@ -606,7 +606,10 @@ void MapTools::draw() const
                 drawTile(x, y, color);
 				std::string terrainHeight(16, '\0');
 				std::snprintf(&terrainHeight[0], terrainHeight.size(), "%.2f", m_bot.Map().terrainHeight(x, y));
-				m_bot.Map().drawText(CCPosition(x, y), terrainHeight, color);
+				std::stringstream ss;
+            	ss << std::to_string(x) << "," << std::to_string(y) << "\n" << terrainHeight;
+				//m_bot.Map().drawText(CCPosition(x, y), terrainHeight, color);
+				m_bot.Map().drawText(CCPosition(x, y), ss.str().c_str(), color);
             }
         }
     }

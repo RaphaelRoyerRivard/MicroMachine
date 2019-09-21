@@ -510,13 +510,12 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 		// If our unit is almost in range of threat, use the influence map to find the best flee path
 		const float dist = Util::Dist(rangedUnit->pos, threat->pos);
-		const float threatRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
+		const float threatRange = Util::getThreatRange(rangedUnit, threat, m_bot);
 		if (dist < threatRange + 0.5f)
 		{
 			useInfluenceMap = true;
 			break;
 		}
-
 		summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
 	}
 
@@ -1168,7 +1167,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	}
 
 	// Check if unit can fight cloaked
-	if(rangedUnit->energy >= 5 && (rangedUnit->cloak == sc2::Unit::Cloaked || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ShouldBansheeCloak(rangedUnit, false))))
+	if(rangedUnit->energy >= 5 && (rangedUnit->cloak == sc2::Unit::CloakedAllied || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ShouldBansheeCloak(rangedUnit, false))))
 	{
 		// If the unit is at an undetected position
 		if (!Util::IsPositionUnderDetection(rangedUnit->pos, m_bot))
@@ -1474,9 +1473,9 @@ bool RangedManager::ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruise
 	if (m_bot.Strategy().enemyHasProtossHighTechAir())
 		return false;
 
-	const auto distSq = Util::DistSq(battlecruiser->pos, goal);
+	/*const auto distSq = Util::DistSq(battlecruiser->pos, goal);
 	if (distSq >= 50 * 50)
-		return TeleportBattlecruiser(battlecruiser, goal);
+		return TeleportBattlecruiser(battlecruiser, goal);*/
 
 	return false;
 }

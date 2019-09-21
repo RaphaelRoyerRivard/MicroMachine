@@ -120,20 +120,30 @@ void BuildingManager::FindRampTiles(std::list<CCTilePosition> &rampTiles, std::l
 		}
 		else
 		{
-			float tileHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y);
-
-			float topHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x + 1, currentTile.y);
-			float downHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x - 1, currentTile.y);
-			float rightHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x, currentTile.y + 1);
-			float leftHeightDiff = tileHeight - m_bot.Map().terrainHeight(currentTile.x, currentTile.y - 1);
-
-			bool topIsLower = topHeightDiff >= 0.2f && 0.3f >= topHeightDiff;
-			bool downIsLower = downHeightDiff >= 0.2f && 0.3f >= downHeightDiff;
-			bool rightIsLower = rightHeightDiff >= 0.2f && 0.3f >= rightHeightDiff;
-			bool leftIsLower = leftHeightDiff >= 0.2f && 0.3f >= leftHeightDiff;
-
-			//Ramps tiles are 0.25 lower
-			if (topIsLower || downIsLower || rightIsLower || leftIsLower)
+			const auto tileHeight = m_bot.Map().terrainHeight(currentTile.x, currentTile.y);
+			auto slightlyLowerDiagonalNeighbors = 0;
+			auto slightlyLowerAdjacentNeighbors = 0;
+			for (int x = -1; x <= 1; ++x)
+			{
+				for (int y = -1; y <= 1; ++y)
+				{
+					if (x == 0 && y == 0)
+						continue;
+					const auto neighborTile = CCTilePosition(currentTile.x + x, currentTile.y + y);
+					if (!m_bot.Map().isWalkable(neighborTile))
+						continue;
+					const auto neighborHeightDiff = tileHeight - m_bot.Map().terrainHeight(neighborTile);
+					if(neighborHeightDiff >= 0.24f && neighborHeightDiff <= 0.26f || neighborHeightDiff >= 1.99f && neighborHeightDiff <= 2.01f)
+					{
+						const auto diagonal = x != 0 && y != 0;
+						if (diagonal)
+							++slightlyLowerDiagonalNeighbors;
+						else
+							++slightlyLowerAdjacentNeighbors;
+					}
+				}
+			}
+			if (slightlyLowerDiagonalNeighbors == 1 || slightlyLowerAdjacentNeighbors == 2)
 			{
 				rampTiles.push_back(currentTile);
 			}
@@ -186,39 +196,21 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 	std::vector<CCTilePosition> tilesToBlock;
 	for (auto & tile : rampTiles)
 	{
-		CCTilePosition below = CCTilePosition(tile.x - 1, tile.y);
-		CCTilePosition above = CCTilePosition(tile.x + 1, tile.y);
-		CCTilePosition left = CCTilePosition(tile.x, tile.y - 1);
-		CCTilePosition right = CCTilePosition(tile.x, tile.y + 1);
-		if (m_bot.Map().isBuildable(below) && m_bot.Map().isWalkable(below) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(below))
-		{//we need to block this tile
-			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), below) == tilesToBlock.end())
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
 			{
-				tilesToBlock.push_back(below);
-			}
-		}
-		
-		if (m_bot.Map().isBuildable(above) && m_bot.Map().isWalkable(above) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(above))
-		{//we need to block this tile
-			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), above) == tilesToBlock.end())
-			{
-				tilesToBlock.push_back(above);
-			}
-		}
-
-		if (m_bot.Map().isBuildable(left) && m_bot.Map().isWalkable(left) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(left))
-		{//we need to block this tile
-			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), left) == tilesToBlock.end())
-			{
-				tilesToBlock.push_back(left);
-			}
-		}
-
-		if (m_bot.Map().isBuildable(right) && m_bot.Map().isWalkable(right) && m_bot.Map().terrainHeight(tile) == m_bot.Map().terrainHeight(right))
-		{//we need to block this tile
-			if (std::find(tilesToBlock.begin(), tilesToBlock.end(), right) == tilesToBlock.end())
-			{
-				tilesToBlock.push_back(right);
+				if (x == 0 && y == 0 || x != 0 && y != 0)
+					continue;	//only adjacent tiles are parsed
+				const auto neighbor = CCTilePosition(tile.x + x, tile.y + y);
+				if (m_bot.Map().isBuildable(neighbor) && m_bot.Map().isWalkable(neighbor) && m_bot.Map().terrainHeight(neighbor) >= m_bot.Map().terrainHeight(tile))
+				{
+					//we need to block this tile
+					if (std::find(tilesToBlock.begin(), tilesToBlock.end(), neighbor) == tilesToBlock.end())
+					{
+						tilesToBlock.push_back(neighbor);
+					}
+				}
 			}
 		}
 	}
@@ -749,7 +741,7 @@ void BuildingManager::constructAssignedBuildings()
 					else
 					{
 						b.builderUnit.build(b.type, b.finalPosition);
-						if (b.type.isResourceDepot() && b.buildCommandGiven)//if ressource depot position is blocked by a unit, send elsewhere
+						if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
 						{
 							if (m_bot.GetMinerals() >= b.type.mineralPrice())
 							{

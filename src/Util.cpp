@@ -1,16 +1,14 @@
 #include "Util.h"
 #include "CCBot.h"
-#include <libvoxelbot/combat/simulator.h>
-#include <libvoxelbot/combat/combat_environment.h>
-#include <libvoxelbot/combat/combat_upgrades.h>
+#include "libvoxelbot/combat/combat_upgrades.h"
 
 const float EPSILON = 1e-5;
 const float CLIFF_MIN_HEIGHT_DIFFERENCE = 1.f;
 const float CLIFF_MAX_HEIGHT_DIFFERENCE = 2.5f;
 const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
-const float HARASS_PATHFINDING_TILE_BASE_COST = 0.1f;
+const float HARASS_PATHFINDING_TILE_BASE_COST = 1.f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
-const float PATHFINDING_TURN_COST = 5.f;
+const float PATHFINDING_TURN_COST = 3.f;
 const float PATHFINDING_TILE_DOWN_RAMP_COST = 5.f;
 const float PATHFINDING_SECONDARY_GOAL_COST = 10.f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
@@ -668,6 +666,16 @@ float Util::PathFinding::GetCombatInfluenceOnTile(CCTilePosition tile, bool isFl
 	if (fromGround)
 		return bot.Commander().Combat().getGroundFromGroundCombatInfluence(tile);
 	return bot.Commander().Combat().getGroundFromAirCombatInfluence(tile);
+}
+
+float Util::PathFinding::GetGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot)
+{
+	return bot.Commander().Combat().getGroundFromGroundCloakedCombatInfluence(tile);
+}
+
+float Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot)
+{
+	return bot.Commander().Combat().getGroundFromGroundCloakedCombatInfluence(tile) != 0.f;
 }
 
 bool Util::PathFinding::HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot)
@@ -1761,15 +1769,15 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 			}
 		}
 	}
-	/*auto & areasUnderDetection = bot.Analyzer().GetAreasUnderDetection();
-	const int areaUnderDetectionSize = bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? 20 : 10;
+	auto & areasUnderDetection = bot.Analyzer().GetAreasUnderDetection();
+	const int areaUnderDetectionSize = 10;
 	for(auto & area : areasUnderDetection)
 	{
 		if(Util::DistSq(position, area.first) < areaUnderDetectionSize * areaUnderDetectionSize)
 		{
 			return true;
 		}
-	}*/
+	}
 	return false;
 }
 
@@ -2072,7 +2080,7 @@ void Util::DisplayError(const std::string & error, const std::string & errorCode
 	std::stringstream ss;
 	ss << (isCritical ? "[CRITICAL ERROR]" : "[ERROR]") << " : " << error << " | " << errorCode;
 
-	if (allowDebug || isCritical)//Not tournament or critical
+	if (allowDebug && isCritical)
 	{
 		bot.Actions()->SendChat(ss.str());
 	}
