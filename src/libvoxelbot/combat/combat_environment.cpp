@@ -237,7 +237,7 @@ float WeaponInfo::getDPS(UNIT_TYPEID target, float modifier) const {
 
 	if (dpsCache.find(unsigned(target)) == dpsCache.end()) {
 		cerr << "CombatSimulator error: dpsCache does not contain unit of type " << unsigned(target) << " named " << UnitTypeToName(target) << endl;
-		dpsCache.insert_or_assign(unsigned(target), 0);
+		dpsCache[unsigned(target)] = 0;
     }
 
     // TODO: Modifier ignores speed upgrades
@@ -265,10 +265,9 @@ WeaponInfo::WeaponInfo(const Weapon* weapon, UNIT_TYPEID type, const CombatUpgra
 
     auto& unitTypes = getUnitTypes();
     for (size_t i = 0; i < unitTypes.size(); i++) {
-        dpsCache.insert_or_assign(i, calculateDPS(type, UNIT_TYPEID(i), *weapon, upgrades, targetUpgrades));
+        dpsCache[i] = calculateDPS(type, UNIT_TYPEID(i), *weapon, upgrades, targetUpgrades);
     }
 }
-
 
 UnitCombatInfo::UnitCombatInfo(UNIT_TYPEID type, const CombatUpgrades& upgrades, const CombatUpgrades& targetUpgrades) {
     auto& data = getUnitData(type);
