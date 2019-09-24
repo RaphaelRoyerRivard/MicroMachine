@@ -150,7 +150,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		const float flyingDetectorModifier = target->is_flying && UnitType::isDetector(target->unit_type) ? 2.f : 1.f;
 		const float minionModifier = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR ? 0.1f : 1.f;	//units that can be respawned should be less prioritized
 		const auto & yamatoTargets = m_bot.Commander().Combat().getYamatoTargets();
-		const float yamatoTargetModifier = yamatoTargets.find(target) != yamatoTargets.end() ? 0.1f : 1.f;
+		const float yamatoTargetModifier = yamatoTargets.find(target->tag) != yamatoTargets.end() ? 0.1f : 1.f;
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
 		return (targetDps + unitDps - healthValue + proximityValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier;
 	}

@@ -1508,7 +1508,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		const float threatDistance = Util::DistSq(battlecruiser->pos, threat->pos);
 		const float threatHp = threat->health + threat->shield;
 		unsigned yamatos = 0;
-		const auto & it = yamatoTargets.find(threat);
+		const auto & it = yamatoTargets.find(threat->tag);
 		if (it != yamatoTargets.end())
 			yamatos = it->second.size();
 		// TODO find a way of targetting multiple yamato onto the same target if it has a lot of HP
@@ -1528,7 +1528,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_YAMATOGUN, target, true, BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT);
 		PlanAction(battlecruiser, action);
 		queryYamatoAvailability.insert(battlecruiser);
-		yamatoTargets[target][battlecruiser] = currentFrame + BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT + 20;
+		yamatoTargets[target->tag][battlecruiser->tag] = currentFrame + BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT + 20;
 		return true;
 	}
 
