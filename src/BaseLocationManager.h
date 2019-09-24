@@ -38,6 +38,7 @@ public:
     const std::vector<const BaseLocation *> & getStartingBaseLocations() const;
     const std::set<BaseLocation *> & getOccupiedBaseLocations(int player) const;
 	BaseLocation * getClosestOccupiedBaseLocationForUnit(const Unit unit) const;
+	BaseLocation * getFarthestOccupiedBaseLocation() const;
     const BaseLocation * getPlayerStartingBaseLocation(int player) const;
 	void FixNullPlayerStartingBaseLocation();
 	int getBaseCount(int player, bool isCompleted = false) const;

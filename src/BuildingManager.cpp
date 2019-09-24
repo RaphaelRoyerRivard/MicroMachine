@@ -1520,7 +1520,7 @@ void BuildingManager::castBuildingsAbilities()
 
 			CCTilePosition orbitalPosition;
 			const sc2::Unit* closestMineral = nullptr;
-			auto bases = m_bot.Bases().getBaseLocations();//Sorted by closest to enemy base
+			auto & bases = m_bot.Bases().getBaseLocations();//Sorted by closest to enemy base
 			for (auto base : bases)
 			{
 				if (!base->isOccupiedByPlayer(Players::Self))
@@ -1529,7 +1529,7 @@ void BuildingManager::castBuildingsAbilities()
 				if (base->isUnderAttack())
 					continue;
 
-				auto depot = base->getResourceDepot();
+				auto & depot = base->getResourceDepot();
 				if (!depot.isCompleted())
 					continue;
 
