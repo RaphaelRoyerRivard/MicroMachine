@@ -85,28 +85,30 @@ bool CombatCommander::isSquadUpdateFrame()
 
 void CombatCommander::clearYamatoTargets()
 {
-	for(auto & targetPair : m_yamatoTargets)	// m_yamatoTargets is a std::map<const sc2::Unit*, std::map<const sc2::Unit*, uint32_t>>
+	for(auto & targetPair : m_yamatoTargets)
 	{
-		const auto target = targetPair.first;
+		const auto targetTag = targetPair.first;
+		const auto target = m_bot.Observation()->GetUnit(targetTag);
 		if (!target || !target->is_alive)
 		{
-			m_yamatoTargets.erase(target);
+			m_yamatoTargets.erase(targetTag);
 			continue;
 		}
 
 		auto & battlecruiserPairs = targetPair.second;
 		for (const auto & battlecruiserPair : battlecruiserPairs)
 		{
-			const auto battlecruiser = battlecruiserPair.first;
+			const auto battlecruiserTag = battlecruiserPair.first;
+			const auto battlecruiser = m_bot.Observation()->GetUnit(battlecruiserTag);
 			const auto finishFrame = battlecruiserPair.second;
 			if(!battlecruiser || !battlecruiser->is_alive || m_bot.GetCurrentFrame() >= finishFrame)
 			{
-				battlecruiserPairs.erase(battlecruiser);
+				battlecruiserPairs.erase(battlecruiserTag);
 			}
 		}
 
 		if(battlecruiserPairs.empty())
-			m_yamatoTargets.erase(target);
+			m_yamatoTargets.erase(targetTag);
 	}
 }
 

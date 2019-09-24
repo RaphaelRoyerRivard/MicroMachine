@@ -30,7 +30,7 @@ class CombatCommander
 	std::map<sc2::ABILITY_ID, float> m_abilityCastingRanges;
 	std::set<const sc2::Unit *> m_unitsBeingRepaired;
 	std::set<const sc2::Unit *> m_queryYamatoAvailability;
-	std::map<const sc2::Unit *, std::map<const sc2::Unit *, uint32_t>> m_yamatoTargets;	// <target, <bc, frame>>
+	std::map<const sc2::Tag, std::map<const sc2::Tag, uint32_t>> m_yamatoTargets;	// <target, <bc, frame>>
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnCastedFrame;
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnTargets;	// <cyclone, <target, frame>>
 	std::set<sc2::Tag> m_newCyclones;
@@ -101,7 +101,7 @@ public:
 	std::map<sc2::ABILITY_ID, float> & getAbilityCastingRanges() { return m_abilityCastingRanges; }
 	std::set<const sc2::Unit *> & getUnitsBeingRepaired() { return m_unitsBeingRepaired; }
 	std::set<const sc2::Unit *> & getQueryYamatoAvailability() { return m_queryYamatoAvailability; }
-	std::map<const sc2::Unit *, std::map<const sc2::Unit *, uint32_t>> & getYamatoTargets() { return m_yamatoTargets; }
+	std::map<const sc2::Tag, std::map<const sc2::Tag, uint32_t>> & getYamatoTargets() { return m_yamatoTargets; }
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> & getLockOnCastedFrame() { return m_lockOnCastedFrame; }
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> & getLockOnTargets() { return m_lockOnTargets; }
 	std::set<sc2::Tag> & getNewCyclones() { return m_newCyclones; }
