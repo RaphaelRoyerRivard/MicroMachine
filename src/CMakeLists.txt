@@ -5,7 +5,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "-rdynamic")
 
 # All the source files for the bot.
-file(GLOB BOT_SOURCES "*.cpp" "*.h" "*.hpp")
+file(GLOB BOT_SOURCES "*.cpp" "*.h" "*.hpp" "libvoxelbot/*/*.cpp" "libvoxelbot/*/*.h")
 
 # Enable compilation of the SC2 version of the bot.
 add_definitions(-DSC2API)
@@ -22,7 +22,7 @@ add_definitions(-DSC2API)
 # )
 
 # include_directories(SYSTEM "${SC2Api_INCLUDE_DIRS}" "${LIBVOXELBOT_PATH}")
-include_directories(SYSTEM "${SC2Api_INCLUDE_DIRS}" "${PROJECT_SOURCE_DIR}")
+include_directories(SYSTEM "${SC2Api_INCLUDE_DIRS}" "~/Projects/MicroMachine")
 
 # Show more warnings at compiletime.
 if (MSVC)
@@ -34,6 +34,7 @@ endif ()
 # Create the executable.
 add_executable(MicroMachine ${BOT_SOURCES})
 # target_link_libraries(MicroMachine ${SC2Api_LIBRARIES} "${LIBVOXELBOT_PATH}/build/liblibvoxelbot.a")
+target_link_libraries(MicroMachine ${SC2Api_LIBRARIES})
 
 if (APPLE)
     target_link_libraries(MicroMachine "-framework Carbon")
