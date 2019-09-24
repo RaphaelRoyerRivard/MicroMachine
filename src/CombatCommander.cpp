@@ -579,12 +579,19 @@ void CombatCommander::updateIdleSquad()
 
 	if (m_bot.GetCurrentFrame() % 24 == 0)	// Every second
 	{
+		auto idlePosition = m_bot.GetStartLocation();
+		const BaseLocation* farthestBase = m_bot.Bases().getFarthestOccupiedBaseLocation();
+		if(farthestBase)
+		{
+			const auto vectorAwayFromBase = Util::Normalized(farthestBase->getResourceDepot().getPosition() - Util::GetPosition(farthestBase->getCenterOfMinerals()));
+			idlePosition = farthestBase->getResourceDepot().getPosition() + vectorAwayFromBase * 5.f;
+		}
+		
 		for (auto & combatUnit : idleSquad.getUnits())
 		{
-			const BaseLocation* closestBase = m_bot.Bases().getClosestOccupiedBaseLocationForUnit(combatUnit);
-			if(closestBase != nullptr && Util::DistSq(combatUnit, closestBase->getPosition()) > 5.f * 5.f)
+			if (Util::DistSq(combatUnit, idlePosition) > 5.f * 5.f)
 			{
-				Micro::SmartMove(combatUnit.getUnitPtr(), closestBase->getPosition(), m_bot);
+				Micro::SmartMove(combatUnit.getUnitPtr(), idlePosition, m_bot);
 			}
 		}
 	}
