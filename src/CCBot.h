@@ -75,6 +75,7 @@ class CCBot : public sc2::Agent
 	std::mutex m_command_mutex;
 	bool m_concede;
 	bool m_saidHallucinationLine;
+	std::string m_botVersion;
 
 	//KeyState
 	bool key1 = false;
