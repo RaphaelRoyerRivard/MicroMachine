@@ -85,30 +85,40 @@ bool CombatCommander::isSquadUpdateFrame()
 
 void CombatCommander::clearYamatoTargets()
 {
-	for(auto & targetPair : m_yamatoTargets)
+	for(auto it = m_yamatoTargets.begin(); it != m_yamatoTargets.end();)
 	{
+		auto & targetPair = *it;
 		const auto targetTag = targetPair.first;
 		const auto target = m_bot.Observation()->GetUnit(targetTag);
 		if (!target || !target->is_alive)
 		{
-			m_yamatoTargets.erase(targetTag);
+			it = m_yamatoTargets.erase(it);
 			continue;
 		}
 
 		auto & battlecruiserPairs = targetPair.second;
-		for (const auto & battlecruiserPair : battlecruiserPairs)
+		for (auto it2 = battlecruiserPairs.begin(); it2 != battlecruiserPairs.end();)
 		{
+			const auto & battlecruiserPair = *it2;
 			const auto battlecruiserTag = battlecruiserPair.first;
 			const auto battlecruiser = m_bot.Observation()->GetUnit(battlecruiserTag);
 			const auto finishFrame = battlecruiserPair.second;
 			if(!battlecruiser || !battlecruiser->is_alive || m_bot.GetCurrentFrame() >= finishFrame)
 			{
-				battlecruiserPairs.erase(battlecruiserTag);
+				it2 = battlecruiserPairs.erase(it2);
+				continue;
 			}
+			
+			++it2;
 		}
 
-		if(battlecruiserPairs.empty())
-			m_yamatoTargets.erase(targetTag);
+		if (battlecruiserPairs.empty())
+		{
+			it = m_yamatoTargets.erase(it);
+			continue;
+		}
+
+		++it;
 	}
 }
 
