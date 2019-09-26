@@ -445,6 +445,7 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
             // Only a single healer can heal a given unit at a time
             // (holds for medivacs and shield batteries at least)
             vector<bool> hasBeenHealed(g1.size());
+			fill(hasBeenHealed.begin(), hasBeenHealed.end(), false);
             // How many melee units that have attacked a particular enemy so far
             vector<int> meleeUnitAttackCount(g2.size());
 
@@ -474,6 +475,7 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                         for (size_t j = 0; j < g1.size(); j++) {
                             size_t index = (j + offset) % g1.size();
                             auto& other = *g1[index];
+							index = index >= g1.size() || index < 0 ? 0 : index;
 							auto healed = hasBeenHealed[index];
 							auto needHealing = other.health > 0 && other.health < other.health_max;
 							auto bio = contains(getUnitData(other.type).attributes, Attribute::Biological);
@@ -496,6 +498,7 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                         const float ENERGY_USE_PER_SHIELD = 1.0f / 3.0f;
                         for (size_t j = 0; j < g1.size(); j++) {
                             size_t index = (j + offset) % g1.size();
+							index = index >= g1.size() || index < 0 ? 0 : index;
                             auto& other = *g1[index];
                             if (index != i && !hasBeenHealed[index] && other.health > 0 && other.shield < other.shield_max) {
                                 float delta = min(min(other.shield_max - other.shield, SHIELDS_PER_NORMAL_SPEED_SECOND * dt), unit.energy / ENERGY_USE_PER_SHIELD);

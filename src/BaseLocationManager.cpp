@@ -496,6 +496,11 @@ const std::set<BaseLocation *> & BaseLocationManager::getOccupiedBaseLocations(i
     return m_occupiedBaseLocations.at(player);
 }
 
+int BaseLocationManager::getFreeBaseLocationCount() const
+{
+	return m_baseLocationPtrs.size() - getOccupiedBaseLocations(Players::Self).size() - getOccupiedBaseLocations(Players::Enemy).size();
+}
+
 BaseLocation * BaseLocationManager::getClosestOccupiedBaseLocationForUnit(const Unit unit) const
 {
 	BaseLocation* closestBase = nullptr;
