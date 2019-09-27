@@ -71,13 +71,19 @@ void handler(int sig) {
 	sw.ShowCallstack();
 #else
 	// https://panthema.net/2008/0901-stacktrace-demangled/
-	void *arr[30];
-	size_t size;
-	// get void*'s for all entries on the stack
-	size = backtrace(arr, 30);
+	// storage array for stack trace address data
+	void* addrlist[max_frames + 1];
+
+	// retrieve current stack addresses
+	int addrlen = backtrace(addrlist, sizeof(addrlist) / sizeof(void*));
+
+	if (addrlen == 0) {
+		fprintf(out, "  <empty, possibly corrupt>\n");
+		return;
+	}
 	// resolve addresses into strings containing "filename(function+address)",
 	// this array must be free()-ed
-	char** symbollist = backtrace_symbols_fd(arr, size, STDERR_FILENO);
+	char** symbollist = backtrace_symbols_fd(addrlist, size);
 	// allocate string which will be filled with the demangled function name
 	size_t funcnamesize = 256;
 	char* funcname = (char*)malloc(funcnamesize);
