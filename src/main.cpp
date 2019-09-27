@@ -78,12 +78,12 @@ void handler(int sig) {
 	int addrlen = backtrace(addrlist, sizeof(addrlist) / sizeof(void*));
 
 	if (addrlen == 0) {
-		std::cout << "  <empty, possibly corrupt>" << std::endl;
+		std::cerr << "  <empty, possibly corrupt>" << std::endl;
 		return;
 	}
 	// resolve addresses into strings containing "filename(function+address)",
 	// this array must be free()-ed
-	char** symbollist = backtrace_symbols_fd(addrlist, addrlen);
+	char** symbollist = backtrace_symbols_fd(addrlist, addrlen, STDERR_FILENO);
 	// allocate string which will be filled with the demangled function name
 	size_t funcnamesize = 256;
 	char* funcname = (char*)malloc(funcnamesize);
@@ -121,18 +121,18 @@ void handler(int sig) {
 				char* ret = abi::__cxa_demangle(begin_name, funcname, &funcnamesize, &status);
 				if (status == 0) {
 					funcname = ret; // use possibly realloc()-ed string
-					std::cout << "  " << symbollist[i] << " : " << funcname << "+" << begin_offset << std::endl;
+					std::cerr << "  " << symbollist[i] << " : " << funcname << "+" << begin_offset << std::endl;
 				}
 				else {
 					// demangling failed. Output function name as a C function with
 					// no arguments.
-					std::cout << "  " << symbollist[i] << " : " << begin_name << "()+" << begin_offset << std::endl;
+					std::cerr << "  " << symbollist[i] << " : " << begin_name << "()+" << begin_offset << std::endl;
 				}
 			}
 			else
 			{
 				// couldn't parse the line? print the whole line.
-				std::cout << "  " << symbollist[i] << std::endl;
+				std::cerr << "  " << symbollist[i] << std::endl;
 			}
 		}
 
