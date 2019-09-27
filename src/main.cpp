@@ -83,7 +83,7 @@ void handler(int sig) {
 	}
 	// resolve addresses into strings containing "filename(function+address)",
 	// this array must be free()-ed
-	char** symbollist = backtrace_symbols_fd(addrlist, size);
+	char** symbollist = backtrace_symbols_fd(addrlist, addrlen);
 	// allocate string which will be filled with the demangled function name
 	size_t funcnamesize = 256;
 	char* funcname = (char*)malloc(funcnamesize);
