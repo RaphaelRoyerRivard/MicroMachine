@@ -78,7 +78,7 @@ void handler(int sig) {
 	int addrlen = backtrace(addrlist, sizeof(addrlist) / sizeof(void*));
 
 	if (addrlen == 0) {
-		std::cerr << "  <empty, possibly corrupt>" << std::endl;
+		fprintf(stderr, "  <empty, possibly corrupt>\n");
 		return;
 	}
 	// resolve addresses into strings containing "filename(function+address)",
@@ -121,18 +121,18 @@ void handler(int sig) {
 				char* ret = abi::__cxa_demangle(begin_name, funcname, &funcnamesize, &status);
 				if (status == 0) {
 					funcname = ret; // use possibly realloc()-ed string
-					std::cerr << "  " << symbollist[i] << " : " << funcname << "+" << begin_offset << std::endl;
+					fprintf(stderr, "  %s : %s+%s\n", symbollist[i], funcname, begin_offset);
 				}
 				else {
 					// demangling failed. Output function name as a C function with
 					// no arguments.
-					std::cerr << "  " << symbollist[i] << " : " << begin_name << "()+" << begin_offset << std::endl;
+					fprintf(stderr, "  %s : %s()+%s\n", symbollist[i], begin_name, begin_offset);
 				}
 			}
 			else
 			{
 				// couldn't parse the line? print the whole line.
-				std::cerr << "  " << symbollist[i] << std::endl;
+				fprintf(stderr, "  %s\n", symbollist[i]);
 			}
 		}
 
