@@ -14,9 +14,12 @@ void ProductionManager::setBuildOrder(const BuildOrder & buildOrder)
 {
     m_queue.clearAll();
 
+	bool firstBarracks = false;
     for (size_t i(0); i<buildOrder.size(); ++i)
     {
-        m_queue.queueAsLowestPriority(buildOrder[i], true);
+		if (buildOrder[i].getUnitType() == MetaTypeEnum::Barracks.getUnitType())
+			firstBarracks = true;
+        m_queue.queueAsLowestPriority(buildOrder[i], firstBarracks);
     }
 }
 
@@ -257,6 +260,26 @@ void ProductionManager::manageBuildOrderQueue()
 			m_bot.StopProfiling("2.2.1     fixBuildOrderDeadlock");
 			continue;
 		}
+
+    	// Proxy barracks
+    	// TODO We need to check earlier if we can build the Barracks. The blocking queue prevents us to premove the worker
+		/*if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks)
+		{
+			const auto & baseLocations = m_bot.Bases().getBaseLocations();	// Sorted by closest to enemy base
+			if (baseLocations.size() > 2 && baseLocations[2] != nullptr)
+			{
+				Unit producer = getProducer(currentItem.type);
+				Building b(currentItem.type.getUnitType(), baseLocations[2]->getDepotPosition());
+				if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
+				{
+					if (create(producer, currentItem, baseLocations[2]->getDepotPosition(), false))
+					{
+						m_queue.removeCurrentHighestPriorityItem();
+						break;
+					}
+				}
+			}
+		}*/
 
 		if (currentlyHasRequirement(currentItem.type))
 		{
@@ -1660,7 +1683,7 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used to create unit/tech/buildings (when we have the ressources)
-bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition)
+bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources)
 {
 	if (!producer.isValid())
 	{
@@ -1679,7 +1702,7 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		else
 		{
 			Building b(item.type.getUnitType(), desidredPosition);
-			result = m_bot.Buildings().addBuildingTask(b);
+			result = m_bot.Buildings().addBuildingTask(b, reserveResources);
 		}
 	}
 	// if we're dealing with a non-building unit

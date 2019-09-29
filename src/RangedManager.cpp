@@ -500,7 +500,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 	m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 
-	m_bot.StartProfiling("0.10.4.1.5.1.8          PotentialFields");
 	bool useInfluenceMap = false;
 	CCPosition summedFleeVec(0, 0);
 	// add normalied * 1.5 vector of potential threats
@@ -519,70 +518,82 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
 	}
 
-	if(!useInfluenceMap)
+	if (useInfluenceMap)
 	{
-		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange, unitShouldHeal);
-
-		// Sum up the threats vector with the direction vector
-		if (!threats.empty())
+		// Banshee in danger should cloak itself if low on hp
+		if (isBanshee && unitShouldHeal && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
 		{
-			AdjustSummedFleeVec(summedFleeVec);
-			dirVec += summedFleeVec;
-		}
-
-		// We repulse the Reaper from our closest harass unit
-		if (isReaper)
-		{
-			dirVec += GetRepulsionVectorFromFriendlyReapers(rangedUnit, rangedUnits);
-		}
-		// We attract the Hellion towards our other close Hellions
-		else if (isHellion)
-		{
-			dirVec += GetAttractionVectorToFriendlyHellions(rangedUnit, rangedUnits);
-		}
-
-		// We move only if the vector is long enough
-		const float vecLen = std::sqrt(std::pow(dirVec.x, 2) + std::pow(dirVec.y, 2));
-		if (vecLen < 0.5f)
-		{
-			m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 			return;
 		}
-
-		// Normalize the final direction vector so it's easier to work with
-		Util::Normalize(dirVec);
-
-		// If we find a pathable tile in the direction of the vector, we move at that tile
-		CCPosition pathableTile(0, 0);
-		if(MoveUnitWithDirectionVector(rangedUnit, dirVec, pathableTile))
+		
+		m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
+		// If close to an unpathable position or in danger
+		// Use influence map to find safest path
+		CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, m_bot);
+		if (safeTile != CCPosition())
 		{
-#ifndef PUBLIC_RELEASE
-			if (m_bot.Config().DrawHarassInfo)
-				m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
-#endif
-
-			const auto action = RangedUnitAction(MicroActionType::Move, pathableTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
+			//safeTile = AttenuateZigzag(rangedUnit, threats, safeTile, summedFleeVec);	//if we decomment this, we must not break in the threat check loop
+			const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 			PlanAction(rangedUnit, action);
-			m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
+			m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
 			return;
 		}
 	}
-	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 
-	// Banshee in danger should cloak itself if low on hp
-	if (isBanshee && unitShouldHeal && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
+	m_bot.StartProfiling("0.10.4.1.5.1.8          PotentialFields");
+	CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange, unitShouldHeal);
+
+	// Sum up the threats vector with the direction vector
+	if (!threats.empty())
 	{
+		AdjustSummedFleeVec(summedFleeVec);
+		dirVec += summedFleeVec;
+	}
+
+	// We repulse the Reaper from our closest harass unit
+	if (isReaper)
+	{
+		dirVec += GetRepulsionVectorFromFriendlyReapers(rangedUnit, rangedUnits);
+	}
+	// We attract the Hellion towards our other close Hellions
+	else if (isHellion)
+	{
+		dirVec += GetAttractionVectorToFriendlyHellions(rangedUnit, rangedUnits);
+	}
+
+	// We move only if the vector is long enough
+	const float vecLen = std::sqrt(std::pow(dirVec.x, 2) + std::pow(dirVec.y, 2));
+	if (vecLen < 0.5f)
+	{
+		m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 		return;
 	}
 
-	m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
-	// If close to an unpathable position or in danger
-	// Use influence map to find safest path
-	const CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, m_bot);
-	//safeTile = AttenuateZigzag(rangedUnit, threats, safeTile, summedFleeVec);	//if we decomment this, we must not break in the threat check loop
-	const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
+	// Normalize the final direction vector so it's easier to work with
+	Util::Normalize(dirVec);
+
+	// If we find a pathable tile in the direction of the vector, we move at that tile
+	CCPosition pathableTile(0, 0);
+	if(MoveUnitWithDirectionVector(rangedUnit, dirVec, pathableTile))
+	{
+#ifndef PUBLIC_RELEASE
+		if (m_bot.Config().DrawHarassInfo)
+			m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
+#endif
+
+		const auto action = RangedUnitAction(MicroActionType::Move, pathableTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
+		PlanAction(rangedUnit, action);
+		m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
+		return;
+	}
+	
+	// Unit cannot flee, we let it attack any close unit
+	char buffer[50];
+	sprintf_s(buffer, "Unit %s cannot flee", sc2::UnitTypeToName(rangedUnit->unit_type));
+	Util::Log(__FUNCTION__, buffer, m_bot);
+	const auto action = RangedUnitAction(MicroActionType::AttackMove, rangedUnit->pos, false, 0);
 	PlanAction(rangedUnit, action);
-	m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
+	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 }
 
 bool RangedManager::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
@@ -1747,32 +1758,35 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 	int moveDistance = initialMoveDistance;
 	CCPosition moveTo = rangedUnit->pos + directionVector * moveDistance;
 
-	if (!rangedUnit->is_flying)
+	if (rangedUnit->is_flying)
 	{
-		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
-		{
-			const CCPosition mapMin = m_bot.Map().mapMin();
-			const CCPosition mapMax = m_bot.Map().mapMax();
-			bool canMoveAtInitialDistanceOrFarther = true;
+		outPathableTile = moveTo;
+		return true;
+	}
+	
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+	{
+		const CCPosition mapMin = m_bot.Map().mapMin();
+		const CCPosition mapMax = m_bot.Map().mapMax();
+		bool canMoveAtInitialDistanceOrFarther = true;
 
-			// Check if we can move in the direction of the vector
-			// We check if we are moving towards and close to an unpathable position
-			while (!m_bot.Observation()->IsPathable(moveTo))
+		// Check if we can move in the direction of the vector
+		// We check if we are moving towards and close to an unpathable position
+		while (!m_bot.Observation()->IsPathable(moveTo))
+		{
+			++moveDistance;
+			moveTo = rangedUnit->pos + directionVector * moveDistance;
+			// If moveTo is out of the map, stop checking farther and switch to influence map navigation
+			if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
 			{
-				++moveDistance;
-				moveTo = rangedUnit->pos + directionVector * moveDistance;
-				// If moveTo is out of the map, stop checking farther and switch to influence map navigation
-				if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
-				{
-					canMoveAtInitialDistanceOrFarther = false;
-					break;
-				}
+				canMoveAtInitialDistanceOrFarther = false;
+				break;
 			}
-			if (canMoveAtInitialDistanceOrFarther)
-			{
-				outPathableTile = moveTo;
-				return true;
-			}
+		}
+		if (canMoveAtInitialDistanceOrFarther)
+		{
+			outPathableTile = moveTo;
+			return true;
 		}
 
 		// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
@@ -1789,8 +1803,23 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 		}
 		return false;
 	}
-	outPathableTile = moveTo;
-	return true;
+	
+	// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
+	for (moveDistance = 1; moveDistance < initialMoveDistance; ++moveDistance)
+	{
+		moveTo = rangedUnit->pos + directionVector * moveDistance;
+		if (!m_bot.Observation()->IsPathable(moveTo))
+		{
+			--moveDistance;
+			break;
+		}
+	}
+	if (moveDistance >= 1)
+	{
+		outPathableTile = rangedUnit->pos + directionVector * moveDistance;
+		return true;
+	}
+	return false;
 }
 
 CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const

@@ -55,7 +55,7 @@ public:
 	std::vector<CCTilePosition> FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles);
 	void				PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock);
 	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
-	bool				addBuildingTask(Building & b);
+	bool				addBuildingTask(Building & b, bool reserveResources = true);
 	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
 	void				drawStartingRamp();

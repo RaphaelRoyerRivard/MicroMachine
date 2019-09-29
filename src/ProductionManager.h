@@ -34,7 +34,7 @@ class ProductionManager
     bool    canMakeNow(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
     void    setBuildOrder(const BuildOrder & buildOrder);
-    bool    create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition);
+    bool    create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources = true);
 	bool    create(const Unit & producer, Building & b);
     void    manageBuildOrderQueue();
 	void	putImportantBuildOrderItemsInQueue();

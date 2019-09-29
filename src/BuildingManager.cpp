@@ -545,13 +545,14 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 			return false;
 		}
 		m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
-		if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
+		const auto isPathToGoalSafe = Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot);
+		m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
+		if(!isPathToGoalSafe)
 		{
 			Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " isn't safe", m_bot);
 			//TODO checks twice if the path is safe for no reason if we get the same build location, should change location or change builder
 
 			//Not safe, pick another location
-			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 			testLocation = getNextBuildingLocation(b, false, true);
 			if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
 			{
@@ -581,7 +582,6 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 		}
 		else
 		{
-			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 			//path  is safe, we can remove it from the list
 			auto positions = m_nextBuildingPosition.find(b.type);// .pop_front();
 			if (positions != m_nextBuildingPosition.end())
@@ -1013,7 +1013,7 @@ void BuildingManager::checkForCompletedBuildings()
 
 // add a new building to be constructed
 // Used for Premove
-bool BuildingManager::addBuildingTask(Building & b)
+bool BuildingManager::addBuildingTask(Building & b, bool reserveResources)
 {
 	b.status = BuildingStatus::Unassigned;
 
@@ -1031,9 +1031,12 @@ bool BuildingManager::addBuildingTask(Building & b)
 		return false;
 	}
 
-	TypeData typeData = m_bot.Data(b.type);
-	m_bot.ReserveMinerals(typeData.mineralCost);
-	m_bot.ReserveGas(typeData.gasCost);
+	if (reserveResources)
+	{
+		const TypeData typeData = m_bot.Data(b.type);
+		m_bot.ReserveMinerals(typeData.mineralCost);
+		m_bot.ReserveGas(typeData.gasCost);
+	}
 
 	m_buildings.push_back(b);
 

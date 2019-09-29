@@ -193,8 +193,9 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	if(foundIndex >= 0 && bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
 		return releventResult.m_result;
 
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, false, bot);
-	const bool success = !path.empty();
+	FailureReason failureReason;
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, false, failureReason, bot);
+	const bool success = !path.empty() || failureReason == TIMEOUT;
 	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
 	if(foundIndex >= 0)
 	{
@@ -277,14 +278,19 @@ CCPosition Util::PathFinding::FindOptimalPathToDodgeEffectAwayFromGoal(const sc2
 
 std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, CCBot & bot)
 {
+	FailureReason failureReason;
+	return FindOptimalPath(unit, goal, secondaryGoal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, flee, failureReason, bot);
+}
+
+std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, FailureReason & failureReason, CCBot & bot)
+{
 	std::list<CCPosition> path;
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
 
 	const auto & lockOnTargets = bot.Commander().Combat().getLockOnTargets();
 	const bool unitShouldAvoidDownCliffs = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE && unit->health / unit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE && lockOnTargets.find(unit) != lockOnTargets.end();
-	const bool bigUnit = unit->radius >= 1.f;
-	const int maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
+	const auto maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = Util::GetTilePosition(unit->pos);
@@ -346,7 +352,11 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		if (shouldTriggerExit)
 		{
 			// If it exits on influence, we need to check if there is actually influence on the current tile. If so, we do not return a valid path
-			if (!exitOnInfluence || (!HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot)))
+			if(exitOnInfluence && (HasCombatInfluenceOnTile(currentNode, unit, bot) || HasEffectInfluenceOnTile(currentNode, unit, bot)))
+			{
+				failureReason = INFLUENCE;
+			}
+			else
 			{
 				// If the unit wants to flee but stay in range
 				if(flee && maxRange > 0.f && Dist(GetPosition(currentNode->position), goal) > maxRange)
@@ -354,6 +364,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 					// But this is the first node, we do not return a valid path
 					if(currentNode->parent == nullptr)
 					{
+						failureReason = NO_NEED_TO_MOVE;
 						break;
 					}
 					// Otherwise we return a path to the previous tile (otherwise the unit would go out of range)
@@ -421,6 +432,10 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				opened.insert(neighbor);
 			}
 		}
+	}
+	if(closed.size() >= maxExploredNode)
+	{
+		failureReason = TIMEOUT;
 	}
 	for (auto node : opened)
 		delete node;

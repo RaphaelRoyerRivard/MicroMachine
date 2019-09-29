@@ -24,7 +24,7 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Terran",
+        "EnemyRace"                 : "Zerg",
         "MapFile"                   : "DiscoBloodbathLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
