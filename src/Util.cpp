@@ -62,6 +62,11 @@ struct Util::PathFinding::IMNode
 		return position != CCTilePosition(0, 0);
 	}
 
+	int getId() const
+	{
+		return position.x * 1000 + position.y;
+	}
+
 	bool operator<(const IMNode& rhs) const
 	{
 		return getTotalCost() < rhs.getTotalCost();
@@ -194,7 +199,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 		return releventResult.m_result;
 
 	FailureReason failureReason;
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, false, failureReason, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, false, true, failureReason, bot);
 	const bool success = !path.empty() || failureReason == TIMEOUT;
 	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
 	if(foundIndex >= 0)
@@ -276,33 +281,43 @@ CCPosition Util::PathFinding::FindOptimalPathToDodgeEffectAwayFromGoal(const sc2
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
+std::list<CCPosition> Util::PathFinding::FindOptimalPathWithoutLimit(const sc2::Unit * unit, CCPosition goal, CCBot & bot)
+{
+	FailureReason failureReason;
+	return FindOptimalPath(unit, goal, CCPosition(), 5.f, true, false, true, true, false, false, failureReason, bot);
+}
+
 std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, CCBot & bot)
 {
 	FailureReason failureReason;
-	return FindOptimalPath(unit, goal, secondaryGoal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, flee, failureReason, bot);
+	return FindOptimalPath(unit, goal, secondaryGoal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, flee, true, failureReason, bot);
 }
 
-std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, FailureReason & failureReason, CCBot & bot)
+std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, bool limitSearch, FailureReason & failureReason, CCBot & bot)
 {
 	std::list<CCPosition> path;
 	std::set<IMNode*> opened;
 	std::set<IMNode*> closed;
+	std::map<int, float> bestCosts;
 
 	const auto & lockOnTargets = bot.Commander().Combat().getLockOnTargets();
 	const bool unitShouldAvoidDownCliffs = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE && unit->health / unit->health_max < HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE && lockOnTargets.find(unit) != lockOnTargets.end();
-	const auto maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
+	const auto maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (!limitSearch ? 20 : exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = Util::GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
 	const CCTilePosition secondaryGoalPosition = Util::GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
+	bestCosts[start->getId()] = 0;
 	opened.insert(start);
 
 	while (!opened.empty() && closed.size() < maxExploredNode)
 	{
 		IMNode* currentNode = getLowestCostNode(opened);
 		opened.erase(currentNode);
+		if (bestCosts[currentNode->getId()] < currentNode->cost)
+			continue;	// No need to check that node, we already checked it with a lower cost
 		closed.insert(currentNode);
 
 		bool shouldTriggerExit = false;
@@ -402,10 +417,8 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 					const auto secondaryGoalDirection = Normalized(secondaryGoal - GetPosition(currentNode->position));
 					secondaryGoalCost = (1 - GetDotProduct(neighborDirection, secondaryGoalDirection)) * PATHFINDING_SECONDARY_GOAL_COST;
 				}
-				const float nodeCost = (influenceOnTile + creepCost + heightCost + secondaryGoalCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
-				totalCost += currentNode->cost + nodeCost;
-
 				// Consider turning cost to prevent our units from wiggling while fleeing, but not for workers that want to know if the path is safe
+				float turnCost = 0.f;
 				if (!exitOnInfluence)
 				{
 					CCPosition facingVector;
@@ -416,19 +429,24 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 					const auto directionVector = GetPosition(neighborPosition) - GetPosition(currentNode->position);
 					const auto dotProduct = GetDotProduct(facingVector, directionVector);
 					const auto turnValue = std::min(1.f, 1 - dotProduct);
-					const float turnCost = turnValue * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
-					totalCost += turnCost;
+					turnCost = turnValue * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
 				}
+				const float nodeCost = (influenceOnTile + creepCost + heightCost + secondaryGoalCost + turnCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
+				totalCost += currentNode->cost + nodeCost;
 
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition, secondaryGoalPosition);
 				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
 
-				if (SetContainsNode(closed, neighbor, false))
+				if (bestCosts.find(neighbor->getId()) != bestCosts.end() && bestCosts[neighbor->getId()] <= totalCost)
+					continue;
+				
+				/*if (SetContainsNode(closed, neighbor, false))
 					continue;	// already explored check
 
 				if (SetContainsNode(opened, neighbor, true))
-					continue;	// node already opened and of lower cost
+					continue;	// node already opened and of lower cost*/
 
+				bestCosts[neighbor->getId()] = totalCost;
 				opened.insert(neighbor);
 			}
 		}
@@ -1879,6 +1897,15 @@ CCPositionType Util::DistSq(const CCPosition & p1, const CCPosition & p2)
     CCPositionType dy = p1.y - p2.y;
 
     return dx*dx + dy*dy;
+}
+
+float Util::DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point)
+{
+	const auto numerator = abs((linePoint2.y - linePoint1.y) * point.x - (linePoint2.x - linePoint1.x) * point.y + linePoint2.x * linePoint1.y - linePoint2.y * linePoint1.x);
+	const auto denominator = sqrt(pow(linePoint2.y - linePoint1.y, 2) + pow(linePoint2.x - linePoint1.x, 2));
+	if (denominator == 0)
+		return 0;
+	return numerator / denominator;
 }
 
 sc2::Point2D Util::CalcLinearRegression(const std::vector<const sc2::Unit *> & units)

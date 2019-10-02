@@ -213,10 +213,19 @@ void WorkerManager::handleMineralWorkers()
 	}
 	m_bot.StopProfiling("0.7.2.2     selectMinerals");
 
+	Unit proxyWorker;
+	if (m_bot.Strategy().getStartingStrategy() != STANDARD)
+	{
+		proxyWorker = *getWorkers().begin();
+		proxyWorker.move(m_bot.Buildings().getProxyLocation());
+	}
+
 	m_bot.StartProfiling("0.7.2.3     orderedMineralWorkers");
 	std::map<Unit, int> workerMineralDistance;
 	for (auto & worker : getWorkers())
 	{
+		if (worker == proxyWorker)
+			continue;
 		CCPosition position = worker.getPosition();
 		int maxDist = -1;
 		for (auto& mineral : mineralsUsage)

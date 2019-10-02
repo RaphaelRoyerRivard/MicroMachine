@@ -387,6 +387,25 @@ bool BuildingManager::ValidateSupplyDepotPosition(std::list<CCTilePosition> buil
 	return true;
 }
 
+void BuildingManager::FindOpponentMainRamp()
+{
+	const auto enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+	if(enemyBaseLocation)
+	{
+		std::list<CCTilePosition> checkedTiles;
+		std::list<CCTilePosition> rampTiles;
+		FindRampTiles(rampTiles, checkedTiles, enemyBaseLocation->getDepotPosition());
+		FindMainRamp(rampTiles);
+		CCPosition rampPos;
+		for (const auto & rampTile : rampTiles)
+		{
+			rampPos += Util::GetPosition(rampTile);
+		}
+		rampPos /= rampTiles.size();
+		m_enemyMainRamp = rampPos;
+	}
+}
+
 bool BuildingManager::isBeingBuilt(UnitType type) const
 {
     for (auto & b : m_buildings)
@@ -1201,6 +1220,88 @@ CCTilePosition BuildingManager::getWallPosition()
 std::list<Unit> BuildingManager::getWallBuildings()
 {
 	return m_wallBuilding;
+}
+
+CCTilePosition BuildingManager::getProxyLocation()
+{
+	if (m_proxyLocation != CCTilePosition())
+		return m_proxyLocation;
+	
+	FindOpponentMainRamp();
+	if (m_enemyMainRamp != CCPosition())
+	{
+		const auto & scv = *m_bot.Workers().getWorkers().begin();
+		auto scvPtr = scv.getUnitPtr();
+		bool deletePtr = false;
+		if (!m_rampTiles.empty())
+		{
+			deletePtr = true;
+			auto fakeSCV = new sc2::Unit();
+			fakeSCV->unit_type = sc2::UnitTypeID(sc2::UNIT_TYPEID::TERRAN_SCV);
+			fakeSCV->is_flying = false;
+			fakeSCV->radius = 0.375f;
+			auto rampPos = CCPosition();
+			for (auto rampTile : m_rampTiles)
+				rampPos += Util::GetPosition(rampTile);
+			rampPos /= m_rampTiles.size();
+			fakeSCV->pos = sc2::Point3D(rampPos.x, rampPos.y, Util::TerrainHeight(rampPos));
+			scvPtr = fakeSCV;
+		}
+		const auto mainPath = Util::PathFinding::FindOptimalPathWithoutLimit(scvPtr, m_enemyMainRamp, m_bot);
+		if (deletePtr)
+			delete scvPtr;
+		if (mainPath.empty())
+			return Util::GetTilePosition(m_bot.Map().center());
+		const auto startingBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+		const auto enemyBasePosition = Util::GetPosition(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getDepotPosition());
+		const auto enemyNext = m_bot.Bases().getNextExpansion(Players::Enemy, false, false);
+		const auto & baseLocations = m_bot.Bases().getBaseLocations();	// Sorted by closest to enemy base
+		int minDistance = 0;
+		const BaseLocation* closestBase = nullptr;
+		for(auto i=1; i<baseLocations.size(); ++i)
+		{
+			const auto baseLocation = baseLocations[i];
+			if (baseLocation == enemyNext || baseLocation == startingBaseLocation)
+				continue;
+			const auto dist = baseLocation->getGroundDistance(m_enemyMainRamp);
+			const auto startingBaseDist = startingBaseLocation->getGroundDistance(baseLocation->getDepotPosition());
+			const auto totalDist = dist * 2 + startingBaseDist;
+			if(!closestBase || totalDist < minDistance)
+			{
+				const auto baseHeight = m_bot.Map().terrainHeight(baseLocation->getDepotPosition());
+				const auto basePosition = Util::GetPosition(baseLocation->getDepotPosition());
+				if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Zerg)
+				{
+					if (Util::DistBetweenLineAndPoint(Util::GetPosition(startingBaseLocation->getDepotPosition()), enemyBasePosition, basePosition) < 15.f)
+					{
+						continue;
+					}
+				}
+				auto tooCloseToMainPath = false;
+				for (const auto & pathPosition : mainPath)
+				{
+					if (m_bot.Map().terrainHeight(pathPosition) + 0.5f < baseHeight)
+						continue;
+					if (Util::DistSq(pathPosition, basePosition) <= 15.f * 15.f)
+					{
+						tooCloseToMainPath = true;
+						break;
+					}
+				}
+				if (!tooCloseToMainPath)
+				{
+					minDistance = totalDist;
+					closestBase = baseLocation;
+				}
+			}
+		}
+		if (closestBase != nullptr)
+		{
+			m_proxyLocation = closestBase->getDepotPosition();
+			return m_proxyLocation;
+		}
+	}
+	return Util::GetTilePosition(m_bot.Map().center());
 }
 
 std::vector<UnitType> BuildingManager::buildingsQueued() const

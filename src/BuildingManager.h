@@ -20,6 +20,8 @@ class BuildingManager
 	std::vector<Unit> m_finishedBaseBuildings;
 	std::vector<Unit> m_previousBaseBuildings; //Base buildings last frame, useful to find dead buildings
 	std::list<CCTilePosition> m_rampTiles;
+	CCPosition m_enemyMainRamp;
+	CCTilePosition m_proxyLocation;
 	std::list<CCTilePosition> m_wallBuildingPosition;
 	std::list<Unit> m_wallBuilding;
 	std::map<UnitType, std::list<CCTilePosition>> m_nextBuildingPosition;
@@ -55,6 +57,7 @@ public:
 	std::vector<CCTilePosition> FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles);
 	void				PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock);
 	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
+	void FindOpponentMainRamp();
 	bool				addBuildingTask(Building & b, bool reserveResources = true);
 	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
@@ -67,6 +70,7 @@ public:
 	std::vector<Unit>	getPreviousBaseBuildings();
 	CCTilePosition		getWallPosition();
 	std::list<Unit>		getWallBuildings();
+	CCTilePosition		getProxyLocation();
     CCTilePosition      getBuildingLocation(const Building & b, bool checkInfluenceMap);
 	CCTilePosition		getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
