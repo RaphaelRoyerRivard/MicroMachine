@@ -191,5 +191,7 @@ bool MetaType::operator < (const MetaType & mt) const
 
 bool MetaType::operator == (const MetaType & mt) const
 {
-	return this->m_name == mt.getName();
+	if (isUnit())
+		return m_unitType == mt.getUnitType();
+	return m_upgrade == mt.getUpgrade();
 }

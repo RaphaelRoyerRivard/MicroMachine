@@ -263,12 +263,13 @@ void ProductionManager::manageBuildOrderQueue()
 
     	// Proxy barracks
     	// TODO We need to check earlier if we can build the Barracks. The blocking queue prevents us to premove the worker
-		if (m_bot.Strategy().getStartingStrategy() != STANDARD && !firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks)
+		if (m_bot.Strategy().getStartingStrategy() != STANDARD && (currentItem.type == MetaTypeEnum::Barracks || currentItem.type == MetaTypeEnum::Factory))
 		{
 			const auto proxyLocation = m_bot.Buildings().getProxyLocation();
 			Unit producer = getProducer(currentItem.type);
 			Building b(currentItem.type.getUnitType(), proxyLocation);
-			if (meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks, 0, 0, additionalReservedMineral, additionalReservedGas))
+			if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
+			//if (meetsReservedResourcesWithExtra(currentItem.type, 0, 0, additionalReservedMineral, additionalReservedGas))
 			{
 				if (create(producer, currentItem, proxyLocation, true, false))
 				{
