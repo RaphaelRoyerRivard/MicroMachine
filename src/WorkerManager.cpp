@@ -878,40 +878,14 @@ void WorkerManager::repairCombatBuildings()
 	}
 }
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage, bool filterMoving) const
 {
-    Unit closestMineralWorker;
-    double closestDist = std::numeric_limits<double>::max();
-
-    // for each of our workers
-    for (auto & worker : m_workerData.getWorkers())
-    {
-        if (!worker.isValid() || worker.getID() == workerToIgnore) { continue; }
-		const sc2::Unit* workerPtr = worker.getUnitPtr();
-		if (workerPtr->health < minHpPercentage * workerPtr->health_max)
-		{
-			continue;
-		}
-
-        // if it is a mineral worker, Idle or None
-        if(isFree(worker))
-        {
-			if (!isReturningCargo(worker))
-			{
-				///TODO: Maybe it should by ground distance?
-				double dist = Util::DistSq(worker.getPosition(), pos);
-				if (!closestMineralWorker.isValid() || dist < closestDist)
-				{
-					closestMineralWorker = worker;
-					closestDist = dist;
-				}
-			}
-        }
-    }
-	return closestMineralWorker;
+	auto workersToIgnore = std::vector<CCUnitID>();
+	workersToIgnore.push_back(workerToIgnore);
+	return getClosestMineralWorkerTo(pos, workersToIgnore, minHpPercentage, filterMoving);
 }
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, std::vector<CCUnitID> workerToIgnore, float minHpPercentage) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving) const
 {
 	Unit closestMineralWorker;
 	double closestDist = std::numeric_limits<double>::max();
@@ -919,35 +893,34 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, std::vecto
 	// for each of our workers
 	for (auto & worker : m_workerData.getWorkers())
 	{
-		if (!worker.isValid() || std::find(workerToIgnore.begin(), workerToIgnore.end(), worker.getID()) != workerToIgnore.end()) { continue; }
+		if (!worker.isValid() || std::find(workersToIgnore.begin(), workersToIgnore.end(), worker.getID()) != workersToIgnore.end()) { continue; }
 		const sc2::Unit* workerPtr = worker.getUnitPtr();
 		if (workerPtr->health < minHpPercentage * workerPtr->health_max)
-		{
 			continue;
-		}
 
 		// if it is a mineral worker, Idle or None
-		if (isFree(worker))
+		if (!isFree(worker))
+			continue;
+		if (isReturningCargo(worker))
+			continue;
+		if (filterMoving  && worker.isMoving())
+			continue;
+		
+		///TODO: Maybe it should by ground distance?
+		double dist = Util::DistSq(worker.getPosition(), pos);
+		if (!closestMineralWorker.isValid() || dist < closestDist)
 		{
-			if (!isReturningCargo(worker))
-			{
-				///TODO: Maybe it should by ground distance?
-				double dist = Util::DistSq(worker.getPosition(), pos);
-				if (!closestMineralWorker.isValid() || dist < closestDist)
-				{
-					closestMineralWorker = worker;
-					closestDist = dist;
-				}
-			}
+			closestMineralWorker = worker;
+			closestDist = dist;
 		}
 	}
 	return closestMineralWorker;
 }
 
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage, bool filterMoving) const
 {
-    return getClosestMineralWorkerTo(pos, CCUnitID{}, minHpPercentage);
+    return getClosestMineralWorkerTo(pos, CCUnitID{}, minHpPercentage, filterMoving);
 }
 
 Unit WorkerManager::getClosestGasWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage) const
@@ -1213,7 +1186,7 @@ int WorkerManager::getWorkerCountAtBasePosition(CCPosition basePosition) const
 // gets a builder for BuildingManager to use
 // if setJobAsBuilder is true (default), it will be flagged as a builder unit
 // set 'setJobAsBuilder' to false if we just want to see which worker will build a building
-Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
+Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMoving) const
 {
 	bool isValid;
 	std::vector<CCUnitID> invalidWorkers;
@@ -1222,7 +1195,7 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder) const
 	do
 	{
 		isValid = true;
-		builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0);
+		builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0, filterMoving);
 		if (!builderWorker.isValid())//If no worker left to check
 		{
 			break;

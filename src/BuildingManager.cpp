@@ -519,7 +519,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 	}
 }
 
-bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
+bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filterMovingWorker)
 {
     BOT_ASSERT(!b.builderUnit.isValid(), "Error: Tried to assign a builder to a building that already had one ");
 
@@ -557,7 +557,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 		b.finalPosition = testLocation;
 
 		// grab the worker unit from WorkerManager which is closest to this final position
-		Unit builderUnit = m_bot.Workers().getBuilder(b, false);
+		Unit builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker);
 		//Test if worker path is safe
 		if (!builderUnit.isValid())
 		{
@@ -582,7 +582,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 
 			const auto previousBuilder = builderUnit.getUnitPtr();
 			// grab the worker unit from WorkerManager which is closest to this final position
-			builderUnit = m_bot.Workers().getBuilder(b, false);
+			builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker);
 			//Test if worker path is safe
 			if(!builderUnit.isValid())
 			{
@@ -1032,7 +1032,7 @@ void BuildingManager::checkForCompletedBuildings()
 
 // add a new building to be constructed
 // Used for Premove
-bool BuildingManager::addBuildingTask(Building & b, bool reserveResources)
+bool BuildingManager::addBuildingTask(Building & b, bool reserveResources, bool filterMovingWorker)
 {
 	b.status = BuildingStatus::Unassigned;
 
@@ -1045,7 +1045,7 @@ bool BuildingManager::addBuildingTask(Building & b, bool reserveResources)
 			return false;
 		}
 	}
-	else if (!assignWorkerToUnassignedBuilding(b))//Includes a check to see if path is safe
+	else if (!assignWorkerToUnassignedBuilding(b, filterMovingWorker))//Includes a check to see if path is safe
 	{
 		return false;
 	}

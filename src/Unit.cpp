@@ -251,6 +251,17 @@ bool Unit::isProductionBuildingIdle() const
 	return false;
 }
 
+bool Unit::isMoving() const
+{
+	const auto & orders = getUnitPtr()->orders;
+	for (const auto & order : orders)
+	{
+		if (order.ability_id == sc2::ABILITY_ID::MOVE)
+			return true;
+	}
+	return false;
+}
+
 int Unit::getWeaponCooldown() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");

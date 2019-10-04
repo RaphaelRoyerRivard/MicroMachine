@@ -270,7 +270,7 @@ void ProductionManager::manageBuildOrderQueue()
 			Building b(currentItem.type.getUnitType(), proxyLocation);
 			if (meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks, 0, 0, additionalReservedMineral, additionalReservedGas))
 			{
-				if (create(producer, currentItem, proxyLocation))
+				if (create(producer, currentItem, proxyLocation, true, false))
 				{
 					m_queue.removeCurrentHighestPriorityItem();
 					break;
@@ -1322,6 +1322,18 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 				{
 					continue;
 				}
+				const auto & orders = unit.getUnitPtr()->orders;
+				bool isMoving = false;
+				for (const auto & order : orders)
+				{
+					if (order.ability_id == sc2::ABILITY_ID::MOVE)
+					{
+						isMoving = true;
+						break;
+					}
+				}
+				if (isMoving)
+					continue;
 				break;
 			}
 			case sc2::UNIT_TYPEID::TERRAN_MULE:
@@ -1680,7 +1692,7 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used to create unit/tech/buildings (when we have the ressources)
-bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources)
+bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker)
 {
 	if (!producer.isValid())
 	{
@@ -1699,7 +1711,7 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		else
 		{
 			Building b(item.type.getUnitType(), desidredPosition);
-			result = m_bot.Buildings().addBuildingTask(b, reserveResources);
+			result = m_bot.Buildings().addBuildingTask(b, reserveResources, filterMovingWorker);
 		}
 	}
 	// if we're dealing with a non-building unit
@@ -1731,7 +1743,7 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used for premove
-bool ProductionManager::create(const Unit & producer, Building & b)
+bool ProductionManager::create(const Unit & producer, Building & b, bool filterMovingWorker)
 {
     if (!producer.isValid())
     {
@@ -1744,7 +1756,7 @@ bool ProductionManager::create(const Unit & producer, Building & b)
 		return true;
     }
 
-	return m_bot.Buildings().addBuildingTask(b);
+	return m_bot.Buildings().addBuildingTask(b, true, filterMovingWorker);
 }
 
 bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
