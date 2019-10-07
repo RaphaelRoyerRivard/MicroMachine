@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "DiscoBloodbathLE.SC2Map",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "TritonLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -127,7 +127,7 @@
 
     "Debug" :
     {
-		"AllowDebug"				: true,
+		"AllowDebug"				: false,
 		"AllowKeyControl"			: true,
 		
         "DrawGameInfo"              : false, 
