@@ -419,13 +419,14 @@ bool BuildingManager::isBeingBuilt(UnitType type) const
     return false;
 }
 
-int BuildingManager::countBeingBuilt(UnitType type) const
+int BuildingManager::countBeingBuilt(UnitType type, bool underConstruction) const
 {
 	int count = 0;
 	for (auto & b : m_buildings)
 	{
 		if (b.type == type)
 		{
+			if (!underConstruction || b.status == BuildingStatus::UnderConstruction)
 			count++;
 		}
 	}
@@ -1592,6 +1593,35 @@ const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool 
 
 void BuildingManager::castBuildingsAbilities()
 {
+	if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
+	{
+		if (m_proxyBarracksPosition == CCPosition())
+		{
+			const auto & barracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+			const auto & factories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORY);
+			const auto & barracksTechlabs = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB);
+			if (barracks.size() == 1 && factories.size() == 1 && barracksTechlabs.size() == 1)
+			{
+				if (factories[0].getBuildPercentage() == 1.0f && barracksTechlabs[0].getBuildPercentage() == 1.0f)
+				{
+					m_proxyBarracksPosition = barracks[0].getPosition();
+					Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+					Micro::SmartAbility(factories[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+				}
+			}
+		}
+		else if (!m_proxySwapDone)
+		{
+			const auto & flyingBarracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING);
+			const auto & flyingFactories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING);
+			if (flyingBarracks.size() == 1 && flyingFactories.size() == 1)
+			{
+				Micro::SmartAbility(flyingFactories[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyBarracksPosition, m_bot);
+				m_proxySwapDone = true;
+			}
+		}
+	}
+	
 	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
 	{
 		auto energy = b.getEnergy();

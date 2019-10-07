@@ -216,7 +216,18 @@ void WorkerManager::handleMineralWorkers()
 	Unit proxyWorker;
 	if (m_bot.Strategy().getStartingStrategy() != STANDARD)
 	{
-		proxyWorker = *getWorkers().begin();
+		float minDist = 0.f;
+		const auto & workers = getWorkers();
+		const auto rampPosition = Util::GetPosition(m_bot.Buildings().getWallPosition());
+		for (const auto & worker : workers)
+		{
+			const auto dist = Util::DistSq(worker, rampPosition);
+			if (!proxyWorker.isValid() || dist < minDist)
+			{
+				minDist = dist;
+				proxyWorker = worker;
+			}
+		}
 		proxyWorker.move(m_bot.Buildings().getProxyLocation());
 	}
 

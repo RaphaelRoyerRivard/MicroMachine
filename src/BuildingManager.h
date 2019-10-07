@@ -22,6 +22,8 @@ class BuildingManager
 	std::list<CCTilePosition> m_rampTiles;
 	CCPosition m_enemyMainRamp;
 	CCTilePosition m_proxyLocation;
+	CCPosition m_proxyBarracksPosition;
+	bool m_proxySwapDone = false;
 	std::list<CCTilePosition> m_wallBuildingPosition;
 	std::list<Unit> m_wallBuilding;
 	std::map<UnitType, std::list<CCTilePosition>> m_nextBuildingPosition;
@@ -70,6 +72,7 @@ public:
 	std::vector<Unit>	getPreviousBaseBuildings();
 	CCTilePosition		getWallPosition();
 	std::list<Unit>		getWallBuildings();
+	CCPosition			getEnemyMainRamp() const { return m_enemyMainRamp; }
 	CCTilePosition		getProxyLocation();
     CCTilePosition      getBuildingLocation(const Building & b, bool checkInfluenceMap);
 	CCTilePosition		getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap);
@@ -81,7 +84,7 @@ public:
 	const sc2::Unit *	getLargestCloseMineral(const Unit unit, bool checkUnderAttack = false, std::vector<CCUnitID> skipMinerals = {}) const;
 
     bool                isBeingBuilt(UnitType type) const;
-	int					countBeingBuilt(UnitType type) const;
+	int					countBeingBuilt(UnitType type, bool underConstruction = false) const;
 	int					countBoughtButNotBeingBuilt(sc2::UNIT_TYPEID type) const;
 
 	void				removeBuildings(const std::vector<Building> & toRemove);

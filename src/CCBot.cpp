@@ -1015,7 +1015,7 @@ Unit CCBot::GetUnit(const CCUnitID & tag) const
 #endif
 }
 
-int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed)
+int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed, bool underConstruction)
 { 
 	auto completedCount = 0;
 	if (m_unitCompletedCount.find(type) != m_unitCompletedCount.end())
@@ -1029,7 +1029,7 @@ int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed)
 	auto unitType = UnitType(type, *this);
 	if (unitType.isBuilding())
 	{
-		total += m_buildings.countBeingBuilt(unitType);
+		total += m_buildings.countBeingBuilt(unitType, underConstruction);
 	}
 	else //is unit
 	{

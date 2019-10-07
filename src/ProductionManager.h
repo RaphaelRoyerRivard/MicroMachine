@@ -24,6 +24,7 @@ class ProductionManager
 	std::list<std::list<MetaType>> reversePossibleUpgrades;//Does not include tech
 	std::map<std::string, MetaType> alternateUpgrades;//Tech do not have alternate upgrades
 	bool firstBarrackBuilt = false;
+	bool firstBarracksTechlab = true;
 	UnitType supplyProvider;
 	MetaType supplyProviderType;
 	UnitType workerType;

@@ -819,7 +819,8 @@ void CombatCommander::updateHarassSquads()
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_RAVEN
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THOR
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THORAP)
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THORAP
+			|| (unitTypeId == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES))
 			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
 		{
 			if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION)

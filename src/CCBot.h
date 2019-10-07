@@ -156,7 +156,7 @@ public:
 	int GetFreeGas();
     Unit GetUnit(const CCUnitID & tag) const;
     const std::vector<Unit> & GetUnits() const;
-	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false);
+	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false, bool underConstruction = false);
 	const std::map<sc2::UNIT_TYPEID, int> & GetCompletedUnitCounts() const { return m_unitCompletedCount; };
 	std::map<sc2::Tag, Unit> & GetAllyUnits();
 	const std::vector<Unit> & GetAllyUnits(sc2::UNIT_TYPEID type);
