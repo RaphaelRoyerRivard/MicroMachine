@@ -338,7 +338,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
 		const bool hasFlyingHelper = cycloneWithHelperIt != m_cyclonesWithHelper.end();
 
-		if (!unitShouldHeal && !cycloneShouldStayCloseToTarget)
+		if (!unitShouldHeal && !cycloneShouldStayCloseToTarget && m_order.getType() != SquadOrderTypes::Defend)
 		{
 			// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
 			if (cycloneShouldUseLockOn && hasFlyingHelper)
@@ -351,7 +351,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				}
 			}
 
-			if (!hasFlyingHelper && m_order.getType() != SquadOrderTypes::Defend)
+			if (!hasFlyingHelper)
 			{
 				// If the target is too far, we don't want to chase it, we just leave
 				if (target)
