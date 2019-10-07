@@ -127,7 +127,7 @@
 
     "Debug" :
     {
-		"AllowDebug"				: false,
+		"AllowDebug"				: true,
 		"AllowKeyControl"			: true,
 		
         "DrawGameInfo"              : false, 
