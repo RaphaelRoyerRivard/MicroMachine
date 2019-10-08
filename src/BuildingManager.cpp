@@ -838,9 +838,12 @@ void BuildingManager::checkForStartedConstruction()
 
 			if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
 			{
-				// the resources should now be spent, so unreserve them
-				m_bot.FreeMinerals(building.getType().mineralPrice());
-				m_bot.FreeGas(building.getType().gasPrice());
+				if (b.reserveResources)
+				{
+					// the resources should now be spent, so unreserve them
+					m_bot.FreeMinerals(building.getType().mineralPrice());
+					m_bot.FreeGas(building.getType().gasPrice());
+				}
 
 				// flag it as started and set the buildingUnit
 				b.underConstruction = true;
@@ -1033,7 +1036,7 @@ void BuildingManager::checkForCompletedBuildings()
 
 // add a new building to be constructed
 // Used for Premove
-bool BuildingManager::addBuildingTask(Building & b, bool reserveResources, bool filterMovingWorker)
+bool BuildingManager::addBuildingTask(Building & b, bool filterMovingWorker)
 {
 	b.status = BuildingStatus::Unassigned;
 
@@ -1051,7 +1054,7 @@ bool BuildingManager::addBuildingTask(Building & b, bool reserveResources, bool 
 		return false;
 	}
 
-	if (reserveResources)
+	if (b.reserveResources)
 	{
 		const TypeData typeData = m_bot.Data(b.type);
 		m_bot.ReserveMinerals(typeData.mineralCost);
@@ -1508,8 +1511,11 @@ Building BuildingManager::CancelBuilding(Building b)
 		}
 		}
 
-		m_bot.FreeMinerals(b.type.mineralPrice());
-		m_bot.FreeGas(b.type.gasPrice());
+		if (b.reserveResources)
+		{
+			m_bot.FreeMinerals(b.type.mineralPrice());
+			m_bot.FreeGas(b.type.gasPrice());
+		}
 
 		return b;
 	}

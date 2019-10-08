@@ -60,7 +60,7 @@ public:
 	void				PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock);
 	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
 	void FindOpponentMainRamp();
-	bool				addBuildingTask(Building & b, bool reserveResources = true, bool filterMovingWorker = true);
+	bool				addBuildingTask(Building & b, bool filterMovingWorker = true);
 	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
 	void				drawStartingRamp();

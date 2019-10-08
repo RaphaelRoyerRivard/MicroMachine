@@ -251,6 +251,7 @@ void ProductionManager::manageBuildOrderQueue()
 			additionalReservedGas = lowestGasReq;
 		}
 
+		const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
 		bool shouldWait = false;
 		if (currentItem.type.getUnitType().isRefinery())
 		{
@@ -259,11 +260,13 @@ void ProductionManager::manageBuildOrderQueue()
 		}
 		else if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
 		{
-			if (currentItem.type == MetaTypeEnum::FactoryTechLab)
+			if (currentItem.type == MetaTypeEnum::FactoryTechLab || currentItem.type == MetaTypeEnum::Factory)
 			{
-				const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, false);
+				const bool hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0;
+				const auto unattachedTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::TechLab.getUnitType(), false, false, false);
+				const auto barracksTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, false, false);
 				const auto factoryTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, false, false);
-				if (factoryCount <= factoryTechlabCount)
+				if (!hasBarracks || (factoryCount > 0 && factoryCount <= unattachedTechlabCount + barracksTechlabCount + factoryTechlabCount))
 					shouldWait = true;
 			}
 			else if (currentItem.type == MetaTypeEnum::Reaper)
@@ -288,11 +291,12 @@ void ProductionManager::manageBuildOrderQueue()
 			// Proxy buildings
 			if (m_bot.Strategy().getStartingStrategy() != STANDARD)
 			{
-				if (currentItem.type == MetaTypeEnum::Barracks || (currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES))
+				if (currentItem.type == MetaTypeEnum::Barracks || (currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && factoryCount == 0))
 				{
 					const auto proxyLocation = m_bot.Buildings().getProxyLocation();
-					Unit producer = getProducer(currentItem.type);
+					Unit producer = getProducer(currentItem.type, Util::GetPosition(proxyLocation));
 					Building b(currentItem.type.getUnitType(), proxyLocation);
+					//b.finalPosition = proxyLocation;	// TODO this should be set but the proxy worker is hesitant to go to the building location for an unknown reason
 					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
 					{
 						if (create(producer, currentItem, proxyLocation, false, false))
@@ -1257,7 +1261,8 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 				//If the commandcenter should morph instead, don't queue workers on it
 				if (unitType == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && !type.getUnitType().isMorphedBuilding())
 				{
-					if (m_initialBuildOrderFinished && (m_queue.contains(MetaTypeEnum::OrbitalCommand) || m_queue.contains(MetaTypeEnum::PlanetaryFortress)))
+					if (m_initialBuildOrderFinished && (m_queue.contains(MetaTypeEnum::OrbitalCommand) || m_queue.contains(MetaTypeEnum::PlanetaryFortress))
+						&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0)
 					{
 						continue;
 					}
@@ -1700,7 +1705,8 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		else
 		{
 			Building b(item.type.getUnitType(), desidredPosition);
-			result = m_bot.Buildings().addBuildingTask(b, reserveResources, filterMovingWorker);
+			b.reserveResources = reserveResources;
+			result = m_bot.Buildings().addBuildingTask(b, filterMovingWorker);
 		}
 	}
 	// if we're dealing with a non-building unit
@@ -1745,7 +1751,7 @@ bool ProductionManager::create(const Unit & producer, Building & b, bool filterM
 		return true;
     }
 
-	return m_bot.Buildings().addBuildingTask(b, true, filterMovingWorker);
+	return m_bot.Buildings().addBuildingTask(b, filterMovingWorker);
 }
 
 bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)

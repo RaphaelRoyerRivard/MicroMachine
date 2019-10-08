@@ -292,8 +292,7 @@
 										"Refinery",
 										"SCV",
 										"Refinery",
-										"SCV",
-										"OrbitalCommand"],
+										"SCV"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
