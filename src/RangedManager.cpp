@@ -586,7 +586,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
 #endif
 
-		const auto action = RangedUnitAction(MicroActionType::Move, pathableTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
+		const auto action = RangedUnitAction(Move, pathableTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 		PlanAction(rangedUnit, action);
 		m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 		return;
@@ -596,7 +596,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	char buffer[50];
 	sprintf_s(buffer, "Unit %s cannot flee", sc2::UnitTypeToName(rangedUnit->unit_type));
 	Util::Log(__FUNCTION__, buffer, m_bot);
-	const auto action = RangedUnitAction(MicroActionType::AttackMove, rangedUnit->pos, false, 0);
+	const auto actionType = m_bot.Data(rangedUnit->unit_type).isBuilding ? Move : AttackMove;
+	const auto action = RangedUnitAction(AttackMove, rangedUnit->pos, false, 0);
 	PlanAction(rangedUnit, action);
 	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 }
@@ -950,7 +951,7 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 #endif
 
 		const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
-		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings());
+		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings()) || m_bot.Data(rangedUnit->unit_type).isBuilding;
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 		const auto action = RangedUnitAction(moveWithoutAttack ? MicroActionType::Move : MicroActionType::AttackMove, goal, unitShouldHeal, actionDuration);
 		PlanAction(rangedUnit, action);
