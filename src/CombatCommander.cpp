@@ -577,6 +577,8 @@ void CombatCommander::updateIdleSquad()
     Squad & idleSquad = m_squadData.getSquad("Idle");
     for (auto & unit : m_combatUnits)
     {
+		if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING)
+			continue;
         // if it hasn't been assigned to a squad yet, put it in the low priority idle squad
         if (m_squadData.canAssignUnitToSquad(unit, idleSquad))
         {

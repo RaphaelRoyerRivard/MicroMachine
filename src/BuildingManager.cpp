@@ -1621,10 +1621,12 @@ void BuildingManager::castBuildingsAbilities()
 		{
 			const auto & flyingBarracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING);
 			const auto & flyingFactories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING);
-			if (flyingBarracks.size() == 1 && flyingFactories.size() == 1)
+			if (flyingBarracks.size() == 1 || flyingFactories.size() == 1)
 			{
-				Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyFactoryPosition, m_bot);
-				Micro::SmartAbility(flyingFactories[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyBarracksPosition, m_bot);
+				if (flyingBarracks.size() == 1)
+					Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyFactoryPosition, m_bot);
+				if (flyingFactories.size() == 1)
+					Micro::SmartAbility(flyingFactories[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyBarracksPosition, m_bot);
 			}
 			else if(flyingBarracks.empty() && flyingFactories.empty())
 			{
