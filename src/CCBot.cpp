@@ -708,6 +708,10 @@ void CCBot::clearDeadUnits()
 				m_KD8ChargesSpawnFrame.erase(tag);
 			if (unit.getPlayer() == Players::Enemy)
 				m_parasitedUnits.insert(unit.getUnitPtr()->tag);
+			if (m_deadAllyUnitsCount.find(unit.getAPIUnitType()) == m_deadAllyUnitsCount.end())
+				m_deadAllyUnitsCount[unit.getAPIUnitType()] = 1;
+			else
+				m_deadAllyUnitsCount[unit.getAPIUnitType()] += 1;
 		}
 	}
 	// Remove dead ally units
@@ -1043,6 +1047,14 @@ int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed, bool underConstru
 	}
 	
 	return total;
+}
+
+int CCBot::GetDeadAllyUnitsCount(sc2::UNIT_TYPEID type) const
+{
+	const auto it = m_deadAllyUnitsCount.find(type);
+	if (it != m_deadAllyUnitsCount.end())
+		return it->second;
+	return 0;
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()

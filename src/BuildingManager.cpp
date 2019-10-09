@@ -1611,6 +1611,7 @@ void BuildingManager::castBuildingsAbilities()
 				if (factories[0].getBuildPercentage() == 1.0f && barracksTechlabs[0].getBuildPercentage() == 1.0f)
 				{
 					m_proxyBarracksPosition = barracks[0].getPosition();
+					m_proxyFactoryPosition = factories[0].getPosition();
 					Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 					Micro::SmartAbility(factories[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 				}
@@ -1622,8 +1623,22 @@ void BuildingManager::castBuildingsAbilities()
 			const auto & flyingFactories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING);
 			if (flyingBarracks.size() == 1 && flyingFactories.size() == 1)
 			{
+				Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyFactoryPosition, m_bot);
 				Micro::SmartAbility(flyingFactories[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyBarracksPosition, m_bot);
+			}
+			else if(flyingBarracks.empty() && flyingFactories.empty())
+			{
 				m_proxySwapDone = true;
+			}
+		}
+		else if(!m_barracksSentToEnemyBase)
+		{
+			const auto & barracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+			const auto totalReapers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_REAPER);
+			if (!barracks.empty() && totalReapers >= 2)
+			{
+				Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+				m_barracksSentToEnemyBase = true;
 			}
 		}
 	}
