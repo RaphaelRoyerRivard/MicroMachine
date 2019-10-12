@@ -1713,19 +1713,19 @@ void BuildingManager::RunProxyLogic()
 			if (!flyingBarracks.empty())
 			{
 				m_proxyBarracksPosition = flyingBarracks[0].getPosition();
+				m_buildingPlacer.reserveTiles(m_proxyBarracksPosition.x, m_proxyBarracksPosition.y, 3, 3);
 				return;
 			}
 		}
 
 		// Land Barracks
-		if (m_proxyBarracksLandingPosition == CCPosition() && flyingBarracks.size() == 1)
+		if (!m_barracksSentToEnemyBase && flyingBarracks.size() == 1)
 		{
-			// TODO find a way to call this every frame so we can change landing position in case an enemy probe is blocking it
+			// Called every frame so the barracks can choose a new location if it gets blocked
 			const auto barracksFlyingType = UnitType(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, m_bot);
 			const auto barracksBuilding = Building(barracksFlyingType, m_proxyBarracksPosition);
-			m_proxyBarracksLandingPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(barracksBuilding, 0, false, true));
-			Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyBarracksLandingPosition, m_bot);
-			return;
+			const auto landingPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(barracksBuilding, 0, false, true));
+			Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
 		}
 
 		// Lift Factory
