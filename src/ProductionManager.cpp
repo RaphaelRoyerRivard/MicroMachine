@@ -273,6 +273,10 @@ void ProductionManager::manageBuildOrderQueue()
 			{
 				const bool hasBarracksTechlab = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType()) > 0;
 				shouldWait = hasBarracksTechlab;
+				if (shouldWait)
+					auto a = 0;
+				else
+					auto b = 0;
 			}
 		}
 

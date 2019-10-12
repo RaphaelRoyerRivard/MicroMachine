@@ -1599,51 +1599,7 @@ const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool 
 
 void BuildingManager::castBuildingsAbilities()
 {
-	if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
-	{
-		if (m_proxyBarracksPosition == CCPosition())
-		{
-			const auto & barracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
-			const auto & factories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORY);
-			const auto & barracksTechlabs = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB);
-			if (barracks.size() == 1 && factories.size() == 1 && barracksTechlabs.size() == 1)
-			{
-				if (factories[0].getBuildPercentage() == 1.0f && barracksTechlabs[0].getBuildPercentage() == 1.0f)
-				{
-					m_proxyBarracksPosition = barracks[0].getPosition();
-					m_proxyFactoryPosition = factories[0].getPosition();
-					Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
-					Micro::SmartAbility(factories[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
-				}
-			}
-		}
-		else if (!m_proxySwapDone)
-		{
-			const auto & flyingBarracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING);
-			const auto & flyingFactories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING);
-			if (flyingBarracks.size() == 1 || flyingFactories.size() == 1)
-			{
-				if (flyingBarracks.size() == 1)
-					Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyFactoryPosition, m_bot);
-				if (flyingFactories.size() == 1)
-					Micro::SmartAbility(flyingFactories[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyBarracksPosition, m_bot);
-			}
-			else if(flyingBarracks.empty() && flyingFactories.empty())
-			{
-				m_proxySwapDone = true;
-			}
-		}
-		else if(!m_barracksSentToEnemyBase)
-		{
-			const auto & barracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
-			const auto totalReapers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_REAPER);
-			if (!barracks.empty() && totalReapers >= 2)
-			{
-				Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
-				m_barracksSentToEnemyBase = true;
-			}
-		}
-	}
+	RunProxyLogic();
 	
 	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
 	{
@@ -1718,6 +1674,92 @@ void BuildingManager::castBuildingsAbilities()
 			point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
 			point.y = (point.y + (point.y + (point.y + orbitalPosition.y) / 2) / 2) / 2;
 			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
+		}
+	}
+}
+
+void BuildingManager::RunProxyLogic()
+{
+	if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
+	{
+		/*
+		Orders in order
+		¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+		Barracks
+		Reaper
+		Factory
+		Techlab
+		Lift B
+		Land B
+		Reaper
+		Lift F
+		Land F
+		Cyclone
+		Lift B
+		*/
+		const auto & barracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+		const auto & factories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORY);
+		const auto & techlabs = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_TECHLAB);
+		const auto & barracksTechlabs = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB);
+		const auto & flyingBarracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING);
+		// Lift Barracks
+		if (m_proxyBarracksPosition == CCPosition())
+		{
+			if (barracks.size() == 1 && factories.size() == 1 && barracksTechlabs.size() == 1 && barracksTechlabs[0].getBuildPercentage() == 1.0f)
+			{
+				Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+				return;
+			}
+			if (!flyingBarracks.empty())
+			{
+				m_proxyBarracksPosition = flyingBarracks[0].getPosition();
+				return;
+			}
+		}
+
+		// Land Barracks
+		if (m_proxyBarracksLandingPosition == CCPosition() && flyingBarracks.size() == 1)
+		{
+			// TODO find a way to call this every frame so we can change landing position in case an enemy probe is blocking it
+			const auto barracksFlyingType = UnitType(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, m_bot);
+			const auto barracksBuilding = Building(barracksFlyingType, m_proxyBarracksPosition);
+			m_proxyBarracksLandingPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(barracksBuilding, 0, false, true));
+			Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyBarracksLandingPosition, m_bot);
+			return;
+		}
+
+		// Lift Factory
+		if (m_proxyFactoryPosition == CCPosition())
+		{
+			if (factories.size() == 1 && factories[0].getBuildPercentage() == 1.0f && techlabs.size() == 1 && techlabs[0].getBuildPercentage() == 1.0f)
+			{
+				m_proxyFactoryPosition = factories[0].getPosition();
+				Micro::SmartAbility(factories[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+				return;
+			}
+		}
+
+		// Land Factory
+		if (!m_proxySwapDone && m_proxyBarracksPosition != CCPosition())
+		{
+			const auto & flyingFactories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING);
+			if (flyingFactories.size() == 1)
+			{
+				m_proxySwapDone = true;
+				Micro::SmartAbility(flyingFactories[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyBarracksPosition, m_bot);
+				return;
+			}
+		}
+
+		// Lift Barracks and let the CombatCommander take control of it
+		if (!m_barracksSentToEnemyBase)
+		{
+			const auto totalReapers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_REAPER);
+			if (!barracks.empty() && totalReapers >= 2)
+			{
+				Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+				m_barracksSentToEnemyBase = true;
+			}
 		}
 	}
 }

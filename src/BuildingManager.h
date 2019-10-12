@@ -23,6 +23,7 @@ class BuildingManager
 	CCPosition m_enemyMainRamp;
 	CCTilePosition m_proxyLocation;
 	CCPosition m_proxyBarracksPosition;
+	CCPosition m_proxyBarracksLandingPosition;
 	CCPosition m_proxyFactoryPosition;
 	bool m_proxySwapDone = false;
 	bool m_barracksSentToEnemyBase = false;
@@ -35,6 +36,7 @@ class BuildingManager
 
     bool            isBuildingPositionExplored(const Building & b) const;
 	void			castBuildingsAbilities();
+	void			RunProxyLogic();
 	Building		CancelBuilding(Building b);
 	void			updateBaseBuildings();
 
