@@ -1757,6 +1757,11 @@ bool Util::isUnitLockedOn(const sc2::Unit * unit)
 	return unitHasBuff(unit, sc2::BUFF_ID::LOCKON);
 }
 
+bool Util::isUnitDisabled(const sc2::Unit * unit)
+{
+	return unitHasBuff(unit, sc2::BUFF_ID::RAVENSCRAMBLERMISSILE);
+}
+
 bool Util::isUnitLifted(const sc2::Unit * unit)
 {
 	return unitHasBuff(unit, sc2::BUFF_ID::GRAVITONBEAM);

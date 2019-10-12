@@ -291,6 +291,11 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		goal = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getPosition();
 		unitShouldHeal = true;
 	}
+	else if (Util::isUnitDisabled(rangedUnit))
+	{
+		goal = m_bot.Map().center();
+		unitShouldHeal = true;
+	}
 
 	bool shouldAttack = true;
 	bool cycloneShouldUseLockOn = false;
