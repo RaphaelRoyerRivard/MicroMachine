@@ -576,11 +576,7 @@ bool Unit::isVisible() const
 void Unit::stop() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
-#ifdef SC2API
     m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::STOP);
-#else
-    m_unit->stop();
-#endif
 }
 
 void Unit::attackUnit(const Unit & target) const

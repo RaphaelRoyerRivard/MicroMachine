@@ -427,7 +427,7 @@ int BuildingManager::countBeingBuilt(UnitType type, bool underConstruction) cons
 		if (b.type == type)
 		{
 			if (!underConstruction || b.status == BuildingStatus::UnderConstruction)
-			count++;
+				count++;
 		}
 	}
 
@@ -709,14 +709,14 @@ void BuildingManager::constructAssignedBuildings()
             }
             else
             {
-                // if it's a refinery, the build command has to be on the geyser unit tag
-                if (b.type.isRefinery())
-                {
-                    // first we find the geyser at the desired location
-                    Unit geyser;
-                    for (auto unit : m_bot.GetUnits())
-                    {
-                        if (unit.getType().isGeyser() && Util::DistSq(Util::GetPosition(b.finalPosition), unit.getPosition()) < 3 * 3)
+				// if it's a refinery, the build command has to be on the geyser unit tag
+				if (b.type.isRefinery())
+				{
+					// first we find the geyser at the desired location
+					Unit geyser;
+					for (const auto & unit : m_bot.GetUnits())
+					{
+						if (unit.getType().isGeyser() && Util::DistSq(Util::GetPosition(b.finalPosition), unit.getPosition()) < 3 * 3)
 						{
 							geyser = unit;
 							break;
@@ -741,20 +741,20 @@ void BuildingManager::constructAssignedBuildings()
 						MetaType addonMetatype;
 						switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
 						{
-							case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
-							case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
-							case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
-							{
-								addonMetatype = MetaTypeEnum::Reactor;
-								break;
-							}
-							case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
-							case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
-							case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
-							{
-								addonMetatype = MetaTypeEnum::TechLab;
-								break;
-							}
+						case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+						case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+						{
+							addonMetatype = MetaTypeEnum::Reactor;
+							break;
+						}
+						case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
+						case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
+						{
+							addonMetatype = MetaTypeEnum::TechLab;
+							break;
+						}
 						}
 						b.builderUnit.build(b.type, b.finalPosition);
 					}

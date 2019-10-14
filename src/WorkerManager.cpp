@@ -568,6 +568,7 @@ void WorkerManager::handleIdleWorkers()
 			if (!worker.isConstructingAnything())
 			{
 				bool hasBuilding = false;
+				bool isCloseToBuildingLocation = false;
 				if (idle)
 				{
 					//Check if worker is waiting to build
@@ -581,6 +582,10 @@ void WorkerManager::handleIdleWorkers()
 							if (!b.type.isRefinery())
 							{
 								hasBuilding = true;
+								if (Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) < 1.f * 1.f)
+								{
+									isCloseToBuildingLocation = true;
+								}
 							}
 							break;
 						}
@@ -588,13 +593,16 @@ void WorkerManager::handleIdleWorkers()
 				}
 				if (hasBuilding)
 				{
-					//Is waiting for resources, so we patrol
-					//Patrol requires at least a 1 tile distance, 0.707 is exactly what we need to have a diagonal distance of 1.
-					auto patrolTarget = worker.getPosition();
-					patrolTarget.x += 0.71f;
-					patrolTarget.y += 0.71f;
+					if (isCloseToBuildingLocation)
+					{
+						//Is waiting for resources, so we patrol
+						//Patrol requires at least a 1 tile distance, 0.707 is exactly what we need to have a diagonal distance of 1.
+						auto patrolTarget = worker.getPosition();
+						patrolTarget.x += 0.71f;
+						patrolTarget.y += 0.71f;
 
-					worker.patrol(patrolTarget);
+						worker.patrol(patrolTarget);
+					}
 				}
 				else
 				{
