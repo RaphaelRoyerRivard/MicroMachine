@@ -78,9 +78,10 @@ CCPosition RepairStationManager::getBestRepairStationForUnit(const sc2::Unit* un
 	return base->getPosition();
 }
 
-bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack)
+bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack) const
 {
 	const int MINIMUM_WORKER_COUNT = 3;
+	const int PROXY_MINIMUM_WORKER_COUNT = 1;
 
 	if (!baseLocation)
 		return false;
@@ -91,19 +92,24 @@ bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocatio
 	if (!ignoreUnderAttack && baseLocation->isUnderAttack())
 		return false;
 
+	auto & workerData = m_bot.Workers().getWorkerData();
+	const auto repairWorkerCount = workerData.getRepairStationWorkers()[baseLocation].size();
 	const Unit& resourceDepot = baseLocation->getResourceDepot();
-	if (!resourceDepot.isValid())
-		return false;
+	if (resourceDepot.isValid())
+	{
+		if (!resourceDepot.isCompleted() && !resourceDepot.getType().isMorphedBuilding())
+			return false;
 
-	if (!resourceDepot.isCompleted() && !resourceDepot.getType().isMorphedBuilding())
-		return false;
+		const auto workerCount = workerData.getNumAssignedWorkers(resourceDepot);
+		if (workerCount + repairWorkerCount < MINIMUM_WORKER_COUNT)
+			return false;
+	}
+	else
+	{
+		if (repairWorkerCount < PROXY_MINIMUM_WORKER_COUNT)
+			return false;
+	}
 	
-	auto workerData = m_bot.Workers().getWorkerData();
-	int workerCount = workerData.getNumAssignedWorkers(resourceDepot);
-	int repairWorkerCount = workerData.getRepairStationWorkers()[baseLocation].size();
-	if (workerCount + repairWorkerCount < MINIMUM_WORKER_COUNT)
-		return false;
-
 	return true;
 }
 

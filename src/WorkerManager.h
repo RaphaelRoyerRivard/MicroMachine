@@ -48,7 +48,7 @@ public:
     void setScoutWorker(Unit worker);
     void setCombatWorker(Unit worker);
     void setRepairWorker(Unit worker,const Unit & unitToRepair);
-    void stopRepairing(Unit worker);
+    void stopRepairing(const Unit & worker);
 
     int  getNumMineralWorkers();
     int  getNumGasWorkers();

@@ -242,20 +242,20 @@ void BaseLocationManager::onFrame()
 
 	m_bot.StartProfiling("0.6.3   updateBaseLocations");
     // for each unit on the map, update which base location it may be occupying
-    for (auto & unit : m_bot.Buildings().getBaseBuildings())
-    {
-		if (!unit.getType().isResourceDepot())
-		{
+	for (const auto & unitPair : m_bot.GetAllyUnits())
+	{
+		const auto & unit = unitPair.second;
+		if (!unit.getType().isBuilding() || unit.isFlying())
 			continue;
-		}
-
+		
         BaseLocation * baseLocation = getBaseLocation(unit.getPosition());
 
-        if (baseLocation != nullptr)
-        {
-            baseLocation->setPlayerOccupying(Players::Self, true);
-			baseLocation->setResourceDepot(unit);
-        }
+		if (baseLocation != nullptr)
+		{
+			baseLocation->setPlayerOccupying(Players::Self, true);
+			if (unit.getType().isResourceDepot())
+				baseLocation->setResourceDepot(unit);
+		}
     }
 	m_bot.StopProfiling("0.6.3   updateBaseLocations");
 
@@ -525,6 +525,8 @@ BaseLocation * BaseLocationManager::getFarthestOccupiedBaseLocation() const
 	const auto enemyLocation = enemyBaseLocation ? enemyBaseLocation->getPosition() : m_bot.Map().center();
 	for (auto baseLocation : getOccupiedBaseLocations(Players::Self))
 	{
+		if (!baseLocation->getResourceDepot().isValid())
+			continue;
 		const auto distance = baseLocation->getGroundDistance(enemyLocation);
 		if (!closestBase || distance < minDistance)
 		{

@@ -178,9 +178,11 @@ void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)
     m_workerData.setWorkerJob(worker, WorkerJobs::Repair, unitToRepair);
 }
 
-void WorkerManager::stopRepairing(Unit worker)
+void WorkerManager::stopRepairing(const Unit & worker)
 {
     m_workerData.WorkerStoppedRepairing(worker);
+	if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && Util::DistSq(worker, Util::GetPosition(m_bot.Buildings().getProxyLocation())) < 10.f * 10.f)
+		return;
     finishedWithWorker(worker);
 }
 
@@ -651,29 +653,32 @@ void WorkerManager::handleRepairWorkers()
 
         if (m_workerData.getWorkerJob(worker) == WorkerJobs::Repair)
         {
-            Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
-			auto type = repairedUnit.getType();
-            if (!worker.isAlive())
-            {
-                // We inform the manager that we are no longer repairing
-                stopRepairing(worker);
-            }
-			// We do not try to repair if we don't have the required ressources
-			else if ((type.mineralPrice() > 0 && mineral == 0) || (type.gasPrice() > 0 && gas == 0))
+			if (!worker.isAlive())
 			{
 				// We inform the manager that we are no longer repairing
 				stopRepairing(worker);
 			}
-            // We do not try to repair dead units
-            else if (!repairedUnit.isAlive() || repairedUnit.getHitPoints() + std::numeric_limits<float>::epsilon() >= repairedUnit.getUnitPtr()->health_max)
-            {
-                stopRepairing(worker);
-            }
-            else if (worker.isIdle())
-            {
-                // Get back to repairing...
-                worker.repair(repairedUnit);
-            }
+            Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
+			if (repairedUnit.isValid())
+			{
+				auto type = repairedUnit.getType();
+				// We do not try to repair if we don't have the required ressources
+				if ((type.mineralPrice() > 0 && mineral == 0) || (type.gasPrice() > 0 && gas == 0))
+				{
+					// We inform the manager that we are no longer repairing
+					stopRepairing(worker);
+				}
+				// We do not try to repair dead units nor full health units
+				else if (!repairedUnit.isAlive() || repairedUnit.getHitPoints() + std::numeric_limits<float>::epsilon() >= repairedUnit.getUnitPtr()->health_max)
+				{
+					stopRepairing(worker);
+				}
+				else if (worker.isIdle())
+				{
+					// Get back to repairing...
+					worker.repair(repairedUnit);
+				}
+			}
         }
 
 		// this has been commented out because it doesn't work well against worker rushes (less combat scvs and too much minerals are spent repairing)

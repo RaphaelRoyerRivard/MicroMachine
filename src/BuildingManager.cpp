@@ -983,6 +983,14 @@ void BuildingManager::checkForCompletedBuildings()
 				else
 				{
 					m_bot.Workers().finishedWithWorker(b.builderUnit);
+					if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
+					{
+						if (b.buildingUnit.getType() == MetaTypeEnum::Factory.getUnitType() && Util::DistSq(b.buildingUnit, Util::GetPosition(m_proxyLocation)) < 15.f * 15.f)
+						{
+							m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Repair);
+							b.builderUnit.move(m_proxyLocation);
+						}
+					}
 
 					//Handle rally points
 					switch ((sc2::UNIT_TYPEID)type)
@@ -1643,7 +1651,7 @@ void BuildingManager::castBuildingsAbilities()
 					continue;
 
 				auto & depot = base->getResourceDepot();
-				if (!depot.isCompleted())
+				if (!depot.isValid() || !depot.isCompleted())
 					continue;
 
 				closestMineral = getLargestCloseMineral(depot, false, skipMinerals);

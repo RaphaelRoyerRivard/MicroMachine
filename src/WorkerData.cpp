@@ -308,6 +308,9 @@ Unit WorkerData::getWorkerDepot(const Unit & unit) const
 
 int WorkerData::getNumAssignedWorkers(const Unit & unit)
 {
+	if (!unit.isValid())
+		return 0;
+	
     if (unit.getType().isResourceDepot())
     {
         auto it = m_depotWorkerCount.find(unit);
@@ -434,7 +437,6 @@ void WorkerData::validateRepairStationWorkers()
 
 Unit WorkerData::getWorkerRepairTarget(const Unit & unit) const
 {
-           
     auto it = m_workerRepairTarget.find(unit);
 
     // if there is an entry, return it
@@ -442,10 +444,7 @@ Unit WorkerData::getWorkerRepairTarget(const Unit & unit) const
     {
         return it->second;
     }
-    else
-    {
-        return {};
-    }
+    return {};
 }
 
 std::map<Unit, std::pair<Unit, int>> & WorkerData::getReorderedGasWorkers()
