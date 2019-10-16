@@ -1079,6 +1079,8 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			float bestScore = 0.f;
 			for(const auto threat : threats)
 			{
+				if (UnitType(threat->unit_type, m_bot).isWorker())
+					continue;
 				const float threatHeight = m_bot.Map().terrainHeight(threat->pos);
 				if (threatHeight > cycloneHeight)
 				{
@@ -1098,8 +1100,6 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 						continue;
 				}
 				const float dist = Util::Dist(cyclone->pos, threat->pos);
-				/*if (dist > 10.f)
-					continue;*/
 				if (shouldHeal && dist > partialLockOnRange + threat->radius)
 					continue;
 				// The lower the better
