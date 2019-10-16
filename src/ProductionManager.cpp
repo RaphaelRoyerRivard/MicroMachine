@@ -575,8 +575,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						toBuild = MetaTypeEnum::Starport;
 						hasPicked = true;
 					}
-
-					if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
+					
+					if (hasPicked && !m_queue.contains(toBuild) && (!m_queue.contains(MetaTypeEnum::CommandCenter) || m_bot.GetFreeMinerals() > 400 || m_bot.Bases().getFreeBaseLocationCount() == 0))
 					{
 						bool idleProductionBuilding = false;
 						const auto & productionBuildings = m_bot.GetAllyUnits(toBuild.getUnitType().getAPIUnitType());
@@ -721,7 +721,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				break;
 			}
-			case TERRAN_VS_PROTOSS:
+			/*case TERRAN_VS_PROTOSS:
 			{
 				const auto vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 				const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
@@ -805,10 +805,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				//const int thorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Thor.getUnitType(), false, true);
 				//const auto hasArmory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Armory.getUnitType(), true, true) > 0;
 				const auto cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
-				/*if (hasArmory && !m_queue.contains(MetaTypeEnum::Thor))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Thor, 1, false));
-				}*/
+				//if (hasArmory && !m_queue.contains(MetaTypeEnum::Thor))
+				//{
+				//	m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Thor, 1, false));
+				//}
 
 				if (!m_queue.contains(MetaTypeEnum::Cyclone))
 				{
@@ -832,7 +832,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 #endif
 				break;
-			}
+			}*/
 			case WORKER_RUSH_DEFENSE:
 			{
 				m_queue.removeAllOfType(MetaTypeEnum::Refinery);
