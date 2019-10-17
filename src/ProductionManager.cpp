@@ -1034,6 +1034,9 @@ void ProductionManager::lowPriorityChecks()
 			{
 				for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
 				{
+					if (!base->getResourceDepot().isValid())
+						continue;
+					
 					auto hasTurret = false;
 					auto position = base->getTurretPosition();
 					auto buildings = m_bot.Buildings().getFinishedBuildings();

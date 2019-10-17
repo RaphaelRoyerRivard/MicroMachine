@@ -509,7 +509,7 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 
 	for (auto & base : bases)
 	{
-		if (base->isUnderAttack())
+		if (!base->getResourceDepot().isValid() || base->isUnderAttack())
 		{
 			continue;
 		}
