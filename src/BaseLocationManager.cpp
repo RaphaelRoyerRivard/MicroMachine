@@ -788,7 +788,8 @@ int BaseLocationManager::getAccessibleMineralFieldCount() const
 	int count = 0;
 	for (auto & base : getOccupiedBaseLocations(Players::Self))
 	{
-		count += base->getMinerals().size();
+		if (base->getResourceDepot().isValid())
+			count += base->getMinerals().size();
 	}
 	return count;
 }

@@ -570,7 +570,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						toBuild = MetaTypeEnum::Factory;
 						hasPicked = true;
 					}
-					else if (starportCount < finishedBaseCount * (m_bot.Strategy().enemyHasMassZerglings() ? 1 : 2))
+					else if (starportCount < finishedBaseCount)
 					{
 						toBuild = MetaTypeEnum::Starport;
 						hasPicked = true;
