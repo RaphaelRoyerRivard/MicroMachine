@@ -1111,10 +1111,13 @@ struct RegionArmyInformation
 	std::vector<const sc2::Unit*> affectedAllyUnits;
 	std::unordered_map<const sc2::Unit*, float> unitGroundScores;
 	std::unordered_map<const sc2::Unit*, float> unitAirScores;
+	std::unordered_map<const sc2::Unit*, float> unitDetectionScores;
 	float airEnemyPower;
 	float groundEnemyPower;
+	bool invisEnemies;
 	float antiAirAllyPower;
 	float antiGroundAllyPower;
+	bool antiInvis;
 	Squad* squad;
 	Unit closestEnemyUnit;
 
@@ -1123,22 +1126,36 @@ struct RegionArmyInformation
 		, bot(bot)
 		, airEnemyPower(0)
 		, groundEnemyPower(0)
+		, invisEnemies(false)
 		, antiAirAllyPower(0)
 		, antiGroundAllyPower(0)
+		, antiInvis(false)
 		, squad(nullptr)
 		, closestEnemyUnit({})
 	{}
+
+	std::unordered_map<const sc2::Unit*, float> & getScores(std::string type)
+	{
+		if (type == "detection")
+			return unitDetectionScores;
+		if (type == "ground")
+			return unitGroundScores;
+		return unitAirScores;
+	}
 
 	void calcEnemyPower()
 	{
 		airEnemyPower = 0;
 		groundEnemyPower = 0;
+		invisEnemies = false;
 		for(auto& unit : enemyUnits)
 		{
 			if (unit.isFlying())
 				airEnemyPower += Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
 			else
 				groundEnemyPower += Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
+			if (unit.isCloaked() || unit.isBurrowed())
+				invisEnemies = true;
 		}
 	}
 
@@ -1162,6 +1179,7 @@ struct RegionArmyInformation
 		const float power = Util::GetUnitPower(unit, nullptr, bot);
 		const bool canAttackGround = Util::CanUnitAttackGround(unit, bot);
 		const bool canAttackAir = Util::CanUnitAttackAir(unit, bot);
+		const bool isDetector = UnitType(unit->unit_type, bot).isDetector();
 		if(canAttackGround)
 		{
 			if(canAttackAir)
@@ -1184,6 +1202,10 @@ struct RegionArmyInformation
 		{
 			antiAirAllyPower += power;
 		}
+		if (isDetector)
+		{
+			antiInvis = true;
+		}
 	}
 
 	float antiGroundPowerNeeded() const
@@ -1194,6 +1216,11 @@ struct RegionArmyInformation
 	float antiAirPowerNeeded() const
 	{
 		return airEnemyPower * 1.5f - antiAirAllyPower;
+	}
+
+	bool antiInvisNeeded() const
+	{
+		return invisEnemies && !antiInvis;
 	}
 
 	bool needsMoreAntiGround() const
@@ -1453,6 +1480,7 @@ void CombatCommander::updateDefenseSquads()
 			{
 				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
 				bool immune = true;
+				bool detectionUseful = false;
 				float maxGroundDps = 0.f;
 				float maxAirDps = 0.f;
 				for (auto & enemyUnit : region.enemyUnits)
@@ -1469,6 +1497,8 @@ void CombatCommander::updateDefenseSquads()
 							immune = !Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot);
 						}
 					}
+					if (!detectionUseful && unit.getType().isDetector() && (enemyUnit.isCloaked() || enemyUnit.isBurrowed()))
+						detectionUseful = true;
 					// We check the max ground and air dps that our unit would do in that region
 					const float dps = Util::GetDpsForTarget(unit.getUnitPtr(), enemyUnit.getUnitPtr(), m_bot);
 					if (enemyUnit.isFlying())
@@ -1498,6 +1528,11 @@ void CombatCommander::updateDefenseSquads()
 					float regionScore = immune * 50 + maxAirDps - distance;
 					region.unitAirScores[unit.getUnitPtr()] = regionScore;
 				}
+				if (detectionUseful)
+				{
+					float regionScore = 100 - distance;
+					region.unitDetectionScores[unit.getUnitPtr()] = regionScore;
+				}
 			}
 		}
 		m_bot.StopProfiling("0.10.4.2.2.5      calculateRegionsScores");
@@ -1513,6 +1548,7 @@ void CombatCommander::updateDefenseSquads()
 			auto & squad = *regionIterator->squad;
 			bool stopCheckingForGroundSupport = false;
 			bool stopCheckingForAirSupport = false;
+			bool stopCheckingForDetectionSupport = false;
 
 			do
 			{
@@ -1520,21 +1556,29 @@ void CombatCommander::updateDefenseSquads()
 
 				// We find the unit that is the most interested to defend that region
 				float bestScore = 0.f;
-				bool checkForGroundSupport;
-				if(region.groundEnemyPower > 0.f && (stopCheckingForAirSupport || region.airEnemyPower == 0.f))
+				std::string support;
+				if (region.antiInvisNeeded() && !stopCheckingForDetectionSupport)
 				{
-					checkForGroundSupport = true;
+					support = "detection";
+				}
+				else if(region.groundEnemyPower > 0.f && (stopCheckingForAirSupport || region.airEnemyPower == 0.f))
+				{
+					support = "ground";
 				}
 				else if(region.airEnemyPower > 0.f && (stopCheckingForGroundSupport || region.groundEnemyPower == 0.f))
 				{
-					checkForGroundSupport = false;
+					support = "air";
 				}
 				else
 				{
-					checkForGroundSupport = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded();
+					support = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded() ? "ground" : "air";
 				}
-				const bool needsMoreSupport = checkForGroundSupport ? region.needsMoreAntiGround() : region.needsMoreAntiAir();
-				auto& scores = checkForGroundSupport ? region.unitGroundScores : region.unitAirScores;
+				bool needsMoreSupport = true;
+				if (support == "ground")
+					needsMoreSupport = region.needsMoreAntiGround();
+				else if (support == "air")
+					needsMoreSupport = region.needsMoreAntiAir();
+				auto& scores = region.getScores(support);
 				for (auto & scorePair : scores)
 				{
 					// If the base already has enough defense
@@ -1569,7 +1613,7 @@ void CombatCommander::updateDefenseSquads()
 					unit = Unit(unitptr, m_bot);
 				}
 				// If we have no more unit to defend we check for the workers
-				else if(checkForGroundSupport)
+				else if(support == "ground")
 				{
 					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit);
 				}
@@ -1577,14 +1621,20 @@ void CombatCommander::updateDefenseSquads()
 				// If no support is available
 				if (!unit.isValid())
 				{
+					// If we were checking for detection support, stop checking for detection support
+					if (support == "detection" && !stopCheckingForDetectionSupport)
+					{
+						stopCheckingForDetectionSupport = true;
+						continue;	// Continue to check if the same region needs the other type of support
+					}
 					// If we were checking for ground support, stop checking for ground support
-					if(checkForGroundSupport && !stopCheckingForGroundSupport)
+					if(support == "ground" && !stopCheckingForGroundSupport)
 					{
 						stopCheckingForGroundSupport = true;
 						continue;	// Continue to check if the same region needs the other type of support
 					}
 					// If we were checking for air support, stop checking for air support
-					if(!checkForGroundSupport && !stopCheckingForAirSupport)
+					if(support == "air" && !stopCheckingForAirSupport)
 					{
 						stopCheckingForAirSupport = true;
 						continue;	// Continue to check if the same region needs the other type of support
@@ -1597,6 +1647,7 @@ void CombatCommander::updateDefenseSquads()
 					// Reset the support checks because it will now be for another region
 					stopCheckingForGroundSupport = false;
 					stopCheckingForAirSupport = false;
+					stopCheckingForDetectionSupport = false;
 				}
 			} while (!unit.isValid());
 
@@ -1625,6 +1676,7 @@ void CombatCommander::updateDefenseSquads()
 				{
 					regionToRemoveUnit.unitGroundScores.erase(unitptr);
 					regionToRemoveUnit.unitAirScores.erase(unitptr);
+					regionToRemoveUnit.unitDetectionScores.erase(unitptr);
 				}
 			}
 

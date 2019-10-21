@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.6.8",
+        "BotVersion"                : "1.6.9",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -132,7 +132,7 @@
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
-        "DrawBaseLocationInfo"      : false,
+        "DrawBaseLocationInfo"      : true,
         "DrawBaseTiles"             : false,
         "DrawStartingRamp"		    : true,
         "DrawWall"		   			: true,

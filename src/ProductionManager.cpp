@@ -14,12 +14,12 @@ void ProductionManager::setBuildOrder(const BuildOrder & buildOrder)
 {
     m_queue.clearAll();
 
-	bool firstBarracks = false;
+	bool blocking = m_bot.Strategy().getStartingStrategy() == STANDARD ? true : false;
     for (size_t i(0); i<buildOrder.size(); ++i)
     {
-		if (buildOrder[i].getUnitType() == MetaTypeEnum::Barracks.getUnitType())
-			firstBarracks = true;
-        m_queue.queueAsLowestPriority(buildOrder[i], firstBarracks);
+		if (!blocking && buildOrder[i].getUnitType() == MetaTypeEnum::Barracks.getUnitType())
+			blocking = true;
+        m_queue.queueAsLowestPriority(buildOrder[i], blocking);
     }
 }
 
@@ -1040,7 +1040,7 @@ void ProductionManager::lowPriorityChecks()
 					auto hasTurret = false;
 					auto position = base->getTurretPosition();
 					auto buildings = m_bot.Buildings().getFinishedBuildings();
-					for (auto b : buildings)
+					for (auto & b : buildings)
 					{
 						if (b.getTilePosition() == position)
 						{

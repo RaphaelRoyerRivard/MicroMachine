@@ -31,7 +31,7 @@ StrategyManager::StrategyManager(CCBot & bot)
 void StrategyManager::onStart()
 {
     readStrategyFile(m_bot.Config().ConfigFileLocation);
-	m_startingStrategy = PROXY_CYCLONES;
+	m_startingStrategy = STANDARD;
 }
 
 void StrategyManager::onFrame()

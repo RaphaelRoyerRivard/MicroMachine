@@ -658,19 +658,18 @@ void BuildingManager::constructAssignedBuildings()
         }
 
 		// TODO: not sure if this is the correct way to tell if the building is constructing
-		Unit builderUnit = b.builderUnit;
-		bool isTryingToBuild = false;
+		Unit & builderUnit = b.builderUnit;
 
 		//Prevent order spam 
-		if (b.buildCommandGiven && builderUnit.isValid())
+		/*if (b.buildCommandGiven && builderUnit.isValid())
 		{
-			auto orders = b.builderUnit.getUnitPtr()->orders;
+			auto & orders = b.builderUnit.getUnitPtr()->orders;
 			if (orders.size() != 0 && orders[0].ability_id != sc2::ABILITY_ID::PATROL)
 			{
 				//Is not idle and is not patroling, should be trying to build.
 				continue;
 			}
-		}
+		}*/
 
 
 		// if we're zerg and the builder unit is null, we assume it morphed into the building
@@ -695,7 +694,9 @@ void BuildingManager::constructAssignedBuildings()
             // if we haven't explored the build position, go there
             if (!isBuildingPositionExplored(b))
             {
-                builderUnit.move(b.finalPosition);
+				const auto & orders = b.builderUnit.getUnitPtr()->orders;
+            	if (orders.empty() || orders[0].ability_id != sc2::ABILITY_ID::MOVE || orders[0].target_pos.x != b.finalPosition.x || orders[0].target_pos.y != b.finalPosition.y)
+					builderUnit.move(b.finalPosition);
             }
             // if this is not the first time we've sent this guy to build this
             // it must be the case that something was in the way of building
