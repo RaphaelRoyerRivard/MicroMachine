@@ -272,11 +272,17 @@ void ProductionManager::manageBuildOrderQueue()
 			else if (currentItem.type == MetaTypeEnum::Reaper)
 			{
 				const bool hasBarracksTechlab = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType()) > 0;
-				shouldWait = hasBarracksTechlab;
-				if (shouldWait)
-					auto a = 0;
+				if (hasBarracksTechlab)
+				{
+					shouldWait = true;
+				}
 				else
-					auto b = 0;
+				{
+					const bool hasTechlab = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::TechLab.getUnitType(), true, true) > 0;
+					const bool reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType());
+					if (!hasTechlab && reaperCount == 1)
+						shouldWait = true;
+				}
 			}
 		}
 
