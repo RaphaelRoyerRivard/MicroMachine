@@ -912,7 +912,18 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID w
 Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving) const
 {
 	Unit closestMineralWorker;
-	double closestDist = std::numeric_limits<double>::max();
+	auto closestDist = 0.f;
+
+	const BaseLocation * base = nullptr;
+	const auto & baseLocations = m_bot.Bases().getBaseLocations();
+	for (const auto baseLocation : baseLocations)
+	{
+		if (Util::DistSq(pos, Util::GetPosition(baseLocation->getDepotPosition())) < 10 * 10)
+		{
+			base = baseLocation;
+			break;
+		}
+	}
 
 	// for each of our workers
 	for (auto & worker : m_workerData.getWorkers())
@@ -927,11 +938,15 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 			continue;
 		if (isReturningCargo(worker))
 			continue;
-		if (filterMoving  && worker.isMoving())
+		if (filterMoving && worker.isMoving())
 			continue;
 		
-		///TODO: Maybe it should by ground distance?
-		double dist = Util::DistSq(worker.getPosition(), pos);
+		auto dist = Util::DistSq(worker.getPosition(), pos);
+		if (base != nullptr && dist > 20 * 20)
+		{
+			dist = base->getGroundDistance(worker.getPosition());
+			dist *= dist;
+		}
 		if (!closestMineralWorker.isValid() || dist < closestDist)
 		{
 			closestMineralWorker = worker;

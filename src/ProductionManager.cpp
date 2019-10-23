@@ -1675,18 +1675,18 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
         return units[0];
     }
 
-    Unit closestUnit;
-    double minDist = std::numeric_limits<double>::max();
-
-    for (auto & unit : units)
-    {
-        double distance = Util::DistSq(unit, closestTo);
-        if (!closestUnit.isValid() || distance < minDist)
-        {
-            closestUnit = unit;
-            minDist = distance;
-        }
-    }
+	Unit closestUnit;
+	auto minDist = 0.f;
+	
+	for (auto & unit : units)
+	{
+		const auto distance = Util::DistSq(unit, closestTo);
+		if (!closestUnit.isValid() || distance < minDist)
+		{
+			closestUnit = unit;
+			minDist = distance;
+		}
+	}
 
     return closestUnit;
 }
