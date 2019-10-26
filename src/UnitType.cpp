@@ -60,7 +60,6 @@ CCRace UnitType::getRace() const
 
 bool UnitType::isCombatUnit() const
 {
-#ifdef SC2API
     if (isWorker()) { return false; }
 	if (isEgg() || isLarva()) { return false; }
 	if (isBuilding())
@@ -70,26 +69,6 @@ bool UnitType::isCombatUnit() const
 		return false;
 	}
     return true;
-#else
-    // check for various types of combat units
-    if (m_type.canAttack() || 
-        m_type == BWAPI::UnitTypes::Terran_Medic ||
-        m_type == BWAPI::UnitTypes::Protoss_High_Templar ||
-        m_type == BWAPI::UnitTypes::Protoss_Observer ||
-        m_type == BWAPI::UnitTypes::Zerg_Overlord ||
-        m_type == BWAPI::UnitTypes::Protoss_Observer)
-    {
-        return true;
-    }
-
-    // no workers or buildings allowed
-    if (m_type.isWorker() || m_type.isBuilding())
-    {
-        return false;
-    }
-
-    return false;
-#endif
 }
 
 bool UnitType::isSupplyProvider() const
@@ -182,6 +161,7 @@ bool UnitType::isDetector(sc2::UnitTypeID unitTypeId)
 	switch (unitTypeId.ToType())
 	{
 		case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
 		case sc2::UNIT_TYPEID::ZERG_OVERSEER:
 		case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET:
 		case sc2::UNIT_TYPEID::ZERG_SPORECRAWLER:

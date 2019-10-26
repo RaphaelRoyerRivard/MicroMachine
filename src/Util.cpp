@@ -1790,6 +1790,7 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 		sc2::UNIT_TYPEID::TERRAN_MISSILETURRET,
 		sc2::UNIT_TYPEID::TERRAN_RAVEN,
 		sc2::UNIT_TYPEID::PROTOSS_OBSERVER,
+		sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE,
 		sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON,
 		sc2::UNIT_TYPEID::ZERG_SPORECRAWLER,
 		sc2::UNIT_TYPEID::ZERG_OVERSEER
@@ -1800,7 +1801,9 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 		for(const auto & detector : detectors)
 		{
 			const float distance = Util::DistSq(detector, position);
-			const float detectionRange = detector.getUnitPtr()->detect_range;
+			float detectionRange = detector.getUnitPtr()->detect_range;
+			if (detectionRange == 0)
+				detectionRange = detector.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE ? 13.75f : 11;
 			if(distance <= detectionRange * detectionRange)
 			{
 				return true;
