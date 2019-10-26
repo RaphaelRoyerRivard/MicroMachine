@@ -414,7 +414,7 @@ void WorkerData::validateRepairStationWorkers()
 		std::list<Unit> toRemove;
 		for (auto & worker : station.second)
 		{
- 			if (!worker.isValid() || !worker.isAlive() || getWorkerJob(worker) != WorkerJobs::Repair)
+ 			if (!worker.isValid() || !worker.isAlive() || getWorkerJob(worker) != WorkerJobs::Repair || Util::DistSq(worker, station.first->getPosition()) > 10.f * 10.f)
 			{
 				toRemove.push_back(worker);
 			}

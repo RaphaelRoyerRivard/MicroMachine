@@ -753,7 +753,13 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = { supportUnit->unit_type };
 	const std::vector<sc2::UNIT_TYPEID> typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
 	const auto clusterQueryName = "";// isRaven ? "Raven" : "";
-	const auto clusters = Util::GetUnitClusters(rangedUnits, isMarine ? typesToConsider : typesToIgnore, !isMarine, clusterQueryName, m_bot);
+	sc2::Units validUnits;
+	for (const auto rangedUnit : rangedUnits)
+	{
+		if (!ShouldUnitHeal(rangedUnit))
+			validUnits.push_back(rangedUnit);
+	}
+	const auto clusters = Util::GetUnitClusters(validUnits, isMarine ? typesToConsider : typesToIgnore, !isMarine, clusterQueryName, m_bot);
 	const Util::UnitCluster* closestBiggestCluster = nullptr;
 	float distance = 0.f;
 	for(const auto & cluster : clusters)
