@@ -237,7 +237,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isCycloneHelper = cycloneFlyingHelperIt != m_cycloneFlyingHelpers.end();
 	if (isCycloneHelper)
 	{
-		goal = cycloneFlyingHelperIt->second.position;
+		const auto helperGoalPosition = cycloneFlyingHelperIt->second.position;
+		if (Util::DistSq(rangedUnit->pos, helperGoalPosition) < 20 * 20)
+			goal = helperGoalPosition;
 		if (m_bot.Config().DrawHarassInfo)
 		{
 			m_bot.Map().drawCircle(rangedUnit->pos, 0.75f, sc2::Colors::Purple);
@@ -264,11 +266,11 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		{
 			goal = m_bot.GetStartLocation();
 		}
-		else*/ if (!isCycloneHelper && (isMarine || isRaven || isViking))
+		else*/ if (!isCycloneHelper && (isMarine || isRaven || isViking || isHellion))
 		{
 			goal = GetBestSupportPosition(rangedUnit, rangedUnits);
 		}
-		else if (!isCycloneHelper && isFlyingBarracks)
+		else if (isFlyingBarracks && !isCycloneHelper)
 		{
 			goal = m_bot.Buildings().getEnemyMainRamp();
 		}
@@ -658,7 +660,7 @@ bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inD
 
 bool RangedManager::ShouldBansheeUncloak(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal) const
 {
-	if (banshee->cloak != sc2::Unit::Cloaked)
+	if (banshee->cloak != sc2::Unit::CloakedAllied)
 		return false;
 
 	if (!unitShouldHeal)
@@ -939,11 +941,11 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * target)
 {
 	const uint32_t currentFrame = m_bot.GetCurrentFrame();
+	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 	//const bool queryAbilityAvailable = QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON);
 	const bool abilityAvailable = isAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone);
 	if (abilityAvailable)
 	{
-		auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 		// Lock-On ability is not on cooldown
 		const auto it = lockOnTargets.find(cyclone);
 		if (it != lockOnTargets.end())
@@ -985,11 +987,27 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			const auto cycloneHeight = m_bot.Map().terrainHeight(cyclone->pos);
 			auto & abilityCastingRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
 			const auto partialLockOnRange = abilityCastingRanges[sc2::ABILITY_ID::EFFECT_LOCKON] + cyclone->radius;
+			std::map<const sc2::Unit *, int> lockedOnTargets;
+			for (const auto & lockOnTarget : lockOnTargets)
+			{
+				auto lockedOnTarget = lockOnTarget.second.first;
+				const auto it = lockedOnTargets.find(lockedOnTarget);
+				if (it == lockedOnTargets.end())
+					lockedOnTargets[lockedOnTarget] = 1;
+				else
+					lockedOnTargets[lockedOnTarget] += 1;
+			}
 			const sc2::Unit * bestTarget = nullptr;
 			float bestScore = 0.f;
 			for(const auto threat : threats)
 			{
+				// Do not Lock On on workers
 				if (UnitType(threat->unit_type, m_bot).isWorker())
+					continue;
+				// Do not Lock On on units that are already Locked On unless they have a lot of hp
+				// Will target the unit only if it can absorb more than 3 missiles (20 damage each) per Cyclone Locked On to it
+				const auto it = lockedOnTargets.find(threat);
+				if (it != lockedOnTargets.end() && threat->health + threat->shield <= it->second * 60)
 					continue;
 				const float threatHeight = m_bot.Map().terrainHeight(threat->pos);
 				if (threatHeight > cycloneHeight)

@@ -468,7 +468,10 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_SPIRE:
 					case sc2::UNIT_TYPEID::ZERG_HIVE:
 						m_strategy.setShouldProduceAntiAirOffense(true);
-						Actions()->SendChat("Going for air units? Your fleet will be not match for mine!");
+						if (GetPlayerRace(Players::Enemy) == sc2::Zerg)
+							Actions()->SendChat("Going for air units? Your flock will be not match for my fleet!");
+						else
+							Actions()->SendChat("Going for air units? Your fleet will be not match for mine!");
 						Util::DebugLog(__FUNCTION__, "Air production building detected: " + unit.getType().getName(), *this);
 					default:
 						break;

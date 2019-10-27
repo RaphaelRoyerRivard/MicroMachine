@@ -1267,6 +1267,10 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 		if (where == sc2::Weapon::TargetType::Ground)
 			range = 4.f;
 	}
+	else if (unitType == sc2::UNIT_TYPEID::ZERG_HYDRALISK)
+	{
+		range = 6.f;	// Always consider they have their range upgrade because we don't want to detect it manually
+	}
 
 	return range;
 }
