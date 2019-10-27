@@ -29,7 +29,7 @@ void RepairStationManager::onFrame()
 	}
 
 	// Add the valid repair stations that are missing from the map
-	const std::vector<const BaseLocation *> & bases = m_bot.Bases().getBaseLocations();
+	const auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 	for(auto & base : bases)
 	{
 		if (!isRepairStationValidForBaseLocation(base))
@@ -81,7 +81,6 @@ CCPosition RepairStationManager::getBestRepairStationForUnit(const sc2::Unit* un
 bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack) const
 {
 	const int MINIMUM_WORKER_COUNT = 3;
-	const int PROXY_MINIMUM_WORKER_COUNT = 1;
 
 	if (!baseLocation)
 		return false;
@@ -93,7 +92,6 @@ bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocatio
 		return false;
 
 	auto & workerData = m_bot.Workers().getWorkerData();
-	const auto repairWorkerCount = workerData.getRepairStationWorkers()[baseLocation].size();
 	const Unit& resourceDepot = baseLocation->getResourceDepot();
 	if (resourceDepot.isValid())
 	{
@@ -101,13 +99,22 @@ bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocatio
 			return false;
 
 		const auto workerCount = workerData.getNumAssignedWorkers(resourceDepot);
+		const auto repairWorkerCount = workerData.getRepairStationWorkers()[baseLocation].size();
 		if (workerCount + repairWorkerCount < MINIMUM_WORKER_COUNT)
 			return false;
 	}
 	else
 	{
-		if (repairWorkerCount < PROXY_MINIMUM_WORKER_COUNT)
-			return false;
+		bool proxyRepairWorker = false;
+		for (const auto & worker : workerData.getWorkers())
+		{
+			if (workerData.getWorkerJob(worker) == WorkerJobs::Repair && Util::DistSq(worker, baseLocation->getPosition()) < 10 * 10)
+			{
+				proxyRepairWorker = true;
+				break;
+			}
+		}
+		return proxyRepairWorker;
 	}
 	
 	return true;
