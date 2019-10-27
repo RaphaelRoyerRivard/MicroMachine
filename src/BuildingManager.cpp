@@ -1754,9 +1754,12 @@ void BuildingManager::RunProxyLogic()
 			const auto & flyingFactories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING);
 			if (flyingFactories.size() == 1)
 			{
-				m_proxySwapDone = true;
+				m_proxySwapInitiated = true;
 				Micro::SmartAbility(flyingFactories[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyBarracksPosition, m_bot);
-				return;
+			}
+			else if (m_proxySwapInitiated)
+			{
+				m_proxySwapDone = true;
 			}
 		}
 

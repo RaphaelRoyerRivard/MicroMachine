@@ -66,11 +66,6 @@ void BaseLocationManager::onStart()
 			}
 		}
 
-#ifndef SC2API
-        // for BWAPI we have to eliminate minerals that have low resource counts
-        if (mineral.getUnitPtr()->getResources() < 100) { continue; }
-#endif
-
         if (!affectToCluster(resourceClusters, mineral.second, maxClusterDistanceSq))
         {
             resourceClusters.push_back(std::vector<Unit>());
@@ -114,7 +109,17 @@ void BaseLocationManager::onStart()
     {
         if (cluster.size() > 4)
         {
-            m_baseLocationData.push_back(BaseLocation(m_bot, baseID++, cluster));
+			bool hasGeyser = false;
+			for (const auto & resource : cluster)
+			{
+				if (resource.getType().isGeyser())
+				{
+					hasGeyser = true;
+					break;
+				}
+			}
+        	if (hasGeyser)
+				m_baseLocationData.push_back(BaseLocation(m_bot, baseID++, cluster));
         }
     }
 

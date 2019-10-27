@@ -15,7 +15,7 @@ const size_t ScoutDefensePriority = 5;
 const size_t DropPriority = 5;
 
 const float DefaultOrderRadius = 25;			//Order radius is the threat awareness range of units in the squad
-const float WorkerRushDefenseOrderRadius = 100;
+const float WorkerRushDefenseOrderRadius = 250;
 const float MainAttackOrderRadius = 15;
 const float HarassOrderRadius = 15;
 const float ScoutOrderRadius = 6;				//Small number to prevent the scout from targeting far units instead of going to the next base location
@@ -1293,7 +1293,7 @@ void CombatCommander::updateDefenseSquads()
 		int numEnemyGroundInRegion = 0;
 		float minEnemyDistance = 0;
 		Unit closestEnemy;
-		bool firstWorker = true;
+		int enemyWorkers = 0;
 		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
 		{
 			// if it's an overlord, don't worry about it for defense, we don't care what they see
@@ -1309,11 +1309,11 @@ void CombatCommander::updateDefenseSquads()
 			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
 			{
 				//we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
-				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392)	// first 3 minutes
+				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
 				{
-					if (firstWorker)
+					if (enemyWorkers < 3)
 					{
-						firstWorker = false;
+						++enemyWorkers;
 						continue;
 					}
 					workerRushed = true;

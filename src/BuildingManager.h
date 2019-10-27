@@ -24,6 +24,7 @@ class BuildingManager
 	CCTilePosition m_proxyLocation;
 	CCPosition m_proxyBarracksPosition;
 	CCPosition m_proxyFactoryPosition;
+	bool m_proxySwapInitiated = false;
 	bool m_proxySwapDone = false;
 	bool m_barracksSentToEnemyBase = false;
 	std::list<CCTilePosition> m_wallBuildingPosition;
