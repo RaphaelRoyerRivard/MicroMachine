@@ -1283,7 +1283,8 @@ CCTilePosition BuildingManager::getProxyLocation()
 			{
 				const auto baseHeight = m_bot.Map().terrainHeight(baseLocation->getDepotPosition());
 				const auto basePosition = Util::GetPosition(baseLocation->getDepotPosition());
-				if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Zerg)
+				const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
+				if (enemyRace == sc2::Zerg || enemyRace == sc2::Random)
 				{
 					if (Util::DistBetweenLineAndPoint(Util::GetPosition(startingBaseLocation->getDepotPosition()), enemyBasePosition, basePosition) < 15.f)
 					{

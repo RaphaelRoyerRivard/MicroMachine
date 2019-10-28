@@ -387,25 +387,40 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-	if (!unitShouldHeal && (cycloneShouldUseLockOn || cycloneShouldStayCloseToTarget || AllowUnitToPathFind(rangedUnit)))
+	if (!unitShouldHeal)
 	{
-		const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
-		const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
-		const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
-		const float maxRange = target ? unitAttackRange : 3.f;
-		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, m_bot);
-		if (closePositionInPath != CCPosition())
+		if (cycloneShouldUseLockOn || cycloneShouldStayCloseToTarget || AllowUnitToPathFind(rangedUnit))
 		{
-			const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
-			const auto action = RangedUnitAction(MicroActionType::Move, closePositionInPath, unitShouldHeal, actionDuration);
-			PlanAction(rangedUnit, action);
-			m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
-			m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-			return;
+			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
+			const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
+			const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
+			const float maxRange = target ? unitAttackRange : 3.f;
+			CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, m_bot);
+			if (closePositionInPath != CCPosition())
+			{
+				const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
+				const auto action = RangedUnitAction(MicroActionType::Move, closePositionInPath, unitShouldHeal, actionDuration);
+				PlanAction(rangedUnit, action);
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
+				return;
+			}
+			else
+			{
+				nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
+			}
 		}
-		else
+		else if (isCyclone && !shouldAttack && !cycloneShouldUseLockOn && target)
 		{
-			nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
+			CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(rangedUnit, target, unitAttackRange, m_bot);
+			if (movePosition != CCPosition())
+			{
+				const auto action = RangedUnitAction(MicroActionType::Move, movePosition, unitShouldHeal, 0);
+				PlanAction(rangedUnit, action);
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
+				return;
+			}
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
@@ -1335,7 +1350,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			if (injured || shouldKite)
 			{
-				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, m_bot);
+				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, m_bot);
 			}
 			else if(shouldChase)
 			{

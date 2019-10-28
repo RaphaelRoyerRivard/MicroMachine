@@ -230,9 +230,8 @@ CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CC
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
-CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, CCBot & bot)
 {
-	const float range = GetAttackRangeForTarget(unit, target, bot);
 	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, CCPosition(), range, false, false, false, false, true, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
 }
