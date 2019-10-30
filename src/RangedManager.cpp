@@ -317,7 +317,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
-	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, goal, unitShouldHeal, isCycloneHelper))
+	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
 	{
 		return;
 	}
@@ -1489,7 +1489,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 	}
 }
 
-bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
+bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 	{
@@ -1508,7 +1508,7 @@ bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * range
 		if (ExecuteOffensiveTeleportLogic(rangedUnit, threats, goal))
 			return true;
 
-		if (ExecuteYamatoCannonLogic(rangedUnit, threats))
+		if (ExecuteYamatoCannonLogic(rangedUnit, targets))
 			return true;
 	}
 
@@ -1552,7 +1552,7 @@ bool RangedManager::ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruise
 	return false;
 }
 
-bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats)
+bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & targets)
 {
 	const size_t currentFrame = m_bot.GetCurrentFrame();
 	auto & queryYamatoAvailability = m_bot.Commander().Combat().getQueryYamatoAvailability();
@@ -1571,26 +1571,31 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		return false;
 
 	const sc2::Unit* target = nullptr;
-	float maxDps = 0.f;
+	float maxDps = 0.1f; // This will prevent Yamato to be shot on a unit that can't attack the BC
 	auto & abilityCastingRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
 	auto & yamatoTargets = m_bot.Commander().Combat().getYamatoTargets();
-	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN);
-	for (const auto threat : threats)
+	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN) + battlecruiser->radius;
+	for (const auto potentialTarget : targets)
 	{
-		const float threatDistance = Util::DistSq(battlecruiser->pos, threat->pos);
-		const float threatHp = threat->health + threat->shield;
+		const float curentYamatoRange = yamatoRange + potentialTarget->radius;
+		const float targetDistance = Util::DistSq(battlecruiser->pos, potentialTarget->pos);
+		const float targetHp = potentialTarget->health + potentialTarget->shield;
 		unsigned yamatos = 0;
-		const auto & it = yamatoTargets.find(threat->tag);
+		const auto & it = yamatoTargets.find(potentialTarget->tag);
 		if (it != yamatoTargets.end())
 			yamatos = it->second.size();
 		// TODO find a way of targetting multiple yamato onto the same target if it has a lot of HP
-		if (threatDistance <= yamatoRange * yamatoRange && yamatos == 0 && threatHp >= 120.f && threatHp <= 240.f) //+ 240.f * yamatos)
+		if (targetDistance <= curentYamatoRange * curentYamatoRange && yamatos == 0)
 		{
-			const float dps = Util::GetDpsForTarget(threat, battlecruiser, m_bot);
-			if(dps > maxDps || (dps == maxDps && threatHp > target->health + target->shield))
+			const auto isInfestor = potentialTarget->unit_type == sc2::UNIT_TYPEID::ZERG_INFESTOR || potentialTarget->unit_type == sc2::UNIT_TYPEID::ZERG_INFESTORBURROWED;
+			if (isInfestor || (targetHp >= 120.f && targetHp <= 240.f))	//+ 240.f * yamatos)
 			{
-				maxDps = dps;
-				target = threat;
+				const float dps = isInfestor ? 1000 : Util::GetDpsForTarget(potentialTarget, battlecruiser, m_bot);
+				if (dps > maxDps || (dps == maxDps && targetHp > target->health + target->shield))
+				{
+					maxDps = dps;
+					target = potentialTarget;
+				}
 			}
 		}
 	}
