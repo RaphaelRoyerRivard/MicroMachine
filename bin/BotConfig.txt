@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.6.9",
+        "BotVersion"                : "1.6.10",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -25,7 +25,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "TritonLE.SC2Map",
+        "MapFile"                   : "WorldofSleepersLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -280,19 +280,36 @@
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
-			"Terran_ReaperHarass4"     : 
+            "Terran_ReaperHarass4"     : 
             { 
                 "Race"              : "Terran",  
                 "OpeningBuildOrder" : ["SCV", 
-										"SupplyDepot", 
-										"SCV", 
-										"SCV", 
-										"Barracks",
-										"SCV",
-										"Refinery",
-										"SCV",
-										"Refinery",
-										"SCV"],
+                                        "SupplyDepot", 
+                                        "SCV", 
+                                        "SCV", 
+                                        "Barracks",
+                                        "SCV",
+                                        "Refinery",
+                                        "SCV",
+                                        "Refinery",
+                                        "SCV"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
+            },
+            "Terran_ReaperHarass4_Ladder"     : 
+            { 
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV",
+                                        "SupplyDepot", 
+                                        "SCV",
+                                        "SCV",
+                                        "SCV",
+                                        "Barracks",
+                                        "SCV",
+                                        "Refinery",
+                                        "SCV",
+                                        "Refinery",
+                                        "SCV"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
