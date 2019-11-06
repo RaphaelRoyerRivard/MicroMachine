@@ -34,7 +34,7 @@ void StrategyManager::onStart()
 	m_startingStrategy = PROXY_CYCLONES;
 }
 
-void StrategyManager::onFrame()
+void StrategyManager::onFrame(bool executeMacro)
 {
 
 }

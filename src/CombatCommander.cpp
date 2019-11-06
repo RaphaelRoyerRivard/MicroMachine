@@ -170,10 +170,11 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 void CombatCommander::lowPriorityCheck()
 {
 	auto frame = m_bot.GetGameLoop();
-	if (frame % 5)
+	if (frame - m_lastLowPriorityFrame < 5)
 	{
 		return;
 	}
+	m_lastLowPriorityFrame = frame;
 
 	std::vector<Unit> toRemove;
 	for (auto sighting : m_invisibleSighting)
@@ -242,7 +243,9 @@ void CombatCommander::resetInfluenceMaps()
 {
 	const size_t mapWidth = m_bot.Map().totalWidth();
 	const size_t mapHeight = m_bot.Map().totalHeight();
-	const bool resetBlockedTiles = m_bot.GetGameLoop() % BLOCKED_TILES_UPDATE_FREQUENCY == 0;
+	const bool resetBlockedTiles = m_bot.GetGameLoop() - m_lastBlockedTilesResetFrame >= BLOCKED_TILES_UPDATE_FREQUENCY;
+	if (resetBlockedTiles)
+		m_lastBlockedTilesResetFrame = m_bot.GetGameLoop();
 	for (size_t x = 0; x < mapWidth; ++x)
 	{
 		std::vector<float> & groundFromGroundInfluenceMap = m_groundFromGroundCombatInfluenceMap[x];
@@ -289,7 +292,9 @@ void CombatCommander::updateInfluenceMaps()
 
 void CombatCommander::updateInfluenceMapsWithUnits()
 {
-	const bool updateBlockedTiles = m_bot.GetGameLoop() % BLOCKED_TILES_UPDATE_FREQUENCY == 0;
+	const bool updateBlockedTiles = m_bot.GetGameLoop() - m_lastBlockedTilesUpdateFrame >= BLOCKED_TILES_UPDATE_FREQUENCY;
+	if (updateBlockedTiles)
+		m_lastBlockedTilesUpdateFrame = m_bot.GetGameLoop();
 	for (auto& enemyUnit : m_bot.GetKnownEnemyUnits())
 	{
 		auto& enemyUnitType = enemyUnit.getType();
@@ -589,8 +594,9 @@ void CombatCommander::updateIdleSquad()
 	if (idleSquad.getUnits().empty())
 		return;
 
-	if (m_bot.GetCurrentFrame() % 24 == 0)	// Every second
+	if (m_bot.GetCurrentFrame() - m_lastIdleSquadUpdateFrame >= 24)	// Every second
 	{
+		m_lastIdleSquadUpdateFrame = m_bot.GetCurrentFrame();
 		auto idlePosition = m_bot.GetStartLocation();
 		const BaseLocation* farthestBase = m_bot.Bases().getFarthestOccupiedBaseLocation();
 		if(farthestBase)

@@ -35,10 +35,11 @@ void CombatAnalyzer::onFrame()
 
 void CombatAnalyzer::lowPriorityChecks()
 {
-	if (m_bot.GetGameLoop() % 10)
+	if (m_bot.GetGameLoop() - m_lastLowPriorityFrame < 10)
 	{
 		return;
 	}
+	m_lastLowPriorityFrame = m_bot.GetGameLoop();
 
 	std::vector<CCTilePosition> buildingPositions;
 	aliveEnemiesCountByType.clear();

@@ -15,6 +15,7 @@ CCBot::CCBot(std::string botVersion)
 	, m_concede(false)
 	, m_saidHallucinationLine(false)
 	, m_botVersion(botVersion)
+	, m_previousMacroGameLoop(-1)
 {
 }
 
@@ -105,6 +106,9 @@ void CCBot::OnStep()
 	{
 		Util::ClearDisplayedErrors();
 	}
+	const bool executeMacro = m_gameLoop - m_previousMacroGameLoop > 1;
+	if (executeMacro)
+		m_previousMacroGameLoop = m_gameLoop;
 	
 	StartProfiling("0.1 checkKeyState");
 	checkKeyState();
@@ -133,15 +137,15 @@ void CCBot::OnStep()
 	StopProfiling("0.6 m_bases.onFrame");
 
 	StartProfiling("0.7 m_workers.onFrame");
-    m_workers.onFrame();
+	m_workers.onFrame(executeMacro);
 	StopProfiling("0.7 m_workers.onFrame");
 
 	StartProfiling("0.8 m_buildings.onFrame");
-	m_buildings.onFrame();
+	m_buildings.onFrame(executeMacro);
 	StopProfiling("0.8 m_buildings.onFrame");
 
 	StartProfiling("0.9 m_strategy.onFrame");
-    m_strategy.onFrame();
+    m_strategy.onFrame(executeMacro);
 	StopProfiling("0.9 m_strategy.onFrame");
 
 	StartProfiling("0.11 m_repairStations.onFrame");
@@ -153,7 +157,7 @@ void CCBot::OnStep()
 	StopProfiling("0.12 m_combatAnalyzer.onFrame");
 
 	StartProfiling("0.10 m_gameCommander.onFrame");
-	m_gameCommander.onFrame();
+	m_gameCommander.onFrame(executeMacro);
 	StopProfiling("0.10 m_gameCommander.onFrame");
 
 	updatePreviousFrameEnemyUnitPos();
@@ -1306,8 +1310,9 @@ void CCBot::drawProfilingInfo()
 				if (time * 4 > stepTime)
 				{
 					profilingInfo += "!!";
-					if(GetCurrentFrame() % 25 == 0 && stepTime > 10000)	// >10ms
+					if(GetCurrentFrame() - m_lastProfilingLagOutput >= 25 && stepTime > 10000)	// >10ms
 					{
+						m_lastProfilingLagOutput = GetCurrentFrame();
 						Util::DebugLog(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * time) + "ms", *this);
 					}
 				}

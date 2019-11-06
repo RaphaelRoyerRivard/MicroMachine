@@ -17,44 +17,46 @@ void WorkerManager::onStart()
 
 }
 
-void WorkerManager::onFrame()
+void WorkerManager::onFrame(bool executeMacro)
 {
 	m_bot.StartProfiling("0.7.1   m_workerData.updateAllWorkerData");
     m_workerData.updateAllWorkerData();
 	m_bot.StopProfiling("0.7.1   m_workerData.updateAllWorkerData");
-	m_bot.StartProfiling("0.7.2   handleMineralWorkers");
-	handleMineralWorkers();
-	m_bot.StopProfiling("0.7.2   handleMineralWorkers");
-	m_bot.StartProfiling("0.7.3   handleGasWorkers");
-    handleGasWorkers();
-	m_bot.StopProfiling("0.7.3   handleGasWorkers");
-	m_bot.StartProfiling("0.7.4   handleIdleWorkers");
-	handleIdleWorkers();
-	m_bot.StopProfiling("0.7.4   handleIdleWorkers");
-	m_bot.StartProfiling("0.7.5   repairCombatBuildings");
-	repairCombatBuildings();
-	m_bot.StopProfiling("0.7.5   repairCombatBuildings");
-	m_bot.StartProfiling("0.7.6   lowPriorityChecks");
-	lowPriorityChecks();
-	m_bot.StopProfiling("0.7.6   lowPriorityChecks");
-
+	if (executeMacro)
+	{
+		m_bot.StartProfiling("0.7.2   handleMineralWorkers");
+		handleMineralWorkers();
+		m_bot.StopProfiling("0.7.2   handleMineralWorkers");
+		m_bot.StartProfiling("0.7.3   handleGasWorkers");
+		handleGasWorkers();
+		m_bot.StopProfiling("0.7.3   handleGasWorkers");
+		m_bot.StartProfiling("0.7.4   handleIdleWorkers");
+		handleIdleWorkers();
+		m_bot.StopProfiling("0.7.4   handleIdleWorkers");
+		m_bot.StartProfiling("0.7.5   repairCombatBuildings");
+		repairCombatBuildings();
+		m_bot.StopProfiling("0.7.5   repairCombatBuildings");
+		m_bot.StartProfiling("0.7.6   lowPriorityChecks");
+		lowPriorityChecks();
+		m_bot.StopProfiling("0.7.6   lowPriorityChecks");
+		m_bot.StartProfiling("0.7.7   handleRepairWorkers");
+		handleRepairWorkers();
+		m_bot.StopProfiling("0.7.7   handleRepairWorkers");
+	}
     drawResourceDebugInfo();
     drawWorkerInformation();
 
     m_workerData.drawDepotDebugInfo();
-
-	m_bot.StartProfiling("0.7.7   handleRepairWorkers");
-    handleRepairWorkers();
-	m_bot.StopProfiling("0.7.7   handleRepairWorkers");
 }
 
 void WorkerManager::lowPriorityChecks()
 {
 	int currentFrame = m_bot.GetCurrentFrame();
-	if (currentFrame % 48)
+	if (currentFrame - m_lastLowPriorityCheckFrame < 48)
 	{
 		return;
 	}
+	m_lastLowPriorityCheckFrame = currentFrame;
 
 	//Detect depleted geysers
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
@@ -514,8 +516,8 @@ void WorkerManager::handleGasWorkers()
 			{
 				if (reorderedGasWorker[worker].second > 0)//If order hasn't changed
 				{
-					auto frame = reorderedGasWorker[worker].second--;
-					if (frame % 15)
+					auto tick = reorderedGasWorker[worker].second--;
+					if (tick % 8)
 					{
 						continue;
 					}

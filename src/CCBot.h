@@ -35,7 +35,9 @@ class CCBot : public sc2::Agent
 
 	uint32_t				m_gameLoop;
 	uint32_t				m_previousGameLoop;
+	int						m_previousMacroGameLoop;
 	uint32_t				m_skippedFrames;
+	uint32_t				m_lastProfilingLagOutput = 0;
     MapTools                m_map;
     BaseLocationManager     m_bases;
     UnitInfoManager         m_unitInfo;

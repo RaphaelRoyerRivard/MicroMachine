@@ -9,7 +9,7 @@ class CCBot;
 class BuildingManager
 {
     CCBot &   m_bot;
-
+	uint32_t m_lastLowPriorityFrame = 0;
 	bool firstFrame = true;
     BuildingPlacer  m_buildingPlacer;
     std::vector<Building> m_buildings; //under construction
@@ -56,7 +56,7 @@ public:
 
     void                onStart();
 	void				onFirstFrame();
-    void                onFrame();
+    void                onFrame(bool executeMacro);
 	void				lowPriorityChecks();
 	void				FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile);
 	void				FindMainRamp(std::list<CCTilePosition> &rampTiles);

@@ -10,6 +10,7 @@ class CCBot;
 
 class CombatAnalyzer {
 	CCBot & m_bot;
+	uint32_t m_lastLowPriorityFrame = 0;
 	float overallDamage;
 	float overallRatio;
 

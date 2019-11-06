@@ -157,22 +157,24 @@ void ProductionManager::onStart()
 	}
 }
 
-void ProductionManager::onFrame()
+void ProductionManager::onFrame(bool executeMacro)
 {
-	m_bot.StartProfiling("1.0 lowPriorityChecks");
-	lowPriorityChecks();
-	validateUpgradesProgress();
-	m_bot.StopProfiling("1.0 lowPriorityChecks");
-	m_bot.StartProfiling("2.0 manageBuildOrderQueue");
-    manageBuildOrderQueue();
-	m_bot.StopProfiling("2.0 manageBuildOrderQueue");
-	m_bot.StartProfiling("3.0 QueueDeadBuildings");
-	QueueDeadBuildings();
-	m_bot.StopProfiling("3.0 QueueDeadBuildings");
+	if (executeMacro)
+	{
+		m_bot.StartProfiling("1.0 lowPriorityChecks");
+		lowPriorityChecks();
+		validateUpgradesProgress();
+		m_bot.StopProfiling("1.0 lowPriorityChecks");
+		m_bot.StartProfiling("2.0 manageBuildOrderQueue");
+		manageBuildOrderQueue();
+		m_bot.StopProfiling("2.0 manageBuildOrderQueue");
+		m_bot.StartProfiling("3.0 QueueDeadBuildings");
+		QueueDeadBuildings();
+		m_bot.StopProfiling("3.0 QueueDeadBuildings");
 
-    // TODO: if nothing is currently building, get a new goal from the strategy manager
-    // TODO: triggers for game things like cloaked units etc
-
+		// TODO: if nothing is currently building, get a new goal from the strategy manager
+		// TODO: triggers for game things like cloaked units etc
+	}
     drawProductionInformation();
 }
 
@@ -453,8 +455,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 
 
-	if (m_bot.Config().AllowDebug && m_bot.GetCurrentFrame() % 10)
-		return;
+	/*if (m_bot.Config().AllowDebug && m_bot.GetCurrentFrame() % 10)
+		return;*/
 
 	const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
 	const float productionScore = getProductionScore();
@@ -957,10 +959,11 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 
 void ProductionManager::lowPriorityChecks()
 {
-	if (m_bot.GetGameLoop() % 10)
+	if (m_bot.GetGameLoop()  - m_lastLowPriorityCheckFrame < 10)
 	{
 		return;
 	}
+	m_lastLowPriorityCheckFrame = m_bot.GetGameLoop();
 
 	// build a refinery if we are missing one
 	//TODO doesn't handle extra hatcheries

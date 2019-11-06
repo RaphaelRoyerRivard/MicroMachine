@@ -32,41 +32,43 @@ void BuildingManager::onFirstFrame()
 }
 
 // gets called every frame from GameCommander
-void BuildingManager::onFrame()
+void BuildingManager::onFrame(bool executeMacro)
 {
 	if (firstFrame)
 	{
 		firstFrame = false;
 		onFirstFrame();
 	}
-	m_bot.StartProfiling("0.8.0 lowPriorityChecks");
-	lowPriorityChecks();
-	m_bot.StopProfiling("0.8.0 lowPriorityChecks");
-	m_bot.StartProfiling("0.8.1 updateBaseBuildings");
-	updateBaseBuildings();
-	m_bot.StopProfiling("0.8.1 updateBaseBuildings");
-	m_bot.StartProfiling("0.8.2 validateWorkersAndBuildings");
-    validateWorkersAndBuildings();          // check to see if assigned workers have died en route or while constructing
-	m_bot.StopProfiling("0.8.2 validateWorkersAndBuildings");
-	m_bot.StartProfiling("0.8.3 assignWorkersToUnassignedBuildings");
-    assignWorkersToUnassignedBuildings();   // assign workers to the unassigned buildings and label them 'planned'
-	m_bot.StopProfiling("0.8.3 assignWorkersToUnassignedBuildings");
-	m_bot.StartProfiling("0.8.4 constructAssignedBuildings");
-    constructAssignedBuildings();           // for each planned building, if the worker isn't constructing, send the command
-	m_bot.StopProfiling("0.8.4 constructAssignedBuildings");
-	m_bot.StartProfiling("0.8.5 checkForStartedConstruction");
-    checkForStartedConstruction();          // check to see if any buildings have started construction and update data structures
-	m_bot.StopProfiling("0.8.5 checkForStartedConstruction");
-	m_bot.StartProfiling("0.8.6 checkForDeadTerranBuilders");
-    checkForDeadTerranBuilders();           // if we are terran and a building is under construction without a worker, assign a new one
-	m_bot.StopProfiling("0.8.6 checkForDeadTerranBuilders");
-	m_bot.StartProfiling("0.8.7 checkForCompletedBuildings");
-    checkForCompletedBuildings();           // check to see if any buildings have completed and update data structures
-	m_bot.StopProfiling("0.8.7 checkForCompletedBuildings");
-	m_bot.StartProfiling("0.8.8 castBuildingsAbilities");
-	castBuildingsAbilities();
-	m_bot.StopProfiling("0.8.8 castBuildingsAbilities");
-
+	if (executeMacro)
+	{
+		m_bot.StartProfiling("0.8.0 lowPriorityChecks");
+		lowPriorityChecks();
+		m_bot.StopProfiling("0.8.0 lowPriorityChecks");
+		m_bot.StartProfiling("0.8.1 updateBaseBuildings");
+		updateBaseBuildings();
+		m_bot.StopProfiling("0.8.1 updateBaseBuildings");
+		m_bot.StartProfiling("0.8.2 validateWorkersAndBuildings");
+		validateWorkersAndBuildings();          // check to see if assigned workers have died en route or while constructing
+		m_bot.StopProfiling("0.8.2 validateWorkersAndBuildings");
+		m_bot.StartProfiling("0.8.3 assignWorkersToUnassignedBuildings");
+		assignWorkersToUnassignedBuildings();   // assign workers to the unassigned buildings and label them 'planned'
+		m_bot.StopProfiling("0.8.3 assignWorkersToUnassignedBuildings");
+		m_bot.StartProfiling("0.8.4 constructAssignedBuildings");
+		constructAssignedBuildings();           // for each planned building, if the worker isn't constructing, send the command
+		m_bot.StopProfiling("0.8.4 constructAssignedBuildings");
+		m_bot.StartProfiling("0.8.5 checkForStartedConstruction");
+		checkForStartedConstruction();          // check to see if any buildings have started construction and update data structures
+		m_bot.StopProfiling("0.8.5 checkForStartedConstruction");
+		m_bot.StartProfiling("0.8.6 checkForDeadTerranBuilders");
+		checkForDeadTerranBuilders();           // if we are terran and a building is under construction without a worker, assign a new one
+		m_bot.StopProfiling("0.8.6 checkForDeadTerranBuilders");
+		m_bot.StartProfiling("0.8.7 checkForCompletedBuildings");
+		checkForCompletedBuildings();           // check to see if any buildings have completed and update data structures
+		m_bot.StopProfiling("0.8.7 checkForCompletedBuildings");
+		m_bot.StartProfiling("0.8.8 castBuildingsAbilities");
+		castBuildingsAbilities();
+		m_bot.StopProfiling("0.8.8 castBuildingsAbilities");
+	}
     drawBuildingInformation();
 	drawStartingRamp();
 	drawWall();
@@ -75,10 +77,11 @@ void BuildingManager::onFrame()
 void BuildingManager::lowPriorityChecks()
 {
 	auto frame = m_bot.GetGameLoop();
-	if (frame % 24)
+	if (frame - m_lastLowPriorityFrame < 24)
 	{
 		return;
 	}
+	m_lastLowPriorityFrame = frame;
 
 	//Validate buildings are not on creep
 	std::vector<Building> toRemove;

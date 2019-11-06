@@ -12,6 +12,7 @@ typedef std::function<bool(std::pair<Unit, int>, std::pair<Unit, int>)> Comparat
 class WorkerManager
 {
     CCBot & m_bot;
+	uint32_t m_lastLowPriorityCheckFrame = 0;
 	bool m_isFirstFrame = true;
 	int gasWorkersTarget = 3;
 	std::list<Unit> buildingAutomaticallyRepaired;
@@ -40,7 +41,7 @@ public:
     WorkerManager(CCBot & bot);
 
     void onStart();
-    void onFrame();
+    void onFrame(bool executeMacro);
 
     void finishedWithWorker(const Unit & unit);
     void drawResourceDebugInfo();

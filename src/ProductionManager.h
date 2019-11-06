@@ -12,7 +12,7 @@ class CCBot;
 class ProductionManager
 {
     CCBot &       m_bot;
-
+	uint32_t m_lastLowPriorityCheckFrame = 0;
     BuildOrderQueue m_queue;
 	bool m_initialBuildOrderFinished;
 	bool m_ccShouldBeInQueue = false;
@@ -54,7 +54,7 @@ public:
     ProductionManager(CCBot & bot);
 
     void    onStart();
-    void    onFrame();
+    void    onFrame(bool executeMacro);
     void    onUnitDestroy(const Unit & unit);
     void    drawProductionInformation();
 

@@ -75,7 +75,7 @@ public:
     bool scoutConditionIsMet() const;
     bool attackConditionIsMet() const;
     void onStart();
-    void onFrame();
+    void onFrame(bool executeMacro);
     void onEnd(const bool isWinner);
     void addStrategy(const std::string & name, const Strategy & strategy);
     const UnitPairVector getBuildOrderGoal() const;
