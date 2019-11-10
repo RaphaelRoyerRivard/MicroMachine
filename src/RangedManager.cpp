@@ -514,9 +514,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	
 	// Unit cannot flee, we let it attack any close unit
-	char buffer[50];
-	sprintf_s(buffer, "Unit %s cannot flee", sc2::UnitTypeToName(rangedUnit->unit_type));
-	Util::Log(__FUNCTION__, buffer, m_bot);
+	std::stringstream ss;
+	ss << "Unit " << sc2::UnitTypeToName(rangedUnit->unit_type) << " cannot flee";
+	Util::Log(__FUNCTION__, ss.str(), m_bot);
 	const auto actionType = m_bot.Data(rangedUnit->unit_type).isBuilding ? Move : AttackMove;
 	const auto action = RangedUnitAction(AttackMove, rangedUnit->pos, false, 0);
 	PlanAction(rangedUnit, action);
