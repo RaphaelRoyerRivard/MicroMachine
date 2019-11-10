@@ -205,7 +205,13 @@ int main(int argc, char* argv[])
     bool PlayVsItSelf = false;
     bool PlayerOneIsHuman = false;
 	bool ForceStepMode = false;
+	bool AllowDebug = true;
 
+	if (j.count("Debug") && j["Debug"].is_object())
+	{
+		const json & debug = j["Debug"];
+		JSONTools::ReadBool("AllowDebug", debug, AllowDebug);
+	}
     if (j.count("SC2API") && j["SC2API"].is_object())
     {
         const json & info = j["SC2API"];
@@ -250,7 +256,7 @@ int main(int argc, char* argv[])
 		bool loadSettings = false;
 		JSONTools::ReadBool("LoadSettings", j["SC2API"], loadSettings);
 		CCBot bot(botVersion);
-		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings);
+		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings, AllowDebug);
 
 		return 0;
 	}
@@ -293,6 +299,7 @@ int main(int argc, char* argv[])
     //          The bot may crash or do unexpected things if its logic is not called every frame
     coordinator.SetStepSize(stepSize);
     coordinator.SetRealtime(PlayerOneIsHuman && !ForceStepMode);
+	coordinator.SetRawAffectsSelection(!AllowDebug);
 
     coordinator.SetParticipants({
         spectatingPlayer,

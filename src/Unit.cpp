@@ -251,6 +251,17 @@ bool Unit::isProductionBuildingIdle() const
 	return false;
 }
 
+bool Unit::isMoving() const
+{
+	const auto & orders = getUnitPtr()->orders;
+	for (const auto & order : orders)
+	{
+		if (order.ability_id == sc2::ABILITY_ID::MOVE)
+			return true;
+	}
+	return false;
+}
+
 int Unit::getWeaponCooldown() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
@@ -289,6 +300,7 @@ bool Unit::isLight() const
 		case sc2::UNIT_TYPEID::PROTOSS_HIGHTEMPLAR:
 		case sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR:
 		case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
 		case sc2::UNIT_TYPEID::PROTOSS_PHOENIX:
 		case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
 		case sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR:
@@ -434,6 +446,7 @@ bool Unit::isMechanical() const
 		case sc2::UNIT_TYPEID::PROTOSS_IMMORTAL:
 		case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS:
 		case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
 		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISM:
 		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISMPHASING:
 		case sc2::UNIT_TYPEID::PROTOSS_PHOENIX:
@@ -565,11 +578,7 @@ bool Unit::isVisible() const
 void Unit::stop() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
-#ifdef SC2API
     m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::STOP);
-#else
-    m_unit->stop();
-#endif
 }
 
 void Unit::attackUnit(const Unit & target) const

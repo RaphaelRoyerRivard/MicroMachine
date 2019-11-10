@@ -336,14 +336,14 @@ void MapTools::drawLine(const CCPosition & p1, const CCPosition & p2, const CCCo
     drawLine(p1.x, p1.y, p2.x, p2.y, color);
 }
 
-void MapTools::drawTile(const CCTilePosition& tilePosition, const CCColor & color, float size) const
+void MapTools::drawTile(const CCTilePosition& tilePosition, const CCColor & color, float size, bool checkFrustum) const
 {
-	drawTile(tilePosition.x, tilePosition.y, color, size);
+	drawTile(tilePosition.x, tilePosition.y, color, size, checkFrustum);
 }
 
-void MapTools::drawTile(int tileX, int tileY, const CCColor & color, float size) const
+void MapTools::drawTile(int tileX, int tileY, const CCColor & color, float size, bool checkFrustum) const
 {
-	if (!isInCameraFrustum(tileX, tileY))
+	if (checkFrustum && !isInCameraFrustum(tileX, tileY))
 		return;
 
 	size = std::min(1.f, std::max(0.f, size));

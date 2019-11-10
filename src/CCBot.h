@@ -35,7 +35,9 @@ class CCBot : public sc2::Agent
 
 	uint32_t				m_gameLoop;
 	uint32_t				m_previousGameLoop;
+	int						m_previousMacroGameLoop;
 	uint32_t				m_skippedFrames;
+	uint32_t				m_lastProfilingLagOutput = 0;
     MapTools                m_map;
     BaseLocationManager     m_bases;
     UnitInfoManager         m_unitInfo;
@@ -53,6 +55,7 @@ class CCBot : public sc2::Agent
 	int						m_reservedGas = 0;					// gas reserved for planned buildings
 	std::map<sc2::UNIT_TYPEID, int> m_unitCount;
 	std::map<sc2::UNIT_TYPEID, int> m_unitCompletedCount;
+	std::map<sc2::UNIT_TYPEID, int> m_deadAllyUnitsCount;
 	std::map<sc2::Tag, Unit> m_allyUnits;
 	std::map<sc2::Tag, Unit> m_enemyUnits;
 	std::map<sc2::Tag, Unit> m_neutralUnits;
@@ -156,8 +159,9 @@ public:
 	int GetFreeGas();
     Unit GetUnit(const CCUnitID & tag) const;
     const std::vector<Unit> & GetUnits() const;
-	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false);
-	const std::map<sc2::UNIT_TYPEID, int> & GetCompletedUnitCounts() const { return m_unitCompletedCount; };
+	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false, bool underConstruction = false);
+	const std::map<sc2::UNIT_TYPEID, int> & GetCompletedUnitCounts() const { return m_unitCompletedCount; }
+	int GetDeadAllyUnitsCount(sc2::UNIT_TYPEID type) const;
 	std::map<sc2::Tag, Unit> & GetAllyUnits();
 	const std::vector<Unit> & GetAllyUnits(sc2::UNIT_TYPEID type);
 	const std::vector<Unit> GetAllyDepotUnits();//Cannot be by reference, vector created in function

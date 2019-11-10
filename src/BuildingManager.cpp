@@ -32,41 +32,43 @@ void BuildingManager::onFirstFrame()
 }
 
 // gets called every frame from GameCommander
-void BuildingManager::onFrame()
+void BuildingManager::onFrame(bool executeMacro)
 {
 	if (firstFrame)
 	{
 		firstFrame = false;
 		onFirstFrame();
 	}
-	m_bot.StartProfiling("0.8.0 lowPriorityChecks");
-	lowPriorityChecks();
-	m_bot.StopProfiling("0.8.0 lowPriorityChecks");
-	m_bot.StartProfiling("0.8.1 updateBaseBuildings");
-	updateBaseBuildings();
-	m_bot.StopProfiling("0.8.1 updateBaseBuildings");
-	m_bot.StartProfiling("0.8.2 validateWorkersAndBuildings");
-    validateWorkersAndBuildings();          // check to see if assigned workers have died en route or while constructing
-	m_bot.StopProfiling("0.8.2 validateWorkersAndBuildings");
-	m_bot.StartProfiling("0.8.3 assignWorkersToUnassignedBuildings");
-    assignWorkersToUnassignedBuildings();   // assign workers to the unassigned buildings and label them 'planned'
-	m_bot.StopProfiling("0.8.3 assignWorkersToUnassignedBuildings");
-	m_bot.StartProfiling("0.8.4 constructAssignedBuildings");
-    constructAssignedBuildings();           // for each planned building, if the worker isn't constructing, send the command
-	m_bot.StopProfiling("0.8.4 constructAssignedBuildings");
-	m_bot.StartProfiling("0.8.5 checkForStartedConstruction");
-    checkForStartedConstruction();          // check to see if any buildings have started construction and update data structures
-	m_bot.StopProfiling("0.8.5 checkForStartedConstruction");
-	m_bot.StartProfiling("0.8.6 checkForDeadTerranBuilders");
-    checkForDeadTerranBuilders();           // if we are terran and a building is under construction without a worker, assign a new one
-	m_bot.StopProfiling("0.8.6 checkForDeadTerranBuilders");
-	m_bot.StartProfiling("0.8.7 checkForCompletedBuildings");
-    checkForCompletedBuildings();           // check to see if any buildings have completed and update data structures
-	m_bot.StopProfiling("0.8.7 checkForCompletedBuildings");
-	m_bot.StartProfiling("0.8.8 castBuildingsAbilities");
-	castBuildingsAbilities();
-	m_bot.StopProfiling("0.8.8 castBuildingsAbilities");
-
+	if (executeMacro)
+	{
+		m_bot.StartProfiling("0.8.0 lowPriorityChecks");
+		lowPriorityChecks();
+		m_bot.StopProfiling("0.8.0 lowPriorityChecks");
+		m_bot.StartProfiling("0.8.1 updateBaseBuildings");
+		updateBaseBuildings();
+		m_bot.StopProfiling("0.8.1 updateBaseBuildings");
+		m_bot.StartProfiling("0.8.2 validateWorkersAndBuildings");
+		validateWorkersAndBuildings();          // check to see if assigned workers have died en route or while constructing
+		m_bot.StopProfiling("0.8.2 validateWorkersAndBuildings");
+		m_bot.StartProfiling("0.8.3 assignWorkersToUnassignedBuildings");
+		assignWorkersToUnassignedBuildings();   // assign workers to the unassigned buildings and label them 'planned'
+		m_bot.StopProfiling("0.8.3 assignWorkersToUnassignedBuildings");
+		m_bot.StartProfiling("0.8.4 constructAssignedBuildings");
+		constructAssignedBuildings();           // for each planned building, if the worker isn't constructing, send the command
+		m_bot.StopProfiling("0.8.4 constructAssignedBuildings");
+		m_bot.StartProfiling("0.8.5 checkForStartedConstruction");
+		checkForStartedConstruction();          // check to see if any buildings have started construction and update data structures
+		m_bot.StopProfiling("0.8.5 checkForStartedConstruction");
+		m_bot.StartProfiling("0.8.6 checkForDeadTerranBuilders");
+		checkForDeadTerranBuilders();           // if we are terran and a building is under construction without a worker, assign a new one
+		m_bot.StopProfiling("0.8.6 checkForDeadTerranBuilders");
+		m_bot.StartProfiling("0.8.7 checkForCompletedBuildings");
+		checkForCompletedBuildings();           // check to see if any buildings have completed and update data structures
+		m_bot.StopProfiling("0.8.7 checkForCompletedBuildings");
+		m_bot.StartProfiling("0.8.8 castBuildingsAbilities");
+		castBuildingsAbilities();
+		m_bot.StopProfiling("0.8.8 castBuildingsAbilities");
+	}
     drawBuildingInformation();
 	drawStartingRamp();
 	drawWall();
@@ -75,10 +77,11 @@ void BuildingManager::onFrame()
 void BuildingManager::lowPriorityChecks()
 {
 	auto frame = m_bot.GetGameLoop();
-	if (frame % 24)
+	if (frame - m_lastLowPriorityFrame < 24)
 	{
 		return;
 	}
+	m_lastLowPriorityFrame = frame;
 
 	//Validate buildings are not on creep
 	std::vector<Building> toRemove;
@@ -387,6 +390,25 @@ bool BuildingManager::ValidateSupplyDepotPosition(std::list<CCTilePosition> buil
 	return true;
 }
 
+void BuildingManager::FindOpponentMainRamp()
+{
+	const auto enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+	if(enemyBaseLocation)
+	{
+		std::list<CCTilePosition> checkedTiles;
+		std::list<CCTilePosition> rampTiles;
+		FindRampTiles(rampTiles, checkedTiles, enemyBaseLocation->getDepotPosition());
+		FindMainRamp(rampTiles);
+		CCPosition rampPos;
+		for (const auto & rampTile : rampTiles)
+		{
+			rampPos += Util::GetPosition(rampTile);
+		}
+		rampPos /= rampTiles.size();
+		m_enemyMainRamp = rampPos;
+	}
+}
+
 bool BuildingManager::isBeingBuilt(UnitType type) const
 {
     for (auto & b : m_buildings)
@@ -400,14 +422,15 @@ bool BuildingManager::isBeingBuilt(UnitType type) const
     return false;
 }
 
-int BuildingManager::countBeingBuilt(UnitType type) const
+int BuildingManager::countBeingBuilt(UnitType type, bool underConstruction) const
 {
 	int count = 0;
 	for (auto & b : m_buildings)
 	{
 		if (b.type == type)
 		{
-			count++;
+			if (!underConstruction || b.status == BuildingStatus::UnderConstruction)
+				count++;
 		}
 	}
 
@@ -500,7 +523,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 	}
 }
 
-bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
+bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filterMovingWorker)
 {
     BOT_ASSERT(!b.builderUnit.isValid(), "Error: Tried to assign a builder to a building that already had one ");
 
@@ -538,20 +561,21 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 		b.finalPosition = testLocation;
 
 		// grab the worker unit from WorkerManager which is closest to this final position
-		Unit builderUnit = m_bot.Workers().getBuilder(b, false);
+		Unit builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker);
 		//Test if worker path is safe
 		if (!builderUnit.isValid())
 		{
 			return false;
 		}
 		m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
-		if(!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
+		const auto isPathToGoalSafe = Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot);
+		m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
+		if(!isPathToGoalSafe)
 		{
 			Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " isn't safe", m_bot);
 			//TODO checks twice if the path is safe for no reason if we get the same build location, should change location or change builder
 
 			//Not safe, pick another location
-			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 			testLocation = getNextBuildingLocation(b, false, true);
 			if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
 			{
@@ -562,7 +586,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 
 			const auto previousBuilder = builderUnit.getUnitPtr();
 			// grab the worker unit from WorkerManager which is closest to this final position
-			builderUnit = m_bot.Workers().getBuilder(b, false);
+			builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker);
 			//Test if worker path is safe
 			if(!builderUnit.isValid())
 			{
@@ -581,7 +605,6 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b)
 		}
 		else
 		{
-			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 			//path  is safe, we can remove it from the list
 			auto positions = m_nextBuildingPosition.find(b.type);// .pop_front();
 			if (positions != m_nextBuildingPosition.end())
@@ -638,19 +661,18 @@ void BuildingManager::constructAssignedBuildings()
         }
 
 		// TODO: not sure if this is the correct way to tell if the building is constructing
-		Unit builderUnit = b.builderUnit;
-		bool isTryingToBuild = false;
+		Unit & builderUnit = b.builderUnit;
 
 		//Prevent order spam 
-		if (b.buildCommandGiven && builderUnit.isValid())
+		/*if (b.buildCommandGiven && builderUnit.isValid())
 		{
-			auto orders = b.builderUnit.getUnitPtr()->orders;
+			auto & orders = b.builderUnit.getUnitPtr()->orders;
 			if (orders.size() != 0 && orders[0].ability_id != sc2::ABILITY_ID::PATROL)
 			{
 				//Is not idle and is not patroling, should be trying to build.
 				continue;
 			}
-		}
+		}*/
 
 
 		// if we're zerg and the builder unit is null, we assume it morphed into the building
@@ -675,7 +697,9 @@ void BuildingManager::constructAssignedBuildings()
             // if we haven't explored the build position, go there
             if (!isBuildingPositionExplored(b))
             {
-                builderUnit.move(b.finalPosition);
+				const auto & orders = b.builderUnit.getUnitPtr()->orders;
+            	if (orders.empty() || orders[0].ability_id != sc2::ABILITY_ID::MOVE || orders[0].target_pos.x != b.finalPosition.x || orders[0].target_pos.y != b.finalPosition.y)
+					builderUnit.move(b.finalPosition);
             }
             // if this is not the first time we've sent this guy to build this
             // it must be the case that something was in the way of building
@@ -689,14 +713,14 @@ void BuildingManager::constructAssignedBuildings()
             }
             else
             {
-                // if it's a refinery, the build command has to be on the geyser unit tag
-                if (b.type.isRefinery())
-                {
-                    // first we find the geyser at the desired location
-                    Unit geyser;
-                    for (auto unit : m_bot.GetUnits())
-                    {
-                        if (unit.getType().isGeyser() && Util::DistSq(Util::GetPosition(b.finalPosition), unit.getPosition()) < 3 * 3)
+				// if it's a refinery, the build command has to be on the geyser unit tag
+				if (b.type.isRefinery())
+				{
+					// first we find the geyser at the desired location
+					Unit geyser;
+					for (const auto & unit : m_bot.GetUnits())
+					{
+						if (unit.getType().isGeyser() && Util::DistSq(Util::GetPosition(b.finalPosition), unit.getPosition()) < 3 * 3)
 						{
 							geyser = unit;
 							break;
@@ -721,20 +745,20 @@ void BuildingManager::constructAssignedBuildings()
 						MetaType addonMetatype;
 						switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
 						{
-							case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
-							case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
-							case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
-							{
-								addonMetatype = MetaTypeEnum::Reactor;
-								break;
-							}
-							case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
-							case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
-							case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
-							{
-								addonMetatype = MetaTypeEnum::TechLab;
-								break;
-							}
+						case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+						case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+						{
+							addonMetatype = MetaTypeEnum::Reactor;
+							break;
+						}
+						case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
+						case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
+						case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
+						{
+							addonMetatype = MetaTypeEnum::TechLab;
+							break;
+						}
 						}
 						b.builderUnit.build(b.type, b.finalPosition);
 					}
@@ -743,7 +767,7 @@ void BuildingManager::constructAssignedBuildings()
 						b.builderUnit.build(b.type, b.finalPosition);
 						if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
 						{
-							if (m_bot.GetMinerals() >= b.type.mineralPrice())
+							if (m_bot.GetMinerals() > b.type.mineralPrice())
 							{
 								// We want the worker to be close so it doesn't flag the base as blocked by error
 								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
@@ -818,9 +842,12 @@ void BuildingManager::checkForStartedConstruction()
 
 			if (dx * dx + dy * dy < Util::TileToPosition(1.0f))
 			{
-				// the resources should now be spent, so unreserve them
-				m_bot.FreeMinerals(building.getType().mineralPrice());
-				m_bot.FreeGas(building.getType().gasPrice());
+				if (b.reserveResources)
+				{
+					// the resources should now be spent, so unreserve them
+					m_bot.FreeMinerals(building.getType().mineralPrice());
+					m_bot.FreeGas(building.getType().gasPrice());
+				}
 
 				// flag it as started and set the buildingUnit
 				b.underConstruction = true;
@@ -960,6 +987,14 @@ void BuildingManager::checkForCompletedBuildings()
 				else
 				{
 					m_bot.Workers().finishedWithWorker(b.builderUnit);
+					if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
+					{
+						if (b.buildingUnit.getType() == MetaTypeEnum::Factory.getUnitType() && Util::DistSq(b.buildingUnit, Util::GetPosition(m_proxyLocation)) < 15.f * 15.f)
+						{
+							m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Repair);
+							b.builderUnit.move(m_proxyLocation);
+						}
+					}
 
 					//Handle rally points
 					switch ((sc2::UNIT_TYPEID)type)
@@ -1013,7 +1048,7 @@ void BuildingManager::checkForCompletedBuildings()
 
 // add a new building to be constructed
 // Used for Premove
-bool BuildingManager::addBuildingTask(Building & b)
+bool BuildingManager::addBuildingTask(Building & b, bool filterMovingWorker)
 {
 	b.status = BuildingStatus::Unassigned;
 
@@ -1026,14 +1061,17 @@ bool BuildingManager::addBuildingTask(Building & b)
 			return false;
 		}
 	}
-	else if (!assignWorkerToUnassignedBuilding(b))//Includes a check to see if path is safe
+	else if (!assignWorkerToUnassignedBuilding(b, filterMovingWorker))//Includes a check to see if path is safe
 	{
 		return false;
 	}
 
-	TypeData typeData = m_bot.Data(b.type);
-	m_bot.ReserveMinerals(typeData.mineralCost);
-	m_bot.ReserveGas(typeData.gasCost);
+	if (b.reserveResources)
+	{
+		const TypeData typeData = m_bot.Data(b.type);
+		m_bot.ReserveMinerals(typeData.mineralCost);
+		m_bot.ReserveGas(typeData.gasCost);
+	}
 
 	m_buildings.push_back(b);
 
@@ -1198,6 +1236,89 @@ CCTilePosition BuildingManager::getWallPosition()
 std::list<Unit> BuildingManager::getWallBuildings()
 {
 	return m_wallBuilding;
+}
+
+CCTilePosition BuildingManager::getProxyLocation()
+{
+	if (m_proxyLocation != CCTilePosition())
+		return m_proxyLocation;
+	
+	FindOpponentMainRamp();
+	if (m_enemyMainRamp != CCPosition())
+	{
+		const auto & scv = *m_bot.Workers().getWorkers().begin();
+		auto scvPtr = scv.getUnitPtr();
+		bool deletePtr = false;
+		if (!m_rampTiles.empty())
+		{
+			deletePtr = true;
+			auto fakeSCV = new sc2::Unit();
+			fakeSCV->unit_type = sc2::UnitTypeID(sc2::UNIT_TYPEID::TERRAN_SCV);
+			fakeSCV->is_flying = false;
+			fakeSCV->radius = 0.375f;
+			auto rampPos = CCPosition();
+			for (auto rampTile : m_rampTiles)
+				rampPos += Util::GetPosition(rampTile);
+			rampPos /= m_rampTiles.size();
+			fakeSCV->pos = sc2::Point3D(rampPos.x, rampPos.y, Util::TerrainHeight(rampPos));
+			scvPtr = fakeSCV;
+		}
+		const auto mainPath = Util::PathFinding::FindOptimalPathWithoutLimit(scvPtr, m_enemyMainRamp, m_bot);
+		if (deletePtr)
+			delete scvPtr;
+		if (mainPath.empty())
+			return Util::GetTilePosition(m_bot.Map().center());
+		const auto startingBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+		const auto enemyBasePosition = Util::GetPosition(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getDepotPosition());
+		const auto enemyNext = m_bot.Bases().getNextExpansion(Players::Enemy, false, false);
+		const auto & baseLocations = m_bot.Bases().getBaseLocations();	// Sorted by closest to enemy base
+		int minDistance = 0;
+		const BaseLocation* closestBase = nullptr;
+		for(auto i=1; i<baseLocations.size(); ++i)
+		{
+			const auto baseLocation = baseLocations[i];
+			if (baseLocation == enemyNext || baseLocation == startingBaseLocation)
+				continue;
+			const auto dist = baseLocation->getGroundDistance(m_enemyMainRamp);
+			const auto startingBaseDist = startingBaseLocation->getGroundDistance(baseLocation->getDepotPosition());
+			const auto totalDist = dist * 2 + startingBaseDist;
+			if(!closestBase || totalDist < minDistance)
+			{
+				const auto baseHeight = m_bot.Map().terrainHeight(baseLocation->getDepotPosition());
+				const auto basePosition = Util::GetPosition(baseLocation->getDepotPosition());
+				const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
+				if (enemyRace == sc2::Zerg || enemyRace == sc2::Random)
+				{
+					if (Util::DistBetweenLineAndPoint(Util::GetPosition(startingBaseLocation->getDepotPosition()), enemyBasePosition, basePosition) < 15.f)
+					{
+						continue;
+					}
+				}
+				auto tooCloseToMainPath = false;
+				for (const auto & pathPosition : mainPath)
+				{
+					if (m_bot.Map().terrainHeight(pathPosition) + 0.5f < baseHeight)
+						continue;
+					if (Util::DistSq(pathPosition, basePosition) <= 15.f * 15.f)
+					{
+						tooCloseToMainPath = true;
+						break;
+					}
+				}
+				if (!tooCloseToMainPath)
+				{
+					minDistance = totalDist;
+					closestBase = baseLocation;
+				}
+			}
+		}
+		if (closestBase != nullptr)
+		{
+			m_proxyLocation = closestBase->getDepotPosition();
+			return m_proxyLocation;
+		}
+	}
+	return Util::GetTilePosition(m_bot.Map().center());
 }
 
 std::vector<UnitType> BuildingManager::buildingsQueued() const
@@ -1403,8 +1524,11 @@ Building BuildingManager::CancelBuilding(Building b)
 		}
 		}
 
-		m_bot.FreeMinerals(b.type.mineralPrice());
-		m_bot.FreeGas(b.type.gasPrice());
+		if (b.reserveResources)
+		{
+			m_bot.FreeMinerals(b.type.mineralPrice());
+			m_bot.FreeGas(b.type.gasPrice());
+		}
 
 		return b;
 	}
@@ -1488,6 +1612,8 @@ const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool 
 
 void BuildingManager::castBuildingsAbilities()
 {
+	RunProxyLogic();
+	
 	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
 	{
 		auto energy = b.getEnergy();
@@ -1530,7 +1656,7 @@ void BuildingManager::castBuildingsAbilities()
 					continue;
 
 				auto & depot = base->getResourceDepot();
-				if (!depot.isCompleted())
+				if (!depot.isValid() || !depot.isCompleted())
 					continue;
 
 				closestMineral = getLargestCloseMineral(depot, false, skipMinerals);
@@ -1561,6 +1687,95 @@ void BuildingManager::castBuildingsAbilities()
 			point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
 			point.y = (point.y + (point.y + (point.y + orbitalPosition.y) / 2) / 2) / 2;
 			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
+		}
+	}
+}
+
+void BuildingManager::RunProxyLogic()
+{
+	if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
+	{
+		/*
+		Orders in order
+		¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+		Barracks
+		Reaper
+		Factory
+		Techlab
+		Lift B
+		Land B
+		Reaper
+		Lift F
+		Land F
+		Cyclone
+		Lift B
+		*/
+		const auto & barracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+		const auto & factories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORY);
+		const auto & techlabs = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_TECHLAB);
+		const auto & barracksTechlabs = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB);
+		const auto & flyingBarracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING);
+		// Lift Barracks
+		if (m_proxyBarracksPosition == CCPosition())
+		{
+			if (barracks.size() == 1 && factories.size() == 1 && barracksTechlabs.size() == 1 && barracksTechlabs[0].getBuildPercentage() == 1.0f)
+			{
+				Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+				return;
+			}
+			if (!flyingBarracks.empty())
+			{
+				m_proxyBarracksPosition = flyingBarracks[0].getPosition();
+				m_buildingPlacer.reserveTiles(m_proxyBarracksPosition.x, m_proxyBarracksPosition.y, 3, 3);
+				return;
+			}
+		}
+
+		// Land Barracks
+		if (!m_barracksSentToEnemyBase && flyingBarracks.size() == 1)
+		{
+			// Called every frame so the barracks can choose a new location if it gets blocked
+			const auto barracksFlyingType = UnitType(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, m_bot);
+			const auto barracksBuilding = Building(barracksFlyingType, m_proxyBarracksPosition);
+			const auto landingPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(barracksBuilding, 0, false, true));
+			Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
+		}
+
+		// Lift Factory
+		if (m_proxyFactoryPosition == CCPosition())
+		{
+			if (factories.size() == 1 && factories[0].getBuildPercentage() == 1.0f && techlabs.size() == 1 && techlabs[0].getBuildPercentage() == 1.0f)
+			{
+				m_proxyFactoryPosition = factories[0].getPosition();
+				Micro::SmartAbility(factories[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+				return;
+			}
+		}
+
+		// Land Factory
+		if (!m_proxySwapDone && m_proxyBarracksPosition != CCPosition())
+		{
+			const auto & flyingFactories = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING);
+			if (flyingFactories.size() == 1)
+			{
+				m_proxySwapInitiated = true;
+				Micro::SmartAbility(flyingFactories[0].getUnitPtr(), sc2::ABILITY_ID::LAND, m_proxyBarracksPosition, m_bot);
+			}
+			else if (m_proxySwapInitiated)
+			{
+				m_proxySwapDone = true;
+			}
+		}
+
+		// Lift Barracks and let the CombatCommander take control of it
+		if (!m_barracksSentToEnemyBase)
+		{
+			const auto totalReapers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_REAPER);
+			if (!barracks.empty() && totalReapers >= 2)
+			{
+				Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+				m_barracksSentToEnemyBase = true;
+			}
 		}
 	}
 }

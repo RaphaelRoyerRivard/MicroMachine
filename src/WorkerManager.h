@@ -12,6 +12,7 @@ typedef std::function<bool(std::pair<Unit, int>, std::pair<Unit, int>)> Comparat
 class WorkerManager
 {
     CCBot & m_bot;
+	uint32_t m_lastLowPriorityCheckFrame = 0;
 	bool m_isFirstFrame = true;
 	int gasWorkersTarget = 3;
 	std::list<Unit> buildingAutomaticallyRepaired;
@@ -40,7 +41,7 @@ public:
     WorkerManager(CCBot & bot);
 
     void onStart();
-    void onFrame();
+    void onFrame(bool executeMacro);
 
     void finishedWithWorker(const Unit & unit);
     void drawResourceDebugInfo();
@@ -48,7 +49,7 @@ public:
     void setScoutWorker(Unit worker);
     void setCombatWorker(Unit worker);
     void setRepairWorker(Unit worker,const Unit & unitToRepair);
-    void stopRepairing(Unit worker);
+    void stopRepairing(const Unit & worker);
 
     int  getNumMineralWorkers();
     int  getNumGasWorkers();
@@ -66,16 +67,16 @@ public:
 	bool isReturningCargo(Unit worker) const;
 	bool canHandleMoreRefinery() const;
 
-    Unit getBuilder(Building & b, bool setJobAsBuilder = true) const;
+    Unit getBuilder(Building & b, bool setJobAsBuilder = true, bool filterMoving = true) const;
 	Unit getMineralWorker(Unit refinery) const;
 	Unit getGasWorker(Unit refinery, bool checkReturningCargo, bool checkInsideRefinery) const;
 	int  getGasWorkersTarget() const;
 	Unit getDepotAtBasePosition(CCPosition basePosition) const;
 	int  getWorkerCountAtBasePosition(CCPosition basePosition) const;
     Unit getClosestDepot(Unit worker) const;
-	Unit getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f) const;
-	Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f) const;
-	Unit getClosestMineralWorkerTo(const CCPosition & pos, std::vector<CCUnitID> workerToIgnore, float minHpPercentage) const;
+	Unit getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f, bool filterMoving = true) const;
+	Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f, bool filterMoving = true) const;
+	Unit getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving = true) const;
 	Unit getClosestGasWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f) const;
 	Unit getClosestGasWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f) const;
 	Unit getClosest(const Unit unit, const std::list<Unit> units) const;

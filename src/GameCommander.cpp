@@ -19,14 +19,14 @@ void GameCommander::onStart()
     m_combatCommander.onStart();
 }
 
-void GameCommander::onFrame()
+void GameCommander::onFrame(bool executeMacro)
 {
 	m_bot.StartProfiling("0.10.1   handleUnitAssignments");
     handleUnitAssignments();
 	m_bot.StopProfiling("0.10.1   handleUnitAssignments");
 
 	m_bot.StartProfiling("0.10.2   m_productionManager.onFrame");
-    m_productionManager.onFrame();
+	m_productionManager.onFrame(executeMacro);
 	m_bot.StopProfiling("0.10.2   m_productionManager.onFrame");
 	m_bot.StartProfiling("0.10.3   m_scoutManager.onFrame");
     m_scoutManager.onFrame();

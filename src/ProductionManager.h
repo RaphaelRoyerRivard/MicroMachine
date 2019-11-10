@@ -12,7 +12,7 @@ class CCBot;
 class ProductionManager
 {
     CCBot &       m_bot;
-
+	uint32_t m_lastLowPriorityCheckFrame = 0;
     BuildOrderQueue m_queue;
 	bool m_initialBuildOrderFinished;
 	bool m_ccShouldBeInQueue = false;
@@ -24,6 +24,7 @@ class ProductionManager
 	std::list<std::list<MetaType>> reversePossibleUpgrades;//Does not include tech
 	std::map<std::string, MetaType> alternateUpgrades;//Tech do not have alternate upgrades
 	bool firstBarrackBuilt = false;
+	bool firstBarracksTechlab = true;
 	UnitType supplyProvider;
 	MetaType supplyProviderType;
 	UnitType workerType;
@@ -34,8 +35,8 @@ class ProductionManager
     bool    canMakeNow(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
     void    setBuildOrder(const BuildOrder & buildOrder);
-    bool    create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition);
-	bool    create(const Unit & producer, Building & b);
+    bool    create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources = true, bool filterMovingWorker = true);
+	bool    create(const Unit & producer, Building & b, bool filterMovingWorker = true);
     void    manageBuildOrderQueue();
 	void	putImportantBuildOrderItemsInQueue();
 	void	QueueDeadBuildings();
@@ -53,7 +54,7 @@ public:
     ProductionManager(CCBot & bot);
 
     void    onStart();
-    void    onFrame();
+    void    onFrame(bool executeMacro);
     void    onUnitDestroy(const Unit & unit);
     void    drawProductionInformation();
 

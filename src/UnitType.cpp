@@ -60,35 +60,15 @@ CCRace UnitType::getRace() const
 
 bool UnitType::isCombatUnit() const
 {
-#ifdef SC2API
     if (isWorker()) { return false; }
-    if (isSupplyProvider() && !isAttackingBuilding()) { return false; }
-    // If the building have a range, it can attack
-    if (isBuilding() && !isAttackingBuilding()) { return false; }
-
-    if (isEgg() || isLarva()) { return false; }
-
+	if (isEgg() || isLarva()) { return false; }
+	if (isBuilding())
+	{
+		if (getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING && m_bot->Strategy().getStartingStrategy() == PROXY_CYCLONES) { return true; }
+		if (isAttackingBuilding()) { return true; }
+		return false;
+	}
     return true;
-#else
-    // check for various types of combat units
-    if (m_type.canAttack() || 
-        m_type == BWAPI::UnitTypes::Terran_Medic ||
-        m_type == BWAPI::UnitTypes::Protoss_High_Templar ||
-        m_type == BWAPI::UnitTypes::Protoss_Observer ||
-        m_type == BWAPI::UnitTypes::Zerg_Overlord ||
-        m_type == BWAPI::UnitTypes::Protoss_Observer)
-    {
-        return true;
-    }
-
-    // no workers or buildings allowed
-    if (m_type.isWorker() || m_type.isBuilding())
-    {
-        return false;
-    }
-
-    return false;
-#endif
 }
 
 bool UnitType::isSupplyProvider() const
@@ -131,25 +111,25 @@ bool UnitType::isResourceDepot() const
 #endif
 }
 
+bool UnitType::isRefinery(sc2::UnitTypeID type)
+{
+	switch (type.ToType())
+	{
+	case sc2::UNIT_TYPEID::TERRAN_REFINERY:
+	case sc2::UNIT_TYPEID::TERRAN_REFINERYRICH:
+	case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR:
+	case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH:
+	case sc2::UNIT_TYPEID::ZERG_EXTRACTOR:
+	case sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH:
+		return true;
+	default:
+		return false;
+	}
+}
+
 bool UnitType::isRefinery() const
 {
-	//TODO Doesn't handle protoss and zerg rich geysers
-#ifdef SC2API
-    switch (m_type.ToType()) 
-    {
-        case sc2::UNIT_TYPEID::TERRAN_REFINERY:
-		case sc2::UNIT_TYPEID::TERRAN_REFINERYRICH:
-		case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR:
-		case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH:
-		case sc2::UNIT_TYPEID::ZERG_EXTRACTOR:
-		case sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH:
-    		return true;
-        default:
-    		return false;
-    }
-#else
-    return m_type.isRefinery();
-#endif
+	return isRefinery(m_type);
 }
 
 sc2::UNIT_TYPEID UnitType::getEnemyRefineryType(sc2::Race enemyRace)
@@ -181,6 +161,7 @@ bool UnitType::isDetector(sc2::UnitTypeID unitTypeId)
 	switch (unitTypeId.ToType())
 	{
 		case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
 		case sc2::UNIT_TYPEID::ZERG_OVERSEER:
 		case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET:
 		case sc2::UNIT_TYPEID::ZERG_SPORECRAWLER:

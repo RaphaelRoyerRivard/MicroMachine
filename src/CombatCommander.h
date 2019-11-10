@@ -13,7 +13,10 @@ class CombatCommander
 	const int FRAME_BEFORE_SIGHTING_INVALIDATED = 25;
 
     CCBot &         m_bot;
-
+	uint32_t m_lastLowPriorityFrame = 0;
+	uint32_t m_lastBlockedTilesResetFrame = 0;
+	uint32_t m_lastBlockedTilesUpdateFrame = 0;
+	uint32_t m_lastIdleSquadUpdateFrame = 0;
     SquadData       m_squadData;
     std::vector<Unit>  m_combatUnits;
 	std::map<Unit, std::pair<CCPosition, uint32_t>> m_invisibleSighting;

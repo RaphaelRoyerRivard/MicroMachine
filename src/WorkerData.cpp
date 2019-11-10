@@ -44,15 +44,6 @@ void WorkerData::updateAllWorkerData()
         {
             setWorkerJob(worker, WorkerJobs::Idle);
         }
-		else if (job == WorkerJobs::Build)// Builders that have a harvest order won't go build, so we need to make them stop
-		{
-			auto orders = worker.getUnitPtr()->orders;
-			if (!orders.empty() && !m_bot.Workers().isReturningCargo(worker) && orders[0].ability_id == 3666)//3666 = HARVEST_GATHER
-			{
-				worker.stop();
-				setWorkerJob(worker, WorkerJobs::Idle);
-			}
-		}
 
         // TODO: If it's a gas worker whose refinery has been destroyed, set to minerals
     }
@@ -77,6 +68,7 @@ void WorkerData::workerDestroyed(const Unit & unit)
 {
     clearPreviousJob(unit);
     m_workers.erase(unit);
+    m_proxyWorkers.erase(unit);
 
 	for (auto & building : m_workerRepairing)
 	{
@@ -308,6 +300,9 @@ Unit WorkerData::getWorkerDepot(const Unit & unit) const
 
 int WorkerData::getNumAssignedWorkers(const Unit & unit)
 {
+	if (!unit.isValid())
+		return 0;
+	
     if (unit.getType().isResourceDepot())
     {
         auto it = m_depotWorkerCount.find(unit);
@@ -403,7 +398,17 @@ void WorkerData::drawDepotDebugInfo()
 
 const std::set<Unit> & WorkerData::getWorkers() const
 {
-    return m_workers;
+	return m_workers;
+}
+
+const std::set<Unit> & WorkerData::getProxyWorkers() const
+{
+	return m_proxyWorkers;
+}
+
+void WorkerData::setProxyWorker(const Unit & unit)
+{
+	m_proxyWorkers.insert(unit);
 }
 
 std::map<const BaseLocation*, std::list<Unit>>& WorkerData::getRepairStationWorkers()
@@ -420,7 +425,7 @@ void WorkerData::validateRepairStationWorkers()
 		std::list<Unit> toRemove;
 		for (auto & worker : station.second)
 		{
- 			if (!worker.isValid() || !worker.isAlive() || getWorkerJob(worker) != WorkerJobs::Repair)
+ 			if (!worker.isValid() || !worker.isAlive() || getWorkerJob(worker) != WorkerJobs::Repair || Util::DistSq(worker, station.first->getPosition()) > 10.f * 10.f)
 			{
 				toRemove.push_back(worker);
 			}
@@ -434,7 +439,6 @@ void WorkerData::validateRepairStationWorkers()
 
 Unit WorkerData::getWorkerRepairTarget(const Unit & unit) const
 {
-           
     auto it = m_workerRepairTarget.find(unit);
 
     // if there is an entry, return it
@@ -442,10 +446,7 @@ Unit WorkerData::getWorkerRepairTarget(const Unit & unit) const
     {
         return it->second;
     }
-    else
-    {
-        return {};
-    }
+    return {};
 }
 
 std::map<Unit, std::pair<Unit, int>> & WorkerData::getReorderedGasWorkers()

@@ -184,7 +184,7 @@ void UnitInfoManager::drawSelectedUnitDebugInfo()
 }
 
 // passing in a unit type of 0 returns a count of all units
-size_t UnitInfoManager::getUnitTypeCount(CCPlayer player, UnitType type, bool completed, bool ignoreState) const
+size_t UnitInfoManager::getUnitTypeCount(CCPlayer player, UnitType type, bool completed, bool ignoreState, bool underConstruction) const
 {
 	sc2::UNIT_TYPEID typeID = type.getAPIUnitType();
 	if (ignoreState)
@@ -194,22 +194,22 @@ size_t UnitInfoManager::getUnitTypeCount(CCPlayer player, UnitType type, bool co
 		{
 			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT:
 			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED:
-				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED, completed);
+				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, completed, underConstruction) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED, completed, underConstruction);
 			case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
 			case sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING:
-				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, completed);
+				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS, completed, underConstruction) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, completed, underConstruction);
 			case sc2::UNIT_TYPEID::TERRAN_FACTORY:
 			case sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING:
-				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_FACTORY, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING, completed);
+				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_FACTORY, completed, underConstruction) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING, completed, underConstruction);
 			case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 			case sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING:
-				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_STARPORT, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING, completed);
+				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_STARPORT, completed, underConstruction) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING, completed, underConstruction);
 			case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER:
 			case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING:
-				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING, completed);
+				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, completed, underConstruction) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING, completed, underConstruction);
 			case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:
 			case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING:
-				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING, completed);
+				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, completed, underConstruction) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING, completed, underConstruction);
 			case sc2::UNIT_TYPEID::TERRAN_HELLION:
 			case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_HELLION, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_HELLIONTANK, completed);
@@ -229,12 +229,12 @@ size_t UnitInfoManager::getUnitTypeCount(CCPlayer player, UnitType type, bool co
 			case sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
 				return m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT, completed) + m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, completed);
 			default:
-				return m_bot.GetUnitCount(typeID, completed);
+				return m_bot.GetUnitCount(typeID, completed, underConstruction);
 		}
 	}
 	else
 	{
-		return m_bot.GetUnitCount(typeID, completed);
+		return m_bot.GetUnitCount(typeID, completed, underConstruction);
 	}
 }
 

@@ -73,6 +73,13 @@ namespace Util
 
 	namespace PathFinding
 	{
+		enum FailureReason
+		{
+			TIMEOUT,
+			INFLUENCE,
+			NO_NEED_TO_MOVE
+		};
+		
 		struct IMNode;
 
 		struct SafePathResult
@@ -100,11 +107,13 @@ namespace Util
 		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
-		CCPosition FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
+		CCPosition FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, CCBot & bot);
 		float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);
 		CCPosition FindOptimalPathPosition(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot);
 		CCPosition FindOptimalPathToDodgeEffectAwayFromGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot);
+		std::list<CCPosition> FindOptimalPathWithoutLimit(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
 		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, CCBot & bot);
+		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, bool flee, bool limitSearch, FailureReason & failureReason, CCBot & bot);
 		CCTilePosition GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		CCPosition GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, CCBot & bot);
 		std::list<CCPosition> GetPositionListFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
@@ -175,6 +184,7 @@ namespace Util
 	CCPosition getFacingVector(const sc2::Unit * unit);
 	bool isUnitFacingAnother(const sc2::Unit * unitA, const sc2::Unit * unitB);
 	bool isUnitLockedOn(const sc2::Unit * unit);
+	bool isUnitDisabled(const sc2::Unit * unit);
 	bool isUnitLifted(const sc2::Unit * unit);
 	bool unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId);
 
@@ -250,6 +260,7 @@ namespace Util
 	CCPositionType DistSq(const Unit & unit, const CCPosition & p2);
 	CCPositionType DistSq(const Unit & unit, const Unit & unit2);
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
+	float DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point);
 
 	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits);
 };

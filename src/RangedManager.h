@@ -103,6 +103,21 @@ struct RangedUnitAction
 	}
 };
 
+enum FlyingHelperGoal
+{
+	ESCORT,
+	TRACK
+};
+
+struct FlyingHelperMission
+{
+	FlyingHelperMission() : goal(ESCORT), position(CCPosition()) {}
+	FlyingHelperMission(FlyingHelperGoal goal, CCPosition position) : goal(goal), position(position) {}
+	
+	FlyingHelperGoal goal;
+	CCPosition position;
+};
+
 class RangedManager : public MicroManager
 {
 public:
@@ -118,7 +133,7 @@ private:
 	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
 	bool m_harassMode = false;
-	std::map<const sc2::Unit *, CCPosition> m_cycloneFlyingHelpers;
+	std::map<const sc2::Unit *, FlyingHelperMission> m_cycloneFlyingHelpers;
 	std::map<const sc2::Unit *, const sc2::Unit *> m_cyclonesWithHelper;
 
 	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
@@ -139,7 +154,7 @@ private:
 	CCPosition GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const;
 	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, bool unitShouldHeal, bool isCycloneHelper);
 	bool ExecuteThorMorphLogic(const sc2::Unit * thor);
-	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, bool unitShouldHeal);
+	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, bool unitShouldHeal, bool force);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;
 	bool IsInRangeOfSlowerUnit(const sc2::Unit * rangedUnit, const sc2::Unit * target) const;
 	CCPosition GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange, bool unitShouldHeal) const;
@@ -147,10 +162,11 @@ private:
 	void LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * target);
 	bool CycloneHasTarget(const sc2::Unit * cyclone) const;
 	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats);
-	bool ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper);
+	void ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal);
+	bool ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper);
 	bool ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats);
 	bool ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats, CCPosition goal);
-	bool ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats);
+	bool ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & targets);
 	bool QueryIsAbilityAvailable(const sc2::Unit* unit, sc2::ABILITY_ID abilityId) const;
 	bool CanUseKD8Charge(const sc2::Unit * reaper);
 	bool ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::Units & threats);

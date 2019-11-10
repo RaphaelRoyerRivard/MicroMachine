@@ -26,7 +26,7 @@ const int CYCLONE_ATTACK_FRAME_COUNT = 1;
 const int CYCLONE_LOCKON_CAST_FRAME_COUNT = 9;
 const int CYCLONE_LOCKON_CHANNELING_FRAME_COUNT = 321 + CYCLONE_LOCKON_CAST_FRAME_COUNT;
 const int CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT = 97;
-const float CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER = 5.f;
+const float CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER = 4.f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
 const int REAPER_KD8_CHARGE_COOLDOWN = 314 + REAPER_KD8_CHARGE_FRAME_COUNT + 7;
@@ -211,6 +211,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isViking = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
 	const bool isCyclone = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE;
 	const bool isBattlecruiser = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER;
+	const bool isFlyingBarracks = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING;
 
 	// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 	if (ShouldSkipFrame(rangedUnit))
@@ -236,7 +237,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isCycloneHelper = cycloneFlyingHelperIt != m_cycloneFlyingHelpers.end();
 	if (isCycloneHelper)
 	{
-		goal = cycloneFlyingHelperIt->second;
+		const auto helperGoalPosition = cycloneFlyingHelperIt->second.position;
+		if (Util::DistSq(rangedUnit->pos, helperGoalPosition) < 20 * 20)
+			goal = helperGoalPosition;
 		if (m_bot.Config().DrawHarassInfo)
 		{
 			m_bot.Map().drawCircle(rangedUnit->pos, 0.75f, sc2::Colors::Purple);
@@ -263,9 +266,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		{
 			goal = m_bot.GetStartLocation();
 		}
-		else*/ if (!isCycloneHelper && (isMarine || isRaven || isViking))
+		else*/ if (!isCycloneHelper && (isMarine || isRaven || isViking || isHellion))
 		{
 			goal = GetBestSupportPosition(rangedUnit, rangedUnits);
+		}
+		else if (isFlyingBarracks && !isCycloneHelper)
+		{
+			goal = m_bot.Buildings().getEnemyMainRamp();
 		}
 		else if (isViking && !isCycloneHelper && !m_bot.Commander().Combat().hasEnoughVikingsAgainstTempests())
 		{
@@ -286,115 +293,18 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		goal = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getPosition();
 		unitShouldHeal = true;
 	}
+	else if (Util::isUnitDisabled(rangedUnit))
+	{
+		goal = m_bot.Map().center();
+		unitShouldHeal = true;
+	}
 
 	bool shouldAttack = true;
 	bool cycloneShouldUseLockOn = false;
 	bool cycloneShouldStayCloseToTarget = false;
 	if (isCyclone)
 	{
-		target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
-
-		// If the Cyclone has a its Lock-On on a target with a big range (like a Tempest or Tank)
-		if (!shouldAttack && !cycloneShouldUseLockOn && m_order.getType() != SquadOrderTypes::Defend)
-		{
-			const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
-			const auto it = lockOnTargets.find(rangedUnit);
-			if (it != lockOnTargets.end())
-			{
-				const auto lockOnTarget = it->second.first;
-				const auto enemyRange = Util::GetAttackRangeForTarget(lockOnTarget, rangedUnit, m_bot);
-				if(enemyRange >= 10.f)
-				{
-					// We check if we have another unit that is close to it, but if not, the Cyclone should stay close to it
-					bool closeAlly = false;
-					for (const auto ally : rangedUnits)
-					{
-						if (ally == rangedUnit)
-							continue;
-						if (Util::DistSq(ally->pos, lockOnTarget->pos) > 7.f * 7.f)
-							continue;
-						// If the ally could survive at least 2 seconds close to the target
-						if (ally->health >= Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(ally->pos), ally, m_bot) * 2.f)
-						{
-							closeAlly = true;
-							break;
-						}
-					}
-					if (!closeAlly)
-					{
-						cycloneShouldStayCloseToTarget = true;
-						unitShouldHeal = false;
-						target = lockOnTarget;
-					}
-				}
-			}
-		}
-
-		const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
-		const bool hasFlyingHelper = cycloneWithHelperIt != m_cyclonesWithHelper.end();
-
-		if (!unitShouldHeal && !cycloneShouldStayCloseToTarget)
-		{
-			// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
-			if (cycloneShouldUseLockOn && hasFlyingHelper)
-			{
-				const auto cycloneFlyingHelper = cycloneWithHelperIt->second;
-				// If the flying helper is too far, go towards it
-				if (Util::DistSq(rangedUnit->pos, cycloneFlyingHelper->pos) > CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER * CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER)
-				{
-					goal = cycloneFlyingHelper->pos;
-				}
-			}
-
-			if (!hasFlyingHelper && m_order.getType() != SquadOrderTypes::Defend)
-			{
-				// If the target is too far, we don't want to chase it, we just leave
-				if (target)
-				{
-					const float lockOnRange = m_bot.Commander().Combat().getAbilityCastingRanges().at(sc2::ABILITY_ID::EFFECT_LOCKON) + rangedUnit->radius + target->radius;
-					if (Util::DistSq(rangedUnit->pos, target->pos) > lockOnRange * lockOnRange)
-					{
-						// TODO remove when the flying helper bug is fixed
-						bool closeFlyingUnit = false;
-						for (const auto allyUnit : rangedUnits)
-						{
-							if (!allyUnit->is_flying)
-								continue;
-							if (Util::DistSq(rangedUnit->pos, allyUnit->pos) < 7.f * 7.f)
-							{
-								closeFlyingUnit = true;
-								break;
-							}
-						}
-						if (!closeFlyingUnit)
-							target = nullptr;
-					}
-				}
-				// Find the closest flying helper on the map
-				float minDistSq = 0.f;
-				const sc2::Unit* closestHelper = nullptr;
-				for (const auto & flyingHelper : m_cycloneFlyingHelpers)
-				{
-					const float distSq = Util::DistSq(rangedUnit->pos, flyingHelper.first->pos);
-					if (!closestHelper || distSq < minDistSq)
-					{
-						minDistSq = distSq;
-						closestHelper = flyingHelper.first;
-					}
-				}
-				// If there is one
-				if (closestHelper)
-				{
-					goal = closestHelper->pos;
-				}
-				else
-				{
-					// Otherwise go back to base, it's too dangerous to go alone
-					goal = m_bot.GetStartLocation();
-					unitShouldHeal = true;
-				}
-			}
-		}
+		ExecuteCycloneLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, cycloneShouldStayCloseToTarget, rangedUnits, threats, target, goal);
 	}
 
 	const auto distSqToTarget = target ? Util::DistSq(rangedUnit->pos, target->pos) : 0.f;
@@ -407,13 +317,14 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
-	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, goal, unitShouldHeal, isCycloneHelper))
+	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
 	{
 		return;
 	}
 
 	// if there is no potential target or threat, move to objective (max distance is not considered when defending)
-	if(MoveToGoal(rangedUnit, threats, target, goal, unitShouldHeal))
+	const bool forceMoveToGoal = isCycloneHelper && isFlyingBarracks && cycloneFlyingHelperIt->second.goal == TRACK;
+	if(MoveToGoal(rangedUnit, threats, target, goal, unitShouldHeal, forceMoveToGoal))
 	{
 		return;
 	}
@@ -476,31 +387,45 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-	if (cycloneShouldUseLockOn || cycloneShouldStayCloseToTarget || AllowUnitToPathFind(rangedUnit))
+	if (!unitShouldHeal)
 	{
-		const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
-		const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
-		const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
-		const float maxRange = target ? unitAttackRange : 3.f;
-		CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, m_bot);
-		if (closePositionInPath != CCPosition())
+		if (cycloneShouldUseLockOn || cycloneShouldStayCloseToTarget || AllowUnitToPathFind(rangedUnit))
 		{
-			const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
-			const auto action = RangedUnitAction(MicroActionType::Move, closePositionInPath, unitShouldHeal, actionDuration);
-			PlanAction(rangedUnit, action);
-			m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
-			m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-			return;
+			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
+			const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
+			const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
+			const float maxRange = target ? unitAttackRange : 3.f;
+			CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, m_bot);
+			if (closePositionInPath != CCPosition())
+			{
+				const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
+				const auto action = RangedUnitAction(MicroActionType::Move, closePositionInPath, unitShouldHeal, actionDuration);
+				PlanAction(rangedUnit, action);
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
+				return;
+			}
+			else
+			{
+				nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
+			}
 		}
-		else
+		else if (isCyclone && !shouldAttack && !cycloneShouldUseLockOn && target)
 		{
-			nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
+			CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(rangedUnit, target, unitAttackRange, m_bot);
+			if (movePosition != CCPosition())
+			{
+				const auto action = RangedUnitAction(MicroActionType::Move, movePosition, unitShouldHeal, 0);
+				PlanAction(rangedUnit, action);
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
+				return;
+			}
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 	m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 
-	m_bot.StartProfiling("0.10.4.1.5.1.8          PotentialFields");
 	bool useInfluenceMap = false;
 	CCPosition summedFleeVec(0, 0);
 	// add normalied * 1.5 vector of potential threats
@@ -519,70 +444,83 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
 	}
 
-	if(!useInfluenceMap)
+	if (useInfluenceMap)
 	{
-		CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange, unitShouldHeal);
-
-		// Sum up the threats vector with the direction vector
-		if (!threats.empty())
+		// Banshee in danger should cloak itself if low on hp
+		if (isBanshee && unitShouldHeal && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
 		{
-			AdjustSummedFleeVec(summedFleeVec);
-			dirVec += summedFleeVec;
-		}
-
-		// We repulse the Reaper from our closest harass unit
-		if (isReaper)
-		{
-			dirVec += GetRepulsionVectorFromFriendlyReapers(rangedUnit, rangedUnits);
-		}
-		// We attract the Hellion towards our other close Hellions
-		else if (isHellion)
-		{
-			dirVec += GetAttractionVectorToFriendlyHellions(rangedUnit, rangedUnits);
-		}
-
-		// We move only if the vector is long enough
-		const float vecLen = std::sqrt(std::pow(dirVec.x, 2) + std::pow(dirVec.y, 2));
-		if (vecLen < 0.5f)
-		{
-			m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 			return;
 		}
-
-		// Normalize the final direction vector so it's easier to work with
-		Util::Normalize(dirVec);
-
-		// If we find a pathable tile in the direction of the vector, we move at that tile
-		CCPosition pathableTile(0, 0);
-		if(MoveUnitWithDirectionVector(rangedUnit, dirVec, pathableTile))
+		
+		m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
+		// If close to an unpathable position or in danger
+		// Use influence map to find safest path
+		CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, m_bot);
+		if (safeTile != CCPosition())
 		{
-#ifndef PUBLIC_RELEASE
-			if (m_bot.Config().DrawHarassInfo)
-				m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
-#endif
-
-			const auto action = RangedUnitAction(MicroActionType::Move, pathableTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
+			//safeTile = AttenuateZigzag(rangedUnit, threats, safeTile, summedFleeVec);	//if we decomment this, we must not break in the threat check loop
+			const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 			PlanAction(rangedUnit, action);
-			m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
+			m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
 			return;
 		}
 	}
-	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 
-	// Banshee in danger should cloak itself if low on hp
-	if (isBanshee && unitShouldHeal && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
+	m_bot.StartProfiling("0.10.4.1.5.1.8          PotentialFields");
+	CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange, unitShouldHeal);
+
+	// Sum up the threats vector with the direction vector
+	if (!threats.empty())
 	{
+		AdjustSummedFleeVec(summedFleeVec);
+		dirVec += summedFleeVec;
+	}
+
+	// We repulse the Reaper from our closest harass unit
+	if (isReaper)
+	{
+		dirVec += GetRepulsionVectorFromFriendlyReapers(rangedUnit, rangedUnits);
+	}
+	// We attract the Hellion towards our other close Hellions
+	else if (isHellion)
+	{
+		dirVec += GetAttractionVectorToFriendlyHellions(rangedUnit, rangedUnits);
+	}
+
+	// We move only if the vector is long enough
+	const float vecLen = std::sqrt(std::pow(dirVec.x, 2) + std::pow(dirVec.y, 2));
+	if (vecLen < 0.5f)
+	{
+		m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 		return;
 	}
 
-	m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
-	// If close to an unpathable position or in danger
-	// Use influence map to find safest path
-	const CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, m_bot);
-	//safeTile = AttenuateZigzag(rangedUnit, threats, safeTile, summedFleeVec);	//if we decomment this, we must not break in the threat check loop
-	const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
+	// Normalize the final direction vector so it's easier to work with
+	Util::Normalize(dirVec);
+
+	// If we find a pathable tile in the direction of the vector, we move at that tile
+	CCPosition pathableTile(0, 0);
+	if(MoveUnitWithDirectionVector(rangedUnit, dirVec, pathableTile))
+	{
+#ifndef PUBLIC_RELEASE
+		if (m_bot.Config().DrawHarassInfo)
+			m_bot.Map().drawLine(rangedUnit->pos, rangedUnit->pos+dirVec, sc2::Colors::Purple);
+#endif
+
+		const auto action = RangedUnitAction(Move, pathableTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
+		PlanAction(rangedUnit, action);
+		m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
+		return;
+	}
+	
+	// Unit cannot flee, we let it attack any close unit
+	char buffer[50];
+	sprintf_s(buffer, "Unit %s cannot flee", sc2::UnitTypeToName(rangedUnit->unit_type));
+	Util::Log(__FUNCTION__, buffer, m_bot);
+	const auto actionType = m_bot.Data(rangedUnit->unit_type).isBuilding ? Move : AttackMove;
+	const auto action = RangedUnitAction(AttackMove, rangedUnit->pos, false, 0);
 	PlanAction(rangedUnit, action);
-	m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
+	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 }
 
 bool RangedManager::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
@@ -737,7 +675,7 @@ bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inD
 
 bool RangedManager::ShouldBansheeUncloak(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal) const
 {
-	if (banshee->cloak != sc2::Unit::Cloaked)
+	if (banshee->cloak != sc2::Unit::CloakedAllied)
 		return false;
 
 	if (!unitShouldHeal)
@@ -766,8 +704,8 @@ bool RangedManager::ExecuteBansheeUncloakLogic(const sc2::Unit * banshee, CCPosi
 bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit) const
 {
 	auto & unitsBeingRepaired = m_bot.Commander().Combat().getUnitsBeingRepaired();
-	UnitType unitType(rangedUnit->unit_type, m_bot);
-	if (unitType.isRepairable())
+	const UnitType unitType(rangedUnit->unit_type, m_bot);
+	if (unitType.isRepairable() && !unitType.isBuilding())
 	{
 		const auto it = unitsBeingRepaired.find(rangedUnit);
 		//If unit is being repaired
@@ -831,8 +769,14 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	const bool isRaven = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
 	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = { supportUnit->unit_type };
 	const std::vector<sc2::UNIT_TYPEID> typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
-	const auto clusterQueryName = isRaven ? "Raven" : "";
-	const auto clusters = Util::GetUnitClusters(rangedUnits, isMarine ? typesToConsider : typesToIgnore, !isMarine, clusterQueryName, m_bot);
+	const auto clusterQueryName = "";// isRaven ? "Raven" : "";
+	sc2::Units validUnits;
+	for (const auto rangedUnit : rangedUnits)
+	{
+		if (!ShouldUnitHeal(rangedUnit))
+			validUnits.push_back(rangedUnit);
+	}
+	const auto clusters = Util::GetUnitClusters(validUnits, isMarine ? typesToConsider : typesToIgnore, !isMarine, clusterQueryName, m_bot);
 	const Util::UnitCluster* closestBiggestCluster = nullptr;
 	float distance = 0.f;
 	for(const auto & cluster : clusters)
@@ -858,6 +802,10 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	if(closestBiggestCluster)
 	{
 		return closestBiggestCluster->m_center;
+	}
+	if (m_order.getType() == SquadOrderTypes::Defend)
+	{
+		return m_order.getPosition();
 	}
 	return m_bot.GetStartLocation();
 }
@@ -922,11 +870,12 @@ bool RangedManager::ExecuteThorMorphLogic(const sc2::Unit * thor)
 	return morph;
 }
 
-bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, bool unitShouldHeal)
+bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, bool unitShouldHeal, bool force)
 {
-	if ((!target ||
+	if (force ||
+		((!target ||
 		(m_order.getType() != SquadOrderTypes::Defend && Util::DistSq(rangedUnit->pos, target->pos) > m_order.getRadius() * m_order.getRadius()))
-		&& threats.empty())
+		&& threats.empty()))
 	{
 #ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
@@ -934,7 +883,7 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 #endif
 
 		const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
-		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings());
+		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings()) || m_bot.Data(rangedUnit->unit_type).isBuilding;
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 		const auto action = RangedUnitAction(moveWithoutAttack ? MicroActionType::Move : MicroActionType::AttackMove, goal, unitShouldHeal, actionDuration);
 		PlanAction(rangedUnit, action);
@@ -1007,11 +956,11 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * target)
 {
 	const uint32_t currentFrame = m_bot.GetCurrentFrame();
+	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 	//const bool queryAbilityAvailable = QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON);
 	const bool abilityAvailable = isAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone);
 	if (abilityAvailable)
 	{
-		auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 		// Lock-On ability is not on cooldown
 		const auto it = lockOnTargets.find(cyclone);
 		if (it != lockOnTargets.end())
@@ -1053,10 +1002,28 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			const auto cycloneHeight = m_bot.Map().terrainHeight(cyclone->pos);
 			auto & abilityCastingRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
 			const auto partialLockOnRange = abilityCastingRanges[sc2::ABILITY_ID::EFFECT_LOCKON] + cyclone->radius;
+			std::map<const sc2::Unit *, int> lockedOnTargets;
+			for (const auto & lockOnTarget : lockOnTargets)
+			{
+				auto lockedOnTarget = lockOnTarget.second.first;
+				const auto it = lockedOnTargets.find(lockedOnTarget);
+				if (it == lockedOnTargets.end())
+					lockedOnTargets[lockedOnTarget] = 1;
+				else
+					lockedOnTargets[lockedOnTarget] += 1;
+			}
 			const sc2::Unit * bestTarget = nullptr;
 			float bestScore = 0.f;
 			for(const auto threat : threats)
 			{
+				// Do not Lock On on workers
+				if (UnitType(threat->unit_type, m_bot).isWorker())
+					continue;
+				// Do not Lock On on units that are already Locked On unless they have a lot of hp
+				// Will target the unit only if it can absorb more than 3 missiles (20 damage each) per Cyclone Locked On to it
+				const auto it = lockedOnTargets.find(threat);
+				if (it != lockedOnTargets.end() && threat->health + threat->shield <= it->second * 60)
+					continue;
 				const float threatHeight = m_bot.Map().terrainHeight(threat->pos);
 				if (threatHeight > cycloneHeight)
 				{
@@ -1076,8 +1043,6 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 						continue;
 				}
 				const float dist = Util::Dist(cyclone->pos, threat->pos);
-				/*if (dist > 10.f)
-					continue;*/
 				if (shouldHeal && dist > partialLockOnRange + threat->radius)
 					continue;
 				// The lower the better
@@ -1116,7 +1081,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 		{
 			const auto type = UnitType(target->unit_type, m_bot);
 			// Prevent the use of Lock-On on passive buildings
-			if (type.isBuilding() && !type.isAttackingBuilding())
+			if (type.isWorker() || (type.isBuilding() && !type.isAttackingBuilding()))
 			{
 				shouldUseLockOn = false;
 				shouldAttack = true;
@@ -1385,7 +1350,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			if (injured || shouldKite)
 			{
-				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, m_bot);
+				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, m_bot);
 			}
 			else if(shouldChase)
 			{
@@ -1417,7 +1382,114 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	return currentUnitHasACommand;
 }
 
-bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
+void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal)
+{
+	target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
+
+	// If the Cyclone has a its Lock-On on a target with a big range (like a Tempest or Tank)
+	if (!shouldAttack && !cycloneShouldUseLockOn && m_order.getType() != SquadOrderTypes::Defend)
+	{
+		const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+		const auto it = lockOnTargets.find(rangedUnit);
+		if (it != lockOnTargets.end())
+		{
+			const auto lockOnTarget = it->second.first;
+			const auto enemyRange = Util::GetAttackRangeForTarget(lockOnTarget, rangedUnit, m_bot);
+			if (enemyRange >= 10.f)
+			{
+				// We check if we have another unit that is close to it, but if not, the Cyclone should stay close to it
+				bool closeAlly = false;
+				for (const auto ally : rangedUnits)
+				{
+					if (ally == rangedUnit)
+						continue;
+					if (Util::DistSq(ally->pos, lockOnTarget->pos) > 7.f * 7.f)
+						continue;
+					// If the ally could survive at least 2 seconds close to the target
+					if (ally->health >= Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(ally->pos), ally, m_bot) * 2.f)
+					{
+						closeAlly = true;
+						break;
+					}
+				}
+				if (!closeAlly)
+				{
+					cycloneShouldStayCloseToTarget = true;
+					unitShouldHeal = false;
+					target = lockOnTarget;
+				}
+			}
+		}
+	}
+
+	const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
+	const bool hasFlyingHelper = cycloneWithHelperIt != m_cyclonesWithHelper.end();
+
+	if (!unitShouldHeal && !cycloneShouldStayCloseToTarget && m_order.getType() != SquadOrderTypes::Defend)
+	{
+		// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
+		if (cycloneShouldUseLockOn && hasFlyingHelper)
+		{
+			const auto cycloneFlyingHelper = cycloneWithHelperIt->second;
+			// If the flying helper is too far, go towards it
+			if (Util::DistSq(rangedUnit->pos, cycloneFlyingHelper->pos) > CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER * CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER)
+			{
+				goal = cycloneFlyingHelper->pos;
+			}
+		}
+
+		if (!hasFlyingHelper)
+		{
+			// If the target is too far, we don't want to chase it, we just leave
+			if (target)
+			{
+				const float lockOnRange = m_bot.Commander().Combat().getAbilityCastingRanges().at(sc2::ABILITY_ID::EFFECT_LOCKON) + rangedUnit->radius + target->radius;
+				if (Util::DistSq(rangedUnit->pos, target->pos) > lockOnRange * lockOnRange)
+				{
+					// TODO remove when the flying helper bug is fixed
+					bool closeFlyingUnit = false;
+					for (const auto allyUnit : rangedUnits)
+					{
+						if (!allyUnit->is_flying)
+							continue;
+						if (Util::DistSq(rangedUnit->pos, allyUnit->pos) < 7.f * 7.f)
+						{
+							closeFlyingUnit = true;
+							break;
+						}
+					}
+					if (!closeFlyingUnit)
+						target = nullptr;
+				}
+			}
+			// Find the closest flying helper on the map
+			float minDistSq = 0.f;
+			const sc2::Unit* closestHelper = nullptr;
+			for (const auto & flyingHelper : m_cycloneFlyingHelpers)
+			{
+				const float distSq = Util::DistSq(rangedUnit->pos, flyingHelper.first->pos);
+				if (!closestHelper || distSq < minDistSq)
+				{
+					minDistSq = distSq;
+					closestHelper = flyingHelper.first;
+				}
+			}
+			// If there is one
+			if (closestHelper)
+			{
+				goal = closestHelper->pos;
+			}
+			else
+			{
+				// Otherwise go back to base, it's too dangerous to go alone
+				goal = m_bot.GetStartLocation();
+				unitShouldHeal = true;
+			}
+		}
+	}
+}
+
+bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 	{
@@ -1436,7 +1508,7 @@ bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * range
 		if (ExecuteOffensiveTeleportLogic(rangedUnit, threats, goal))
 			return true;
 
-		if (ExecuteYamatoCannonLogic(rangedUnit, threats))
+		if (ExecuteYamatoCannonLogic(rangedUnit, targets))
 			return true;
 	}
 
@@ -1480,7 +1552,7 @@ bool RangedManager::ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruise
 	return false;
 }
 
-bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats)
+bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & targets)
 {
 	const size_t currentFrame = m_bot.GetCurrentFrame();
 	auto & queryYamatoAvailability = m_bot.Commander().Combat().getQueryYamatoAvailability();
@@ -1499,26 +1571,31 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		return false;
 
 	const sc2::Unit* target = nullptr;
-	float maxDps = 0.f;
+	float maxDps = 0.1f; // This will prevent Yamato to be shot on a unit that can't attack the BC
 	auto & abilityCastingRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
 	auto & yamatoTargets = m_bot.Commander().Combat().getYamatoTargets();
-	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN);
-	for (const auto threat : threats)
+	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN) + battlecruiser->radius;
+	for (const auto potentialTarget : targets)
 	{
-		const float threatDistance = Util::DistSq(battlecruiser->pos, threat->pos);
-		const float threatHp = threat->health + threat->shield;
+		const float curentYamatoRange = yamatoRange + potentialTarget->radius;
+		const float targetDistance = Util::DistSq(battlecruiser->pos, potentialTarget->pos);
+		const float targetHp = potentialTarget->health + potentialTarget->shield;
 		unsigned yamatos = 0;
-		const auto & it = yamatoTargets.find(threat->tag);
+		const auto & it = yamatoTargets.find(potentialTarget->tag);
 		if (it != yamatoTargets.end())
 			yamatos = it->second.size();
 		// TODO find a way of targetting multiple yamato onto the same target if it has a lot of HP
-		if (threatDistance <= yamatoRange * yamatoRange && yamatos == 0 && threatHp >= 120.f && threatHp <= 240.f) //+ 240.f * yamatos)
+		if (targetDistance <= curentYamatoRange * curentYamatoRange && yamatos == 0)
 		{
-			const float dps = Util::GetDpsForTarget(threat, battlecruiser, m_bot);
-			if(dps > maxDps || (dps == maxDps && threatHp > target->health + target->shield))
+			const auto isInfestor = potentialTarget->unit_type == sc2::UNIT_TYPEID::ZERG_INFESTOR || potentialTarget->unit_type == sc2::UNIT_TYPEID::ZERG_INFESTORBURROWED;
+			if (isInfestor || (targetHp >= 120.f && targetHp <= 240.f))	//+ 240.f * yamatos)
 			{
-				maxDps = dps;
-				target = threat;
+				const float dps = isInfestor ? 1000 : Util::GetDpsForTarget(potentialTarget, battlecruiser, m_bot);
+				if (dps > maxDps || (dps == maxDps && targetHp > target->health + target->shield))
+				{
+					maxDps = dps;
+					target = potentialTarget;
+				}
 			}
 		}
 	}
@@ -1747,32 +1824,35 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 	int moveDistance = initialMoveDistance;
 	CCPosition moveTo = rangedUnit->pos + directionVector * moveDistance;
 
-	if (!rangedUnit->is_flying)
+	if (rangedUnit->is_flying)
 	{
-		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
-		{
-			const CCPosition mapMin = m_bot.Map().mapMin();
-			const CCPosition mapMax = m_bot.Map().mapMax();
-			bool canMoveAtInitialDistanceOrFarther = true;
+		outPathableTile = moveTo;
+		return true;
+	}
+	
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+	{
+		const CCPosition mapMin = m_bot.Map().mapMin();
+		const CCPosition mapMax = m_bot.Map().mapMax();
+		bool canMoveAtInitialDistanceOrFarther = true;
 
-			// Check if we can move in the direction of the vector
-			// We check if we are moving towards and close to an unpathable position
-			while (!m_bot.Observation()->IsPathable(moveTo))
+		// Check if we can move in the direction of the vector
+		// We check if we are moving towards and close to an unpathable position
+		while (!m_bot.Observation()->IsPathable(moveTo))
+		{
+			++moveDistance;
+			moveTo = rangedUnit->pos + directionVector * moveDistance;
+			// If moveTo is out of the map, stop checking farther and switch to influence map navigation
+			if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
 			{
-				++moveDistance;
-				moveTo = rangedUnit->pos + directionVector * moveDistance;
-				// If moveTo is out of the map, stop checking farther and switch to influence map navigation
-				if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
-				{
-					canMoveAtInitialDistanceOrFarther = false;
-					break;
-				}
+				canMoveAtInitialDistanceOrFarther = false;
+				break;
 			}
-			if (canMoveAtInitialDistanceOrFarther)
-			{
-				outPathableTile = moveTo;
-				return true;
-			}
+		}
+		if (canMoveAtInitialDistanceOrFarther)
+		{
+			outPathableTile = moveTo;
+			return true;
 		}
 
 		// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
@@ -1789,8 +1869,23 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 		}
 		return false;
 	}
-	outPathableTile = moveTo;
-	return true;
+	
+	// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
+	for (moveDistance = 1; moveDistance < initialMoveDistance; ++moveDistance)
+	{
+		moveTo = rangedUnit->pos + directionVector * moveDistance;
+		if (!m_bot.Observation()->IsPathable(moveTo))
+		{
+			--moveDistance;
+			break;
+		}
+	}
+	if (moveDistance >= 1)
+	{
+		outPathableTile = rangedUnit->pos + directionVector * moveDistance;
+		return true;
+	}
+	return false;
 }
 
 CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const
@@ -2092,7 +2187,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 			// Remove the helper from the set because it is now taken
 			potentialFlyingCycloneHelpers.erase(closestHelper);
 			// Save the helper
-			m_cycloneFlyingHelpers[closestHelper] = targetCluster.m_center;
+			m_cycloneFlyingHelpers[closestHelper] = FlyingHelperMission(TRACK, targetCluster.m_center);
 			// Associate the helper with every Cyclone that had a target in that target cluster
 			for(const auto target : targetCluster.m_units)
 			{
@@ -2150,7 +2245,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 				// Remove the helper from the set because it is now taken
 				potentialFlyingCycloneHelpers.erase(closestHelper);
 				// Save the helper
-				m_cycloneFlyingHelpers[closestHelper] = cycloneCluster.m_center;
+				m_cycloneFlyingHelpers[closestHelper] = FlyingHelperMission(ESCORT, cycloneCluster.m_center);
 				// Associate the helper with every Cyclone in that Cyclone cluster
 				for(const auto cyclone : cycloneCluster.m_units)
 				{

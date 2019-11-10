@@ -30,7 +30,7 @@ public:
     GameCommander(CCBot & bot);
 
     void onStart();
-    void onFrame();
+    void onFrame(bool executeMacro);
 
 	ProductionManager& Production();
 	CombatCommander& Combat();

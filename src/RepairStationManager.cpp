@@ -29,7 +29,7 @@ void RepairStationManager::onFrame()
 	}
 
 	// Add the valid repair stations that are missing from the map
-	const std::vector<const BaseLocation *> & bases = m_bot.Bases().getBaseLocations();
+	const auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 	for(auto & base : bases)
 	{
 		if (!isRepairStationValidForBaseLocation(base))
@@ -78,7 +78,7 @@ CCPosition RepairStationManager::getBestRepairStationForUnit(const sc2::Unit* un
 	return base->getPosition();
 }
 
-bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack)
+bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack) const
 {
 	const int MINIMUM_WORKER_COUNT = 3;
 
@@ -91,19 +91,32 @@ bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocatio
 	if (!ignoreUnderAttack && baseLocation->isUnderAttack())
 		return false;
 
+	auto & workerData = m_bot.Workers().getWorkerData();
 	const Unit& resourceDepot = baseLocation->getResourceDepot();
-	if (!resourceDepot.isValid())
-		return false;
+	if (resourceDepot.isValid())
+	{
+		if (!resourceDepot.isCompleted() && !resourceDepot.getType().isMorphedBuilding())
+			return false;
 
-	if (!resourceDepot.isCompleted() && !resourceDepot.getType().isMorphedBuilding())
-		return false;
+		const auto workerCount = workerData.getNumAssignedWorkers(resourceDepot);
+		const auto repairWorkerCount = workerData.getRepairStationWorkers()[baseLocation].size();
+		if (workerCount + repairWorkerCount < MINIMUM_WORKER_COUNT)
+			return false;
+	}
+	else
+	{
+		bool proxyRepairWorker = false;
+		for (const auto & worker : workerData.getWorkers())
+		{
+			if (workerData.getWorkerJob(worker) == WorkerJobs::Repair && Util::DistSq(worker, baseLocation->getPosition()) < 10 * 10)
+			{
+				proxyRepairWorker = true;
+				break;
+			}
+		}
+		return proxyRepairWorker;
+	}
 	
-	auto workerData = m_bot.Workers().getWorkerData();
-	int workerCount = workerData.getNumAssignedWorkers(resourceDepot);
-	int repairWorkerCount = workerData.getRepairStationWorkers()[baseLocation].size();
-	if (workerCount + repairWorkerCount < MINIMUM_WORKER_COUNT)
-		return false;
-
 	return true;
 }
 

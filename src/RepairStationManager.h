@@ -19,7 +19,7 @@ private:
 	std::unordered_map<const BaseLocation*, std::list<const sc2::Unit*>> m_repairStations;
 	std::unordered_map<const sc2::Unit*, const BaseLocation*> m_destinations;
 
-	bool isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack = true);
+	bool isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack = true) const;
 	void reservePlaceForUnit(const sc2::Unit* unit);
 	void drawRepairStations();
 };

@@ -70,7 +70,7 @@ bool BuildOrderQueue::canSkipItem()
     {
         return false;
     }
-
+	
     // is the current highest priority item not blocking a skip
     bool highestNotBlocking = !m_queue[m_queue.size() - 1 - m_numSkippedItems].blocking;
 

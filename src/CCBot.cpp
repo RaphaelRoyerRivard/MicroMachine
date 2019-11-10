@@ -15,6 +15,7 @@ CCBot::CCBot(std::string botVersion)
 	, m_concede(false)
 	, m_saidHallucinationLine(false)
 	, m_botVersion(botVersion)
+	, m_previousMacroGameLoop(-1)
 {
 }
 
@@ -105,6 +106,9 @@ void CCBot::OnStep()
 	{
 		Util::ClearDisplayedErrors();
 	}
+	const bool executeMacro = m_gameLoop - m_previousMacroGameLoop > 1;
+	if (executeMacro)
+		m_previousMacroGameLoop = m_gameLoop;
 	
 	StartProfiling("0.1 checkKeyState");
 	checkKeyState();
@@ -133,15 +137,15 @@ void CCBot::OnStep()
 	StopProfiling("0.6 m_bases.onFrame");
 
 	StartProfiling("0.7 m_workers.onFrame");
-    m_workers.onFrame();
+	m_workers.onFrame(executeMacro);
 	StopProfiling("0.7 m_workers.onFrame");
 
 	StartProfiling("0.8 m_buildings.onFrame");
-	m_buildings.onFrame();
+	m_buildings.onFrame(executeMacro);
 	StopProfiling("0.8 m_buildings.onFrame");
 
 	StartProfiling("0.9 m_strategy.onFrame");
-    m_strategy.onFrame();
+    m_strategy.onFrame(executeMacro);
 	StopProfiling("0.9 m_strategy.onFrame");
 
 	StartProfiling("0.11 m_repairStations.onFrame");
@@ -153,7 +157,7 @@ void CCBot::OnStep()
 	StopProfiling("0.12 m_combatAnalyzer.onFrame");
 
 	StartProfiling("0.10 m_gameCommander.onFrame");
-	m_gameCommander.onFrame();
+	m_gameCommander.onFrame(executeMacro);
 	StopProfiling("0.10 m_gameCommander.onFrame");
 
 	updatePreviousFrameEnemyUnitPos();
@@ -398,6 +402,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_OVERLORDCOCOON:
 					case sc2::UNIT_TYPEID::ZERG_OVERSEER:
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+					case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
 						break;
 					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
 					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
@@ -467,7 +472,10 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_SPIRE:
 					case sc2::UNIT_TYPEID::ZERG_HIVE:
 						m_strategy.setShouldProduceAntiAirOffense(true);
-						Actions()->SendChat("Going for air units? Your fleet will be not match for mine!");
+						if (GetPlayerRace(Players::Enemy) == sc2::Zerg)
+							Actions()->SendChat("Going for air units? Your flock will be not match for my fleet!");
+						else
+							Actions()->SendChat("Going for air units? Your fleet will be not match for mine!");
 						Util::DebugLog(__FUNCTION__, "Air production building detected: " + unit.getType().getName(), *this);
 					default:
 						break;
@@ -708,6 +716,10 @@ void CCBot::clearDeadUnits()
 				m_KD8ChargesSpawnFrame.erase(tag);
 			if (unit.getPlayer() == Players::Enemy)
 				m_parasitedUnits.insert(unit.getUnitPtr()->tag);
+			if (m_deadAllyUnitsCount.find(unit.getAPIUnitType()) == m_deadAllyUnitsCount.end())
+				m_deadAllyUnitsCount[unit.getAPIUnitType()] = 1;
+			else
+				m_deadAllyUnitsCount[unit.getAPIUnitType()] += 1;
 		}
 	}
 	// Remove dead ally units
@@ -861,12 +873,13 @@ void CCBot::IssueCheats()
 	const auto mapCenter = Map().center();
 	const auto offset = Util::Normalized(mapCenter - m_startLocation) * 12;
 	//Debug()->DebugGiveAllTech();
+	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS);
 	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
 
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, m_startLocation, 2, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, mapCenter, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + Util::Normalized(mapCenter - m_startLocation) * 12, player2, 3);
@@ -874,12 +887,14 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation, player1, 5);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + offset, player2, 15);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player1, 2);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player1, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation, player1, 10);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player2, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CORRUPTOR, m_startLocation, player2, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE, mapCenter, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 20);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation + offset, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, m_startLocation + offset, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, mapCenter, player2, 1);
 
 	//Workers
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, Players::Enemy, 10);
@@ -1015,7 +1030,7 @@ Unit CCBot::GetUnit(const CCUnitID & tag) const
 #endif
 }
 
-int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed)
+int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed, bool underConstruction)
 { 
 	auto completedCount = 0;
 	if (m_unitCompletedCount.find(type) != m_unitCompletedCount.end())
@@ -1029,7 +1044,7 @@ int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed)
 	auto unitType = UnitType(type, *this);
 	if (unitType.isBuilding())
 	{
-		total += m_buildings.countBeingBuilt(unitType);
+		total += m_buildings.countBeingBuilt(unitType, underConstruction);
 	}
 	else //is unit
 	{
@@ -1043,6 +1058,14 @@ int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed)
 	}
 	
 	return total;
+}
+
+int CCBot::GetDeadAllyUnitsCount(sc2::UNIT_TYPEID type) const
+{
+	const auto it = m_deadAllyUnitsCount.find(type);
+	if (it != m_deadAllyUnitsCount.end())
+		return it->second;
+	return 0;
 }
 
 std::map<sc2::Tag, Unit> & CCBot::GetAllyUnits()
@@ -1287,8 +1310,9 @@ void CCBot::drawProfilingInfo()
 				if (time * 4 > stepTime)
 				{
 					profilingInfo += "!!";
-					if(GetCurrentFrame() % 25 == 0 && stepTime > 10000)	// >10ms
+					if(GetCurrentFrame() - m_lastProfilingLagOutput >= 25 && stepTime > 10000)	// >10ms
 					{
+						m_lastProfilingLagOutput = GetCurrentFrame();
 						Util::DebugLog(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * time) + "ms", *this);
 					}
 				}

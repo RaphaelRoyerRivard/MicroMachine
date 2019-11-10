@@ -66,11 +66,6 @@ void BaseLocationManager::onStart()
 			}
 		}
 
-#ifndef SC2API
-        // for BWAPI we have to eliminate minerals that have low resource counts
-        if (mineral.getUnitPtr()->getResources() < 100) { continue; }
-#endif
-
         if (!affectToCluster(resourceClusters, mineral.second, maxClusterDistanceSq))
         {
             resourceClusters.push_back(std::vector<Unit>());
@@ -108,13 +103,23 @@ void BaseLocationManager::onStart()
 	m_bot.Commander().Combat().initInfluenceMaps();
 	m_bot.Commander().Combat().updateBlockedTilesWithNeutral();
 
-	// add the base locations if there are more than 4 resouces in the cluster
+	// add the base locations if there are more than 6 resouces in the cluster
     int baseID = 0;
     for (auto & cluster : resourceClusters)
     {
-        if (cluster.size() > 4)
+        if (cluster.size() > 6)
         {
-            m_baseLocationData.push_back(BaseLocation(m_bot, baseID++, cluster));
+			bool hasGeyser = false;
+			for (const auto & resource : cluster)
+			{
+				if (resource.getType().isGeyser())
+				{
+					hasGeyser = true;
+					break;
+				}
+			}
+        	if (hasGeyser)
+				m_baseLocationData.push_back(BaseLocation(m_bot, baseID++, cluster));
         }
     }
 
@@ -242,20 +247,20 @@ void BaseLocationManager::onFrame()
 
 	m_bot.StartProfiling("0.6.3   updateBaseLocations");
     // for each unit on the map, update which base location it may be occupying
-    for (auto & unit : m_bot.Buildings().getBaseBuildings())
-    {
-		if (!unit.getType().isResourceDepot())
-		{
+	for (const auto & unitPair : m_bot.GetAllyUnits())
+	{
+		const auto & unit = unitPair.second;
+		if (!unit.getType().isBuilding() || unit.isFlying())
 			continue;
-		}
-
+		
         BaseLocation * baseLocation = getBaseLocation(unit.getPosition());
 
-        if (baseLocation != nullptr)
-        {
-            baseLocation->setPlayerOccupying(Players::Self, true);
-			baseLocation->setResourceDepot(unit);
-        }
+		if (baseLocation != nullptr)
+		{
+			baseLocation->setPlayerOccupying(Players::Self, true);
+			if (unit.getType().isResourceDepot())
+				baseLocation->setResourceDepot(unit);
+		}
     }
 	m_bot.StopProfiling("0.6.3   updateBaseLocations");
 
@@ -525,6 +530,8 @@ BaseLocation * BaseLocationManager::getFarthestOccupiedBaseLocation() const
 	const auto enemyLocation = enemyBaseLocation ? enemyBaseLocation->getPosition() : m_bot.Map().center();
 	for (auto baseLocation : getOccupiedBaseLocations(Players::Self))
 	{
+		if (!baseLocation->getResourceDepot().isValid())
+			continue;
 		const auto distance = baseLocation->getGroundDistance(enemyLocation);
 		if (!closestBase || distance < minDistance)
 		{
@@ -786,7 +793,8 @@ int BaseLocationManager::getAccessibleMineralFieldCount() const
 	int count = 0;
 	for (auto & base : getOccupiedBaseLocations(Players::Self))
 	{
-		count += base->getMinerals().size();
+		if (base->getResourceDepot().isValid())
+			count += base->getMinerals().size();
 	}
 	return count;
 }

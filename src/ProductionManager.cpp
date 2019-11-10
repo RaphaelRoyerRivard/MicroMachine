@@ -14,9 +14,12 @@ void ProductionManager::setBuildOrder(const BuildOrder & buildOrder)
 {
     m_queue.clearAll();
 
+	bool blocking = m_bot.Strategy().getStartingStrategy() == STANDARD ? true : false;
     for (size_t i(0); i<buildOrder.size(); ++i)
     {
-        m_queue.queueAsLowestPriority(buildOrder[i], true);
+		if (!blocking && buildOrder[i].getUnitType() == MetaTypeEnum::Barracks.getUnitType())
+			blocking = true;
+        m_queue.queueAsLowestPriority(buildOrder[i], blocking);
     }
 }
 
@@ -154,22 +157,24 @@ void ProductionManager::onStart()
 	}
 }
 
-void ProductionManager::onFrame()
+void ProductionManager::onFrame(bool executeMacro)
 {
-	m_bot.StartProfiling("1.0 lowPriorityChecks");
-	lowPriorityChecks();
-	validateUpgradesProgress();
-	m_bot.StopProfiling("1.0 lowPriorityChecks");
-	m_bot.StartProfiling("2.0 manageBuildOrderQueue");
-    manageBuildOrderQueue();
-	m_bot.StopProfiling("2.0 manageBuildOrderQueue");
-	m_bot.StartProfiling("3.0 QueueDeadBuildings");
-	QueueDeadBuildings();
-	m_bot.StopProfiling("3.0 QueueDeadBuildings");
+	if (executeMacro)
+	{
+		m_bot.StartProfiling("1.0 lowPriorityChecks");
+		lowPriorityChecks();
+		validateUpgradesProgress();
+		m_bot.StopProfiling("1.0 lowPriorityChecks");
+		m_bot.StartProfiling("2.0 manageBuildOrderQueue");
+		manageBuildOrderQueue();
+		m_bot.StopProfiling("2.0 manageBuildOrderQueue");
+		m_bot.StartProfiling("3.0 QueueDeadBuildings");
+		QueueDeadBuildings();
+		m_bot.StopProfiling("3.0 QueueDeadBuildings");
 
-    // TODO: if nothing is currently building, get a new goal from the strategy manager
-    // TODO: triggers for game things like cloaked units etc
-
+		// TODO: if nothing is currently building, get a new goal from the strategy manager
+		// TODO: triggers for game things like cloaked units etc
+	}
     drawProductionInformation();
 }
 
@@ -248,175 +253,189 @@ void ProductionManager::manageBuildOrderQueue()
 			additionalReservedGas = lowestGasReq;
 		}
 
-		//check if we have the prerequirements.
-		if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
+		const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
+		bool shouldWait = false;
+		if (currentItem.type.getUnitType().isRefinery())
 		{
-			m_bot.StartProfiling("2.2.1     fixBuildOrderDeadlock");
-			fixBuildOrderDeadlock(currentItem);
-			currentItem = m_queue.getHighestPriorityItem();
-			m_bot.StopProfiling("2.2.1     fixBuildOrderDeadlock");
-			continue;
+			const bool hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true) > 0;
+			shouldWait = !hasBarracks;
+		}
+		else if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
+		{
+			if (currentItem.type == MetaTypeEnum::FactoryTechLab || currentItem.type == MetaTypeEnum::Factory)
+			{
+				const bool hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0;
+				const auto unattachedTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::TechLab.getUnitType(), false, false, false);
+				const auto barracksTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, false, false);
+				const auto factoryTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, false, false);
+				if (!hasBarracks || (factoryCount > 0 && factoryCount <= unattachedTechlabCount + barracksTechlabCount + factoryTechlabCount))
+					shouldWait = true;
+			}
+			else if (currentItem.type == MetaTypeEnum::Reaper)
+			{
+				const bool hasBarracksTechlab = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType()) > 0;
+				if (hasBarracksTechlab)
+				{
+					shouldWait = true;
+				}
+				else
+				{
+					const bool hasTechlab = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::TechLab.getUnitType(), true, true) > 0;
+					const bool reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType());
+					if (!hasTechlab && reaperCount == 1)
+						shouldWait = true;
+				}
+			}
 		}
 
-		if (currentlyHasRequirement(currentItem.type))
+		if (!shouldWait)
 		{
-			//TODO: TEMP build barrack away from the ramp to protect it from worker rush
-			/*if (!firstBarrackBuilt && currentItem.type == MetaTypeEnum::Barracks && m_bot.GetPlayerRace(Players::Enemy) == CCRace::Protoss &&
-				meetsReservedResourcesWithExtra(MetaTypeEnum::Barracks, 0, 0, additionalReservedMineral, additionalReservedGas))
+			//check if we have the prerequirements.
+			if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
 			{
-				firstBarrackBuilt = true;
+				m_bot.StartProfiling("2.2.1     fixBuildOrderDeadlock");
+				fixBuildOrderDeadlock(currentItem);
+				currentItem = m_queue.getHighestPriorityItem();
+				m_bot.StopProfiling("2.2.1     fixBuildOrderDeadlock");
+				continue;
+			}
 
-				auto baseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-				auto & supplyDepots = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT);
-				
-				if (!supplyDepots.empty())//If we have a depot
-				{
-					auto & supplyDepot = supplyDepots[0];
-
-					auto basePosition = baseLocation->getDepotPosition();
-					auto point = supplyDepot.getTilePosition();
-					CCTilePosition target = CCTilePosition(basePosition.x + (basePosition.x - point.x), basePosition.y + (basePosition.y - point.y));
-					const CCPosition mapMin = m_bot.Map().mapMin();
-					const CCPosition mapMax = m_bot.Map().mapMax();
-					if (target.x < mapMin.x)
-					{
-						target.x = mapMin.x;
-					}
-					else if (target.x >= mapMax.x)
-					{
-						target.x = mapMax.x - 1;
-					}
-					if (target.y < mapMin.y)
-					{
-						target.y = mapMin.y;
-					}
-					else if (target.y >= mapMax.y)
-					{
-						target.y = mapMax.y - 1;
-					}
-
-					Unit producer = getProducer(currentItem.type);
-					if (create(producer, currentItem, target))
-					{
-						m_queue.removeCurrentHighestPriorityItem();
-					}
-
-					break;
-				}				
-			}*/
-
-			//Check if we already have an idle production building of that type
-			bool idleProductionBuilding = false;
-#ifndef NO_UNITS
-			if(currentItem.type.isBuilding())
+			// Proxy buildings
+			if (m_bot.Strategy().getStartingStrategy() != STANDARD)
 			{
-				auto productionBuildingTypes = getProductionBuildingTypes();
-				const sc2::UnitTypeID itemType = currentItem.type.getUnitType().getAPIUnitType();
-
-				//If its a production building
-				if(std::find(productionBuildingTypes.begin(), productionBuildingTypes.end(), itemType) != productionBuildingTypes.end())
+				if (currentItem.type == MetaTypeEnum::Barracks || (currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && factoryCount == 0))
 				{
-					auto & productionBuildings = m_bot.GetAllyUnits(itemType);
-					for(auto & productionBuilding : productionBuildings)
+					const auto proxyLocation = m_bot.Buildings().getProxyLocation();
+					Unit producer = getProducer(currentItem.type, Util::GetPosition(proxyLocation));
+					Building b(currentItem.type.getUnitType(), proxyLocation);
+					//b.finalPosition = proxyLocation;	// TODO this should be set but the proxy worker is hesitant to go to the building location for an unknown reason
+					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
 					{
-						//Check if this building is idle
-						if(productionBuilding.isProductionBuildingIdle())
+						if (create(producer, currentItem, proxyLocation, false, false))
 						{
-							idleProductionBuilding = true;
+							m_bot.Workers().getWorkerData().setProxyWorker(producer);
+							m_queue.removeCurrentHighestPriorityItem();
 							break;
 						}
 					}
 				}
 			}
-#endif
 
-			if (!idleProductionBuilding)
+			if (currentlyHasRequirement(currentItem.type))
 			{
-				auto data = m_bot.Data(currentItem.type);
-				// if we can make the current item
-				m_bot.StartProfiling("2.2.2     tryingToBuild");
-				if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
+				//Check if we already have an idle production building of that type
+				bool idleProductionBuilding = false;
+#ifndef NO_UNITS
+				if (currentItem.type.isBuilding())
 				{
-					m_bot.StartProfiling("2.2.3     Build without premovement");
-					Unit producer = getProducer(currentItem.type);
-					// build supply if we need some (SupplyBlock)
-					if (producer.isValid())
+					auto productionBuildingTypes = getProductionBuildingTypes();
+					const sc2::UnitTypeID itemType = currentItem.type.getUnitType().getAPIUnitType();
+
+					//If its a production building
+					if (std::find(productionBuildingTypes.begin(), productionBuildingTypes.end(), itemType) != productionBuildingTypes.end())
 					{
-						if (m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+						auto & productionBuildings = m_bot.GetAllyUnits(itemType);
+						for (auto & productionBuilding : productionBuildings)
 						{
-							supplyBlockedFrames++;
-#if _DEBUG
-							Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
-#else
-							Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", m_bot);
-#endif
-						}
-
-						if (canMakeNow(producer, currentItem.type))
-						{
-							// create it and remove it from the _queue
-							if (create(producer, currentItem, Util::GetTilePosition(m_bot.GetStartLocation())))
+							//Check if this building is idle
+							if (productionBuilding.isProductionBuildingIdle())
 							{
-								m_queue.removeCurrentHighestPriorityItem();
-
-								// don't actually loop around in here
-								m_bot.StopProfiling("2.2.2     tryingToBuild");
-								m_bot.StopProfiling("2.2.3     Build without premovement");
+								idleProductionBuilding = true;
 								break;
 							}
 						}
 					}
-					m_bot.StopProfiling("2.2.3     Build without premovement");
 				}
-				else if (data.isBuilding
-					&& !data.isAddon
-					&& !currentItem.type.getUnitType().isMorphedBuilding()
-					&& !data.isResourceDepot)//TODO temporary until we have a better solution, allow this if the enemy base doesn't look aggressive
+#endif
+
+				if (!idleProductionBuilding)
 				{
-					// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
-
-					m_bot.StartProfiling("2.2.4     Build with premovement");
-					Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
-					//Get building location
-
-					m_bot.StartProfiling("2.2.5     getNextBuildingLocation");
-					const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, true, true);
-					m_bot.StopProfiling("2.2.5     getNextBuildingLocation");
-					if (targetLocation != CCTilePosition(0, 0))
+					auto data = m_bot.Data(currentItem.type);
+					// if we can make the current item
+					m_bot.StartProfiling("2.2.2     tryingToBuild");
+					if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 					{
-						Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
-						if (worker.isValid())
+						m_bot.StartProfiling("2.2.3     Build without premovement");
+						Unit producer = getProducer(currentItem.type);
+						// build supply if we need some (SupplyBlock)
+						if (producer.isValid())
 						{
-							b.finalPosition = targetLocation;
-							if (canMakeAtArrival(b, worker, additionalReservedMineral, additionalReservedGas))
+							if (m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+							{
+								supplyBlockedFrames++;
+#if _DEBUG
+								Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
+#else
+								Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", m_bot);
+#endif
+							}
+
+							if (canMakeNow(producer, currentItem.type))
 							{
 								// create it and remove it from the _queue
-								if (create(worker, b) && worker.isValid())
+								if (create(producer, currentItem, Util::GetTilePosition(m_bot.GetStartLocation())))
 								{
-									worker.move(targetLocation);
 									m_queue.removeCurrentHighestPriorityItem();
-								}
 
-								// don't actually loop around in here
-								m_bot.StopProfiling("2.2.2     tryingToBuild");
-								m_bot.StopProfiling("2.2.4     Build with premovement");
-								break;
+									// don't actually loop around in here
+									m_bot.StopProfiling("2.2.2     tryingToBuild");
+									m_bot.StopProfiling("2.2.3     Build without premovement");
+									break;
+								}
 							}
 						}
+						m_bot.StopProfiling("2.2.3     Build without premovement");
 					}
-					else
+					else if (data.isBuilding
+						&& !data.isAddon
+						&& !currentItem.type.getUnitType().isMorphedBuilding()
+						&& !data.isResourceDepot)//TODO temporary until we have a better solution, allow this if the enemy base doesn't look aggressive
 					{
-						if (currentItem.type.getUnitType().getAPIUnitType() != Util::GetRefineryType().getAPIUnitType())//Supresses the refinery related errors
+						// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
+
+						m_bot.StartProfiling("2.2.4     Build with premovement");
+						Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
+						//Get building location
+
+						m_bot.StartProfiling("2.2.5     getNextBuildingLocation");
+						const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, true, true);
+						m_bot.StopProfiling("2.2.5     getNextBuildingLocation");
+						if (targetLocation != CCTilePosition(0, 0))
 						{
-							Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
+							Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
+							if (worker.isValid())
+							{
+								b.finalPosition = targetLocation;
+								if (canMakeAtArrival(b, worker, additionalReservedMineral, additionalReservedGas))
+								{
+									// create it and remove it from the _queue
+									if (create(worker, b) && worker.isValid())
+									{
+										worker.move(targetLocation);
+										m_queue.removeCurrentHighestPriorityItem();
+									}
+
+									// don't actually loop around in here
+									m_bot.StopProfiling("2.2.2     tryingToBuild");
+									m_bot.StopProfiling("2.2.4     Build with premovement");
+									break;
+								}
+							}
 						}
+						else
+						{
+							if (currentItem.type.getUnitType().getAPIUnitType() != Util::GetRefineryType().getAPIUnitType())//Supresses the refinery related errors
+							{
+								Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
+							}
+						}
+						m_bot.StopProfiling("2.2.4     Build with premovement");
 					}
-					m_bot.StopProfiling("2.2.4     Build with premovement");
+					m_bot.StopProfiling("2.2.2     tryingToBuild");
 				}
-				m_bot.StopProfiling("2.2.2     tryingToBuild");
 			}
 		}
-		              
+    	
     	// if we can't skip the current item, we stop here
 		if (!m_queue.canSkipItem())
 			break;
@@ -437,8 +456,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 
 
-	if (m_bot.Config().AllowDebug && m_bot.GetCurrentFrame() % 10)
-		return;
+	/*if (m_bot.Config().AllowDebug && m_bot.GetCurrentFrame() % 10)
+		return;*/
 
 	const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
 	const float productionScore = getProductionScore();
@@ -517,15 +536,23 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case TERRAN_CLASSIC :
 			{
 				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
+				const auto reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
 				//if (productionScore < (float)baseCount)
 				{
 					if (productionBuildingAddonCount < productionBuildingCount)
 					{//Addon
 						bool hasPicked = false;
 						MetaType toBuild;
+						const bool proxyCyclonesStrategy = m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES;
 						const int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) +
 							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
-						if (starportCount > starportAddonCount)
+						if (proxyCyclonesStrategy && reaperCount > 0 && firstBarracksTechlab)
+						{
+							firstBarracksTechlab = false;
+							toBuild = MetaTypeEnum::BarracksTechLab;
+							hasPicked = true;
+						}
+						else if (starportCount > starportAddonCount)
 						{
 							toBuild = MetaTypeEnum::StarportTechLab;
 							hasPicked = true;
@@ -552,13 +579,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						toBuild = MetaTypeEnum::Factory;
 						hasPicked = true;
 					}
-					else if (starportCount < finishedBaseCount * (m_bot.Strategy().enemyHasMassZerglings() ? 1 : 2))
+					else if (starportCount < finishedBaseCount)
 					{
 						toBuild = MetaTypeEnum::Starport;
 						hasPicked = true;
 					}
-
-					if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
+					
+					if (hasPicked && !m_queue.contains(toBuild) && (!m_queue.contains(MetaTypeEnum::CommandCenter) || m_bot.GetFreeMinerals() > 400 || m_bot.Bases().getFreeBaseLocationCount() == 0))
 					{
 						bool idleProductionBuilding = false;
 						const auto & productionBuildings = m_bot.GetAllyUnits(toBuild.getUnitType().getAPIUnitType());
@@ -585,7 +612,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					queueTech(MetaTypeEnum::YamatoCannon);
 				}
 
-				const int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
 #ifndef NO_UNITS
 				if ((reaperCount == 0 || (!m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)) && !m_queue.contains(MetaTypeEnum::Reaper))
 				{
@@ -704,7 +730,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				break;
 			}
-			case TERRAN_VS_PROTOSS:
+			/*case TERRAN_VS_PROTOSS:
 			{
 				const auto vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 				const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
@@ -788,10 +814,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				//const int thorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Thor.getUnitType(), false, true);
 				//const auto hasArmory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Armory.getUnitType(), true, true) > 0;
 				const auto cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
-				/*if (hasArmory && !m_queue.contains(MetaTypeEnum::Thor))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Thor, 1, false));
-				}*/
+				//if (hasArmory && !m_queue.contains(MetaTypeEnum::Thor))
+				//{
+				//	m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Thor, 1, false));
+				//}
 
 				if (!m_queue.contains(MetaTypeEnum::Cyclone))
 				{
@@ -815,7 +841,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 #endif
 				break;
-			}
+			}*/
 			case WORKER_RUSH_DEFENSE:
 			{
 				m_queue.removeAllOfType(MetaTypeEnum::Refinery);
@@ -934,10 +960,11 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 
 void ProductionManager::lowPriorityChecks()
 {
-	if (m_bot.GetGameLoop() % 10)
+	if (m_bot.GetGameLoop()  - m_lastLowPriorityCheckFrame < 10)
 	{
 		return;
 	}
+	m_lastLowPriorityCheckFrame = m_bot.GetGameLoop();
 
 	// build a refinery if we are missing one
 	//TODO doesn't handle extra hatcheries
@@ -1017,10 +1044,13 @@ void ProductionManager::lowPriorityChecks()
 			{
 				for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
 				{
+					if (!base->getResourceDepot().isValid())
+						continue;
+					
 					auto hasTurret = false;
 					auto position = base->getTurretPosition();
 					auto buildings = m_bot.Buildings().getFinishedBuildings();
-					for (auto b : buildings)
+					for (auto & b : buildings)
 					{
 						if (b.getTilePosition() == position)
 						{
@@ -1248,7 +1278,8 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 				//If the commandcenter should morph instead, don't queue workers on it
 				if (unitType == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && !type.getUnitType().isMorphedBuilding())
 				{
-					if (m_initialBuildOrderFinished && (m_queue.contains(MetaTypeEnum::OrbitalCommand) || m_queue.contains(MetaTypeEnum::PlanetaryFortress)))
+					if (m_initialBuildOrderFinished && (m_queue.contains(MetaTypeEnum::OrbitalCommand) || m_queue.contains(MetaTypeEnum::PlanetaryFortress))
+						&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0)
 					{
 						continue;
 					}
@@ -1302,6 +1333,18 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 				{
 					continue;
 				}
+				const auto & orders = unit.getUnitPtr()->orders;
+				bool isMoving = false;
+				for (const auto & order : orders)
+				{
+					if (order.ability_id == sc2::ABILITY_ID::MOVE)
+					{
+						isMoving = true;
+						break;
+					}
+				}
+				if (isMoving)
+					continue;
 				break;
 			}
 			case sc2::UNIT_TYPEID::TERRAN_MULE:
@@ -1642,25 +1685,25 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
         return units[0];
     }
 
-    Unit closestUnit;
-    double minDist = std::numeric_limits<double>::max();
-
-    for (auto & unit : units)
-    {
-        double distance = Util::DistSq(unit, closestTo);
-        if (!closestUnit.isValid() || distance < minDist)
-        {
-            closestUnit = unit;
-            minDist = distance;
-        }
-    }
+	Unit closestUnit;
+	auto minDist = 0.f;
+	
+	for (auto & unit : units)
+	{
+		const auto distance = Util::DistSq(unit, closestTo);
+		if (!closestUnit.isValid() || distance < minDist)
+		{
+			closestUnit = unit;
+			minDist = distance;
+		}
+	}
 
     return closestUnit;
 }
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used to create unit/tech/buildings (when we have the ressources)
-bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition)
+bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker)
 {
 	if (!producer.isValid())
 	{
@@ -1679,7 +1722,8 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		else
 		{
 			Building b(item.type.getUnitType(), desidredPosition);
-			result = m_bot.Buildings().addBuildingTask(b);
+			b.reserveResources = reserveResources;
+			result = m_bot.Buildings().addBuildingTask(b, filterMovingWorker);
 		}
 	}
 	// if we're dealing with a non-building unit
@@ -1711,7 +1755,7 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used for premove
-bool ProductionManager::create(const Unit & producer, Building & b)
+bool ProductionManager::create(const Unit & producer, Building & b, bool filterMovingWorker)
 {
     if (!producer.isValid())
     {
@@ -1724,7 +1768,7 @@ bool ProductionManager::create(const Unit & producer, Building & b)
 		return true;
     }
 
-	return m_bot.Buildings().addBuildingTask(b);
+	return m_bot.Buildings().addBuildingTask(b, filterMovingWorker);
 }
 
 bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)

@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.6.8",
+        "BotVersion"                : "1.6.11",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Terran",
-        "MapFile"                   : "DiscoBloodbathLE.SC2Map",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "WorldofSleepersLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -132,7 +132,7 @@
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
-        "DrawBaseLocationInfo"      : false,
+        "DrawBaseLocationInfo"      : true,
         "DrawBaseTiles"             : false,
         "DrawStartingRamp"		    : true,
         "DrawWall"		   			: true,
@@ -280,20 +280,19 @@
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
-			"Terran_ReaperHarass4"     : 
+            "Terran_ReaperHarass4"     : 
             { 
                 "Race"              : "Terran",  
                 "OpeningBuildOrder" : ["SCV", 
-										"SupplyDepot", 
-										"SCV", 
-										"SCV", 
-										"Barracks",
-										"SCV",
-										"Refinery",
-										"SCV",
-										"Refinery",
-										"SCV",
-										"OrbitalCommand"],
+                                        "SupplyDepot", 
+                                        "SCV", 
+                                        "SCV", 
+                                        "Barracks",
+                                        "SCV",
+                                        "Refinery",
+                                        "SCV",
+                                        "Refinery",
+                                        "SCV"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },

@@ -23,6 +23,13 @@ struct Strategy
     Strategy(const std::string & name, const CCRace & race, const BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition);
 };
 
+enum StartingStrategy
+{
+	STANDARD,
+	PROXY_REAPERS,
+	PROXY_CYCLONES
+};
+
 enum StrategyPostBuildOrder {
 	NO_STRATEGY = -1,
 	TERRAN_CLASSIC = 0,
@@ -37,6 +44,7 @@ class StrategyManager
     CCRace                          m_selfRace;
     CCRace                          m_enemyRace;
     std::map<std::string, Strategy> m_strategies;
+	StartingStrategy m_startingStrategy;
     int                             m_totalGamesPlayed;
     const BuildOrder                m_emptyBuildOrder;
 	bool m_workerRushed = false;
@@ -62,11 +70,12 @@ public:
     StrategyManager(CCBot & bot);
 
     const Strategy & getCurrentStrategy() const;
+	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
 	StrategyPostBuildOrder getCurrentStrategyPostBuildOrder() const;
     bool scoutConditionIsMet() const;
     bool attackConditionIsMet() const;
     void onStart();
-    void onFrame();
+    void onFrame(bool executeMacro);
     void onEnd(const bool isWinner);
     void addStrategy(const std::string & name, const Strategy & strategy);
     const UnitPairVector getBuildOrderGoal() const;

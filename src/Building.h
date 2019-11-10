@@ -23,6 +23,7 @@ public:
     int             lastOrderFrame;
     bool            buildCommandGiven;
     bool            underConstruction;
+	bool			reserveResources = true;
 
     Building();
 

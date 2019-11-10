@@ -130,7 +130,7 @@ const CCTilePosition & BaseLocation::getTurretPosition() const
 // TODO: calculate the actual depot position
 const CCTilePosition & BaseLocation::getDepotPosition() const
 {
-	    return m_depotPosition;
+	return m_depotPosition;
 }
 
 int BaseLocation::getOptimalMineralWorkerCount() const

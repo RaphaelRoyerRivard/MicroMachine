@@ -73,6 +73,7 @@ public:
 	bool isCounterToUnit(const Unit& unit) const;
 	sc2::Tag getAddonTag() const;
 	bool isProductionBuildingIdle() const;
+	bool isMoving() const;
 
     void stop           () const;
     void attackUnit     (const Unit & target) const;
