@@ -103,11 +103,11 @@ void BaseLocationManager::onStart()
 	m_bot.Commander().Combat().initInfluenceMaps();
 	m_bot.Commander().Combat().updateBlockedTilesWithNeutral();
 
-	// add the base locations if there are more than 4 resouces in the cluster
+	// add the base locations if there are more than 6 resouces in the cluster
     int baseID = 0;
     for (auto & cluster : resourceClusters)
     {
-        if (cluster.size() > 4)
+        if (cluster.size() > 6)
         {
 			bool hasGeyser = false;
 			for (const auto & resource : cluster)

@@ -313,6 +313,7 @@ void ProductionManager::manageBuildOrderQueue()
 					{
 						if (create(producer, currentItem, proxyLocation, false, false))
 						{
+							m_bot.Workers().getWorkerData().setProxyWorker(producer);
 							m_queue.removeCurrentHighestPriorityItem();
 							break;
 						}

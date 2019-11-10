@@ -36,7 +36,24 @@ void StrategyManager::onStart()
 
 void StrategyManager::onFrame(bool executeMacro)
 {
-
+	if (executeMacro)
+	{
+		if (m_startingStrategy != STANDARD && m_bot.GetGameLoop() >= 672 && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 30s
+		{
+			if (m_startingStrategy == PROXY_CYCLONES)
+			{
+				const auto factoryFinished = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true) > 0;
+				if (!factoryFinished)
+				{
+					m_startingStrategy = STANDARD;
+				}
+			}
+			else
+			{
+				m_startingStrategy = STANDARD;
+			}
+		}
+	}
 }
 
 const Strategy & StrategyManager::getCurrentStrategy() const

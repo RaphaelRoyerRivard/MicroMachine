@@ -16,6 +16,7 @@ class WorkerData
     CCBot & m_bot;
 
     std::set<Unit>          m_workers;
+    std::set<Unit>          m_proxyWorkers;
     std::set<Unit>          m_depots;
     std::map<int, int>      m_workerJobCount;
     std::map<Unit, int>     m_workerJobMap;
@@ -52,6 +53,8 @@ public:
     Unit    getWorkerDepot(const Unit & unit) const;
     const char * getJobCode(const Unit & unit);
     const std::set<Unit> & getWorkers() const;
+    const std::set<Unit> & getProxyWorkers() const;
+	void setProxyWorker(const Unit & unit);
 	std::map<const BaseLocation*, std::list<Unit>>& getRepairStationWorkers();
 	void validateRepairStationWorkers();
     Unit getWorkerRepairTarget(const Unit & unit) const;

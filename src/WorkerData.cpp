@@ -68,6 +68,7 @@ void WorkerData::workerDestroyed(const Unit & unit)
 {
     clearPreviousJob(unit);
     m_workers.erase(unit);
+    m_proxyWorkers.erase(unit);
 
 	for (auto & building : m_workerRepairing)
 	{
@@ -397,7 +398,17 @@ void WorkerData::drawDepotDebugInfo()
 
 const std::set<Unit> & WorkerData::getWorkers() const
 {
-    return m_workers;
+	return m_workers;
+}
+
+const std::set<Unit> & WorkerData::getProxyWorkers() const
+{
+	return m_proxyWorkers;
+}
+
+void WorkerData::setProxyWorker(const Unit & unit)
+{
+	m_proxyWorkers.insert(unit);
 }
 
 std::map<const BaseLocation*, std::list<Unit>>& WorkerData::getRepairStationWorkers()
