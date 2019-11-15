@@ -1317,7 +1317,8 @@ void CombatCommander::updateDefenseSquads()
 				//we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
 				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
 				{
-					if (enemyWorkers < 3)
+					// Need at least 3 workers for a worker rush (or 1 if the previous frame was a worker rush)
+					if (!m_bot.Strategy().isWorkerRushed() && enemyWorkers < 3)
 					{
 						++enemyWorkers;
 						continue;
