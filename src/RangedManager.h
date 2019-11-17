@@ -135,6 +135,7 @@ private:
 	bool m_harassMode = false;
 	std::map<const sc2::Unit *, FlyingHelperMission> m_cycloneFlyingHelpers;
 	std::map<const sc2::Unit *, const sc2::Unit *> m_cyclonesWithHelper;
+	bool m_flyingBarracksShouldReachEnemyRamp = true;
 
 	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
 	void setNextFrameAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit, uint32_t nextAvailableFrame);
