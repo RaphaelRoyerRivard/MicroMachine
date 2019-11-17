@@ -277,21 +277,25 @@ int main(int argc, char* argv[])
 
     sc2::PlayerSetup otherPlayer;
     sc2::PlayerSetup spectatingPlayer;
+	std::stringstream ss;
     if (PlayerOneIsHuman) {
         spectatingPlayer = CreateParticipant(Util::GetRaceFromString(enemyRaceString), &human_bot);
         otherPlayer = sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot);
+		ss << "human-" << enemyRaceString;
     }
     else if (PlayVsItSelf)
     {
         spectatingPlayer = sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot);
         otherPlayer = sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot2);
+		ss << "self";
     }
     else
     {
         spectatingPlayer = sc2::CreateParticipant(Util::GetRaceFromString(botRaceString), &bot);
         otherPlayer = sc2::CreateComputer(Util::GetRaceFromString(enemyRaceString), enemyDifficulty);
+		ss << "ai-" << enemyRaceString;
     }
-
+	bot.SetOpponentId(ss.str());
 
     
     // WARNING: Bot logic has not been thorougly tested on step sizes > 1
