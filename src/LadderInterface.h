@@ -136,7 +136,7 @@ static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_op
         connect_options.ComputerOpponent = false;
 		std::string OpponentIdStr;
 		if (arg_parser.Get("OpponentId", OpponentIdStr)) {
-			connect_options.OpponentId = OpponentIdStr.c_str();
+			connect_options.OpponentId = OpponentIdStr;
 			std::cout << "OpponentId: " << OpponentIdStr << std::endl;
 		}
 		else
