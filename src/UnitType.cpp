@@ -203,7 +203,6 @@ bool UnitType::isGeyser() const
 
 bool UnitType::isMineral() const
 {
-#ifdef SC2API
 	sc2::UnitTypeData unitTypeData(m_bot->Observation()->GetUnitTypeData()[m_type]);
 	if (unitTypeData.has_minerals)
 		return true;
@@ -228,10 +227,13 @@ bool UnitType::isMineral() const
 		default:
 			return false;
     }
-#else
-    return m_type.isMineralField();
-#endif
 }
+
+bool UnitType::isMineralWallPatch() const
+{
+	return m_type.ToType() == sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD450;
+}
+
 
 bool UnitType::isWorker() const
 {

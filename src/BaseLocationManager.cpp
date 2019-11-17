@@ -40,7 +40,7 @@ void BaseLocationManager::onStart()
 	{
 		// skip minerals that don't have more than 100 starting minerals
 		// these are probably stupid map-blocking minerals to confuse us
-		if (!mineral.second.getType().isMineral())
+		if (!mineral.second.getType().isMineral() || mineral.second.getType().isMineralWallPatch())
 		{
 			continue;
 		}
