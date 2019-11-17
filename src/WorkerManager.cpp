@@ -233,6 +233,7 @@ void WorkerManager::handleMineralWorkers()
 			}
 		}
 		proxyWorker.move(m_bot.Buildings().getProxyLocation());
+		m_workerData.setProxyWorker(proxyWorker);
 	}
 
 	m_bot.StartProfiling("0.7.2.3     orderedMineralWorkers");
@@ -637,7 +638,8 @@ void WorkerManager::handleIdleWorkers()
 						break;
 					}
 				}
-				if (!isBuilder)
+				const bool isFarProxyWorker = m_workerData.isProxyWorker(worker) && Util::DistSq(worker, Util::GetPosition(m_bot.Buildings().getProxyLocation())) > 20.f * 20.f;
+				if (!isBuilder && !isFarProxyWorker)
 				{
 					setMineralWorker(worker);
 				}

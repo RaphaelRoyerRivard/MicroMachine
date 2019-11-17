@@ -473,7 +473,8 @@ void BuildingManager::validateWorkersAndBuildings()
 		{
 			case BuildingStatus::Assigned:
 			{
-				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive())//If the worker died on the way to start the building construction
+				//If the worker died on the way to start the building construction or if the requirements are not met anymore
+				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true))
 				{
 					auto remove = CancelBuilding(b);
 					toRemove.push_back(remove);

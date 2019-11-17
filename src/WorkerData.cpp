@@ -406,6 +406,11 @@ const std::set<Unit> & WorkerData::getProxyWorkers() const
 	return m_proxyWorkers;
 }
 
+bool WorkerData::isProxyWorker(const Unit & unit) const
+{
+	return m_proxyWorkers.find(unit) != m_proxyWorkers.end();
+}
+
 void WorkerData::setProxyWorker(const Unit & unit)
 {
 	m_proxyWorkers.insert(unit);

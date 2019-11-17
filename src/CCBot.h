@@ -79,6 +79,7 @@ class CCBot : public sc2::Agent
 	bool m_concede;
 	bool m_saidHallucinationLine;
 	std::string m_botVersion;
+	std::string m_opponentId;
 
 	//KeyState
 	bool key1 = false;
@@ -183,4 +184,6 @@ public:
 	void StopProfiling(const std::string & profilerName);
 	std::mutex & GetCommandMutex();
 	bool shouldConcede() const { return m_concede; }
+	std::string GetOpponentId() const { return m_opponentId; }
+	void SetOpponentId(std::string opponentId) { m_opponentId = opponentId; }
 };

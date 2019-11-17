@@ -54,6 +54,7 @@ public:
     const char * getJobCode(const Unit & unit);
     const std::set<Unit> & getWorkers() const;
     const std::set<Unit> & getProxyWorkers() const;
+	bool isProxyWorker(const Unit & unit) const;
 	void setProxyWorker(const Unit & unit);
 	std::map<const BaseLocation*, std::list<Unit>>& getRepairStationWorkers();
 	void validateRepairStationWorkers();

@@ -168,9 +168,9 @@ void ProductionManager::onFrame(bool executeMacro)
 		m_bot.StartProfiling("2.0 manageBuildOrderQueue");
 		manageBuildOrderQueue();
 		m_bot.StopProfiling("2.0 manageBuildOrderQueue");
-		m_bot.StartProfiling("3.0 QueueDeadBuildings");
+		/*m_bot.StartProfiling("3.0 QueueDeadBuildings");
 		QueueDeadBuildings();
-		m_bot.StopProfiling("3.0 QueueDeadBuildings");
+		m_bot.StopProfiling("3.0 QueueDeadBuildings");*/
 
 		// TODO: if nothing is currently building, get a new goal from the strategy manager
 		// TODO: triggers for game things like cloaked units etc
@@ -535,6 +535,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		{
 			case TERRAN_CLASSIC :
 			{
+				const bool proxyCyclonesStrategy = m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES;
 				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
 				const auto reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
 				//if (productionScore < (float)baseCount)
@@ -543,7 +544,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{//Addon
 						bool hasPicked = false;
 						MetaType toBuild;
-						const bool proxyCyclonesStrategy = m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES;
 						const int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) +
 							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
 						if (proxyCyclonesStrategy && reaperCount > 0 && firstBarracksTechlab)
@@ -673,7 +673,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
 				const bool massZergling = m_bot.Strategy().enemyHasMassZerglings();
 				// Against Zerg, produce at least 2 Hellions and then do more only if enemy has mass zerglings 
-				if (enemyRace == sc2::Race::Zerg && (hellionCount < 2 || massZergling))
+				if (enemyRace == sc2::Race::Zerg && ((!proxyCyclonesStrategy && hellionCount < 2) || massZergling))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 #ifndef NO_UNITS

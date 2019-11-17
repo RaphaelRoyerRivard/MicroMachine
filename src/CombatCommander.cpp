@@ -1317,7 +1317,8 @@ void CombatCommander::updateDefenseSquads()
 				//we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
 				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
 				{
-					if (enemyWorkers < 3)
+					// Need at least 3 workers for a worker rush (or 1 if the previous frame was a worker rush)
+					if (!m_bot.Strategy().isWorkerRushed() && enemyWorkers < 3)
 					{
 						++enemyWorkers;
 						continue;
@@ -1485,12 +1486,21 @@ void CombatCommander::updateDefenseSquads()
 			for (auto & region : regions)
 			{
 				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
+				bool weakUnitAgainstOnlyBuildings = unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER;
 				bool immune = true;
 				bool detectionUseful = false;
 				float maxGroundDps = 0.f;
 				float maxAirDps = 0.f;
 				for (auto & enemyUnit : region.enemyUnits)
 				{
+					// As soon as there is a non building unit that the weak unit can attack, we consider that the weak unit can be useful
+					if (weakUnitAgainstOnlyBuildings)
+					{
+						if (enemyUnit.getType().isBuilding())
+							continue;
+						if (Util::GetDpsForTarget(unit.getUnitPtr(), enemyUnit.getUnitPtr(), m_bot) > 0.f)
+							weakUnitAgainstOnlyBuildings = false;
+					}
 					// We check if our unit is immune to the enemy unit (as soon as one enemy unit can attack our unit, we stop checking)
 					if (immune)
 					{
@@ -1522,6 +1532,9 @@ void CombatCommander::updateDefenseSquads()
 						}
 					}
 				}
+				// The weak unit would not be useful against buildings, it should harass instead of defend
+				if (weakUnitAgainstOnlyBuildings)
+					continue;
 				// If our unit would have a valid ground target, we calculate the score (usefulness in that region) and add it to the list
 				if (maxGroundDps > 0.f)
 				{

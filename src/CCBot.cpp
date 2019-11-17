@@ -35,38 +35,17 @@ void CCBot::OnUnitEnterVision(const sc2::Unit*) {}
 void CCBot::OnNuclearLaunchDetected() {}
 
 void CCBot::OnGameStart() //full start
-{
+{	
     m_config.readConfigFile();
 	Util::Initialize(*this, GetPlayerRace(Players::Self), Observation()->GetGameInfo());
 
     // add all the possible start locations on the map
-#ifdef SC2API
     for (auto & loc : Observation()->GetGameInfo().enemy_start_locations)
     {
         m_enemyBaseLocations.push_back(loc);
     }
 	m_startLocation = Observation()->GetStartLocation();
 	m_buildingArea = Util::GetTilePosition(m_startLocation);
-#else
-    for (auto & loc : BWAPI::Broodwar->getStartLocations())
-    {
-        m_baseLocations.push_back(BWAPI::Position(loc));
-    }
-
-    // set the BWAPI game flags
-    BWAPI::Broodwar->setLocalSpeed(m_config.SetLocalSpeed);
-    BWAPI::Broodwar->setFrameSkip(m_config.SetFrameSkip);
-    
-    if (m_config.CompleteMapInformation)
-    {
-        BWAPI::Broodwar->enableFlag(BWAPI::Flag::CompleteMapInformation);
-    }
-
-    if (m_config.UserInput)
-    {
-        BWAPI::Broodwar->enableFlag(BWAPI::Flag::UserInput);
-    }
-#endif
 
 	//Initialize list of MetaType
 	MetaTypeEnum::Initialize(*this);
@@ -76,6 +55,7 @@ void CCBot::OnGameStart() //full start
 	std::cout << "Version " << m_botVersion << std::endl;
 	Actions()->SendChat(m_botVersion);
 	selfRace = GetPlayerRace(Players::Self);
+	Util::DebugLog(__FUNCTION__, "Playing against " + m_opponentId, *this);
     
     setUnits();
     m_techTree.onStart();

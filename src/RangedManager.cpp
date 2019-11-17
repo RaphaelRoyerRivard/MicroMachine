@@ -270,9 +270,11 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		{
 			goal = GetBestSupportPosition(rangedUnit, rangedUnits);
 		}
-		else if (isFlyingBarracks && !isCycloneHelper)
+		else if (isFlyingBarracks && (m_flyingBarracksShouldReachEnemyRamp || !isCycloneHelper))
 		{
 			goal = m_bot.Buildings().getEnemyMainRamp();
+			if (Util::DistSq(rangedUnit->pos, goal) < 1.f || !threats.empty())
+				m_flyingBarracksShouldReachEnemyRamp = false;
 		}
 		else if (isViking && !isCycloneHelper && !m_bot.Commander().Combat().hasEnoughVikingsAgainstTempests())
 		{

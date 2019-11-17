@@ -44,7 +44,6 @@ class ProductionManager
 	void	fixBuildOrderDeadlock(BuildOrderItem & item);
 	void	lowPriorityChecks();
 	bool	currentlyHasRequirement(MetaType currentItem) const;
-	bool	hasRequired(const MetaType& metaType, bool checkInQueue) const;
 	bool	hasRequiredUnit(const UnitType& unitType, bool checkInQueue) const;
 	bool	hasProducer(const MetaType& metaType, bool checkInQueue);
 
@@ -58,6 +57,7 @@ public:
     void    onUnitDestroy(const Unit & unit);
     void    drawProductionInformation();
 
+	bool	hasRequired(const MetaType& metaType, bool checkInQueue) const;
     Unit getProducer(const MetaType & type, CCPosition closestTo = CCPosition(0, 0)) const;
 	std::vector<sc2::UNIT_TYPEID> getProductionBuildingTypes() const;
 	int getProductionBuildingsCount() const;
