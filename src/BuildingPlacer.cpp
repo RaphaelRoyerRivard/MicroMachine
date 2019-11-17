@@ -509,7 +509,8 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 
 	for (auto & base : bases)
 	{
-		if (!base->getResourceDepot().isValid() || base->isUnderAttack())
+		// base under attack condition was commented because it broke the bot when getting cannon rushed and also there is already pathfinding done to make sure the path to the geyser is safe
+		if (!base->getResourceDepot().isValid())// || base->isUnderAttack())
 		{
 			continue;
 		}
