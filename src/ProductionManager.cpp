@@ -301,27 +301,22 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 
 			// Proxy buildings
-			if (m_bot.Strategy().getStartingStrategy() != STANDARD)
+			if (m_bot.Strategy().getStartingStrategy() != STANDARD && (currentItem.type == MetaTypeEnum::Barracks || (currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && factoryCount == 0)))
 			{
-				if (currentItem.type == MetaTypeEnum::Barracks || (currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && factoryCount == 0))
+				const auto proxyLocation = m_bot.Buildings().getProxyLocation();
+				Unit producer = getProducer(currentItem.type, Util::GetPosition(proxyLocation));
+				Building b(currentItem.type.getUnitType(), proxyLocation);
+				b.finalPosition = proxyLocation;
+				if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
 				{
-					const auto proxyLocation = m_bot.Buildings().getProxyLocation();
-					Unit producer = getProducer(currentItem.type, Util::GetPosition(proxyLocation));
-					Building b(currentItem.type.getUnitType(), proxyLocation);
-					//b.finalPosition = proxyLocation;	// TODO this should be set but the proxy worker is hesitant to go to the building location for an unknown reason
-					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
+					if (create(producer, currentItem, proxyLocation, false, false))
 					{
-						if (create(producer, currentItem, proxyLocation, false, false))
-						{
-							m_bot.Workers().getWorkerData().setProxyWorker(producer);
-							m_queue.removeCurrentHighestPriorityItem();
-							break;
-						}
+						m_queue.removeCurrentHighestPriorityItem();
+						break;
 					}
 				}
 			}
-
-			if (currentlyHasRequirement(currentItem.type))
+			else if (currentlyHasRequirement(currentItem.type))
 			{
 				//Check if we already have an idle production building of that type
 				bool idleProductionBuilding = false;

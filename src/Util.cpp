@@ -702,7 +702,7 @@ float Util::PathFinding::GetGroundFromGroundCloakedInfluenceOnTile(CCTilePositio
 	return bot.Commander().Combat().getGroundFromGroundCloakedCombatInfluence(tile);
 }
 
-float Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot)
+bool Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot)
 {
 	return bot.Commander().Combat().getGroundFromGroundCloakedCombatInfluence(tile) != 0.f;
 }

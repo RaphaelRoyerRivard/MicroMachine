@@ -638,8 +638,8 @@ void WorkerManager::handleIdleWorkers()
 						break;
 					}
 				}
-				const bool isFarProxyWorker = m_workerData.isProxyWorker(worker) && Util::DistSq(worker, Util::GetPosition(m_bot.Buildings().getProxyLocation())) > 20.f * 20.f;
-				if (!isBuilder && !isFarProxyWorker)
+				
+				if (!isBuilder && !m_workerData.isProxyWorker(worker))
 				{
 					setMineralWorker(worker);
 				}
@@ -1376,7 +1376,7 @@ bool WorkerManager::isFree(Unit worker) const
 	if (worker.getType().isMule())
 		return false;
 	int job = m_workerData.getWorkerJob(worker);
-    return job == WorkerJobs::Minerals || job == WorkerJobs::Idle || job == WorkerJobs::None;
+    return job == WorkerJobs::Minerals || job == WorkerJobs::Idle || job == WorkerJobs::None || (m_workerData.isProxyWorker(worker) && job != WorkerJobs::Build);
 }
 
 bool WorkerManager::isInsideGeyser(Unit worker) const

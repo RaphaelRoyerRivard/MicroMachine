@@ -45,6 +45,13 @@ void WorkerData::updateAllWorkerData()
             setWorkerJob(worker, WorkerJobs::Idle);
         }
 
+		auto it = m_proxyWorkers.find(worker);
+    	if (it != m_proxyWorkers.end())
+    	{
+			if (job == WorkerJobs::Minerals || job == WorkerJobs::Gas)
+				m_proxyWorkers.erase(it);
+    	}
+
         // TODO: If it's a gas worker whose refinery has been destroyed, set to minerals
     }
 
