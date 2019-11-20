@@ -130,7 +130,7 @@ namespace Util
 		float GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, bool fromGround, CCBot & bot);
 		float GetCombatInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, bool fromGround, CCBot & bot);
 		float GetGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot);
-		float HasGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot);
+		bool HasGroundFromGroundCloakedInfluenceOnTile(CCTilePosition tile, CCBot & bot);
 		bool HasEffectInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 		bool HasEffectInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		bool IsUnitOnTileWithInfluence(const sc2::Unit * unit, CCBot & bot);

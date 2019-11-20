@@ -625,10 +625,12 @@ void CombatCommander::updateWorkerFleeSquad()
 		const bool groundCloakedThreat = Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(tile, m_bot);
 		const bool groundThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), true, m_bot);
 		const bool injured = worker.getHitPointsPercentage() < m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT * 100;
+		const auto job = m_bot.Workers().getWorkerData().getWorkerJob(worker);
+		const auto isProxyWorker = m_bot.Workers().getWorkerData().isProxyWorker(worker);
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
-		if (((flyingThreat && !groundThreat) || groundCloakedThreat)
+		if ((((flyingThreat && !groundThreat) || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
 			|| Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
-			|| (groundThreat && injured && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))
+			|| (groundThreat && (injured || isProxyWorker) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))
 		{
 			// Put it in the squad if it is not defending or already in the squad
 			if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
@@ -1815,6 +1817,8 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
 bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy) const
 {
 	if (!worker.isValid())
+		return false;
+	if (m_bot.Workers().getWorkerData().isProxyWorker(worker))
 		return false;
 	if (!m_squadData.canAssignUnitToSquad(worker, defenseSquad))
 		return false;

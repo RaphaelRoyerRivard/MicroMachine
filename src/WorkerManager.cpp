@@ -183,7 +183,7 @@ void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)
 void WorkerManager::stopRepairing(const Unit & worker)
 {
     m_workerData.WorkerStoppedRepairing(worker);
-	if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && Util::DistSq(worker, Util::GetPosition(m_bot.Buildings().getProxyLocation())) < 10.f * 10.f)
+	if (m_workerData.isProxyWorker(worker))
 		return;
     finishedWithWorker(worker);
 }
@@ -218,7 +218,7 @@ void WorkerManager::handleMineralWorkers()
 	m_bot.StopProfiling("0.7.2.2     selectMinerals");
 
 	Unit proxyWorker;
-	if (m_bot.Strategy().getStartingStrategy() != STANDARD)
+	if (m_bot.Strategy().isProxyStartingStrategy())
 	{
 		float minDist = 0.f;
 		const auto & workers = getWorkers();
@@ -638,8 +638,8 @@ void WorkerManager::handleIdleWorkers()
 						break;
 					}
 				}
-				const bool isFarProxyWorker = m_workerData.isProxyWorker(worker) && Util::DistSq(worker, Util::GetPosition(m_bot.Buildings().getProxyLocation())) > 20.f * 20.f;
-				if (!isBuilder && !isFarProxyWorker)
+				
+				if (!isBuilder && !m_workerData.isProxyWorker(worker))
 				{
 					setMineralWorker(worker);
 				}
@@ -1376,7 +1376,7 @@ bool WorkerManager::isFree(Unit worker) const
 	if (worker.getType().isMule())
 		return false;
 	int job = m_workerData.getWorkerJob(worker);
-    return job == WorkerJobs::Minerals || job == WorkerJobs::Idle || job == WorkerJobs::None;
+    return job == WorkerJobs::Minerals || job == WorkerJobs::Idle || job == WorkerJobs::None || (m_workerData.isProxyWorker(worker) && job != WorkerJobs::Build);
 }
 
 bool WorkerManager::isInsideGeyser(Unit worker) const
