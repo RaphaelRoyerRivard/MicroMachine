@@ -19,8 +19,18 @@ CCBot::CCBot(std::string botVersion)
 {
 }
 
-void CCBot::OnGameFullStart() {}//end?
-void CCBot::OnGameEnd() {}//Start
+void CCBot::OnGameFullStart() {}
+void CCBot::OnGameEnd()
+{
+	std::stringstream ss;
+	ss << "OnGameEnd ";
+	if (GetAllyUnits().size() > GetEnemyUnits().size())
+		ss << "Win";
+	else
+		ss << "Lose";
+	std::cout << ss.str() << std::endl;
+	Util::Log(__FUNCTION__, ss.str(), *this);
+}
 void CCBot::OnUnitDestroyed(const sc2::Unit*) {}
 void CCBot::OnUnitCreated(const sc2::Unit*) {}
 void CCBot::OnUnitIdle(const sc2::Unit*) {}
