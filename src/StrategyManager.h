@@ -27,7 +27,8 @@ enum StartingStrategy
 {
 	STANDARD,
 	PROXY_REAPERS,
-	PROXY_CYCLONES
+	PROXY_CYCLONES,
+	EARLY_EXPAND
 };
 
 enum StrategyPostBuildOrder {
@@ -71,6 +72,7 @@ public:
 
     const Strategy & getCurrentStrategy() const;
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
+	bool isProxyStartingStrategy() const;
 	StrategyPostBuildOrder getCurrentStrategyPostBuildOrder() const;
     bool scoutConditionIsMet() const;
     bool attackConditionIsMet() const;

@@ -14,7 +14,7 @@ void ProductionManager::setBuildOrder(const BuildOrder & buildOrder)
 {
     m_queue.clearAll();
 
-	bool blocking = m_bot.Strategy().getStartingStrategy() == STANDARD ? true : false;
+	bool blocking = !m_bot.Strategy().isProxyStartingStrategy();
     for (size_t i(0); i<buildOrder.size(); ++i)
     {
 		if (!blocking && buildOrder[i].getUnitType() == MetaTypeEnum::Barracks.getUnitType())
@@ -253,42 +253,7 @@ void ProductionManager::manageBuildOrderQueue()
 			additionalReservedGas = lowestGasReq;
 		}
 
-		const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
-		bool shouldWait = false;
-		if (currentItem.type.getUnitType().isRefinery())
-		{
-			const bool hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true) > 0;
-			shouldWait = !hasBarracks;
-		}
-		else if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
-		{
-			if (currentItem.type == MetaTypeEnum::FactoryTechLab || currentItem.type == MetaTypeEnum::Factory)
-			{
-				const bool hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0;
-				const auto unattachedTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::TechLab.getUnitType(), false, false, false);
-				const auto barracksTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, false, false);
-				const auto factoryTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, false, false);
-				if (!hasBarracks || (factoryCount > 0 && factoryCount <= unattachedTechlabCount + barracksTechlabCount + factoryTechlabCount))
-					shouldWait = true;
-			}
-			else if (currentItem.type == MetaTypeEnum::Reaper)
-			{
-				const bool hasBarracksTechlab = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType()) > 0;
-				if (hasBarracksTechlab)
-				{
-					shouldWait = true;
-				}
-				else
-				{
-					const bool hasTechlab = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::TechLab.getUnitType(), true, true) > 0;
-					const bool reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType());
-					if (!hasTechlab && reaperCount == 1)
-						shouldWait = true;
-				}
-			}
-		}
-
-		if (!shouldWait)
+		if (!ShouldSkipQueueItem(currentItem))
 		{
 			//check if we have the prerequirements.
 			if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
@@ -300,8 +265,9 @@ void ProductionManager::manageBuildOrderQueue()
 				continue;
 			}
 
+			const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
 			// Proxy buildings
-			if (m_bot.Strategy().getStartingStrategy() != STANDARD && (currentItem.type == MetaTypeEnum::Barracks || (currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && factoryCount == 0)))
+			if (m_bot.Strategy().isProxyStartingStrategy() && (currentItem.type == MetaTypeEnum::Barracks || (currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && factoryCount == 0)))
 			{
 				const auto proxyLocation = m_bot.Buildings().getProxyLocation();
 				Unit producer = getProducer(currentItem.type, Util::GetPosition(proxyLocation));
@@ -444,6 +410,63 @@ void ProductionManager::manageBuildOrderQueue()
 	m_bot.StopProfiling("2.2   checkQueue");
 }
 
+bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) const
+{
+	bool shouldSkip = false;
+	const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
+	const auto ccs = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), false, true);
+	const auto orbitals = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::OrbitalCommand.getUnitType(), false, true);
+	const auto deadCCs = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
+	const auto deadOrbitals = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND);
+	const bool hasStartedFirstExpand = ccs + orbitals + deadCCs + deadOrbitals > 1;
+	const auto earlyExpand = m_bot.Strategy().getStartingStrategy() == EARLY_EXPAND && m_bot.GetCurrentFrame() < 4032 && !hasStartedFirstExpand;
+	if (currentItem.type.getUnitType().isRefinery())
+	{
+		const bool hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true) > 0;
+		shouldSkip = !hasBarracks;
+		if (!shouldSkip)
+		{
+			const auto hasRefinery = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true) > 0;
+			shouldSkip = earlyExpand && hasRefinery;
+		}
+	}
+	else if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
+	{
+		if (currentItem.type == MetaTypeEnum::FactoryTechLab || currentItem.type == MetaTypeEnum::Factory)
+		{
+			const bool hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0;
+			const auto unattachedTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::TechLab.getUnitType(), false, false, false);
+			const auto barracksTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, false, false);
+			const auto factoryTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, false, false);
+			if (!hasBarracks || (factoryCount > 0 && factoryCount <= unattachedTechlabCount + barracksTechlabCount + factoryTechlabCount))
+				shouldSkip = true;
+		}
+		else if (currentItem.type == MetaTypeEnum::Reaper)
+		{
+			const bool hasBarracksTechlab = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType()) > 0;
+			if (hasBarracksTechlab)
+			{
+				shouldSkip = true;
+			}
+			else
+			{
+				const bool hasTechlab = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::TechLab.getUnitType(), true, true) > 0;
+				const bool reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType());
+				if (!hasTechlab && reaperCount == 1)
+					shouldSkip = true;
+			}
+		}
+	}
+	else if (earlyExpand)
+	{
+		if (currentItem.type == MetaTypeEnum::Factory || currentItem.type == MetaTypeEnum::Starport)
+		{
+			shouldSkip = true;
+		}
+	}
+	return shouldSkip;
+}
+
 void ProductionManager::putImportantBuildOrderItemsInQueue()
 {
 #ifdef NO_PRODUCTION
@@ -464,6 +487,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 
 	const auto currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
+	const auto startingStrategy = m_bot.Strategy().getStartingStrategy();
 
 	// build supply if we need some
 	const auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
@@ -496,8 +520,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 			}
 		}
-		// We want to wait for our first Banshee to build our second CC, otherwise we might have difficulty defending it **COMMENTED**
-		else if (boughtDepotCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter) && starportCount > 0)
+		else if (boughtDepotCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter))
 		{
 			const bool enoughMinerals = m_bot.GetFreeMinerals() >= 600;
 			const int workerCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
@@ -530,7 +553,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		{
 			case TERRAN_CLASSIC :
 			{
-				const bool proxyCyclonesStrategy = m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES;
+				const bool proxyCyclonesStrategy = startingStrategy == PROXY_CYCLONES;
 				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
 				const auto reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
 				//if (productionScore < (float)baseCount)

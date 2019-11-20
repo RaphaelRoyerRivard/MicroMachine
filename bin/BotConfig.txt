@@ -210,7 +210,7 @@
     "SC2API Strategy" :
     {
         "Protoss"                   : "Protoss_ZealotRush",
-        "Terran"                    : "Terran_ReaperHarass4",
+        "Terran"                    : "Terran_RefineryOpener",
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "AutoCompleteBuildOrder"    : true,
@@ -293,6 +293,19 @@
                                         "SCV",
                                         "Refinery",
                                         "SCV"],
+                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
+                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
+            },
+            "Terran_RefineryOpener":
+            {
+                "Race"              : "Terran",  
+                "OpeningBuildOrder" : ["SCV", 
+                                        "SupplyDepot", 
+                                        "SCV", 
+                                        "SCV", 
+                                        "Barracks",
+                                        "SCV",
+                                        "Refinery"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
