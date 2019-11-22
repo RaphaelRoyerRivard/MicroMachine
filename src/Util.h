@@ -224,6 +224,10 @@ namespace Util
 	void			LogNoFrame(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, const std::string & message, CCBot & bot);
+	int				GetTimeControlSpeed();
+	int				GetTimeControlMaxSpeed();
+	void			TimeControlIncreaseSpeed();
+	void			TimeControlDecreaseSpeed();
     UnitType        GetRessourceDepotType();
     UnitType        GetRefineryType();
 	UnitType		GetRichRefineryType();

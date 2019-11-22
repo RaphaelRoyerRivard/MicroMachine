@@ -16,6 +16,8 @@ const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
 const float UNIT_CLUSTERING_MAX_DISTANCE = 5.f;
 
+int timeControlRatio = -1;
+
 // Influence Map Node
 struct Util::PathFinding::IMNode
 {
@@ -2135,6 +2137,61 @@ void Util::Log(const std::string & function, CCBot & bot)
 void Util::Log(const std::string & function, const std::string & message, CCBot & bot)
 {
 	file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
+}
+
+int Util::GetTimeControlSpeed()
+{
+	return timeControlRatio;
+}
+
+int Util::GetTimeControlMaxSpeed()
+{
+	return -1;
+}
+
+void Util::TimeControlIncreaseSpeed()
+{
+	switch (timeControlRatio)
+	{
+		case 5:
+			timeControlRatio = 50;
+			break;
+		case 50:
+			timeControlRatio = 100;
+			break;
+		case 100:
+			timeControlRatio = -1;
+			break;
+		case -1:
+			timeControlRatio = -1;
+			break;
+		default:
+			timeControlRatio = -1;
+			break;
+	}
+}
+
+void Util::TimeControlDecreaseSpeed()
+{
+
+	switch (timeControlRatio)
+	{
+		case 5:
+			timeControlRatio = 5;
+			break;
+		case 50:
+			timeControlRatio = 5;
+			break;
+		case 100:
+			timeControlRatio = 50;
+			break;
+		case -1:
+			timeControlRatio = 100;
+			break;
+		default:
+			timeControlRatio = 5;
+			break;
+	}
 }
 
 bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits)

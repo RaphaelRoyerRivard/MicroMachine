@@ -2,10 +2,12 @@
 //#define PUBLIC_RELEASE
 //#define NO_UNITS
 //#define NO_PRODUCTION
+//#define NO_BUILDING
 
 #ifdef PUBLIC_RELEASE
 #undef NO_UNITS
 #undef NO_PRODUCTION
+#undef NO_BUILDING
 #endif
 
 #include "Common.h"
@@ -76,6 +78,8 @@ class CCBot : public sc2::Agent
 	bool m_concede;
 	bool m_saidHallucinationLine;
 
+	std::chrono::steady_clock::time_point m_lastFrameEndTime;
+
 	//KeyState
 	bool key1 = false;
 	bool key2 = false;
@@ -87,6 +91,8 @@ class CCBot : public sc2::Agent
 	bool key8 = false;
 	bool key9 = false;
 	bool key0 = false;
+	bool keyF1 = false;
+	bool keyF2 = false;
 
 	void checkKeyState();
 	void setUnits();
@@ -176,6 +182,7 @@ public:
     const std::vector<CCPosition> & GetEnemyStartLocations() const;
 	void StartProfiling(const std::string & profilerName);
 	void StopProfiling(const std::string & profilerName);
+	void drawTimeControl();
 	std::mutex & GetCommandMutex();
 	bool shouldConcede() const { return m_concede; }
 };

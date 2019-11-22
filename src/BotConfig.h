@@ -64,6 +64,7 @@ public:
 	bool DrawRangedUnitActions;
 	bool DrawResourcesProximity;
 	bool DrawCombatInformation;
+	bool TimeControl;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;

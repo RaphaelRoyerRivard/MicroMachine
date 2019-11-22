@@ -25,7 +25,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Terran",
-        "MapFile"                   : "DiscoBloodbathLE.SC2Map",
+        "MapFile"                   : "EphemeronLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -129,6 +129,7 @@
     {
 		"AllowDebug"				: true,
 		"AllowKeyControl"			: true,
+		"TimeControl"				: true,
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 

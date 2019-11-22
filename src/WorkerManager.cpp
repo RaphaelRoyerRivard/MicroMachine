@@ -576,9 +576,13 @@ void WorkerManager::handleIdleWorkers()
 				}
 				else
 				{
-					//return mining
-					m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
-					workerJob = WorkerJobs::Idle;
+					auto orders = worker.getUnitPtr()->orders;
+					if (!orders.empty() && orders[0].ability_id != sc2::ABILITY_ID::PATROL)
+					{
+						//return mining
+						m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
+						workerJob = WorkerJobs::Idle;
+					}
 				}
 			}
 		}

@@ -92,6 +92,7 @@ void CCBot::OnGameStart() //full start
 	}
 
 	StartProfiling("0 Starcraft II");
+	m_lastFrameEndTime = std::chrono::steady_clock::now();
 }
 
 void CCBot::OnStep()
@@ -168,6 +169,22 @@ void CCBot::OnStep()
 #endif
 #endif
 	StartProfiling("0 Starcraft II");
+
+	if (Config().TimeControl)
+	{
+		int speed = Util::GetTimeControlSpeed();
+		if (speed != Util::GetTimeControlMaxSpeed())
+		{
+			long elapsedTime;
+			do
+			{
+				elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - m_lastFrameEndTime).count() / 1000;
+			} while (elapsedTime < (1000 / 22.4f) / (speed / 100.f));
+
+			m_lastFrameEndTime = std::chrono::steady_clock::now();
+			drawTimeControl();
+		}
+	}
 }
 
 #pragma optimize( "checkKeyState", off )
@@ -184,6 +201,26 @@ void CCBot::checkKeyState()
 	if (GetAsyncKeyState(VK_DELETE))
 	{
 		printf("Pausing...");
+	}
+
+	if (GetAsyncKeyState(VK_F1))
+	{
+		keyF1 = true;
+	}
+	else if (keyF1)
+	{
+		keyF1 = false;
+		Util::TimeControlIncreaseSpeed();
+	}
+
+	if (GetAsyncKeyState(VK_F2))
+	{
+		keyF2 = true;
+	}
+	else if (keyF2)
+	{
+		keyF2 = false;
+		Util::TimeControlDecreaseSpeed();
 	}
 
 	if (GetAsyncKeyState('1'))
@@ -1300,6 +1337,19 @@ void CCBot::drawProfilingInfo()
 			}
 		}
 		m_map.drawTextScreen(0.72f, 0.1f, profilingInfo);
+	}
+}
+
+void CCBot::drawTimeControl()
+{
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
+	if (m_config.TimeControl)
+	{
+		std::stringstream ss;
+		ss << "Speed: " << Util::GetTimeControlSpeed() << "%";
+		m_map.drawTextScreen(0.5f, 0.75f, ss.str());
 	}
 }
 
