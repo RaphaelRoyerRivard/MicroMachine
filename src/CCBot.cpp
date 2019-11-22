@@ -60,12 +60,13 @@ void CCBot::OnGameStart() //full start
 	//Initialize list of MetaType
 	MetaTypeEnum::Initialize(*this);
 	Util::SetAllowDebug(Config().AllowDebug);
+
+	// Create logfile
 	Util::CreateLog(*this);
 	Util::Log(__FUNCTION__, m_botVersion, *this);
 	std::cout << "Version " << m_botVersion << std::endl;
 	Actions()->SendChat(m_botVersion);
 	selfRace = GetPlayerRace(Players::Self);
-	Util::DebugLog(__FUNCTION__, "Playing against " + m_opponentId, *this);
     
     setUnits();
     m_techTree.onStart();
@@ -112,7 +113,7 @@ void CCBot::OnStep()
 	clearDeadUnits();
 	StopProfiling("0.3 clearDeadUnits");
 
-	//checkForConcede();
+	checkForConcede();
 
 	StartProfiling("0.4 m_map.onFrame");
 	m_map.onFrame();
@@ -771,11 +772,22 @@ void CCBot::updatePreviousFrameEnemyUnitPos()
 
 void CCBot::checkForConcede()
 {
-	if(!m_concede && m_allyUnits.size() == 1)
+	if(!m_concede && m_allyUnits.size() <= 5)
 	{
+		int buildings = 0;
+		for (const auto allyUnit : m_allyUnits)
+		{
+			if(allyUnit.second.getType().isBuilding())
+			{
+				buildings += 1;
+				if (buildings > 1)
+					return;
+			}
+		}
 		m_concede = true;
-		Actions()->SendChat("Pineapple");
+		//Actions()->SendChat("Pineapple");
 		Util::DebugLog(__FUNCTION__, "Concede", *this);
+		m_strategy.onEnd(false);
 	}
 }
 

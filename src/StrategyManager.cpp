@@ -30,8 +30,54 @@ StrategyManager::StrategyManager(CCBot & bot)
 
 void StrategyManager::onStart()
 {
+	const auto opponentId = m_bot.GetOpponentId();
+	Util::DebugLog(__FUNCTION__, "Playing against " + opponentId, m_bot);
     readStrategyFile(m_bot.Config().ConfigFileLocation);
-	m_startingStrategy = STANDARD;
+	std::stringstream ss;
+	ss << "data/opponents/" << opponentId << ".json";
+	std::string path = ss.str();
+	json j;
+	std::ifstream file(path);
+	if (file.good())
+	{
+		file >> j;
+		file.close();
+		auto jStrats = j["strategies"];
+		int bestScore = 0;
+		int bestStrat = -1;
+		for (auto stratIndex = 0; stratIndex < jStrats.size(); ++stratIndex)
+		{
+			int wins;
+			int losses;
+			JSONTools::ReadInt("wins", jStrats[stratIndex], wins);
+			JSONTools::ReadInt("losses", jStrats[stratIndex], losses);
+			if (bestStrat < 0 || wins - losses > bestScore)
+			{
+				bestScore = wins - losses;
+				bestStrat = stratIndex;
+			}
+		}
+		m_startingStrategy = StartingStrategy(bestStrat);
+	}
+	else
+	{
+		std::ofstream outFile(path);
+		for (int i = 0; i < StartingStrategy::COUNT; ++i)
+		{
+			j["strategies"][i]["wins"] = 0;
+			j["strategies"][i]["losses"] = 0;
+		}
+		outFile << j.dump();
+		outFile.close();
+		m_startingStrategy = PROXY_CYCLONES;
+	}
+	std::ofstream outFile(path);
+	int wins;
+	JSONTools::ReadInt("wins", j["strategies"][int(m_startingStrategy)], wins);
+	j["strategies"][int(m_startingStrategy)]["wins"] = wins + 1;
+	outFile << j.dump();
+	outFile.close();
+	m_initialStartingStrategy = m_startingStrategy;
 }
 
 void StrategyManager::onFrame(bool executeMacro)
@@ -58,7 +104,7 @@ void StrategyManager::onFrame(bool executeMacro)
 
 bool StrategyManager::isProxyStartingStrategy() const
 {
-	return m_startingStrategy == PROXY_CYCLONES || m_startingStrategy == PROXY_REAPERS;
+	return m_startingStrategy == PROXY_CYCLONES;
 }
 
 const Strategy & StrategyManager::getCurrentStrategy() const
@@ -126,7 +172,28 @@ const UnitPairVector StrategyManager::getZergBuildOrderGoal() const
 
 void StrategyManager::onEnd(const bool isWinner)
 {
+	if (isWinner)
+		return;
 
+	std::stringstream ss;
+	ss << "data/opponents/" << m_bot.GetOpponentId() << ".json";
+	std::string path = ss.str();
+	int wins;
+	int losses;
+	std::ifstream file(path);
+	json j;
+	if (file.good())
+	{
+		file >> j;
+		file.close();
+	}
+	JSONTools::ReadInt("wins", j["strategies"][int(m_initialStartingStrategy)], wins);
+	JSONTools::ReadInt("losses", j["strategies"][int(m_initialStartingStrategy)], losses);
+	j["strategies"][int(m_initialStartingStrategy)]["wins"] = wins - 1;
+	j["strategies"][int(m_initialStartingStrategy)]["losses"] = losses + 1;
+	std::ofstream outFile(path);
+	outFile << j.dump();
+	outFile.close();
 }
 
 void StrategyManager::readStrategyFile(const std::string & filename)

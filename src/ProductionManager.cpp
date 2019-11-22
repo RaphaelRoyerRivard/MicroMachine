@@ -952,11 +952,6 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     // build the producer of the unit if we don't have one
     if (!hasProducer(item.type, true))
     {
-        if (item.type.getUnitType().isWorker() && m_bot.Observation()->GetFoodWorkers() == 0)
-        {
-            // We no longer have worker and no longer have buildings to do more, so we are rip...
-            return;
-        }
 		std::cout << item.type.getName() << " needs a producer: " << typeData.whatBuilds[0].getName() << "\n";
 		BuildOrderItem producerItem = m_queue.queueItem(BuildOrderItem(MetaType(typeData.whatBuilds[0], m_bot), 0, item.blocking));
         fixBuildOrderDeadlock(producerItem);
