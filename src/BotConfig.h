@@ -98,6 +98,7 @@ public:
     int WorkersPerRefinery;
     int BuildingSpacing;
     int PylonSpacing;
+	bool SelectStartingBuildBasedOnHistory;
  
     BotConfig();
 

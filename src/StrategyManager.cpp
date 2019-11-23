@@ -33,50 +33,57 @@ void StrategyManager::onStart()
 	const auto opponentId = m_bot.GetOpponentId();
 	Util::DebugLog(__FUNCTION__, "Playing against " + opponentId, m_bot);
     readStrategyFile(m_bot.Config().ConfigFileLocation);
-	std::stringstream ss;
-	ss << "data/opponents/" << opponentId << ".json";
-	std::string path = ss.str();
-	json j;
-	std::ifstream file(path);
-	if (file.good())
+	if (m_bot.Config().SelectStartingBuildBasedOnHistory)
 	{
-		file >> j;
-		file.close();
-		auto jStrats = j["strategies"];
-		int bestScore = 0;
-		int bestStrat = -1;
-		for (auto stratIndex = 0; stratIndex < jStrats.size(); ++stratIndex)
+		std::stringstream ss;
+		ss << "data/opponents/" << opponentId << ".json";
+		std::string path = ss.str();
+		json j;
+		std::ifstream file(path);
+		if (file.good())
 		{
-			int wins;
-			int losses;
-			JSONTools::ReadInt("wins", jStrats[stratIndex], wins);
-			JSONTools::ReadInt("losses", jStrats[stratIndex], losses);
-			if (bestStrat < 0 || wins - losses > bestScore)
+			file >> j;
+			file.close();
+			auto jStrats = j["strategies"];
+			int bestScore = 0;
+			int bestStrat = -1;
+			for (auto stratIndex = 0; stratIndex < jStrats.size(); ++stratIndex)
 			{
-				bestScore = wins - losses;
-				bestStrat = stratIndex;
+				int wins;
+				int losses;
+				JSONTools::ReadInt("wins", jStrats[stratIndex], wins);
+				JSONTools::ReadInt("losses", jStrats[stratIndex], losses);
+				if (bestStrat < 0 || wins - losses > bestScore)
+				{
+					bestScore = wins - losses;
+					bestStrat = stratIndex;
+				}
 			}
+			m_startingStrategy = StartingStrategy(bestStrat);
 		}
-		m_startingStrategy = StartingStrategy(bestStrat);
+		else
+		{
+			std::ofstream outFile(path);
+			for (int i = 0; i < StartingStrategy::COUNT; ++i)
+			{
+				j["strategies"][i]["wins"] = 0;
+				j["strategies"][i]["losses"] = 0;
+			}
+			outFile << j.dump();
+			outFile.close();
+			m_startingStrategy = PROXY_CYCLONES;
+		}
+		std::ofstream outFile(path);
+		int wins;
+		JSONTools::ReadInt("wins", j["strategies"][int(m_startingStrategy)], wins);
+		j["strategies"][int(m_startingStrategy)]["wins"] = wins + 1;
+		outFile << j.dump();
+		outFile.close();
 	}
 	else
 	{
-		std::ofstream outFile(path);
-		for (int i = 0; i < StartingStrategy::COUNT; ++i)
-		{
-			j["strategies"][i]["wins"] = 0;
-			j["strategies"][i]["losses"] = 0;
-		}
-		outFile << j.dump();
-		outFile.close();
-		m_startingStrategy = PROXY_CYCLONES;
+		m_startingStrategy = STANDARD;
 	}
-	std::ofstream outFile(path);
-	int wins;
-	JSONTools::ReadInt("wins", j["strategies"][int(m_startingStrategy)], wins);
-	j["strategies"][int(m_startingStrategy)]["wins"] = wins + 1;
-	outFile << j.dump();
-	outFile.close();
 	m_initialStartingStrategy = m_startingStrategy;
 }
 
