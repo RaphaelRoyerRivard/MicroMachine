@@ -1156,12 +1156,15 @@ struct RegionArmyInformation
 		airEnemyPower = 0;
 		groundEnemyPower = 0;
 		invisEnemies = false;
-		for(auto& unit : enemyUnits)
+		for (auto& unit : enemyUnits)
 		{
+			auto power = Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
+			if (power == 0.f)
+				power = Util::GetSpecialCasePower(unit);
 			if (unit.isFlying())
-				airEnemyPower += Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
+				airEnemyPower += power;
 			else
-				groundEnemyPower += Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
+				groundEnemyPower += power;
 			if (unit.isCloaked() || unit.isBurrowed())
 				invisEnemies = true;
 		}
@@ -1292,13 +1295,8 @@ void CombatCommander::updateDefenseSquads()
 
 		const CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotPosition());
 
-		const int numDefendersPerEnemyResourceDepot = 6; // This is a minimum
-		const int numDefendersPerEnemyCanon = 4; // This is a minimum
-
 		// calculate how many units are flying / ground units
 		bool unitOtherThanWorker = false;
-		int numEnemyFlyingInRegion = 0;
-		int numEnemyGroundInRegion = 0;
 		float minEnemyDistance = 0;
 		Unit closestEnemy;
 		int enemyWorkers = 0;
@@ -1343,28 +1341,6 @@ void CombatCommander::updateDefenseSquads()
 				{
 					minEnemyDistance = enemyDistance;
 					closestEnemy = unit;
-				}
-
-				if (unit.isFlying())
-				{
-					numEnemyFlyingInRegion++;
-				}
-				else
-				{
-					// Canon rush dangerous
-					if (unit.getType().isAttackingBuilding())
-					{
-						numEnemyGroundInRegion += numDefendersPerEnemyCanon;
-					}
-					// Hatcheries are tanky
-					else if (unit.getType().isResourceDepot())
-					{
-						numEnemyGroundInRegion += numDefendersPerEnemyResourceDepot;
-					}
-					else
-					{
-						numEnemyGroundInRegion++;
-					}
 				}
 
 				region.enemyUnits.push_back(unit);
@@ -1592,7 +1568,7 @@ void CombatCommander::updateDefenseSquads()
 				}
 				else
 				{
-					support = region.antiGroundPowerNeeded() > region.antiAirPowerNeeded() ? "ground" : "air";
+					support = region.antiGroundPowerNeeded() >= region.antiAirPowerNeeded() ? "ground" : "air";
 				}
 				bool needsMoreSupport = true;
 				if (support == "ground")
@@ -1634,7 +1610,7 @@ void CombatCommander::updateDefenseSquads()
 					unit = Unit(unitptr, m_bot);
 				}
 				// If we have no more unit to defend we check for the workers
-				else if(support == "ground")
+				else if(support == "ground" && needsMoreSupport)
 				{
 					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit);
 				}
@@ -1831,7 +1807,10 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	if (m_bot.Strategy().isWorkerRushed())
 		return true;
 	// worker can fight buildings somewhat close to the base
-	if (closestEnemy.getType().isBuilding() && Util::DistSq(closestEnemy, pos) < 12.f * 12.f)
+	const auto isBuilding = closestEnemy.getType().isBuilding();
+	const auto enemyDistanceToBase = Util::DistSq(closestEnemy, pos);
+	const auto maxDistance = closestEnemy.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL ? 30.f : 12.f;
+	if (isBuilding && enemyDistanceToBase < maxDistance * maxDistance)
 		return true;
 	// worker should not get too far from base and can fight only units close to it
 	if (Util::DistSq(worker, pos) < 15.f * 15.f && Util::DistSq(worker, closestEnemy) < 7.f * 7.f)

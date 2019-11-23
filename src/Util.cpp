@@ -1129,6 +1129,17 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 	return unitPower;
 }
 
+/**
+ * This is to be used only on enemy units in our bases
+ */
+float Util::GetSpecialCasePower(const Unit &unit)
+{
+	if (!unit.getType().isBuilding())
+		return 0.f;
+	const auto unitPtr = unit.getUnitPtr();
+	return (unitPtr->health_max + unitPtr->shield_max) / 5;
+}
+
 float Util::GetNorm(const sc2::Point2D& point)
 {
 	return sqrt(pow(point.x, 2) + pow(point.y, 2));
