@@ -1822,7 +1822,7 @@ CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit 
 bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const
 {
 	// Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
-	const int initialMoveDistance = 9;
+	const int initialMoveDistance = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? 9 : 5;
 	int moveDistance = initialMoveDistance;
 	CCPosition moveTo = rangedUnit->pos + directionVector * moveDistance;
 
@@ -1832,60 +1832,40 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 		return true;
 	}
 	
-	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
-	{
-		const CCPosition mapMin = m_bot.Map().mapMin();
-		const CCPosition mapMax = m_bot.Map().mapMax();
-		bool canMoveAtInitialDistanceOrFarther = true;
+	const CCPosition mapMin = m_bot.Map().mapMin();
+	const CCPosition mapMax = m_bot.Map().mapMax();
+	bool canMoveAtInitialDistanceOrFarther = true;
 
-		// Check if we can move in the direction of the vector
-		// We check if we are moving towards and close to an unpathable position
-		while (!m_bot.Observation()->IsPathable(moveTo))
+	// Check if we can move in the direction of the vector
+	// We check if we are moving towards and close to an unpathable position
+	while (!m_bot.Observation()->IsPathable(moveTo))
+	{
+		++moveDistance;
+		moveTo = rangedUnit->pos + directionVector * moveDistance;
+		// If moveTo is out of the map, stop checking farther and switch to influence map navigation
+		if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
 		{
-			++moveDistance;
-			moveTo = rangedUnit->pos + directionVector * moveDistance;
-			// If moveTo is out of the map, stop checking farther and switch to influence map navigation
-			if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
-			{
-				canMoveAtInitialDistanceOrFarther = false;
-				break;
-			}
+			canMoveAtInitialDistanceOrFarther = false;
+			break;
 		}
-		if (canMoveAtInitialDistanceOrFarther)
+	}
+	if (canMoveAtInitialDistanceOrFarther)
+	{
+		outPathableTile = moveTo;
+		return true;
+	}
+
+	// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
+	moveDistance = 3;
+	while (moveDistance <= initialMoveDistance)
+	{
+		++moveDistance;
+		moveTo = rangedUnit->pos + directionVector * moveDistance;
+		if (m_bot.Observation()->IsPathable(moveTo))
 		{
 			outPathableTile = moveTo;
 			return true;
 		}
-
-		// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
-		moveDistance = 3;
-		while (moveDistance <= initialMoveDistance)
-		{
-			++moveDistance;
-			moveTo = rangedUnit->pos + directionVector * moveDistance;
-			if (m_bot.Observation()->IsPathable(moveTo))
-			{
-				outPathableTile = moveTo;
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
-	for (moveDistance = 1; moveDistance < initialMoveDistance; ++moveDistance)
-	{
-		moveTo = rangedUnit->pos + directionVector * moveDistance;
-		if (!m_bot.Observation()->IsPathable(moveTo))
-		{
-			--moveDistance;
-			break;
-		}
-	}
-	if (moveDistance >= 1)
-	{
-		outPathableTile = rangedUnit->pos + directionVector * moveDistance;
-		return true;
 	}
 	return false;
 }
