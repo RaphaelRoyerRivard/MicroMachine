@@ -966,7 +966,7 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 		auto richRefineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, richRefinery, false, true);
 		if (refineryCount + richRefineryCount == 0)
 		{
-			m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), true);
+			m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), item.blocking);
 		}
     }
 }
