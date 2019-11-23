@@ -25,10 +25,11 @@ struct Strategy
 
 enum StartingStrategy
 {
-	STANDARD,
-	PROXY_REAPERS,
-	PROXY_CYCLONES,
-	EARLY_EXPAND
+	// Always add new strategies at the end of the enum (before COUNT), otherwise the saved data will be wrong
+	PROXY_CYCLONES = 0,
+	EARLY_EXPAND = 1,
+	STANDARD = 2,
+	COUNT = 3
 };
 
 enum StrategyPostBuildOrder {
@@ -45,6 +46,7 @@ class StrategyManager
     CCRace                          m_selfRace;
     CCRace                          m_enemyRace;
     std::map<std::string, Strategy> m_strategies;
+	StartingStrategy m_initialStartingStrategy;
 	StartingStrategy m_startingStrategy;
     int                             m_totalGamesPlayed;
     const BuildOrder                m_emptyBuildOrder;

@@ -200,6 +200,7 @@ namespace Util
 	float			GetUnitsPower(const sc2::Units & units, const sc2::Units & targets, CCBot& bot);
 	float			GetUnitPower(const sc2::Unit* unit, const sc2::Unit* closestUnit, CCBot& bot);
 	float			GetUnitPower(const Unit &unit, const Unit& closestUnit, CCBot& m_bot);
+	float			GetSpecialCasePower(const Unit &unit);
 	float           GetNorm(const sc2::Point2D& point);
     void            Normalize(sc2::Point2D& point);
     sc2::Point2D    Normalized(const sc2::Point2D& point);

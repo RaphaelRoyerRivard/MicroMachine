@@ -66,6 +66,7 @@ BotConfig::BotConfig()
     WorkersPerRefinery = 3;
     BuildingSpacing = 1;
     PylonSpacing = 3;
+	SelectStartingBuildBasedOnHistory = false;
 
     AlphaBetaDepth = 6;
     AlphaBetaMaxMilli = 100;
@@ -170,6 +171,7 @@ void BotConfig::readConfigFile()
         JSONTools::ReadInt("BuildingSpacing", macro, BuildingSpacing);
         JSONTools::ReadInt("PylongSpacing", macro, PylonSpacing);
         JSONTools::ReadInt("WorkersPerRefinery", macro, WorkersPerRefinery);
+		JSONTools::ReadBool("SelectStartingBuildBasedOnHistory", macro, SelectStartingBuildBasedOnHistory);
     }
 
     // Parse the Debug Options

@@ -28,6 +28,7 @@ bin/CommandCenter
 bin/*.exe
 bin/*.ilk
 bin/TechTree.json
+bin/data/*.json
 *.tlog
 *.obj
 vs/RelWithDebInfo/CommandCenter.log

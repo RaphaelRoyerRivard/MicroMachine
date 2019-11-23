@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.6.12",
+        "BotVersion"                : "1.7.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -122,7 +122,8 @@
     {
         "WorkersPerRefinery"        : 3,
         "BuildingSpacing"           : 0,
-        "PylonSpacing"              : 3
+        "PylonSpacing"              : 3,
+        "SelectStartingBuildBasedOnHistory" : true
     },
 
     "Debug" :
