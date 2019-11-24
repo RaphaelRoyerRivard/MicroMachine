@@ -224,9 +224,9 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
-CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, bool shouldHeal, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), 0.f, false, false, false, false, true, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), 0.f, false, false, shouldHeal, false, true, bot);
 	return GetCommandPositionFromPath(path, unit, bot);
 }
 
@@ -341,24 +341,23 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 					(considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot)) &&
 					!HasEffectInfluenceOnTile(currentNode, unit, bot)) &&
 					Util::Dist(Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
-
-				if(getCloser && shouldTriggerExit)
+			}
+		}
+		if (getCloser && shouldTriggerExit)
+		{
+			if (numberOfTilesExploredAfterPathFound > 10)
+			{
+				currentNode = closestNode;
+			}
+			else
+			{
+				shouldTriggerExit = false;
+				const CCPosition shiftedPos = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+				if (closestNode == nullptr || Util::Dist(shiftedPos, goal) < Util::Dist(Util::GetPosition(closestNode->position) + CCPosition(0.5f, 0.5f), goal))
 				{
-					if(numberOfTilesExploredAfterPathFound > 10)
-					{
-						currentNode = closestNode;
-					}
-					else
-					{
-						shouldTriggerExit = false;
-						const CCPosition shiftedPos = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
-						if(closestNode == nullptr || Util::Dist(shiftedPos, goal) < Util::Dist(Util::GetPosition(closestNode->position) + CCPosition(0.5f, 0.5f), goal))
-						{
-							closestNode = currentNode;
-						}
-						++numberOfTilesExploredAfterPathFound;
-					}
+					closestNode = currentNode;
 				}
+				++numberOfTilesExploredAfterPathFound;
 			}
 		}
 		if (shouldTriggerExit)
@@ -1339,6 +1338,9 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
 	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+		return 0.f;
+
+	if (!target)
 		return 0.f;
 
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);

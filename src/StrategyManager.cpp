@@ -179,7 +179,7 @@ const UnitPairVector StrategyManager::getZergBuildOrderGoal() const
 
 void StrategyManager::onEnd(const bool isWinner)
 {
-	if (isWinner)
+	if (isWinner || !m_bot.Config().SelectStartingBuildBasedOnHistory)
 		return;
 
 	std::stringstream ss;

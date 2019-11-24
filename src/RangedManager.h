@@ -162,7 +162,7 @@ private:
 	const sc2::Unit * ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * target);
 	void LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * target);
 	bool CycloneHasTarget(const sc2::Unit * cyclone) const;
-	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats);
+	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & threats);
 	void ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal);
 	bool ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper);
 	bool ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats);

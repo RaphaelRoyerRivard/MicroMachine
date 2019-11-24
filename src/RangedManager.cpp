@@ -359,7 +359,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
-	if (shouldAttack && !unitShouldHeal && ExecuteThreatFightingLogic(rangedUnit, rangedUnits, threats))
+	if (shouldAttack && ExecuteThreatFightingLogic(rangedUnit, unitShouldHeal, rangedUnits, threats))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 		return;
@@ -441,7 +441,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if (dist < threatRange + 0.5f)
 		{
 			useInfluenceMap = true;
-			break;
 		}
 		summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
 	}
@@ -457,10 +456,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
 		// If close to an unpathable position or in danger
 		// Use influence map to find safest path
-		CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, m_bot);
+		// If should heal, try to go closer to goal
+		CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, unitShouldHeal, m_bot);
 		if (safeTile != CCPosition())
 		{
-			//safeTile = AttenuateZigzag(rangedUnit, threats, safeTile, summedFleeVec);	//if we decomment this, we must not break in the threat check loop
 			const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0);
 			PlanAction(rangedUnit, action);
 			m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
@@ -1111,7 +1110,7 @@ bool RangedManager::CycloneHasTarget(const sc2::Unit * cyclone) const
 	return lockOnTargets.find(cyclone) != lockOnTargets.end();
 }
 
-bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits, sc2::Units & threats)
+bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & threats)
 {
 	if (threats.empty())
 		return false;
@@ -1127,7 +1126,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 	// The harass mode deactivation is a hack to not ignore range targets
 	m_harassMode = false;
 	const sc2::Unit* target = getTarget(rangedUnit, threats);
-	if (!target || !isTargetRanged(target))
+	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
+	if (!target || !isTargetRanged(target) || (unitShouldHeal && !closeToEnemyTempest))
 	{
 		m_harassMode = true;
 		return false;
@@ -1140,7 +1141,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		if (!Util::IsPositionUnderDetection(rangedUnit->pos, m_bot))
 		{
 			bool canFightCloaked = true;
-			const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 			const float targetDist = Util::Dist(rangedUnit->pos, target->pos);
 			if (targetDist > range)
 			{
@@ -1209,8 +1209,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		{
 			continue;
 		}
-		// Ignore units that should heal to not consider them in the power calculation
-		if (unit != rangedUnit && ShouldUnitHeal(unit))
+		const bool canAttackTarget = target->is_flying ? Util::CanUnitAttackAir(unit, m_bot) : Util::CanUnitAttackGround(unit, m_bot);
+		const bool canAttackTempest = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && canAttackTarget;
+		// Ignore units that should heal to not consider them in the power calculation, unless the target is a Tempest and our unit can attack it
+		if (unit != rangedUnit && ShouldUnitHeal(unit) && !canAttackTempest)
 		{
 			continue;
 		}
@@ -1226,7 +1228,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 		}
 
 		// Check if it can attack the selected target
-		const bool canAttackTarget = target->is_flying ? Util::CanUnitAttackAir(unit, m_bot) : Util::CanUnitAttackGround(unit, m_bot);
 		const sc2::Unit* unitTarget = canAttackTarget ? target : nullptr;
 		if (!unitTarget)
 		{
@@ -1287,14 +1288,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 
 	if(!vikings.empty() && !tempests.empty())
 	{
-		const auto otherAllies = closeUnits.size() - vikings.size();
 		const auto otherEnemies = threats.size() - tempests.size();
-		//Util::DebugLog(__FUNCTION__, std::to_string(vikings.size()) + " Vikings and " + std::to_string(otherAllies) + " others vs " + std::to_string(tempests.size()) + " Tempests and " + std::to_string(otherEnemies) + " others : Simulation predicts a " + (winSimulation ? "win" : "lose") + " and our power ratio is " + std::to_string(unitsPower / targetsPower), m_bot);
 		if (!winSimulation && otherEnemies > 0)
 		{
 			winSimulation = Util::SimulateCombat(vikings, tempests);
-			const auto str = "Only Vikings vs Tempests : " + std::to_string(winSimulation);
-			//Util::DebugLog(__FUNCTION__, str, m_bot);
 		}
 		shouldFight = winSimulation;
 	}
@@ -1329,7 +1326,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, sc2
 			{
 				const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 				const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, actionDuration);
-				// Attack the target
 				PlanAction(unit, action);
 				if (unit == rangedUnit)
 					currentUnitHasACommand = true;
@@ -1822,7 +1818,7 @@ CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit 
 bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const
 {
 	// Average estimate of the distance between a ledge and the other side, in increment of mineral chunck size, also based on interloperLE.
-	const int initialMoveDistance = 9;
+	const int initialMoveDistance = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? 9 : 5;
 	int moveDistance = initialMoveDistance;
 	CCPosition moveTo = rangedUnit->pos + directionVector * moveDistance;
 
@@ -1832,60 +1828,40 @@ bool RangedManager::MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CC
 		return true;
 	}
 	
-	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
-	{
-		const CCPosition mapMin = m_bot.Map().mapMin();
-		const CCPosition mapMax = m_bot.Map().mapMax();
-		bool canMoveAtInitialDistanceOrFarther = true;
+	const CCPosition mapMin = m_bot.Map().mapMin();
+	const CCPosition mapMax = m_bot.Map().mapMax();
+	bool canMoveAtInitialDistanceOrFarther = true;
 
-		// Check if we can move in the direction of the vector
-		// We check if we are moving towards and close to an unpathable position
-		while (!m_bot.Observation()->IsPathable(moveTo))
+	// Check if we can move in the direction of the vector
+	// We check if we are moving towards and close to an unpathable position
+	while (!m_bot.Observation()->IsPathable(moveTo))
+	{
+		++moveDistance;
+		moveTo = rangedUnit->pos + directionVector * moveDistance;
+		// If moveTo is out of the map, stop checking farther and switch to influence map navigation
+		if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
 		{
-			++moveDistance;
-			moveTo = rangedUnit->pos + directionVector * moveDistance;
-			// If moveTo is out of the map, stop checking farther and switch to influence map navigation
-			if (moveTo.x >= mapMax.x || moveTo.x < mapMin.x || moveTo.y >= mapMax.y || moveTo.y < mapMin.y)
-			{
-				canMoveAtInitialDistanceOrFarther = false;
-				break;
-			}
+			canMoveAtInitialDistanceOrFarther = false;
+			break;
 		}
-		if (canMoveAtInitialDistanceOrFarther)
+	}
+	if (canMoveAtInitialDistanceOrFarther)
+	{
+		outPathableTile = moveTo;
+		return true;
+	}
+
+	// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
+	moveDistance = 3;
+	while (moveDistance <= initialMoveDistance)
+	{
+		++moveDistance;
+		moveTo = rangedUnit->pos + directionVector * moveDistance;
+		if (m_bot.Observation()->IsPathable(moveTo))
 		{
 			outPathableTile = moveTo;
 			return true;
 		}
-
-		// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
-		moveDistance = 3;
-		while (moveDistance <= initialMoveDistance)
-		{
-			++moveDistance;
-			moveTo = rangedUnit->pos + directionVector * moveDistance;
-			if (m_bot.Observation()->IsPathable(moveTo))
-			{
-				outPathableTile = moveTo;
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	// If we did not found a pathable tile far enough, we check closer (will force the unit to go near a wall)
-	for (moveDistance = 1; moveDistance < initialMoveDistance; ++moveDistance)
-	{
-		moveTo = rangedUnit->pos + directionVector * moveDistance;
-		if (!m_bot.Observation()->IsPathable(moveTo))
-		{
-			--moveDistance;
-			break;
-		}
-	}
-	if (moveDistance >= 1)
-	{
-		outPathableTile = rangedUnit->pos + directionVector * moveDistance;
-		return true;
 	}
 	return false;
 }
