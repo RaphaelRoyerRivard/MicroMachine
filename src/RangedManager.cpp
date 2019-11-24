@@ -1126,7 +1126,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	// The harass mode deactivation is a hack to not ignore range targets
 	m_harassMode = false;
 	const sc2::Unit* target = getTarget(rangedUnit, threats);
-	if (!target || !isTargetRanged(target) || (unitShouldHeal && target->unit_type != sc2::UNIT_TYPEID::PROTOSS_TEMPEST))
+	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
+	if (!target || !isTargetRanged(target) || (unitShouldHeal && !closeToEnemyTempest))
 	{
 		m_harassMode = true;
 		return false;
@@ -1139,7 +1141,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		if (!Util::IsPositionUnderDetection(rangedUnit->pos, m_bot))
 		{
 			bool canFightCloaked = true;
-			const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 			const float targetDist = Util::Dist(rangedUnit->pos, target->pos);
 			if (targetDist > range)
 			{

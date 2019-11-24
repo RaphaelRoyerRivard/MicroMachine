@@ -1340,6 +1340,9 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
 		return 0.f;
 
+	if (!target)
+		return 0.f;
+
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
 	
