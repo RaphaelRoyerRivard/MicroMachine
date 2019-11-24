@@ -723,7 +723,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					hasPicked = true;
 				}
 
-				if (hasPicked && !m_queue.contains(toBuild) && !m_queue.contains(MetaTypeEnum::CommandCenter))
+				if (hasPicked && !m_queue.contains(toBuild) && (!m_queue.contains(MetaTypeEnum::CommandCenter) || m_bot.GetFreeMinerals() > 400 || m_bot.Bases().getFreeBaseLocationCount() == 0))
 				{
 					bool idleProductionBuilding = false;
 					const auto & productionBuildings = m_bot.GetAllyUnits(toBuild.getUnitType().getAPIUnitType());

@@ -4,7 +4,6 @@
 #include <cereal/types/string.hpp>
 #include <cereal/types/vector.hpp>
 #include <sc2api/sc2_map_info.h>
-#include "src/Unit.h"
 
 namespace sc2 {
     template <class Archive>
@@ -90,7 +89,7 @@ namespace sc2 {
     }
 
     template <class Archive>
-    void save(Archive& archive, const ::Unit& unit) {
+    void save(Archive& archive, const Unit& unit) {
         UNIT_TYPEID unit_type = unit.unit_type;
         std::vector<BUFF_ID> buffs;
         for (auto b : unit.buffs) buffs.push_back(b);

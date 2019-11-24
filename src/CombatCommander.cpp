@@ -85,28 +85,40 @@ bool CombatCommander::isSquadUpdateFrame()
 
 void CombatCommander::clearYamatoTargets()
 {
-	for(auto & targetPair : m_yamatoTargets)	// m_yamatoTargets is a std::map<const sc2::Unit*, std::map<const sc2::Unit*, uint32_t>>
+	for(auto it = m_yamatoTargets.begin(); it != m_yamatoTargets.end();)
 	{
-		const auto target = targetPair.first;
+		auto & targetPair = *it;
+		const auto targetTag = targetPair.first;
+		const auto target = m_bot.Observation()->GetUnit(targetTag);
 		if (!target || !target->is_alive)
 		{
-			m_yamatoTargets.erase(target);
+			it = m_yamatoTargets.erase(it);
 			continue;
 		}
 
 		auto & battlecruiserPairs = targetPair.second;
-		for (const auto & battlecruiserPair : battlecruiserPairs)
+		for (auto it2 = battlecruiserPairs.begin(); it2 != battlecruiserPairs.end();)
 		{
-			const auto battlecruiser = battlecruiserPair.first;
+			const auto & battlecruiserPair = *it2;
+			const auto battlecruiserTag = battlecruiserPair.first;
+			const auto battlecruiser = m_bot.Observation()->GetUnit(battlecruiserTag);
 			const auto finishFrame = battlecruiserPair.second;
 			if(!battlecruiser || !battlecruiser->is_alive || m_bot.GetCurrentFrame() >= finishFrame)
 			{
-				battlecruiserPairs.erase(battlecruiser);
+				it2 = battlecruiserPairs.erase(it2);
+				continue;
 			}
+			
+			++it2;
 		}
 
-		if(battlecruiserPairs.empty())
-			m_yamatoTargets.erase(target);
+		if (battlecruiserPairs.empty())
+		{
+			it = m_yamatoTargets.erase(it);
+			continue;
+		}
+
+		++it;
 	}
 }
 
@@ -577,12 +589,19 @@ void CombatCommander::updateIdleSquad()
 
 	if (m_bot.GetCurrentFrame() % 24 == 0)	// Every second
 	{
+		auto idlePosition = m_bot.GetStartLocation();
+		const BaseLocation* farthestBase = m_bot.Bases().getFarthestOccupiedBaseLocation();
+		if(farthestBase)
+		{
+			const auto vectorAwayFromBase = Util::Normalized(farthestBase->getResourceDepot().getPosition() - Util::GetPosition(farthestBase->getCenterOfMinerals()));
+			idlePosition = farthestBase->getResourceDepot().getPosition() + vectorAwayFromBase * 5.f;
+		}
+		
 		for (auto & combatUnit : idleSquad.getUnits())
 		{
-			const BaseLocation* closestBase = m_bot.Bases().getClosestOccupiedBaseLocationForUnit(combatUnit);
-			if(closestBase != nullptr && Util::DistSq(combatUnit, closestBase->getPosition()) > 5.f * 5.f)
+			if (Util::DistSq(combatUnit, idlePosition) > 5.f * 5.f)
 			{
-				Micro::SmartMove(combatUnit.getUnitPtr(), closestBase->getPosition(), m_bot);
+				Micro::SmartMove(combatUnit.getUnitPtr(), idlePosition, m_bot);
 			}
 		}
 	}

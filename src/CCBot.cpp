@@ -14,9 +14,8 @@ CCBot::CCBot(std::string botVersion)
 	, m_techTree(*this)
 	, m_concede(false)
 	, m_saidHallucinationLine(false)
+	, m_botVersion(botVersion)
 {
-	if(botVersion != "")
-		Actions()->SendChat(botVersion);
 }
 
 void CCBot::OnGameFullStart() {}//end?
@@ -72,6 +71,9 @@ void CCBot::OnGameStart() //full start
 	MetaTypeEnum::Initialize(*this);
 	Util::SetAllowDebug(Config().AllowDebug);
 	Util::CreateLog(*this);
+	Util::Log(__FUNCTION__, m_botVersion, *this);
+	std::cout << "Version " << m_botVersion << std::endl;
+	Actions()->SendChat(m_botVersion);
 	selfRace = GetPlayerRace(Players::Self);
     
     setUnits();

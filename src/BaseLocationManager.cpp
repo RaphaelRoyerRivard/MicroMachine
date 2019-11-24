@@ -496,13 +496,36 @@ const std::set<BaseLocation *> & BaseLocationManager::getOccupiedBaseLocations(i
     return m_occupiedBaseLocations.at(player);
 }
 
+int BaseLocationManager::getFreeBaseLocationCount() const
+{
+	return m_baseLocationPtrs.size() - getOccupiedBaseLocations(Players::Self).size() - getOccupiedBaseLocations(Players::Enemy).size();
+}
+
 BaseLocation * BaseLocationManager::getClosestOccupiedBaseLocationForUnit(const Unit unit) const
 {
 	BaseLocation* closestBase = nullptr;
 	float minDistance = 0.f;
-	for (auto baseLocation : m_bot.Bases().getOccupiedBaseLocations(unit.getPlayer()))
+	for (auto baseLocation : getOccupiedBaseLocations(unit.getPlayer()))
 	{
 		const float distance = Util::DistSq(unit, baseLocation->getPosition());
+		if (!closestBase || distance < minDistance)
+		{
+			closestBase = baseLocation;
+			minDistance = distance;
+		}
+	}
+	return closestBase;
+}
+
+BaseLocation * BaseLocationManager::getFarthestOccupiedBaseLocation() const
+{
+	BaseLocation* closestBase = nullptr;
+	int minDistance = 0.f;
+	const auto enemyBaseLocation = getPlayerStartingBaseLocation(Players::Enemy);
+	const auto enemyLocation = enemyBaseLocation ? enemyBaseLocation->getPosition() : m_bot.Map().center();
+	for (auto baseLocation : getOccupiedBaseLocations(Players::Self))
+	{
+		const auto distance = baseLocation->getGroundDistance(enemyLocation);
 		if (!closestBase || distance < minDistance)
 		{
 			closestBase = baseLocation;
