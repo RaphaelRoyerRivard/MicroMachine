@@ -1623,7 +1623,8 @@ void BuildingManager::castBuildingsAbilities()
 			continue;
 		}
 
-		bool hasInvisible = m_bot.Strategy().enemyHasInvisible();
+		// TODO decomment this block when we are ready to use the scans
+		/*bool hasInvisible = m_bot.Strategy().enemyHasInvisible();
 		//Scan
 		if (hasInvisible)
 		{
@@ -1634,10 +1635,10 @@ void BuildingManager::castBuildingsAbilities()
 					Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, sighting.second.first, m_bot);
 				}
 			}
-		}
+		}*/
 
 		//Mule
-		if (energy >= 50 && (!hasInvisible || energy >= 100))
+		if (energy >= 50)// && (!hasInvisible || energy >= 100))
 		{
 			std::vector<CCUnitID> skipMinerals;
 			for (auto mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
