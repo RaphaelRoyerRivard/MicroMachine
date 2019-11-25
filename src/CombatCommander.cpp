@@ -1113,7 +1113,7 @@ void CombatCommander::lowerSupplyDepots()
 
 struct RegionArmyInformation
 {
-	BaseLocation* baseLocation;
+	const BaseLocation* baseLocation;
 	CCBot& bot;
 	std::vector<Unit> enemyUnits;
 	std::vector<const sc2::Unit*> affectedAllyUnits;
@@ -1129,7 +1129,7 @@ struct RegionArmyInformation
 	Squad* squad;
 	Unit closestEnemyUnit;
 
-	RegionArmyInformation(BaseLocation* baseLocation, CCBot& bot)
+	RegionArmyInformation(const BaseLocation* baseLocation, CCBot& bot)
 		: baseLocation(baseLocation)
 		, bot(bot)
 		, airEnemyPower(0)
@@ -1282,7 +1282,12 @@ void CombatCommander::updateDefenseSquads()
 	std::list<RegionArmyInformation> regions;
 	// for each of our occupied regions
 	const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-	for (BaseLocation * myBaseLocation : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+	const auto & ourBases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+	auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false);
+	std::set<BaseLocation*> bases;
+	bases.insert(ourBases.begin(), ourBases.end());
+	bases.insert(nextExpansion);
+	for (BaseLocation * myBaseLocation : bases)
 	{
 		// don't defend inside the enemy region, this will end badly when we are stealing gas or cannon rushing
 		if (myBaseLocation == enemyBaseLocation)
@@ -1809,11 +1814,12 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	// worker can fight buildings somewhat close to the base
 	const auto isBuilding = closestEnemy.getType().isBuilding();
 	const auto enemyDistanceToBase = Util::DistSq(closestEnemy, pos);
-	const auto maxDistance = closestEnemy.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL ? 30.f : 12.f;
-	if (isBuilding && enemyDistanceToBase < maxDistance * maxDistance)
+	const auto maxEnemyDistance = closestEnemy.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL ? 30.f : 15.f;
+	const auto enemyDistanceToWorker = Util::DistSq(worker, closestEnemy);
+	if (isBuilding && enemyDistanceToBase < maxEnemyDistance * maxEnemyDistance && enemyDistanceToWorker < maxEnemyDistance * maxEnemyDistance)
 		return true;
 	// worker should not get too far from base and can fight only units close to it
-	if (Util::DistSq(worker, pos) < 15.f * 15.f && Util::DistSq(worker, closestEnemy) < 7.f * 7.f)
+	if (Util::DistSq(worker, pos) < 15.f * 15.f && enemyDistanceToWorker < 7.f * 7.f)
 		return true;
 	return false;
 }

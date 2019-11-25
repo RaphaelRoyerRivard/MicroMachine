@@ -10,7 +10,7 @@ class BaseLocationManager
 
 	bool m_areBaseLocationPtrsSorted;
     std::vector<BaseLocation>                       m_baseLocationData;
-    std::vector<const BaseLocation *>               m_baseLocationPtrs;
+    std::vector<BaseLocation *>						m_baseLocationPtrs;
     std::vector<const BaseLocation *>               m_startingBaseLocations;
     std::map<int, const BaseLocation *>             m_playerStartingBaseLocations;
     std::map<int, std::set<BaseLocation *>>			m_occupiedBaseLocations;
@@ -34,7 +34,7 @@ public:
 	void drawResourceProxity();
 
 	BaseLocation * getBaseLocation(const CCPosition & pos) const;
-    const std::vector<const BaseLocation *> & getBaseLocations() const;
+    const std::vector<BaseLocation *> & getBaseLocations() const;
     const std::vector<const BaseLocation *> & getStartingBaseLocations() const;
     const std::set<BaseLocation *> & getOccupiedBaseLocations(int player) const;
 	int getFreeBaseLocationCount() const;
@@ -44,7 +44,7 @@ public:
 	void FixNullPlayerStartingBaseLocation();
 	int getBaseCount(int player, bool isCompleted = false) const;
 
-	const BaseLocation* getNextExpansion(int player, bool checkBlocked, bool checkBuildable) const;
+	BaseLocation* getNextExpansion(int player, bool checkBlocked, bool checkBuildable) const;
 	CCTilePosition getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable) const;
 	CCTilePosition getBasePosition(int player, int index) const;
 	BaseLocation* getClosestBase(const CCPosition position, bool checkContains) const;

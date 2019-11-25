@@ -26,6 +26,18 @@ void ProductionManager::setBuildOrder(const BuildOrder & buildOrder)
 
 void ProductionManager::onStart()
 {
+	/*const auto expansion = m_bot.Bases().getNextExpansion(Players::Self, false, false);
+	const auto centerOfMinerals = Util::GetPosition(expansion->getCenterOfMinerals());
+	const auto expansionPosition = Util::GetPosition(expansion->getDepotPosition());
+	const auto towardsMinerals = Util::Normalized(centerOfMinerals - expansionPosition);
+	m_bot.Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, centerOfMinerals, 2, 1);
+	m_bot.Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, centerOfMinerals + towardsMinerals*2, 2, 1);
+	const auto startLocation = m_bot.GetStartLocation();
+	const auto mapCenter = m_bot.Map().center();
+	const auto towardsMapCenter = Util::Normalized(mapCenter - startLocation);
+	m_bot.Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, startLocation + towardsMapCenter * 10, 2, 1);
+	m_bot.Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, startLocation + towardsMapCenter * 12, 2, 1);*/
+	
     setBuildOrder(m_bot.Strategy().getOpeningBookBuildOrder());
 	if (m_queue.isEmpty())
 		Util::DisplayError("Initial build order is empty.", "0x00000003", m_bot, true);
@@ -987,7 +999,7 @@ void ProductionManager::lowPriorityChecks()
 		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
 		{
 			auto& refineries = m_bot.GetAllyGeyserUnits();
-			const std::vector<const BaseLocation *> & bases = m_bot.Bases().getBaseLocations();
+			const auto & bases = m_bot.Bases().getBaseLocations();
 			for (auto & base : bases)
 			{
 				if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
