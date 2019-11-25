@@ -1,6 +1,7 @@
 #pragma once
 //#define PUBLIC_RELEASE
 //#define NO_UNITS
+//#define NO_EXPANSION
 //#define NO_PRODUCTION
 
 #ifdef PUBLIC_RELEASE
