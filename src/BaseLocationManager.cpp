@@ -454,7 +454,7 @@ void BaseLocationManager::drawResourceProxity()
 	}
 }
 
-const std::vector<const BaseLocation *> & BaseLocationManager::getBaseLocations() const
+const std::vector<BaseLocation *> & BaseLocationManager::getBaseLocations() const
 {
     return m_baseLocationPtrs;
 }
@@ -560,7 +560,7 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 	return m_bot.Buildings().getBuildingCountOfType(baseTypes, isCompleted);
 }
 
-const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocked, bool checkBuildable) const
+BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocked, bool checkBuildable) const
 {
 	//[expand]
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
@@ -569,7 +569,7 @@ const BaseLocation* BaseLocationManager::getNextExpansion(int player, bool check
 	const BaseLocation * enemyHomeBase = getPlayerStartingBaseLocation(otherPlayer);
 	BOT_ASSERT(homeBase, "No home base detected");
 
-	const BaseLocation * closestBase = nullptr;
+	BaseLocation * closestBase = nullptr;
 	int minDistance = std::numeric_limits<int>::max();
 
 	CCPosition homeTile = homeBase->getPosition();
@@ -757,8 +757,8 @@ const BaseLocation* BaseLocationManager::getBaseContainingPosition(const CCPosit
 void BaseLocationManager::sortBaseLocationPtrs()
 {
 	//Sorting base locations from closest to opponent's starting base to farthest
-	std::vector<const BaseLocation *> sortedBaseLocationPtrs;
-	std::map<const BaseLocation *, float> baseLocationDistances;
+	std::vector<BaseLocation *> sortedBaseLocationPtrs;
+	std::map<BaseLocation *, float> baseLocationDistances;
 	const BaseLocation * enemyStartingBaseLocation = m_playerStartingBaseLocations[Players::Enemy];
 	for(const auto baseLocation : m_baseLocationPtrs)
 	{
@@ -767,7 +767,7 @@ void BaseLocationManager::sortBaseLocationPtrs()
 	while(!baseLocationDistances.empty())
 	{
 		float smallestDistance = 0.f;
-		const BaseLocation * baseLocation = nullptr;
+		BaseLocation * baseLocation = nullptr;
 		for(const auto baseLocationDistancePair : baseLocationDistances)
 		{
 			if(!baseLocation || baseLocationDistancePair.second < smallestDistance)

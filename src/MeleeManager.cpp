@@ -48,7 +48,7 @@ void MeleeManager::executeMicro()
 					Unit target = getTarget(meleeUnit, m_targets);
 					const sc2::Unit* repairTarget = nullptr;
 					// If the melee unit is a worker
-					if (meleeUnit.getType().isWorker() && m_bot.GetMinerals() > 0)
+					if (meleeUnit.getType().isWorker() && m_bot.GetMinerals() > 0 && m_bot.Strategy().isWorkerRushed())
 					{
 						const float range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
 						const float distSq = Util::DistSq(meleeUnit, target);
