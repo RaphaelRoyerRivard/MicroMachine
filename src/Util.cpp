@@ -84,6 +84,12 @@ struct Util::PathFinding::IMNode
 
 void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 {
+	// Initialize combat simulator
+	initMappings();
+	m_simulator = new CombatPredictor();
+	m_simulator->init();
+	m_simulator->getCombatEnvironment({}, {});
+	
 	switch (race)
 	{
 		case sc2::Race::Terran:
@@ -2202,13 +2208,6 @@ void Util::Log(const std::string & function, const std::string & message, CCBot 
 
 bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits)
 {
-	if(!m_simulator)
-	{
-		initMappings();
-		m_simulator = new CombatPredictor();
-		m_simulator->init();
-	}
-
 	CombatState state;
 	for(int i=0; i<2; ++i)
 	{
@@ -2230,10 +2229,11 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 	CombatUpgrades player1upgrades = {};
 
 	CombatUpgrades player2upgrades = {};
-
+	
 	state.environment = &m_simulator->getCombatEnvironment(player1upgrades, player2upgrades);
-
+	
 	CombatSettings settings;
+	
 	// Simulate for at most 100 *game* seconds
 	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
 	settings.maxTime = 100;
