@@ -1286,7 +1286,8 @@ void CombatCommander::updateDefenseSquads()
 	auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false);
 	std::set<BaseLocation*> bases;
 	bases.insert(ourBases.begin(), ourBases.end());
-	bases.insert(nextExpansion);
+	if (nextExpansion)
+		bases.insert(nextExpansion);
 	for (BaseLocation * myBaseLocation : bases)
 	{
 		// don't defend inside the enemy region, this will end badly when we are stealing gas or cannon rushing
