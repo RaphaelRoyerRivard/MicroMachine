@@ -24,7 +24,7 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Protoss",
+        "EnemyRace"                 : "Zerg",
         "MapFile"                   : "AcropolisLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,

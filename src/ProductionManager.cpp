@@ -534,6 +534,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		}
 		else if (boughtDepotCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter))
 		{
+#ifndef NO_EXPANSION
 			const bool enoughMinerals = m_bot.GetFreeMinerals() >= 600;
 			const int workerCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
 			const int mineralPatches = m_bot.Bases().getAccessibleMineralFieldCount();
@@ -543,6 +544,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			{
 				m_queue.queueAsLowestPriority(MetaTypeEnum::CommandCenter, false);
 			}
+#endif
 		}
 
 		if (!m_queue.contains(workerMetatype))//check queue

@@ -1249,6 +1249,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	}
 
 	float maxThreatSpeed = 0.f;
+	float maxThreatRange = 0.f;
 	// Calculate enemy power
 	for (auto threat : threats)
 	{
@@ -1260,6 +1261,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		if (threatSpeed > maxThreatSpeed)
 			maxThreatSpeed = threatSpeed;
 		const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
+		const float threatRange = Util::GetAttackRangeForTarget(threat, threatTarget, m_bot);
+		if (threatRange > maxThreatRange)
+			maxThreatRange = threatRange;
 		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
 	}
 
@@ -1294,6 +1298,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			winSimulation = Util::SimulateCombat(vikings, tempests);
 		}
 		shouldFight = winSimulation;
+	}
+	else if(maxThreatRange >= 10)
+	{
+		shouldFight = winSimulation;	// We consider only the simulation for long range enemies because our formula is shit
 	}
 
 	// For each of our close units

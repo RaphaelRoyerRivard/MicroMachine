@@ -245,7 +245,6 @@ std::vector<sc2::AbilityData> load_ability_data() {
     {
         cereal::BinaryInputArchive archive(file);
         archive(abilities2);
-		cout << "Deserialize abilities" << endl;
     }
     //file.close();
 
@@ -298,7 +297,6 @@ std::vector<sc2::UpgradeData> load_upgrade_data() {
     {
         cereal::BinaryInputArchive archive(file);
         archive(upgrades);
-		cout << "Deserialize upgrades" << endl;
     }
     //file.close();
     return upgrades;

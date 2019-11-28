@@ -1451,6 +1451,28 @@ void CombatCommander::updateDefenseSquads()
 	}
 	m_bot.Strategy().setIsEarlyRushed(earlyRushed);
 
+	// Find our Reaper that is the closest to the enemy base
+	const sc2::Unit * offensiveReaper = nullptr;
+	if (earlyRushed)
+	{
+		if (enemyBaseLocation)
+		{
+			for (auto & unitPair : m_bot.GetAllyUnits())
+			{
+				float minDist = 0.f;
+				if (unitPair.second.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
+				{
+					const auto dist = Util::DistSq(unitPair.second, enemyBaseLocation->getPosition());
+					if (!offensiveReaper || dist < minDist)
+					{
+						minDist = dist;
+						offensiveReaper = unitPair.second.getUnitPtr();
+					}
+				}
+			}
+		}
+	}
+
 	// If we have at least one region under attack
 	if(!regions.empty())
 	{
@@ -1464,6 +1486,9 @@ void CombatCommander::updateDefenseSquads()
 			auto & unit = unitPair.second;
 			if (unit.getType().isWorker() || unit.getType().isBuilding())
 				continue;	// We don't want to consider our workers and defensive buildings (they will automatically defend their region)
+
+			if (unit.getUnitPtr() == offensiveReaper)
+				continue;	// We want to keep at least one Reaper in the Harass squad (defined only when early rushed)
 
 			// We check how useful our unit would be for anti ground and anti air for each of our regions
 			for (auto & region : regions)
