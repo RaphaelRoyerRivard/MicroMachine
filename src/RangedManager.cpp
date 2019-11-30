@@ -638,9 +638,14 @@ bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool star
 			return true;
 	}
 
-	if (currentFrame >= frameCast + CYCLONE_LOCKON_CHANNELING_FRAME_COUNT && cyclone->engaged_target_tag == sc2::NullTag)
-		return true;
-
+	if (currentFrame >= frameCast + CYCLONE_LOCKON_CAST_FRAME_COUNT)
+	{
+		if (cyclone->engaged_target_tag == sc2::NullTag)
+			return true;
+		if (!Util::isUnitLockedOn(lockOnTarget))
+			return true;
+	}
+	
 	return false;
 }
 
