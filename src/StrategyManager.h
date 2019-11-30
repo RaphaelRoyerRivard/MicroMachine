@@ -29,7 +29,8 @@ enum StartingStrategy
 	PROXY_CYCLONES = 0,
 	EARLY_EXPAND = 1,
 	STANDARD = 2,
-	COUNT = 3
+	WORKER_RUSH = 3,
+	COUNT = 4
 };
 
 enum StrategyPostBuildOrder {

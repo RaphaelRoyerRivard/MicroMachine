@@ -20,7 +20,7 @@ public:
     void            onFrame();
     void            clearSquadData();
 
-    bool            canAssignUnitToSquad(const Unit & unit, const Squad & squad) const;
+    bool            canAssignUnitToSquad(const Unit & unit, const Squad & squad, bool considerMaxSquadDistance = true) const;
 	void			assignUnitToSquad(const sc2::Unit* unitptr, Squad & squad);
 	void            assignUnitToSquad(const Unit & unit, Squad & squad);
     void            addSquad(const std::string & squadName, const Squad & squad);

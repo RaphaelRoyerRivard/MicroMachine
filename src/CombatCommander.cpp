@@ -152,7 +152,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		updateClearExpandSquads();
 		updateScoutSquad();
 		updateHarassSquads();
-		//updateAttackSquads();
+		updateAttackSquads();
         //updateBackupSquads();
     }
 	drawCombatInformation();
@@ -808,7 +808,7 @@ void CombatCommander::updateScoutSquad()
 
 void CombatCommander::updateHarassSquads()
 {
-	Squad & harassSquad = m_squadData.getSquad("Harass");
+	Squad & harassSquad = m_squadData.getSquad("Harass");	
 	std::vector<Unit*> idleHellions;
 	std::vector<Unit*> idleMarines;
 	std::vector<Unit*> idleVikings;
@@ -943,14 +943,29 @@ void CombatCommander::updateHarassSquads()
 
 void CombatCommander::updateAttackSquads()
 {
-    if (!m_attackStarted)
+    /*if (!m_attackStarted)
     {
         return;
-    }
+    }*/
 
     Squad & mainAttackSquad = m_squadData.getSquad("MainAttack");
+	
+	if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH)
+	{
+		for (auto & scv : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SCV))
+		{
+			if (mainAttackSquad.getUnits().size() < 11 && m_squadData.canAssignUnitToSquad(scv, mainAttackSquad, true))
+			{
+				m_bot.Workers().getWorkerData().setWorkerJob(scv, WorkerJobs::Combat);
+				m_squadData.assignUnitToSquad(scv, mainAttackSquad);
+			}
+		}
+		
+		const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, getMainAttackLocation(), MainAttackOrderRadius, "Attack");
+		mainAttackSquad.setSquadOrder(mainAttackOrder);
+	}
 
-    for (auto & unit : m_combatUnits)
+    /*for (auto & unit : m_combatUnits)
     {   
         BOT_ASSERT(unit.isValid(), "null unit in combat units");
 
@@ -982,7 +997,7 @@ void CombatCommander::updateAttackSquads()
     {
         SquadOrder mainAttackOrder(SquadOrderTypes::Attack, getMainAttackLocation(), MainAttackOrderRadius, "Attack");
         mainAttackSquad.setSquadOrder(mainAttackOrder);
-    }
+    }*/
 }
 
 void CombatCommander::updateScoutDefenseSquad()

@@ -476,6 +476,10 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 			shouldSkip = true;
 		}
 	}
+	else if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH)
+	{
+		shouldSkip = true;
+	}
 	return shouldSkip;
 }
 
