@@ -130,6 +130,7 @@
     {
 		"AllowDebug"				: true,
 		"AllowKeyControl"			: true,
+		"TimeControl"				: true,
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 

@@ -52,6 +52,7 @@ BotConfig::BotConfig()
 	DrawRangedUnitActions = false;
 	DrawResourcesProximity = false;
 	DrawCombatInformation = false;
+	TimeControl = false;
 
     KiteWithRangedUnits = true;
     ScoutHarassEnemy = true;
@@ -214,6 +215,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawRangedUnitActions", debug, DrawRangedUnitActions);
 			JSONTools::ReadBool("DrawResourcesProximity", debug, DrawResourcesProximity);
 			JSONTools::ReadBool("DrawCombatInformation", debug, DrawCombatInformation);
+			JSONTools::ReadBool("TimeControl", debug, TimeControl);
 		}
     }
 

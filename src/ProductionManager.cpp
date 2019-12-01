@@ -224,46 +224,20 @@ void ProductionManager::manageBuildOrderQueue()
     // the current item to be used
     BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
 	int highestPriority = currentItem.priority;
-	int lowestMineralReq = -1;
-	int lowestGasReq = -1;
 	int additionalReservedMineral = 0;
 	int additionalReservedGas = 0;
 	bool isSupplyCap = false;
-
-	//Dont reserve ressources for worker or less important things
-	if (true)//highestPriority < 0)//Highest priority is 0 when queue is empty
-	{
-		lowestMineralReq = 0;
-		lowestGasReq = 0;
-	}
 	
     // while there is still something left in the queue
     while (!m_queue.isEmpty())
     {
-		//Get the lowest price for any top priority item in the queue.
-		if (currentItem.priority == highestPriority)
+#ifdef NO_BUILDING
+		if (currentItem.type.isBuilding())
 		{
-			if (lowestMineralReq == -1 || lowestMineralReq > m_bot.Data(currentItem.type).mineralCost)
-			{
-				lowestMineralReq = m_bot.Data(currentItem.type).mineralCost;
-			}
-			if (lowestGasReq == -1 || lowestGasReq > m_bot.Data(currentItem.type).gasCost)
-			{
-				lowestGasReq = m_bot.Data(currentItem.type).gasCost;
-			}
+			m_queue.removeCurrentHighestPriorityItem();
+			continue;
 		}
-
-		//If we currently have a high priority, do not reserve ressources. Otherwise reserve ressources
-		if (highestPriority == currentItem.priority)
-		{
-			additionalReservedMineral = 0;
-			additionalReservedGas = 0;
-		}
-		else
-		{
-			additionalReservedMineral = lowestMineralReq;
-			additionalReservedGas = lowestGasReq;
-		}
+#endif
 
 		if (!ShouldSkipQueueItem(currentItem))
 		{
@@ -488,10 +462,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #ifdef NO_PRODUCTION
 	return;
 #endif
-
-
-	/*if (m_bot.Config().AllowDebug && m_bot.GetCurrentFrame() % 10)
-		return;*/
 
 	const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
 	const float productionScore = getProductionScore();
