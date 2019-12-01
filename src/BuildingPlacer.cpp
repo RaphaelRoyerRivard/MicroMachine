@@ -17,7 +17,10 @@ void BuildingPlacer::onStart()
 	auto bases = m_bot.Bases().getBaseLocations();
 	for (auto baseLocation : bases)
 	{
-		auto basePosition = CCTilePosition(baseLocation->getDepotPosition().x, baseLocation->getDepotPosition().y);
+		const auto depotPosition = Util::GetPosition(baseLocation->getDepotPosition());
+		const auto centerOfMinerals = Util::GetPosition(baseLocation->getCenterOfMinerals());
+		const auto towardsOutside = Util::Normalized(depotPosition - centerOfMinerals);
+		const auto basePosition = Util::GetTilePosition(depotPosition + towardsOutside * 2);
 		auto minerals = baseLocation->getMinerals();
 		for (auto mineral : minerals)
 		{
@@ -27,7 +30,7 @@ void BuildingPlacer::onStart()
 		auto geysers = baseLocation->getGeysers();
 		for (auto geyser : geysers)
 		{
-			reserveTiles(basePosition, CCTilePosition(geyser.getTilePosition().x + 1, geyser.getTilePosition().y + 1));//+1 so we have the center tile instead of the bottom left.
+			reserveTiles(basePosition, geyser.getTilePosition());
 		}
 	}
 }
