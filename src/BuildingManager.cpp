@@ -933,7 +933,9 @@ void BuildingManager::checkForDeadTerranBuilders()
 			{
 				if(b.builderUnit.isValid() && b.builderUnit.isAlive())
 				{
-					// Builder is alright, probably just saving his ass, he'll come back
+					// Builder is alright, probably just saving his ass
+					if (b.builderUnit.getUnitPtr()->orders.empty())
+						b.builderUnit.rightClick(b.buildingUnit);
 					continue;
 				}
 				// grab the worker unit from WorkerManager which is closest to this final position
