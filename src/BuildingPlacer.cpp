@@ -353,7 +353,7 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	{
 		CCTilePosition position = b.getTilePosition();
 		auto tiles = getTilesForBuildLocation(position.x, position.y, b.getType(), 2, 2);
-		for each (auto tile in tiles)
+		for (auto tile : tiles)
 		{
 			if (tile.x == x && tile.y == y)
 			{
@@ -394,7 +394,7 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)
 {
 	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height);
-	for each  (auto tile in tiles)
+	for (auto tile : tiles)
 	{
 		m_reserveMap[tile.x][tile.y] = true;
 	}
@@ -468,7 +468,7 @@ void BuildingPlacer::drawReservedTiles()
 void BuildingPlacer::freeTiles(int bx, int by, int width, int height)
 {
 	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height);
-	for each  (auto tile in tiles)
+	for (auto tile : tiles)
 	{
 		m_reserveMap[tile.x][tile.y] = false;
 	}
