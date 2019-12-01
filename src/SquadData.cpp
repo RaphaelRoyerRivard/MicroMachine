@@ -171,8 +171,6 @@ void SquadData::assignUnitToSquad(const sc2::Unit* unitptr, Squad & squad)
 
 void SquadData::assignUnitToSquad(const Unit & unit, Squad & squad)
 {
-    BOT_ASSERT(canAssignUnitToSquad(unit, squad), "We shouldn't be re-assigning this unit!");
-
     Squad * previousSquad = getUnitSquad(unit);
 
     if (previousSquad)
@@ -183,7 +181,7 @@ void SquadData::assignUnitToSquad(const Unit & unit, Squad & squad)
     squad.addUnit(unit);
 }
 
-bool SquadData::canAssignUnitToSquad(const Unit & unit, const Squad & newSquad) const
+bool SquadData::canAssignUnitToSquad(const Unit & unit, const Squad & newSquad, bool considerMaxSquadDistance) const
 {
     const Squad * currentSquad = getUnitSquad(unit);
 
@@ -195,7 +193,7 @@ bool SquadData::canAssignUnitToSquad(const Unit & unit, const Squad & newSquad) 
     if (!canAssign)
         return false;
 
-    if (newSquad.getMaxDistanceFromCenter() > 0.f && !newSquad.isEmpty())
+    if (considerMaxSquadDistance && newSquad.getMaxDistanceFromCenter() > 0.f && !newSquad.isEmpty())
     {
         const float distance = Util::DistSq(unit.getPosition(), newSquad.calcCenter());
         const bool closeEnough = distance < newSquad.getMaxDistanceFromCenter() * newSquad.getMaxDistanceFromCenter();

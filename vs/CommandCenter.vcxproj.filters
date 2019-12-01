@@ -119,6 +119,63 @@
     <ClCompile Include="..\src\RepairStationManager.cpp">
       <Filter>global</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\buildorder\build_order.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\buildorder\build_state.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\buildorder\build_time_estimator.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\buildorder\optimizer.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\buildorder\tracker.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\caching\caching.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\caching\dependency_analyzer.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\combat\combat_environment.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\combat\combat_upgrades.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\combat\simulator.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\common\unit_lists.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\generated\abilities.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\utilities\influence.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\utilities\mappings.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\utilities\pathfinding.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\utilities\predicates.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\utilities\profiler.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\utilities\python_utils.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\libvoxelbot\utilities\unit_data_caching.cpp">
+      <Filter>libvoxelbot</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CCBot.h" />
@@ -245,6 +302,89 @@
     <ClInclude Include="..\src\RepairStationManager.h">
       <Filter>global</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\Behavior.h" />
+    <ClInclude Include="..\src\BehaviorTreeBuilder.h" />
+    <ClInclude Include="..\src\libvoxelbot\buildorder\build_order.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\buildorder\build_state.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\buildorder\build_time_estimator.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\buildorder\optimizer.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\buildorder\tracker.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\caching\dependency_analyzer.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\combat\combat_environment.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\combat\combat_upgrades.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\combat\simulator.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\common\unit_lists.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\generated\abilities.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\generated\abilities_data.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\generated\units_data.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\generated\upgrades_data.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\build_state_serialization.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\bump_allocator.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\cereal_json.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\influence.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\ladder_interface.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\mappings.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\pathfinding.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\predicates.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\profiler.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\python_utils.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\sc2_serialization.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\stdutils.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\libvoxelbot\utilities\unit_data_caching.h">
+      <Filter>libvoxelbot</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CommandCenter.rc" />
@@ -265,5 +405,33 @@
     <Filter Include="util">
       <UniqueIdentifier>{db91aa47-c051-43b3-a492-87f9619e4100}</UniqueIdentifier>
     </Filter>
+    <Filter Include="libvoxelbot">
+      <UniqueIdentifier>{1f9a5dfb-1820-480a-bb2f-23183868933b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\libvoxelbot\generated\abilities.bin">
+      <Filter>libvoxelbot</Filter>
+    </None>
+    <None Include="..\src\libvoxelbot\generated\units.data">
+      <Filter>libvoxelbot</Filter>
+    </None>
+    <None Include="..\src\libvoxelbot\generated\upgrades.bin">
+      <Filter>libvoxelbot</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\src\libvoxelbot\generated\abilities.txt">
+      <Filter>libvoxelbot</Filter>
+    </Text>
+    <Text Include="..\src\libvoxelbot\generated\units.txt">
+      <Filter>libvoxelbot</Filter>
+    </Text>
+    <Text Include="..\src\libvoxelbot\generated\units_verify.txt">
+      <Filter>libvoxelbot</Filter>
+    </Text>
+    <Text Include="..\src\libvoxelbot\generated\units_with_tech.txt">
+      <Filter>libvoxelbot</Filter>
+    </Text>
   </ItemGroup>
 </Project>

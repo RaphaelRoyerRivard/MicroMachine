@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "AcropolisLE.SC2Map",
+        "EnemyRace"                 : "Terran",
+        "MapFile"                   : "EphemeronLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -123,13 +123,14 @@
         "WorkersPerRefinery"        : 3,
         "BuildingSpacing"           : 0,
         "PylonSpacing"              : 3,
-        "SelectStartingBuildBasedOnHistory" : true
+        "SelectStartingBuildBasedOnHistory" : false
     },
 
     "Debug" :
     {
 		"AllowDebug"				: true,
 		"AllowKeyControl"			: true,
+		"TimeControl"				: true,
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true, 
@@ -144,7 +145,7 @@
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
-        "DrawSquadInfo"             : true,
+        "DrawSquadInfo"             : false,
         "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,

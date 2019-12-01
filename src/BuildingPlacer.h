@@ -26,9 +26,11 @@ public:
 
     // determines whether we can build at a given location
 	bool canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const;
-    bool canBuildHere(int bx, int by, const Building & b, bool ignoreReservedTiles = false) const;
-	bool canBuildHere(int bx, int by, const UnitType & type, bool ignoreReservedTiles) const;
-    bool canBuildHereWithSpace(int bx, int by, const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const;
+    bool canBuildHere(int bx, int by, const UnitType & type, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const;
+	std::vector<CCTilePosition> getTilesForBuildLocation(Unit building) const;
+	std::vector<CCTilePosition> getTilesForBuildLocation(int bx, int by, const UnitType & type, int width, int height) const;
+	CCTilePosition getCenterTileForBuildLocation(int bx, int by, const UnitType & type) const;
+	int getBuildingCenterOffset(int x, int y, int width, int height) const;
 
     // returns a build location near a building's desired location
     CCTilePosition getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const;

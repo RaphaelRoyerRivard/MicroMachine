@@ -88,7 +88,7 @@ void BuildingManager::lowPriorityChecks()
 	for (auto & building : m_buildings)
 	{
 		auto position = building.finalPosition;
-		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building, true))
+		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building.type, 0, true, false))
 		{
 			auto it = find(m_buildings.begin(), m_buildings.end(), building);
 			if (it != m_buildings.end())
@@ -772,8 +772,8 @@ void BuildingManager::constructAssignedBuildings()
 							{
 								// We want the worker to be close so it doesn't flag the base as blocked by error
 								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
-								// If we can't build here, we can flag it as blocked
-								const bool tilesBuildable = m_bot.Buildings().getBuildingPlacer().canBuildHereWithSpace(b.finalPosition.x, b.finalPosition.y, b, 0, false, false);
+								// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
+								const bool tilesBuildable = closeEnough || m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, false, false);
 								if (closeEnough || tilesBuildable)
 								{
 									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true);
@@ -933,7 +933,9 @@ void BuildingManager::checkForDeadTerranBuilders()
 			{
 				if(b.builderUnit.isValid() && b.builderUnit.isAlive())
 				{
-					// Builder is alright, probably just saving his ass, he'll come back
+					// Builder is alright, probably just saving his ass
+					if (b.builderUnit.getUnitPtr()->orders.empty())
+						b.builderUnit.rightClick(b.buildingUnit);
 					continue;
 				}
 				// grab the worker unit from WorkerManager which is closest to this final position
@@ -1413,6 +1415,7 @@ CCTilePosition BuildingManager::getNextBuildingLocation(Building & b, bool check
 			m_previousNextBuildingPositionByBase.push_back(std::pair<CCTilePosition, CCTilePosition>(basePosition, position));
 		}
 	}*/
+
 	return position;
 }
 

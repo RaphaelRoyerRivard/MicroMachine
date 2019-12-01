@@ -553,7 +553,6 @@ void MapTools::draw() const
 #ifdef PUBLIC_RELEASE
 	return;
 #endif
-
 	if (!m_bot.Config().DrawWalkableSectors && !m_bot.Config().DrawBuildableSectors && !m_bot.Config().DrawTileInfo)
 	{
 		return;
