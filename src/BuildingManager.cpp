@@ -1513,19 +1513,22 @@ Building BuildingManager::CancelBuilding(Building b)
 	if (it != m_buildings.end())
 	{
 		auto position = b.finalPosition;
-		m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight());
+		if (position != CCPosition())
+		{
+			m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight());
 
-		//Free oposite of reserved tiles in assignWorkersToUnassignedBuildings
-		switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
-		{
-			//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
-		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
-		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
-		case sc2::UNIT_TYPEID::TERRAN_STARPORT:
-		{
-			m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
-			m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
-		}
+			//Free oposite of reserved tiles in assignWorkersToUnassignedBuildings
+			switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
+			{
+				//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
+			case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+			case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+			case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+			{
+				m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
+				m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
+			}
+			}
 		}
 
 		if (b.reserveResources)
