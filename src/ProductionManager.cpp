@@ -470,7 +470,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const auto totalBaseCount = m_bot.Bases().getBaseCount(Players::Self, false);
 	const auto finishedBaseCount = m_bot.Bases().getBaseCount(Players::Self, true);
 	const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
-	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+	const auto starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 
 	const auto currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 	const auto startingStrategy = m_bot.Strategy().getStartingStrategy();
@@ -550,8 +550,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{//Addon
 						bool hasPicked = false;
 						MetaType toBuild;
-						const int starportAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true) +
-							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
+						const auto starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
+						const auto starportReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
+						const auto starportAddonCount = starportTechLabCount + starportReactorCount;
 						if (proxyCyclonesStrategy && reaperCount > 0 && firstBarracksTechlab)
 						{
 							firstBarracksTechlab = false;
@@ -560,7 +561,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						}
 						else if (starportCount > starportAddonCount)
 						{
-							toBuild = MetaTypeEnum::StarportTechLab;
+							if (m_bot.Strategy().enemyHasProtossHighTechAir() || (m_bot.Strategy().shouldProduceAntiAirOffense() && starportTechLabCount > starportReactorCount))
+								toBuild = MetaTypeEnum::StarportReactor;
+							else
+								toBuild = MetaTypeEnum::StarportTechLab;
 							hasPicked = true;
 						}
 
@@ -612,12 +616,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				//const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), false, true);
-				if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && hasFusionCore && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
-				{
-					queueTech(MetaTypeEnum::YamatoCannon);
-				}
-
 #ifndef NO_UNITS
 				if ((reaperCount == 0 || (!m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)) && !m_queue.contains(MetaTypeEnum::Reaper))
 				{
@@ -630,15 +628,32 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if(finishedBaseCount >= 3)
 				{
+					if (!m_bot.Strategy().enemyHasProtossHighTechAir())
+					{
 #ifndef NO_UNITS
-					if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
-					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
-					}
+						if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
+						{
+							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
+						}
 
-					if (hasFusionCore && m_bot.GetFreeMinerals() >= 450 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
+						if (hasFusionCore)
+						{
+							if (m_bot.GetFreeMinerals() >= 450 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
+							{
+								m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+							}
+
+							if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
+							{
+								queueTech(MetaTypeEnum::YamatoCannon);
+							}
+						}
+					}
+					else
 					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+						m_queue.removeAllOfType(MetaTypeEnum::Battlecruiser);
+						m_queue.removeAllOfType(MetaTypeEnum::YamatoCannon);
+						m_queue.removeAllOfType(MetaTypeEnum::FusionCore);
 					}
 #endif
 				}
@@ -719,7 +734,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (m_bot.Strategy().shouldProduceAntiAirOffense())
 				{
 #ifndef NO_UNITS
-					if ((vikingCount < bansheeCount || vikingCount < battlecruiserCount * 2.5f || (!hasFusionCore && stopBanshees)) && !m_queue.contains(MetaTypeEnum::Viking))
+					if ((vikingCount < bansheeCount || vikingCount < battlecruiserCount * 2.5f || (!hasFusionCore && stopBanshees) || m_bot.Strategy().enemyHasProtossHighTechAir()) && !m_queue.contains(MetaTypeEnum::Viking))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
@@ -1380,6 +1395,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 								break;
 							}
 						}
+						break;
 					}
 				}
 				if (!hasRequiredUnit) { continue; }
