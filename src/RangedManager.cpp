@@ -1602,7 +1602,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 			if (isInfestor || (targetHp >= 120.f && targetHp <= 240.f))	//+ 240.f * yamatos)
 			{
 				const float dps = isInfestor ? 1000 : Util::GetDpsForTarget(potentialTarget, battlecruiser, m_bot);
-				if (dps > maxDps || (dps == maxDps && targetHp > target->health + target->shield))
+				if (!target || dps > maxDps || (dps == maxDps && targetHp > target->health + target->shield))
 				{
 					maxDps = dps;
 					target = potentialTarget;

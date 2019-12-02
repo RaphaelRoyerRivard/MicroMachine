@@ -911,6 +911,7 @@ void CCBot::IssueCheats()
 	const int player2 = 2;
 	const auto mapCenter = Map().center();
 	const auto offset = Util::Normalized(mapCenter - m_startLocation) * 15;
+	//Strategy().setShouldProduceAntiAirOffense(true);
 	//Debug()->DebugGiveAllTech();
 	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS);
 	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
