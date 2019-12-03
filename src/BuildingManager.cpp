@@ -934,9 +934,15 @@ void BuildingManager::checkForDeadTerranBuilders()
 				if(b.builderUnit.isValid() && b.builderUnit.isAlive())
 				{
 					// Builder is alright, probably just saving his ass
-					if (b.builderUnit.getUnitPtr()->orders.empty())
+					const auto workerJob = m_bot.Workers().getWorkerData().getWorkerJob(b.builderUnit);
+					if (workerJob == WorkerJobs::Combat)
+						continue;
+					if (workerJob == WorkerJobs::Build)
+					{
 						b.builderUnit.rightClick(b.buildingUnit);
-					continue;
+						continue;
+					}
+					// else, we find a new worker
 				}
 				// grab the worker unit from WorkerManager which is closest to this final position
 				Unit newBuilderUnit = m_bot.Workers().getBuilder(b, false);

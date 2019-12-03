@@ -835,7 +835,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 		if (closeToGoal && !target)
 		{
 			if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
-				&& !m_bot.Strategy().enemyHasProtossHighTechAir()
+				&& (!m_bot.Strategy().enemyHasProtossHighTechAir() || m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size() + m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_CARRIER).size() <= 0)
 				&& !isCycloneHelper
 				&& Util::PathFinding::GetCombatInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f
 				&& Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f)
