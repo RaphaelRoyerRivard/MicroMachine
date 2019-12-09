@@ -33,7 +33,6 @@ const int REAPER_KD8_CHARGE_COOLDOWN = 314 + REAPER_KD8_CHARGE_FRAME_COUNT + 7;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 40;
 const int THOR_MORPH_FRAME_COUNT = 40;
-const float VIKING_LANDING_DISTANCE_FROM_GOAL = 10.f;
 const int ACTION_REEXECUTION_FREQUENCY = 50;
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
@@ -816,12 +815,15 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	return m_bot.GetStartLocation();
 }
 
-bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, bool unitShouldHeal, bool isCycloneHelper)
+bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, bool unitShouldHeal, bool isCycloneHelper)
 {
 	bool morph = false;
 	sc2::AbilityID morphAbility = 0;
-	const auto squaredDistanceToGoal = Util::DistSq(viking->pos, goal);
-	if(unitShouldHeal)
+	//const auto airInfluence = Util::PathFinding::GetTotalInfluenceOnTiles(viking->pos, true, 2.f, m_bot);
+	//const auto groundInfluence = Util::PathFinding::GetTotalInfluenceOnTiles(viking->pos, false, 2.f, m_bot);
+	const auto airInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(viking->pos), true, m_bot);
+	const auto groundInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot);
+	if(unitShouldHeal && airInfluence <= groundInfluence)
 	{
 		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 		{
@@ -829,26 +831,67 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 			morph = true;
 		}
 	}
-	else 
+	else
 	{
-		const bool closeToGoal = squaredDistanceToGoal < VIKING_LANDING_DISTANCE_FROM_GOAL * VIKING_LANDING_DISTANCE_FROM_GOAL;
-		if (closeToGoal && !target)
+		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 		{
-			if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
-				&& !m_bot.Strategy().enemyHasProtossHighTechAir()
-				&& !isCycloneHelper
-				&& Util::PathFinding::GetCombatInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f
-				&& Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot) == 0.f)
+			if (!target && threats.empty() && groundInfluence <= 0.f && !isCycloneHelper)
 			{
-				morphAbility = sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE;
-				morph = true;
+				const auto vikingAssaultRange = 6.f;
+				bool potentialTarget = false; 
+				for (const auto enemyUnit : targets)
+				{
+					const auto distanceToEnemy = Util::Dist(viking->pos, enemyUnit->pos);
+					const auto enemyGroundDps = Util::GetGroundDps(enemyUnit, m_bot);
+					if (enemyGroundDps >= 5.f)
+					{
+						const auto enemyThreatRange = Util::getThreatRange(false, viking->pos, viking->radius, enemyUnit, m_bot);
+						const auto enemyThreatSpeed = Util::getSpeedOfUnit(enemyUnit, m_bot);
+						if (distanceToEnemy <= enemyThreatRange + enemyThreatSpeed * 2.03f)	// 2.03 is maximum duration for landing
+						{
+							potentialTarget = false;
+							break;	// We do not want to land near a dangerous unit
+						}
+						continue;	// Do not land to attack dangerous ground units
+					}
+					if (enemyUnit->is_flying)
+						continue;	// We want to find a ground target
+					const auto realVikingRange = vikingAssaultRange + viking->radius + enemyUnit->radius;
+					const bool closeToEnemy = distanceToEnemy <= realVikingRange;
+					if (!closeToEnemy)
+						continue;	// Wait to be close to target until landing
+					potentialTarget = true;
+				}
+				if (potentialTarget)
+				{
+					morphAbility = sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE;
+					morph = true;
+				}
 			}
 		}
-		//TODO should morph to assault mode if there are close flying units
-		else if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT && !target && !m_bot.Strategy().shouldFocusBuildings())
+		else
 		{
-			morphAbility = sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE;
-			morph = true;
+			bool strongThreat = false;
+			if (target)
+			{
+				for (const auto threat : threats)
+				{
+					const auto threatDps = Util::GetDpsForTarget(threat, viking, m_bot);
+					if (threatDps >= 5.f)
+					{
+						strongThreat = true;
+						break;
+					}
+				}
+			}
+			if (!target || strongThreat)
+			{
+				if (airInfluence <= groundInfluence)
+				{
+					morphAbility = sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE;
+					morph = true;
+				}
+			}
 		}
 	}
 	if(morph)
@@ -1290,7 +1333,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	bool currentUnitHasACommand = false;
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
-	bool winSimulation = Util::SimulateCombat(closeUnits, threats);
+	bool winSimulation = Util::SimulateCombat(closeUnits, threats, m_bot);
 	m_bot.StopProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
 	const bool formulaWin = unitsPower >= targetsPower;
 	bool shouldFight = winSimulation && formulaWin;
@@ -1300,7 +1343,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const auto otherEnemies = threats.size() - tempests.size();
 		if (!winSimulation && otherEnemies > 0)
 		{
-			winSimulation = Util::SimulateCombat(vikings, tempests);
+			winSimulation = Util::SimulateCombat(vikings, tempests, m_bot);
 		}
 		shouldFight = winSimulation;
 	}
@@ -1504,7 +1547,7 @@ bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * range
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 	{
-		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, unitShouldHeal, isCycloneHelper))
+		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, threats, targets, unitShouldHeal, isCycloneHelper))
 			return true;
 	}
 

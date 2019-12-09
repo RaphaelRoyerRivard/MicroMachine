@@ -198,7 +198,7 @@ void ProductionManager::onUnitDestroy(const Unit & unit)
 
 void ProductionManager::manageBuildOrderQueue()
 {
-    // if there is nothing in the queue, oh well
+	// if there is nothing in the queue, oh well
 	if (!m_initialBuildOrderFinished && m_queue.isEmpty())
 	{
 		m_initialBuildOrderFinished = true;
@@ -734,9 +734,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (m_bot.Strategy().shouldProduceAntiAirOffense())
 				{
 #ifndef NO_UNITS
-					if ((vikingCount < bansheeCount || vikingCount < battlecruiserCount * 2.5f || (!hasFusionCore && stopBanshees) || m_bot.Strategy().enemyHasProtossHighTechAir()) && !m_queue.contains(MetaTypeEnum::Viking))
+					if (vikingCount < bansheeCount || vikingCount < battlecruiserCount * 2.5f || (!hasFusionCore && stopBanshees) || m_bot.Strategy().enemyHasProtossHighTechAir())
 					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+						if (vikingCount < 50 && !m_queue.contains(MetaTypeEnum::Viking))
+						{
+							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+						}
 					}
 #endif
 				}

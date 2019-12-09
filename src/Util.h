@@ -123,6 +123,7 @@ namespace Util
 		bool HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
 		bool HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, bool fromGround, CCBot & bot);
 		bool HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, bool fromGround, CCBot & bot);
+		float GetTotalInfluenceOnTiles(CCPosition position, bool isFlying, float radius, CCBot & bot);
 		float GetTotalInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 		float GetTotalInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
 		float GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
@@ -179,6 +180,7 @@ namespace Util
 	std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
 	std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot);
 	float getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCBot & m_bot);
+	float getThreatRange(bool isFlying, CCPosition position, float radius, const sc2::Unit * threat, CCBot & m_bot);
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
 	float getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
 	CCPosition getFacingVector(const sc2::Unit * unit);
@@ -267,5 +269,5 @@ namespace Util
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
 	float DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point);
 
-	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits);
+	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
 };

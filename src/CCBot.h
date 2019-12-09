@@ -83,6 +83,7 @@ class CCBot : public sc2::Agent
 	bool m_saidHallucinationLine;
 	std::string m_botVersion;
 	std::string m_opponentId;
+	bool m_player1IsHuman;
 
 	std::chrono::steady_clock::time_point m_lastFrameEndTime;
 
@@ -194,4 +195,6 @@ public:
 	bool shouldConcede() const { return m_concede; }
 	std::string GetOpponentId() const { return m_opponentId; }
 	void SetOpponentId(std::string opponentId) { m_opponentId = opponentId; }
+	bool IsPlayer1Human() const { return m_player1IsHuman; }
+	void SetPlayer1IsHuman(bool player1Human) { m_player1IsHuman = player1Human; }
 };

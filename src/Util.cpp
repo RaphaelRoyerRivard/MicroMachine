@@ -624,6 +624,26 @@ bool Util::PathFinding::HasCombatInfluenceOnTile(const CCTilePosition position, 
 	return GetCombatInfluenceOnTile(position, isFlying, bot) != 0.f;
 }
 
+float Util::PathFinding::GetTotalInfluenceOnTiles(CCPosition position, bool isFlying, float radius, CCBot & bot)
+{
+	float totalInfluence = 0.f;
+	const int minX = round(position.x - radius);
+	const int minY = round(position.y - radius);
+	const int maxX = round(position.x + radius);
+	const int maxY = round(position.y + radius);
+	for (int x = minX; x < maxX; ++x)
+	{
+		for (int y = minY; y < maxY; ++y)
+		{
+			const auto tilePosition = CCTilePosition(position.x + x, position.y + y);
+			if (DistSq(position, CCPosition(tilePosition.x + 0.5f, tilePosition.y + 0.5f)) > radius * radius)
+				continue;	// If center of tile is farther than radius, ignore
+			totalInfluence += GetTotalInfluenceOnTile(tilePosition, isFlying, bot);
+		}
+	}
+	return totalInfluence;
+}
+
 float Util::PathFinding::GetTotalInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
 {
 	if (unit->radius >= 1.f)
@@ -1716,7 +1736,21 @@ float Util::getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCB
 	const float heightBonus = unit->is_flying ? 0.f : Util::TerrainHeight(threat->pos) > Util::TerrainHeight(unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
 	const float tempestAirBonus = threat->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && unit->is_flying ? 2.f : 0.f;
 	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + tempestAirBonus + HARASS_THREAT_RANGE_BUFFER;
-	
+
+	return threatRange;
+}
+
+float Util::getThreatRange(bool isFlying, CCPosition position, float radius, const sc2::Unit * threat, CCBot & m_bot)
+{
+	const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
+	const float HARASS_THREAT_RANGE_BUFFER = 1.f;
+	const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
+
+	const float heightBonus = isFlying ? 0.f : Util::TerrainHeight(threat->pos) > Util::TerrainHeight(position) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
+	const float tempestAirBonus = threat->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && isFlying ? 2.f : 0.f;
+	const float threatWeaponRange = isFlying ? Util::GetAirAttackRange(threat, m_bot) : Util::GetGroundAttackRange(threat, m_bot);
+	const float threatRange = threatWeaponRange + radius + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + tempestAirBonus + HARASS_THREAT_RANGE_BUFFER;
+
 	return threatRange;
 }
 
@@ -2263,7 +2297,7 @@ void Util::TimeControlDecreaseSpeed()
 	}
 }
 
-bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits)
+bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot)
 {
 	CombatState state;
 	for(int i=0; i<2; ++i)
@@ -2296,5 +2330,5 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 	settings.maxTime = 100;
 	CombatResult outcome = m_simulator->predict_engage(state, settings);
 	const int winner = outcome.state.owner_with_best_outcome();
-	return winner == 1;
+	return winner == bot.IsPlayer1Human() ? 2 : 1;
 }
