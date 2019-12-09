@@ -16,6 +16,7 @@ CCBot::CCBot(std::string botVersion)
 	, m_saidHallucinationLine(false)
 	, m_botVersion(botVersion)
 	, m_previousMacroGameLoop(-1)
+	, m_player1IsHuman(false)
 {
 }
 
@@ -910,7 +911,10 @@ void CCBot::IssueCheats()
 	const int player1 = 1;
 	const int player2 = 2;
 	const auto mapCenter = Map().center();
-	const auto offset = Util::Normalized(mapCenter - m_startLocation) * 15;
+	const auto towardsCenter = Util::Normalized(mapCenter - m_startLocation);
+	const auto towardsCenterX = Util::Normalized(CCPosition(mapCenter.x - m_startLocation.x, 0));
+	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
+	const auto offset = towardsCenter * 15;
 	//Strategy().setShouldProduceAntiAirOffense(true);
 	//Debug()->DebugGiveAllTech();
 	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS);
@@ -932,7 +936,6 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE, mapCenter, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 20);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation + offset, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, m_startLocation + offset, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, mapCenter, player2, 1);
 	//for (const auto baseLocation : Bases().getBaseLocations())
@@ -941,6 +944,16 @@ void CCBot::IssueCheats()
 	//Workers
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, Players::Enemy, 10);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, m_startLocation, Players::Enemy, 1);
+	
+	//Test for reproducing Reaper bug against Marine and SCV in DiscoBloodbathLE
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation + towardsCenterX * 20, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation + towardsCenterX * 25, player2, 1);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BARRACKS, m_startLocation + towardsCenterX * 21 + towardsCenterY * 2, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BARRACKS, m_startLocation + towardsCenterX * 25 + towardsCenterY * 2, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, m_startLocation + towardsCenterX * 22 + towardsCenterY * 1, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation + towardsCenterX * 25 + towardsCenterY * 2, player1, 1);*/
 }
 
 uint32_t CCBot::GetCurrentFrame() const
