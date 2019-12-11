@@ -253,7 +253,7 @@ void ProductionManager::manageBuildOrderQueue()
 
 			const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
 			// Proxy buildings
-			if (m_bot.Strategy().isProxyStartingStrategy() && (currentItem.type == MetaTypeEnum::Barracks || (currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && factoryCount == 0)))
+			if (m_bot.Strategy().isProxyStartingStrategy() && m_bot.GetCurrentFrame() < 4032 /* 3 min */ && (currentItem.type == MetaTypeEnum::Barracks || (currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && factoryCount == 0)))
 			{
 				const auto proxyLocation = m_bot.Buildings().getProxyLocation();
 				Unit producer = getProducer(currentItem.type, Util::GetPosition(proxyLocation));
@@ -754,118 +754,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				break;
 			}
-			/*case TERRAN_VS_PROTOSS:
-			{
-				const auto vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
-				const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-
-				if (productionBuildingAddonCount < productionBuildingCount)
-				{//Addon
-					const int starportReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
-					if (starportCount > starportReactorCount && vikingCount > 0)
-					{
-						if (!m_queue.contains(MetaTypeEnum::StarportReactor))
-						{
-							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::StarportReactor, 1, false));
-						}
-					}
-
-					const int factoryAddonCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
-					if (factoryCount > factoryAddonCount)
-					{
-						if (!m_queue.contains(MetaTypeEnum::FactoryTechLab))
-						{
-							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::FactoryTechLab, 1, false));
-						}
-					}
-				}
-
-				//Building
-				bool hasPicked = false;
-				MetaType toBuild;
-				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-				if (barracksCount < 1)
-				{
-					toBuild = MetaTypeEnum::Barracks;
-					hasPicked = true;
-				}
-				else if (starportCount < 1)
-				{
-					toBuild = MetaTypeEnum::Starport;
-					hasPicked = true;
-				}
-				else if (factoryCount < finishedBaseCount)
-				{
-					toBuild = MetaTypeEnum::Factory;
-					hasPicked = true;
-				}
-
-				if (hasPicked && !m_queue.contains(toBuild) && (!m_queue.contains(MetaTypeEnum::CommandCenter) || m_bot.GetFreeMinerals() > 400 || m_bot.Bases().getFreeBaseLocationCount() == 0))
-				{
-					bool idleProductionBuilding = false;
-					const auto & productionBuildings = m_bot.GetAllyUnits(toBuild.getUnitType().getAPIUnitType());
-					const int totalProductionBuildings = m_bot.UnitInfo().getUnitTypeCount(Players::Self, toBuild.getUnitType(), false, true);
-					if (productionBuildings.size() == totalProductionBuildings)
-					{
-						for (const auto & productionBuilding : productionBuildings)
-						{
-							if (productionBuilding.isProductionBuildingIdle())
-							{
-								idleProductionBuilding = true;
-								break;
-							}
-						}
-						if (!idleProductionBuilding)
-							m_queue.queueAsLowestPriority(toBuild, false);
-					}
-				}
-
-				const int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
-#ifndef NO_UNITS
-				if (reaperCount == 0 && !m_queue.contains(MetaTypeEnum::Reaper))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
-				}
-#endif
-
-#ifndef NO_UNITS
-				if (m_bot.Strategy().enemyHasInvisible() && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
-				{
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Raven, false);
-				}
-#endif
-
-				//const int thorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Thor.getUnitType(), false, true);
-				//const auto hasArmory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Armory.getUnitType(), true, true) > 0;
-				const auto cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
-				//if (hasArmory && !m_queue.contains(MetaTypeEnum::Thor))
-				//{
-				//	m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Thor, 1, false));
-				//}
-
-				if (!m_queue.contains(MetaTypeEnum::Cyclone))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
-				}
-
-				if (cycloneCount > 0 && !isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
-				{
-					queueTech(MetaTypeEnum::MagFieldAccelerator);
-				}
-
-				if (m_bot.Strategy().shouldProduceAntiAirDefense() && !isTechQueuedOrStarted(MetaTypeEnum::HiSecAutoTracking) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HISECAUTOTRACKING))
-				{
-					queueTech(MetaTypeEnum::HiSecAutoTracking);
-				}
-
-#ifndef NO_UNITS
-				if ((vikingCount * 2 < cycloneCount || m_bot.Strategy().enemyHasProtossHighTechAir()) && !m_queue.contains(MetaTypeEnum::Viking))
-				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, -1, false));
-				}
-#endif
-				break;
-			}*/
 			case WORKER_RUSH_DEFENSE:
 			{
 				m_queue.removeAllOfType(MetaTypeEnum::Refinery);
