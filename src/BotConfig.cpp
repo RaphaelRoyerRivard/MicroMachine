@@ -173,6 +173,7 @@ void BotConfig::readConfigFile()
         JSONTools::ReadInt("PylongSpacing", macro, PylonSpacing);
         JSONTools::ReadInt("WorkersPerRefinery", macro, WorkersPerRefinery);
 		JSONTools::ReadBool("SelectStartingBuildBasedOnHistory", macro, SelectStartingBuildBasedOnHistory);
+		JSONTools::ReadBool("PrintGreetingMessage", macro, PrintGreetingMessage);
     }
 
     // Parse the Debug Options
@@ -216,7 +217,6 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawResourcesProximity", debug, DrawResourcesProximity);
 			JSONTools::ReadBool("DrawCombatInformation", debug, DrawCombatInformation);
 			JSONTools::ReadBool("TimeControl", debug, TimeControl);
-			JSONTools::ReadBool("PrintGreetingMessage", debug, PrintGreetingMessage);
 		}
     }
 
