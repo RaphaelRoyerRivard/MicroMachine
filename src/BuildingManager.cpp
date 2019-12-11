@@ -83,21 +83,23 @@ void BuildingManager::lowPriorityChecks()
 	}
 	m_lastLowPriorityFrame = frame;
 
-	//Validate buildings are not on creep
+	//Validate buildings are not on creep or blocked
 	std::vector<Building> toRemove;
 	for (auto & building : m_buildings)
 	{
+		if (building.status == BuildingStatus::UnderConstruction)//Ignore buildings already being built
+		{
+			continue;
+		}
+
 		auto position = building.finalPosition;
+		auto tag = (building.builderUnit.isValid() ? building.builderUnit.getTag() : 0);
 		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building.type, 0, true, false))
 		{
-			auto it = find(m_buildings.begin(), m_buildings.end(), building);
-			if (it != m_buildings.end())
+			auto remove = CancelBuilding(building);
+			if (remove.finalPosition != CCTilePosition(0,0))
 			{
-				auto remove = CancelBuilding(building);
-				if (remove.finalPosition != CCTilePosition(0,0))
-				{
-					toRemove.push_back(remove);
-				}
+				toRemove.push_back(remove);
 			}
 		}
 	}

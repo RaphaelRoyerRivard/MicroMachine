@@ -329,6 +329,11 @@ void ProductionManager::manageBuildOrderQueue()
 									m_bot.StopProfiling("2.2.3     Build without premovement");
 									break;
 								}
+								else if (!m_initialBuildOrderFinished)
+								{
+									Util::DebugLog(__FUNCTION__, "Failed to place " + currentItem.type.getName() + " during initial build order. Skipping.", m_bot);
+									m_queue.removeCurrentHighestPriorityItem();
+								}
 							}
 						}
 						m_bot.StopProfiling("2.2.3     Build without premovement");

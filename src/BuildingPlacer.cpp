@@ -109,7 +109,38 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 		}
 	}
 
+	auto pos = getBottomLeftForBuildLocation(bx, by, type);
+	auto radius = type.radius();
+
+	for (auto tagUnit : m_bot.GetEnemyUnits())
+	{
+		if (tagUnit.second.getType().isBuilding())
+		{
+			continue;
+		}
+
+		if (intersects(tagUnit.second, Util::GetPosition(pos), radius))
+		{
+			return false;
+		}
+	}
+
     return true;
+}
+
+//Check if a unit and a building location intersect
+bool BuildingPlacer::intersects(Unit unit, CCPosition buildingAbsoluteCenter, int buildingRadius) const
+{
+	auto x = unit.getPosition().x;
+	auto y = unit.getPosition().y;
+	auto r = unit.getUnitPtr()->radius;
+
+	float distanceX = abs(x - buildingAbsoluteCenter.x);
+	float distanceY = abs(y - buildingAbsoluteCenter.y);
+
+	float distance_sq = pow(distanceX, 2) + pow(distanceY, 2);
+
+	return distance_sq <= pow(r + buildingRadius, 2);
 }
 
 std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(Unit building) const
@@ -173,7 +204,7 @@ std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int
 	return tiles;
 }
 
-CCTilePosition BuildingPlacer::getCenterTileForBuildLocation(int bx, int by, const UnitType & type) const
+CCTilePosition BuildingPlacer::getBottomLeftForBuildLocation(int bx, int by, const UnitType & type) const
 {
 	int offset = getBuildingCenterOffset(bx, by, type.tileWidth(), type.tileHeight());
 
@@ -366,7 +397,7 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	}
 	
 	//check if buildable
-	if (!m_bot.Map().isBuildable(x, y))
+	if (!m_bot.Map().isBuildable(x, y) && !type.isGeyser())
 	{
 		return false;
 	}

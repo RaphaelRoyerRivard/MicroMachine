@@ -56,6 +56,7 @@ public:
     bool isAttackingBuilding() const;
     bool isAddon() const;
     CCPositionType getAttackRange() const;
+	float radius() const;
     int tileWidth() const;
     int tileHeight() const;
     int supplyProvided() const;
