@@ -44,7 +44,10 @@ void StrategyManager::onStart()
 		{
 			file >> j;
 			file.close();
+			std::stringstream opponentHistory;
 			auto jStrats = j["strategies"];
+			int totalWins = 0;
+			int totalLosses = 0;
 			int bestScore = 0;
 			int bestStrat = -1;
 			for (auto stratIndex = 0; stratIndex < jStrats.size(); ++stratIndex)
@@ -53,13 +56,35 @@ void StrategyManager::onStart()
 				int losses;
 				JSONTools::ReadInt("wins", jStrats[stratIndex], wins);
 				JSONTools::ReadInt("losses", jStrats[stratIndex], losses);
+				totalWins += wins;
+				totalLosses += losses;
 				if (bestStrat < 0 || wins - losses > bestScore)
 				{
 					bestScore = wins - losses;
 					bestStrat = stratIndex;
 				}
+				opponentHistory << STRATEGY_NAMES[stratIndex] << " (" << wins << "-" << losses << ")";
+				if (stratIndex < jStrats.size() - 1)
+					opponentHistory << ", ";
 			}
 			m_startingStrategy = StartingStrategy(bestStrat);
+			if (m_bot.Config().PrintGreetingMessage)
+			{
+				const auto winPercentage = totalWins + totalLosses > 0 ? round(totalWins * 100 / (totalWins + totalLosses)) : 100;
+				std::stringstream greetingMessage;
+				greetingMessage << "Greetings " << opponentId << ", my rudimentary database is telling me that I've won " << winPercentage << "% of our encounters. ";
+				if (winPercentage >= 95)
+					greetingMessage << "Prepare to get crushed.";
+				else if (winPercentage >= 50)
+					greetingMessage << "Do your best, as I won't spare you!";
+				else if (winPercentage >= 10)
+					greetingMessage << "Let's see if I can be lucky this time around!";
+				else
+					greetingMessage << "Ouch...";
+				m_bot.Actions()->SendChat(greetingMessage.str());
+				m_bot.Actions()->SendChat(opponentHistory.str(), sc2::ChatChannel::Team);
+			}
+			Util::Log(__FUNCTION__, opponentHistory.str(), m_bot);
 		}
 		else
 		{
@@ -72,7 +97,20 @@ void StrategyManager::onStart()
 			outFile << j.dump();
 			outFile.close();
 			m_startingStrategy = PROXY_CYCLONES;
+			if (m_bot.Config().PrintGreetingMessage)
+			{
+				std::stringstream greetingMessage;
+				greetingMessage << "Greetings stranger. I shall call you " << opponentId << " from now on. GLHF!";
+				m_bot.Actions()->SendChat(greetingMessage.str());
+			}
 		}
+		std::stringstream strategyMessage;
+		strategyMessage << "Chosen strategy: " << STRATEGY_NAMES[m_startingStrategy];
+		if (m_bot.Config().PrintGreetingMessage)
+		{
+			m_bot.Actions()->SendChat(strategyMessage.str(), sc2::ChatChannel::Team);
+		}
+		Util::Log(__FUNCTION__, strategyMessage.str(), m_bot);
 		std::ofstream outFile(path);
 		int wins;
 		JSONTools::ReadInt("wins", j["strategies"][int(m_startingStrategy)], wins);

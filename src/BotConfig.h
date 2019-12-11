@@ -65,6 +65,7 @@ public:
 	bool DrawResourcesProximity;
 	bool DrawCombatInformation;
 	bool TimeControl;
+	bool PrintGreetingMessage;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;

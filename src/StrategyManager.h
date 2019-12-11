@@ -23,6 +23,13 @@ struct Strategy
     Strategy(const std::string & name, const CCRace & race, const BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition);
 };
 
+enum StrategyPostBuildOrder {
+	NO_STRATEGY = -1,
+	TERRAN_CLASSIC = 0,
+	TERRAN_VS_PROTOSS = 1,
+	WORKER_RUSH_DEFENSE = 3
+};
+
 enum StartingStrategy
 {
 	// Always add new strategies at the end of the enum (before COUNT), otherwise the saved data will be wrong
@@ -33,15 +40,15 @@ enum StartingStrategy
 	COUNT = 4
 };
 
-enum StrategyPostBuildOrder {
-	NO_STRATEGY = -1,
-	TERRAN_CLASSIC = 0,
-	TERRAN_VS_PROTOSS = 1,
-	WORKER_RUSH_DEFENSE = 3
-};
-
 class StrategyManager
 {
+	std::vector<std::string> STRATEGY_NAMES = {
+		"PROXY_CYCLONES",
+		"EARLY_EXPAND",
+		"STANDARD",
+		"WORKER_RUSH"
+	};
+	
     CCBot & m_bot;
 
     CCRace                          m_selfRace;
