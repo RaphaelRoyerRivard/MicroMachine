@@ -237,7 +237,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (isCycloneHelper)
 	{
 		const auto helperGoalPosition = cycloneFlyingHelperIt->second.position;
-		if (Util::DistSq(rangedUnit->pos, helperGoalPosition) < 20 * 20)
+		if (isFlyingBarracks || Util::DistSq(rangedUnit->pos, helperGoalPosition) < 20 * 20)
 			goal = helperGoalPosition;
 		if (m_bot.Config().DrawHarassInfo)
 		{
@@ -272,7 +272,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		else if (isFlyingBarracks && (m_flyingBarracksShouldReachEnemyRamp || !isCycloneHelper))
 		{
 			goal = m_bot.Buildings().getEnemyMainRamp();
-			if (Util::DistSq(rangedUnit->pos, goal) < 1.f || !threats.empty())
+			if (Util::DistSq(rangedUnit->pos, goal) < 5 * 5 || !threats.empty())
 				m_flyingBarracksShouldReachEnemyRamp = false;
 		}
 		else if (isViking && !isCycloneHelper && !m_bot.Commander().Combat().hasEnoughVikingsAgainstTempests())
@@ -639,9 +639,7 @@ bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool star
 
 	if (currentFrame >= frameCast + CYCLONE_LOCKON_CAST_FRAME_COUNT)
 	{
-		if (cyclone->engaged_target_tag == sc2::NullTag)
-			return true;
-		if (!Util::isUnitLockedOn(lockOnTarget))
+		if (cyclone->engaged_target_tag == sc2::NullTag && !Util::isUnitLockedOn(lockOnTarget))
 			return true;
 	}
 	
@@ -2237,7 +2235,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 	}
 
 	// If there are Cyclones without target, follow them to give them vision
-	if(!cyclones.empty() && m_cycloneFlyingHelpers.size() < potentialFlyingCycloneHelpers.size())
+	if(!cyclones.empty() && !potentialFlyingCycloneHelpers.empty())
 	{
 		// Do not consider Cyclones without target that are already near a helper
 		sc2::Units cyclonesVector;
@@ -2250,6 +2248,7 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 				{
 					// that cyclone doesn't need help from another flying unit
 					covered = true;
+					m_cyclonesWithHelper[cyclone] = helper.first;
 					break;
 				}
 			}
