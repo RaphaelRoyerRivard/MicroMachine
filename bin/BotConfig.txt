@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.7.0",
+        "BotVersion"                : "1.7.1",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -25,7 +25,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Terran",
-        "MapFile"                   : "EphemeronLE.SC2Map",
+        "MapFile"                   : "DiscoBloodbathLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -123,7 +123,7 @@
         "WorkersPerRefinery"        : 3,
         "BuildingSpacing"           : 0,
         "PylonSpacing"              : 3,
-        "SelectStartingBuildBasedOnHistory" : false
+        "SelectStartingBuildBasedOnHistory" : true
     },
 
     "Debug" :
@@ -160,7 +160,8 @@
 		"DrawDamageHealthRatio"		: true,
         "DrawRangedUnitActions"     : false,
         "DrawResourcesProximity"    : false,
-        "DrawCombatInformation"     : false
+        "DrawCombatInformation"     : false,
+        "PrintGreetingMessage"      : false
     },
     
     "Modules" :

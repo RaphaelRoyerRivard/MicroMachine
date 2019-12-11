@@ -810,22 +810,25 @@ void CCBot::updatePreviousFrameEnemyUnitPos()
 
 void CCBot::checkForConcede()
 {
-	if(!m_concede && m_allyUnits.size() <= 5)
+	if(!m_concede && GetCurrentFrame() > 2688)	// 2 min
 	{
-		int buildings = 0;
+		Unit building;
 		for (const auto allyUnit : m_allyUnits)
 		{
 			if(allyUnit.second.getType().isBuilding())
 			{
-				buildings += 1;
-				if (buildings > 1)
+				if (building.isValid())
 					return;
+				building = allyUnit.second;
 			}
 		}
-		m_concede = true;
-		//Actions()->SendChat("Pineapple");
-		Util::Log(__FUNCTION__, "Concede", *this);
-		m_strategy.onEnd(false);
+		if (building.getHitPointsPercentage() < 50 && Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(building.getPosition()), building.getUnitPtr(), *this) > 0)
+		{
+			m_concede = true;
+			//Actions()->SendChat("Pineapple");
+			Util::Log(__FUNCTION__, "Concede", *this);
+			m_strategy.onEnd(false);
+		}
 	}
 }
 
