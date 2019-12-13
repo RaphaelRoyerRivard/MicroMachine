@@ -2257,32 +2257,66 @@ void RangedManager::CalcBestFlyingCycloneHelpers()
 		}
 
 		// Find clusters of Cyclones without target to use less potential helpers
-		const auto cycloneClusters = Util::GetUnitClusters(cyclonesVector, { sc2::UNIT_TYPEID::TERRAN_CYCLONE }, false, m_bot);
+		const auto cycloneClustersVector = Util::GetUnitClusters(cyclonesVector, { sc2::UNIT_TYPEID::TERRAN_CYCLONE }, false, m_bot);
+		std::list<Util::UnitCluster> cycloneClusters(cycloneClustersVector.begin(), cycloneClustersVector.end());
 
-		// Choose the best air unit to give vision to Cyclones without target
-		for(const auto & cycloneCluster : cycloneClusters)
+		if (potentialFlyingCycloneHelpers.size() <= cycloneClusters.size())
 		{
-			const sc2::Unit * closestHelper = nullptr;
-			float smallestDistSq = 0.f;
+			// Choose the best air unit to give vision to Cyclones without target
 			for (const auto potentialHelper : potentialFlyingCycloneHelpers)
 			{
-				const float distSq = Util::DistSq(potentialHelper->pos, cycloneCluster.m_center);
-				if(!closestHelper || distSq < smallestDistSq)
+				Util::UnitCluster closestCluster;
+				float smallestDistSq = 0.f;
+				for (const auto & cycloneCluster : cycloneClusters)
 				{
-					closestHelper = potentialHelper;
-					smallestDistSq = distSq;
+					const float distSq = Util::DistSq(potentialHelper->pos, cycloneCluster.m_center);
+					if (closestCluster.m_units.empty() || distSq < smallestDistSq)
+					{
+						closestCluster = cycloneCluster;
+						smallestDistSq = distSq;
+					}
+				}
+				if (!closestCluster.m_units.empty())
+				{
+					// Remove the helper from the set because it is now taken
+					cycloneClusters.remove(closestCluster);
+					// Save the helper
+					m_cycloneFlyingHelpers[potentialHelper] = FlyingHelperMission(ESCORT, closestCluster.m_center);
+					// Associate the helper with every Cyclone in that Cyclone cluster
+					for (const auto cyclone : closestCluster.m_units)
+					{
+						m_cyclonesWithHelper[cyclone] = potentialHelper;
+					}
 				}
 			}
-			if (closestHelper)
+		}
+		else
+		{
+			// Choose the best air unit to give vision to Cyclones without target
+			for (const auto & cycloneCluster : cycloneClusters)
 			{
-				// Remove the helper from the set because it is now taken
-				potentialFlyingCycloneHelpers.erase(closestHelper);
-				// Save the helper
-				m_cycloneFlyingHelpers[closestHelper] = FlyingHelperMission(ESCORT, cycloneCluster.m_center);
-				// Associate the helper with every Cyclone in that Cyclone cluster
-				for(const auto cyclone : cycloneCluster.m_units)
+				const sc2::Unit * closestHelper = nullptr;
+				float smallestDistSq = 0.f;
+				for (const auto potentialHelper : potentialFlyingCycloneHelpers)
 				{
-					m_cyclonesWithHelper[cyclone] = closestHelper;
+					const float distSq = Util::DistSq(potentialHelper->pos, cycloneCluster.m_center);
+					if (!closestHelper || distSq < smallestDistSq)
+					{
+						closestHelper = potentialHelper;
+						smallestDistSq = distSq;
+					}
+				}
+				if (closestHelper)
+				{
+					// Remove the helper from the set because it is now taken
+					potentialFlyingCycloneHelpers.erase(closestHelper);
+					// Save the helper
+					m_cycloneFlyingHelpers[closestHelper] = FlyingHelperMission(ESCORT, cycloneCluster.m_center);
+					// Associate the helper with every Cyclone in that Cyclone cluster
+					for (const auto cyclone : cycloneCluster.m_units)
+					{
+						m_cyclonesWithHelper[cyclone] = closestHelper;
+					}
 				}
 			}
 		}

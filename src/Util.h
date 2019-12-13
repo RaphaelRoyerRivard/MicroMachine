@@ -36,6 +36,11 @@ namespace Util
 		CCPosition m_center;
 		sc2::Units m_units;
 
+		UnitCluster()
+			: m_center(CCPosition())
+			, m_units({})
+		{};
+
 		UnitCluster(CCPosition center, sc2::Units units)
 			: m_center(center)
 			, m_units(units)
@@ -56,6 +61,10 @@ namespace Util
 		bool operator>(const UnitCluster & rhs) const
 		{
 			return rhs < *this;
+		}
+		bool operator==(const UnitCluster & rhs)
+		{
+			return m_center == rhs.m_center && m_units == rhs.m_units;
 		}
 	};
 
