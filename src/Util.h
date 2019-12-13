@@ -36,6 +36,11 @@ namespace Util
 		CCPosition m_center;
 		sc2::Units m_units;
 
+		UnitCluster()
+			: m_center(CCPosition())
+			, m_units({})
+		{};
+
 		UnitCluster(CCPosition center, sc2::Units units)
 			: m_center(center)
 			, m_units(units)
@@ -56,6 +61,10 @@ namespace Util
 		bool operator>(const UnitCluster & rhs) const
 		{
 			return rhs < *this;
+		}
+		bool operator==(const UnitCluster & rhs)
+		{
+			return m_center == rhs.m_center && m_units == rhs.m_units;
 		}
 	};
 
@@ -158,13 +167,13 @@ namespace Util
 
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
 	bool CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot);
-    float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
+    float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells = false);
     float GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
 	float GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot);
     float GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot);
     float GetMaxAttackRange(sc2::UnitTypeData unitTypeData, CCBot & bot);
-	float GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
-	float GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
+	float GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any, bool ignoreSpells = false);
+	float GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any, bool ignoreSpells = false);
 	float GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot);
 	float GetAirAttackRange(const sc2::Unit * unit, CCBot & bot);
 	float GetAttackRangeBonus(const sc2::UnitTypeID unitType, CCBot & bot);

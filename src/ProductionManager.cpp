@@ -628,7 +628,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				if(finishedBaseCount >= 3)
 				{
-					if (!m_bot.Strategy().enemyHasProtossHighTechAir())
+					const int enemyTempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
+					if (enemyTempestCount == 0)
 					{
 #ifndef NO_UNITS
 						if (!m_queue.contains(MetaTypeEnum::Battlecruiser))

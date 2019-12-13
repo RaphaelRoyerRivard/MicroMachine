@@ -129,9 +129,9 @@ void StrategyManager::onFrame(bool executeMacro)
 {
 	if (executeMacro)
 	{
-		if (isProxyStartingStrategy() && m_bot.GetGameLoop() >= 672 && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 30s
+		if (isProxyStartingStrategy())
 		{
-			if (m_startingStrategy == PROXY_CYCLONES)
+			if (m_bot.GetGameLoop() >= 448 && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 20s
 			{
 				const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
 				if (!hasFactory)
@@ -139,8 +139,9 @@ void StrategyManager::onFrame(bool executeMacro)
 					m_startingStrategy = STANDARD;
 				}
 			}
-			else
+			else if (isWorkerRushed())
 			{
+				m_bot.Workers().getWorkerData().clearProxyWorkers();
 				m_startingStrategy = STANDARD;
 			}
 		}

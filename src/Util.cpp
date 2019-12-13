@@ -1237,9 +1237,9 @@ bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 	return GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground) > 0.f;
 }
 
-float Util::GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where)
+float Util::GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where, bool ignoreSpells)
 {
-	float range = Util::GetSpecialCaseRange(unit->unit_type, where);
+	float range = Util::GetSpecialCaseRange(unit->unit_type, where, ignoreSpells);
 	if (range != 0)
 		return range;
 
@@ -1251,7 +1251,7 @@ float Util::GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType w
 	return range;
 }
 
-float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where)
+float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where, bool ignoreSpells)
 {
 	float range = 0.f;
 
@@ -1304,6 +1304,11 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	else if (unitType == sc2::UNIT_TYPEID::ZERG_HYDRALISK)
 	{
 		range = 6.f;	// Always consider they have their range upgrade because we don't want to detect it manually
+	}
+	else if (unitType == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+	{
+		if (!ignoreSpells)
+			range = 7.f;
 	}
 
 	return range;
@@ -1363,7 +1368,7 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 	return maxRange;
 }
 
-float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
+float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells)
 {
 	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
 		return 0.f;
@@ -1374,16 +1379,16 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
 	
-	float maxRange = 0.0f;
-	for (auto & weapon : unitTypeData.weapons)
-	{
-		// can attack target with a weapon
-		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
-			maxRange = weapon.range;
-	}
-
+	float maxRange = GetSpecialCaseRange(unit->unit_type, expectedWeaponType, ignoreSpells);
 	if (maxRange == 0.f)
-		maxRange = GetSpecialCaseRange(unit->unit_type, expectedWeaponType);
+	{
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			// can attack target with a weapon
+			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
+				maxRange = weapon.range;
+		}
+	}
 
 	if (maxRange > 0.f)
 	{
