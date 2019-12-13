@@ -56,7 +56,7 @@ public:
     const std::set<Unit> & getProxyWorkers() const;
 	bool isProxyWorker(const Unit & unit) const;
 	void setProxyWorker(const Unit & unit);
-	void WorkerData::clearProxyWorkers();
+	void clearProxyWorkers();
 	std::map<const BaseLocation*, std::list<Unit>>& getRepairStationWorkers();
 	void validateRepairStationWorkers();
     Unit getWorkerRepairTarget(const Unit & unit) const;
