@@ -27,7 +27,7 @@ void BuildingManager::onFirstFrame()
 		FindMainRamp(m_rampTiles);
 
 		auto tilesToBlock = FindRampTilesToPlaceBuilding(m_rampTiles);
-		PlaceSupplyDepots(tilesToBlock);
+		PlaceWallBuildings(tilesToBlock);
 	}
 }
 
@@ -303,7 +303,7 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 	return tilesToBlock;
 }
 
-void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock)
+void BuildingManager::PlaceWallBuildings(std::vector<CCTilePosition> tilesToBlock)
 {
 	std::list<CCTilePosition> buildingTiles;
 	for (auto & tile : tilesToBlock)
@@ -356,13 +356,53 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 		//TODO: Check remove the buildingTiles and try again in a different order. To try again, pop front tilesToBlock and push back the front.
 	}
 
+	//Calculate the center of the buildings
+	auto centerX = 0.f;
+	auto centerY = 0.f;
+	for (auto building : buildingTiles)
+	{
+		centerX += building.x;
+		centerY += building.y;
+	}
+	centerX /= buildingTiles.size();
+	centerY /= buildingTiles.size();
+
+	if (centerX > buildingTiles.front().x)
+	{
+		buildingTiles.front().x -= 1;
+	}
+	else
+	{
+		buildingTiles.front().x += 1;
+	}
+
+	if (centerY > buildingTiles.front().y)
+	{
+		buildingTiles.front().y -= 1;
+	}
+	else
+	{
+		buildingTiles.front().y += 1;
+	}
+
+	auto i = 0;
 	for (auto building : buildingTiles)
 	{
 		auto position = CCTilePosition(building.x + 1, building.y + 1);
-		m_nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(position);
+		if (i == 0)//0 is always the center building
+		{
+			//offset the barrack in the opposite direction of the center, so we can build it
+			m_nextBuildingPosition[MetaTypeEnum::Barracks.getUnitType()].push_back(position);
+			m_buildingPlacer.reserveTiles(position.x, position.y, 3, 3);
+		}
+		else
+		{
+			m_nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(position);
+			m_buildingPlacer.reserveTiles(position.x, position.y, 2, 2);
+		}
 		m_wallBuildingPosition.push_back(position);
 
-		m_buildingPlacer.reserveTiles(position.x, position.y, 2, 2);
+		i++;
 	}
 }
 
@@ -422,6 +462,18 @@ bool BuildingManager::isBeingBuilt(UnitType type) const
     }
 
     return false;
+}
+
+bool BuildingManager::isWallPosition(int x, int y) const
+{
+	for (auto wallPos : m_wallBuildingPosition)
+	{
+		if (x == wallPos.x && y == wallPos.y)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 int BuildingManager::countBeingBuilt(UnitType type, bool underConstruction) const
@@ -1099,7 +1151,6 @@ bool BuildingManager::isBuildingPositionExplored(const Building & b) const
     return m_bot.Map().isExplored(b.finalPosition);
 }
 
-
 char BuildingManager::getBuildingWorkerCode(const Building & b) const
 {
     return b.builderUnit.isValid() ? 'W' : 'X';
@@ -1519,19 +1570,26 @@ Building BuildingManager::CancelBuilding(Building b)
 		switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
 		{
 			//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
-		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
-		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
-		case sc2::UNIT_TYPEID::TERRAN_STARPORT:
-		{
-			m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
-			m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
-		}
+			case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+			case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+			case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+			{
+				m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
+				m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
+			}
 		}
 
+		//Free resources
 		if (b.reserveResources)
 		{
 			m_bot.FreeMinerals(b.type.mineralPrice());
 			m_bot.FreeGas(b.type.gasPrice());
+		}
+
+		//Free worker
+		if (b.builderUnit.isValid())
+		{
+			m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Idle);
 		}
 
 		return b;

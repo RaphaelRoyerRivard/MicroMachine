@@ -156,8 +156,8 @@ std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int
 	//width and height are not taken from the Type to allow a padding around the building of we want to.
 	int offset = getBuildingCenterOffset(bx, by, width, height);
 
-	bx -= offset;
-	by -= offset;
+	int x = bx - offset;
+	int y = by - offset;
 
 	//tiles for the actual building
 	std::vector<CCTilePosition> tiles;
@@ -165,7 +165,7 @@ std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int
 	{
 		for (int j = 0; j < height; j++)
 		{
-			tiles.push_back(CCTilePosition(bx + i, by + j));
+			tiles.push_back(CCTilePosition(x + i, y + j));
 		}
 	}
 
@@ -176,11 +176,15 @@ std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int
 		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
 		case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 		{
-			for (int i = 0; i < 2; i++)
+			//Shouldnt validate the addon if the building is in the wall
+			if (!m_bot.Buildings().isWallPosition(bx, by))//Must not consider the offset
 			{
-				for (int j = 0; j < 2; j++)
+				for (int i = 0; i < 2; i++)
 				{
-					tiles.push_back(CCTilePosition(bx + width + i, by + j));
+					for (int j = 0; j < 2; j++)
+					{
+						tiles.push_back(CCTilePosition(x + width + i, y + j));
+					}
 				}
 			}
 		}
@@ -196,7 +200,7 @@ std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int
 		{
 			for (int i = 0; i < width; i++)
 			{
-				tiles.push_back(CCTilePosition(bx + i, by - 1));
+				tiles.push_back(CCTilePosition(x + i, y - 1));
 			}
 		}
 	}

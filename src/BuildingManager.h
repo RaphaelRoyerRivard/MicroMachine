@@ -88,6 +88,7 @@ public:
 	const sc2::Unit *	getLargestCloseMineral(const Unit unit, bool checkUnderAttack = false, std::vector<CCUnitID> skipMinerals = {}) const;
 
     bool                isBeingBuilt(UnitType type) const;
+	bool				isWallPosition(int x, int y) const;
 	int					countBeingBuilt(UnitType type, bool underConstruction = false) const;
 	int					countBoughtButNotBeingBuilt(sc2::UNIT_TYPEID type) const;
 
