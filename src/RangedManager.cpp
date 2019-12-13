@@ -272,7 +272,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		else if (isFlyingBarracks && (m_flyingBarracksShouldReachEnemyRamp || !isCycloneHelper))
 		{
 			goal = m_bot.Buildings().getEnemyMainRamp();
-			if (Util::DistSq(rangedUnit->pos, goal) < 5 * 5 || !threats.empty())
+			if (Util::DistSq(rangedUnit->pos, goal) < 5 * 5 || !threats.empty() || (isCycloneHelper && cycloneFlyingHelperIt->second.goal == TRACK))
 				m_flyingBarracksShouldReachEnemyRamp = false;
 		}
 		else if (isViking && !isCycloneHelper && !m_bot.Commander().Combat().hasEnoughVikingsAgainstTempests())
@@ -341,7 +341,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		else if (!shouldAttack)
 			unitAttackRange = 14.f + rangedUnit->radius + target->radius;
 		else
-			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
+			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot, true);
 		targetInAttackRange = distSqToTarget <= unitAttackRange * unitAttackRange;
 
 #ifndef PUBLIC_RELEASE
