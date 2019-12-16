@@ -64,9 +64,9 @@ void CCBot::OnGameStart() //full start
 
 	// Create logfile
 	Util::CreateLog(*this);
-	Util::Log(__FUNCTION__, m_botVersion, *this);
-	std::cout << "Version " << m_botVersion << std::endl;
-	Actions()->SendChat(m_botVersion);
+	m_versionMessage << "MicroMachine v" << m_botVersion;
+	Util::Log(__FUNCTION__, m_versionMessage.str(), *this);
+	std::cout << m_versionMessage.str() << std::endl;
 	selfRace = GetPlayerRace(Players::Self);
     
     setUnits();
@@ -94,6 +94,12 @@ void CCBot::OnStep()
 {
 	StopProfiling("0 Starcraft II");
 	StartProfiling("0.0 OnStep");	//Do not remove
+	if (!m_versionMessage.str().empty())
+	{
+		Actions()->SendChat(m_versionMessage.str(), sc2::ChatChannel::Team);
+		m_versionMessage.str("");
+		m_versionMessage.clear();
+	}
 	m_gameLoop = Observation()->GetGameLoop();
 	if (m_gameLoop % Util::DELAY_BETWEEN_ERROR == 0)
 	{

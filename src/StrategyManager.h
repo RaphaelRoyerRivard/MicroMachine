@@ -71,6 +71,9 @@ class StrategyManager
 	bool m_enemyHasSeveralArmoredUnits = false;
 	bool m_focusBuildings = false;
 	std::set<sc2::UPGRADE_ID> m_completedUpgrades;
+	std::stringstream m_greetingMessage;
+	std::stringstream m_opponentHistory;
+	std::stringstream m_strategyMessage;
 
     const UnitPairVector getProtossBuildOrderGoal() const;
     const UnitPairVector getTerranBuildOrderGoal() const;

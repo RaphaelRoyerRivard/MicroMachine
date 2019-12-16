@@ -84,6 +84,7 @@ class CCBot : public sc2::Agent
 	std::string m_botVersion;
 	std::string m_opponentId;
 	bool m_player1IsHuman;
+	std::stringstream m_versionMessage;
 
 	std::chrono::steady_clock::time_point m_lastFrameEndTime;
 

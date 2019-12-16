@@ -757,7 +757,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case WORKER_RUSH_DEFENSE:
 			{
-				m_queue.removeAllOfType(MetaTypeEnum::Refinery);
+				m_queue.clearAll();
+				/*m_queue.removeAllOfType(MetaTypeEnum::Refinery);
 				if(m_bot.GetFreeGas() >= 50)
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Marine);
@@ -769,8 +770,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				else if (!m_queue.contains(MetaTypeEnum::Marine))
 				{
 					m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
-				}
-				return;
+				}*/
+				break;
 			}
 			case NO_STRATEGY:
 				break;
