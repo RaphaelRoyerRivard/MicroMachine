@@ -249,6 +249,15 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 	bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
+	if (isCyclone)
+	{
+		auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
+		const auto it = lockOnCastedFrame.find(rangedUnit);
+		if (it != lockOnCastedFrame.end())
+		{
+			unitShouldHeal = false;
+		}
+	}
 	if (unitShouldHeal)
 	{
 		CCPosition healGoal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);

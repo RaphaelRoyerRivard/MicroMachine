@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.7.1",
+        "BotVersion"                : "1.7.2",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,7 +24,7 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Terran",
+        "EnemyRace"                 : "Protoss",
         "MapFile"                   : "DiscoBloodbathLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
@@ -123,7 +123,8 @@
         "WorkersPerRefinery"        : 3,
         "BuildingSpacing"           : 0,
         "PylonSpacing"              : 3,
-        "SelectStartingBuildBasedOnHistory" : true
+        "SelectStartingBuildBasedOnHistory" : true,
+        "PrintGreetingMessage"      : true
     },
 
     "Debug" :
@@ -160,8 +161,7 @@
 		"DrawDamageHealthRatio"		: true,
         "DrawRangedUnitActions"     : false,
         "DrawResourcesProximity"    : false,
-        "DrawCombatInformation"     : false,
-        "PrintGreetingMessage"      : false
+        "DrawCombatInformation"     : false
     },
     
     "Modules" :
