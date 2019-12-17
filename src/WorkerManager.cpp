@@ -1409,17 +1409,8 @@ bool WorkerManager::isBuilder(Unit worker) const
 }
 
 bool WorkerManager::isReturningCargo(Unit worker) const
-{//(ReturnCargo)
-	auto orders = worker.getUnitPtr()->orders;
-	if (orders.size() > 0)
-	{
-		//Not checking the abilities HARVEST_RETURN_DRONE, HARVEST_RETURN_MULE, HARVEST_RETURN_PROBE and HARVEST_RETURN_SCV, because they seem to never be used.
-		if (orders.at(0).ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
-		{
-			return true;
-		}
-	}
-	return false;
+{
+	return worker.isReturningCargo();
 }
 
 bool WorkerManager::canHandleMoreRefinery() const

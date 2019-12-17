@@ -71,6 +71,7 @@ public:
     bool isConstructing(const UnitType & type) const;
 	bool isConstructingAnything() const;
 	bool isCounterToUnit(const Unit& unit) const;
+	bool isReturningCargo() const;
 	sc2::Tag getAddonTag() const;
 	bool isProductionBuildingIdle() const;
 	bool isMoving() const;

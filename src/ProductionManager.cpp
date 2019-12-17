@@ -758,19 +758,24 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case WORKER_RUSH_DEFENSE:
 			{
 				m_queue.clearAll();
-				/*m_queue.removeAllOfType(MetaTypeEnum::Refinery);
-				if(m_bot.GetFreeGas() >= 50)
+				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, false);
+				if (barracksCount > 0 && m_bot.GetFreeMinerals() >= 50)
 				{
-					m_queue.removeAllOfType(MetaTypeEnum::Marine);
-					if(!m_queue.contains(MetaTypeEnum::Reaper))
+					if (m_bot.GetFreeGas() >= 50)
 					{
-						m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
+						if (!m_queue.contains(MetaTypeEnum::Reaper))
+						{
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
+						}
+					}
+					else
+					{
+						if (!m_queue.contains(MetaTypeEnum::Marine))
+						{
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+						}
 					}
 				}
-				else if (!m_queue.contains(MetaTypeEnum::Marine))
-				{
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
-				}*/
 				break;
 			}
 			case NO_STRATEGY:

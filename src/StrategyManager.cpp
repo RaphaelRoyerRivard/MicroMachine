@@ -125,7 +125,7 @@ void StrategyManager::onStart()
 
 void StrategyManager::onFrame(bool executeMacro)
 {
-	if (m_bot.Config().PrintGreetingMessage)
+	if (m_bot.Config().PrintGreetingMessage && m_bot.GetCurrentFrame() >= 5)
 	{
 		if (!m_greetingMessage.str().empty())
 		{
@@ -162,6 +162,26 @@ void StrategyManager::onFrame(bool executeMacro)
 			{
 				m_bot.Workers().getWorkerData().clearProxyWorkers();
 				m_startingStrategy = STANDARD;
+			}
+		}
+		else if (m_startingStrategy == WORKER_RUSH)
+		{
+			const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
+			if (!enemyUnits.empty())
+			{
+				bool groundUnit = false;
+				for (const auto & enemyUnit : enemyUnits)
+				{
+					if (!enemyUnit.isFlying())
+					{
+						groundUnit = true;
+						break;
+					}
+				}
+				if (!groundUnit)
+				{
+					m_startingStrategy = STANDARD;
+				}
 			}
 		}
 	}
