@@ -950,11 +950,11 @@ void CombatCommander::updateAttackSquads()
 
     Squad & mainAttackSquad = m_squadData.getSquad("MainAttack");
 	
-	if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH)
+	if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH && m_bot.GetCurrentFrame() >= 224)
 	{
 		for (auto & scv : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SCV))
 		{
-			if (mainAttackSquad.getUnits().size() < 11 && m_squadData.canAssignUnitToSquad(scv, mainAttackSquad, true))
+			if (!scv.isReturningCargo() && mainAttackSquad.getUnits().size() < 11 && m_squadData.canAssignUnitToSquad(scv, mainAttackSquad, true))
 			{
 				m_bot.Workers().getWorkerData().setWorkerJob(scv, WorkerJobs::Combat);
 				m_squadData.assignUnitToSquad(scv, mainAttackSquad);

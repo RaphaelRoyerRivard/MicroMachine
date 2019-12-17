@@ -94,13 +94,13 @@ void CCBot::OnStep()
 {
 	StopProfiling("0 Starcraft II");
 	StartProfiling("0.0 OnStep");	//Do not remove
-	if (!m_versionMessage.str().empty())
+	m_gameLoop = Observation()->GetGameLoop();
+	if (!m_versionMessage.str().empty() && m_gameLoop >= 5)
 	{
 		Actions()->SendChat(m_versionMessage.str(), sc2::ChatChannel::Team);
 		m_versionMessage.str("");
 		m_versionMessage.clear();
 	}
-	m_gameLoop = Observation()->GetGameLoop();
 	if (m_gameLoop % Util::DELAY_BETWEEN_ERROR == 0)
 	{
 		Util::ClearDisplayedErrors();
