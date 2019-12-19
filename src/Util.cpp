@@ -437,7 +437,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				const float nodeCost = (influenceOnTile + creepCost + secondaryGoalCost + turnCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
 				totalCost += currentNode->cost + nodeCost;
 
-				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition, secondaryGoalPosition);
+				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition, secondaryGoalPosition, bot);
 				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic);
 
 				if (bestCosts.find(neighbor->getId()) != bestCosts.end() && bestCosts[neighbor->getId()] <= totalCost)
@@ -563,11 +563,14 @@ std::list<CCPosition> Util::PathFinding::GetPositionListFromPath(IMNode* current
 	return returnPositions;
 }
 
-float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to, CCTilePosition secondaryGoal)
+float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to, CCTilePosition secondaryGoal, CCBot & bot)
 {
 	float heuristic = Util::Dist(from, to) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER;
-	if(secondaryGoal != CCTilePosition())
-		heuristic += Util::Dist(from, secondaryGoal) * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER / 2;
+	if (secondaryGoal != CCTilePosition())
+	{
+		const auto dist = bot.Map().getGroundDistance(GetPosition(from), GetPosition(secondaryGoal));
+		heuristic += dist * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER * 2;
+	}
 	return heuristic;
 }
 
