@@ -758,23 +758,21 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case WORKER_RUSH_DEFENSE:
 			{
 				m_queue.clearAll();
-				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, false);
-				if (barracksCount > 0 && m_bot.GetFreeMinerals() >= 50)
+				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, false);
+				if (barracksCount > 0)
 				{
 					if (m_bot.GetFreeGas() >= 50)
 					{
-						if (!m_queue.contains(MetaTypeEnum::Reaper))
-						{
-							m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
-						}
+						m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
 					}
 					else
 					{
-						if (!m_queue.contains(MetaTypeEnum::Marine))
-						{
-							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
-						}
+						m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
 					}
+				}
+				else
+				{
+					m_queue.queueAsHighestPriority(MetaTypeEnum::Barracks, false);
 				}
 				break;
 			}

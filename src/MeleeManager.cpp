@@ -26,6 +26,7 @@ void MeleeManager::setTargets(const std::vector<Unit> & targets)
 void MeleeManager::executeMicro()
 {
     const std::vector<Unit> & meleeUnits = getUnits();
+	bool hasBarracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS).size() > 0;
 
     // for each meleeUnit
     for (auto & meleeUnit : meleeUnits)
@@ -65,7 +66,7 @@ void MeleeManager::executeMicro()
 					const sc2::Unit* closestRepairTarget = nullptr;
 					float distanceToClosestRepairTarget = 0;
 					// If the melee unit is a worker
-					if (meleeUnit.getType().isWorker() && m_bot.GetMinerals() > 0 && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
+					if (meleeUnit.getType().isWorker() && m_bot.GetMinerals() > (hasBarracks ? 50 : 0) && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
 					{
 						const float range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
 						const float distSq = Util::DistSq(meleeUnit, target);

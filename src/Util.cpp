@@ -2338,5 +2338,6 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 	settings.maxTime = 100;
 	CombatResult outcome = m_simulator->predict_engage(state, settings);
 	const int winner = outcome.state.owner_with_best_outcome();
-	return winner == bot.IsPlayer1Human() ? 2 : 1;
+	const auto selfPlayer = bot.IsPlayer1Human() ? 2 : 1;
+	return winner == selfPlayer;
 }
