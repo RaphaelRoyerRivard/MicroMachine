@@ -126,7 +126,7 @@ namespace Util
 		CCTilePosition GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		CCPosition GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, CCBot & bot);
 		std::list<CCPosition> GetPositionListFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
-		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to, CCTilePosition secondaryGoal);
+		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to, CCTilePosition secondaryGoal, CCBot & bot);
 		bool HasInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
 		bool HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		bool HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
