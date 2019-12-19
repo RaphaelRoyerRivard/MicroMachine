@@ -1450,7 +1450,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		{
 			// Attack the target
 			const int attackDuration = canAttackNow ? getAttackDuration(unit, unitTarget) : 0;
-			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, false, attackDuration);
+			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, true, attackDuration);
 			PlanAction(unit, action);
 		}
 		if (unit == rangedUnit)
