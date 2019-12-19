@@ -1482,6 +1482,11 @@ std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
 	return trainers;
 }
 
+void ProductionManager::clearQueue()
+{
+	m_queue.clearAll();
+}
+
 bool ProductionManager::isTechQueuedOrStarted(const MetaType & type)
 {
 	return isTechStarted(type) || m_queue.contains(type);
