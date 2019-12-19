@@ -156,6 +156,7 @@ void StrategyManager::onFrame(bool executeMacro)
 				if (!hasFactory)
 				{
 					m_startingStrategy = STANDARD;
+					m_bot.Commander().Production().clearQueue();
 				}
 			}
 			else if (isWorkerRushed())
