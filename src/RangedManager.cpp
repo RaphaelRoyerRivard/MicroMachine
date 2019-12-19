@@ -168,13 +168,18 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	CalcBestFlyingCycloneHelpers();
 	m_bot.StopProfiling("0.10.4.1.5.3        CalcBestFlyingCycloneHelpers");
 
+	m_bot.StartProfiling("0.10.4.1.5.4        GetAbilitiesForUnits");
+	auto rangedUnitsAbilities = m_bot.Query()->GetAbilitiesForUnits(rangedUnits);
+	m_bot.StopProfiling("0.10.4.1.5.4        GetAbilitiesForUnits");
+
 	m_bot.StartProfiling("0.10.4.1.5.1        HarassLogicForUnit");
 	if (m_bot.Config().EnableMultiThreading)
 	{
 		std::list<std::thread*> threads;
-		for (auto rangedUnit : rangedUnits)
+		for (int i = 0; i < rangedUnits.size(); ++i)
 		{
-			std::thread* t = new std::thread(&RangedManager::HarassLogicForUnit, this, rangedUnit, std::ref(rangedUnits), std::ref(rangedUnitTargets));
+			auto rangedUnit = rangedUnits[i];
+			std::thread* t = new std::thread(&RangedManager::HarassLogicForUnit, this, rangedUnit, std::ref(rangedUnits), std::ref(rangedUnitTargets), std::ref(rangedUnitsAbilities[i]));
 			threads.push_back(t);
 		}
 		for (auto t : threads)
@@ -185,9 +190,10 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	}
 	else
 	{
-		for (auto rangedUnit : rangedUnits)
+		for (int i=0; i<rangedUnits.size(); ++i)
 		{
-			HarassLogicForUnit(rangedUnit, rangedUnits, rangedUnitTargets);
+			auto rangedUnit = rangedUnits[i];
+			HarassLogicForUnit(rangedUnit, rangedUnits, rangedUnitTargets, rangedUnitsAbilities[i]);
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1        HarassLogicForUnit");
@@ -197,7 +203,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	m_bot.StopProfiling("0.10.4.1.5.2        ExecuteActions");
 }
 
-void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets)
+void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets, sc2::AvailableAbilities &rangedUnitAbilities)
 {
 	if (!rangedUnit)
 		return;
@@ -219,7 +225,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (rangedUnit->is_selected)
 		m_bot.Strategy();
 
-	if (isCyclone && MonitorCyclone(rangedUnit))
+	if (isCyclone && MonitorCyclone(rangedUnit, rangedUnitAbilities))
 		return;
 
 	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
@@ -314,7 +320,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	bool cycloneShouldStayCloseToTarget = false;
 	if (isCyclone)
 	{
-		ExecuteCycloneLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, cycloneShouldStayCloseToTarget, rangedUnits, threats, target, goal);
+		ExecuteCycloneLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, cycloneShouldStayCloseToTarget, rangedUnits, threats, target, goal, rangedUnitAbilities);
 	}
 
 	const auto distSqToTarget = target ? Util::DistSq(rangedUnit->pos, target->pos) : 0.f;
@@ -538,7 +544,7 @@ bool RangedManager::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
 	return m_bot.GetGameLoop() < availableFrame;
 }
 
-bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
+bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbilities & abilities)
 {
 	// Toggle off the auto-cast of Lock-On on the second frame of existence of the Cyclone (just to make sure there is no bug with the toggle)
 	auto & newCyclones = m_bot.Commander().Combat().getNewCyclones();
@@ -565,7 +571,7 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
 		// If the Cyclone is still casting the Lock On ability
 		if (it->second.second + CYCLONE_LOCKON_CAST_FRAME_COUNT > currentFrame)
 		{
-			if (IsCycloneLockOnCanceled(cyclone, false))
+			if (IsCycloneLockOnCanceled(cyclone, false, abilities))
 			{
 				// Query the game to make sure the Lock-On has really been canceled while casting
 				if(QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON))
@@ -611,7 +617,7 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone)
 	return false;
 }
 
-bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started) const
+bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started, sc2::AvailableAbilities & abilities) const
 {
 	auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
@@ -648,8 +654,22 @@ bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool star
 
 	if (currentFrame >= frameCast + CYCLONE_LOCKON_CAST_FRAME_COUNT)
 	{
+		// Sometimes, even though the target is still in range and visible, the Cyclone will have no engaged target and the target will not have the buff.
+		// In that case, we need to check if the ability can still be canceled. If so, the Lock-On isn't finished.
 		if (cyclone->engaged_target_tag == sc2::NullTag && !Util::isUnitLockedOn(lockOnTarget))
-			return true;
+		{
+			bool canceled = true;
+			for (auto & ability : abilities.abilities)
+			{
+				if (ability.ability_id == sc2::ABILITY_ID::CANCEL)
+				{
+					canceled = false;
+					break;
+				}
+			}
+			if (canceled)
+				return true;
+		}
 	}
 	
 	return false;
@@ -1009,7 +1029,7 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 	return dirVec;
 }
 
-const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * target)
+const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * target, sc2::AvailableAbilities & abilities)
 {
 	const uint32_t currentFrame = m_bot.GetCurrentFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
@@ -1021,7 +1041,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 		const auto it = lockOnTargets.find(cyclone);
 		if (it != lockOnTargets.end())
 		{
-			if (IsCycloneLockOnCanceled(cyclone, true))
+			if (IsCycloneLockOnCanceled(cyclone, true, abilities))
 			{
 				lockOnTargets.erase(cyclone);
 				setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone, currentFrame + CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT);
@@ -1443,9 +1463,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	return currentUnitHasACommand;
 }
 
-void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal)
+void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal, sc2::AvailableAbilities & abilities)
 {
-	target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target);
+	target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, rangedUnits, threats, target, abilities);
 
 	// If the Cyclone has a its Lock-On on a target with a big range (like a Tempest or Tank)
 	if (!shouldAttack && !cycloneShouldUseLockOn && m_order.getType() != SquadOrderTypes::Defend)
