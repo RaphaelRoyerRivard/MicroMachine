@@ -35,7 +35,7 @@ void BuildingPlacer::onStart()
 bool BuildingPlacer::canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const
 {
 	UnitType depot = Util::GetRessourceDepotType();
-	if (canBuildHere(bx, by, depot, 0, true, false))//Do not need to check if interesting other buildings, since it is called at the start of the game only.
+	if (canBuildHere(bx, by, depot, 0, true, false, false))//Do not need to check if interesting other buildings, since it is called at the start of the game only.
 	{
 		// check the reserve map
 		for (int x = bx - 2; x <= bx + 2; x++)
@@ -54,7 +54,7 @@ bool BuildingPlacer::canBuildDepotHere(int bx, int by, std::vector<Unit> mineral
 }
 
 //returns true if we can build this type of unit here with the specified amount of space.
-bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int buildDistAround, bool ignoreReserved, bool checkInfluenceMap) const
+bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int buildDistAround, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
 {
 	// height and width of the building
 	int width = type.tileWidth();
@@ -81,7 +81,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 		return false;
 	}
 
-	auto tiles = getTilesForBuildLocation(startx, starty, type, width + buildDistAround * 2, height + buildDistAround * 2);//Include padding (buildDist) so we test all the tiles
+	auto tiles = getTilesForBuildLocation(startx, starty, type, width + buildDistAround * 2, height + buildDistAround * 2, includeExtraTiles);//Include padding (buildDist) so we test all the tiles
 	auto buildingTerrainHeight = -1;
 	if (!type.isRefinery())
 	{
@@ -109,9 +109,11 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 		}
 	}
 
-	auto pos = getBottomLeftForBuildLocation(bx, by, type);
-	auto radius = type.radius();
+    return !isEnemyUnitBlocking(CCTilePosition(bx, by), type);
+}
 
+bool BuildingPlacer::isEnemyUnitBlocking(CCTilePosition center, UnitType type) const
+{
 	for (auto tagUnit : m_bot.GetEnemyUnits())
 	{
 		if (tagUnit.second.getType().isBuilding())
@@ -119,13 +121,12 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 			continue;
 		}
 
-		if (intersects(tagUnit.second, Util::GetPosition(pos), radius))
+		if (intersects(tagUnit.second, Util::GetPosition(center), type.radius()))
 		{
-			return false;
+			return true;
 		}
 	}
-
-    return true;
+	return false;
 }
 
 //Check if a unit and a building location intersect
@@ -148,10 +149,10 @@ std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(Unit buildi
 	BOT_ASSERT(building.getType().isBuilding(), "Should not call getTilesForBuildLocation on a none building unit.");
 	auto position = building.getTilePosition();
 	auto type = building.getType();
-	return getTilesForBuildLocation(position.x, position.y, type, type.tileWidth(), type.tileHeight());
+	return getTilesForBuildLocation(position.x, position.y, type, type.tileWidth(), type.tileHeight(), true);
 }
 
-std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int by, const UnitType & type, int width, int height) const
+std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int by, const UnitType & type, int width, int height, bool includeExtraTiles) const
 {
 	//width and height are not taken from the Type to allow a padding around the building of we want to.
 	int offset = getBuildingCenterOffset(bx, by, width, height);
@@ -169,38 +170,41 @@ std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int
 		}
 	}
 
-	//tiles for the addon
-	switch ((sc2::UNIT_TYPEID)type.getAPIUnitType())
+	if (includeExtraTiles)
 	{
-		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
-		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
-		case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+		//tiles for the addon
+		switch ((sc2::UNIT_TYPEID)type.getAPIUnitType())
 		{
-			//Shouldnt validate the addon if the building is in the wall
-			if (!m_bot.Buildings().isWallPosition(bx, by))//Must not consider the offset
+			case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+			case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+			case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 			{
-				for (int i = 0; i < 2; i++)
+				//Shouldnt validate the addon if the building is in the wall
+				if (!m_bot.Buildings().isWallPosition(bx, by))//Must not consider the offset
 				{
-					for (int j = 0; j < 2; j++)
+					for (int i = 0; i < 2; i++)
 					{
-						tiles.push_back(CCTilePosition(x + width + i, y + j));
+						for (int j = 0; j < 2; j++)
+						{
+							tiles.push_back(CCTilePosition(x + width + i, y + j));
+						}
 					}
 				}
 			}
 		}
-	}
 
-	//tiles below for the building exit
-	switch ((sc2::UNIT_TYPEID)type.getAPIUnitType())
-	{
-		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
-		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
-		case sc2::UNIT_TYPEID::PROTOSS_GATEWAY:
-		case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
+		//tiles below for the building exit
+		switch ((sc2::UNIT_TYPEID)type.getAPIUnitType())
 		{
-			for (int i = 0; i < width; i++)
+			case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+			case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+			case sc2::UNIT_TYPEID::PROTOSS_GATEWAY:
+			case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
 			{
-				tiles.push_back(CCTilePosition(x + i, y - 1));
+				for (int i = 0; i < width; i++)
+				{
+					tiles.push_back(CCTilePosition(x + i, y - 1));
+				}
 			}
 		}
 	}
@@ -233,7 +237,7 @@ int BuildingPlacer::getBuildingCenterOffset(int x, int y, int width, int height)
 	}
 }
 
-CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap) const
+CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
 {
 	//If the space is not walkable, look arround for a walkable space. The result may not be the most optimal location.
 	const int MAX_OFFSET = 5;
@@ -317,7 +321,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
     {
         auto & pos = closestToBuilding[i];
 
-        if (canBuildHere(pos.x, pos.y, b.type, buildDist, ignoreReserved, checkInfluenceMap))
+        if (canBuildHere(pos.x, pos.y, b.type, buildDist, ignoreReserved, checkInfluenceMap, includeExtraTiles))
         {
 			return pos;
         }
@@ -384,7 +388,7 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	for (auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED))//TODO could be simplified
 	{
 		CCTilePosition position = b.getTilePosition();
-		auto tiles = getTilesForBuildLocation(position.x, position.y, b.getType(), 2, 2);
+		auto tiles = getTilesForBuildLocation(position.x, position.y, b.getType(), 2, 2, false);
 		for each (auto tile in tiles)
 		{
 			if (tile.x == x && tile.y == y)
@@ -425,7 +429,7 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 
 void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)
 {
-	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height);
+	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true);
 	for each  (auto tile in tiles)
 	{
 		m_reserveMap[tile.x][tile.y] = true;
@@ -499,7 +503,7 @@ void BuildingPlacer::drawReservedTiles()
 
 void BuildingPlacer::freeTiles(int bx, int by, int width, int height)
 {
-	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height);
+	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true);
 	for each  (auto tile in tiles)
 	{
 		m_reserveMap[tile.x][tile.y] = false;

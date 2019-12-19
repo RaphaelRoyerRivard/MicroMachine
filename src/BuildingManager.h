@@ -61,7 +61,7 @@ public:
 	void				FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile);
 	void				FindMainRamp(std::list<CCTilePosition> &rampTiles);
 	std::vector<CCTilePosition> FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles);
-	void				PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock);
+	void				PlaceWallBuildings(std::vector<CCTilePosition> tilesToBlock);
 	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
 	void FindOpponentMainRamp();
 	bool				addBuildingTask(Building & b, bool filterMovingWorker = true);

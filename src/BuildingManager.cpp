@@ -94,7 +94,7 @@ void BuildingManager::lowPriorityChecks()
 
 		auto position = building.finalPosition;
 		auto tag = (building.builderUnit.isValid() ? building.builderUnit.getTag() : 0);
-		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building.type, 0, true, false))
+		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building.type, 0, true, false, false))
 		{
 			auto remove = CancelBuilding(building);
 			if (remove.finalPosition != CCTilePosition(0,0))
@@ -364,8 +364,8 @@ void BuildingManager::PlaceWallBuildings(std::vector<CCTilePosition> tilesToBloc
 		centerX += building.x;
 		centerY += building.y;
 	}
-	centerX /= buildingTiles.size();
-	centerY /= buildingTiles.size();
+	centerX = centerX / buildingTiles.size();
+	centerY = centerY / buildingTiles.size();
 
 	if (centerX > buildingTiles.front().x)
 	{
@@ -373,7 +373,7 @@ void BuildingManager::PlaceWallBuildings(std::vector<CCTilePosition> tilesToBloc
 	}
 	else
 	{
-		buildingTiles.front().x += 1;
+		//buildingTiles.front().x += 1;
 	}
 
 	if (centerY > buildingTiles.front().y)
@@ -382,14 +382,15 @@ void BuildingManager::PlaceWallBuildings(std::vector<CCTilePosition> tilesToBloc
 	}
 	else
 	{
-		buildingTiles.front().y += 1;
+		//buildingTiles.front().y += 1;
 	}
 
 	auto i = 0;
 	for (auto building : buildingTiles)
 	{
 		auto position = CCTilePosition(building.x + 1, building.y + 1);
-		if (i == 0)//0 is always the center building
+
+		if (!m_bot.Strategy().isProxyStartingStrategy() && i == 0)//0 is always the center building
 		{
 			//offset the barrack in the opposite direction of the center, so we can build it
 			m_nextBuildingPosition[MetaTypeEnum::Barracks.getUnitType()].push_back(position);
@@ -528,7 +529,8 @@ void BuildingManager::validateWorkersAndBuildings()
 			case BuildingStatus::Assigned:
 			{
 				//If the worker died on the way to start the building construction or if the requirements are not met anymore
-				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true))
+				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
+					|| (m_bot.Strategy().isWorkerRushed() && m_buildingPlacer.isEnemyUnitBlocking(b.finalPosition, b.type)))
 				{
 					auto remove = CancelBuilding(b);
 					toRemove.push_back(remove);
@@ -827,7 +829,7 @@ void BuildingManager::constructAssignedBuildings()
 								// We want the worker to be close so it doesn't flag the base as blocked by error
 								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
 								// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
-								const bool tilesBuildable = closeEnough || m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, false, false);
+								const bool tilesBuildable = closeEnough || m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, false, false, true);
 								if (closeEnough || tilesBuildable)
 								{
 									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true);
@@ -1415,7 +1417,7 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool che
 		// get a position within our region
 		// TODO: put back in special pylon / cannon spacing
 		m_bot.StartProfiling("0.8.3.1.3 getBuildLocationNear");
-		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, m_bot.Config().BuildingSpacing, false, checkInfluenceMap);
+		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, m_bot.Config().BuildingSpacing, false, checkInfluenceMap, true);
 		m_bot.StopProfiling("0.8.3.1.3 getBuildLocationNear");
 	}
 	return buildingLocation;
@@ -1800,7 +1802,7 @@ void BuildingManager::RunProxyLogic()
 			// Called every frame so the barracks can choose a new location if it gets blocked
 			const auto barracksFlyingType = UnitType(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, m_bot);
 			const auto barracksBuilding = Building(barracksFlyingType, m_proxyBarracksPosition);
-			const auto landingPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(barracksBuilding, 0, false, true));
+			const auto landingPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(barracksBuilding, 0, false, true, true));
 			Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
 		}
 

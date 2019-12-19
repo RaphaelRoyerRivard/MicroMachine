@@ -119,7 +119,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     }
 
 	Building b(MetaTypeEnum::MissileTurret.getUnitType(), m_centerOfMinerals);
-	m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true, false);;
+	m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true, false, true);
 }
 
 const CCTilePosition & BaseLocation::getTurretPosition() const
