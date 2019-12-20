@@ -272,6 +272,18 @@ CCPositionType UnitType::getAttackRange() const
 #endif
 }
 
+float UnitType::radius() const
+{
+#ifdef SC2API
+	if (isMineral()) { return 1; }//Not valid since its an oval.
+	if (isGeyser()) { return 1.8125f; }//Same as a Barrack
+	if (isAddon()) { return 1.25f; }//Same as supply depot
+	else { return m_bot->Observation()->GetAbilityData()[m_bot->Data(*this).buildAbility].footprint_radius; }
+#else
+	return m_type.tileWidth() / 2;
+#endif
+}
+
 int UnitType::tileWidth() const
 {
 #ifdef SC2API

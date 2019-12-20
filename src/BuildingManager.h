@@ -61,7 +61,7 @@ public:
 	void				FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile);
 	void				FindMainRamp(std::list<CCTilePosition> &rampTiles);
 	std::vector<CCTilePosition> FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles);
-	void				PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock);
+	void				PlaceWallBuildings(std::vector<CCTilePosition> tilesToBlock);
 	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
 	void FindOpponentMainRamp();
 	bool				addBuildingTask(Building & b, bool filterMovingWorker = true);
@@ -88,6 +88,7 @@ public:
 	const sc2::Unit *	getLargestCloseMineral(const Unit unit, bool checkUnderAttack = false, std::vector<CCUnitID> skipMinerals = {}) const;
 
     bool                isBeingBuilt(UnitType type) const;
+	bool				isWallPosition(int x, int y) const;
 	int					countBeingBuilt(UnitType type, bool underConstruction = false) const;
 	int					countBoughtButNotBeingBuilt(sc2::UNIT_TYPEID type) const;
 

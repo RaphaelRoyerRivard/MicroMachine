@@ -239,7 +239,7 @@ void ProductionManager::manageBuildOrderQueue()
 		}
 #endif
 
-		if (!ShouldSkipQueueItem(currentItem))
+		if (!m_initialBuildOrderFinished || !ShouldSkipQueueItem(currentItem))//Cjeck initial BO first, allows to build refinery (and finish the BO) even if our barrack couldnt start for some reason. 
 		{
 			//check if we have the prerequirements.
 			if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
@@ -328,6 +328,11 @@ void ProductionManager::manageBuildOrderQueue()
 									m_bot.StopProfiling("2.2.2     tryingToBuild");
 									m_bot.StopProfiling("2.2.3     Build without premovement");
 									break;
+								}
+								else if (!m_initialBuildOrderFinished)
+								{
+									Util::DebugLog(__FUNCTION__, "Failed to place " + currentItem.type.getName() + " during initial build order. Skipping.", m_bot);
+									m_queue.removeCurrentHighestPriorityItem();
 								}
 							}
 						}

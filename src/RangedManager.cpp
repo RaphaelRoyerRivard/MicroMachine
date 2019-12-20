@@ -255,13 +255,15 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 	bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
-	if (isCyclone)
+	if (isCyclone && unitShouldHeal)
 	{
-		auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
-		const auto it = lockOnCastedFrame.find(rangedUnit);
-		if (it != lockOnCastedFrame.end())
+		for (const auto & ability : rangedUnitAbilities.abilities)
 		{
-			unitShouldHeal = false;
+			if (ability.ability_id == sc2::ABILITY_ID::CANCEL)	// Currently using Lock-On
+			{
+				unitShouldHeal = false;
+				break;
+			}
 		}
 	}
 	if (unitShouldHeal)
@@ -338,13 +340,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 
-	// if there is no potential target or threat, move to objective (max distance is not considered when defending)
-	const bool forceMoveToGoal = isCycloneHelper && isFlyingBarracks && cycloneFlyingHelperIt->second.goal == TRACK;
-	if(MoveToGoal(rangedUnit, threats, target, goal, unitShouldHeal, forceMoveToGoal))
-	{
-		return;
-	}
-
 	bool targetInAttackRange = false;
 	float unitAttackRange = 0.f;
 	if (target)
@@ -401,46 +396,56 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
 
-	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
-	m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-	if (!unitShouldHeal)
+	if (distSqToTarget < m_order.getRadius() * m_order.getRadius())
 	{
-		if (cycloneShouldUseLockOn || cycloneShouldStayCloseToTarget || AllowUnitToPathFind(rangedUnit))
+		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
+		if (!unitShouldHeal)
 		{
-			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
-			const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
-			const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
-			const float maxRange = target ? unitAttackRange : 3.f;
-			CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, m_bot);
-			if (closePositionInPath != CCPosition())
+			if (cycloneShouldUseLockOn || cycloneShouldStayCloseToTarget || AllowUnitToPathFind(rangedUnit))
 			{
-				const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
-				const auto action = RangedUnitAction(MicroActionType::Move, closePositionInPath, unitShouldHeal, actionDuration);
-				PlanAction(rangedUnit, action);
-				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
-				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-				return;
+				const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
+				const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
+				const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
+				const float maxRange = target ? unitAttackRange : 3.f;
+				CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, m_bot);
+				if (closePositionInPath != CCPosition())
+				{
+					const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
+					const auto action = RangedUnitAction(MicroActionType::Move, closePositionInPath, unitShouldHeal, actionDuration);
+					PlanAction(rangedUnit, action);
+					m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+					m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
+					return;
+				}
+				else
+				{
+					nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
+				}
 			}
-			else
+			else if (isCyclone && !shouldAttack && !cycloneShouldUseLockOn && target)
 			{
-				nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
+				CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(rangedUnit, target, unitAttackRange, m_bot);
+				if (movePosition != CCPosition())
+				{
+					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, unitShouldHeal, 0);
+					PlanAction(rangedUnit, action);
+					m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+					m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
+					return;
+				}
 			}
 		}
-		else if (isCyclone && !shouldAttack && !cycloneShouldUseLockOn && target)
-		{
-			CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(rangedUnit, target, unitAttackRange, m_bot);
-			if (movePosition != CCPosition())
-			{
-				const auto action = RangedUnitAction(MicroActionType::Move, movePosition, unitShouldHeal, 0);
-				PlanAction(rangedUnit, action);
-				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
-				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-				return;
-			}
-		}
+		m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+		m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 	}
-	m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
-	m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
+
+	// if there is no potential target or threat, move to objective
+	const bool forceMoveToGoal = isCycloneHelper && isFlyingBarracks && cycloneFlyingHelperIt->second.goal == TRACK;
+	if (MoveToGoal(rangedUnit, threats, target, goal, unitShouldHeal, forceMoveToGoal))
+	{
+		return;
+	}
 
 	bool useInfluenceMap = false;
 	CCPosition summedFleeVec(0, 0);
@@ -760,8 +765,8 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit) const
 			switch(rangedUnit->unit_type.ToType())
 			{
 				case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
-					if (isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit))
-						percentageMultiplier = 0.5f;	//BCs can fight longer since they can teleport back to safety
+					/*if (isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit))
+						percentageMultiplier = 0.5f;*/	//BCs can fight longer since they can teleport back to safety
 					break;
 				case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
 					percentageMultiplier = 1.5f;
@@ -799,7 +804,7 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 {
 	const bool isMarine = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE;
 	const bool isRaven = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
-	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = { supportUnit->unit_type };
+	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = supportTypes;
 	const std::vector<sc2::UNIT_TYPEID> typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
 	const auto clusterQueryName = "";// isRaven ? "Raven" : "";
 	sc2::Units validUnits;
@@ -835,7 +840,7 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	{
 		return closestBiggestCluster->m_center;
 	}
-	if (m_order.getType() == SquadOrderTypes::Defend)
+	if (m_order.getType() == SquadOrderTypes::Defend || m_bot.GetCurrentSupply() == 200)
 	{
 		return m_order.getPosition();
 	}
@@ -946,12 +951,11 @@ bool RangedManager::ExecuteThorMorphLogic(const sc2::Unit * thor)
 	return morph;
 }
 
-bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, bool unitShouldHeal, bool force)
+bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition goal, bool unitShouldHeal, bool force)
 {
 	if (force ||
-		((!target ||
-		(m_order.getType() != SquadOrderTypes::Defend && Util::DistSq(rangedUnit->pos, target->pos) > m_order.getRadius() * m_order.getRadius()))
-		&& threats.empty()))
+		(threats.empty()
+		&& (unitShouldHeal || !target || Util::DistSq(rangedUnit->pos, target->pos) > m_order.getRadius() * m_order.getRadius())))
 	{
 #ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
@@ -1777,7 +1781,7 @@ bool RangedManager::ExecuteAutoTurretLogic(const sc2::Unit * raven, const sc2::U
 	}
 
 	const auto turretBuilding = Building(UnitType(sc2::UNIT_TYPEID::TERRAN_AUTOTURRET, m_bot), Util::GetTilePosition(raven->pos));
-	const CCPosition turretPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(turretBuilding, 0, true, false));
+	const CCPosition turretPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(turretBuilding, 0, true, false, false));
 
 	if(Util::DistSq(turretPosition, raven->pos) < 2.75f * 2.75)
 	{

@@ -121,7 +121,6 @@ struct FlyingHelperMission
 class RangedManager : public MicroManager
 {
 public:
-
     RangedManager(CCBot & bot);
 	void setHarassMode(bool harass) { m_harassMode = harass; }
     void setTargets(const std::vector<Unit> & targets) override;
@@ -129,6 +128,14 @@ public:
 	bool isTargetRanged(const sc2::Unit * target);
 
 private:
+	std::vector<sc2::UNIT_TYPEID> supportTypes = {
+		sc2::UNIT_TYPEID::TERRAN_MARINE,
+		sc2::UNIT_TYPEID::TERRAN_RAVEN,
+		sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER,
+		sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT,
+		sc2::UNIT_TYPEID::TERRAN_HELLION,
+		sc2::UNIT_TYPEID::TERRAN_HELLIONTANK
+	};
 	std::map<const sc2::Unit *, RangedUnitAction> unitActions;
 	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
@@ -155,7 +162,7 @@ private:
 	CCPosition GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const;
 	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, bool unitShouldHeal, bool isCycloneHelper);
 	bool ExecuteThorMorphLogic(const sc2::Unit * thor);
-	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, bool unitShouldHeal, bool force);
+	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition goal, bool unitShouldHeal, bool force);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;
 	bool IsInRangeOfSlowerUnit(const sc2::Unit * rangedUnit, const sc2::Unit * target) const;
 	CCPosition GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange, bool unitShouldHeal) const;

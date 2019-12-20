@@ -27,7 +27,7 @@ void BuildingManager::onFirstFrame()
 		FindMainRamp(m_rampTiles);
 
 		auto tilesToBlock = FindRampTilesToPlaceBuilding(m_rampTiles);
-		PlaceSupplyDepots(tilesToBlock);
+		PlaceWallBuildings(tilesToBlock);
 	}
 }
 
@@ -83,21 +83,23 @@ void BuildingManager::lowPriorityChecks()
 	}
 	m_lastLowPriorityFrame = frame;
 
-	//Validate buildings are not on creep
+	//Validate buildings are not on creep or blocked
 	std::vector<Building> toRemove;
 	for (auto & building : m_buildings)
 	{
-		auto position = building.finalPosition;
-		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building.type, 0, true, false))
+		if (building.status == BuildingStatus::UnderConstruction)//Ignore buildings already being built
 		{
-			auto it = find(m_buildings.begin(), m_buildings.end(), building);
-			if (it != m_buildings.end())
+			continue;
+		}
+
+		auto position = building.finalPosition;
+		auto tag = (building.builderUnit.isValid() ? building.builderUnit.getTag() : 0);
+		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building.type, 0, true, false, false))
+		{
+			auto remove = CancelBuilding(building);
+			if (remove.finalPosition != CCTilePosition(0,0))
 			{
-				auto remove = CancelBuilding(building);
-				if (remove.finalPosition != CCTilePosition(0,0))
-				{
-					toRemove.push_back(remove);
-				}
+				toRemove.push_back(remove);
 			}
 		}
 	}
@@ -301,7 +303,7 @@ std::vector<CCTilePosition> BuildingManager::FindRampTilesToPlaceBuilding(std::l
 	return tilesToBlock;
 }
 
-void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock)
+void BuildingManager::PlaceWallBuildings(std::vector<CCTilePosition> tilesToBlock)
 {
 	std::list<CCTilePosition> buildingTiles;
 	for (auto & tile : tilesToBlock)
@@ -354,13 +356,54 @@ void BuildingManager::PlaceSupplyDepots(std::vector<CCTilePosition> tilesToBlock
 		//TODO: Check remove the buildingTiles and try again in a different order. To try again, pop front tilesToBlock and push back the front.
 	}
 
+	//Calculate the center of the buildings
+	auto centerX = 0.f;
+	auto centerY = 0.f;
+	for (auto building : buildingTiles)
+	{
+		centerX += building.x;
+		centerY += building.y;
+	}
+	centerX = centerX / buildingTiles.size();
+	centerY = centerY / buildingTiles.size();
+
+	if (centerX > buildingTiles.front().x)
+	{
+		buildingTiles.front().x -= 1;
+	}
+	else
+	{
+		//buildingTiles.front().x += 1;
+	}
+
+	if (centerY > buildingTiles.front().y)
+	{
+		buildingTiles.front().y -= 1;
+	}
+	else
+	{
+		//buildingTiles.front().y += 1;
+	}
+
+	auto i = 0;
 	for (auto building : buildingTiles)
 	{
 		auto position = CCTilePosition(building.x + 1, building.y + 1);
-		m_nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(position);
+
+		if (!m_bot.Strategy().isProxyStartingStrategy() && i == 0)//0 is always the center building
+		{
+			//offset the barrack in the opposite direction of the center, so we can build it
+			m_nextBuildingPosition[MetaTypeEnum::Barracks.getUnitType()].push_back(position);
+			m_buildingPlacer.reserveTiles(position.x, position.y, 3, 3);
+		}
+		else
+		{
+			m_nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(position);
+			m_buildingPlacer.reserveTiles(position.x, position.y, 2, 2);
+		}
 		m_wallBuildingPosition.push_back(position);
 
-		m_buildingPlacer.reserveTiles(position.x, position.y, 2, 2);
+		i++;
 	}
 }
 
@@ -422,6 +465,18 @@ bool BuildingManager::isBeingBuilt(UnitType type) const
     return false;
 }
 
+bool BuildingManager::isWallPosition(int x, int y) const
+{
+	for (auto wallPos : m_wallBuildingPosition)
+	{
+		if (x == wallPos.x && y == wallPos.y)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 int BuildingManager::countBeingBuilt(UnitType type, bool underConstruction) const
 {
 	int count = 0;
@@ -474,7 +529,8 @@ void BuildingManager::validateWorkersAndBuildings()
 			case BuildingStatus::Assigned:
 			{
 				//If the worker died on the way to start the building construction or if the requirements are not met anymore
-				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true))
+				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
+					|| (m_bot.Strategy().isWorkerRushed() && m_buildingPlacer.isEnemyUnitBlocking(b.finalPosition, b.type)))
 				{
 					auto remove = CancelBuilding(b);
 					toRemove.push_back(remove);
@@ -773,7 +829,7 @@ void BuildingManager::constructAssignedBuildings()
 								// We want the worker to be close so it doesn't flag the base as blocked by error
 								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
 								// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
-								const bool tilesBuildable = closeEnough || m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, false, false);
+								const bool tilesBuildable = closeEnough || m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, false, false, true);
 								if (closeEnough || tilesBuildable)
 								{
 									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true);
@@ -1105,7 +1161,6 @@ bool BuildingManager::isBuildingPositionExplored(const Building & b) const
     return m_bot.Map().isExplored(b.finalPosition);
 }
 
-
 char BuildingManager::getBuildingWorkerCode(const Building & b) const
 {
     return b.builderUnit.isValid() ? 'W' : 'X';
@@ -1370,7 +1425,7 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool che
 		// get a position within our region
 		// TODO: put back in special pylon / cannon spacing
 		m_bot.StartProfiling("0.8.3.1.3 getBuildLocationNear");
-		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, m_bot.Config().BuildingSpacing, false, checkInfluenceMap);
+		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, m_bot.Config().BuildingSpacing, false, checkInfluenceMap, true);
 		m_bot.StopProfiling("0.8.3.1.3 getBuildLocationNear");
 	}
 	return buildingLocation;
@@ -1523,24 +1578,31 @@ Building BuildingManager::CancelBuilding(Building b)
 		{
 			m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight());
 
-			//Free oposite of reserved tiles in assignWorkersToUnassignedBuildings
+			//Free opposite of reserved tiles in assignWorkersToUnassignedBuildings
 			switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
 			{
 				//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
-			case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
-			case sc2::UNIT_TYPEID::TERRAN_FACTORY:
-			case sc2::UNIT_TYPEID::TERRAN_STARPORT:
-			{
-				m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
-				m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
-			}
+				case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+				case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+				case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+				{
+					m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
+					m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
+				}
 			}
 		}
 
+		//Free resources
 		if (b.reserveResources)
 		{
 			m_bot.FreeMinerals(b.type.mineralPrice());
 			m_bot.FreeGas(b.type.gasPrice());
+		}
+
+		//Free worker
+		if (b.builderUnit.isValid())
+		{
+			m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Idle);
 		}
 
 		return b;
@@ -1751,7 +1813,7 @@ void BuildingManager::RunProxyLogic()
 			// Called every frame so the barracks can choose a new location if it gets blocked
 			const auto barracksFlyingType = UnitType(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, m_bot);
 			const auto barracksBuilding = Building(barracksFlyingType, m_proxyBarracksPosition);
-			const auto landingPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(barracksBuilding, 0, false, true));
+			const auto landingPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(barracksBuilding, 0, false, true, true));
 			Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
 		}
 

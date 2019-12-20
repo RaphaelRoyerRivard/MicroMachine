@@ -20,7 +20,7 @@
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
-        "PlayAsHuman"               : false,
+        "PlayAsHuman"               : true,
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
