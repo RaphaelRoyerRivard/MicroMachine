@@ -255,13 +255,15 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 	bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
-	if (isCyclone)
+	if (isCyclone && unitShouldHeal)
 	{
-		auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
-		const auto it = lockOnCastedFrame.find(rangedUnit);
-		if (it != lockOnCastedFrame.end())
+		for (const auto & ability : rangedUnitAbilities.abilities)
 		{
-			unitShouldHeal = false;
+			if (ability.ability_id == sc2::ABILITY_ID::CANCEL)	// Currently using Lock-On
+			{
+				unitShouldHeal = false;
+				break;
+			}
 		}
 	}
 	if (unitShouldHeal)
@@ -760,8 +762,8 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit) const
 			switch(rangedUnit->unit_type.ToType())
 			{
 				case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
-					if (isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit))
-						percentageMultiplier = 0.5f;	//BCs can fight longer since they can teleport back to safety
+					/*if (isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit))
+						percentageMultiplier = 0.5f;*/	//BCs can fight longer since they can teleport back to safety
 					break;
 				case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
 					percentageMultiplier = 1.5f;
@@ -799,7 +801,7 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 {
 	const bool isMarine = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE;
 	const bool isRaven = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
-	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = { supportUnit->unit_type };
+	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = supportTypes;
 	const std::vector<sc2::UNIT_TYPEID> typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
 	const auto clusterQueryName = "";// isRaven ? "Raven" : "";
 	sc2::Units validUnits;
@@ -835,7 +837,7 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	{
 		return closestBiggestCluster->m_center;
 	}
-	if (m_order.getType() == SquadOrderTypes::Defend)
+	if (m_order.getType() == SquadOrderTypes::Defend || m_bot.GetCurrentSupply() == 200)
 	{
 		return m_order.getPosition();
 	}
@@ -946,7 +948,7 @@ bool RangedManager::ExecuteThorMorphLogic(const sc2::Unit * thor)
 	return morph;
 }
 
-bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition & goal, bool unitShouldHeal, bool force)
+bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition goal, bool unitShouldHeal, bool force)
 {
 	if (force ||
 		((!target ||
