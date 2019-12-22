@@ -320,7 +320,7 @@ void ProductionManager::manageBuildOrderQueue()
 							if (canMakeNow(producer, currentItem.type))
 							{
 								// create it and remove it from the _queue
-								if (create(producer, currentItem, Util::GetTilePosition(m_bot.GetStartLocation())))
+								if (create(producer, currentItem, m_bot.GetBuildingArea()))
 								{
 									m_queue.removeCurrentHighestPriorityItem();
 
@@ -1412,25 +1412,25 @@ std::vector<sc2::UNIT_TYPEID> ProductionManager::getProductionBuildingTypes() co
 {
 	switch (m_bot.GetSelfRace())
 	{
-	case CCRace::Terran:
-	{
-		return {sc2::UNIT_TYPEID::TERRAN_BARRACKS,
-			sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING,
-			sc2::UNIT_TYPEID::TERRAN_FACTORY,
-			sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING,
-			sc2::UNIT_TYPEID::TERRAN_STARPORT,
-			sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
-	}
-	case CCRace::Protoss:
-	{
-		//TODO
-		return {};
-	}
-	case CCRace::Zerg:
-	{
-		//TODO
-		return {};
-	}
+		case CCRace::Terran:
+		{
+			return {sc2::UNIT_TYPEID::TERRAN_BARRACKS,
+				sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING,
+				sc2::UNIT_TYPEID::TERRAN_FACTORY,
+				sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING,
+				sc2::UNIT_TYPEID::TERRAN_STARPORT,
+				sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
+		}
+		case CCRace::Protoss:
+		{
+			//TODO
+			return {};
+		}
+		case CCRace::Zerg:
+		{
+			//TODO
+			return {};
+		}
 	}
 	return {};
 }

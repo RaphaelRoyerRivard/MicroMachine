@@ -1236,6 +1236,30 @@ const CCPosition CCBot::GetStartLocation() const
 
 const CCTilePosition CCBot::GetBuildingArea() const
 {
+	if (m_strategy.isEarlyRushed() || m_strategy.isWorkerRushed())
+	{
+		//Build on the opposite direction (generally behind the minerals) from the ramp so it is safer.
+		auto wallPos = m_buildings.getWallPosition();
+		auto safeLocation = CCTilePosition(m_buildingArea);
+		safeLocation.x += (safeLocation.x - wallPos.x);
+		safeLocation.y += (safeLocation.y - wallPos.y);
+
+		return safeLocation;
+	}
+
+	const auto & bases = m_bases.getBaseLocations();
+	for (auto & base : bases)
+	{
+		if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
+			continue;
+		if (base->getDepotPosition().x == 149)
+		{
+			continue;//TODO TEMP
+		}
+		return base->getDepotPosition();
+	}
+
+	//If all bases are underattack, return the main base.
 	return m_buildingArea;
 }
 
