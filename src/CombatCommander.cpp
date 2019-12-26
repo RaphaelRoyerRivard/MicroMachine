@@ -1013,16 +1013,13 @@ void CombatCommander::updateScoutDefenseSquad()
 
     // get all of the enemy units in this region
     std::vector<Unit> enemyUnitsInRegion;
-	if (m_bot.GetCurrentFrame() < 120 * 24)	// No need to have a scout defense after 2 min
+	for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
 	{
-		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+		if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
 		{
-			if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
-			{
-				enemyUnitsInRegion.push_back(unit);
-				if (enemyUnitsInRegion.size() > 1)
-					break;
-			}
+			enemyUnitsInRegion.push_back(unit);
+			if (enemyUnitsInRegion.size() > 1)
+				break;
 		}
 	}
 
@@ -1516,6 +1513,9 @@ void CombatCommander::updateDefenseSquads()
 				bool detectionUseful = false;
 				float maxGroundDps = 0.f;
 				float maxAirDps = 0.f;
+				const bool workerScout = region.enemyUnits.size() == 1 && region.enemyUnits[0].getType().isWorker();
+				if (workerScout)
+					continue;	// We do not want to send a combat unit against an enemy scout
 				for (auto & enemyUnit : region.enemyUnits)
 				{
 					// As soon as there is a non building unit that the weak unit can attack, we consider that the weak unit can be useful
