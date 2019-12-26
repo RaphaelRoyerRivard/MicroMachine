@@ -396,7 +396,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
 
-	if (distSqToTarget < m_order.getRadius() * m_order.getRadius())
+	if (distSqToTarget < m_order.getRadius() * m_order.getRadius() && (target || !threats.empty()))
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
