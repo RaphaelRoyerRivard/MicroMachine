@@ -1685,6 +1685,9 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN) + battlecruiser->radius;
 	for (const auto potentialTarget : targets)
 	{
+		const auto type = UnitType(potentialTarget->unit_type, m_bot);
+		if (type.isBuilding() && !type.isAttackingBuilding())
+			continue;
 		const float curentYamatoRange = yamatoRange + potentialTarget->radius;
 		const float targetDistance = Util::DistSq(battlecruiser->pos, potentialTarget->pos);
 		const float targetHp = potentialTarget->health + potentialTarget->shield;
@@ -2150,6 +2153,7 @@ void RangedManager::ExecuteActions()
 		if (action.executed && (action.duration >= ACTION_REEXECUTION_FREQUENCY || m_bot.GetGameLoop() - action.executionFrame < ACTION_REEXECUTION_FREQUENCY))
 			continue;
 
+		bool skip = false;
 		m_bot.GetCommandMutex().lock();
 		switch (action.microActionType)
 		{
@@ -2160,7 +2164,18 @@ void RangedManager::ExecuteActions()
 			Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
 			break;
 		case MicroActionType::Move:
-			Micro::SmartMove(rangedUnit, action.position, m_bot);
+			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
+			{
+				const auto orderPos = rangedUnit->orders[0].target_pos;
+				const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
+				const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
+				const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
+				const auto dist = Util::DistSq(orderPos, action.position);
+				if (sameDirection && dist < 1)
+					skip = true;
+			}
+			if (!skip)
+				Micro::SmartMove(rangedUnit, action.position, m_bot);
 			break;
 		case MicroActionType::Ability:
 			Micro::SmartAbility(rangedUnit, action.abilityID, m_bot);
@@ -2187,11 +2202,14 @@ void RangedManager::ExecuteActions()
 		}
 		m_bot.GetCommandMutex().unlock();
 
-		action.executed = true;
-		action.executionFrame = m_bot.GetGameLoop();
-		if (action.duration > 0)
+		if (!skip)
 		{
-			nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + action.duration;
+			action.executed = true;
+			action.executionFrame = m_bot.GetGameLoop();
+			if (action.duration > 0)
+			{
+				nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + action.duration;
+			}
 		}
 	}
 }

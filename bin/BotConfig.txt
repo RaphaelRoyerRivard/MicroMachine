@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.7.10",
+        "BotVersion"                : "1.7.11",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
