@@ -1685,6 +1685,9 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN) + battlecruiser->radius;
 	for (const auto potentialTarget : targets)
 	{
+		const auto type = UnitType(potentialTarget->unit_type, m_bot);
+		if (type.isBuilding() && !type.isAttackingBuilding())
+			continue;
 		const float curentYamatoRange = yamatoRange + potentialTarget->radius;
 		const float targetDistance = Util::DistSq(battlecruiser->pos, potentialTarget->pos);
 		const float targetHp = potentialTarget->health + potentialTarget->shield;
