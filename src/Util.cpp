@@ -1840,6 +1840,20 @@ bool Util::unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId)
 	return false;
 }
 
+bool Util::CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot)
+{
+	const auto distSq = DistSq(unit->pos, enemyUnit->pos);
+	if (distSq > 20 * 20)
+		return false;	// Unit is just too far
+	const auto unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+	const auto sight = unitTypeData.sight_range + unit->radius + enemyUnit->radius;
+	if (distSq > sight * sight)
+		return false;	// Unit doesn't have enough sight range
+	if (!unit->is_flying && bot.Map().terrainHeight(unit->pos) < bot.Map().terrainHeight(enemyUnit->pos))
+		return false;	// Unit can't see above cliff
+	return true;
+}
+
 bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 {
 	const auto & enemyScans = bot.Commander().Combat().GetEnemyScans();

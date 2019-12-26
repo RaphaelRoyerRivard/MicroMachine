@@ -349,7 +349,21 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		else if (cycloneShouldStayCloseToTarget)
 			unitAttackRange = 5.f;	// We want to stay close to the unit so we keep our Lock-On for a longer period
 		else if (!shouldAttack)
-			unitAttackRange = 14.f + rangedUnit->radius + target->radius;
+		{
+			bool allyUnitSeesTarget = false;
+			for (const auto & allyUnit : m_bot.GetAllyUnits())
+			{
+				const auto allyUnitPtr = allyUnit.second.getUnitPtr();
+				if (allyUnitPtr == rangedUnit)
+					continue;
+				if (Util::CanUnitSeeEnemyUnit(allyUnitPtr, target, m_bot))
+				{
+					allyUnitSeesTarget = true;
+					break;
+				}
+			}
+			unitAttackRange = (allyUnitSeesTarget ? 14.f : 10.f) + rangedUnit->radius + target->radius;
+		}
 		else
 			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot, true);
 		targetInAttackRange = distSqToTarget <= unitAttackRange * unitAttackRange;
@@ -1053,8 +1067,9 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			}
 			else
 			{
+				target = it->second.first;
 				if (m_bot.Config().DrawHarassInfo)
-					m_bot.Map().drawLine(cyclone->pos, it->second.first->pos, sc2::Colors::Green);
+					m_bot.Map().drawLine(cyclone->pos, target->pos, sc2::Colors::Green);
 				// Attacking would cancel our lock-on
 				shouldAttack = false;
 			}
