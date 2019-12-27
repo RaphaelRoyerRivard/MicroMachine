@@ -152,11 +152,21 @@ void StrategyManager::onFrame(bool executeMacro)
 		{
 			if (m_bot.GetGameLoop() >= 448 && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 20s
 			{
-				const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
-				if (!hasFactory)
+				const auto hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0;
+				if (!hasBarracks)
 				{
 					m_startingStrategy = STANDARD;
 					m_bot.Commander().Production().clearQueue();
+					m_bot.Commander().Production().queueAsHighestPriority(MetaTypeEnum::Barracks, false);
+				}
+				else
+				{
+					const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
+					if (!hasFactory)
+					{
+						m_startingStrategy = STANDARD;
+						m_bot.Commander().Production().clearQueue();
+					}
 				}
 			}
 			else if (isWorkerRushed())

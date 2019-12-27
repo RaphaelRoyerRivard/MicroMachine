@@ -77,4 +77,5 @@ public:
 	bool canMakeAtArrival(const Building & building, const Unit & worker, int additionalReservedMineral, int additionalReservedGas);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
 	void clearQueue();
+	BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);
 };
