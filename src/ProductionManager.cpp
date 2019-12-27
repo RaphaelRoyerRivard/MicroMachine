@@ -1492,6 +1492,11 @@ void ProductionManager::clearQueue()
 	m_queue.clearAll();
 }
 
+BuildOrderItem ProductionManager::queueAsHighestPriority(const MetaType & type, bool blocking)
+{
+	return m_queue.queueAsHighestPriority(type, blocking);
+}
+
 bool ProductionManager::isTechQueuedOrStarted(const MetaType & type)
 {
 	return isTechStarted(type) || m_queue.contains(type);

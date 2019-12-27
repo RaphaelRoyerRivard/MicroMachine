@@ -2158,10 +2158,24 @@ void RangedManager::ExecuteActions()
 		switch (action.microActionType)
 		{
 		case MicroActionType::AttackMove:
-			Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
+			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
+			{
+				const auto orderPos = rangedUnit->orders[0].target_pos;
+				const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
+				const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
+				const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
+				const auto dist = Util::DistSq(orderPos, action.position);
+				if (sameDirection && dist < 1)
+					skip = true;
+			}
+			if (!skip)
+				Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
 			break;
 		case MicroActionType::AttackUnit:
-			Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
+			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == action.target->tag)
+				skip = true;
+			if (!skip)
+				Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
 			break;
 		case MicroActionType::Move:
 			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
