@@ -62,9 +62,14 @@ void StrategyManager::onStart()
 				float winPercentage = games > 0 ? wins / float(games) : 1;
 				if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && games > 0 && games < bestScoreGames))
 				{
-					bestScore = winPercentage;
-					bestStrat = stratIndex;
-					bestScoreGames = games;
+					// We make sure the opponent has the appropriate race to pick the race specific strategy 
+					const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
+					if (it == RACE_SPECIFIC_STRATEGIES.end() || m_bot.GetPlayerRace(Players::Enemy) == it->second)
+					{
+						bestScore = winPercentage;
+						bestStrat = stratIndex;
+						bestScoreGames = games;
+					}
 				}
 				m_opponentHistory << STRATEGY_NAMES[stratIndex] << " (" << wins << "-" << losses << ")";
 				if (stratIndex < StartingStrategy::COUNT - 1)
@@ -200,7 +205,7 @@ void StrategyManager::onFrame(bool executeMacro)
 
 bool StrategyManager::isProxyStartingStrategy() const
 {
-	return m_startingStrategy == PROXY_CYCLONES;
+	return m_startingStrategy == PROXY_CYCLONES || m_startingStrategy == PROXY_MARAUDERS;
 }
 
 const Strategy & StrategyManager::getCurrentStrategy() const

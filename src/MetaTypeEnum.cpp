@@ -60,6 +60,7 @@ MetaType MetaTypeEnum::HyperflightRotors;
 MetaType MetaTypeEnum::HiSecAutoTracking;
 MetaType MetaTypeEnum::YamatoCannon;
 MetaType MetaTypeEnum::MagFieldAccelerator;
+MetaType MetaTypeEnum::ConcussiveShells;
 
 //PROTOSS
 	//Buildings
@@ -163,6 +164,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::HiSecAutoTracking = MetaType("HiSecAutoTracking", m_bot);
 	MetaTypeEnum::YamatoCannon = MetaType("BattlecruiserEnableSpecializations", m_bot);
 	MetaTypeEnum::MagFieldAccelerator = MetaType("CycloneLockOnDamageUpgrade", m_bot);
+	MetaTypeEnum::ConcussiveShells = MetaType("PunisherGrenades", m_bot);
 	
 	//PROTOSS
 		//Buildings
