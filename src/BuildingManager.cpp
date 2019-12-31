@@ -356,33 +356,30 @@ void BuildingManager::PlaceWallBuildings(std::vector<CCTilePosition> tilesToBloc
 		//TODO: Check remove the buildingTiles and try again in a different order. To try again, pop front tilesToBlock and push back the front.
 	}
 
-	//Calculate the center of the buildings
-	auto centerX = 0.f;
-	auto centerY = 0.f;
-	for (auto building : buildingTiles)
+	bool barrackInWall = !m_bot.Strategy().isProxyStartingStrategy();
+	
+	if (barrackInWall)
 	{
-		centerX += building.x;
-		centerY += building.y;
-	}
-	centerX = centerX / buildingTiles.size();
-	centerY = centerY / buildingTiles.size();
+		//Calculate the center of the buildings
+		auto centerX = 0.f;
+		auto centerY = 0.f;
+		for (auto building : buildingTiles)
+		{
+			centerX += building.x;
+			centerY += building.y;
+		}
+		centerX = centerX / buildingTiles.size();
+		centerY = centerY / buildingTiles.size();
 
-	if (centerX > buildingTiles.front().x)
-	{
-		buildingTiles.front().x -= 1;
-	}
-	else
-	{
-		//buildingTiles.front().x += 1;
-	}
+		if (centerX > buildingTiles.front().x)
+		{
+			buildingTiles.front().x -= 1;
+		}
 
-	if (centerY > buildingTiles.front().y)
-	{
-		buildingTiles.front().y -= 1;
-	}
-	else
-	{
-		//buildingTiles.front().y += 1;
+		if (centerY > buildingTiles.front().y)
+		{
+			buildingTiles.front().y -= 1;
+		}
 	}
 
 	auto i = 0;
@@ -390,7 +387,7 @@ void BuildingManager::PlaceWallBuildings(std::vector<CCTilePosition> tilesToBloc
 	{
 		auto position = CCTilePosition(building.x + 1, building.y + 1);
 
-		if (!m_bot.Strategy().isProxyStartingStrategy() && i == 0)//0 is always the center building
+		if (barrackInWall && i == 0)//0 is always the center building
 		{
 			//offset the barrack in the opposite direction of the center, so we can build it
 			m_nextBuildingPosition[MetaTypeEnum::Barracks.getUnitType()].push_back(position);
@@ -606,7 +603,8 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 	{
 		m_bot.StartProfiling("0.8.3.1 getBuildingLocation");
 		// grab a worker unit from WorkerManager which is closest to this final position
-		CCTilePosition testLocation = getNextBuildingLocation(b, true, true);
+		bool isRushed = m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().isWorkerRushed();
+		CCTilePosition testLocation = getNextBuildingLocation(b, !isRushed, true);//Only check m_nextBuildLocation if we are not being rushed
 		m_bot.StopProfiling("0.8.3.1 getBuildingLocation");
 
 		// Don't test the location if the building is already started
@@ -660,10 +658,10 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 				return false;
 			}
 		}
-		else
+		else if(!isRushed)//Do not remove postion from m_nextBuildLocation if we are being rushed, since we didn't use it.
 		{
 			//path  is safe, we can remove it from the list
-			auto positions = m_nextBuildingPosition.find(b.type);// .pop_front();
+			auto positions = m_nextBuildingPosition.find(b.type);
 			if (positions != m_nextBuildingPosition.end())
 			{
 				for (auto & position : positions->second)
@@ -1288,7 +1286,7 @@ BuildingPlacer& BuildingManager::getBuildingPlacer()
 	return m_buildingPlacer;
 }
 
-CCTilePosition BuildingManager::getWallPosition()
+CCTilePosition BuildingManager::getWallPosition() const
 {
 	if (m_wallBuildingPosition.empty())
 	{
