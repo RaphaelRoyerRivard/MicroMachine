@@ -1377,10 +1377,18 @@ CCTilePosition BuildingManager::getProxyLocation()
 		if (closestBase != nullptr)
 		{
 			m_proxyLocation = closestBase->getDepotPosition();
+			const auto depotPos = Util::GetPosition(closestBase->getDepotPosition());
+			const auto centerOfMinerals = Util::GetPosition(closestBase->getCenterOfMinerals());
+			m_proxyLocation2 = depotPos + Util::Normalized(depotPos - centerOfMinerals) * 8;
 			return m_proxyLocation;
 		}
 	}
 	return Util::GetTilePosition(m_bot.Map().center());
+}
+
+CCPosition BuildingManager::getProxyLocation2()
+{
+	return m_proxyLocation2;
 }
 
 std::vector<UnitType> BuildingManager::buildingsQueued() const

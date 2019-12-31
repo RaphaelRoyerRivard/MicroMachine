@@ -379,7 +379,7 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	//ignoreReservedTiles is used for more than just ignoring reserved tiles.
 
 	//Check if tiles are blocked, checks if there is another buildings in the way
-	if (!type.isGeyser())
+	if (!ignoreReservedTiles && !type.isGeyser())
 	{
 		if (m_bot.Commander().Combat().isTileBlocked(x, y))
 		{

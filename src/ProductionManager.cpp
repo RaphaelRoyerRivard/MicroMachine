@@ -255,8 +255,8 @@ void ProductionManager::manageBuildOrderQueue()
 			// Proxy buildings
 			if (m_bot.Strategy().isProxyStartingStrategy() && m_bot.GetCurrentFrame() < 4032 /* 3 min */ && (currentItem.type == MetaTypeEnum::Barracks || (currentItem.type == MetaTypeEnum::Factory && factoryCount == 0)))
 			{
-				const auto proxyLocation = m_bot.Buildings().getProxyLocation();
-				Unit producer = getProducer(currentItem.type, Util::GetPosition(proxyLocation));
+				const auto proxyLocation = currentItem.type == MetaTypeEnum::Factory ? m_bot.Buildings().getProxyLocation2() : Util::GetPosition(m_bot.Buildings().getProxyLocation());
+				Unit producer = getProducer(currentItem.type, proxyLocation);
 				Building b(currentItem.type.getUnitType(), proxyLocation);
 				b.finalPosition = proxyLocation;
 				if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
