@@ -657,7 +657,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if ((reaperCount == 0 || (!m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)) && !m_queue.contains(MetaTypeEnum::Reaper))
+				if ((reaperCount == 0 || (!proxyMaraudersStrategy && !m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)) && !m_queue.contains(MetaTypeEnum::Reaper))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}

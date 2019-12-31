@@ -902,15 +902,27 @@ void CombatCommander::updateHarassSquads()
 	}
 	if(!idleCyclones.empty())
 	{
-		for (const auto & unit : harassSquad.getUnits())
+		bool addCyclones = false;
+		if (m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS)
 		{
-			if (unit.isFlying())
+			addCyclones = true;
+		}
+		else
+		{
+			for (const auto & unit : harassSquad.getUnits())
 			{
-				for (auto cyclone : idleCyclones)
+				if (unit.isFlying())
 				{
-					m_squadData.assignUnitToSquad(*cyclone, harassSquad);
+					addCyclones = true;
+					break;
 				}
-				break;
+			}
+		}
+		if (addCyclones)
+		{
+			for (auto cyclone : idleCyclones)
+			{
+				m_squadData.assignUnitToSquad(*cyclone, harassSquad);
 			}
 		}
 	}
