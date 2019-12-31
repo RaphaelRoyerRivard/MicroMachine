@@ -66,6 +66,7 @@ class MetaTypeEnum
 		static MetaType HiSecAutoTracking;
 		static MetaType YamatoCannon;
 		static MetaType MagFieldAccelerator;
+		static MetaType ConcussiveShells;
 
 		//PROTOSS
 			//Buildings

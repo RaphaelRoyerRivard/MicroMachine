@@ -255,17 +255,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 	bool unitShouldHeal = ShouldUnitHeal(rangedUnit);
-	if (isCyclone && unitShouldHeal)
-	{
-		for (const auto & ability : rangedUnitAbilities.abilities)
-		{
-			if (ability.ability_id == sc2::ABILITY_ID::CANCEL)	// Currently using Lock-On
-			{
-				unitShouldHeal = false;
-				break;
-			}
-		}
-	}
 	if (unitShouldHeal)
 	{
 		CCPosition healGoal = isReaper ? m_bot.Map().center() : m_bot.RepairStations().getBestRepairStationForUnit(rangedUnit);
@@ -783,6 +772,8 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit) const
 						percentageMultiplier = 0.5f;*/	//BCs can fight longer since they can teleport back to safety
 					break;
 				case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
+					if (m_bot.Commander().Combat().getLockOnTargets().find(rangedUnit) != m_bot.Commander().Combat().getLockOnTargets().end())
+						return false;	// Cyclones with lock-on target should not go back to heal
 					percentageMultiplier = 1.5f;
 					break;
 				default:
@@ -1541,7 +1532,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 			}
 		}
 
-		if (!hasFlyingHelper)
+		if (!hasFlyingHelper && m_bot.Strategy().getStartingStrategy() != PROXY_MARAUDERS)
 		{
 			// If the target is too far, we don't want to chase it, we just leave
 			if (target)

@@ -851,6 +851,8 @@ void WorkerManager::repairCombatBuildings()
 		return;
 	}
 
+	bool completeWall = false;
+	bool checkedCompleteWall = false;
 	auto workers = getWorkers();
 	auto buildings = m_bot.Buildings().getFinishedBuildings();
 	for (auto building : buildings)
@@ -860,43 +862,17 @@ void WorkerManager::repairCombatBuildings()
 			continue;
 		}
 
+		if (building.getHitPoints() > repairAt * building.getUnitPtr()->health_max)
+		{
+			continue;
+		}
+
+		int maxReparator = 5;
 		int alreadyRepairing = 0;
 		switch ((sc2::UNIT_TYPEID)building.getAPIUnitType())
 		{
-			case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET:
-			case sc2::UNIT_TYPEID::TERRAN_BUNKER:
-				if (building.getHitPoints() > repairAt * building.getUnitPtr()->health_max)
-				{
-					continue;
-				}
-
-				for (auto & worker : workers)
-				{
-					Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
-					if (repairedUnit.isValid() && repairedUnit.getID() == building.getID())
-					{
-						alreadyRepairing++;
-						if (maxReparator == alreadyRepairing)
-						{
-							break;
-						}
-					}
-				}
-				for (int i = 0; i < maxReparator - alreadyRepairing; i++)
-				{
-					Unit worker = getClosestMineralWorkerTo(building.getPosition());
-					if (worker.isValid())
-						setRepairWorker(worker, building);
-					else
-						break;
-				}
-				break;
 			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
 				///TODO Doesn't use the gas workers
-				if (building.getHitPoints() > repairAt * building.getUnitPtr()->health_max)
-				{
-					continue;
-				}
 				for (auto & worker : workers)///TODO order by closest to the target base location
 				{
 					auto depot = m_workerData.getWorkerDepot(worker);
@@ -906,6 +882,87 @@ void WorkerManager::repairCombatBuildings()
 					}
 				}
 				break;
+			default:
+				bool shouldRepair = false;
+				switch ((sc2::UNIT_TYPEID)building.getAPIUnitType())
+				{
+					case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET:
+					case sc2::UNIT_TYPEID::TERRAN_BUNKER:
+						shouldRepair = true;
+						break;
+					default:	// Allows to repair buildings in wall (repair wall)
+						//NOTE: commented out because we don't currently have a good way to check if the enemy has ranged units that could hit our workers.
+						//		We don't want to suicide all of our workers trying to repair. Should also only repair if its a full wall.
+						maxReparator = 3;
+						const auto buildingTilePos = building.getTilePosition();
+						const auto buildingPos = Util::GetPosition(buildingTilePos);
+						const auto buildingDistSq = Util::DistSq(buildingTilePos, m_bot.Buildings().getWallPosition());
+						if (buildingDistSq < 5 * 5)	// Within 5 tiles of the wall
+						{
+							if (!checkedCompleteWall)
+							{
+								std::vector<Unit> possibleWallBuildings;
+								//TODO maybe consider all types of buildings
+								const auto & barracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+								const auto & supplyDepots = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT);
+								const auto & supplyDepotsLowered = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED);
+								possibleWallBuildings.insert(possibleWallBuildings.end(), barracks.begin(), barracks.end());
+								possibleWallBuildings.insert(possibleWallBuildings.end(), supplyDepots.begin(), supplyDepots.end());
+								possibleWallBuildings.insert(possibleWallBuildings.end(), supplyDepotsLowered.begin(), supplyDepotsLowered.end());
+								int wallBuildings = 0;
+								for (const auto & possibleWallBuilding : possibleWallBuildings)
+								{
+									const auto distSq = Util::DistSq(possibleWallBuilding, buildingPos);
+									if (distSq < 5 * 5)
+										wallBuildings += 1;
+								}
+								if (wallBuildings >= 3)
+									completeWall = true;
+								checkedCompleteWall = true;
+							}
+							if (!completeWall)
+							{
+								shouldRepair = false;
+								break;
+							}
+							shouldRepair = true;
+							for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+							{
+								const auto enemyDistSq = Util::DistSq(enemyUnit, buildingPos);
+								const auto enemyAttackRange = Util::GetAttackRangeForTarget(enemyUnit.getUnitPtr(), building.getUnitPtr(), m_bot);
+								if (enemyAttackRange > 2 && enemyDistSq < enemyAttackRange * enemyAttackRange)
+								{
+									shouldRepair = false;
+									break;
+								}
+							}
+						}
+						break;
+				}
+				if (shouldRepair)
+				{
+
+					for (auto & worker : workers)
+					{
+						Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
+						if (repairedUnit.isValid() && repairedUnit.getID() == building.getID())
+						{
+							alreadyRepairing++;
+							if (maxReparator == alreadyRepairing)
+							{
+								break;
+							}
+						}
+					}
+					for (int i = 0; i < maxReparator - alreadyRepairing; i++)
+					{
+						Unit worker = getClosestMineralWorkerTo(building.getPosition());
+						if (worker.isValid())
+							setRepairWorker(worker, building);
+						else
+							break;
+					}
+				}
 		}
 	}
 }

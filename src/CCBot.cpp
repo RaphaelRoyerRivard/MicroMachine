@@ -932,14 +932,15 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation + offset, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_THORAP, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, m_startLocation, 2, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter, player2, 3);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter, player2, 5);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, mapCenter, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + Util::Normalized(mapCenter - m_startLocation) * 12, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, m_startLocation + towardsCenter * 5, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation, player1, 10);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, mapCenter, player1, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + offset, player2, 15);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CORRUPTOR, m_startLocation, player2, 2);
@@ -1262,6 +1263,26 @@ const CCPosition CCBot::GetStartLocation() const
 
 const CCTilePosition CCBot::GetBuildingArea() const
 {
+	if (m_strategy.isEarlyRushed() || m_strategy.isWorkerRushed())
+	{
+		//Build on the opposite direction (generally behind the minerals) from the ramp so it is safer.
+		auto wallPos = m_buildings.getWallPosition();
+		auto safeLocation = CCTilePosition(m_buildingArea);
+		safeLocation.x += (safeLocation.x - wallPos.x);
+		safeLocation.y += (safeLocation.y - wallPos.y);
+
+		return safeLocation;
+	}
+
+	const auto & bases = m_bases.getBaseLocations();
+	for (auto & base : bases)
+	{
+		if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
+			continue;
+		return base->getDepotPosition();
+	}
+
+	//If all bases are underattack, return the main base.
 	return m_buildingArea;
 }
 

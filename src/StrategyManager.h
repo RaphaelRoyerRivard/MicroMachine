@@ -37,7 +37,8 @@ enum StartingStrategy
 	EARLY_EXPAND = 1,
 	STANDARD = 2,
 	WORKER_RUSH = 3,
-	COUNT = 4
+	PROXY_MARAUDERS = 4,
+	COUNT = 5
 };
 
 class StrategyManager
@@ -46,7 +47,12 @@ class StrategyManager
 		"PROXY_CYCLONES",
 		"EARLY_EXPAND",
 		"STANDARD",
-		"WORKER_RUSH"
+		"WORKER_RUSH",
+		"PROXY_MARAUDERS"
+	};
+
+	std::map<StartingStrategy, sc2::Race> RACE_SPECIFIC_STRATEGIES = {
+		{ PROXY_MARAUDERS, sc2::Race::Protoss }
 	};
 	
     CCBot & m_bot;
