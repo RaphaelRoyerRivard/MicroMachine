@@ -25,7 +25,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Terran",
-        "MapFile"                   : "WorldofSleepersLE.SC2Map",
+        "MapFile"                   : "Random",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
