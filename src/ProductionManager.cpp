@@ -285,7 +285,7 @@ void ProductionManager::manageBuildOrderQueue()
 						for (auto & productionBuilding : productionBuildings)
 						{
 							//Check if this building is idle
-							if (productionBuilding.isProductionBuildingIdle())
+							if (productionBuilding.isProductionBuildingIdle() && !productionBuilding.isBeingConstructed())
 							{
 								idleProductionBuilding = true;
 								break;
