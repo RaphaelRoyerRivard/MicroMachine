@@ -924,6 +924,7 @@ void CCBot::IssueCheats()
 	const auto towardsCenterX = Util::Normalized(CCPosition(mapCenter.x - m_startLocation.x, 0));
 	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
 	const auto offset = towardsCenter * 15;
+	const auto enemyLocation = GetEnemyStartLocations()[0];
 	//Strategy().setShouldProduceAntiAirOffense(true);
 	//Debug()->DebugGiveAllTech();
 	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS);
@@ -965,6 +966,25 @@ void CCBot::IssueCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BARRACKS, m_startLocation + towardsCenterX * 25 + towardsCenterY * 2, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, m_startLocation + towardsCenterX * 22 + towardsCenterY * 1, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation + towardsCenterX * 25 + towardsCenterY * 2, player1, 1);*/
+
+	// Test for reproducing bug where units would try to hit enemy units on top of cliffs with no vision
+	/*CCPosition cliffPos;
+	float currentDist = 0;
+	const auto topHeight = Map().terrainHeight(enemyLocation);
+	while (cliffPos == CCPosition())
+	{
+		currentDist += 1;
+		auto currentPosition = enemyLocation - towardsCenter * currentDist;
+		const auto currentHeight = Map().terrainHeight(currentPosition);
+		if (currentHeight < topHeight)
+		{
+			cliffPos = currentPosition;
+		}
+	}
+	const auto enemyStalkerLocation = cliffPos - Util::Normalized(cliffPos - enemyLocation) * 2;
+	const auto marauderLocation = cliffPos + Util::Normalized(cliffPos - enemyLocation);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, enemyStalkerLocation, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, marauderLocation, player2, 1);*/
 }
 
 uint32_t CCBot::GetCurrentFrame() const
