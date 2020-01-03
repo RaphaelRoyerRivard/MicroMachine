@@ -941,7 +941,6 @@ void WorkerManager::repairCombatBuildings()
 				}
 				if (shouldRepair)
 				{
-
 					for (auto & worker : workers)
 					{
 						Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
