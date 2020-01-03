@@ -930,7 +930,7 @@ void WorkerManager::repairCombatBuildings()
 							{
 								const auto enemyDistSq = Util::DistSq(enemyUnit, buildingPos);
 								const auto enemyAttackRange = Util::GetAttackRangeForTarget(enemyUnit.getUnitPtr(), building.getUnitPtr(), m_bot);
-								if (enemyAttackRange > 2 && enemyDistSq < enemyAttackRange * enemyAttackRange)
+								if (enemyAttackRange > 3 && enemyDistSq < enemyAttackRange * enemyAttackRange)
 								{
 									shouldRepair = false;
 									break;
