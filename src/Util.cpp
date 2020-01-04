@@ -1840,6 +1840,19 @@ bool Util::unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId)
 	return false;
 }
 
+bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot)
+{
+	for (const auto & allyUnit : bot.GetAllyUnits())
+	{
+		const auto allyUnitPtr = allyUnit.second.getUnitPtr();
+		if (allyUnitPtr == exceptUnit)
+			continue;
+		if (Util::CanUnitSeeEnemyUnit(allyUnitPtr, enemyUnit, bot))
+			return true;
+	}
+	return false;
+}
+
 bool Util::CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot)
 {
 	const auto distSq = DistSq(unit->pos, enemyUnit->pos);

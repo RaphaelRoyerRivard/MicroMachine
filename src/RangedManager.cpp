@@ -340,18 +340,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			unitAttackRange = 5.f;	// We want to stay close to the unit so we keep our Lock-On for a longer period
 		else if (!shouldAttack)
 		{
-			bool allyUnitSeesTarget = false;
-			for (const auto & allyUnit : m_bot.GetAllyUnits())
-			{
-				const auto allyUnitPtr = allyUnit.second.getUnitPtr();
-				if (allyUnitPtr == rangedUnit)
-					continue;
-				if (Util::CanUnitSeeEnemyUnit(allyUnitPtr, target, m_bot))
-				{
-					allyUnitSeesTarget = true;
-					break;
-				}
-			}
+			bool allyUnitSeesTarget = Util::AllyUnitSeesEnemyUnit(rangedUnit, target, m_bot);
 			unitAttackRange = (allyUnitSeesTarget ? 14.f : 10.f) + rangedUnit->radius + target->radius;
 		}
 		else
@@ -1483,7 +1472,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 	target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, lockOnAvailable, rangedUnits, threats, target, abilities);
 
 	// If the Cyclone has a its Lock-On on a target with a big range (like a Tempest or Tank)
-	if (!shouldAttack && !cycloneShouldUseLockOn && m_order.getType() != SquadOrderTypes::Defend)
+	if (!shouldAttack && !cycloneShouldUseLockOn)
 	{
 		const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 		const auto it = lockOnTargets.find(rangedUnit);
@@ -1494,8 +1483,8 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 			if (enemyRange >= 10.f)
 			{
 				// We check if we have another unit that is close to it, but if not, the Cyclone should stay close to it
-				bool closeAlly = false;
-				for (const auto ally : rangedUnits)
+				bool closeAlly = Util::AllyUnitSeesEnemyUnit(rangedUnit, lockOnTarget, m_bot);;
+				/*for (const auto ally : rangedUnits)
 				{
 					if (ally == rangedUnit)
 						continue;
@@ -1507,7 +1496,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 						closeAlly = true;
 						break;
 					}
-				}
+				}*/
 				if (!closeAlly)
 				{
 					cycloneShouldStayCloseToTarget = true;

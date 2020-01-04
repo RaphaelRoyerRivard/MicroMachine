@@ -198,6 +198,7 @@ namespace Util
 	bool isUnitDisabled(const sc2::Unit * unit);
 	bool isUnitLifted(const sc2::Unit * unit);
 	bool unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId);
+	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
     
