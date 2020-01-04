@@ -1252,10 +1252,6 @@ const CCTilePosition CCBot::GetBuildingArea() const
 	{
 		if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
 			continue;
-		if (base->getDepotPosition().x == 149)
-		{
-			continue;//TODO TEMP
-		}
 		return base->getDepotPosition();
 	}
 

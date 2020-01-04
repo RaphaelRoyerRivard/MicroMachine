@@ -845,7 +845,6 @@ void WorkerManager::repairCombatBuildings()
 {
 	const float repairAt = 0.95f; //95% health
 	const int maxReparator = 5; //Turret and bunkers only
-	const int maxWallRaparator = 1;
 
 	if (m_bot.GetSelfRace() != CCRace::Terran)
 	{
@@ -881,14 +880,12 @@ void WorkerManager::repairCombatBuildings()
 				}
 				break;
 			default:
-				int repairer;
 				bool shouldRepair = false;
 				switch ((sc2::UNIT_TYPEID)building.getAPIUnitType())
 				{
 					case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET:
 					case sc2::UNIT_TYPEID::TERRAN_BUNKER:
 						shouldRepair = true;
-						repairer = maxReparator;
 						break;
 					default://Allows to repair buildings in wall (repair wall)
 						//NOTE: commented out because we don't currently have a good way to check if the enemy has ranged units that could hit our workers.
@@ -898,26 +895,25 @@ void WorkerManager::repairCombatBuildings()
 						if (distsq < 25)//within 5 tiles of the wall
 						{
 							shouldRepair = true;
-							repairer = maxWallRaparator;
 						}
 						break;
 				}
 				if (shouldRepair)
 				{
-
+					int reparator = maxReparator - floor(maxReparator * building.getHitPointsPercentage() / 100);
 					for (auto & worker : workers)
 					{
 						Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
 						if (repairedUnit.isValid() && repairedUnit.getID() == building.getID())
 						{
 							alreadyRepairing++;
-							if (repairer == alreadyRepairing)
+							if (reparator == alreadyRepairing)//Already enough repairer, stop checking how many are repairing
 							{
 								break;
 							}
 						}
 					}
-					for (int i = 0; i < repairer - alreadyRepairing; i++)
+					for (int i = 0; i < reparator - alreadyRepairing; i++)
 					{
 						Unit worker = getClosestMineralWorkerTo(building.getPosition());
 						if (worker.isValid())
