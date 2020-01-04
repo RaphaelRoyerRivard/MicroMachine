@@ -593,8 +593,15 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		{
 			return false;
 		}
+
+		//Do not build addons if enemies are close by. Equivalent of IsPathSafeToGoal for addons.
+		if (Util::PathFinding::GetCombatInfluenceOnTile(producer.getTilePosition(), false, m_bot) > 0.f)
+		{
+			return false;
+		}
+
 		b.builderUnit = producer;
-		b.finalPosition = Util::GetTilePosition(producer.getPosition());
+		b.finalPosition = producer.getTilePosition();
 
 		b.status = BuildingStatus::Assigned;
 		return true;
