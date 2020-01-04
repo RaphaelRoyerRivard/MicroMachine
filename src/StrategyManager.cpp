@@ -208,6 +208,11 @@ bool StrategyManager::isProxyStartingStrategy() const
 	return m_startingStrategy == PROXY_CYCLONES || m_startingStrategy == PROXY_MARAUDERS;
 }
 
+bool StrategyManager::wasProxyStartingStrategy() const
+{
+	return m_initialStartingStrategy == PROXY_CYCLONES || m_initialStartingStrategy == PROXY_MARAUDERS;
+}
+
 const Strategy & StrategyManager::getCurrentStrategy() const
 {
     auto strategy = m_strategies.find(m_bot.Config().StrategyName);

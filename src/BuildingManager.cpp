@@ -998,6 +998,16 @@ void BuildingManager::checkForDeadTerranBuilders()
 					}
 					// else, we find a new worker
 				}
+				// Was using a proxy strategy but not anymore
+				if (m_bot.Strategy().wasProxyStartingStrategy() && !m_bot.Strategy().isProxyStartingStrategy())
+				{
+					// The building is close to the proxy location
+					if (Util::DistSq(Util::GetPosition(b.finalPosition), m_proxyLocation) < 20 * 20)
+					{
+						// We do not want to finish it
+						continue;
+					}
+				}
 				// grab the worker unit from WorkerManager which is closest to this final position
 				Unit newBuilderUnit = m_bot.Workers().getBuilder(b, false);
 				if (!newBuilderUnit.isValid())

@@ -505,10 +505,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		dirVec += GetRepulsionVectorFromFriendlyReapers(rangedUnit, rangedUnits);
 	}
-	// We attract the Hellion towards our other close Hellions
-	else if (isHellion)
+	// We attract the ranged unit towards our other close ranged units of same type
+	else if (isHellion || isViking || isMarauder)
 	{
-		dirVec += GetAttractionVectorToFriendlyHellions(rangedUnit, rangedUnits);
+		dirVec += GetAttractionVectorToFriendlyUnits(rangedUnit, rangedUnits);
 	}
 
 	// We move only if the vector is long enough
@@ -1888,15 +1888,15 @@ CCPosition RangedManager::GetRepulsionVectorFromFriendlyReapers(const sc2::Unit 
 	return CCPosition(0, 0);
 }
 
-CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit * hellion, sc2::Units & rangedUnits) const
+CCPosition RangedManager::GetAttractionVectorToFriendlyUnits(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits) const
 {
 	// Check if there is a friendly harass unit close to this one
 	std::vector<const sc2::Unit*> closeAllies;
 	for (auto friendlyRangedUnit : rangedUnits)
 	{
-		if (friendlyRangedUnit->tag != hellion->tag && friendlyRangedUnit->unit_type == hellion->unit_type)
+		if (friendlyRangedUnit->tag != rangedUnit->tag && friendlyRangedUnit->unit_type == rangedUnit->unit_type)
 		{
-			const float dist = Util::DistSq(hellion->pos, friendlyRangedUnit->pos);
+			const float dist = Util::DistSq(rangedUnit->pos, friendlyRangedUnit->pos);
 			if (dist < HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE * HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE)
 				closeAllies.push_back(friendlyRangedUnit);
 		}
@@ -1908,11 +1908,11 @@ CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit 
 
 #ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
-			m_bot.Map().drawLine(hellion->pos, closeAlliesCenter, sc2::Colors::Green);
+			m_bot.Map().drawLine(rangedUnit->pos, closeAlliesCenter, sc2::Colors::Green);
 #endif
 
-		const float distToCloseAlliesCenter = Util::Dist(hellion->pos, closeAlliesCenter);
-		CCPosition attractionVector = closeAlliesCenter - hellion->pos;
+		const float distToCloseAlliesCenter = Util::Dist(rangedUnit->pos, closeAlliesCenter);
+		CCPosition attractionVector = closeAlliesCenter - rangedUnit->pos;
 		Util::Normalize(attractionVector);
 		// The repulsion intensity is linearly interpolated (stronger the farthest to lower the closest)
 		const float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToCloseAlliesCenter / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;

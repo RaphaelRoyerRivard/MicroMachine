@@ -91,7 +91,9 @@ public:
 
     const Strategy & getCurrentStrategy() const;
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
+	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
 	bool isProxyStartingStrategy() const;
+	bool wasProxyStartingStrategy() const;
 	StrategyPostBuildOrder getCurrentStrategyPostBuildOrder() const;
     bool scoutConditionIsMet() const;
     bool attackConditionIsMet() const;
