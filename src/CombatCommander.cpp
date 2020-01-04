@@ -1322,6 +1322,8 @@ void CombatCommander::updateDefenseSquads()
 			continue;
 		}
 
+		const auto proxyBase = m_bot.Strategy().isProxyStartingStrategy() && myBaseLocation->containsPositionApproximative(Util::GetPosition(m_bot.Buildings().getProxyLocation()));
+
 		m_bot.StartProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		auto region = RegionArmyInformation(myBaseLocation, m_bot);
 
@@ -1332,7 +1334,8 @@ void CombatCommander::updateDefenseSquads()
 		float minEnemyDistance = 0;
 		Unit closestEnemy;
 		int enemyWorkers = 0;
-		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+		for (auto & unit : m_bot.GetKnownEnemyUnits())
+		//for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
 		{
 			// if it's an overlord, don't worry about it for defense, we don't care what they see
 			if (unit.getType().isOverlord())
@@ -1357,7 +1360,7 @@ void CombatCommander::updateDefenseSquads()
 					}
 					workerRushed = true;
 				}
-				else if (!earlyRushed && m_bot.GetGameLoop() < 7320)	// first 5 minutes
+				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 7320)	// first 5 minutes
 				{
 					earlyRushed = true;
 				}
