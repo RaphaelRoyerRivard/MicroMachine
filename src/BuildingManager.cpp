@@ -595,7 +595,13 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		}
 
 		//Do not build addons if enemies are close by. Equivalent of IsPathSafeToGoal for addons.
-		if (Util::PathFinding::GetCombatInfluenceOnTile(producer.getTilePosition(), false, m_bot) > 0.f)
+		//400hp. Reactor builds in 36 seconds. TechLab builds in 18 seconds. Reactor gains 11.1 hp per second. Reactor gains 22.2 hp per second.
+		int maxInfluence = (addonType == MetaTypeEnum::Reactor ? 5 : 10);//These numbers are about 50% lower than the addon hp gain per second 
+																		  //just to be on the safe side since influence considers distance.
+		auto addonPos = producer.getTilePosition();
+		addonPos.x += 3;
+		float currentInfluence = Util::PathFinding::GetCombatInfluenceOnTile(addonPos, false, m_bot);
+		if (currentInfluence > maxInfluence)
 		{
 			return false;
 		}
@@ -834,8 +840,8 @@ void BuildingManager::constructAssignedBuildings()
 								// We want the worker to be close so it doesn't flag the base as blocked by error
 								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
 								// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
-								const bool tilesBuildable = closeEnough || m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, false, false, true);
-								if (closeEnough || tilesBuildable)
+								const bool blocked = closeEnough && !m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, true, false, false);
+								if (blocked)
 								{
 									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true);
 									b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
