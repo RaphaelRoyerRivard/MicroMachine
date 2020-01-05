@@ -23,16 +23,6 @@ struct Strategy
     Strategy(const std::string & name, const CCRace & race, const BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition);
 };
 
-enum StartingStrategy
-{
-	// Always add new strategies at the end of the enum (before COUNT), otherwise the saved data will be wrong
-	PROXY_CYCLONES = 0,
-	EARLY_EXPAND = 1,
-	STANDARD = 2,
-	WORKER_RUSH = 3,
-	COUNT = 4
-};
-
 enum StrategyPostBuildOrder {
 	NO_STRATEGY = -1,
 	TERRAN_CLASSIC = 0,
@@ -40,8 +30,31 @@ enum StrategyPostBuildOrder {
 	WORKER_RUSH_DEFENSE = 3
 };
 
+enum StartingStrategy
+{
+	// Always add new strategies at the end of the enum (before COUNT), otherwise the saved data will be wrong
+	PROXY_CYCLONES = 0,
+	EARLY_EXPAND = 1,
+	STANDARD = 2,
+	WORKER_RUSH = 3,
+	PROXY_MARAUDERS = 4,
+	COUNT = 5
+};
+
 class StrategyManager
 {
+	std::vector<std::string> STRATEGY_NAMES = {
+		"PROXY_CYCLONES",
+		"EARLY_EXPAND",
+		"STANDARD",
+		"WORKER_RUSH",
+		"PROXY_MARAUDERS"
+	};
+
+	std::map<StartingStrategy, sc2::Race> RACE_SPECIFIC_STRATEGIES = {
+		{ PROXY_MARAUDERS, sc2::Race::Protoss }
+	};
+	
     CCBot & m_bot;
 
     CCRace                          m_selfRace;
@@ -64,6 +77,9 @@ class StrategyManager
 	bool m_enemyHasSeveralArmoredUnits = false;
 	bool m_focusBuildings = false;
 	std::set<sc2::UPGRADE_ID> m_completedUpgrades;
+	std::stringstream m_greetingMessage;
+	std::stringstream m_opponentHistory;
+	std::stringstream m_strategyMessage;
 
     const UnitPairVector getProtossBuildOrderGoal() const;
     const UnitPairVector getTerranBuildOrderGoal() const;
@@ -75,7 +91,9 @@ public:
 
     const Strategy & getCurrentStrategy() const;
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
+	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
 	bool isProxyStartingStrategy() const;
+	bool wasProxyStartingStrategy() const;
 	StrategyPostBuildOrder getCurrentStrategyPostBuildOrder() const;
     bool scoutConditionIsMet() const;
     bool attackConditionIsMet() const;

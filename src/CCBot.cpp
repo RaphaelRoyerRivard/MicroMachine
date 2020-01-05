@@ -16,6 +16,7 @@ CCBot::CCBot(std::string botVersion)
 	, m_saidHallucinationLine(false)
 	, m_botVersion(botVersion)
 	, m_previousMacroGameLoop(-1)
+	, m_player1IsHuman(false)
 {
 }
 
@@ -63,9 +64,9 @@ void CCBot::OnGameStart() //full start
 
 	// Create logfile
 	Util::CreateLog(*this);
-	Util::Log(__FUNCTION__, m_botVersion, *this);
-	std::cout << "Version " << m_botVersion << std::endl;
-	Actions()->SendChat(m_botVersion);
+	m_versionMessage << "MicroMachine v" << m_botVersion;
+	Util::Log(__FUNCTION__, m_versionMessage.str(), *this);
+	std::cout << m_versionMessage.str() << std::endl;
 	selfRace = GetPlayerRace(Players::Self);
     
     setUnits();
@@ -94,6 +95,12 @@ void CCBot::OnStep()
 	StopProfiling("0 Starcraft II");
 	StartProfiling("0.0 OnStep");	//Do not remove
 	m_gameLoop = Observation()->GetGameLoop();
+	if (!m_versionMessage.str().empty() && m_gameLoop >= 5)
+	{
+		Actions()->SendChat(m_versionMessage.str(), sc2::ChatChannel::Team);
+		m_versionMessage.str("");
+		m_versionMessage.clear();
+	}
 	if (m_gameLoop % Util::DELAY_BETWEEN_ERROR == 0)
 	{
 		Util::ClearDisplayedErrors();
@@ -809,22 +816,25 @@ void CCBot::updatePreviousFrameEnemyUnitPos()
 
 void CCBot::checkForConcede()
 {
-	if(!m_concede && m_allyUnits.size() <= 5)
+	if(!m_concede && GetCurrentFrame() > 2688)	// 2 min
 	{
-		int buildings = 0;
+		Unit building;
 		for (const auto allyUnit : m_allyUnits)
 		{
 			if(allyUnit.second.getType().isBuilding())
 			{
-				buildings += 1;
-				if (buildings > 1)
+				if (building.isValid())
 					return;
+				building = allyUnit.second;
 			}
 		}
-		m_concede = true;
-		//Actions()->SendChat("Pineapple");
-		Util::Log(__FUNCTION__, "Concede", *this);
-		m_strategy.onEnd(false);
+		if (building.getHitPointsPercentage() < 50 && Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(building.getPosition()), building.getUnitPtr(), *this) > 0)
+		{
+			m_concede = true;
+			//Actions()->SendChat("Pineapple");
+			Util::Log(__FUNCTION__, "Concede", *this);
+			m_strategy.onEnd(false);
+		}
 	}
 }
 
@@ -910,7 +920,12 @@ void CCBot::IssueCheats()
 	const int player1 = 1;
 	const int player2 = 2;
 	const auto mapCenter = Map().center();
-	const auto offset = Util::Normalized(mapCenter - m_startLocation) * 15;
+	const auto towardsCenter = Util::Normalized(mapCenter - m_startLocation);
+	const auto towardsCenterX = Util::Normalized(CCPosition(mapCenter.x - m_startLocation.x, 0));
+	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
+	const auto offset = towardsCenter * 15;
+	const auto enemyLocation = GetEnemyStartLocations()[0];
+	//Strategy().setShouldProduceAntiAirOffense(true);
 	//Debug()->DebugGiveAllTech();
 	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS);
 	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
@@ -918,26 +933,66 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation + offset, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_THORAP, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, m_startLocation, 2, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter, player2, 3);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter, player2, 5);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, mapCenter, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + Util::Normalized(mapCenter - m_startLocation) * 12, player2, 3);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, m_startLocation + Util::Normalized(mapCenter - m_startLocation) * 12, player2, 3);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation, player1, 5);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, m_startLocation + towardsCenter * 5, player2, 3);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation, player1, 10);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, mapCenter, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + offset, player2, 15);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CORRUPTOR, m_startLocation, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE, mapCenter, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 20);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation + offset, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, m_startLocation + offset, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, mapCenter, player2, 1);
+	//for (const auto baseLocation : Bases().getBaseLocations())
+	//	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED, Util::GetPosition(baseLocation->getDepotPosition()), player1, 1);
 
 	//Workers
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, Players::Enemy, 10);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, m_startLocation, Players::Enemy, 1);
+	
+	//Test for reproducing Reaper bug against Marine and SCV in DiscoBloodbathLE
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation + towardsCenterX * 20, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation + towardsCenterX * 25, player2, 1);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BARRACKS, m_startLocation + towardsCenterX * 21 + towardsCenterY * 2, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BARRACKS, m_startLocation + towardsCenterX * 25 + towardsCenterY * 2, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, m_startLocation + towardsCenterX * 22 + towardsCenterY * 1, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation + towardsCenterX * 25 + towardsCenterY * 2, player1, 1);*/
+
+	// Test for reproducing bug where units would try to hit enemy units on top of cliffs with no vision
+	/*CCPosition cliffPos;
+	float currentDist = 0;
+	const auto topHeight = Map().terrainHeight(enemyLocation);
+	while (cliffPos == CCPosition())
+	{
+		currentDist += 1;
+		auto currentPosition = enemyLocation - towardsCenter * currentDist;
+		const auto currentHeight = Map().terrainHeight(currentPosition);
+		if (currentHeight < topHeight)
+		{
+			cliffPos = currentPosition;
+		}
+	}
+	const auto enemyStalkerLocation = cliffPos - Util::Normalized(cliffPos - enemyLocation) * 2;
+	const auto marauderLocation = cliffPos + Util::Normalized(cliffPos - enemyLocation);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, enemyStalkerLocation, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, marauderLocation, player2, 1);*/
+
+	// Test for reproducing bugs with Vikings against Tempests
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, mapCenter + towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, mapCenter + towardsCenter * 10, player2, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, mapCenter - towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 5, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 10, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter - towardsCenter * 3, player1, 1);*/
 }
 
 uint32_t CCBot::GetCurrentFrame() const

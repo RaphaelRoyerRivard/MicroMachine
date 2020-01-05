@@ -123,7 +123,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 					m_bot.Map().drawCircle(targetUnit.getPosition(), 0.5f, sc2::Colors::Red);
 			}
 		}
-		if (targetUnit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_SCV)
+		if (targetUnit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_SCV && attacker->unit_type != sc2::UNIT_TYPEID::TERRAN_SCV)
 		{
 			// Add a bonus if the SCV is building
 			if (Util::Contains(targetUnit.getUnitPtr(), m_bot.GetEnemySCVBuilders()))

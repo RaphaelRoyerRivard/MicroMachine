@@ -26,6 +26,7 @@ void MeleeManager::setTargets(const std::vector<Unit> & targets)
 void MeleeManager::executeMicro()
 {
     const std::vector<Unit> & meleeUnits = getUnits();
+	bool hasBarracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS).size() > 0;
 
     // for each meleeUnit
     for (auto & meleeUnit : meleeUnits)
@@ -37,8 +38,23 @@ void MeleeManager::executeMicro()
         {
             if (!m_targets.empty())
             {
+				bool injured = false;
+				bool injuredUnitInDanger = false;
+            	if (meleeUnit.getHitPointsPercentage() <= 25)
+            	{
+					injured = true;
+            		for (const auto target : m_targets)
+            		{
+						const auto enemyRange = Util::GetAttackRangeForTarget(target.getUnitPtr(), meleeUnit.getUnitPtr(), m_bot);
+            			if (Util::Dist(target, meleeUnit) < enemyRange + 0.75f)
+            			{
+							injuredUnitInDanger = true;
+							break;
+            			}
+            		}
+            	}
 				// If it is a worker that just attacked, we want it to mineral walk back
-				if (meleeUnit.getType().isWorker() && meleeUnit.getUnitPtr()->weapon_cooldown > 10.f)
+				if (meleeUnit.getType().isWorker() && (meleeUnit.getUnitPtr()->weapon_cooldown > 10.f || injuredUnitInDanger))
 				{
 					Micro::SmartRightClick(meleeUnit.getUnitPtr(), m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getMinerals()[0].getUnitPtr(), m_bot);
 				}
@@ -47,13 +63,15 @@ void MeleeManager::executeMicro()
 					// find the best target for this meleeUnit
 					Unit target = getTarget(meleeUnit, m_targets);
 					const sc2::Unit* repairTarget = nullptr;
+					const sc2::Unit* closestRepairTarget = nullptr;
+					float distanceToClosestRepairTarget = 0;
 					// If the melee unit is a worker
-					if (meleeUnit.getType().isWorker() && m_bot.GetMinerals() > 0 && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
+					if (meleeUnit.getType().isWorker() && m_bot.GetMinerals() > (hasBarracks ? 50 : 0) && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
 					{
 						const float range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
 						const float distSq = Util::DistSq(meleeUnit, target);
 						// If the worker is too far from its target to attack it
-						if (meleeUnit.getUnitPtr()->weapon_cooldown > 0.f || distSq > range * range)
+						if (meleeUnit.getUnitPtr()->weapon_cooldown > 0.f || distSq > range * range || injured)
 						{
 							// Check all other workers to check if there is one injured close enough to repair it
 							for (auto & otherWorker : meleeUnits)
@@ -71,15 +89,22 @@ void MeleeManager::executeMicro()
 									repairTarget = otherWorker.getUnitPtr();
 									break;
 								}
+								if (!closestRepairTarget || otherWorkerDistSq < distanceToClosestRepairTarget)
+								{
+									closestRepairTarget = otherWorker.getUnitPtr();
+									distanceToClosestRepairTarget = otherWorkerDistSq;
+								}
 							}
 						}
 					}
 
-					if (repairTarget)
+					if (repairTarget || (injured && closestRepairTarget))
 					{
+						if (!repairTarget)
+							repairTarget = closestRepairTarget;
 						Micro::SmartRepair(meleeUnit.getUnitPtr(), repairTarget, m_bot);
 					}
-					else
+					else if (!injured)
 					{
 						// attack the target
 						Micro::SmartAttackUnit(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);

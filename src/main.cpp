@@ -296,6 +296,7 @@ int main(int argc, char* argv[])
 		ss << "ai-" << enemyRaceString;
     }
 	bot.SetOpponentId(ss.str());
+	bot.SetPlayer1IsHuman(PlayerOneIsHuman);
 
     
     // WARNING: Bot logic has not been thorougly tested on step sizes > 1

@@ -1000,8 +1000,26 @@ void BuildingManager::checkForDeadTerranBuilders()
 			{
 				if(b.builderUnit.isValid() && b.builderUnit.isAlive())
 				{
-					// Builder is alright, probably just saving his ass, he'll come back
-					continue;
+					// Builder is alright, probably just saving his ass
+					const auto workerJob = m_bot.Workers().getWorkerData().getWorkerJob(b.builderUnit);
+					if (workerJob == WorkerJobs::Combat)
+						continue;
+					if (workerJob == WorkerJobs::Build)
+					{
+						b.builderUnit.rightClick(b.buildingUnit);
+						continue;
+					}
+					// else, we find a new worker
+				}
+				// Was using a proxy strategy but not anymore
+				if (m_bot.Strategy().wasProxyStartingStrategy() && !m_bot.Strategy().isProxyStartingStrategy())
+				{
+					// The building is close to the proxy location
+					if (Util::DistSq(Util::GetPosition(b.finalPosition), m_proxyLocation) < 20 * 20)
+					{
+						// We do not want to finish it
+						continue;
+					}
 				}
 				// grab the worker unit from WorkerManager which is closest to this final position
 				Unit newBuilderUnit = m_bot.Workers().getBuilder(b, false);
@@ -1382,10 +1400,18 @@ CCTilePosition BuildingManager::getProxyLocation()
 		if (closestBase != nullptr)
 		{
 			m_proxyLocation = closestBase->getDepotPosition();
+			const auto depotPos = Util::GetPosition(closestBase->getDepotPosition());
+			const auto centerOfMinerals = Util::GetPosition(closestBase->getCenterOfMinerals());
+			m_proxyLocation2 = depotPos + Util::Normalized(depotPos - centerOfMinerals) * 8;
 			return m_proxyLocation;
 		}
 	}
 	return Util::GetTilePosition(m_bot.Map().center());
+}
+
+CCPosition BuildingManager::getProxyLocation2()
+{
+	return m_proxyLocation2;
 }
 
 std::vector<UnitType> BuildingManager::buildingsQueued() const
@@ -1577,18 +1603,21 @@ Building BuildingManager::CancelBuilding(Building b)
 	if (it != m_buildings.end())
 	{
 		auto position = b.finalPosition;
-		m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight());
-
-		//Free oposite of reserved tiles in assignWorkersToUnassignedBuildings
-		switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
+		if (position != CCPosition())
 		{
-			//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
-			case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
-			case sc2::UNIT_TYPEID::TERRAN_FACTORY:
-			case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+			m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight());
+
+			//Free opposite of reserved tiles in assignWorkersToUnassignedBuildings
+			switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
 			{
-				m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
-				m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
+				//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
+				case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+				case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+				case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+				{
+					m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
+					m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
+				}
 			}
 		}
 

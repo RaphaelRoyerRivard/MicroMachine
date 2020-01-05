@@ -22,6 +22,7 @@ class BuildingManager
 	std::list<CCTilePosition> m_rampTiles;
 	CCPosition m_enemyMainRamp;
 	CCTilePosition m_proxyLocation;
+	CCPosition m_proxyLocation2;
 	CCPosition m_proxyBarracksPosition;
 	CCPosition m_proxyFactoryPosition;
 	bool m_proxySwapInitiated = false;
@@ -78,6 +79,7 @@ public:
 	std::list<Unit>		getWallBuildings();
 	CCPosition			getEnemyMainRamp() const { return m_enemyMainRamp; }
 	CCTilePosition		getProxyLocation();
+	CCPosition			getProxyLocation2();
     CCTilePosition      getBuildingLocation(const Building & b, bool checkInfluenceMap);
 	CCTilePosition		getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;

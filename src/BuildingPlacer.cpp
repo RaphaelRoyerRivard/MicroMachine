@@ -17,7 +17,10 @@ void BuildingPlacer::onStart()
 	auto bases = m_bot.Bases().getBaseLocations();
 	for (auto baseLocation : bases)
 	{
-		auto basePosition = CCTilePosition(baseLocation->getDepotPosition().x, baseLocation->getDepotPosition().y);
+		const auto depotPosition = Util::GetPosition(baseLocation->getDepotPosition());
+		const auto centerOfMinerals = Util::GetPosition(baseLocation->getCenterOfMinerals());
+		const auto towardsOutside = Util::Normalized(depotPosition - centerOfMinerals);
+		const auto basePosition = Util::GetTilePosition(depotPosition + towardsOutside * 2);
 		auto minerals = baseLocation->getMinerals();
 		for (auto mineral : minerals)
 		{
@@ -27,7 +30,7 @@ void BuildingPlacer::onStart()
 		auto geysers = baseLocation->getGeysers();
 		for (auto geyser : geysers)
 		{
-			reserveTiles(basePosition, CCTilePosition(geyser.getTilePosition().x + 1, geyser.getTilePosition().y + 1));//+1 so we have the center tile instead of the bottom left.
+			reserveTiles(basePosition, geyser.getTilePosition());
 		}
 	}
 }
@@ -389,7 +392,7 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	{
 		CCTilePosition position = b.getTilePosition();
 		auto tiles = getTilesForBuildLocation(position.x, position.y, b.getType(), 2, 2, false);
-		for each (auto tile in tiles)
+		for (auto tile : tiles)
 		{
 			if (tile.x == x && tile.y == y)
 			{
@@ -430,7 +433,7 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)
 {
 	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true);
-	for each  (auto tile in tiles)
+	for (auto tile : tiles)
 	{
 		m_reserveMap[tile.x][tile.y] = true;
 	}
@@ -504,7 +507,7 @@ void BuildingPlacer::drawReservedTiles()
 void BuildingPlacer::freeTiles(int bx, int by, int width, int height)
 {
 	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true);
-	for each  (auto tile in tiles)
+	for (auto tile : tiles)
 	{
 		m_reserveMap[tile.x][tile.y] = false;
 	}

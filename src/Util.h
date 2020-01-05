@@ -36,6 +36,11 @@ namespace Util
 		CCPosition m_center;
 		sc2::Units m_units;
 
+		UnitCluster()
+			: m_center(CCPosition())
+			, m_units({})
+		{};
+
 		UnitCluster(CCPosition center, sc2::Units units)
 			: m_center(center)
 			, m_units(units)
@@ -56,6 +61,10 @@ namespace Util
 		bool operator>(const UnitCluster & rhs) const
 		{
 			return rhs < *this;
+		}
+		bool operator==(const UnitCluster & rhs)
+		{
+			return m_center == rhs.m_center && m_units == rhs.m_units;
 		}
 	};
 
@@ -117,12 +126,13 @@ namespace Util
 		CCTilePosition GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		CCPosition GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, CCBot & bot);
 		std::list<CCPosition> GetPositionListFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
-		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to, CCTilePosition secondaryGoal);
+		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to, CCTilePosition secondaryGoal, CCBot & bot);
 		bool HasInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
 		bool HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, CCBot & bot);
 		bool HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
 		bool HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, bool fromGround, CCBot & bot);
 		bool HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, bool fromGround, CCBot & bot);
+		float GetTotalInfluenceOnTiles(CCPosition position, bool isFlying, float radius, CCBot & bot);
 		float GetTotalInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 		float GetTotalInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
 		float GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
@@ -157,13 +167,13 @@ namespace Util
 
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
 	bool CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot);
-    float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
+    float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells = false);
     float GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
 	float GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot);
     float GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot);
     float GetMaxAttackRange(sc2::UnitTypeData unitTypeData, CCBot & bot);
-	float GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
-	float GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
+	float GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any, bool ignoreSpells = false);
+	float GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any, bool ignoreSpells = false);
 	float GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot);
 	float GetAirAttackRange(const sc2::Unit * unit, CCBot & bot);
 	float GetAttackRangeBonus(const sc2::UnitTypeID unitType, CCBot & bot);
@@ -179,6 +189,7 @@ namespace Util
 	std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
 	std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot);
 	float getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCBot & m_bot);
+	float getThreatRange(bool isFlying, CCPosition position, float radius, const sc2::Unit * threat, CCBot & m_bot);
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
 	float getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
 	CCPosition getFacingVector(const sc2::Unit * unit);
@@ -187,7 +198,8 @@ namespace Util
 	bool isUnitDisabled(const sc2::Unit * unit);
 	bool isUnitLifted(const sc2::Unit * unit);
 	bool unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId);
-
+	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot);
+	bool CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
     
     std::string     GetStringFromRace(const sc2::Race & race);
@@ -267,5 +279,5 @@ namespace Util
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
 	float DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point);
 
-	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits);
+	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
 };

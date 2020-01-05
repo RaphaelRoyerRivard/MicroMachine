@@ -45,21 +45,52 @@ void StrategyManager::onStart()
 			file >> j;
 			file.close();
 			auto jStrats = j["strategies"];
-			int bestScore = 0;
+			int totalWins = 0;
+			int totalLosses = 0;
+			float bestScore = 0;
+			int bestScoreGames = 0;
 			int bestStrat = -1;
-			for (auto stratIndex = 0; stratIndex < jStrats.size(); ++stratIndex)
+			for (auto stratIndex = 0; stratIndex < StartingStrategy::COUNT; ++stratIndex)
 			{
-				int wins;
-				int losses;
+				int wins = 0;
+				int losses = 0;
 				JSONTools::ReadInt("wins", jStrats[stratIndex], wins);
 				JSONTools::ReadInt("losses", jStrats[stratIndex], losses);
-				if (bestStrat < 0 || wins - losses > bestScore)
+				totalWins += wins;
+				totalLosses += losses;
+				auto games = wins + losses;
+				float winPercentage = games > 0 ? wins / float(games) : 1;
+				if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && games > 0 && games < bestScoreGames))
 				{
-					bestScore = wins - losses;
-					bestStrat = stratIndex;
+					// We make sure the opponent has the appropriate race to pick the race specific strategy 
+					const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
+					if (it == RACE_SPECIFIC_STRATEGIES.end() || m_bot.GetPlayerRace(Players::Enemy) == it->second)
+					{
+						bestScore = winPercentage;
+						bestStrat = stratIndex;
+						bestScoreGames = games;
+					}
 				}
+				m_opponentHistory << STRATEGY_NAMES[stratIndex] << " (" << wins << "-" << losses << ")";
+				if (stratIndex < StartingStrategy::COUNT - 1)
+					m_opponentHistory << ", ";
 			}
 			m_startingStrategy = StartingStrategy(bestStrat);
+			if (m_bot.Config().PrintGreetingMessage)
+			{
+				const auto winPercentage = totalWins + totalLosses > 0 ? round(totalWins * 100 / (totalWins + totalLosses)) : 100;
+				m_greetingMessage << "Greetings " << opponentId << ", my rudimentary database is telling me that I've won " << winPercentage << "% of our encounters. ";
+				if (winPercentage >= 95)
+					m_greetingMessage << "Prepare to get crushed.";
+				else if (winPercentage >= 50)
+					m_greetingMessage << "Do your best, as I won't spare you!";
+				else if (winPercentage >= 10)
+					m_greetingMessage << "Let's see if I can be lucky this time around!";
+				else
+					m_greetingMessage << "Ouch...";
+			}
+			Util::Log(__FUNCTION__, m_opponentHistory.str(), m_bot);
+			std::cout << m_opponentHistory.str() << std::endl;
 		}
 		else
 		{
@@ -72,11 +103,21 @@ void StrategyManager::onStart()
 			outFile << j.dump();
 			outFile.close();
 			m_startingStrategy = PROXY_CYCLONES;
+			if (m_bot.Config().PrintGreetingMessage)
+			{
+				m_greetingMessage << "Greetings stranger. I shall call you " << opponentId << " from now on. GLHF!";
+			}
 		}
+		m_strategyMessage << "Chosen strategy: " << STRATEGY_NAMES[m_startingStrategy];
+		Util::Log(__FUNCTION__, m_strategyMessage.str(), m_bot);
+		std::cout << m_strategyMessage.str() << std::endl;
 		std::ofstream outFile(path);
-		int wins;
+		int wins = 0;
+		int losses = 0;
 		JSONTools::ReadInt("wins", j["strategies"][int(m_startingStrategy)], wins);
+		JSONTools::ReadInt("losses", j["strategies"][int(m_startingStrategy)], losses);
 		j["strategies"][int(m_startingStrategy)]["wins"] = wins + 1;
+		j["strategies"][int(m_startingStrategy)]["losses"] = losses;
 		outFile << j.dump();
 		outFile.close();
 	}
@@ -89,21 +130,74 @@ void StrategyManager::onStart()
 
 void StrategyManager::onFrame(bool executeMacro)
 {
+	if (m_bot.Config().PrintGreetingMessage && m_bot.GetCurrentFrame() >= 5)
+	{
+		if (!m_greetingMessage.str().empty())
+		{
+			m_bot.Actions()->SendChat(m_greetingMessage.str());
+			m_greetingMessage.str("");
+			m_greetingMessage.clear();
+		}
+		if (!m_opponentHistory.str().empty())
+		{
+			m_bot.Actions()->SendChat(m_opponentHistory.str(), sc2::ChatChannel::Team);
+			m_opponentHistory.str("");
+			m_opponentHistory.clear();
+		}
+		if (!m_strategyMessage.str().empty())
+		{
+			m_bot.Actions()->SendChat(m_strategyMessage.str(), sc2::ChatChannel::Team);
+			m_strategyMessage.str("");
+			m_strategyMessage.clear();
+		}
+	}
 	if (executeMacro)
 	{
-		if (isProxyStartingStrategy() && m_bot.GetGameLoop() >= 672 && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 30s
+		if (isProxyStartingStrategy())
 		{
-			if (m_startingStrategy == PROXY_CYCLONES)
+			if (m_bot.GetGameLoop() >= 448 && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 20s
 			{
-				const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
-				if (!hasFactory)
+				const auto hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0;
+				if (!hasBarracks)
+				{
+					m_startingStrategy = STANDARD;
+					m_bot.Commander().Production().clearQueue();
+					m_bot.Commander().Production().queueAsHighestPriority(MetaTypeEnum::Barracks, false);
+				}
+				else
+				{
+					const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
+					if (!hasFactory)
+					{
+						m_startingStrategy = STANDARD;
+						m_bot.Commander().Production().clearQueue();
+					}
+				}
+			}
+			else if (isWorkerRushed())
+			{
+				m_bot.Workers().getWorkerData().clearProxyWorkers();
+				m_startingStrategy = STANDARD;
+			}
+		}
+		else if (m_startingStrategy == WORKER_RUSH)
+		{
+			const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
+			if (!enemyUnits.empty())
+			{
+				bool groundUnit = false;
+				for (const auto & enemyUnit : enemyUnits)
+				{
+					if (!enemyUnit.isFlying())
+					{
+						groundUnit = true;
+						break;
+					}
+				}
+				if (!groundUnit)
 				{
 					m_startingStrategy = STANDARD;
 				}
-			}
-			else
-			{
-				m_startingStrategy = STANDARD;
 			}
 		}
 	}
@@ -111,7 +205,12 @@ void StrategyManager::onFrame(bool executeMacro)
 
 bool StrategyManager::isProxyStartingStrategy() const
 {
-	return m_startingStrategy == PROXY_CYCLONES;
+	return m_startingStrategy == PROXY_CYCLONES || m_startingStrategy == PROXY_MARAUDERS;
+}
+
+bool StrategyManager::wasProxyStartingStrategy() const
+{
+	return m_initialStartingStrategy == PROXY_CYCLONES || m_initialStartingStrategy == PROXY_MARAUDERS;
 }
 
 const Strategy & StrategyManager::getCurrentStrategy() const

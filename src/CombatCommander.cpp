@@ -820,6 +820,7 @@ void CombatCommander::updateHarassSquads()
 		// put high mobility units in the harass squad
 		const sc2::UnitTypeID unitTypeId = unit.getType().getAPIUnitType();
 		if ((unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARAUDER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_REAPER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE
@@ -862,7 +863,8 @@ void CombatCommander::updateHarassSquads()
 	}
 	const auto tempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
 	const auto VIKING_TEMPEST_RATIO = 2.5f;
-	if(idleVikings.size() >= tempestCount * VIKING_TEMPEST_RATIO)
+	const auto vikingsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true);
+	if(vikingsCount >= tempestCount * VIKING_TEMPEST_RATIO)
 	{
 		for (auto viking : idleVikings)
 		{
@@ -900,15 +902,27 @@ void CombatCommander::updateHarassSquads()
 	}
 	if(!idleCyclones.empty())
 	{
-		for (const auto & unit : harassSquad.getUnits())
+		bool addCyclones = false;
+		if (m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS)
 		{
-			if (unit.isFlying())
+			addCyclones = true;
+		}
+		else
+		{
+			for (const auto & unit : harassSquad.getUnits())
 			{
-				for (auto cyclone : idleCyclones)
+				if (unit.isFlying())
 				{
-					m_squadData.assignUnitToSquad(*cyclone, harassSquad);
+					addCyclones = true;
+					break;
 				}
-				break;
+			}
+		}
+		if (addCyclones)
+		{
+			for (auto cyclone : idleCyclones)
+			{
+				m_squadData.assignUnitToSquad(*cyclone, harassSquad);
 			}
 		}
 	}
@@ -934,7 +948,7 @@ void CombatCommander::updateHarassSquads()
 			enemySupply += enemyUnit.getType().supplyRequired();
 		}
 	}
-	m_winAttackSimulation = Util::SimulateCombat(allyUnits, enemyUnits);
+	m_winAttackSimulation = Util::SimulateCombat(allyUnits, enemyUnits, m_bot);
 	m_biggerArmy = allySupply >= enemySupply;
 
 	const SquadOrder harassOrder(SquadOrderTypes::Harass, GetClosestEnemyBaseLocation(), HarassOrderRadius, "Harass");
@@ -950,11 +964,11 @@ void CombatCommander::updateAttackSquads()
 
     Squad & mainAttackSquad = m_squadData.getSquad("MainAttack");
 	
-	if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH)
+	if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH && m_bot.GetCurrentFrame() >= 224)
 	{
 		for (auto & scv : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SCV))
 		{
-			if (mainAttackSquad.getUnits().size() < 11 && m_squadData.canAssignUnitToSquad(scv, mainAttackSquad, true))
+			if (!scv.isReturningCargo() && mainAttackSquad.getUnits().size() < 11 && m_squadData.canAssignUnitToSquad(scv, mainAttackSquad, true))
 			{
 				m_bot.Workers().getWorkerData().setWorkerJob(scv, WorkerJobs::Combat);
 				m_squadData.assignUnitToSquad(scv, mainAttackSquad);
@@ -1012,16 +1026,13 @@ void CombatCommander::updateScoutDefenseSquad()
 
     // get all of the enemy units in this region
     std::vector<Unit> enemyUnitsInRegion;
-	if (m_bot.GetCurrentFrame() < 120 * 24)	// No need to have a scout defense after 2 min
+	for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
 	{
-		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+		if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
 		{
-			if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
-			{
-				enemyUnitsInRegion.push_back(unit);
-				if (enemyUnitsInRegion.size() > 1)
-					break;
-			}
+			enemyUnitsInRegion.push_back(unit);
+			if (enemyUnitsInRegion.size() > 1)
+				break;
 		}
 	}
 
@@ -1311,6 +1322,8 @@ void CombatCommander::updateDefenseSquads()
 			continue;
 		}
 
+		const auto proxyBase = m_bot.Strategy().isProxyStartingStrategy() && myBaseLocation->containsPositionApproximative(Util::GetPosition(m_bot.Buildings().getProxyLocation()));
+
 		m_bot.StartProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		auto region = RegionArmyInformation(myBaseLocation, m_bot);
 
@@ -1321,7 +1334,8 @@ void CombatCommander::updateDefenseSquads()
 		float minEnemyDistance = 0;
 		Unit closestEnemy;
 		int enemyWorkers = 0;
-		for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+		for (auto & unit : m_bot.GetKnownEnemyUnits())
+		//for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
 		{
 			// if it's an overlord, don't worry about it for defense, we don't care what they see
 			if (unit.getType().isOverlord())
@@ -1346,7 +1360,7 @@ void CombatCommander::updateDefenseSquads()
 					}
 					workerRushed = true;
 				}
-				else if (!earlyRushed && m_bot.GetGameLoop() < 7320)	// first 5 minutes
+				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 7320)	// first 5 minutes
 				{
 					earlyRushed = true;
 				}
@@ -1515,6 +1529,9 @@ void CombatCommander::updateDefenseSquads()
 				bool detectionUseful = false;
 				float maxGroundDps = 0.f;
 				float maxAirDps = 0.f;
+				const bool workerScout = region.enemyUnits.size() == 1 && region.enemyUnits[0].getType().isWorker();
+				if (workerScout)
+					continue;	// We do not want to send a combat unit against an enemy scout
 				for (auto & enemyUnit : region.enemyUnits)
 				{
 					// As soon as there is a non building unit that the weak unit can attack, we consider that the weak unit can be useful
