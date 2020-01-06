@@ -60,11 +60,13 @@ void StrategyManager::onStart()
 				totalLosses += losses;
 				auto games = wins + losses;
 				float winPercentage = games > 0 ? wins / float(games) : 1;
-				if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && games > 0 && games < bestScoreGames))
+				// We make sure the opponent has the appropriate race to pick the race specific strategy 
+				const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
+				bool raceSpecificStrategy = it != RACE_SPECIFIC_STRATEGIES.end();
+				bool validRaceSpecificStrategy = raceSpecificStrategy && m_bot.GetPlayerRace(Players::Enemy) == it->second;
+				if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && (validRaceSpecificStrategy || (games > 0 && games < bestScoreGames))))
 				{
-					// We make sure the opponent has the appropriate race to pick the race specific strategy 
-					const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
-					if (it == RACE_SPECIFIC_STRATEGIES.end() || m_bot.GetPlayerRace(Players::Enemy) == it->second)
+					if (!raceSpecificStrategy || validRaceSpecificStrategy)
 					{
 						bestScore = winPercentage;
 						bestStrat = stratIndex;
