@@ -125,7 +125,7 @@ void StrategyManager::onStart()
 	{
 		m_startingStrategy = STANDARD;
 	}
-	//m_startingStrategy = PROXY_MARAUDERS;//TODO TEMPORARY
+	m_startingStrategy = PROXY_MARAUDERS;//TODO TEMPORARY
 	m_initialStartingStrategy = m_startingStrategy;
 }
 
