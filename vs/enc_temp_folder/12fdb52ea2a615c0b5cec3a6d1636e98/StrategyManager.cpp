@@ -60,13 +60,11 @@ void StrategyManager::onStart()
 				totalLosses += losses;
 				auto games = wins + losses;
 				float winPercentage = games > 0 ? wins / float(games) : 1;
-				// We make sure the opponent has the appropriate race to pick the race specific strategy 
-				const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
-				bool raceSpecificStrategy = it != RACE_SPECIFIC_STRATEGIES.end();
-				bool validRaceSpecificStrategy = raceSpecificStrategy && m_bot.GetPlayerRace(Players::Enemy) == it->second;
-				if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && (validRaceSpecificStrategy || (games > 0 && games < bestScoreGames))))
+				if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && games > 0 && games < bestScoreGames))
 				{
-					if (!raceSpecificStrategy || validRaceSpecificStrategy)
+					// We make sure the opponent has the appropriate race to pick the race specific strategy 
+					const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
+					if (it == RACE_SPECIFIC_STRATEGIES.end() || m_bot.GetPlayerRace(Players::Enemy) == it->second)
 					{
 						bestScore = winPercentage;
 						bestStrat = stratIndex;
@@ -127,7 +125,7 @@ void StrategyManager::onStart()
 	{
 		m_startingStrategy = STANDARD;
 	}
-	//m_startingStrategy = PROXY_MARAUDERS;//TODO TEMPORARY
+	m_startingStrategy = PROXY_MARAUDERS;//TODO TEMPORARY
 	m_initialStartingStrategy = m_startingStrategy;
 }
 

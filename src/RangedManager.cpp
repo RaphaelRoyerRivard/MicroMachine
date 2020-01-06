@@ -26,6 +26,7 @@ const int CYCLONE_ATTACK_FRAME_COUNT = 1;
 const int CYCLONE_LOCKON_CAST_FRAME_COUNT = 9;
 const int CYCLONE_LOCKON_CHANNELING_FRAME_COUNT = 321 + CYCLONE_LOCKON_CAST_FRAME_COUNT;
 const int CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT = 97;
+const int CYCLONE_MAX_INFLUENCE_FOR_LOCKON = 75;
 const float CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER = 4.f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
@@ -340,18 +341,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			unitAttackRange = 5.f;	// We want to stay close to the unit so we keep our Lock-On for a longer period
 		else if (!shouldAttack)
 		{
-			bool allyUnitSeesTarget = false;
-			for (const auto & allyUnit : m_bot.GetAllyUnits())
-			{
-				const auto allyUnitPtr = allyUnit.second.getUnitPtr();
-				if (allyUnitPtr == rangedUnit)
-					continue;
-				if (Util::CanUnitSeeEnemyUnit(allyUnitPtr, target, m_bot))
-				{
-					allyUnitSeesTarget = true;
-					break;
-				}
-			}
+			bool allyUnitSeesTarget = Util::AllyUnitSeesEnemyUnit(rangedUnit, target, m_bot);
 			unitAttackRange = (allyUnitSeesTarget ? 14.f : 10.f) + rangedUnit->radius + target->radius;
 		}
 		else
@@ -410,9 +400,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			{
 				const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
 				const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
+				const auto maxInfluence = (cycloneShouldUseLockOn && target) ? CYCLONE_MAX_INFLUENCE_FOR_LOCKON : 0.f;
 				const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
 				const float maxRange = target ? unitAttackRange : 3.f;
-				CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, m_bot);
+				CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, maxInfluence, m_bot);
 				if (closePositionInPath != CCPosition())
 				{
 					const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
@@ -505,10 +496,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		dirVec += GetRepulsionVectorFromFriendlyReapers(rangedUnit, rangedUnits);
 	}
-	// We attract the Hellion towards our other close Hellions
-	else if (isHellion)
+	// We attract the ranged unit towards our other close ranged units of same type
+	else if (isHellion || isViking || isMarauder)
 	{
-		dirVec += GetAttractionVectorToFriendlyHellions(rangedUnit, rangedUnits);
+		dirVec += GetAttractionVectorToFriendlyUnits(rangedUnit, rangedUnits);
 	}
 
 	// We move only if the vector is long enough
@@ -1117,12 +1108,13 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				if (threatHeight > cycloneHeight)
 				{
 					bool hasGoodViewOfUnit = false;
-					for (const auto rangedUnit : rangedUnits)
+					for (const auto allyUnitPair : m_bot.GetAllyUnits())
 					{
-						if (rangedUnit == cyclone)
+						const auto allyUnit = allyUnitPair.second.getUnitPtr();
+						if (allyUnit == cyclone)
 							continue;
-						const float distSq = Util::DistSq(rangedUnit->pos, threat->pos);
-						if(distSq <= 11.f * 11.f && (rangedUnit->is_flying || m_bot.Map().terrainHeight(rangedUnit->pos) >= threatHeight))
+						const auto canSeeEnemy = Util::AllyUnitSeesEnemyUnit(allyUnit, threat, m_bot);
+						if(canSeeEnemy)
 						{
 							hasGoodViewOfUnit = true;
 							break;
@@ -1449,7 +1441,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			}
 			else if(shouldChase)
 			{
-				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, false, m_bot);
+				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, m_bot);
 				movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, m_bot);
 			}
 		}
@@ -1483,7 +1475,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 	target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, lockOnAvailable, rangedUnits, threats, target, abilities);
 
 	// If the Cyclone has a its Lock-On on a target with a big range (like a Tempest or Tank)
-	if (!shouldAttack && !cycloneShouldUseLockOn && m_order.getType() != SquadOrderTypes::Defend)
+	if (!shouldAttack && !cycloneShouldUseLockOn)
 	{
 		const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 		const auto it = lockOnTargets.find(rangedUnit);
@@ -1494,8 +1486,8 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 			if (enemyRange >= 10.f)
 			{
 				// We check if we have another unit that is close to it, but if not, the Cyclone should stay close to it
-				bool closeAlly = false;
-				for (const auto ally : rangedUnits)
+				bool closeAlly = Util::AllyUnitSeesEnemyUnit(rangedUnit, lockOnTarget, m_bot);;
+				/*for (const auto ally : rangedUnits)
 				{
 					if (ally == rangedUnit)
 						continue;
@@ -1507,7 +1499,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 						closeAlly = true;
 						break;
 					}
-				}
+				}*/
 				if (!closeAlly)
 				{
 					cycloneShouldStayCloseToTarget = true;
@@ -1888,15 +1880,15 @@ CCPosition RangedManager::GetRepulsionVectorFromFriendlyReapers(const sc2::Unit 
 	return CCPosition(0, 0);
 }
 
-CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit * hellion, sc2::Units & rangedUnits) const
+CCPosition RangedManager::GetAttractionVectorToFriendlyUnits(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits) const
 {
 	// Check if there is a friendly harass unit close to this one
 	std::vector<const sc2::Unit*> closeAllies;
 	for (auto friendlyRangedUnit : rangedUnits)
 	{
-		if (friendlyRangedUnit->tag != hellion->tag && friendlyRangedUnit->unit_type == hellion->unit_type)
+		if (friendlyRangedUnit->tag != rangedUnit->tag && friendlyRangedUnit->unit_type == rangedUnit->unit_type)
 		{
-			const float dist = Util::DistSq(hellion->pos, friendlyRangedUnit->pos);
+			const float dist = Util::DistSq(rangedUnit->pos, friendlyRangedUnit->pos);
 			if (dist < HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE * HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE)
 				closeAllies.push_back(friendlyRangedUnit);
 		}
@@ -1908,11 +1900,11 @@ CCPosition RangedManager::GetAttractionVectorToFriendlyHellions(const sc2::Unit 
 
 #ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
-			m_bot.Map().drawLine(hellion->pos, closeAlliesCenter, sc2::Colors::Green);
+			m_bot.Map().drawLine(rangedUnit->pos, closeAlliesCenter, sc2::Colors::Green);
 #endif
 
-		const float distToCloseAlliesCenter = Util::Dist(hellion->pos, closeAlliesCenter);
-		CCPosition attractionVector = closeAlliesCenter - hellion->pos;
+		const float distToCloseAlliesCenter = Util::Dist(rangedUnit->pos, closeAlliesCenter);
+		CCPosition attractionVector = closeAlliesCenter - rangedUnit->pos;
 		Util::Normalize(attractionVector);
 		// The repulsion intensity is linearly interpolated (stronger the farthest to lower the closest)
 		const float intensity = HARASS_FRIENDLY_ATTRACTION_INTENSITY * distToCloseAlliesCenter / HARASS_FRIENDLY_ATTRACTION_MIN_DISTANCE;
