@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "AcropolisLE.SC2Map",
+        "EnemyRace"                 : "Terran",
+        "MapFile"                   : "Random",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50

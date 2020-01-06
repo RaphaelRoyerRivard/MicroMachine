@@ -926,6 +926,7 @@ void WorkerManager::repairCombatBuildings()
 								break;
 							}
 							shouldRepair = true;
+
 							for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
 							{
 								const auto enemyDistSq = Util::DistSq(enemyUnit, buildingPos);
@@ -941,19 +942,20 @@ void WorkerManager::repairCombatBuildings()
 				}
 				if (shouldRepair)
 				{
+					int reparator = maxReparator - floor(maxReparator * building.getHitPointsPercentage() / 100);
 					for (auto & worker : workers)
 					{
 						Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
 						if (repairedUnit.isValid() && repairedUnit.getID() == building.getID())
 						{
 							alreadyRepairing++;
-							if (maxReparator == alreadyRepairing)
+							if (reparator == alreadyRepairing)//Already enough repairer, stop checking how many are repairing
 							{
 								break;
 							}
 						}
 					}
-					for (int i = 0; i < maxReparator - alreadyRepairing; i++)
+					for (int i = 0; i < reparator - alreadyRepairing; i++)
 					{
 						Unit worker = getClosestMineralWorkerTo(building.getPosition());
 						if (worker.isValid())
