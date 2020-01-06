@@ -26,6 +26,7 @@ const int CYCLONE_ATTACK_FRAME_COUNT = 1;
 const int CYCLONE_LOCKON_CAST_FRAME_COUNT = 9;
 const int CYCLONE_LOCKON_CHANNELING_FRAME_COUNT = 321 + CYCLONE_LOCKON_CAST_FRAME_COUNT;
 const int CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT = 97;
+const int CYCLONE_MAX_INFLUENCE_FOR_LOCKON = 75;
 const float CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER = 4.f;
 const int HELLION_ATTACK_FRAME_COUNT = 9;
 const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
@@ -399,9 +400,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			{
 				const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
 				const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
+				const auto maxInfluence = (cycloneShouldUseLockOn && target) ? CYCLONE_MAX_INFLUENCE_FOR_LOCKON : 0.f;
 				const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
 				const float maxRange = target ? unitAttackRange : 3.f;
-				CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, m_bot);
+				CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, maxInfluence, m_bot);
 				if (closePositionInPath != CCPosition())
 				{
 					const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
@@ -1106,12 +1108,13 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				if (threatHeight > cycloneHeight)
 				{
 					bool hasGoodViewOfUnit = false;
-					for (const auto rangedUnit : rangedUnits)
+					for (const auto allyUnitPair : m_bot.GetAllyUnits())
 					{
-						if (rangedUnit == cyclone)
+						const auto allyUnit = allyUnitPair.second.getUnitPtr();
+						if (allyUnit == cyclone)
 							continue;
-						const float distSq = Util::DistSq(rangedUnit->pos, threat->pos);
-						if(distSq <= 11.f * 11.f && (rangedUnit->is_flying || m_bot.Map().terrainHeight(rangedUnit->pos) >= threatHeight))
+						const auto canSeeEnemy = Util::AllyUnitSeesEnemyUnit(allyUnit, threat, m_bot);
+						if(canSeeEnemy)
 						{
 							hasGoodViewOfUnit = true;
 							break;
@@ -1438,7 +1441,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			}
 			else if(shouldChase)
 			{
-				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, false, m_bot);
+				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, m_bot);
 				movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, m_bot);
 			}
 		}
