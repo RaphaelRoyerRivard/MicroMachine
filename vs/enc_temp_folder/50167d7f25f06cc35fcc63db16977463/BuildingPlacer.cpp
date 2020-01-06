@@ -111,11 +111,11 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 			//Validate there is no building in the way (any player)
 		}
 	}
-	///TODO TEMP, TESTING MISPLACEMENT
-	/*if (!m_bot.Query()->Placement(m_bot.Data(type).buildAbility, CCPosition(bx ,by)))
+	///TODO MISPLACEMENT
+	if (!m_bot.Query()->Placement(m_bot.Data(type).buildAbility, CCPosition(bx -1 ,by - 1)))
 	{
 		auto a = 1;
-	}*/
+	}
     return !isEnemyUnitBlocking(CCTilePosition(bx, by), type);
 }
 

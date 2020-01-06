@@ -1304,10 +1304,10 @@ const CCTilePosition CCBot::GetBuildingArea() const
 		return safeLocation;
 	}
 
-	const auto & bases = m_bases.getBaseLocations();
+	const auto & bases = m_bases.getOccupiedBaseLocations(Players::Self);	
 	for (auto & base : bases)
 	{
-		if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
+		if (base->isUnderAttack())
 			continue;
 		return base->getDepotPosition();
 	}
