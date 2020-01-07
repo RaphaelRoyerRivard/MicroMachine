@@ -600,9 +600,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 					else if (starportCount > starportAddonCount)
 					{
-						if (m_bot.Strategy().enemyHasProtossHighTechAir() || proxyMaraudersStrategy || (m_bot.Strategy().shouldProduceAntiAirOffense() && starportTechLabCount > starportReactorCount))
+						if (m_bot.Strategy().enemyHasProtossHighTechAir() || (m_bot.Strategy().shouldProduceAntiAirOffense() && (proxyMaraudersStrategy || starportTechLabCount > starportReactorCount)))
 							toBuild = MetaTypeEnum::StarportReactor;
-						else
+						else if (!proxyMaraudersStrategy || hasFusionCore)
 							toBuild = MetaTypeEnum::StarportTechLab;
 						hasPicked = true;
 					}
