@@ -17,8 +17,9 @@ struct RangedUnitAction
 		, finished(true)
 		, duration(0)
 		, executionFrame(0)
+		, description("")
 	{}
-	RangedUnitAction(MicroActionType microActionType, bool prioritize, int duration)
+	RangedUnitAction(MicroActionType microActionType, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(CCPosition())
@@ -28,8 +29,9 @@ struct RangedUnitAction
 		, finished(false)
 		, duration(duration)
 		, executionFrame(0)
+		, description(description)
 	{}
-	RangedUnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration)
+	RangedUnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(target)
 		, position(CCPosition())
@@ -39,8 +41,9 @@ struct RangedUnitAction
 		, finished(false)
 		, duration(duration)
 		, executionFrame(0)
+		, description(description)
 	{}
-	RangedUnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration)
+	RangedUnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(position)
@@ -50,8 +53,9 @@ struct RangedUnitAction
 		, finished(false)
 		, duration(duration)
 		, executionFrame(0)
+		, description(description)
 	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration)
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(CCPosition())
@@ -61,8 +65,9 @@ struct RangedUnitAction
 		, finished(false)
 		, duration(duration)
 		, executionFrame(0)
+		, description(description)
 	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration)
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(position)
@@ -72,8 +77,9 @@ struct RangedUnitAction
 		, finished(false)
 		, duration(duration)
 		, executionFrame(0)
+		, description(description)
 	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration)
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(target)
 		, position(CCPosition())
@@ -83,6 +89,7 @@ struct RangedUnitAction
 		, finished(false)
 		, duration(duration)
 		, executionFrame(0)
+		, description(description)
 	{}
 	RangedUnitAction(const RangedUnitAction& rangedUnitAction) = default;
 	MicroActionType microActionType;
@@ -94,6 +101,7 @@ struct RangedUnitAction
 	bool finished;
 	int duration;
 	uint32_t executionFrame;
+	std::string description;
 
 	RangedUnitAction& operator=(const RangedUnitAction&) = default;
 
