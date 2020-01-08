@@ -1046,7 +1046,7 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 
 void Util::CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits)
 {
-	for (auto unit : units)
+	for (auto & unit : units)
 	{
 		outUnits.push_back(unit.getUnitPtr());
 	}
