@@ -27,6 +27,7 @@ const float MainAttackMinRetreatDuration = 50;	//Max number of frames allowed fo
 const size_t BLOCKED_TILES_UPDATE_FREQUENCY = 24;
 const uint32_t WORKER_RUSH_DETECTION_COOLDOWN = 30 * 24;
 const size_t MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE = 15;
+const int ACTION_REEXECUTION_FREQUENCY = 50;
 
 CombatCommander::CombatCommander(CCBot & bot)
     : m_bot(bot)
@@ -129,6 +130,10 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
         m_attackStarted = shouldWeStartAttacking();
     }
 
+	m_logVikingActions = false;
+
+	CleanActions(combatUnits);
+
 	clearYamatoTargets();
 
     m_combatUnits = combatUnits;
@@ -161,6 +166,8 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	m_bot.StartProfiling("0.10.4.1    m_squadData.onFrame");
 	m_squadData.onFrame();
 	m_bot.StopProfiling("0.10.4.1    m_squadData.onFrame");
+
+	ExecuteActions();
 
 	m_bot.StartProfiling("0.10.4.3    lowPriorityCheck");
 	lowPriorityCheck();
@@ -2151,4 +2158,187 @@ CCPosition CombatCommander::GetNextBaseLocationToScout()
 		targetBasePosition = GetClosestEnemyBaseLocation();
 	}
 	return targetBasePosition;
+}
+
+void CombatCommander::SetLogVikingActions(bool log)
+{
+	m_logVikingActions = log;
+}
+
+bool CombatCommander::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
+{
+	const uint32_t availableFrame = nextCommandFrameForUnit.find(rangedUnit) != nextCommandFrameForUnit.end() ? nextCommandFrameForUnit.at(rangedUnit) : 0;
+	return m_bot.GetGameLoop() < availableFrame;
+}
+
+bool CombatCommander::PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action)
+{
+	auto & currentAction = unitActions[rangedUnit];
+	// If the unit is already performing the same action, we do nothing
+	if (currentAction == action)
+	{
+		// Just reset the priority
+		currentAction.prioritized = action.prioritized;
+		return false;
+	}
+
+	// If the unit is performing a priorized action
+	if (currentAction.prioritized && !action.prioritized)
+	{
+		return false;
+	}
+
+	// The current action is not yet finished and the new one is not prioritized
+	if (currentAction.executed && !currentAction.finished && !action.prioritized)
+	{
+		return false;
+	}
+
+	unitActions[rangedUnit] = action;
+	return true;
+}
+
+void CombatCommander::CleanActions(const std::vector<Unit> &combatUnits)
+{
+	sc2::Units units;
+	Util::CCUnitsToSc2Units(combatUnits, units);
+	sc2::Units unitsToClear;
+	for (auto & unitAction : unitActions)
+	{
+		const auto rangedUnit = unitAction.first;
+		auto & action = unitAction.second;
+
+		// If the unit is dead, we will need to remove it from the map
+		if (!rangedUnit->is_alive)
+		{
+			unitsToClear.push_back(rangedUnit);
+			continue;
+		}
+
+		// If the unit is no longer in this squad
+		if (!Util::Contains(rangedUnit, units))
+		{
+			unitsToClear.push_back(rangedUnit);
+			continue;
+		}
+
+		// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
+		if (ShouldSkipFrame(rangedUnit))
+			continue;
+		
+		// Reset the priority of the action because it is finished
+		action.prioritized = false;
+		action.finished = true;
+	}
+
+	for (auto unit : unitsToClear)
+	{
+		unitActions.erase(unit);
+	}
+}
+
+void CombatCommander::ExecuteActions()
+{
+	for (auto & unitAction : unitActions)
+	{
+		const auto rangedUnit = unitAction.first;
+		auto & action = unitAction.second;
+
+		if (m_logVikingActions && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+		{
+			std::stringstream ss;
+			ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " has action " << action.description;
+			Util::Log(__FUNCTION__, ss.str(), m_bot);
+		}
+
+#ifndef PUBLIC_RELEASE
+		if (m_bot.Config().DrawRangedUnitActions)
+		{
+			const std::string actionString = MicroActionTypeAccronyms[action.microActionType] + (action.prioritized ? "!" : "");
+			m_bot.Map().drawText(rangedUnit->pos, actionString, sc2::Colors::Teal);
+		}
+#endif
+
+		// If the action has already been executed and it is not time to reexecute it
+		if (action.executed && (action.duration >= ACTION_REEXECUTION_FREQUENCY || m_bot.GetGameLoop() - action.executionFrame < ACTION_REEXECUTION_FREQUENCY))
+			continue;
+
+		bool skip = false;
+		m_bot.GetCommandMutex().lock();
+		switch (action.microActionType)
+		{
+		case MicroActionType::AttackMove:
+			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
+			{
+				const auto orderPos = rangedUnit->orders[0].target_pos;
+				const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
+				const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
+				const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
+				const auto dist = Util::DistSq(orderPos, action.position);
+				if (sameDirection && dist < 1)
+					skip = true;
+			}
+			if (!skip)
+				Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
+			break;
+		case MicroActionType::AttackUnit:
+			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == action.target->tag)
+				skip = true;
+			if (!skip)
+				Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
+			break;
+		case MicroActionType::Move:
+			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
+			{
+				const auto orderPos = rangedUnit->orders[0].target_pos;
+				const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
+				const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
+				const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
+				const auto dist = Util::DistSq(orderPos, action.position);
+				if (sameDirection && dist < 1)
+					skip = true;
+			}
+			if (!skip)
+				Micro::SmartMove(rangedUnit, action.position, m_bot);
+			break;
+		case MicroActionType::Ability:
+			Micro::SmartAbility(rangedUnit, action.abilityID, m_bot);
+			break;
+		case MicroActionType::AbilityPosition:
+			Micro::SmartAbility(rangedUnit, action.abilityID, action.position, m_bot);
+			break;
+		case MicroActionType::AbilityTarget:
+			Micro::SmartAbility(rangedUnit, action.abilityID, action.target, m_bot);
+			break;
+		case MicroActionType::Stop:
+			Micro::SmartStop(rangedUnit, m_bot);
+			break;
+		case MicroActionType::RightClick:
+			Micro::SmartRightClick(rangedUnit, action.target, m_bot);
+			break;
+		case MicroActionType::ToggleAbility:
+			Micro::SmartToggleAutoCast(rangedUnit, action.abilityID, m_bot);
+			break;
+		default:
+			const int type = action.microActionType;
+			Util::Log(__FUNCTION__, "Unknown MicroActionType: " + std::to_string(type), m_bot);
+			break;
+		}
+		m_bot.GetCommandMutex().unlock();
+
+		if (!skip)
+		{
+			action.executed = true;
+			action.executionFrame = m_bot.GetGameLoop();
+			if (action.duration > 0)
+			{
+				nextCommandFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + action.duration;
+			}
+		}
+	}
+}
+
+RangedUnitAction& CombatCommander::GetRangedUnitAction(const sc2::Unit * combatUnit)
+{
+	return unitActions[combatUnit];
 }

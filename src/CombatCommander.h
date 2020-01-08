@@ -8,6 +8,112 @@
 class CCBot;
 struct RegionArmyInformation;
 
+struct RangedUnitAction
+{
+	RangedUnitAction()
+		: microActionType()
+		, target(nullptr)
+		, position(CCPosition())
+		, abilityID(0)
+		, prioritized(false)
+		, executed(true)
+		, finished(true)
+		, duration(0)
+		, executionFrame(0)
+		, description("")
+	{}
+	RangedUnitAction(MicroActionType microActionType, bool prioritize, int duration, std::string description)
+		: microActionType(microActionType)
+		, target(nullptr)
+		, position(CCPosition())
+		, abilityID(0)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+		, description(description)
+	{}
+	RangedUnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration, std::string description)
+		: microActionType(microActionType)
+		, target(target)
+		, position(CCPosition())
+		, abilityID(0)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+		, description(description)
+	{}
+	RangedUnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration, std::string description)
+		: microActionType(microActionType)
+		, target(nullptr)
+		, position(position)
+		, abilityID(0)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+		, description(description)
+	{}
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration, std::string description)
+		: microActionType(microActionType)
+		, target(nullptr)
+		, position(CCPosition())
+		, abilityID(abilityID)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+		, description(description)
+	{}
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration, std::string description)
+		: microActionType(microActionType)
+		, target(nullptr)
+		, position(position)
+		, abilityID(abilityID)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+		, description(description)
+	{}
+	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration, std::string description)
+		: microActionType(microActionType)
+		, target(target)
+		, position(CCPosition())
+		, abilityID(abilityID)
+		, prioritized(prioritize)
+		, executed(false)
+		, finished(false)
+		, duration(duration)
+		, executionFrame(0)
+		, description(description)
+	{}
+	RangedUnitAction(const RangedUnitAction& rangedUnitAction) = default;
+	MicroActionType microActionType;
+	const sc2::Unit* target;
+	CCPosition position;
+	sc2::AbilityID abilityID;
+	bool prioritized;
+	bool executed;
+	bool finished;
+	int duration;
+	uint32_t executionFrame;
+	std::string description;
+
+	RangedUnitAction& operator=(const RangedUnitAction&) = default;
+
+	bool operator==(const RangedUnitAction& rangedUnitAction)
+	{
+		return microActionType == rangedUnitAction.microActionType && target == rangedUnitAction.target && position == rangedUnitAction.position && abilityID == rangedUnitAction.abilityID;
+	}
+};
+
 class CombatCommander
 {
 	const int FRAME_BEFORE_SIGHTING_INVALIDATED = 25;
@@ -19,6 +125,8 @@ class CombatCommander
 	uint32_t m_lastIdleSquadUpdateFrame = 0;
     SquadData       m_squadData;
     std::vector<Unit>  m_combatUnits;
+	std::map<const sc2::Unit *, RangedUnitAction> unitActions;
+	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
 	std::map<Unit, std::pair<CCPosition, uint32_t>> m_invisibleSighting;
 	std::vector<std::vector<float>> m_groundFromGroundCombatInfluenceMap;
 	std::vector<std::vector<float>> m_groundFromAirCombatInfluenceMap;
@@ -41,6 +149,7 @@ class CombatCommander
 	bool m_hasEnoughVikingsAgainstTempests = true;
 	bool m_biggerArmy = false;
 	bool m_winAttackSimulation = false;
+	bool m_logVikingActions = false;
 	
     bool            m_initialized;
     bool            m_attackStarted;
@@ -97,7 +206,7 @@ public:
     void onStart();
     void onFrame(const std::vector<Unit> & combatUnits);
 	void lowPriorityCheck();
-
+	const std::vector<Unit> & GetCombatUnits() const { return m_combatUnits; }
 	std::map<Unit, std::pair<CCPosition, uint32_t>> & GetInvisibleSighting();
 	const std::vector<CCPosition> & GetEnemyScans() const { return m_enemyScans; }
 	std::map<sc2::ABILITY_ID, std::map<const sc2::Unit *, uint32_t>> & getNextAvailableAbility() { return m_nextAvailableAbility; }
@@ -125,9 +234,14 @@ public:
 	bool hasEnoughVikingsAgainstTempests() const { return m_hasEnoughVikingsAgainstTempests; }
 	bool winAttackSimulation() const { return m_winAttackSimulation; }
 	bool hasBiggerArmy() const { return m_biggerArmy; }
-
 	void initInfluenceMaps();
 	CCPosition getMainAttackLocation();
 	void updateBlockedTilesWithNeutral();
+	void SetLogVikingActions(bool log);
+	bool ShouldSkipFrame(const sc2::Unit * combatUnit) const;
+	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
+	void CleanActions(const std::vector<Unit> &rangedUnits);
+	void ExecuteActions();
+	RangedUnitAction& GetRangedUnitAction(const sc2::Unit * combatUnit);
 };
 

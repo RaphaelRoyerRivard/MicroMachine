@@ -5,112 +5,6 @@
 
 class CCBot;
 
-struct RangedUnitAction
-{
-	RangedUnitAction()
-		: microActionType()
-		, target(nullptr)
-		, position(CCPosition())
-		, abilityID(0)
-		, prioritized(false)
-		, executed(true)
-		, finished(true)
-		, duration(0)
-		, executionFrame(0)
-		, description("")
-	{}
-	RangedUnitAction(MicroActionType microActionType, bool prioritize, int duration, std::string description)
-		: microActionType(microActionType)
-		, target(nullptr)
-		, position(CCPosition())
-		, abilityID(0)
-		, prioritized(prioritize)
-		, executed(false)
-		, finished(false)
-		, duration(duration)
-		, executionFrame(0)
-		, description(description)
-	{}
-	RangedUnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration, std::string description)
-		: microActionType(microActionType)
-		, target(target)
-		, position(CCPosition())
-		, abilityID(0)
-		, prioritized(prioritize)
-		, executed(false)
-		, finished(false)
-		, duration(duration)
-		, executionFrame(0)
-		, description(description)
-	{}
-	RangedUnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration, std::string description)
-		: microActionType(microActionType)
-		, target(nullptr)
-		, position(position)
-		, abilityID(0)
-		, prioritized(prioritize)
-		, executed(false)
-		, finished(false)
-		, duration(duration)
-		, executionFrame(0)
-		, description(description)
-	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration, std::string description)
-		: microActionType(microActionType)
-		, target(nullptr)
-		, position(CCPosition())
-		, abilityID(abilityID)
-		, prioritized(prioritize)
-		, executed(false)
-		, finished(false)
-		, duration(duration)
-		, executionFrame(0)
-		, description(description)
-	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration, std::string description)
-		: microActionType(microActionType)
-		, target(nullptr)
-		, position(position)
-		, abilityID(abilityID)
-		, prioritized(prioritize)
-		, executed(false)
-		, finished(false)
-		, duration(duration)
-		, executionFrame(0)
-		, description(description)
-	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration, std::string description)
-		: microActionType(microActionType)
-		, target(target)
-		, position(CCPosition())
-		, abilityID(abilityID)
-		, prioritized(prioritize)
-		, executed(false)
-		, finished(false)
-		, duration(duration)
-		, executionFrame(0)
-		, description(description)
-	{}
-	RangedUnitAction(const RangedUnitAction& rangedUnitAction) = default;
-	MicroActionType microActionType;
-	const sc2::Unit* target;
-	CCPosition position;
-	sc2::AbilityID abilityID;
-	bool prioritized;
-	bool executed;
-	bool finished;
-	int duration;
-	uint32_t executionFrame;
-	std::string description;
-
-	RangedUnitAction& operator=(const RangedUnitAction&) = default;
-
-	bool operator==(const RangedUnitAction& rangedUnitAction)
-	{
-		return microActionType == rangedUnitAction.microActionType && target == rangedUnitAction.target && position == rangedUnitAction.position && abilityID == rangedUnitAction.abilityID;
-	}
-};
-
 enum FlyingHelperGoal
 {
 	ESCORT,
@@ -144,8 +38,6 @@ private:
 		sc2::UNIT_TYPEID::TERRAN_HELLION,
 		sc2::UNIT_TYPEID::TERRAN_HELLIONTANK
 	};
-	std::map<const sc2::Unit *, RangedUnitAction> unitActions;
-	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
 	bool m_harassMode = false;
 	std::map<const sc2::Unit *, FlyingHelperMission> m_cycloneFlyingHelpers;
@@ -155,9 +47,8 @@ private:
 	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
 	void setNextFrameAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit, uint32_t nextAvailableFrame);
 	int getAttackDuration(const sc2::Unit* unit, const sc2::Unit* target) const;
-	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets);
-	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets, sc2::AvailableAbilities &rangedUnitAbilities);
-	bool ShouldSkipFrame(const sc2::Unit * rangedUnit) const;
+	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets, sc2::Units &otherSquadsUnits);
+	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets, sc2::AvailableAbilities &rangedUnitAbilities, sc2::Units &otherSquadsUnits);
 	bool MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbilities & abilities);
 	bool IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started, sc2::AvailableAbilities & abilities) const;
 	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit, bool checkInfluence = true) const;
@@ -177,7 +68,7 @@ private:
 	const sc2::Unit * ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, bool & lockOnAvailable, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * target, sc2::AvailableAbilities & abilities);
 	void LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * target);
 	bool CycloneHasTarget(const sc2::Unit * cyclone) const;
-	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & threats);
+	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & threats, sc2::Units & otherSquadsUnits);
 	void ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal, sc2::AvailableAbilities & abilities);
 	bool ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper);
 	bool ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats);
@@ -195,9 +86,6 @@ private:
 	bool MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const;
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits = false) const;
-	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
-	void CleanActions(sc2::Units &rangedUnits);
-	void ExecuteActions();
 	void CleanLockOnTargets() const;
 	void CalcBestFlyingCycloneHelpers();
 };
