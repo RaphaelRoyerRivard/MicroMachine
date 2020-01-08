@@ -151,6 +151,7 @@ private:
 	std::map<const sc2::Unit *, FlyingHelperMission> m_cycloneFlyingHelpers;
 	std::map<const sc2::Unit *, const sc2::Unit *> m_cyclonesWithHelper;
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
+	bool m_logVikingActions = false;
 
 	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
 	void setNextFrameAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit, uint32_t nextAvailableFrame);

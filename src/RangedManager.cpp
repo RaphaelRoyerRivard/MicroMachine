@@ -85,6 +85,8 @@ void RangedManager::executeMicro()
 	if (units.empty())
 		return;
 
+	m_logVikingActions = false;
+
     std::vector<const sc2::Unit *> rangedUnits;
     for (auto & unit : units)
     {
@@ -1271,18 +1273,25 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 	}
 
+	sc2::Units farAllyUnits;
 	// Calculate ally power
 	for (int i = 0; i < 2; ++i)
 	{
-		const bool checkDistanceWithAllies = i > 0;
-		for (const auto unit : rangedUnits)
+		const auto & unitsToLoopOver = i == 0 ? rangedUnits : farAllyUnits;
+		for (const auto unit : unitsToLoopOver)
 		{
-			if (checkDistanceWithAllies)
+			// Distance check (first time with rangedUnit, second time with all fighting units and also the threat)
+			if (i == 0)
 			{
-				if (Util::Contains(unit, closeUnits))
+				// Ignore units that are too far to help
+				if (Util::DistSq(unit->pos, rangedUnit->pos) > HARASS_FRIENDLY_SUPPORT_MAX_DISTANCE * HARASS_FRIENDLY_SUPPORT_MAX_DISTANCE)
 				{
+					farAllyUnits.push_back(unit);
 					continue;
 				}
+			}
+			else
+			{
 				bool tooFar = true;
 				for (auto allyUnit : closeUnits)
 				{
@@ -1302,11 +1311,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 						continue;
 				}
 			}
-			// Ignore units that are too far to help
-			else if (Util::DistSq(unit->pos, rangedUnit->pos) > HARASS_FRIENDLY_SUPPORT_MAX_DISTANCE * HARASS_FRIENDLY_SUPPORT_MAX_DISTANCE)
-			{
-				continue;
-			}
 			auto & unitAction = unitActions[unit];
 			// Ignore units that are executing a prioritized action
 			if (unitAction.prioritized)
@@ -1314,10 +1318,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				continue;
 			}
 			// Ignore units that are not ready to perform an action
-			if (ShouldSkipFrame(unit))
+			/*if (ShouldSkipFrame(unit))
 			{
 				continue;
-			}
+			}*/
 			const bool canAttackTarget = target->is_flying ? Util::CanUnitAttackAir(unit, m_bot) : Util::CanUnitAttackGround(unit, m_bot);
 			const bool canAttackTempest = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && canAttackTarget;
 			// Ignore units that should heal to not consider them in the power calculation, unless the target is a Tempest and our unit can attack it
@@ -1418,9 +1422,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			winSimulation = Util::SimulateCombat(vikings, tempests, m_bot);
 		}
 		shouldFight = winSimulation;
-		/*std::stringstream ss;
+		std::stringstream ss;
 		ss << vikings.size() << " Vikings (" << injuredVikings << " injured) vs " << tempests.size() << " Tempests (" << injuredTempests << " injured): " << (winSimulation ? "win" : "LOSE");
-		Util::Log(__FUNCTION__, ss.str(), m_bot);*/
+		Util::Log(__FUNCTION__, ss.str(), m_bot);
+		m_logVikingActions = true;
 	}
 	else if(maxThreatRange >= 10)
 	{
@@ -2168,9 +2173,12 @@ void RangedManager::ExecuteActions()
 		const auto rangedUnit = unitAction.first;
 		auto & action = unitAction.second;
 
-		/*std::stringstream ss;
-		ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " has action " << action.description;
-		Util::Log(__FUNCTION__, ss.str(), m_bot);*/
+		if (m_logVikingActions && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+		{
+			std::stringstream ss;
+			ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " has action " << action.description;
+			Util::Log(__FUNCTION__, ss.str(), m_bot);
+		}
 
 #ifndef PUBLIC_RELEASE
 		if(m_bot.Config().DrawRangedUnitActions)
