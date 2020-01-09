@@ -30,8 +30,8 @@ Squad::Squad(const std::string & name, const SquadOrder & order, size_t priority
     , m_maxDistanceFromCenter(0)
 	, m_isSuiciding(false)
     , m_priority(priority)
-    , m_meleeManager(bot)
-    , m_rangedManager(bot)
+	, m_meleeManager(bot)
+	, m_rangedManager(bot)
 {
 }
 
@@ -48,13 +48,16 @@ Squad::Squad(const std::string & name, const SquadOrder & order, int maxRegroupD
     , m_maxDistanceFromCenter(maxDistanceFromCenter)
 	, m_isSuiciding(false)
     , m_priority(priority)
-    , m_meleeManager(bot)
-    , m_rangedManager(bot)
+	, m_meleeManager(bot)
+	, m_rangedManager(bot)
 {
 }
 
 void Squad::onFrame()
 {
+	m_meleeManager.setSquad(this);
+	m_rangedManager.setSquad(this);
+	
 	m_bot.StartProfiling("0.10.4.1.1      updateUnits");
     // update all necessary unit information within this squad
     updateUnits();

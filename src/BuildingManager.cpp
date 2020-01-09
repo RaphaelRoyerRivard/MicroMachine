@@ -1372,8 +1372,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 		const auto enemyBasePosition = Util::GetPosition(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getDepotPosition());
 		const auto enemyNext = m_bot.Bases().getNextExpansion(Players::Enemy, false, false);
 		const auto & baseLocations = m_bot.Bases().getBaseLocations();	// Sorted by closest to enemy base
-		int minDistance = 0;
-		const BaseLocation* closestBase = nullptr;
+		std::map<float, const BaseLocation*> sortedBases;
 		for(auto i=1; i<baseLocations.size(); ++i)
 		{
 			const auto baseLocation = baseLocations[i];
@@ -1382,38 +1381,42 @@ CCTilePosition BuildingManager::getProxyLocation()
 			const auto dist = baseLocation->getGroundDistance(m_enemyMainRamp);
 			const auto startingBaseDist = startingBaseLocation->getGroundDistance(baseLocation->getDepotPosition());
 			const auto totalDist = dist * 2 + startingBaseDist;
-			if(!closestBase || totalDist < minDistance)
+			const auto baseHeight = m_bot.Map().terrainHeight(baseLocation->getDepotPosition());
+			const auto basePosition = Util::GetPosition(baseLocation->getDepotPosition());
+			const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
+			if (enemyRace == sc2::Zerg || enemyRace == sc2::Random)
 			{
-				const auto baseHeight = m_bot.Map().terrainHeight(baseLocation->getDepotPosition());
-				const auto basePosition = Util::GetPosition(baseLocation->getDepotPosition());
-				const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
-				if (enemyRace == sc2::Zerg || enemyRace == sc2::Random)
+				if (Util::DistBetweenLineAndPoint(Util::GetPosition(startingBaseLocation->getDepotPosition()), enemyBasePosition, basePosition) < 15.f)
 				{
-					if (Util::DistBetweenLineAndPoint(Util::GetPosition(startingBaseLocation->getDepotPosition()), enemyBasePosition, basePosition) < 15.f)
-					{
-						continue;
-					}
-				}
-				auto tooCloseToMainPath = false;
-				for (const auto & pathPosition : mainPath)
-				{
-					if (m_bot.Map().terrainHeight(pathPosition) + 0.5f < baseHeight)
-						continue;
-					if (Util::DistSq(pathPosition, basePosition) <= 15.f * 15.f)
-					{
-						tooCloseToMainPath = true;
-						break;
-					}
-				}
-				if (!tooCloseToMainPath)
-				{
-					minDistance = totalDist;
-					closestBase = baseLocation;
+					continue;
 				}
 			}
+			auto tooCloseToMainPath = false;
+			for (const auto & pathPosition : mainPath)
+			{
+				if (m_bot.Map().terrainHeight(pathPosition) + 0.5f < baseHeight)
+					continue;
+				if (Util::DistSq(pathPosition, basePosition) <= 15.f * 15.f)
+				{
+					tooCloseToMainPath = true;
+					break;
+				}
+			}
+			if (!tooCloseToMainPath)
+			{
+				sortedBases[totalDist] = baseLocation;
+			}
 		}
-		if (closestBase != nullptr)
+		if (sortedBases.begin() != sortedBases.end())
 		{
+			std::srand(std::time(nullptr));	// Initialize random seed
+			const auto maximumRandomBaseIndex = sortedBases.size() >= 4 ? 4 : sortedBases.size();
+			const auto randomValue = std::rand();
+			const auto randomBaseIndex = randomValue % maximumRandomBaseIndex;
+			auto it = sortedBases.begin();
+			for (int i=0; i<randomBaseIndex; ++i)
+				++it;
+			const auto closestBase = it->second;
 			m_proxyLocation = closestBase->getDepotPosition();
 			const auto depotPos = Util::GetPosition(closestBase->getDepotPosition());
 			const auto centerOfMinerals = Util::GetPosition(closestBase->getCenterOfMinerals());
