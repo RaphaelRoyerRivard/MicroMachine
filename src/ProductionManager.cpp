@@ -800,7 +800,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings() || proxyMaraudersStrategy)
 				{
 #ifndef NO_UNITS
-					if (vikingCount < 1 && !m_queue.contains(MetaTypeEnum::Viking))
+					const int minVikingCount = proxyMaraudersStrategy ? 2 : 1;
+					if (vikingCount < minVikingCount && !m_queue.contains(MetaTypeEnum::Viking))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
