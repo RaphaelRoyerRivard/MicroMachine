@@ -40,6 +40,7 @@ public:
 	bool DrawBaseTiles;
     bool DrawWalkableSectors;
 	bool DrawBuildableSectors;
+	bool DrawBuildable;
     bool DrawResourceInfo;
     bool DrawProductionInfo;
     bool DrawScoutInfo;
