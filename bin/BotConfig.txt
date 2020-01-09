@@ -124,7 +124,8 @@
         "BuildingSpacing"           : 0,
         "PylonSpacing"              : 3,
         "SelectStartingBuildBasedOnHistory" : true,
-        "PrintGreetingMessage"      : true
+        "PrintGreetingMessage"      : true,
+        "RandomProxyLocation"       : false
     },
 
     "Debug" :

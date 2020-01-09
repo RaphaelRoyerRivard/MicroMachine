@@ -1394,13 +1394,16 @@ CCTilePosition BuildingManager::getProxyLocation()
 		}
 		if (sortedBases.begin() != sortedBases.end())
 		{
-			std::srand(std::time(nullptr));	// Initialize random seed
-			const auto maximumRandomBaseIndex = sortedBases.size() >= 4 ? 4 : sortedBases.size();
-			const auto randomValue = std::rand();
-			const auto randomBaseIndex = randomValue % maximumRandomBaseIndex;
 			auto it = sortedBases.begin();
-			for (int i=0; i<randomBaseIndex; ++i)
-				++it;
+			if (m_bot.Config().RandomProxyLocation)
+			{
+				std::srand(std::time(nullptr));	// Initialize random seed
+				const auto maximumRandomBaseIndex = sortedBases.size() >= 4 ? 4 : sortedBases.size();
+				const auto randomValue = std::rand();
+				const auto randomBaseIndex = randomValue % maximumRandomBaseIndex;
+				for (int i = 0; i < randomBaseIndex; ++i)
+					++it;
+			}
 			const auto closestBase = it->second;
 			m_proxyLocation = closestBase->getDepotPosition();
 			const auto depotPos = Util::GetPosition(closestBase->getDepotPosition());
