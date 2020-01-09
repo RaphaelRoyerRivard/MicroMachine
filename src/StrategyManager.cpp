@@ -158,29 +158,38 @@ void StrategyManager::onFrame(bool executeMacro)
 	{
 		if (isProxyStartingStrategy())
 		{
+			const auto barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
+
 			if (m_bot.GetGameLoop() >= 448 && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 20s
 			{
-				const auto hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0;
-				if (!hasBarracks)
+				if (isWorkerRushed())
+				{
+					m_bot.Workers().getWorkerData().clearProxyWorkers();
+					m_startingStrategy = STANDARD;
+					return;
+				}
+				
+				const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
+				if (barracksCount == 0)
 				{
 					m_startingStrategy = STANDARD;
 					m_bot.Commander().Production().clearQueue();
 					m_bot.Commander().Production().queueAsHighestPriority(MetaTypeEnum::Barracks, false);
 				}
-				else
+				else if (!hasFactory && m_startingStrategy == PROXY_CYCLONES)
 				{
-					const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
-					if (!hasFactory)
-					{
-						m_startingStrategy = STANDARD;
-						m_bot.Commander().Production().clearQueue();
-					}
+					m_startingStrategy = STANDARD;
+					m_bot.Commander().Production().clearQueue();
 				}
 			}
-			else if (isWorkerRushed())
+			else if (barracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
 			{
+				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+				for (const auto & proxyWorker : proxyWorkers)
+				{
+					proxyWorker.move(m_bot.GetStartLocation());
+				}
 				m_bot.Workers().getWorkerData().clearProxyWorkers();
-				m_startingStrategy = STANDARD;
 			}
 		}
 		else if (m_startingStrategy == WORKER_RUSH)

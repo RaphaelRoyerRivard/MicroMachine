@@ -452,7 +452,7 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 		return;
 	if (!ground && enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_TEMPEST)
 		range += 2;
-	const float speed = std::max(1.5f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
+	const float speed = std::max(2.5f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
 	updateInfluenceMap(dps, range, speed, enemyUnit.getPosition(), ground, !enemyUnit.isFlying(), false, enemyUnit.getUnitPtr()->cloak == sc2::Unit::Cloaked);
 }
 
@@ -1099,7 +1099,7 @@ void CombatCommander::updateDefenseBuildings()
 
 void CombatCommander::handleWall()
 {
-	int SUPPLYDEPOT_DISTANCE = 25;//5 tiles ^ 2, because we use DistSq
+	int SUPPLYDEPOT_DISTANCE = 7 * 7;	// 7 tiles ^ 2, because we use DistSq
 
 	auto wallCenter = m_bot.Buildings().getWallPosition();
 	auto & enemies = m_bot.GetEnemyUnits();
