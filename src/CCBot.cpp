@@ -1304,10 +1304,11 @@ const CCTilePosition CCBot::GetBuildingArea() const
 		return safeLocation;
 	}
 
-	const auto & bases = m_bases.getOccupiedBaseLocations(Players::Self);	
+	const auto & bases = m_bases.getOccupiedBaseLocations(Players::Self);
+	//= m_bases.getBaseLocations(); Use this to build in random bases.
 	for (auto & base : bases)
 	{
-		if (base->isUnderAttack())
+		if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
 			continue;
 		return base->getDepotPosition();
 	}

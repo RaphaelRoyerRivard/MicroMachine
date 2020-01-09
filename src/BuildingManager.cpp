@@ -96,10 +96,25 @@ void BuildingManager::lowPriorityChecks()
 		auto tag = (building.builderUnit.isValid() ? building.builderUnit.getTag() : 0);
 		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building.type, 0, true, false, false))
 		{
-			auto remove = CancelBuilding(building);
-			if (remove.finalPosition != CCTilePosition(0,0))
+			//Detect if the building was created this frame and we just don't know about it yet.
+			bool isAlreadyBuilt = false;
+			for (auto b : m_bot.GetAllyUnits())
 			{
-				toRemove.push_back(remove);
+				if (building.finalPosition == b.second.getTilePosition() && building.type == b.second.getType())
+				{
+					isAlreadyBuilt = true;
+					break;
+				}
+			}
+
+			if (!isAlreadyBuilt)
+			{
+				//We are trying to build in an invalid location, remove it so we build it elsewhere.
+				auto remove = CancelBuilding(building);
+				if (remove.finalPosition != CCTilePosition(0, 0))
+				{
+					toRemove.push_back(remove);
+				}
 			}
 		}
 	}

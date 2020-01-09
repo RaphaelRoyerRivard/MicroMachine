@@ -29,6 +29,7 @@ BotConfig::BotConfig()
     DrawTileInfo = false;
     DrawWalkableSectors = false;
 	DrawBuildableSectors = false;
+	DrawBuildable = true;
     DrawScoutInfo = false;
     DrawResourceInfo = false;
     DrawWorkerInfo = false;
@@ -194,6 +195,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawWall", debug, DrawWall);
 			JSONTools::ReadBool("DrawWalkableSectors", debug, DrawWalkableSectors);
 			JSONTools::ReadBool("DrawBuildableSectors", debug, DrawBuildableSectors);
+			JSONTools::ReadBool("DrawBuildable", debug, DrawBuildable);
 			JSONTools::ReadBool("DrawResourceInfo", debug, DrawResourceInfo);
 			JSONTools::ReadBool("DrawWorkerInfo", debug, DrawWorkerInfo);
 			JSONTools::ReadBool("DrawProductionInfo", debug, DrawProductionInfo);

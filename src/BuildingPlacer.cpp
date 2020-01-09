@@ -14,25 +14,25 @@ void BuildingPlacer::onStart()
 {
     m_reserveMap = std::vector< std::vector<bool> >(m_bot.Map().totalWidth(), std::vector<bool>(m_bot.Map().totalHeight(), false));
 
-	auto bases = m_bot.Bases().getBaseLocations();
-	for (auto baseLocation : bases)
+auto bases = m_bot.Bases().getBaseLocations();
+for (auto baseLocation : bases)
+{
+	const auto depotPosition = Util::GetPosition(baseLocation->getDepotPosition());
+	const auto centerOfMinerals = Util::GetPosition(baseLocation->getCenterOfMinerals());
+	const auto towardsOutside = Util::Normalized(depotPosition - centerOfMinerals);
+	const auto basePosition = Util::GetTilePosition(depotPosition + towardsOutside * 2);
+	auto minerals = baseLocation->getMinerals();
+	for (auto mineral : minerals)
 	{
-		const auto depotPosition = Util::GetPosition(baseLocation->getDepotPosition());
-		const auto centerOfMinerals = Util::GetPosition(baseLocation->getCenterOfMinerals());
-		const auto towardsOutside = Util::Normalized(depotPosition - centerOfMinerals);
-		const auto basePosition = Util::GetTilePosition(depotPosition + towardsOutside * 2);
-		auto minerals = baseLocation->getMinerals();
-		for (auto mineral : minerals)
-		{
-			reserveTiles(basePosition, mineral.getTilePosition());
-		}
-
-		auto geysers = baseLocation->getGeysers();
-		for (auto geyser : geysers)
-		{
-			reserveTiles(basePosition, geyser.getTilePosition());
-		}
+		reserveTiles(basePosition, mineral.getTilePosition());
 	}
+
+	auto geysers = baseLocation->getGeysers();
+	for (auto geyser : geysers)
+	{
+		reserveTiles(basePosition, geyser.getTilePosition());
+	}
+}
 }
 
 bool BuildingPlacer::canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const
@@ -64,18 +64,20 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 	int height = type.tileHeight();
 
 	// define the rectangle of the building spot
-	int startx = bx - buildDistAround;
-	int starty = by - buildDistAround;
-	int endx = bx + width + buildDistAround;
+	int x = bx - buildDistAround;
+	int y = by - buildDistAround;
+	
+	//TODO Commented out because its not useful and doesnt't consider the offset
+	/*int endx = bx + width + buildDistAround;
 	int endy = by + height + buildDistAround;
 
 	// if this rectangle doesn't fit on the map we can't build here
 	const CCPosition mapMin = m_bot.Map().mapMin();
 	const CCPosition mapMax = m_bot.Map().mapMax();
-	if (startx < mapMin.x || starty < mapMin.y || endx >= mapMax.x || endy >= mapMax.y || endx < bx + width)
+	if (x < mapMin.x || y < mapMin.y || endx >= mapMax.x || endy >= mapMax.y || endx < bx + width)
 	{
 		return false;
-	}
+	}*/
 
 	//If its not safe. We only check one tile since its very likely to be the save result for all tiles. This avoid a little bit of lag.
 	if (checkInfluenceMap && Util::PathFinding::HasCombatInfluenceOnTile(CCTilePosition(bx, by), false, m_bot))
@@ -84,7 +86,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 		return false;
 	}
 
-	auto tiles = getTilesForBuildLocation(startx, starty, type, width + buildDistAround * 2, height + buildDistAround * 2, includeExtraTiles);//Include padding (buildDist) so we test all the tiles
+	auto tiles = getTilesForBuildLocation(x, y, type, width + buildDistAround * 2, height + buildDistAround * 2, includeExtraTiles);//Include padding (buildDist) so we test all the tiles
 	auto buildingTerrainHeight = -1;
 	if (!type.isRefinery())
 	{
@@ -111,11 +113,14 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 			//Validate there is no building in the way (any player)
 		}
 	}
-	///TODO TEMP, TESTING MISPLACEMENT
-	/*if (!m_bot.Query()->Placement(m_bot.Data(type).buildAbility, CCPosition(bx ,by)))
+	else
 	{
-		auto a = 1;
-	}*/
+		if (!isGeyserAssigned(CCTilePosition(x, y)))//Validate the geyser isnt already used.
+		{
+			return false;
+		}
+	}
+
     return !isEnemyUnitBlocking(CCTilePosition(bx, by), type);
 }
 
@@ -383,9 +388,9 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	//ignoreReservedTiles is used for more than just ignoring reserved tiles.
 
 	//Check if tiles are blocked, checks if there is another buildings in the way
-	if (!ignoreReservedTiles && !type.isGeyser())
+	if (!type.isGeyser())
 	{
-		if (m_bot.Commander().Combat().isTileBlocked(x, y))
+		if (!type.isAddon() && m_bot.Commander().Combat().isTileBlocked(x, y))//Cannot check blocked tiles for addons, otherwise it cancels itself on frame 1.
 		{
 			return false;
 		}
@@ -544,28 +549,7 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 			CCPosition geyserPos(geyser.getPosition());
 			CCTilePosition geyserTilePos = Util::GetTilePosition(geyserPos);
 
-			//Check if refinery is already assigned to a building task (m_building)
-			auto assigned = false;
-			for (auto & refinery : m_bot.GetAllyUnits(Util::GetRefineryType().getAPIUnitType()))
-			{
-				if (geyserTilePos == refinery.getTilePosition())
-				{
-					assigned = true;
-					break;
-				}
-			}
-			if (!assigned)
-			{
-				for (auto & b : m_bot.Buildings().getBuildings())
-				{
-					if (b.buildCommandGiven && b.finalPosition == geyserTilePos)
-					{
-						assigned = true;
-						break;
-					}
-				}
-			}
-			if (assigned)
+			if (isGeyserAssigned(geyserTilePos))
 			{
 				continue;
 			}
@@ -645,6 +629,26 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 #else
     return CCTilePosition(closestGeyser);
 #endif
+}
+
+bool BuildingPlacer::isGeyserAssigned(CCTilePosition geyserTilePos) const
+{
+	//Check if refinery is already assigned to a building task (m_building)
+	for (auto & refinery : m_bot.GetAllyUnits(Util::GetRefineryType().getAPIUnitType()))
+	{
+		if (geyserTilePos == refinery.getTilePosition())
+		{
+			return true;
+		}
+	}
+	for (auto & b : m_bot.Buildings().getBuildings())
+	{
+		if (b.buildCommandGiven && b.finalPosition == geyserTilePos)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 bool BuildingPlacer::isReserved(int x, int y) const
