@@ -13,7 +13,7 @@ class BuildingPlacer
     std::vector< std::vector<bool> > m_reserveMap;
 
     // queries for various BuildingPlacer data
-    bool buildable(const UnitType type, int x, int y, bool ignoreReservedTiles = false) const;
+	bool isGeyserAssigned(CCTilePosition geyserTilePos) const;
     bool isReserved(int x, int y) const;
     bool tileOverlapsBaseLocation(int x, int y, UnitType type) const;
 
@@ -25,6 +25,7 @@ public:
     void onStart();
 
     // determines whether we can build at a given location
+	bool buildable(const UnitType type, int x, int y, bool ignoreReservedTiles = false) const;
 	bool canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const;
     bool canBuildHere(int bx, int by, const UnitType & type, int buildDist, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const;
 	bool isEnemyUnitBlocking(CCTilePosition center, UnitType type) const;

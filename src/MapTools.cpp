@@ -6,6 +6,7 @@
 #include <sstream>
 #include <fstream>
 #include <array>
+#include <string>
 
 const size_t LegalActions = 4;
 const int actionX[LegalActions] ={1, -1, 0, 0};
@@ -553,7 +554,7 @@ void MapTools::draw() const
 #ifdef PUBLIC_RELEASE
 	return;
 #endif
-	if (!m_bot.Config().DrawWalkableSectors && !m_bot.Config().DrawBuildableSectors && !m_bot.Config().DrawTileInfo)
+	if (!m_bot.Config().DrawWalkableSectors && !m_bot.Config().DrawBuildableSectors && !m_bot.Config().DrawBuildable && !m_bot.Config().DrawTileInfo)
 	{
 		return;
 	}
@@ -594,6 +595,18 @@ void MapTools::draw() const
 				if (isBuildable(x, y))
 				{
 					drawTile(x, y, CCColor(0, 255, 0));
+				}
+			}
+
+			if (m_bot.Config().DrawBuildable)
+			{
+				if (!m_bot.Buildings().getBuildingPlacer().buildable(MetaTypeEnum::SupplyDepot.getUnitType(), x, y))
+				{
+					drawTile(x, y, CCColor(0, 255, 0));
+
+					std::ostringstream oss;
+					oss << x << "," << y;
+					drawText(CCPosition(x, y), oss.str());
 				}
 			}
 
