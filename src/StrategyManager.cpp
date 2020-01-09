@@ -125,7 +125,6 @@ void StrategyManager::onStart()
 	{
 		m_startingStrategy = STANDARD;
 	}
-	m_startingStrategy = EARLY_EXPAND;//TODO TEMPORARY
 	m_initialStartingStrategy = m_startingStrategy;
 }
 
