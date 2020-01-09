@@ -174,6 +174,7 @@ void BotConfig::readConfigFile()
         JSONTools::ReadInt("WorkersPerRefinery", macro, WorkersPerRefinery);
 		JSONTools::ReadBool("SelectStartingBuildBasedOnHistory", macro, SelectStartingBuildBasedOnHistory);
 		JSONTools::ReadBool("PrintGreetingMessage", macro, PrintGreetingMessage);
+		JSONTools::ReadBool("RandomProxyLocation", macro, RandomProxyLocation);
     }
 
     // Parse the Debug Options
