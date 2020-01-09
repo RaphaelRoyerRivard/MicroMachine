@@ -1567,7 +1567,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 			}
 		}
 
-		if (!hasFlyingHelper && m_bot.Strategy().getStartingStrategy() != PROXY_MARAUDERS)
+		if (!hasFlyingHelper)
 		{
 			// If the target is too far, we don't want to chase it, we just leave
 			if (target)

@@ -2253,8 +2253,10 @@ void Util::CreateLog(CCBot & bot)
 {
 	time_t now = time(0);
 	char buf[80];
-	strftime(buf, sizeof(buf), "./data/%Y-%m-%d--%H-%M-%S.log", localtime(&now));
-	file.open(buf);
+	strftime(buf, sizeof(buf), "./data/%Y-%m-%d--%H-%M-%S", localtime(&now));
+	std::stringstream ss;
+	ss << buf << "_" << bot.GetOpponentId() << ".log";
+	file.open(ss.str());
 
 	std::stringstream races;
 	races << Util::GetStringFromRace(bot.GetPlayerRace(Players::Self)) << " VS " << Util::GetStringFromRace(bot.GetPlayerRace(Players::Enemy)) << " on " << Util::GetMapName();

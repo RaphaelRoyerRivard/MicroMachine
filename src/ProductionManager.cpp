@@ -450,19 +450,18 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 		{
 			if (currentItem.type == MetaTypeEnum::Factory)
 			{
-				const auto barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
-				if (barracksCount < 2)
+				const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, false);
+				// Let the factory be built if we have too much resources
+				const bool tooMuchResources = m_bot.GetMinerals() > 600 && m_bot.GetGas() > 200;
+				if (baseCount < 2 && !tooMuchResources)
 					shouldSkip = true;
-				/*const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, false);
-				if (baseCount < 2)
-					shouldSkip = true;*/
 			}
 			else if (currentItem.type == MetaTypeEnum::CommandCenter)
 			{
 				/*const auto maraudersCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), false, true);
-				shouldSkip = maraudersCount < 2;*/
+				shouldSkip = maraudersCount < 2;
 				const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-				shouldSkip = factoryCount < 1;
+				shouldSkip = factoryCount < 1;*/
 			}
 			else if (currentItem.type == MetaTypeEnum::Refinery)
 			{
@@ -798,7 +797,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 #endif
 				}
-				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings())
+				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings() || proxyMaraudersStrategy)
 				{
 #ifndef NO_UNITS
 					if (vikingCount < 1 && !m_queue.contains(MetaTypeEnum::Viking))
