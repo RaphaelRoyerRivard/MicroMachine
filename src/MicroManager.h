@@ -6,12 +6,14 @@
 #include "Micro.h"
 
 class CCBot;
+class Squad;
 
 class MicroManager
 {
 protected:
 
     CCBot & m_bot;
+	Squad * m_squad = nullptr;
     SquadOrder m_order;
     std::vector<Unit> m_units;
     std::vector<Unit> m_targets;
@@ -22,6 +24,8 @@ public:
 
     MicroManager(CCBot & bot);
 
+	void setSquad(Squad * squadPtr) { m_squad = squadPtr; }
+	const Squad * getSquad() const { return m_squad; }
     const std::vector<Unit> & getUnits() const;
     void setUnits(const std::vector<Unit> & u);
 	std::vector <Unit> getTargets() const { return m_targets; }

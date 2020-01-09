@@ -1417,7 +1417,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 		shouldFight = winSimulation;
 		std::stringstream ss;
-		ss << vikings.size() << " Vikings (" << injuredVikings << " injured) vs " << tempests.size() << " Tempests (" << injuredTempests << " injured): " << (winSimulation ? "win" : "LOSE");
+		ss << getSquad()->getName() << ": " << vikings.size() << " Vikings (" << injuredVikings << " injured) vs " << tempests.size() << " Tempests (" << injuredTempests << " injured): " << (winSimulation ? "win" : "LOSE");
 		Util::Log(__FUNCTION__, ss.str(), m_bot);
 		m_bot.Commander().Combat().SetLogVikingActions(true);
 	}
