@@ -588,11 +588,11 @@ void CCBot::setUnits()
 		{
 			ignoreEnemyUnit = true;
 		}
-		// If mobile unit is not seen for too long (around 4s, or 67s for burrowed widow mines and 22s for sieged tanks), ignore it
+		// If mobile unit is not seen for too long (around 7s, or 67s for burrowed widow mines and 22s for sieged tanks), ignore it
 		else if (!enemyUnit.getType().isBuilding()
 			&& (!isBurrowedWidowMine || enemyUnitPtr->last_seen_game_loop + 1500 < GetGameLoop())
 			&& (!isSiegedSiegeTank || enemyUnitPtr->last_seen_game_loop + 500 < GetGameLoop())
-			&& enemyUnitPtr->last_seen_game_loop + 100 < GetGameLoop())
+			&& enemyUnitPtr->last_seen_game_loop + 150 < GetGameLoop())
 		{
 			ignoreEnemyUnit = true;
 		}
