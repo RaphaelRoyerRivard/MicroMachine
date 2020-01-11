@@ -66,18 +66,6 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 	// define the rectangle of the building spot
 	int x = bx - buildDistAround;
 	int y = by - buildDistAround;
-	
-	//TODO Commented out because its not useful and doesnt't consider the offset
-	/*int endx = bx + width + buildDistAround;
-	int endy = by + height + buildDistAround;
-
-	// if this rectangle doesn't fit on the map we can't build here
-	const CCPosition mapMin = m_bot.Map().mapMin();
-	const CCPosition mapMax = m_bot.Map().mapMax();
-	if (x < mapMin.x || y < mapMin.y || endx >= mapMax.x || endy >= mapMax.y || endx < bx + width)
-	{
-		return false;
-	}*/
 
 	//If its not safe. We only check one tile since its very likely to be the save result for all tiles. This avoid a little bit of lag.
 	if (checkInfluenceMap && Util::PathFinding::HasCombatInfluenceOnTile(CCTilePosition(bx, by), false, m_bot))
@@ -383,9 +371,13 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
 
 bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreReservedTiles) const
 {
-	//Do not check for reservedTiles here, bool is not properly named.
-	// TODO: doesnt take units on the map into account
-	//ignoreReservedTiles is used for more than just ignoring reserved tiles.
+	//Validate the position is within the map
+	const CCTilePosition min = m_bot.Map().mapMin();
+	const CCTilePosition max = m_bot.Map().mapMax();
+	if (x < min.x || y < min.y || x >= max.x || y >= max.y)
+	{
+		return false;
+	}
 
 	//Check if tiles are blocked, checks if there is another buildings in the way
 	if (!type.isGeyser())
