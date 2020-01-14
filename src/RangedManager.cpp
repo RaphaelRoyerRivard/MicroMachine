@@ -379,8 +379,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit, target), "AttackTarget");
 		m_bot.Commander().Combat().PlanAction(rangedUnit, action);
 		m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
-		const float damageDealth = isBattlecruiser ? Util::GetDpsForTarget(rangedUnit, target, m_bot) / 22.4f : Util::GetDamageForTarget(rangedUnit, target, m_bot);
-		m_bot.Analyzer().increaseTotalDamage(damageDealth, rangedUnit->unit_type);
+		const float damageDealt = isBattlecruiser ? Util::GetDpsForTarget(rangedUnit, target, m_bot) / 22.4f : Util::GetDamageForTarget(rangedUnit, target, m_bot);
+		m_bot.Analyzer().increaseTotalDamage(damageDealt, rangedUnit->unit_type);
 		return;
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
@@ -393,6 +393,47 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
+
+	bool enemyThreatIsClose = false;
+	bool fasterEnemyThreat = false;
+	float unitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
+	CCPosition summedFleeVec(0, 0);
+	// add normalied * 1.5 vector of potential threats
+	for (auto threat : threats)
+	{
+		const CCPosition fleeVec = Util::Normalized(rangedUnit->pos - threat->pos);
+
+		// If our unit is almost in range of threat, use the influence map to find the best flee path
+		const float dist = Util::Dist(rangedUnit->pos, threat->pos);
+		const float threatRange = Util::getThreatRange(rangedUnit, threat, m_bot);
+		if (dist < threatRange + 0.5f)
+		{
+			enemyThreatIsClose = true;
+			if (!fasterEnemyThreat && Util::getSpeedOfUnit(threat, m_bot) > unitSpeed)
+				fasterEnemyThreat = true;
+		}
+		summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
+	}
+
+	// Banshee is about to get hit, it should cloak itself
+	if (isBanshee && enemyThreatIsClose && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
+	{
+		return;
+	}
+
+	// Opportunistic attack (usually on buildings)
+	if (shouldAttack && !fasterEnemyThreat)
+	{
+		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true);
+		if (closeTarget && ShouldAttackTarget(rangedUnit, closeTarget, threats))
+		{
+			const auto action = RangedUnitAction(MicroActionType::AttackUnit, closeTarget, false, getAttackDuration(rangedUnit, target), "OpportunisticAttack");
+			m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+			const float damageDealt = isBattlecruiser ? Util::GetDpsForTarget(rangedUnit, closeTarget, m_bot) / 22.4f : Util::GetDamageForTarget(rangedUnit, closeTarget, m_bot);
+			m_bot.Analyzer().increaseTotalDamage(damageDealt, rangedUnit->unit_type);
+			return;
+		}
+	}
 
 	if (distSqToTarget < m_order.getRadius() * m_order.getRadius() && (target || !threats.empty()))
 	{
@@ -446,31 +487,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 
-	bool useInfluenceMap = false;
-	CCPosition summedFleeVec(0, 0);
-	// add normalied * 1.5 vector of potential threats
-	for (auto threat : threats)
-	{
-		const CCPosition fleeVec = Util::Normalized(rangedUnit->pos - threat->pos);
-
-		// If our unit is almost in range of threat, use the influence map to find the best flee path
-		const float dist = Util::Dist(rangedUnit->pos, threat->pos);
-		const float threatRange = Util::getThreatRange(rangedUnit, threat, m_bot);
-		if (dist < threatRange + 0.5f)
-		{
-			useInfluenceMap = true;
-		}
-		summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
-	}
-
-	if (useInfluenceMap)
-	{
-		// Banshee in danger should cloak itself if low on hp
-		if (isBanshee && unitShouldHeal && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
-		{
-			return;
-		}
-		
+	if (enemyThreatIsClose)
+	{		
 		m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
 		// If close to an unpathable position or in danger
 		// Use influence map to find safest path
@@ -2028,7 +2046,7 @@ CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vect
 }
 
 // get a target for the ranged unit to attack
-const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits) const
+const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits, bool considerOnlyUnitsInRange) const
 {
     BOT_ASSERT(rangedUnit, "null ranged unit in getTarget");
 
@@ -2049,9 +2067,13 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 			continue;
 
 		if (filterHigherUnits && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos))
-			continue;
+		{
+			const CCPosition closeToEnemy = !target ? CCPosition() : (target->pos + Util::Normalized(rangedUnit->pos - target->pos) * target->radius * 0.95);
+			if (!m_bot.Map().isVisible(closeToEnemy))
+				continue;
+		}
 
-		float priority = getAttackPriority(rangedUnit, target, m_harassMode);
+		float priority = getAttackPriority(rangedUnit, target, m_harassMode, considerOnlyUnitsInRange);
 		if(priority > 0.f)
 			targetPriorities.insert(std::pair<float, const sc2::Unit*>(priority, target));
     }
