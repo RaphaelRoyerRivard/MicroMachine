@@ -1795,7 +1795,8 @@ float Util::getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot)
 float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 {
 	float zergBonus = 1.f;
-	if(Unit(unit, bot).getType().getRace() == CCRace::Zerg && !unit->is_burrowed && !unit->is_flying)
+	float slowModifier = 1.f;
+	if(!unit->is_burrowed && !unit->is_flying && Unit(unit, bot).getType().getRace() == CCRace::Zerg)
 	{
 		/* From https://liquipedia.net/starcraft2/Creep
 		 * All Zerg ground units move faster when traveling on Creep, with the exception of burrowed units, Drones, Broodlings, and Changelings not disguised as Zerglings. 
@@ -1815,7 +1816,9 @@ float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 		if (bot.Strategy().enemyHasMetabolicBoost() && unit->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 			zergBonus *= 1.6f;
 	}
-	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * zergBonus;
+	if (unitHasBuff(unit, sc2::BUFF_ID::SLOW))
+		slowModifier = 0.5f;
+	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * zergBonus * slowModifier;
 }
 
 CCPosition Util::getFacingVector(const sc2::Unit * unit)
