@@ -43,6 +43,7 @@ private:
 	std::map<const sc2::Unit *, FlyingHelperMission> m_cycloneFlyingHelpers;
 	std::map<const sc2::Unit *, const sc2::Unit *> m_cyclonesWithHelper;
 	std::map<std::set<const sc2::Unit *>, bool> m_combatSimulationResults;
+	std::map<const sc2::Unit *, sc2::Units> m_threatsForUnit;
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
 
 	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
@@ -87,6 +88,7 @@ private:
 	bool MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const;
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits = false, bool considerOnlyUnitsInRange = false) const;
+	sc2::Units & getThreats(const sc2::Unit * rangedUnit, const sc2::Units & targets);
 	void CleanLockOnTargets() const;
 	void CalcBestFlyingCycloneHelpers();
 };

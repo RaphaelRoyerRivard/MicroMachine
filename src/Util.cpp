@@ -1701,12 +1701,11 @@ float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapo
 }
 
 // get threats to our harass unit
-std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot)
+void Util::getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::Units & outThreats, CCBot & bot)
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
 	const auto & enemyUnitsBeingRepaired = bot.GetEnemyUnitsBeingRepaired();
-	std::vector<const sc2::Unit *> threats;
 
 	// for each possible threat
 	for (auto targetUnit : targets)
@@ -1719,34 +1718,44 @@ std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const st
 		const float threatRange = getThreatRange(unit, targetUnit, bot);
 		if (Util::DistSq(unit->pos, targetUnit->pos) < threatRange * threatRange)
 		{
-			threats.push_back(targetUnit);
+			outThreats.push_back(targetUnit);
 
 			// We check if that threat is being repaired
-			const auto & it = enemyUnitsBeingRepaired.find(targetUnit);
-			if(it != enemyUnitsBeingRepaired.end())
+			if (!unit->is_flying)
 			{
-				// If so, we consider all the SCVs repairing it as threats
-				for(const auto enemyRepairingSCV : it->second)
+				const auto & it = enemyUnitsBeingRepaired.find(targetUnit);
+				if (it != enemyUnitsBeingRepaired.end())
 				{
-					threats.push_back(enemyRepairingSCV);
+					// If so, we consider all the SCVs repairing it as threats
+					for (const auto enemyRepairingSCV : it->second)
+					{
+						outThreats.push_back(enemyRepairingSCV);
+					}
 				}
 			}
 		}
 	}
+}
 
+sc2::Units Util::getThreats(const sc2::Unit * unit, const sc2::Units & targets, CCBot & bot)
+{
+	sc2::Units threats;
+	getThreats(unit, targets, threats, bot);
 	return threats;
 }
 
 // get threats to our harass unit
-std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot)
+sc2::Units Util::getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot)
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
-	std::vector<const sc2::Unit *> targetsPtrs(targets.size());
+	sc2::Units targetsPtrs(targets.size());
 	for (auto& targetUnit : targets)
 		targetsPtrs.push_back(targetUnit.getUnitPtr());
 
-	return getThreats(unit, targetsPtrs, bot);
+	sc2::Units threats;
+	getThreats(unit, targetsPtrs, threats, bot);
+	return threats;
 }
 
 //calculate radius max(min range, range + speed + height bonus + small buffer)

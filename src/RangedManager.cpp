@@ -172,6 +172,7 @@ int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* tar
 void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets, sc2::Units &otherSquadsUnits)
 {
 	m_combatSimulationResults.clear();
+	m_threatsForUnit.clear();
 	
 	m_bot.StartProfiling("0.10.4.1.5.3        CalcBestFlyingCycloneHelpers");
 	CalcBestFlyingCycloneHelpers();
@@ -243,7 +244,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
 	m_bot.StopProfiling("0.10.4.1.5.1.0          getTarget");
 	m_bot.StartProfiling("0.10.4.1.5.1.1          getThreats");
-	sc2::Units threats = Util::getThreats(rangedUnit, rangedUnitTargets, m_bot);
+	sc2::Units & threats = getThreats(rangedUnit, rangedUnitTargets);
 	m_bot.StopProfiling("0.10.4.1.5.1.1          getThreats");
 
 	CCPosition goal = m_order.getPosition();
@@ -1290,6 +1291,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 	}
 
+	m_bot.StartProfiling("0.10.4.1.5.1.5.1          CalcCloseUnits");
 	float minUnitRange = -1;
 	// We create a set because we need an ordered data structure for accurate and efficient comparison with data in memory
 	std::set<const sc2::Unit *> closeUnitsSet;
@@ -1372,8 +1374,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			}
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.5.1          CalcCloseUnits");
 
-	if (closeUnitsSet.empty())
+	if (closeUnitsSet.empty() || !Util::Contains(rangedUnit, closeUnitsSet))
 	{
 		m_harassMode = true;
 		return false;
@@ -1391,7 +1394,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			{
 				auto action = m_bot.Commander().Combat().GetRangedUnitAction(rangedUnit);
 				std::stringstream ss;
-				ss << "ThreatFightingLogic was called again when all close units should have been given a prioritized action... Current unit had a " << action.description;
+				ss << "ThreatFightingLogic was called again when all close units should have been given a prioritized action... Current unit of type " << sc2::UnitTypeToName(rangedUnit->unit_type) << " had a " << action.description << " action and is " << (Util::Contains(rangedUnit, allyUnits) ? "" : "not") << " part of the set";
 				Util::Log(__FUNCTION__, ss.str(), m_bot);
 			}
 			return savedResult;
@@ -1402,15 +1405,18 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	for (const auto closeUnit : closeUnitsSet)
 		closeUnits.push_back(closeUnit);
 
+	m_bot.StartProfiling("0.10.4.1.5.1.5.2          CalcThreats");
 	// Calculate all the threats of all the ally units participating in the fight
 	sc2::Units allThreats;
 	for (const auto allyUnit : closeUnits)
 	{
-		const auto allyUnitThreats = Util::getThreats(allyUnit, rangedUnitTargets, m_bot);
+		const auto & allyUnitThreats = getThreats(allyUnit, rangedUnitTargets);
 		for (const auto threat : allyUnitThreats)
 			allThreats.push_back(threat);
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.5.2          CalcThreats");
 
+	m_bot.StartProfiling("0.10.4.1.5.1.5.3          CalcThreatsPower");
 	float maxThreatSpeed = 0.f;
 	float maxThreatRange = 0.f;
 	// Calculate enemy power
@@ -1429,6 +1435,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			maxThreatRange = threatRange;
 		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.5.3          CalcThreatsPower");
 
 	m_harassMode = true;
 
@@ -1461,9 +1468,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 	bool currentUnitHasACommand = false;
 	// If we can beat the enemy
-	m_bot.StartProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
+	m_bot.StartProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
 	bool winSimulation = Util::SimulateCombat(closeUnits, allThreats, m_bot);
-	m_bot.StopProfiling("0.10.4.1.5.1.5.1          SimulateCombat");
+	m_bot.StopProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
 	const bool formulaWin = unitsPower >= targetsPower;
 	bool shouldFight = winSimulation && formulaWin;
 
@@ -2152,6 +2159,17 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 	if (targetPriorities.empty())
 		return nullptr;
 	return (*targetPriorities.rbegin()).second;		//return last target because it's the one with the highest priority
+}
+
+sc2::Units & RangedManager::getThreats(const sc2::Unit * rangedUnit, const sc2::Units & targets)
+{
+	const auto it = m_threatsForUnit.find(rangedUnit);
+	if (it != m_threatsForUnit.end())
+		return it->second;
+	sc2::Units threats;
+	Util::getThreats(rangedUnit, targets, threats, m_bot);
+	m_threatsForUnit[rangedUnit] = threats;
+	return m_threatsForUnit[rangedUnit];
 }
 
 // according to http://wiki.teamliquid.net/starcraft2/Range
