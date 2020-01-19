@@ -34,9 +34,16 @@ const int REAPER_KD8_CHARGE_COOLDOWN = 314 + REAPER_KD8_CHARGE_FRAME_COUNT + 7;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 40;
 const int THOR_MORPH_FRAME_COUNT = 40;
-const std::string ACTION_DESCRIPTION_ATTACK_THREAT = "AttackThreat";
+const std::string ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK = "ThreatFightAttack";
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_MOVE = "ThreatFightMove";
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_DODGE_EFFECT = "ThreatFightDodgeEffect";
+const std::string ACTION_DESCRIPTION_THREAT_FIGHT_MORPH = "ThreatFightMorph";
+const std::vector<std::string> THREAT_FIGHTING_ACTION_DESCRIPTIONS = {
+	ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK,
+	ACTION_DESCRIPTION_THREAT_FIGHT_MOVE,
+	ACTION_DESCRIPTION_THREAT_FIGHT_DODGE_EFFECT,
+	ACTION_DESCRIPTION_THREAT_FIGHT_MORPH
+};
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 {
@@ -173,6 +180,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 {
 	m_combatSimulationResults.clear();
 	m_threatsForUnit.clear();
+	m_dummyAssaultVikings.clear();
 	
 	m_bot.StartProfiling("0.10.4.1.5.3        CalcBestFlyingCycloneHelpers");
 	CalcBestFlyingCycloneHelpers();
@@ -224,7 +232,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const bool isCyclone = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE;
 	const bool isBattlecruiser = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER;
 	const bool isFlyingBarracks = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING;
-	
+
 	auto & unitAction = m_bot.Commander().Combat().GetRangedUnitAction(rangedUnit);
 	// Ignore units that are executing a prioritized action
 	if (unitAction.prioritized)
@@ -336,7 +344,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
-	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
+	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
 	{
 		return;
 	}
@@ -393,7 +401,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.6          UnitAbilities");
 	// Check if unit can use one of its abilities
-	if(ExecuteUnitAbilitiesLogic(rangedUnit, threats))
+	if(ExecuteUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
 		return;
@@ -1226,11 +1234,31 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 	float unitsPower = 0.f;
 	float targetsPower = 0.f;
+	bool morphFlyingVikings = false;
 	std::map<const sc2::Unit*, const sc2::Unit*> closeUnitsTarget;
 
-	// The harass mode deactivation is a hack to not ignore range targets
+	// The harass mode deactivation is a hack to not ignore ranged targets
 	m_harassMode = false;
 	const sc2::Unit* target = getTarget(rangedUnit, rangedUnitTargets);
+	// If the Viking that is not a flying helper has no target, we try to see if it would have one if it was landed
+	if (!target && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && m_cycloneFlyingHelpers.find(rangedUnit) == m_cycloneFlyingHelpers.end())
+	{
+		auto it = m_dummyAssaultVikings.find(rangedUnit->tag);
+		if (it != m_dummyAssaultVikings.end())
+		{
+			rangedUnit = &it->second;
+		}
+		else
+		{
+			m_dummyAssaultVikings[rangedUnit->tag] = Util::CreateDummyVikingAssaultFromUnit(rangedUnit);
+			rangedUnit = &m_dummyAssaultVikings[rangedUnit->tag];
+		}
+		target = getTarget(rangedUnit, rangedUnitTargets);
+		if (target)
+		{
+			morphFlyingVikings = true;
+		}
+	}
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 	const CCPosition closeToEnemy = !target ? CCPosition() : (target->pos + Util::Normalized(rangedUnit->pos - target->pos) * target->radius * 0.95);
 	const bool enemyIsHigher = !rangedUnit->is_flying && target && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos);
@@ -1338,7 +1366,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			}
 			auto & unitAction = m_bot.Commander().Combat().GetRangedUnitAction(unit);
 			// Ignore units that are executing a prioritized action other than a threat fighting one
-			if (unitAction.prioritized && unitAction.description != ACTION_DESCRIPTION_ATTACK_THREAT && unitAction.description != ACTION_DESCRIPTION_THREAT_FIGHT_MOVE && unitAction.description != ACTION_DESCRIPTION_THREAT_FIGHT_DODGE_EFFECT)
+			if (unitAction.prioritized && !Util::Contains(unitAction.description, THREAT_FIGHTING_ACTION_DESCRIPTIONS))
 			{
 				continue;
 			}
@@ -1354,21 +1382,39 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			{
 				continue;
 			}
-			// We don't want flying helpers to take damage so Cyclones can keep vision for longer periods, unless it is a Viking because fuck Tempests
-			if (m_cycloneFlyingHelpers.find(unit) != m_cycloneFlyingHelpers.end() && unit->unit_type != sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
-			{
-				continue;
-			}
 
 			const sc2::Unit* unitTarget = getTarget(unit, rangedUnitTargets);
-
+			const sc2::Unit* unitToSave = unit;
+			
+			// If the flying Viking doesn't have a target, we check if it would have one as a landed Viking (unless it is a flying helper)
+			if (!unitTarget && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && m_cycloneFlyingHelpers.find(unit) == m_cycloneFlyingHelpers.end())
+			{
+				const sc2::Unit* vikingAssault = nullptr;
+				auto it = m_dummyAssaultVikings.find(unit->tag);
+				if (it != m_dummyAssaultVikings.end())
+				{
+					vikingAssault = &it->second;
+				}
+				else
+				{
+					m_dummyAssaultVikings[unit->tag] = Util::CreateDummyVikingAssaultFromUnit(unit);
+					vikingAssault = &m_dummyAssaultVikings[unit->tag];
+				}
+				unitTarget = getTarget(vikingAssault, rangedUnitTargets);
+				if (unitTarget)
+				{
+					unitToSave = vikingAssault;
+					morphFlyingVikings = true;
+				}
+			}
+			
 			// If the unit has a target, add it to the close units and calculate its power
 			if (unitTarget)
 			{
-				closeUnitsSet.insert(unit);
-				closeUnitsTarget[unit] = unitTarget;
-				unitsPower += Util::GetUnitPower(unit, unitTarget, m_bot);
-				float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
+				closeUnitsSet.insert(unitToSave);
+				closeUnitsTarget[unitToSave] = unitTarget;
+				unitsPower += Util::GetUnitPower(unitToSave, unitTarget, m_bot);
+				float unitRange = Util::GetAttackRangeForTarget(unitToSave, unitTarget, m_bot);
 				if (minUnitRange < 0 || unitRange < minUnitRange)
 					minUnitRange = unitRange;
 			}
@@ -1407,12 +1453,17 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 	m_bot.StartProfiling("0.10.4.1.5.1.5.2          CalcThreats");
 	// Calculate all the threats of all the ally units participating in the fight
-	sc2::Units allThreats;
+	std::set<const sc2::Unit *> allThreatsSet;
 	for (const auto allyUnit : closeUnits)
 	{
 		const auto & allyUnitThreats = getThreats(allyUnit, rangedUnitTargets);
 		for (const auto threat : allyUnitThreats)
-			allThreats.push_back(threat);
+			allThreatsSet.insert(threat);
+	}
+	sc2::Units allThreats;
+	for (const auto threat : allThreatsSet)
+	{
+		allThreats.push_back(threat);
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.5.2          CalcThreats");
 
@@ -1536,6 +1587,18 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			}
 		}
 
+		// Check if we should morph the Viking
+		if (shouldFight && morphFlyingVikings && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+		{
+			const auto realViking = m_bot.GetUnitPtr(unit->tag);
+			if (realViking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+			{
+				const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, true, VIKING_MORPH_FRAME_COUNT, ACTION_DESCRIPTION_THREAT_FIGHT_MORPH);
+				m_bot.Commander().Combat().PlanAction(realViking, action);
+				continue;
+			}
+		}
+
 		auto movePosition = CCPosition();
 		const bool injured = unit->health / unit->health_max < 0.5f;
 		const auto enemyRange = Util::GetAttackRangeForTarget(unitTarget, unit, m_bot);
@@ -1566,7 +1629,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		{
 			// Attack the target
 			const int attackDuration = canAttackNow ? getAttackDuration(unit, unitTarget) : 0;
-			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, true, attackDuration, ACTION_DESCRIPTION_ATTACK_THREAT);
+			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, true, attackDuration, ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK);
 			m_bot.Commander().Combat().PlanAction(unit, action);
 			// Keep track of damage dealt
 			const float damageDealt = Util::GetDpsForTarget(unit, unitTarget, m_bot) / 22.4f;
@@ -1692,14 +1755,8 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 	}
 }
 
-bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
+bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
 {
-	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
-	{
-		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, threats, targets, unitShouldHeal, isCycloneHelper))
-			return true;
-	}
-
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 	{
 		if (ExecuteBansheeUncloakLogic(rangedUnit, goal, threats, unitShouldHeal))
@@ -1724,8 +1781,14 @@ bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * range
 	return false;
 }
 
-bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats)
+bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
 {
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+	{
+		if (ExecuteVikingMorphLogic(rangedUnit, goal, target, threats, targets, unitShouldHeal, isCycloneHelper))
+			return true;
+	}
+	
 	if (ExecuteKD8ChargeLogic(rangedUnit, threats))
 	{
 		return true;

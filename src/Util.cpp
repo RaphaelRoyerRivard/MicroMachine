@@ -161,6 +161,8 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 			m_terrainHeight[x][y] = heightMap.TerrainHeight(point);
 		}
 	}
+
+	CreateDummyVikingAssault(bot);
 }
 
 Util::PathFinding::IMNode* getLowestCostNode(std::set<Util::PathFinding::IMNode*> & set)
@@ -1231,6 +1233,51 @@ bool Util::IsProtoss(const CCRace & race)
 #else
     return race == BWAPI::Races::Protoss;
 #endif
+}
+
+void Util::CreateDummyVikingAssault(CCBot & bot)
+{
+	m_dummyVikingAssault = new sc2::Unit;
+	m_dummyVikingAssault->unit_type = sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
+	m_dummyVikingAssault->is_flying = false;
+	m_dummyVikingAssault->health_max = 135;
+	m_dummyVikingAssault->energy_max = 0;
+	m_dummyVikingAssault->energy = 0;
+	m_dummyVikingAssault->alliance = sc2::Unit::Self;
+	m_dummyVikingAssault->owner = GetSelfPlayerId(bot);
+	m_dummyVikingAssault->is_alive = true;
+	m_dummyVikingAssault->shield_max = 0;
+	m_dummyVikingAssault->radius = 0.75;
+	m_dummyVikingAssault->display_type = sc2::Unit::Visible;
+	m_dummyVikingAssault->build_progress = 1;
+	m_dummyVikingAssault->cloak = sc2::Unit::NotCloaked;
+	m_dummyVikingAssault->detect_range = 0;
+	m_dummyVikingAssault->radar_range = 0;
+	m_dummyVikingAssault->is_blip = false;
+	m_dummyVikingAssault->mineral_contents = 0;
+	m_dummyVikingAssault->is_burrowed = false;
+	m_dummyVikingAssault->weapon_cooldown = 0;
+	m_dummyVikingAssault->add_on_tag = 0;
+	m_dummyVikingAssault->passengers = {};
+	m_dummyVikingAssault->cargo_space_taken = 0;
+	m_dummyVikingAssault->cargo_space_max = 0;
+	m_dummyVikingAssault->assigned_harvesters = 0;
+	m_dummyVikingAssault->ideal_harvesters = 0;
+	m_dummyVikingAssault->engaged_target_tag = 0;
+	m_dummyVikingAssault->buffs = {};
+	m_dummyVikingAssault->is_powered = false;
+	m_dummyVikingAssault->last_seen_game_loop = 0;
+}
+
+sc2::Unit Util::CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit)
+{
+	sc2::Unit vikingAssault = sc2::Unit(*m_dummyVikingAssault);
+	vikingAssault.pos = unit->pos;
+	vikingAssault.facing = unit->facing;
+	vikingAssault.health = unit->health;
+	vikingAssault.tag = unit->tag;
+	vikingAssault.last_seen_game_loop = unit->last_seen_game_loop;
+	return vikingAssault;
 }
 
 bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
@@ -2394,6 +2441,10 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 	settings.maxTime = 100;
 	CombatResult outcome = m_simulator->predict_engage(state, settings);
 	const int winner = outcome.state.owner_with_best_outcome();
-	const auto selfPlayer = bot.Observation()->GetGameInfo().player_info[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
-	return winner == selfPlayer;
+	return winner == GetSelfPlayerId(bot);
+}
+
+int Util::GetSelfPlayerId(CCBot & bot)
+{
+	return bot.Observation()->GetGameInfo().player_info[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
 }

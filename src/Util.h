@@ -28,6 +28,7 @@ namespace Util
 	static std::vector<std::vector<bool>> m_pathable;
 	static std::vector<std::vector<bool>> m_placement;
 	static std::vector<std::vector<float>> m_terrainHeight;
+	static sc2::Unit * m_dummyVikingAssault;
 
 	static bool allowDebug;
 	
@@ -165,6 +166,8 @@ namespace Util
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);
 
+	void CreateDummyVikingAssault(CCBot & bot);
+	sc2::Unit CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit);
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
 	bool CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot);
     float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells = false);
@@ -281,4 +284,5 @@ namespace Util
 	float DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point);
 
 	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
+	int GetSelfPlayerId(CCBot & bot);
 };
