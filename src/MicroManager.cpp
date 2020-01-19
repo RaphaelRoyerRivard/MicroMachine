@@ -58,7 +58,7 @@ float MicroManager::getTargetsPower(const std::vector<Unit>& units) const
 	return Util::GetUnitsPower(m_targets, units, m_bot);
 }
 
-float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, bool filterHighRangeUnits) const
+float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, bool filterHighRangeUnits, bool considerOnlyUnitsInRange) const
 {
 	BOT_ASSERT(target, "null unit in getAttackPriority");
 
@@ -95,7 +95,11 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	const float distance = Util::Dist(attacker->pos, target->pos);
 	float proximityValue = 1.f;
 	if (distance > attackerRange)
+	{
+		if (considerOnlyUnitsInRange)
+			return 0.f;
 		proximityValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
+	}
 
 	float invisModifier = 1.f;
 	if (target->cloak == sc2::Unit::CloakedDetected)

@@ -161,6 +161,8 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 			m_terrainHeight[x][y] = heightMap.TerrainHeight(point);
 		}
 	}
+
+	CreateDummyVikingAssault(bot);
 }
 
 Util::PathFinding::IMNode* getLowestCostNode(std::set<Util::PathFinding::IMNode*> & set)
@@ -1233,6 +1235,51 @@ bool Util::IsProtoss(const CCRace & race)
 #endif
 }
 
+void Util::CreateDummyVikingAssault(CCBot & bot)
+{
+	m_dummyVikingAssault = new sc2::Unit;
+	m_dummyVikingAssault->unit_type = sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
+	m_dummyVikingAssault->is_flying = false;
+	m_dummyVikingAssault->health_max = 135;
+	m_dummyVikingAssault->energy_max = 0;
+	m_dummyVikingAssault->energy = 0;
+	m_dummyVikingAssault->alliance = sc2::Unit::Self;
+	m_dummyVikingAssault->owner = GetSelfPlayerId(bot);
+	m_dummyVikingAssault->is_alive = true;
+	m_dummyVikingAssault->shield_max = 0;
+	m_dummyVikingAssault->radius = 0.75;
+	m_dummyVikingAssault->display_type = sc2::Unit::Visible;
+	m_dummyVikingAssault->build_progress = 1;
+	m_dummyVikingAssault->cloak = sc2::Unit::NotCloaked;
+	m_dummyVikingAssault->detect_range = 0;
+	m_dummyVikingAssault->radar_range = 0;
+	m_dummyVikingAssault->is_blip = false;
+	m_dummyVikingAssault->mineral_contents = 0;
+	m_dummyVikingAssault->is_burrowed = false;
+	m_dummyVikingAssault->weapon_cooldown = 0;
+	m_dummyVikingAssault->add_on_tag = 0;
+	m_dummyVikingAssault->passengers = {};
+	m_dummyVikingAssault->cargo_space_taken = 0;
+	m_dummyVikingAssault->cargo_space_max = 0;
+	m_dummyVikingAssault->assigned_harvesters = 0;
+	m_dummyVikingAssault->ideal_harvesters = 0;
+	m_dummyVikingAssault->engaged_target_tag = 0;
+	m_dummyVikingAssault->buffs = {};
+	m_dummyVikingAssault->is_powered = false;
+	m_dummyVikingAssault->last_seen_game_loop = 0;
+}
+
+sc2::Unit Util::CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit)
+{
+	sc2::Unit vikingAssault = sc2::Unit(*m_dummyVikingAssault);
+	vikingAssault.pos = unit->pos;
+	vikingAssault.facing = unit->facing;
+	vikingAssault.health = unit->health;
+	vikingAssault.tag = unit->tag;
+	vikingAssault.last_seen_game_loop = unit->last_seen_game_loop;
+	return vikingAssault;
+}
+
 bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
 {
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
@@ -1701,12 +1748,11 @@ float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapo
 }
 
 // get threats to our harass unit
-std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot)
+void Util::getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::Units & outThreats, CCBot & bot)
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
 	const auto & enemyUnitsBeingRepaired = bot.GetEnemyUnitsBeingRepaired();
-	std::vector<const sc2::Unit *> threats;
 
 	// for each possible threat
 	for (auto targetUnit : targets)
@@ -1719,34 +1765,44 @@ std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const st
 		const float threatRange = getThreatRange(unit, targetUnit, bot);
 		if (Util::DistSq(unit->pos, targetUnit->pos) < threatRange * threatRange)
 		{
-			threats.push_back(targetUnit);
+			outThreats.push_back(targetUnit);
 
 			// We check if that threat is being repaired
-			const auto & it = enemyUnitsBeingRepaired.find(targetUnit);
-			if(it != enemyUnitsBeingRepaired.end())
+			if (!unit->is_flying)
 			{
-				// If so, we consider all the SCVs repairing it as threats
-				for(const auto enemyRepairingSCV : it->second)
+				const auto & it = enemyUnitsBeingRepaired.find(targetUnit);
+				if (it != enemyUnitsBeingRepaired.end())
 				{
-					threats.push_back(enemyRepairingSCV);
+					// If so, we consider all the SCVs repairing it as threats
+					for (const auto enemyRepairingSCV : it->second)
+					{
+						outThreats.push_back(enemyRepairingSCV);
+					}
 				}
 			}
 		}
 	}
+}
 
+sc2::Units Util::getThreats(const sc2::Unit * unit, const sc2::Units & targets, CCBot & bot)
+{
+	sc2::Units threats;
+	getThreats(unit, targets, threats, bot);
 	return threats;
 }
 
 // get threats to our harass unit
-std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot)
+sc2::Units Util::getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot)
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
-	std::vector<const sc2::Unit *> targetsPtrs(targets.size());
+	sc2::Units targetsPtrs(targets.size());
 	for (auto& targetUnit : targets)
 		targetsPtrs.push_back(targetUnit.getUnitPtr());
 
-	return getThreats(unit, targetsPtrs, bot);
+	sc2::Units threats;
+	getThreats(unit, targetsPtrs, threats, bot);
+	return threats;
 }
 
 //calculate radius max(min range, range + speed + height bonus + small buffer)
@@ -1795,7 +1851,8 @@ float Util::getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot)
 float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 {
 	float zergBonus = 1.f;
-	if(Unit(unit, bot).getType().getRace() == CCRace::Zerg && !unit->is_burrowed && !unit->is_flying)
+	float slowModifier = 1.f;
+	if(!unit->is_burrowed && !unit->is_flying && Unit(unit, bot).getType().getRace() == CCRace::Zerg)
 	{
 		/* From https://liquipedia.net/starcraft2/Creep
 		 * All Zerg ground units move faster when traveling on Creep, with the exception of burrowed units, Drones, Broodlings, and Changelings not disguised as Zerglings. 
@@ -1815,7 +1872,9 @@ float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 		if (bot.Strategy().enemyHasMetabolicBoost() && unit->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
 			zergBonus *= 1.6f;
 	}
-	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * zergBonus;
+	if (unitHasBuff(unit, sc2::BUFF_ID::SLOW))
+		slowModifier = 0.5f;
+	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * zergBonus * slowModifier;
 }
 
 CCPosition Util::getFacingVector(const sc2::Unit * unit)
@@ -2382,6 +2441,10 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 	settings.maxTime = 100;
 	CombatResult outcome = m_simulator->predict_engage(state, settings);
 	const int winner = outcome.state.owner_with_best_outcome();
-	const auto selfPlayer = bot.Observation()->GetGameInfo().player_info[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
-	return winner == selfPlayer;
+	return winner == GetSelfPlayerId(bot);
+}
+
+int Util::GetSelfPlayerId(CCBot & bot)
+{
+	return bot.Observation()->GetGameInfo().player_info[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
 }

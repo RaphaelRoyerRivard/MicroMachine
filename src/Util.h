@@ -28,6 +28,7 @@ namespace Util
 	static std::vector<std::vector<bool>> m_pathable;
 	static std::vector<std::vector<bool>> m_placement;
 	static std::vector<std::vector<float>> m_terrainHeight;
+	static sc2::Unit * m_dummyVikingAssault;
 
 	static bool allowDebug;
 	
@@ -165,6 +166,8 @@ namespace Util
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);
 
+	void CreateDummyVikingAssault(CCBot & bot);
+	sc2::Unit CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit);
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
 	bool CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot);
     float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells = false);
@@ -186,8 +189,9 @@ namespace Util
     float GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	float GetDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
 	float GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
-	std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
-	std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot);
+	void getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::Units & outThreats, CCBot & bot);
+	sc2::Units getThreats(const sc2::Unit * unit, const sc2::Units & targets, CCBot & bot);
+	sc2::Units getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot);
 	float getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCBot & m_bot);
 	float getThreatRange(bool isFlying, CCPosition position, float radius, const sc2::Unit * threat, CCBot & m_bot);
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
@@ -280,4 +284,5 @@ namespace Util
 	float DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point);
 
 	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
+	int GetSelfPlayerId(CCBot & bot);
 };

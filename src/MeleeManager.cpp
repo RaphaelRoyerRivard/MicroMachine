@@ -155,7 +155,7 @@ Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets) 
     {
         BOT_ASSERT(targetUnit.isValid(), "null target unit in getTarget");
 
-        const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), false);
+        const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), false, false);
 
         if (!bestTarget.isValid() || priority > highestPriority)
         {

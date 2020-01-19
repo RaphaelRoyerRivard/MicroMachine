@@ -945,8 +945,11 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation + towardsCenter * 15, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + offset, player2, 15);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 1, player1, 4);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, mapCenter + towardsCenter * 5, player2, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 8, player2, 4);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_INFESTOR, m_startLocation, player2, 2);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CORRUPTOR, m_startLocation, player2, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CORRUPTOR, mapCenter, player2, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE, mapCenter, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 20);
@@ -1003,6 +1006,11 @@ void CCBot::IssueCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation - towardsCenter * 5, player1, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation - towardsCenter * 10, player1, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation - towardsCenter * 3, player1, 1);*/
+
+	// Situation for testing the threat fighting morph of Vikings
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter + towardsCenter * 4, player1, 4);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter - towardsCenter * 4, player2, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, mapCenter - towardsCenter * 8, player2, 1);*/
 }
 
 uint32_t CCBot::GetCurrentFrame() const
@@ -1127,11 +1135,12 @@ int CCBot::GetFreeGas()
 
 Unit CCBot::GetUnit(const CCUnitID & tag) const
 {
-#ifdef SC2API
-    return Unit(Observation()->GetUnit(tag), *(CCBot *)this);
-#else
-    return Unit(BWAPI::Broodwar->getUnit(tag), *(CCBot *)this);
-#endif
+	return Unit(Observation()->GetUnit(tag), *(CCBot *)this);
+}
+
+const sc2::Unit * CCBot::GetUnitPtr(const CCUnitID & tag) const
+{
+	return Observation()->GetUnit(tag);
 }
 
 int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed, bool underConstruction)
