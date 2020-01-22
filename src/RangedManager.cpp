@@ -1160,6 +1160,8 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				const float dist = Util::Dist(cyclone->pos, threat->pos);
 				if (shouldHeal && dist > partialLockOnRange + threat->radius)
 					continue;
+				if (threat->display_type == sc2::Unit::Hidden)
+					continue;
 				// The lower the better
 				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 2.5f);
 				const auto healthScore = 0.25f * (threat->health + threat->shield * 1.5f);
@@ -1843,6 +1845,8 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN) + battlecruiser->radius;
 	for (const auto potentialTarget : targets)
 	{
+		if (potentialTarget->display_type == sc2::Unit::Hidden)
+			continue;
 		const auto type = UnitType(potentialTarget->unit_type, m_bot);
 		if (type.isBuilding() && !type.isAttackingBuilding())
 			continue;
