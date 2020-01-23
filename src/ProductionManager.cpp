@@ -725,7 +725,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 				}
 #ifndef NO_UNITS
-				if ((m_bot.Strategy().enemyHasInvisible() || (enemyRace == sc2::Terran && bansheeCount >= 3)) && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
+				if ((m_bot.Strategy().enemyCurrentlyHasInvisible() || (enemyRace == sc2::Terran && bansheeCount >= 3)) && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
 				{
 					m_queue.queueAsHighestPriority(MetaTypeEnum::Raven, false);
 				}

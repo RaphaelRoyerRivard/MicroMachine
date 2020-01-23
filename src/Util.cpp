@@ -2294,6 +2294,14 @@ void Util::Log(const std::string & function, const std::string & message, CCBot 
 	file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 }
 
+void Util::ClearChat(CCBot & bot)
+{
+	for (int i = 0; i < 10; i++)
+	{
+		bot.Actions()->SendChat(" ");
+	}
+}
+
 int Util::GetTimeControlSpeed()
 {
 	return timeControlRatio;

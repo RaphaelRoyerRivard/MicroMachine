@@ -70,6 +70,7 @@ class StrategyManager
 	bool m_shouldProduceAntiAirDefense = false;
 	bool m_enemyHasProtossHighTechAir = false;
 	bool m_enemyHasInvisible = false;
+	bool m_enemyCurrentlyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
 	bool m_enemyHasMassZerglings = false;
 	bool m_enemyHasHiSecAutoTracking = false;
@@ -115,7 +116,9 @@ public:
 	bool enemyHasProtossHighTechAir() const { return m_enemyHasProtossHighTechAir; }
 	void setEnemyHasProtossHighTechAir(bool enemyHasHighTechAir) { m_enemyHasProtossHighTechAir = enemyHasHighTechAir; }
 	bool enemyHasInvisible() const { return m_enemyHasInvisible; }
+	bool enemyCurrentlyHasInvisible() const { return m_enemyCurrentlyHasInvisible; }
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
+	void setEnemyCurrentlyHasInvisible(bool enemyCurrentlyHasInvisible) { m_enemyCurrentlyHasInvisible = enemyCurrentlyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
 	bool enemyHasMassZerglings() const { return m_enemyHasMassZerglings; }
