@@ -57,22 +57,10 @@ void RangedManager::setTargets(const std::vector<Unit> & targets)
 	{
 		// In harass mode, we don't want to attack buildings (like a wall or proxy) if we never reached the enemy base
 		const BaseLocation* enemyStartingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-		if (enemyStartingBase && !m_bot.Map().isExplored(enemyStartingBase->getPosition()))
+		const bool allowEarlyBuildingAttack = m_bot.Commander().Combat().getAllowEarlyBuildingAttack();
+		if (!allowEarlyBuildingAttack && enemyStartingBase && !m_bot.Map().isExplored(enemyStartingBase->getPosition()))
 		{
 			filterPassiveBuildings = true;
-		}
-		else
-		{
-			//Also, we do not want to target buildings unless there are no better targets
-			for (auto & target : targets)
-			{
-				// Check if the target is a unit (not building) or a combat building. In this case, we won't consider passive buildings
-				if (!target.getType().isBuilding() || target.getType().isCombatUnit())
-				{
-					filterPassiveBuildings = true;
-					break;
-				}
-			}
 		}
 	}
     for (auto & target : targets)
@@ -250,6 +238,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
 	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
+	if (!target)
+		target = getTarget(rangedUnit, rangedUnitTargets, false, false, false);
 	m_bot.StopProfiling("0.10.4.1.5.1.0          getTarget");
 	m_bot.StartProfiling("0.10.4.1.5.1.1          getThreats");
 	sc2::Units & threats = getThreats(rangedUnit, rangedUnitTargets);
@@ -438,7 +428,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	// Opportunistic attack (usually on buildings)
 	if (shouldAttack && !fasterEnemyThreat)
 	{
-		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true);
+		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true, false);
 		if (closeTarget && ShouldAttackTarget(rangedUnit, closeTarget, threats))
 		{
 			const auto distToCloseTarget = Util::DistSq(rangedUnit->pos, closeTarget->pos);
@@ -2164,7 +2154,7 @@ CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vect
 }
 
 // get a target for the ranged unit to attack
-const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits, bool considerOnlyUnitsInRange) const
+const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits, bool considerOnlyUnitsInRange, bool filterPassiveBuildings) const
 {
     BOT_ASSERT(rangedUnit, "null ranged unit in getTarget");
 
@@ -2190,6 +2180,13 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 			if (!m_bot.Map().isVisible(closeToEnemy))
 				continue;
 		}
+
+    	if (filterPassiveBuildings)
+    	{
+			auto targetUnit = Unit(target, m_bot);
+			if (targetUnit.getType().isBuilding())
+				continue;
+    	}
 
 		float priority = getAttackPriority(rangedUnit, target, m_harassMode, considerOnlyUnitsInRange);
 		if(priority > 0.f)

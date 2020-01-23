@@ -1016,6 +1016,12 @@ void CCBot::IssueCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, mapCenter, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED, mapCenter + towardsCenter * 7, player1, 1);*/
+
+	// Test for reproducing the bug where units do not launch opportunistic attacks
+	/*Commander().Combat().setAllowEarlyBuildingAttack(true);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 2, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, mapCenter + towardsCenter * 3, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, mapCenter + towardsCenter * 8, player2, 3);*/
 }
 
 uint32_t CCBot::GetCurrentFrame() const

@@ -150,7 +150,7 @@ class CombatCommander
 	bool m_biggerArmy = false;
 	bool m_winAttackSimulation = false;
 	bool m_logVikingActions = false;
-	
+	bool m_allowEarlyBuildingAttack = false;
     bool            m_initialized;
     bool            m_attackStarted;
 	int				m_currentBaseExplorationIndex;
@@ -238,6 +238,8 @@ public:
 	CCPosition getMainAttackLocation();
 	void updateBlockedTilesWithNeutral();
 	void SetLogVikingActions(bool log);
+	bool getAllowEarlyBuildingAttack() const { return m_allowEarlyBuildingAttack; }
+	void setAllowEarlyBuildingAttack(bool allowEarlyBuildingAttack) { m_allowEarlyBuildingAttack = allowEarlyBuildingAttack; }
 	bool ShouldSkipFrame(const sc2::Unit * combatUnit) const;
 	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
 	void CleanActions(const std::vector<Unit> &rangedUnits);
