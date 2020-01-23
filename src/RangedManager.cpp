@@ -1233,7 +1233,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	m_harassMode = false;
 	const sc2::Unit* target = getTarget(rangedUnit, rangedUnitTargets);
 	// If the Viking that is not a flying helper has no target, we try to see if it would have one if it was landed
-	if (!target && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && m_cycloneFlyingHelpers.find(rangedUnit) == m_cycloneFlyingHelpers.end())
+	if (!target && !m_bot.Analyzer().enemyHasCombatAirUnit() && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && m_cycloneFlyingHelpers.find(rangedUnit) == m_cycloneFlyingHelpers.end())
 	{
 		auto it = m_dummyAssaultVikings.find(rangedUnit->tag);
 		if (it != m_dummyAssaultVikings.end())
@@ -1379,7 +1379,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			const sc2::Unit* unitToSave = unit;
 			
 			// If the flying Viking doesn't have a target, we check if it would have one as a landed Viking (unless it is a flying helper)
-			if (!unitTarget && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && m_cycloneFlyingHelpers.find(unit) == m_cycloneFlyingHelpers.end())
+			if (!unitTarget && !m_bot.Analyzer().enemyHasCombatAirUnit() && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && m_cycloneFlyingHelpers.find(unit) == m_cycloneFlyingHelpers.end())
 			{
 				const sc2::Unit* vikingAssault = nullptr;
 				auto it = m_dummyAssaultVikings.find(unit->tag);

@@ -51,6 +51,7 @@ void CombatAnalyzer::lowPriorityChecks()
 	psiCountByType.clear();
 	massiveCountByType.clear();
 
+	m_enemyHasCombatAirUnit = false;
 	totalKnownWorkerCount = 0;
 	totalAirUnitsCount = 0;
 	totalGroundUnitsCount = 0;
@@ -112,7 +113,11 @@ void CombatAnalyzer::lowPriorityChecks()
 		}
 
 		if (unit.isFlying())
+		{
 			totalAirUnitsCount++;
+			if (unit.getType().isCombatUnit())
+				m_enemyHasCombatAirUnit = true;
+		}
 		else
 			totalGroundUnitsCount++;
 
