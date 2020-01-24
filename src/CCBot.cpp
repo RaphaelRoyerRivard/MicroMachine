@@ -119,6 +119,7 @@ void CCBot::OnStep()
 
 	StartProfiling("0.3 clearDeadUnits");
 	clearDeadUnits();
+	clearDuplicateUnits();
 	StopProfiling("0.3 clearDeadUnits");
 
 	checkForConcede();
@@ -799,6 +800,89 @@ void CCBot::clearDeadUnits()
 			unitsToRemove.push_back(unit.getUnitPtr()->tag);
 	}
 	// Remove dead neutral units
+	for (auto tag : unitsToRemove)
+	{
+		m_neutralUnits.erase(tag);
+	}
+}
+
+void CCBot::clearDuplicateUnits()
+{
+	std::vector<sc2::Tag> unitsToRemove;
+	std::map<sc2::UNIT_TYPEID, std::map<float, std::set<const sc2::Unit*>>> units;
+
+	// Classify enemy units
+	for (auto& pair : m_enemyUnits)
+	{
+		auto& unit = pair.second;
+		if (unit.getType().isBuilding())
+			units[unit.getAPIUnitType()][unit.getPosition().x * 10000 + unit.getPosition().y].insert(unit.getUnitPtr());
+	}
+	// Find duplicate enemy units
+	for (auto& buildingType : units)
+	{
+		auto& buildingPositions = buildingType.second;
+		for (auto& buildingPosition : buildingPositions)
+		{
+			auto& buildings = buildingPosition.second;
+			if (buildings.size() > 1)
+			{
+				// Find the real one
+				const sc2::Unit* toKeep = nullptr;
+				for (auto& building : buildings)
+				{
+					if (!toKeep || building->last_seen_game_loop > toKeep->last_seen_game_loop)
+					{
+						if (toKeep)
+							unitsToRemove.push_back(toKeep->tag);
+						toKeep = building;
+					}
+					else
+						unitsToRemove.push_back(building->tag);
+				}
+			}
+		}
+	}
+	// Remove duplicate enemy units
+	for (auto tag : unitsToRemove)
+	{
+		m_enemyUnits.erase(tag);
+	}
+
+	unitsToRemove.clear();
+	units.clear();
+	// Classify neutral units
+	for (auto& pair : m_neutralUnits)
+	{
+		auto& unit = pair.second;
+		units[unit.getAPIUnitType()][unit.getPosition().x * 10000 + unit.getPosition().y].insert(unit.getUnitPtr());
+	}
+	// Find duplicate neutral units
+	for (auto& unitType : units)
+	{
+		auto& unitPositions = unitType.second;
+		for (auto& unitPosition : unitPositions)
+		{
+			auto& neutralUnits = unitPosition.second;
+			if (neutralUnits.size() > 1)
+			{
+				// Find the real one
+				const sc2::Unit* toKeep = nullptr;
+				for (auto& unit : neutralUnits)
+				{
+					if (!toKeep || unit->last_seen_game_loop > toKeep->last_seen_game_loop)
+					{
+						if (toKeep)
+							unitsToRemove.push_back(toKeep->tag);
+						toKeep = unit;
+					}
+					else
+						unitsToRemove.push_back(unit->tag);
+				}
+			}
+		}
+	}
+	// Remove duplicate neutral units
 	for (auto tag : unitsToRemove)
 	{
 		m_neutralUnits.erase(tag);
