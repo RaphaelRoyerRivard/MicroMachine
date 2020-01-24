@@ -426,7 +426,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 
 	// Opportunistic attack (usually on buildings)
-	if (shouldAttack && !fasterEnemyThreat)
+	if ((shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat)
 	{
 		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true, false);
 		if (closeTarget && ShouldAttackTarget(rangedUnit, closeTarget, threats))
