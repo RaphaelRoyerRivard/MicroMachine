@@ -108,6 +108,7 @@ class CCBot : public sc2::Agent
 	void identifyEnemySCVBuilders();
 	void identifyEnemyWorkersGoingIntoRefinery();
 	void clearDeadUnits();
+	void clearDuplicateUnits();
 	void updatePreviousFrameEnemyUnitPos();
 	void checkForConcede();
 	void drawProfilingInfo();

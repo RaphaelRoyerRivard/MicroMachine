@@ -307,16 +307,19 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 		auto& enemyUnitType = enemyUnit.getType();
 		if (enemyUnitType.isCombatUnit() || enemyUnitType.isWorker() || (enemyUnitType.isAttackingBuilding() && enemyUnit.getUnitPtr()->build_progress >= 1.f))
 		{
-			if(enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
+			if (enemyUnit.getAPIUnitType() != sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || enemyUnit.isPowered())
 			{
-				const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
-				const float radius = Util::GetSpecialCaseRange(enemyUnit.getAPIUnitType(), sc2::Weapon::TargetType::Ground);
-				updateInfluenceMap(dps, radius, 1.f, enemyUnit.getPosition(), true, true, true, false);
-			}
-			else
-			{
-				updateGroundInfluenceMapForUnit(enemyUnit);
-				updateAirInfluenceMapForUnit(enemyUnit);
+				if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
+				{
+					const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
+					const float radius = Util::GetSpecialCaseRange(enemyUnit.getAPIUnitType(), sc2::Weapon::TargetType::Ground);
+					updateInfluenceMap(dps, radius, 1.f, enemyUnit.getPosition(), true, true, true, false);
+				}
+				else
+				{
+					updateGroundInfluenceMapForUnit(enemyUnit);
+					updateAirInfluenceMapForUnit(enemyUnit);
+				}
 			}
 		}
 		if(updateBlockedTiles && enemyUnitType.isBuilding() && !enemyUnit.isFlying() && enemyUnit.getUnitPtr()->unit_type != sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
