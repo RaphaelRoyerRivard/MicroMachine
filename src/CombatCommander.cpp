@@ -422,12 +422,16 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 				targetType = sc2::Weapon::TargetType::Any;
 				break;*/
 		}
-		for(auto & pos : effect.positions)
+		if (radius > 0)
 		{
-			if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Air)
-				updateInfluenceMap(dps, radius, 1.f, pos, false, true, true, false);
-			if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Ground)
-				updateInfluenceMap(dps, radius, 1.f, pos, true, true, true, false);
+			radius += 1;	// just a buffer to prevent our units to push the others into the effect's range
+			for (auto & pos : effect.positions)
+			{
+				if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Air)
+					updateInfluenceMap(dps, radius, 1.f, pos, false, true, true, false);
+				if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Ground)
+					updateInfluenceMap(dps, radius, 1.f, pos, true, true, true, false);
+			}
 		}
 	}
 }
@@ -1099,7 +1103,7 @@ void CombatCommander::updateDefenseBuildings()
 
 void CombatCommander::handleWall()
 {
-	int SUPPLYDEPOT_DISTANCE = 7 * 7;	// 7 tiles ^ 2, because we use DistSq
+	int SUPPLYDEPOT_DISTANCE = 10 * 10;	// 10 tiles ^ 2, because we use DistSq
 
 	auto wallCenter = m_bot.Buildings().getWallPosition();
 	auto & enemies = m_bot.GetEnemyUnits();

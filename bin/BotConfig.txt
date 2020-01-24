@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.7.19",
+        "BotVersion"                : "1.8.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -163,7 +163,8 @@
 		"DrawDamageHealthRatio"		: true,
         "DrawRangedUnitActions"     : false,
         "DrawResourcesProximity"    : false,
-        "DrawCombatInformation"     : false
+        "DrawCombatInformation"     : false,
+        "DrawPathfindingTiles"      : false
     },
     
     "Modules" :

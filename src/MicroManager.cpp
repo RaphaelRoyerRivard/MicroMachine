@@ -68,6 +68,9 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	if (m_bot.IsParasited(target))
 		return 0.f;
 
+	if (target->display_type == sc2::Unit::Hidden)
+		return 0.f;
+
 	// Ignoring invisible creep tumors
 	const uint32_t lastGameLoop = m_bot.GetGameLoop() - 1;
 	if ((target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMOR

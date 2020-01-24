@@ -331,6 +331,10 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		if (bestCosts[currentNode->getId()] < currentNode->cost)
 			continue;	// No need to check that node, we already checked it with a lower cost
 		closed.insert(currentNode);
+		if (bot.Config().DrawPathfindingTiles)
+		{
+			bot.Map().drawTile(currentNode->position, sc2::Colors::White, 0.9f, false);
+		}
 
 		bool shouldTriggerExit = false;
 		if (flee)

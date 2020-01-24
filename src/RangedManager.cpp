@@ -57,22 +57,10 @@ void RangedManager::setTargets(const std::vector<Unit> & targets)
 	{
 		// In harass mode, we don't want to attack buildings (like a wall or proxy) if we never reached the enemy base
 		const BaseLocation* enemyStartingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-		if (enemyStartingBase && !m_bot.Map().isExplored(enemyStartingBase->getPosition()))
+		const bool allowEarlyBuildingAttack = m_bot.Commander().Combat().getAllowEarlyBuildingAttack();
+		if (!allowEarlyBuildingAttack && enemyStartingBase && !m_bot.Map().isExplored(enemyStartingBase->getPosition()))
 		{
 			filterPassiveBuildings = true;
-		}
-		else
-		{
-			//Also, we do not want to target buildings unless there are no better targets
-			for (auto & target : targets)
-			{
-				// Check if the target is a unit (not building) or a combat building. In this case, we won't consider passive buildings
-				if (!target.getType().isBuilding() || target.getType().isCombatUnit())
-				{
-					filterPassiveBuildings = true;
-					break;
-				}
-			}
 		}
 	}
     for (auto & target : targets)
@@ -250,6 +238,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
 	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
+	if (!target)
+		target = getTarget(rangedUnit, rangedUnitTargets, false, false, false);
 	m_bot.StopProfiling("0.10.4.1.5.1.0          getTarget");
 	m_bot.StartProfiling("0.10.4.1.5.1.1          getThreats");
 	sc2::Units & threats = getThreats(rangedUnit, rangedUnitTargets);
@@ -436,9 +426,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 
 	// Opportunistic attack (usually on buildings)
-	if (shouldAttack && !fasterEnemyThreat)
+	if ((shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat)
 	{
-		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true);
+		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true, false);
 		if (closeTarget && ShouldAttackTarget(rangedUnit, closeTarget, threats))
 		{
 			const auto distToCloseTarget = Util::DistSq(rangedUnit->pos, closeTarget->pos);
@@ -1160,6 +1150,8 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				const float dist = Util::Dist(cyclone->pos, threat->pos);
 				if (shouldHeal && dist > partialLockOnRange + threat->radius)
 					continue;
+				if (threat->display_type == sc2::Unit::Hidden)
+					continue;
 				// The lower the better
 				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 2.5f);
 				const auto healthScore = 0.25f * (threat->health + threat->shield * 1.5f);
@@ -1241,7 +1233,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	m_harassMode = false;
 	const sc2::Unit* target = getTarget(rangedUnit, rangedUnitTargets);
 	// If the Viking that is not a flying helper has no target, we try to see if it would have one if it was landed
-	if (!target && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && m_cycloneFlyingHelpers.find(rangedUnit) == m_cycloneFlyingHelpers.end())
+	if (!target && !m_bot.Analyzer().enemyHasCombatAirUnit() && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && m_cycloneFlyingHelpers.find(rangedUnit) == m_cycloneFlyingHelpers.end())
 	{
 		auto it = m_dummyAssaultVikings.find(rangedUnit->tag);
 		if (it != m_dummyAssaultVikings.end())
@@ -1387,7 +1379,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			const sc2::Unit* unitToSave = unit;
 			
 			// If the flying Viking doesn't have a target, we check if it would have one as a landed Viking (unless it is a flying helper)
-			if (!unitTarget && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && m_cycloneFlyingHelpers.find(unit) == m_cycloneFlyingHelpers.end())
+			if (!unitTarget && !m_bot.Analyzer().enemyHasCombatAirUnit() && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && m_cycloneFlyingHelpers.find(unit) == m_cycloneFlyingHelpers.end())
 			{
 				const sc2::Unit* vikingAssault = nullptr;
 				auto it = m_dummyAssaultVikings.find(unit->tag);
@@ -1843,6 +1835,8 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	const float yamatoRange = abilityCastingRanges.at(sc2::ABILITY_ID::EFFECT_YAMATOGUN) + battlecruiser->radius;
 	for (const auto potentialTarget : targets)
 	{
+		if (potentialTarget->display_type == sc2::Unit::Hidden)
+			continue;
 		const auto type = UnitType(potentialTarget->unit_type, m_bot);
 		if (type.isBuilding() && !type.isAttackingBuilding())
 			continue;
@@ -2160,7 +2154,7 @@ CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vect
 }
 
 // get a target for the ranged unit to attack
-const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits, bool considerOnlyUnitsInRange) const
+const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits, bool considerOnlyUnitsInRange, bool filterPassiveBuildings) const
 {
     BOT_ASSERT(rangedUnit, "null ranged unit in getTarget");
 
@@ -2186,6 +2180,13 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 			if (!m_bot.Map().isVisible(closeToEnemy))
 				continue;
 		}
+
+    	if (filterPassiveBuildings)
+    	{
+			auto targetUnit = Unit(target, m_bot);
+			if (targetUnit.getType().isBuilding())
+				continue;
+    	}
 
 		float priority = getAttackPriority(rangedUnit, target, m_harassMode, considerOnlyUnitsInRange);
 		if(priority > 0.f)
