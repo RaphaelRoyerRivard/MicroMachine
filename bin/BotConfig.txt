@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.8.1",
+        "BotVersion"                : "1.8.2",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -124,7 +124,7 @@
         "BuildingSpacing"           : 0,
         "PylonSpacing"              : 3,
         "SelectStartingBuildBasedOnHistory" : true,
-        "PrintGreetingMessage"      : true,
+        "PrintGreetingMessage"      : false,
         "RandomProxyLocation"       : false
     },
 
