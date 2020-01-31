@@ -115,7 +115,8 @@ void CombatAnalyzer::lowPriorityChecks()
 		if (unit.isFlying())
 		{
 			totalAirUnitsCount++;
-			if (unit.getType().isCombatUnit())
+			// This will ignore Observers, Warp Prisms and Overlords (+Cocoons)
+			if (unit.getType().isCombatUnit() && (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) > 0 || unit.getUnitPtr()->energy_max > 0))
 				m_enemyHasCombatAirUnit = true;
 		}
 		else

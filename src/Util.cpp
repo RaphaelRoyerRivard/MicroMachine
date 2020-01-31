@@ -1133,7 +1133,7 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 		if (unitRange < distance)
 		{
 			distance -= unitRange;
-			const float distancePenalty = pow(0.5f, distance);
+			const float distancePenalty = pow(0.9f, distance);
 			unitPower *= distancePenalty;
 		}
 	}

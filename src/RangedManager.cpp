@@ -237,9 +237,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 
 	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
-	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
-	if (!target)
-		target = getTarget(rangedUnit, rangedUnitTargets, false, false, false);
+	//TODO Find if filtering higher units would solve problems without creating new ones
+	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets, true);
+	if (!target)	// If no standard target is found, we check for a building that is not out of vision on higher ground
+		target = getTarget(rangedUnit, rangedUnitTargets, true, false, false);
 	m_bot.StopProfiling("0.10.4.1.5.1.0          getTarget");
 	m_bot.StartProfiling("0.10.4.1.5.1.1          getThreats");
 	sc2::Units & threats = getThreats(rangedUnit, rangedUnitTargets);
@@ -1252,13 +1253,23 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 	}
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
-	const CCPosition closeToEnemy = !target ? CCPosition() : (target->pos + Util::Normalized(rangedUnit->pos - target->pos) * target->radius * 0.95);
-	const bool enemyIsHigher = !rangedUnit->is_flying && target && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos);
 	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
-	if (!target || !isTargetRanged(target) || (unitShouldHeal && !closeToEnemyTempest) || (enemyIsHigher && !m_bot.Map().isVisible(closeToEnemy)))
+	if (!target || !isTargetRanged(target) || (unitShouldHeal && !closeToEnemyTempest))
 	{
 		m_harassMode = true;
 		return false;
+	}
+	
+	const CCPosition closeToEnemy = !target ? CCPosition() : (target->pos + Util::Normalized(rangedUnit->pos - target->pos) * target->radius * 0.95);
+	const bool enemyIsHigher = !rangedUnit->is_flying && target && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos);
+	if (enemyIsHigher && !m_bot.Map().isVisible(closeToEnemy))
+	{
+		// If the unit cannot just walk the ramp to reach the enemy
+		if (Util::PathFinding::FindOptimalPathDistance(rangedUnit, target->pos, true, m_bot) > 15)
+		{
+			m_harassMode = true;
+			return false;
+		}
 	}
 
 	// Check if unit can fight cloaked
@@ -1600,7 +1611,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const bool shouldChase = unitRange < enemyRange && unitSpeed >= enemySpeed;
 		if (!canAttackNow && AllowUnitToPathFind(unit, false))
 		{
-			if (injured || shouldKite)
+			if ((injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)) || shouldKite)
 			{
 				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, m_bot);
 			}
@@ -1634,27 +1645,27 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	return currentUnitHasACommand;
 }
 
-void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal, sc2::AvailableAbilities & abilities)
+void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal, sc2::AvailableAbilities & abilities)
 {
 	bool lockOnAvailable;
-	target = ExecuteLockOnLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, lockOnAvailable, rangedUnits, threats, target, abilities);
+	target = ExecuteLockOnLogic(cyclone, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, lockOnAvailable, rangedUnits, threats, target, abilities);
 
 	// If the Cyclone has a its Lock-On on a target with a big range (like a Tempest or Tank)
 	if (!shouldAttack && !cycloneShouldUseLockOn)
 	{
 		const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
-		const auto it = lockOnTargets.find(rangedUnit);
+		const auto it = lockOnTargets.find(cyclone);
 		if (it != lockOnTargets.end())
 		{
 			const auto lockOnTarget = it->second.first;
-			const auto enemyRange = Util::GetAttackRangeForTarget(lockOnTarget, rangedUnit, m_bot);
+			const auto enemyRange = Util::GetAttackRangeForTarget(lockOnTarget, cyclone, m_bot);
 			if (enemyRange >= 10.f)
 			{
 				// We check if we have another unit that is close to it, but if not, the Cyclone should stay close to it
-				bool closeAlly = Util::AllyUnitSeesEnemyUnit(rangedUnit, lockOnTarget, m_bot);;
+				bool closeAlly = Util::AllyUnitSeesEnemyUnit(cyclone, lockOnTarget, m_bot);;
 				/*for (const auto ally : rangedUnits)
 				{
-					if (ally == rangedUnit)
+					if (ally == cyclone)
 						continue;
 					if (Util::DistSq(ally->pos, lockOnTarget->pos) > 7.f * 7.f)
 						continue;
@@ -1675,7 +1686,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 		}
 	}
 
-	const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(rangedUnit);
+	const auto cycloneWithHelperIt = m_cyclonesWithHelper.find(cyclone);
 	const bool hasFlyingHelper = cycloneWithHelperIt != m_cyclonesWithHelper.end();
 
 	if (!unitShouldHeal && !cycloneShouldStayCloseToTarget && m_order.getType() != SquadOrderTypes::Defend)
@@ -1685,7 +1696,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 		{
 			const auto cycloneFlyingHelper = cycloneWithHelperIt->second;
 			// If the flying helper is too far, go towards it
-			if (Util::DistSq(rangedUnit->pos, cycloneFlyingHelper->pos) > CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER * CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER)
+			if (Util::DistSq(cyclone->pos, cycloneFlyingHelper->pos) > CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER * CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER)
 			{
 				goal = cycloneFlyingHelper->pos;
 			}
@@ -1696,8 +1707,8 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 			// If the target is too far, we don't want to chase it, we just leave
 			if (target)
 			{
-				const float lockOnRange = m_bot.Commander().Combat().getAbilityCastingRanges().at(sc2::ABILITY_ID::EFFECT_LOCKON) + rangedUnit->radius + target->radius;
-				if (Util::DistSq(rangedUnit->pos, target->pos) > lockOnRange * lockOnRange)
+				const float lockOnRange = m_bot.Commander().Combat().getAbilityCastingRanges().at(sc2::ABILITY_ID::EFFECT_LOCKON) + cyclone->radius + target->radius;
+				if (Util::DistSq(cyclone->pos, target->pos) > lockOnRange * lockOnRange)
 				{
 					// TODO remove when the flying helper bug is fixed
 					bool closeFlyingUnit = false;
@@ -1705,7 +1716,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 					{
 						if (!allyUnit->is_flying)
 							continue;
-						if (Util::DistSq(rangedUnit->pos, allyUnit->pos) < 7.f * 7.f)
+						if (Util::DistSq(cyclone->pos, allyUnit->pos) < 7.f * 7.f)
 						{
 							closeFlyingUnit = true;
 							break;
@@ -1720,7 +1731,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 			const sc2::Unit* closestHelper = nullptr;
 			for (const auto & flyingHelper : m_cycloneFlyingHelpers)
 			{
-				const float distSq = Util::DistSq(rangedUnit->pos, flyingHelper.first->pos);
+				const float distSq = Util::DistSq(cyclone->pos, flyingHelper.first->pos);
 				if (!closestHelper || distSq < minDistSq)
 				{
 					minDistSq = distSq;
@@ -1743,7 +1754,10 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & uni
 
 	if (!lockOnAvailable)
 	{
-		goal = m_bot.GetStartLocation();
+		auto & nextAvailableAbility = m_bot.Commander().Combat().getNextAvailableAbility();
+		const auto currentFrame = m_bot.GetCurrentFrame();
+		if (nextAvailableAbility[sc2::ABILITY_ID::EFFECT_LOCKON][cyclone] - currentFrame > CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT / 2)
+			goal = m_bot.GetStartLocation();
 	}
 }
 

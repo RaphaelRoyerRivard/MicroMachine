@@ -758,7 +758,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 #endif
 
-					if (hellionCount >= 4 && !isTechQueuedOrStarted(MetaTypeEnum::InfernalPreIgniter) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HIGHCAPACITYBARRELS))
+					if (hellionCount >= 5 && !m_bot.Strategy().isEarlyRushed() && !isTechQueuedOrStarted(MetaTypeEnum::InfernalPreIgniter) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HIGHCAPACITYBARRELS))
 					{
 						queueTech(MetaTypeEnum::InfernalPreIgniter);
 					}
