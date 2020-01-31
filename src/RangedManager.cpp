@@ -238,7 +238,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
 	//TODO Find if filtering higher units would solve problems without creating new ones
-	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets);
+	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets, true);
 	if (!target)	// If no standard target is found, we check for a building that is not out of vision on higher ground
 		target = getTarget(rangedUnit, rangedUnitTargets, true, false, false);
 	m_bot.StopProfiling("0.10.4.1.5.1.0          getTarget");
@@ -1253,13 +1253,23 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 	}
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
-	const CCPosition closeToEnemy = !target ? CCPosition() : (target->pos + Util::Normalized(rangedUnit->pos - target->pos) * target->radius * 0.95);
-	const bool enemyIsHigher = !rangedUnit->is_flying && target && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos);
 	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
-	if (!target || !isTargetRanged(target) || (unitShouldHeal && !closeToEnemyTempest) || (enemyIsHigher && !m_bot.Map().isVisible(closeToEnemy)))
+	if (!target || !isTargetRanged(target) || (unitShouldHeal && !closeToEnemyTempest))
 	{
 		m_harassMode = true;
 		return false;
+	}
+	
+	const CCPosition closeToEnemy = !target ? CCPosition() : (target->pos + Util::Normalized(rangedUnit->pos - target->pos) * target->radius * 0.95);
+	const bool enemyIsHigher = !rangedUnit->is_flying && target && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos);
+	if (enemyIsHigher && !m_bot.Map().isVisible(closeToEnemy))
+	{
+		// If the unit cannot just walk the ramp to reach the enemy
+		if (Util::PathFinding::FindOptimalPathDistance(rangedUnit, target->pos, true, m_bot) > 15)
+		{
+			m_harassMode = true;
+			return false;
+		}
 	}
 
 	// Check if unit can fight cloaked
@@ -1601,7 +1611,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const bool shouldChase = unitRange < enemyRange && unitSpeed >= enemySpeed;
 		if (!canAttackNow && AllowUnitToPathFind(unit, false))
 		{
-			if (injured || shouldKite)
+			if ((injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)) || shouldKite)
 			{
 				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, m_bot);
 			}
