@@ -1992,6 +1992,16 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 	return false;
 }
 
+bool Util::IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbilities & availableAbilities)
+{
+	for (const auto & availableAbility : availableAbilities.abilities)
+	{
+		if (availableAbility.ability_id == abilityId)
+			return true;
+	}
+	return false;
+}
+
 bool Util::IsTerran(const CCRace & race)
 {
 #ifdef SC2API

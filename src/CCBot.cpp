@@ -1113,6 +1113,11 @@ void CCBot::IssueCheats()
 		
 	// Test for reproducing Cannon rush defense bugs
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 10, player2, 1);
+	
+	// Test for reproducing disabled units bug
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, enemyLocation, player1, 1);*/
 }
 
 uint32_t CCBot::GetCurrentFrame() const

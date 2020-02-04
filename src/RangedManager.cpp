@@ -299,8 +299,15 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
+	bool isUnitDisabled = Util::isUnitDisabled(rangedUnit);
+	// If our unit is affected by an Interference Matrix, it should back until the effect wears off
+	if (isUnitDisabled)
+	{
+		goal = m_bot.GetStartLocation();
+		unitShouldHeal = true;
+	}
 	// If our unit is targeted by an enemy Cyclone's Lock-On ability, it should back until the effect wears off
-	if (Util::isUnitLockedOn(rangedUnit))
+	else if (Util::isUnitLockedOn(rangedUnit))
 	{
 		// Banshee in danger should cloak itself
 		if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, true))
@@ -308,21 +315,16 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			return;
 		}
 
-		goal = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getPosition();
-		unitShouldHeal = true;
-	}
-	else if (Util::isUnitDisabled(rangedUnit))
-	{
-		goal = m_bot.Map().center();
+		goal = m_bot.GetStartLocation();
 		unitShouldHeal = true;
 	}
 
-	bool shouldAttack = true;
+	bool shouldAttack = !isUnitDisabled;
 	bool cycloneShouldUseLockOn = false;
 	bool cycloneShouldStayCloseToTarget = false;
 	if (isCyclone)
 	{
-		ExecuteCycloneLogic(rangedUnit, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, cycloneShouldStayCloseToTarget, rangedUnits, threats, target, goal, rangedUnitAbilities);
+		ExecuteCycloneLogic(rangedUnit, isUnitDisabled, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, cycloneShouldStayCloseToTarget, rangedUnits, threats, target, goal, rangedUnitAbilities);
 	}
 
 	const auto distSqToTarget = target ? Util::DistSq(rangedUnit->pos, target->pos) : 0.f;
@@ -335,7 +337,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
-	if (ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
+	if (!isUnitDisabled && ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
 	{
 		return;
 	}
@@ -392,7 +394,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.6          UnitAbilities");
 	// Check if unit can use one of its abilities
-	if(ExecuteUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
+	if(!isUnitDisabled && ExecuteUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
 		return;
@@ -599,7 +601,8 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbil
 			if (IsCycloneLockOnCanceled(cyclone, false, abilities))
 			{
 				// Query the game to make sure the Lock-On has really been canceled while casting
-				if(QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON))
+				//if (QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON))
+				if (Util::IsAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, abilities))
 				{
 					lockOnCastedFrame.erase(cyclone);
 					lockOnTargets.erase(cyclone);
@@ -642,7 +645,7 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbil
 	return false;
 }
 
-bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started, sc2::AvailableAbilities & abilities) const
+bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started, const sc2::AvailableAbilities & abilities) const
 {
 	auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
@@ -666,6 +669,10 @@ bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool star
 
 	// The target is being lifted by a Pheonix
 	if (Util::isUnitLifted(cyclone))
+		return true;
+
+	// The target is disabled by an Interference Matrix
+	if (Util::isUnitDisabled(cyclone))
 		return true;
 
 	// Sometimes, even though the target is perfectly valid, the Lock-On command won't work.
@@ -713,6 +720,9 @@ bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit, bool check
 bool RangedManager::ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger) const
 {
 	if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
+		return false;
+
+	if (Util::isUnitDisabled(banshee))
 		return false;
 
 	// Cloak if the amount of energy is rather high or HP is low
@@ -1059,11 +1069,11 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 {
 	const uint32_t currentFrame = m_bot.GetCurrentFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
-	//const bool queryAbilityAvailable = QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON);
-	const bool abilityAvailable = isAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone);
-	if (abilityAvailable)
+	//lockOnAvailable = QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON);
+	//lockOnAvailable = isAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone);
+	lockOnAvailable = Util::IsAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, abilities);
+	if (lockOnAvailable)
 	{
-		lockOnAvailable = true;
 		// Lock-On ability is not on cooldown
 		const auto it = lockOnTargets.find(cyclone);
 		if (it != lockOnTargets.end())
@@ -1091,7 +1101,6 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 	}
 	else
 	{
-		lockOnAvailable = false;
 		if (m_bot.Config().DrawHarassInfo)
 		{
 			auto & nextAvailableAbility = m_bot.Commander().Combat().getNextAvailableAbility();
@@ -1645,13 +1654,13 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	return currentUnitHasACommand;
 }
 
-void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal, sc2::AvailableAbilities & abilities)
+void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDisabled, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal, sc2::AvailableAbilities & abilities)
 {
 	bool lockOnAvailable;
 	target = ExecuteLockOnLogic(cyclone, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, lockOnAvailable, rangedUnits, threats, target, abilities);
 
 	// If the Cyclone has a its Lock-On on a target with a big range (like a Tempest or Tank)
-	if (!shouldAttack && !cycloneShouldUseLockOn)
+	if (!shouldAttack && !cycloneShouldUseLockOn && !isUnitDisabled)
 	{
 		const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 		const auto it = lockOnTargets.find(cyclone);
