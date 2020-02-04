@@ -1110,6 +1110,9 @@ void CCBot::IssueCheats()
 	// Test for reproducing cliff bugs with Marauders
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenter * 20, player1, 4);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, enemyLocation, player2, 3);
+		
+	// Test for reproducing Cannon rush defense bugs
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 10, player2, 1);
 }
 
 uint32_t CCBot::GetCurrentFrame() const
