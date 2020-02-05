@@ -45,6 +45,7 @@ private:
 	std::map<std::set<const sc2::Unit *>, bool> m_combatSimulationResults;
 	std::map<sc2::Tag, sc2::Unit> m_dummyAssaultVikings;
 	std::map<const sc2::Unit *, sc2::Units> m_threatsForUnit;
+	std::map<const sc2::Unit *, std::map<std::set<const sc2::Unit *>, const sc2::Unit *>> m_threatTargetForUnit;	//<unit, <potential targets, target>>
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
 
 	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
@@ -88,7 +89,7 @@ private:
 	CCPosition GetAttractionVectorToFriendlyUnits(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits) const;
 	bool MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const;
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
-	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits = false, bool considerOnlyUnitsInRange = false, bool filterPassiveBuildings = true) const;
+	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits = false, bool considerOnlyUnitsInRange = false, bool filterPassiveBuildings = true);
 	sc2::Units & getThreats(const sc2::Unit * rangedUnit, const sc2::Units & targets);
 	void CleanLockOnTargets() const;
 	void CalcBestFlyingCycloneHelpers();

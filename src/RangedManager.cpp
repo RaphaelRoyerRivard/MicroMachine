@@ -168,6 +168,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 {
 	m_combatSimulationResults.clear();
 	m_threatsForUnit.clear();
+	m_threatTargetForUnit.clear();
 	m_dummyAssaultVikings.clear();
 	
 	m_bot.StartProfiling("0.10.4.1.5.3        CalcBestFlyingCycloneHelpers");
@@ -772,7 +773,8 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit) const
 {
 	auto & unitsBeingRepaired = m_bot.Commander().Combat().getUnitsBeingRepaired();
 	const UnitType unitType(rangedUnit->unit_type, m_bot);
-	if (unitType.isRepairable() && !unitType.isBuilding())
+	const bool hasBaseOrMinerals = m_bot.Bases().getBaseCount(Players::Self, false) > 0 || m_bot.GetFreeMinerals() >= 450;
+	if (unitType.isRepairable() && !unitType.isBuilding() && hasBaseOrMinerals)
 	{
 		const auto it = unitsBeingRepaired.find(rangedUnit);
 		//If unit is being repaired
@@ -2177,13 +2179,29 @@ CCPosition RangedManager::AttenuateZigzag(const sc2::Unit* rangedUnit, std::vect
 }
 
 // get a target for the ranged unit to attack
-const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits, bool considerOnlyUnitsInRange, bool filterPassiveBuildings) const
+const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits, bool considerOnlyUnitsInRange, bool filterPassiveBuildings)
 {
     BOT_ASSERT(rangedUnit, "null ranged unit in getTarget");
 
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN)
 	{
 		return nullptr;
+	}
+
+	std::set<const sc2::Unit *> currentTargets;
+	if (!m_harassMode)
+	{
+		currentTargets = std::set<const sc2::Unit *>(targets.begin(), targets.end());
+		const auto it = m_threatTargetForUnit.find(rangedUnit);
+		if (it != m_threatTargetForUnit.end())
+		{
+			const auto & savedTargets = it->second;
+			const auto it2 = savedTargets.find(currentTargets);
+			if (it2 != savedTargets.end())
+			{
+				return it2->second;
+			}
+		}
 	}
 
 	std::multiset<std::pair<float, const sc2::Unit *>> targetPriorities;
@@ -2243,9 +2261,10 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		return nullptr;
 	}
 
-	if (targetPriorities.empty())
-		return nullptr;
-	return (*targetPriorities.rbegin()).second;		//return last target because it's the one with the highest priority
+	const sc2::Unit * target = targetPriorities.empty() ? nullptr : (*targetPriorities.rbegin()).second;	//last target because it's the one with the highest priority
+	if (!m_harassMode)
+		m_threatTargetForUnit[rangedUnit][currentTargets] = target;
+	return target;		
 }
 
 sc2::Units & RangedManager::getThreats(const sc2::Unit * rangedUnit, const sc2::Units & targets)

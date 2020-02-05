@@ -1016,9 +1016,10 @@ void CCBot::IssueCheats()
 
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation + offset, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_THORAP, m_startLocation, player2, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, m_startLocation, 2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter, player2, 5);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation, 2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, mapCenter, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, mapCenter, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation, player2, 3);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, m_startLocation, player2, 2);
