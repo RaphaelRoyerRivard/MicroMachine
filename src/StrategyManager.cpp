@@ -35,6 +35,7 @@ void StrategyManager::onStart()
     readStrategyFile(m_bot.Config().ConfigFileLocation);
 	if (m_bot.Config().SelectStartingBuildBasedOnHistory)
 	{
+		const auto enemyPlayerRace = m_bot.GetPlayerRace(Players::Enemy);
 		std::stringstream ss;
 		ss << "data/opponents/" << opponentId << ".json";
 		std::string path = ss.str();
@@ -52,6 +53,7 @@ void StrategyManager::onStart()
 			int bestStrat = -1;
 			for (auto stratIndex = 0; stratIndex < StartingStrategy::COUNT; ++stratIndex)
 			{
+				std::string strategyName = STRATEGY_NAMES[stratIndex];
 				int wins = 0;
 				int losses = 0;
 				JSONTools::ReadInt("wins", jStrats[stratIndex], wins);
@@ -63,17 +65,29 @@ void StrategyManager::onStart()
 				// We make sure the opponent has the appropriate race to pick the race specific strategy 
 				const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
 				bool raceSpecificStrategy = it != RACE_SPECIFIC_STRATEGIES.end();
-				bool validRaceSpecificStrategy = raceSpecificStrategy && m_bot.GetPlayerRace(Players::Enemy) == it->second;
-				if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && (validRaceSpecificStrategy || (games > 0 && games < bestScoreGames))))
+				bool validRaceSpecificStrategy = raceSpecificStrategy && enemyPlayerRace == it->second;
+				if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && games >= bestScoreGames))
 				{
-					if (!raceSpecificStrategy || validRaceSpecificStrategy)
+					if ((!raceSpecificStrategy || validRaceSpecificStrategy) && Util::Contains(strategyName, STRATEGY_ORDER))
 					{
-						bestScore = winPercentage;
-						bestStrat = stratIndex;
-						bestScoreGames = games;
+						bool currentStratHasPriority = true;
+						if (bestStrat >= 0 && winPercentage == bestScore)
+						{
+							std::string bestStrategyName = STRATEGY_NAMES[bestStrat];
+							auto currentStratOrderIndex = std::distance(STRATEGY_ORDER.begin(), std::find(STRATEGY_ORDER.begin(), STRATEGY_ORDER.end(), strategyName));
+							auto bestStratOrderIndex = std::distance(STRATEGY_ORDER.begin(), std::find(STRATEGY_ORDER.begin(), STRATEGY_ORDER.end(), bestStrategyName));
+							if (currentStratOrderIndex > bestStratOrderIndex)
+								currentStratHasPriority = false;
+						}
+						if (currentStratHasPriority)
+						{
+							bestScore = winPercentage;
+							bestStrat = stratIndex;
+							bestScoreGames = games;
+						}
 					}
 				}
-				m_opponentHistory << STRATEGY_NAMES[stratIndex] << " (" << wins << "-" << losses << ")";
+				m_opponentHistory << strategyName << " (" << wins << "-" << losses << ")";
 				if (stratIndex < StartingStrategy::COUNT - 1)
 					m_opponentHistory << ", ";
 			}
@@ -104,7 +118,7 @@ void StrategyManager::onStart()
 			}
 			outFile << j.dump();
 			outFile.close();
-			m_startingStrategy = PROXY_CYCLONES;
+			m_startingStrategy = m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? PROXY_MARAUDERS : EARLY_EXPAND;
 			if (m_bot.Config().PrintGreetingMessage)
 			{
 				m_greetingMessage << "Greetings stranger. I shall call you " << opponentId << " from now on. GLHF!";
@@ -140,13 +154,13 @@ void StrategyManager::onFrame(bool executeMacro)
 			m_greetingMessage.str("");
 			m_greetingMessage.clear();
 		}
-		if (!m_opponentHistory.str().empty())
+		if (m_bot.GetCurrentFrame() >= 10 && !m_opponentHistory.str().empty())
 		{
 			m_bot.Actions()->SendChat(m_opponentHistory.str(), sc2::ChatChannel::Team);
 			m_opponentHistory.str("");
 			m_opponentHistory.clear();
 		}
-		if (!m_strategyMessage.str().empty())
+		if (m_bot.GetCurrentFrame() >= 15 && !m_strategyMessage.str().empty())
 		{
 			m_bot.Actions()->SendChat(m_strategyMessage.str(), sc2::ChatChannel::Team);
 			m_strategyMessage.str("");
