@@ -1484,6 +1484,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	m_bot.StartProfiling("0.10.4.1.5.1.5.3          CalcThreatsPower");
 	float maxThreatSpeed = 0.f;
 	float maxThreatRange = 0.f;
+	sc2::Units threatsToKeep;
 	// Calculate enemy power
 	for (auto threat : allThreats)
 	{
@@ -1496,9 +1497,30 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			maxThreatSpeed = threatSpeed;
 		const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
 		const float threatRange = Util::GetAttackRangeForTarget(threat, threatTarget, m_bot);
+		// If the building threat is too far from its target to attack it (with a very small buffer)
+		if (Unit(threat, m_bot).getType().isBuilding() && threatTarget && Util::Dist(threat->pos, threatTarget->pos) > threatRange + 0.1f)
+		{
+			bool unitWillGetCloseEnough = false;
+			// Simulate the future position of our units to check if they would be in range of the building
+			for (const auto unitTargetPair : closeUnitsTarget)
+			{
+				const auto unit = unitTargetPair.first;
+				const auto unitTarget = unitTargetPair.second;
+				const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
+				const CCPosition futurePosition = unitTarget->pos + Util::Normalized(unit->pos - unitTarget->pos) * unitRange;
+				if (Util::Dist(threat->pos, futurePosition) <= threatRange)
+				{
+					unitWillGetCloseEnough = true;
+					break;
+				}
+			}
+			if (!unitWillGetCloseEnough)
+				continue;
+		}
 		if (threatRange > maxThreatRange)
 			maxThreatRange = threatRange;
 		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
+		threatsToKeep.push_back(threat);
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.5.3          CalcThreatsPower");
 
@@ -1521,7 +1543,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				++injuredVikings;
 		}
 	}
-	for (const auto threat : allThreats)
+	for (const auto threat : threatsToKeep)
 	{
 		if (threat->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST)
 		{
@@ -1534,14 +1556,14 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	bool currentUnitHasACommand = false;
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
-	bool winSimulation = Util::SimulateCombat(closeUnits, allThreats, m_bot);
+	bool winSimulation = Util::SimulateCombat(closeUnits, threatsToKeep, m_bot);
 	m_bot.StopProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
 	const bool formulaWin = unitsPower >= targetsPower;
 	bool shouldFight = winSimulation && formulaWin;
 
 	if(!vikings.empty() && !tempests.empty())
 	{
-		const auto otherEnemies = allThreats.size() - tempests.size();
+		const auto otherEnemies = threatsToKeep.size() - tempests.size();
 		if (!winSimulation && otherEnemies > 0)
 		{
 			winSimulation = Util::SimulateCombat(vikings, tempests, m_bot);
@@ -1619,7 +1641,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const auto unitSpeed = Util::getSpeedOfUnit(unit, m_bot);
 		const auto enemySpeed = Util::getSpeedOfUnit(unitTarget, m_bot);
 		const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > enemyRange && unitSpeed > enemySpeed);
-		const bool shouldChase = unitRange < enemyRange && unitSpeed >= enemySpeed;
+		const bool shouldChase = unitRange < enemyRange && enemySpeed > 0;	//unitSpeed >= enemySpeed;
 		if (!canAttackNow && AllowUnitToPathFind(unit, false))
 		{
 			if ((injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)) || shouldKite)
@@ -2225,7 +2247,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     	if (filterPassiveBuildings)
     	{
 			auto targetUnit = Unit(target, m_bot);
-			if (targetUnit.getType().isBuilding())
+			if (targetUnit.getType().isBuilding() && !targetUnit.getType().isCombatUnit())
 				continue;
     	}
 
