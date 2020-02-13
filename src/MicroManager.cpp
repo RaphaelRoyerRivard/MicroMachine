@@ -101,7 +101,10 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	{
 		if (considerOnlyUnitsInRange)
 			return 0.f;
-		proximityValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
+		if (Util::getSpeedOfUnit(attacker, m_bot) == 0.f)
+			proximityValue = 0.001f;
+		else
+			proximityValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
 	}
 
 	float invisModifier = 1.f;

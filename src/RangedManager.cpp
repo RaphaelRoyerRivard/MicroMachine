@@ -1497,8 +1497,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			maxThreatSpeed = threatSpeed;
 		const sc2::Unit* threatTarget = getTarget(threat, closeUnits);
 		const float threatRange = Util::GetAttackRangeForTarget(threat, threatTarget, m_bot);
+		const float threatDistance = threatTarget ? Util::Dist(threat->pos, threatTarget->pos) : 0.f;
 		// If the building threat is too far from its target to attack it (with a very small buffer)
-		if (Unit(threat, m_bot).getType().isBuilding() && threatTarget && Util::Dist(threat->pos, threatTarget->pos) > threatRange + 0.1f)
+		if (Unit(threat, m_bot).getType().isBuilding() && threatTarget && threatDistance > threatRange + 0.01f)
 		{
 			bool unitWillGetCloseEnough = false;
 			// Simulate the future position of our units to check if they would be in range of the building
