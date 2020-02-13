@@ -1711,7 +1711,6 @@ std::vector<const sc2::Unit *> Util::getThreats(const sc2::Unit * unit, const st
 	// for each possible threat
 	for (auto targetUnit : targets)
 	{
-		BOT_ASSERT(targetUnit, "null target unit in getThreats");//can happen if a unit is not defined in an enum (sc2_typeenums.h)
 		if (Util::GetDpsForTarget(targetUnit, unit, bot) == 0.f)
 			continue;
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
