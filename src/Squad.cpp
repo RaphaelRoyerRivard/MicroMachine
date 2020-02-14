@@ -260,7 +260,7 @@ void Squad::addUnitsToMicroManagers()
     {
         BOT_ASSERT(unit.isValid(), "null unit in addUnitsToMicroManagers()");
 
-		const auto exceptions = { sc2::UNIT_TYPEID::TERRAN_RAVEN, sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING };
+		const auto exceptions = { sc2::UNIT_TYPEID::TERRAN_RAVEN, sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_MEDIVAC };
         if (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) >= 2.5f || Util::Contains(unit.getType().getAPIUnitType(), exceptions))
         {
             rangedUnits.push_back(unit);

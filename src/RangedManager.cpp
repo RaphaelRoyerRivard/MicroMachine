@@ -213,6 +213,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	const bool isMarine = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE;
 	const bool isMarauder = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARAUDER;
+	const bool isMedivac = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC;
 	const bool isReaper = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER;
 	const bool isHellion = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_HELLION;
 	const bool isBanshee = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE;
@@ -237,6 +238,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (isCyclone && MonitorCyclone(rangedUnit, rangedUnitAbilities))
 		return;
 
+	sc2::Units allCombatAllies(rangedUnits);
+	allCombatAllies.insert(allCombatAllies.end(), otherSquadsUnits.begin(), otherSquadsUnits.end());
+	
 	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
 	//TODO Find if filtering higher units would solve problems without creating new ones
 	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets, true);
@@ -283,9 +287,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		{
 			goal = m_bot.GetStartLocation();
 		}
-		else*/ if (!isCycloneHelper && (isMarine || isRaven || isViking || isHellion))
+		else*/
+		if (!isCycloneHelper && (isMarine || isRaven || isViking || isHellion || isMedivac))
 		{
-			goal = GetBestSupportPosition(rangedUnit, rangedUnits);
+			goal = GetBestSupportPosition(rangedUnit, allCombatAllies);
 		}
 		else if (isFlyingBarracks && (m_flyingBarracksShouldReachEnemyRamp || !isCycloneHelper))
 		{
@@ -395,7 +400,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.6          UnitAbilities");
 	// Check if unit can use one of its abilities
-	if(!isUnitDisabled && ExecuteUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
+	if(!isUnitDisabled && ExecuteUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, allCombatAllies, goal, unitShouldHeal, isCycloneHelper, rangedUnitAbilities))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
 		return;
@@ -837,17 +842,34 @@ bool RangedManager::TeleportBattlecruiser(const sc2::Unit * battlecruiser, CCPos
 CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const
 {
 	const bool isMarine = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE;
+	const bool isMedivac = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC;
 	const bool isRaven = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
 	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = supportTypes;
-	const std::vector<sc2::UNIT_TYPEID> typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
+	std::vector<sc2::UNIT_TYPEID> typesToConsider;
+	if (isMarine)
+	{
+		typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
+	}
+	else if (isMedivac)
+	{
+		typesToConsider = {
+			sc2::UNIT_TYPEID::TERRAN_MARINE,
+			sc2::UNIT_TYPEID::TERRAN_MARAUDER,
+			sc2::UNIT_TYPEID::TERRAN_GHOST,
+			sc2::UNIT_TYPEID::TERRAN_HELLIONTANK
+		};
+	}
 	const auto clusterQueryName = "";// isRaven ? "Raven" : "";
 	sc2::Units validUnits;
 	for (const auto rangedUnit : rangedUnits)
 	{
-		if (!ShouldUnitHeal(rangedUnit))
-			validUnits.push_back(rangedUnit);
+		if (ShouldUnitHeal(rangedUnit))
+			continue;
+		if (!typesToConsider.empty() && !Util::Contains(rangedUnit->unit_type, typesToConsider))
+			continue;
+		validUnits.push_back(rangedUnit);
 	}
-	const auto clusters = Util::GetUnitClusters(validUnits, isMarine ? typesToConsider : typesToIgnore, !isMarine, clusterQueryName, m_bot);
+	const auto clusters = Util::GetUnitClusters(validUnits, typesToIgnore, true, clusterQueryName, m_bot);
 	const Util::UnitCluster* closestBiggestCluster = nullptr;
 	float distance = 0.f;
 	for(const auto & cluster : clusters)
@@ -1821,7 +1843,7 @@ bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * range
 	return false;
 }
 
-bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
+bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, sc2::Units & allyUnits, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper, sc2::AvailableAbilities & abilities)
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 	{
@@ -1835,6 +1857,11 @@ bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, cons
 	}
 
 	if (ExecuteAutoTurretLogic(rangedUnit, threats))
+	{
+		return true;
+	}
+
+	if (ExecuteHealLogic(rangedUnit, allyUnits, unitShouldHeal, goal, abilities))
 	{
 		return true;
 	}
@@ -1917,6 +1944,60 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		m_bot.Commander().Combat().PlanAction(battlecruiser, action);
 		queryYamatoAvailability.insert(battlecruiser);
 		yamatoTargets[target->tag][battlecruiser->tag] = currentFrame + BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT + 20;
+		return true;
+	}
+
+	return false;
+}
+
+bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, CCPosition goal, sc2::AvailableAbilities & abilities)
+{
+	if (medivac->unit_type != sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
+		return false;
+	
+	if (shouldHeal)
+		return false;
+
+	if (medivac->energy <= 0)
+		return false;
+
+	bool canHeal = false;
+	for (const auto & ability : abilities.abilities)
+	{
+		if (ability.ability_id == sc2::ABILITY_ID::EFFECT_HEAL)
+		{
+			canHeal = true;
+			break;
+		}
+	}
+	if (!canHeal)
+		return false;
+
+	const auto & abilityRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
+	const float healRange = abilityRanges.at(sc2::ABILITY_ID::EFFECT_HEAL);
+	
+	const sc2::Unit * target = nullptr;
+	float bestScore = 0.f;	// The lower the best
+	for (const auto ally : allyUnits)
+	{
+		if (ally->health >= ally->health_max)
+			continue;
+		const Unit allyUnit(ally, m_bot);
+		if (!allyUnit.getType().isCombatUnit() || !allyUnit.hasAttribute(sc2::Attribute::Biological))
+			continue;
+		const float distance = Util::DistSq(medivac->pos, ally->pos);
+		const float score = ally->health + std::max(healRange, distance);
+		if (!target || score < bestScore)
+		{
+			target = ally;
+			bestScore = score;
+		}
+	}
+	
+	if (target)
+	{
+		const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, false, 0, "Heal");
+		m_bot.Commander().Combat().PlanAction(medivac, action);
 		return true;
 	}
 
@@ -2238,7 +2319,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		if (!UnitType(target->unit_type, m_bot).isWorker() && target->last_seen_game_loop != m_bot.GetGameLoop())
 			continue;
 
-		if (filterHigherUnits && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos))
+		if (filterHigherUnits && !rangedUnit->is_flying && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos))
 		{
 			const CCPosition closeToEnemy = !target ? CCPosition() : (target->pos + Util::Normalized(rangedUnit->pos - target->pos) * target->radius * 0.95);
 			if (!m_bot.Map().isVisible(closeToEnemy))

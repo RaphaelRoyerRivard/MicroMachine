@@ -835,6 +835,7 @@ void CombatCommander::updateHarassSquads()
 		const sc2::UnitTypeID unitTypeId = unit.getType().getAPIUnitType();
 		if ((unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARAUDER
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_MEDIVAC
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_REAPER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE
