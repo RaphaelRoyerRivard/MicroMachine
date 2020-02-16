@@ -236,19 +236,19 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot);
 	}
 	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, false, getCloser, ignoreInfluence, maxInfluence, false, bot);
-	return GetCommandPositionFromPath(path, unit, bot);
+	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, bool shouldHeal, CCBot & bot)
 {
 	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), 0.f, false, false, shouldHeal, false, 0, true, bot);
-	return GetCommandPositionFromPath(path, unit, bot);
+	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
-CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, bool moveFarther, CCBot & bot)
 {
 	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, CCPosition(), range, false, false, false, false, 0, true, bot);
-	return GetCommandPositionFromPath(path, unit, bot);
+	return GetCommandPositionFromPath(path, unit, moveFarther, bot);
 }
 
 /*
@@ -284,14 +284,14 @@ CCPosition Util::PathFinding::FindOptimalPathPosition(const sc2::Unit * unit, CC
 	{
 		return {};
 	}
-	return GetCommandPositionFromPath(path, unit, bot);
+	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToDodgeEffectAwayFromGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot)
 {
 	goal = unit->pos + (unit->pos - goal);
 	std::list<CCPosition> path = Util::PathFinding::FindOptimalPath(unit, goal, CCPosition(), range, false, true, false, false, 0, false, bot);
-	return GetCommandPositionFromPath(path, unit, bot);
+	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
 std::list<CCPosition> Util::PathFinding::FindOptimalPathWithoutLimit(const sc2::Unit * unit, CCPosition goal, CCBot & bot)
@@ -341,18 +341,20 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		{
 			if (maxRange == 0.f)
 			{
-				shouldTriggerExit = !HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot);
+				shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit, bot);
 			}
 			else
 			{
-				shouldTriggerExit = Dist(GetPosition(currentNode->position), goal) > maxRange || (!HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot));
+				if (Dist(GetPosition(currentNode->position), goal) > maxRange)
+					continue;	// We don't want to keep looking in that direction since it's too far from the goal
+				shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit, bot);
 			}
 		}
 		else
 		{
 			if (exitOnInfluence)
 			{
-				shouldTriggerExit = HasCombatInfluenceOnTile(currentNode, unit, bot) || HasEffectInfluenceOnTile(currentNode, unit, bot);
+				shouldTriggerExit = HasInfluenceOnTile(currentNode->position, unit, bot);
 			}
 			else if (maxInfluence > 0)
 			{
@@ -536,7 +538,7 @@ CCTilePosition Util::PathFinding::GetNeighborNodePosition(int x, int y, IMNode* 
 	return neighborPosition;
 }
 
-CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, CCBot & bot)
+CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, bool moveFarther, CCBot & bot)
 {
 	CCPosition returnPos;
 	int i = 0;
@@ -544,7 +546,7 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 	{
 		++i;
 		returnPos = position;
-		//we want to retun a node close to the current position
+		//we want to return a node close to the current position
 		if (i >= 3)
 			break;
 	}
@@ -557,7 +559,7 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > CLIFF_MIN_HEIGHT_DIFFERENCE)
 			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
 	}
-	if (Util::DistSq(rangedUnit->pos, returnPos) < 3*3)
+	if (moveFarther && Util::DistSq(rangedUnit->pos, returnPos) < 3*3)
 	{
 		returnPos = Normalized(returnPos - rangedUnit->pos) * 3 + rangedUnit->pos;
 	}
@@ -2385,6 +2387,9 @@ void Util::TimeControlIncreaseSpeed()
 	switch (timeControlRatio)
 	{
 		case 5:
+			timeControlRatio = 15;
+			break;
+		case 15:
 			timeControlRatio = 50;
 			break;
 		case 50:
@@ -2407,11 +2412,11 @@ void Util::TimeControlDecreaseSpeed()
 
 	switch (timeControlRatio)
 	{
-		case 5:
+		case 15:
 			timeControlRatio = 5;
 			break;
 		case 50:
-			timeControlRatio = 5;
+			timeControlRatio = 15;
 			break;
 		case 100:
 			timeControlRatio = 50;

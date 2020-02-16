@@ -482,7 +482,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			}
 			else if (isCyclone && !shouldAttack && !cycloneShouldUseLockOn && target)
 			{
-				CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(rangedUnit, target, unitAttackRange, m_bot);
+				CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(rangedUnit, target, unitAttackRange, true, m_bot);
 				if (movePosition != CCPosition())
 				{
 					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, unitShouldHeal, 0, "StayInRange");
@@ -1669,12 +1669,12 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		{
 			if ((injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)) || shouldKite)
 			{
-				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, m_bot);
+				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, true, m_bot);
 			}
 			else if(shouldChase)
 			{
 				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, m_bot);
-				movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, m_bot);
+				movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, true, m_bot);
 			}
 		}
 		if (movePosition != CCPosition())
@@ -1974,7 +1974,7 @@ bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units
 		return false;
 
 	const auto & abilityRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
-	const float healRange = abilityRanges.at(sc2::ABILITY_ID::EFFECT_HEAL);
+	const float healRange = abilityRanges.at(sc2::ABILITY_ID::EFFECT_HEAL) + medivac->radius;
 	
 	const sc2::Unit * target = nullptr;
 	float bestScore = 0.f;	// The lower the best
@@ -1986,7 +1986,7 @@ bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units
 		if (!allyUnit.getType().isCombatUnit() || !allyUnit.hasAttribute(sc2::Attribute::Biological))
 			continue;
 		const float distance = Util::DistSq(medivac->pos, ally->pos);
-		const float score = ally->health + std::max(healRange, distance);
+		const float score = ally->health + std::max(healRange + ally->radius, distance);
 		if (!target || score < bestScore)
 		{
 			target = ally;
@@ -1996,6 +1996,24 @@ bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units
 	
 	if (target)
 	{
+		if (Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(medivac->pos), medivac->is_flying, m_bot))
+		{
+			CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(medivac, target, healRange + target->radius, false, m_bot);
+			if (movePosition != CCPosition())
+			{
+				const float distSq = Util::DistSq(medivac->pos, movePosition);
+				if (distSq > 0.25f)
+				{
+					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, false, 0, "MoveToSaferRange");
+					m_bot.Commander().Combat().PlanAction(medivac, action);
+					return true;
+				}
+				else
+					int a = 0;
+			}
+			else
+				int a = 0;
+		}
 		const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, false, 0, "Heal");
 		m_bot.Commander().Combat().PlanAction(medivac, action);
 		return true;
