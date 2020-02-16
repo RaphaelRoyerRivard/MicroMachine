@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.8.2",
+        "BotVersion"                : "1.8.3",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,7 +24,7 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
+        "EnemyRace"                 : "Protoss",
         "MapFile"                   : "DiscoBloodbathLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
