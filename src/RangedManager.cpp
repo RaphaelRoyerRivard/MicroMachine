@@ -452,45 +452,42 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
-	if (distSqToTarget < m_order.getRadius() * m_order.getRadius() && (target || !threats.empty()))
+	if (!unitShouldHeal && distSqToTarget < m_order.getRadius() * m_order.getRadius() && (target || !threats.empty()))
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-		if (!unitShouldHeal)
+		if (cycloneShouldUseLockOn || cycloneShouldStayCloseToTarget || AllowUnitToPathFind(rangedUnit))
 		{
-			if (cycloneShouldUseLockOn || cycloneShouldStayCloseToTarget || AllowUnitToPathFind(rangedUnit))
+			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
+			const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
+			const auto maxInfluence = (cycloneShouldUseLockOn && target) ? CYCLONE_MAX_INFLUENCE_FOR_LOCKON : 0.f;
+			const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
+			const float maxRange = target ? unitAttackRange : 3.f;
+			CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, maxInfluence, m_bot);
+			if (closePositionInPath != CCPosition())
 			{
-				const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
-				const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
-				const auto maxInfluence = (cycloneShouldUseLockOn && target) ? CYCLONE_MAX_INFLUENCE_FOR_LOCKON : 0.f;
-				const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
-				const float maxRange = target ? unitAttackRange : 3.f;
-				CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, maxInfluence, m_bot);
-				if (closePositionInPath != CCPosition())
-				{
-					const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
-					const auto action = RangedUnitAction(MicroActionType::Move, closePositionInPath, unitShouldHeal, actionDuration, "PathfindOffensively");
-					m_bot.Commander().Combat().PlanAction(rangedUnit, action);
-					m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
-					m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-					return;
-				}
-				else
-				{
-					nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
-				}
+				const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
+				const auto action = RangedUnitAction(MicroActionType::Move, closePositionInPath, unitShouldHeal, actionDuration, "PathfindOffensively");
+				m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
+				return;
 			}
-			else if (isCyclone && !shouldAttack && !cycloneShouldUseLockOn && target)
+			else
 			{
-				CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(rangedUnit, target, unitAttackRange, true, m_bot);
-				if (movePosition != CCPosition())
-				{
-					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, unitShouldHeal, 0, "StayInRange");
-					m_bot.Commander().Combat().PlanAction(rangedUnit, action);
-					m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
-					m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-					return;
-				}
+				nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
+			}
+		}
+		else if (isCyclone && !shouldAttack && !cycloneShouldUseLockOn && target)
+		{
+			CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(rangedUnit, target, unitAttackRange, true, m_bot);
+			if (movePosition != CCPosition())
+			{
+				const auto action = RangedUnitAction(MicroActionType::Move, movePosition, unitShouldHeal, 0, "StayInRange");
+				m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
+				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
+				return;
 			}
 		}
 		m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");

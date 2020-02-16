@@ -341,20 +341,20 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		{
 			if (maxRange == 0.f)
 			{
-				shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit, bot);
+				shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
 			}
 			else
 			{
 				if (Dist(GetPosition(currentNode->position), goal) > maxRange)
 					continue;	// We don't want to keep looking in that direction since it's too far from the goal
-				shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit, bot);
+				shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
 			}
 		}
 		else
 		{
 			if (exitOnInfluence)
 			{
-				shouldTriggerExit = HasInfluenceOnTile(currentNode->position, unit, bot);
+				shouldTriggerExit = HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
 			}
 			else if (maxInfluence > 0)
 			{
@@ -388,7 +388,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		if (shouldTriggerExit)
 		{
 			// If it exits on influence, we need to check if there is actually influence on the current tile. If so, we do not return a valid path
-			if(exitOnInfluence && (HasCombatInfluenceOnTile(currentNode, unit, bot) || HasEffectInfluenceOnTile(currentNode, unit, bot)))
+			if(exitOnInfluence && HasInfluenceOnTile(Util::GetPosition(currentNode->position), unit->is_flying, bot))
 			{
 				failureReason = INFLUENCE;
 			}
@@ -1765,7 +1765,7 @@ void Util::getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::U
 	// for each possible threat
 	for (auto targetUnit : targets)
 	{
-		BOT_ASSERT(targetUnit, "null target unit in getThreats");
+		BOT_ASSERT(targetUnit, "null target unit in getThreats");//can happen if a unit is not defined in an enum (sc2_typeenums.h)
 		if (Util::GetDpsForTarget(targetUnit, unit, bot) == 0.f)
 			continue;
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
@@ -2370,6 +2370,14 @@ void Util::Log(const std::string & function, CCBot & bot)
 void Util::Log(const std::string & function, const std::string & message, CCBot & bot)
 {
 	file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
+}
+
+void Util::ClearChat(CCBot & bot)
+{
+	for (int i = 0; i < 10; i++)
+	{
+		bot.Actions()->SendChat(" ");
+	}
 }
 
 int Util::GetTimeControlSpeed()

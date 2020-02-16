@@ -89,6 +89,8 @@ class CCBot : public sc2::Agent
 	std::chrono::steady_clock::time_point m_lastFrameEndTime;
 
 	//KeyState
+	bool keyDelete = false;
+	bool keyEnd = false;
 	bool key1 = false;
 	bool key2 = false;
 	bool key3 = false;
@@ -154,6 +156,7 @@ public:
     const CCPosition GetStartLocation() const;
 	const CCTilePosition GetBuildingArea() const;
 
+	void IssueGameStartCheats();
 	void IssueCheats();
     uint32_t GetCurrentFrame() const;
     int GetMinerals() const;

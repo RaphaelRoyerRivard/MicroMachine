@@ -252,6 +252,7 @@ namespace Util
 	void			LogNoFrame(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, const std::string & message, CCBot & bot);
+	void			ClearChat(CCBot & bot);
 	int				GetTimeControlSpeed();
 	int				GetTimeControlMaxSpeed();
 	void			TimeControlIncreaseSpeed();

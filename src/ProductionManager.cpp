@@ -524,7 +524,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		// Logic for building Orbital Commands and Refineries
 		UnitType depot = Util::GetRessourceDepotType();
 		const size_t boughtDepotCount = m_bot.Buildings().countBoughtButNotBeingBuilt(depot.getAPIUnitType());
-		const size_t completedDepotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, depot, true, true);
+		const size_t incompletedDepotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, depot, false, true, true);
+		const size_t completedDepotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, depot, true, true);//Only counts unupgraded CC, on purpose.
 		if(m_bot.GetSelfRace() == CCRace::Terran && completedDepotCount > 0)
 		{
 			if (!m_queue.contains(MetaTypeEnum::OrbitalCommand) && !m_queue.contains(MetaTypeEnum::PlanetaryFortress))
@@ -540,7 +541,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 			}
 		}
-		else if (boughtDepotCount == 0 && !m_queue.contains(MetaTypeEnum::CommandCenter))
+		else if (boughtDepotCount == 0 && incompletedDepotCount < 2 && !m_queue.contains(MetaTypeEnum::CommandCenter))
 		{
 #ifndef NO_EXPANSION
 			const bool enoughMinerals = m_bot.GetFreeMinerals() >= 600;
@@ -656,7 +657,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if ((reaperCount == 0 || (!proxyMaraudersStrategy && !m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)) && !m_queue.contains(MetaTypeEnum::Reaper))
+				if ((reaperCount == 0 ||(factoryCount == 0 && !proxyMaraudersStrategy && !m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)) && !m_queue.contains(MetaTypeEnum::Reaper))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
@@ -725,7 +726,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 				}
 #ifndef NO_UNITS
-				if ((m_bot.Strategy().enemyHasInvisible() || (enemyRace == sc2::Terran && bansheeCount >= 3)) && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
+				if ((m_bot.Strategy().enemyCurrentlyHasInvisible() || (enemyRace == sc2::Terran && bansheeCount >= 3)) && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
 				{
 					m_queue.queueAsHighestPriority(MetaTypeEnum::Raven, false);
 				}
@@ -982,7 +983,7 @@ void ProductionManager::lowPriorityChecks()
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
 	const bool shouldProduceAntiAirDefense = m_bot.Strategy().shouldProduceAntiAirDefense();
-	const bool shouldProduceAntiInvis = m_bot.Strategy().enemyHasInvisible();
+	const bool shouldProduceAntiInvis = m_bot.Strategy().enemyHasInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
 	if (shouldProduceAntiAirDefense || shouldProduceAntiInvis)
 	{
 		const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);

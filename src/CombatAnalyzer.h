@@ -55,11 +55,50 @@ class CombatAnalyzer {
 	int totalGroundUnitsCount = 0;
 	int totalAirUnitsCount = 0;
 
+	int getUnitUpgradeArmor(const sc2::Unit* unit);
+	int getUnitUpgradeWeapon(const sc2::Unit* unit);
+
 	void clearAreasUnderDetection();
 	void UpdateTotalHealthLoss();
 	void drawDamageHealthRatio();
 	void drawAreasUnderDetection();
 public:
+	int selfTerranBioArmor = 0;
+	int selfTerranBioWeapon = 0;
+	int selfTerranGroundMechWeapon = 0;
+	int selfTerranAirMechWeapon = 0;
+	int selfTerranMechArmor = 0;
+
+	int selfProtossGroundArmor = 0;
+	int selfProtossGroundWeapon = 0;
+	int selfProtossAirArmor = 0;
+	int selfProtossAirWeapon = 0;
+	int selfProtossShield = 0;
+
+	int selfZergGroundArmor = 0;
+	int selfZergGroundMeleeWeapon = 0;
+	int selfZergGroundRangedWeapon = 0;
+	int selfZergAirArmor = 0;
+	int selfZergAirWeapon = 0;
+
+	int opponentTerranBioArmor = 0;
+	int opponentTerranBioWeapon = 0;
+	int opponentTerranGroundMechWeapon = 0;
+	int opponentTerranAirMechWeapon = 0;
+	int opponentTerranMechArmor = 0;
+
+	int opponentProtossGroundArmor = 0;
+	int opponentProtossGroundWeapon = 0;
+	int opponentProtossAirArmor = 0;
+	int opponentProtossAirWeapon = 0;
+	int opponentProtossShield = 0;
+
+	int opponentZergGroundArmor = 0;
+	int opponentZergGroundMeleeWeapon = 0;
+	int opponentZergGroundRangedWeapon = 0;
+	int opponentZergAirArmor = 0;
+	int opponentZergAirWeapon = 0;
+
 	CombatAnalyzer(CCBot & bot);
 	void onStart();
 	void onFrame();
@@ -77,4 +116,6 @@ public:
 	bool shouldProduceAirAntiGround();
 	bool shouldProduceAirAntiAir();
 	bool enemyHasCombatAirUnit() const { return m_enemyHasCombatAirUnit; }
+	void detectUpgrades(Unit & unit, UnitState & state);
+	void detectTechs(Unit & unit, UnitState & state);
 };

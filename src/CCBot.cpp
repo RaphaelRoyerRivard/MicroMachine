@@ -39,6 +39,149 @@ void CCBot::OnUpgradeCompleted(sc2::UpgradeID upgrade)
 {
 	Util::DebugLog(__FUNCTION__, "Upgrade " + upgrade.to_string() + " completed", *this);
 	m_strategy.setUpgradeCompleted(upgrade);
+	switch ((sc2::UPGRADE_ID)upgrade)
+	{
+		//Terran
+		case sc2::UPGRADE_ID::TERRANINFANTRYWEAPONSLEVEL1:
+			m_combatAnalyzer.selfTerranBioWeapon = 1;
+			break;
+		case sc2::UPGRADE_ID::TERRANINFANTRYWEAPONSLEVEL2:
+			m_combatAnalyzer.selfTerranBioWeapon = 2;
+			break;
+		case sc2::UPGRADE_ID::TERRANINFANTRYWEAPONSLEVEL3:
+			m_combatAnalyzer.selfTerranBioWeapon = 3;
+			break;
+		case sc2::UPGRADE_ID::TERRANINFANTRYARMORSLEVEL1:
+			m_combatAnalyzer.selfTerranBioArmor = 1;
+			break;
+		case sc2::UPGRADE_ID::TERRANINFANTRYARMORSLEVEL2:
+			m_combatAnalyzer.selfTerranBioArmor = 2;
+			break;
+		case sc2::UPGRADE_ID::TERRANINFANTRYARMORSLEVEL3:
+			m_combatAnalyzer.selfTerranBioArmor = 3;
+			break;
+		case sc2::UPGRADE_ID::TERRANVEHICLEWEAPONSLEVEL1:
+			m_combatAnalyzer.selfTerranGroundMechWeapon = 1;
+			break;
+		case sc2::UPGRADE_ID::TERRANVEHICLEWEAPONSLEVEL2:
+			m_combatAnalyzer.selfTerranGroundMechWeapon = 2;
+			break;
+		case sc2::UPGRADE_ID::TERRANVEHICLEWEAPONSLEVEL3:
+			m_combatAnalyzer.selfTerranGroundMechWeapon = 3;
+			break;
+		case sc2::UPGRADE_ID::TERRANSHIPWEAPONSLEVEL1:
+			m_combatAnalyzer.selfTerranAirMechWeapon = 1;
+			break;
+		case sc2::UPGRADE_ID::TERRANSHIPWEAPONSLEVEL2:
+			m_combatAnalyzer.selfTerranAirMechWeapon = 2;
+			break;
+		case sc2::UPGRADE_ID::TERRANSHIPWEAPONSLEVEL3:
+			m_combatAnalyzer.selfTerranAirMechWeapon = 3;
+			break;
+		case sc2::UPGRADE_ID::TERRANVEHICLEANDSHIPARMORSLEVEL1:
+			m_combatAnalyzer.selfTerranMechArmor = 1;
+			break;
+		case sc2::UPGRADE_ID::TERRANVEHICLEANDSHIPARMORSLEVEL2:
+			m_combatAnalyzer.selfTerranMechArmor = 2;
+			break;
+		case sc2::UPGRADE_ID::TERRANVEHICLEANDSHIPARMORSLEVEL3:
+			m_combatAnalyzer.selfTerranMechArmor = 3;
+			break;
+
+		//Protoss
+		case sc2::UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1:
+			m_combatAnalyzer.selfProtossGroundArmor = 1;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL2:
+			m_combatAnalyzer.selfProtossGroundArmor = 2;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL3:
+			m_combatAnalyzer.selfProtossGroundArmor = 3;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1:
+			m_combatAnalyzer.selfProtossGroundWeapon = 1;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2:
+			m_combatAnalyzer.selfProtossGroundWeapon = 2;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3:
+			m_combatAnalyzer.selfProtossGroundWeapon = 3;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSAIRARMORSLEVEL1:
+			m_combatAnalyzer.selfProtossAirArmor = 1;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSAIRARMORSLEVEL2:
+			m_combatAnalyzer.selfProtossAirArmor = 2;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSAIRARMORSLEVEL3:
+			m_combatAnalyzer.selfProtossAirArmor = 3;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL1:
+			m_combatAnalyzer.selfProtossAirWeapon = 1;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL2:
+			m_combatAnalyzer.selfProtossAirWeapon = 2;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL3:
+			m_combatAnalyzer.selfProtossAirWeapon = 3;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSSHIELDSLEVEL1:
+			m_combatAnalyzer.selfProtossShield = 1;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSSHIELDSLEVEL2:
+			m_combatAnalyzer.selfProtossShield = 2;
+			break;
+		case sc2::UPGRADE_ID::PROTOSSSHIELDSLEVEL3:
+			m_combatAnalyzer.selfProtossShield = 3;
+			break;
+
+		//Zerg
+		case sc2::UPGRADE_ID::ZERGMELEEWEAPONSLEVEL1:
+			m_combatAnalyzer.selfZergGroundMeleeWeapon = 1;
+			break;
+		case sc2::UPGRADE_ID::ZERGMELEEWEAPONSLEVEL2:
+			m_combatAnalyzer.selfZergGroundMeleeWeapon = 2;
+			break;
+		case sc2::UPGRADE_ID::ZERGMELEEWEAPONSLEVEL3:
+			m_combatAnalyzer.selfZergGroundMeleeWeapon = 3;
+			break;
+		case sc2::UPGRADE_ID::ZERGMISSILEWEAPONSLEVEL1:
+			m_combatAnalyzer.selfZergGroundRangedWeapon = 1;
+			break;
+		case sc2::UPGRADE_ID::ZERGMISSILEWEAPONSLEVEL2:
+			m_combatAnalyzer.selfZergGroundRangedWeapon = 2;
+			break;
+		case sc2::UPGRADE_ID::ZERGMISSILEWEAPONSLEVEL3:
+			m_combatAnalyzer.selfZergGroundRangedWeapon = 3;
+			break;
+		case sc2::UPGRADE_ID::ZERGGROUNDARMORSLEVEL1:
+			m_combatAnalyzer.selfZergGroundArmor = 1;
+			break;
+		case sc2::UPGRADE_ID::ZERGGROUNDARMORSLEVEL2:
+			m_combatAnalyzer.selfZergGroundArmor = 2;
+			break;
+		case sc2::UPGRADE_ID::ZERGGROUNDARMORSLEVEL3:
+			m_combatAnalyzer.selfZergGroundArmor = 3;
+			break;
+		case sc2::UPGRADE_ID::ZERGFLYERWEAPONSLEVEL1:
+			m_combatAnalyzer.selfZergAirWeapon = 1;
+			break;
+		case sc2::UPGRADE_ID::ZERGFLYERWEAPONSLEVEL2:
+			m_combatAnalyzer.selfZergAirWeapon = 2;
+			break;
+		case sc2::UPGRADE_ID::ZERGFLYERWEAPONSLEVEL3:
+			m_combatAnalyzer.selfZergAirWeapon = 3;
+			break;
+		case sc2::UPGRADE_ID::ZERGFLYERARMORSLEVEL1:
+			m_combatAnalyzer.selfZergAirArmor = 1;
+			break;
+		case sc2::UPGRADE_ID::ZERGFLYERARMORSLEVEL2:
+			m_combatAnalyzer.selfZergAirArmor = 2;
+			break;
+		case sc2::UPGRADE_ID::ZERGFLYERARMORSLEVEL3:
+			m_combatAnalyzer.selfZergAirArmor = 3;
+			break;
+	}
 }
 void CCBot::OnBuildingConstructionComplete(const sc2::Unit*) {}
 void CCBot::OnNydusDetected() {}
@@ -83,7 +226,7 @@ void CCBot::OnGameStart() //full start
 
 	if (Config().AllowDebug)
 	{
-		IssueCheats();
+		IssueGameStartCheats();
 	}
 
 	StartProfiling("0 Starcraft II");
@@ -110,7 +253,11 @@ void CCBot::OnStep()
 		m_previousMacroGameLoop = m_gameLoop;
 	
 	StartProfiling("0.1 checkKeyState");
-	checkKeyState();
+	if (Config().AllowDebug)
+	{
+		checkKeyState();
+		IssueCheats();
+	}
 	StopProfiling("0.1 checkKeyState");
 
 	StartProfiling("0.2 setUnits");
@@ -203,9 +350,27 @@ void CCBot::checkKeyState()
 		return;
 	}
 #ifdef _WINDOWS
-	if (GetAsyncKeyState(VK_DELETE))
+	if (GetAsyncKeyState(VK_INSERT))
 	{
 		printf("Pausing...");
+	}
+
+	if (GetAsyncKeyState(VK_DELETE))
+	{
+		keyDelete = true;
+	}
+	else if (keyDelete)
+	{
+		keyDelete = false;
+	}
+
+	if (GetAsyncKeyState(VK_END))
+	{
+		keyEnd = true;
+	}
+	else if (keyEnd)
+	{
+		keyEnd = false;
 	}
 
 	if (GetAsyncKeyState(VK_F1))
@@ -268,16 +433,17 @@ void CCBot::checkKeyState()
 		m_config.DrawWorkerInfo = !m_config.DrawWorkerInfo;
 	}
 
-	/*if (GetAsyncKeyState('5'))
+	if (GetAsyncKeyState('5'))
 	{
 		key5 = true;
 	}
 	else if (key5)
 	{
 		key5 = false;
+		m_config.DrawBaseLocationInfo = !m_config.DrawBaseLocationInfo;
 	}
 
-	if (GetAsyncKeyState('6'))
+	/*if (GetAsyncKeyState('6'))
 	{
 		key6 = true;
 	}
@@ -335,6 +501,7 @@ void CCBot::setUnits()
 	m_allyUnitsPerType.clear();
 	m_unitCount.clear();
 	m_unitCompletedCount.clear();
+	m_strategy.setEnemyCurrentlyHasInvisible(false);
 #ifdef SC2API
 	bool firstPhoenix = true;
 	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
@@ -518,16 +685,22 @@ void CCBot::setUnits()
 					}
 				}
 			}
-			if(!m_strategy.enemyHasInvisible())
+			if (unitptr->cloak == sc2::Unit::Cloaked || unitptr->is_burrowed)//Handle whether the enemy has cloaked/burrowed units or not
 			{
-				if(unitptr->cloak == sc2::Unit::Cloaked)
+				if (!m_strategy.enemyHasInvisible())
 				{
 					m_strategy.setEnemyHasInvisible(true);
 					Actions()->SendChat("I see you are also attracted to the dark arts of invisibility.");
 					Util::DebugLog(__FUNCTION__, "Invis unit detected: " + unit.getType().getName(), *this);
 				}
+				///TODO if we see at least 1 burrowed roach, we might want to consider all roaches as potentially invisible
+				///TODO Should handle unit that CAN get invisible (banshee) and the Mothership (can turn others invisible).
+				m_strategy.setEnemyCurrentlyHasInvisible(true);
+			}
+			if(!m_strategy.enemyHasInvisible())
+			{
 				// If the opponent has built a building that can produce invis units, we should produce Anti Invis units
-				else if (unit.getType().isBuilding())
+				if (unit.getType().isBuilding())
 				{
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{
@@ -996,7 +1169,7 @@ const UnitInfoManager & CCBot::UnitInfo() const
     return m_unitInfo;
 }
 
-void CCBot::IssueCheats()
+void CCBot::IssueGameStartCheats()
 {
 	//IMPORTANT: Players::Enemy doesn't work with the cheats if the second player isn't human. We need to use the player id (player 1 vs player 2)
 	//¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
@@ -1009,6 +1182,7 @@ void CCBot::IssueCheats()
 	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
 	const auto offset = towardsCenter * 15;
 	const auto enemyLocation = GetEnemyStartLocations()[0];
+
 	//Strategy().setShouldProduceAntiAirOffense(true);
 	//Debug()->DebugGiveAllTech();
 	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS);
@@ -1040,8 +1214,10 @@ void CCBot::IssueCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 20);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, m_startLocation + offset, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, mapCenter, player2, 1);
+	
 	//for (const auto baseLocation : Bases().getBaseLocations())
-	//	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED, Util::GetPosition(baseLocation->getDepotPosition()), player1, 1);
+	//	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACHBURROWED, Util::GetPosition(baseLocation->getDepotPosition()), player1, 1);
+	//Debug()->DebugGiveAllTech();
 
 	//Workers
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, Players::Enemy, 10);
@@ -1130,6 +1306,31 @@ void CCBot::IssueCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 3, player1, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, mapCenter - towardsCenter * 7, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3, player2, 3);*/
+}
+
+void CCBot::IssueCheats()
+{
+	//Kill all selected units
+	if (keyDelete)
+	{
+		for (auto u : Observation()->GetUnits())
+		{
+			if (u->is_selected) {
+				Debug()->DebugKillUnit(u);
+			}
+		}
+		Util::ClearChat(*this);
+	}
+	if (keyEnd)
+	{
+		for (auto u : Observation()->GetUnits())
+		{
+			if (u->is_selected) {
+				Debug()->DebugSetLife(10.0f, u);
+			}
+		}
+		Util::ClearChat(*this);
+	}
 }
 
 uint32_t CCBot::GetCurrentFrame() const
