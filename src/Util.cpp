@@ -1589,6 +1589,9 @@ float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetT
 			}
 		}
 	}
+
+	dps *= GetAttackSpeedMultiplier(unit);
+	
 	return dps;
 }
 
@@ -1620,7 +1623,16 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
         }
     }
 
+	dps *= GetAttackSpeedMultiplier(unit);
+
     return dps;
+}
+
+float Util::GetAttackSpeedMultiplier(const sc2::Unit * unit)
+{
+	if (unitHasBuff(unit, sc2::BUFF_ID::STIMPACK) || unitHasBuff(unit, sc2::BUFF_ID::STIMPACKMARAUDER))
+		return 1.5f;
+	return 1.f;
 }
 
 float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where)
@@ -1869,8 +1881,7 @@ float Util::getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot)
 
 float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 {
-	float zergBonus = 1.f;
-	float slowModifier = 1.f;
+	float speedMultiplier = 1.f;
 	if(!unit->is_burrowed && !unit->is_flying && Unit(unit, bot).getType().getRace() == CCRace::Zerg)
 	{
 		/* From https://liquipedia.net/starcraft2/Creep
@@ -1879,21 +1890,33 @@ float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 		if(bot.Observation()->HasCreep(unit->pos))
 		{
 			if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_QUEEN)
-				zergBonus = 2.6667f;
+				speedMultiplier *= 2.6667f;
 			else if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_HYDRALISK)
-				zergBonus = 1.5f;
+				speedMultiplier *= 1.5f;
 			else if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_SPINECRAWLERUPROOTED || unit->unit_type == sc2::UNIT_TYPEID::ZERG_SPORECRAWLERUPROOTED)
-				zergBonus = 2.5f;
+				speedMultiplier *= 2.5f;
 			else if (unit->unit_type != sc2::UNIT_TYPEID::ZERG_DRONE && unit->unit_type != sc2::UNIT_TYPEID::ZERG_BROODLING && unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELING
 				&& unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELINGMARINE && unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELINGMARINESHIELD && unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELINGZEALOT)
-				zergBonus = 1.3f;
+				speedMultiplier *= 1.3f;
 		}
 		if (bot.Strategy().enemyHasMetabolicBoost() && unit->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
-			zergBonus *= 1.6f;
+			speedMultiplier *= 1.6f;
 	}
 	if (unitHasBuff(unit, sc2::BUFF_ID::SLOW))
-		slowModifier = 0.5f;
-	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * zergBonus * slowModifier;
+		speedMultiplier *= 0.5f;
+	if (unitHasBuff(unit, sc2::BUFF_ID::STIMPACK) || unitHasBuff(unit, sc2::BUFF_ID::STIMPACKMARAUDER))
+		speedMultiplier *= 1.5f;
+	if (unitHasBuff(unit, sc2::BUFF_ID::MEDIVACSPEEDBOOST))
+		speedMultiplier *= 1.438f;
+	// Check for our speed upgrades
+	if (unit->alliance == sc2::Unit::Self)
+	{
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
+			speedMultiplier *= 1.364f;
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC && bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MEDIVACINCREASESPEEDBOOST))
+			speedMultiplier *= 1.18f;
+	}
+	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * speedMultiplier;
 }
 
 CCPosition Util::getFacingVector(const sc2::Unit * unit)
@@ -2450,6 +2473,7 @@ void Util::TimeControlDecreaseSpeed()
 
 bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot)
 {
+	const int playerId = GetSelfPlayerId(bot);
 	CombatState state;
 	for(int i=0; i<2; ++i)
 	{
@@ -2472,6 +2496,9 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 
 	CombatUpgrades player2upgrades = {};
 	
+	for (const auto upgrade : bot.Strategy().getCompletedUpgrades())
+		(playerId == 1 ? player1upgrades : player2upgrades).add(upgrade);
+	
 	state.environment = &m_simulator->getCombatEnvironment(player1upgrades, player2upgrades);
 	
 	CombatSettings settings;
@@ -2481,7 +2508,7 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 	settings.maxTime = 100;
 	CombatResult outcome = m_simulator->predict_engage(state, settings);
 	const int winner = outcome.state.owner_with_best_outcome();
-	return winner == GetSelfPlayerId(bot);
+	return winner == playerId;
 }
 
 int Util::GetSelfPlayerId(CCBot & bot)

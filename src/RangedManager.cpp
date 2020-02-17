@@ -1657,6 +1657,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			continue;
 		}
 
+		// Stim
+		if (shouldFight && ExecuteStimLogic(unit))
+			continue;
+
 		auto movePosition = CCPosition();
 		const bool injured = unit->health / unit->health_max < 0.5f;
 		const auto enemyRange = Util::GetAttackRangeForTarget(unitTarget, unit, m_bot);
@@ -2015,6 +2019,26 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 	}
 
 	return false;
+}
+
+bool RangedManager::ExecuteStimLogic(const sc2::Unit * unit) const
+{
+	if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK))
+		return false;
+
+	if (unit->unit_type != sc2::UNIT_TYPEID::TERRAN_MARINE && unit->unit_type != sc2::UNIT_TYPEID::TERRAN_MARAUDER)
+		return false;
+
+	const bool isMarine = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE;
+	if (unit->health <= (isMarine ? 10 : 20))
+		return false;
+
+	if (Util::unitHasBuff(unit, isMarine ? sc2::BUFF_ID::STIMPACK : sc2::BUFF_ID::STIMPACKMARAUDER))
+		return false;
+
+	const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::EFFECT_STIM, true, 0, "Stim");
+	m_bot.Commander().Combat().PlanAction(unit, action);
+	return true;
 }
 
 bool RangedManager::QueryIsAbilityAvailable(const sc2::Unit* unit, sc2::ABILITY_ID abilityId) const
