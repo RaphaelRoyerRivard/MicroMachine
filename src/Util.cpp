@@ -1120,12 +1120,22 @@ float Util::GetUnitPower(const sc2::Unit* unit, const sc2::Unit* target, CCBot& 
 
 float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 {
-	const float unitRange = target.isValid() ? GetAttackRangeForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot) : GetMaxAttackRange(unit.getUnitPtr(), bot);
+	const bool isMedivac = unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MEDIVAC;
+	float unitRange = 0.f;
+	if (target.isValid())
+	{
+		if (isMedivac)
+			unitRange = bot.Commander().Combat().getAbilityCastingRanges().at(sc2::ABILITY_ID::EFFECT_HEAL) + unit.getUnitPtr()->radius + target.getUnitPtr()->radius;
+		else
+			unitRange = GetAttackRangeForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot);
+	}
+	else
+		unitRange = GetMaxAttackRange(unit.getUnitPtr(), bot);
 	///////// HEALTH
 	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.5f);
 	///////// DPS
 	if (target.isValid())
-		unitPower *= Util::GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot);
+		unitPower *= isMedivac ? 12.6f : Util::GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot);
 	else
 		unitPower *= Util::GetDps(unit.getUnitPtr(), bot);
 	///////// DISTANCE

@@ -1416,7 +1416,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				continue;
 			}
 
-			const sc2::Unit* unitTarget = getTarget(unit, rangedUnitTargets);
+			const sc2::Unit* unitTarget = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC ? GetHealTarget(unit, allyCombatUnits) : getTarget(unit, rangedUnitTargets);
 			const sc2::Unit* unitToSave = unit;
 			
 			// If the flying Viking doesn't have a target, we check if it would have one as a landed Viking (unless it is a flying helper)
@@ -1573,7 +1573,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 	}
 
-	bool currentUnitHasACommand = false;
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
 	bool winSimulation = Util::SimulateCombat(closeUnits, threatsToKeep, m_bot);
@@ -1610,8 +1609,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 		if (shouldFight && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ExecuteBansheeCloakLogic(unit, false))
 		{
-			if (unit == rangedUnit)
-				currentUnitHasACommand = true;
 			continue;
 		}
 
@@ -1633,8 +1630,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 				const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, actionDuration, ACTION_DESCRIPTION_THREAT_FIGHT_DODGE_EFFECT);
 				m_bot.Commander().Combat().PlanAction(unit, action);
-				if (unit == rangedUnit)
-					currentUnitHasACommand = true;
 				continue;
 			}
 			else
@@ -1653,6 +1648,13 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				m_bot.Commander().Combat().PlanAction(realViking, action);
 				continue;
 			}
+		}
+
+		// Micro the Medivac
+		if (shouldFight && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
+		{
+			ExecuteHealCommand(unit, unitTarget);
+			continue;
 		}
 
 		auto movePosition = CCPosition();
@@ -1691,11 +1693,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			const float damageDealt = Util::GetDpsForTarget(unit, unitTarget, m_bot) / 22.4f;
 			m_bot.Analyzer().increaseTotalDamage(damageDealt, unit->unit_type);
 		}
-		
-		if (unit == rangedUnit)
-			currentUnitHasACommand = true;
 	}
-	return currentUnitHasACommand;
+	return shouldFight;
 }
 
 void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDisabled, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal, sc2::AvailableAbilities & abilities)
@@ -1858,7 +1857,7 @@ bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, cons
 		return true;
 	}
 
-	if (ExecuteHealLogic(rangedUnit, allyUnits, unitShouldHeal, goal, abilities))
+	if (ExecuteHealLogic(rangedUnit, allyUnits, unitShouldHeal, abilities))
 	{
 		return true;
 	}
@@ -1947,15 +1946,12 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	return false;
 }
 
-bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, CCPosition goal, sc2::AvailableAbilities & abilities)
+bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, sc2::AvailableAbilities & abilities) const
 {
 	if (medivac->unit_type != sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 		return false;
 	
 	if (shouldHeal)
-		return false;
-
-	if (medivac->energy <= 0)
 		return false;
 
 	bool canHeal = false;
@@ -1969,10 +1965,21 @@ bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units
 	}
 	if (!canHeal)
 		return false;
+	
+	const sc2::Unit * target = GetHealTarget(medivac, allyUnits);
+	
+	return ExecuteHealCommand(medivac, target);
+}
+
+const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const sc2::Units & allyUnits) const
+{
+	// "The minimum required energy to start the healing process is 5" according to https://liquipedia.net/starcraft2/Medivac_(Legacy_of_the_Void)
+	if (medivac->energy < 5)
+		return nullptr;
 
 	const auto & abilityRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
 	const float healRange = abilityRanges.at(sc2::ABILITY_ID::EFFECT_HEAL) + medivac->radius;
-	
+
 	const sc2::Unit * target = nullptr;
 	float bestScore = 0.f;	// The lower the best
 	for (const auto ally : allyUnits)
@@ -1990,11 +1997,18 @@ bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units
 			bestScore = score;
 		}
 	}
-	
+
+	return target;
+}
+
+bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target) const
+{
 	if (target)
 	{
 		if (Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(medivac->pos), medivac->is_flying, m_bot))
 		{
+			const auto & abilityRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
+			const float healRange = abilityRanges.at(sc2::ABILITY_ID::EFFECT_HEAL) + medivac->radius;
 			CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(medivac, target, healRange + target->radius, false, m_bot);
 			if (movePosition != CCPosition())
 			{
@@ -2005,11 +2019,7 @@ bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units
 					m_bot.Commander().Combat().PlanAction(medivac, action);
 					return true;
 				}
-				else
-					int a = 0;
 			}
-			else
-				int a = 0;
 		}
 		const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, false, 0, "Heal");
 		m_bot.Commander().Combat().PlanAction(medivac, action);
