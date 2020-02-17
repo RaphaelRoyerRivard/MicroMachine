@@ -78,8 +78,8 @@ private:
 	bool ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, sc2::Units & allyUnits, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper, sc2::AvailableAbilities & abilities);
 	bool ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats, CCPosition goal);
 	bool ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & targets);
-	bool ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, sc2::AvailableAbilities & abilities) const;
-	const sc2::Unit * GetHealTarget(const sc2::Unit * medivac, const sc2::Units & allyUnits) const;
+	bool ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal) const;
+	const sc2::Unit * GetHealTarget(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool filterFullHealthUnits) const;
 	bool ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target) const;
 	bool QueryIsAbilityAvailable(const sc2::Unit* unit, sc2::ABILITY_ID abilityId) const;
 	bool CanUseKD8Charge(const sc2::Unit * reaper);

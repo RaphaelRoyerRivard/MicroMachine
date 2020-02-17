@@ -1416,7 +1416,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				continue;
 			}
 
-			const sc2::Unit* unitTarget = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC ? GetHealTarget(unit, allyCombatUnits) : getTarget(unit, rangedUnitTargets);
+			const sc2::Unit* unitTarget = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC ? GetHealTarget(unit, allyCombatUnits, false) : getTarget(unit, rangedUnitTargets);
 			const sc2::Unit* unitToSave = unit;
 			
 			// If the flying Viking doesn't have a target, we check if it would have one as a landed Viking (unless it is a flying helper)
@@ -1653,7 +1653,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		// Micro the Medivac
 		if (shouldFight && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 		{
-			ExecuteHealCommand(unit, unitTarget);
+			ExecuteHealLogic(unit, allyCombatUnits, false);
 			continue;
 		}
 
@@ -1857,7 +1857,7 @@ bool RangedManager::ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, cons
 		return true;
 	}
 
-	if (ExecuteHealLogic(rangedUnit, allyUnits, unitShouldHeal, abilities))
+	if (ExecuteHealLogic(rangedUnit, allyUnits, unitShouldHeal))
 	{
 		return true;
 	}
@@ -1946,32 +1946,20 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	return false;
 }
 
-bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, sc2::AvailableAbilities & abilities) const
+bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal) const
 {
 	if (medivac->unit_type != sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 		return false;
 	
 	if (shouldHeal)
 		return false;
-
-	bool canHeal = false;
-	for (const auto & ability : abilities.abilities)
-	{
-		if (ability.ability_id == sc2::ABILITY_ID::EFFECT_HEAL)
-		{
-			canHeal = true;
-			break;
-		}
-	}
-	if (!canHeal)
-		return false;
 	
-	const sc2::Unit * target = GetHealTarget(medivac, allyUnits);
+	const sc2::Unit * target = GetHealTarget(medivac, allyUnits, true);
 	
 	return ExecuteHealCommand(medivac, target);
 }
 
-const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const sc2::Units & allyUnits) const
+const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool filterFullHealthUnits) const
 {
 	// "The minimum required energy to start the healing process is 5" according to https://liquipedia.net/starcraft2/Medivac_(Legacy_of_the_Void)
 	if (medivac->energy < 5)
@@ -1984,7 +1972,7 @@ const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const 
 	float bestScore = 0.f;	// The lower the best
 	for (const auto ally : allyUnits)
 	{
-		if (ally->health >= ally->health_max)
+		if (filterFullHealthUnits && ally->health >= ally->health_max)
 			continue;
 		const Unit allyUnit(ally, m_bot);
 		if (!allyUnit.getType().isCombatUnit() || !allyUnit.hasAttribute(sc2::Attribute::Biological))
