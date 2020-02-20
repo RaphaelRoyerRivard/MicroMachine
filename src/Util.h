@@ -29,6 +29,8 @@ namespace Util
 	static std::vector<std::vector<bool>> m_placement;
 	static std::vector<std::vector<float>> m_terrainHeight;
 	static sc2::Unit * m_dummyVikingAssault;
+	static sc2::Unit * m_dummyStimedMarine;
+	static sc2::Unit * m_dummyStimedMarauder;
 
 	static bool allowDebug;
 	
@@ -166,8 +168,15 @@ namespace Util
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);
 
+	void CreateDummyUnits(CCBot & bot);
 	void CreateDummyVikingAssault(CCBot & bot);
+	void CreateDummyStimedMarine(CCBot & bot);
+	void CreateDummyStimedMarauder(CCBot & bot);
+	void SetBaseUnitValues(sc2::Unit * unit, CCBot & bot);
+	sc2::Unit CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit);
 	sc2::Unit CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit);
+	sc2::Unit CreateDummyStimedMarineFromUnit(const sc2::Unit * unit);
+	sc2::Unit CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit);
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
 	bool CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot);
     float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells = false);
@@ -286,6 +295,7 @@ namespace Util
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
 	float DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point);
 
-	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
+	float SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
+	float SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, CCBot & bot);
 	int GetSelfPlayerId(CCBot & bot);
 };

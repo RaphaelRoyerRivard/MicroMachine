@@ -963,7 +963,7 @@ void CombatCommander::updateHarassSquads()
 			enemySupply += enemyUnit.getType().supplyRequired();
 		}
 	}
-	m_winAttackSimulation = Util::SimulateCombat(allyUnits, enemyUnits, m_bot);
+	m_winAttackSimulation = Util::SimulateCombat(allyUnits, enemyUnits, m_bot) > 0.f;
 	m_biggerArmy = allySupply >= enemySupply;
 
 	const SquadOrder harassOrder(SquadOrderTypes::Harass, GetClosestEnemyBaseLocation(), HarassOrderRadius, "Harass");

@@ -162,7 +162,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		}
 	}
 
-	CreateDummyVikingAssault(bot);
+	CreateDummyUnits(bot);
 }
 
 Util::PathFinding::IMNode* getLowestCostNode(std::set<Util::PathFinding::IMNode*> & set)
@@ -1251,49 +1251,104 @@ bool Util::IsProtoss(const CCRace & race)
 #endif
 }
 
+void Util::CreateDummyUnits(CCBot & bot)
+{
+	CreateDummyVikingAssault(bot);
+	CreateDummyStimedMarine(bot);
+	CreateDummyStimedMarauder(bot);
+}
+
 void Util::CreateDummyVikingAssault(CCBot & bot)
 {
 	m_dummyVikingAssault = new sc2::Unit;
 	m_dummyVikingAssault->unit_type = sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
 	m_dummyVikingAssault->is_flying = false;
 	m_dummyVikingAssault->health_max = 135;
-	m_dummyVikingAssault->energy_max = 0;
-	m_dummyVikingAssault->energy = 0;
-	m_dummyVikingAssault->alliance = sc2::Unit::Self;
-	m_dummyVikingAssault->owner = GetSelfPlayerId(bot);
-	m_dummyVikingAssault->is_alive = true;
-	m_dummyVikingAssault->shield_max = 0;
 	m_dummyVikingAssault->radius = 0.75;
-	m_dummyVikingAssault->display_type = sc2::Unit::Visible;
-	m_dummyVikingAssault->build_progress = 1;
-	m_dummyVikingAssault->cloak = sc2::Unit::NotCloaked;
-	m_dummyVikingAssault->detect_range = 0;
-	m_dummyVikingAssault->radar_range = 0;
-	m_dummyVikingAssault->is_blip = false;
-	m_dummyVikingAssault->mineral_contents = 0;
-	m_dummyVikingAssault->is_burrowed = false;
-	m_dummyVikingAssault->weapon_cooldown = 0;
-	m_dummyVikingAssault->add_on_tag = 0;
-	m_dummyVikingAssault->passengers = {};
-	m_dummyVikingAssault->cargo_space_taken = 0;
-	m_dummyVikingAssault->cargo_space_max = 0;
-	m_dummyVikingAssault->assigned_harvesters = 0;
-	m_dummyVikingAssault->ideal_harvesters = 0;
-	m_dummyVikingAssault->engaged_target_tag = 0;
-	m_dummyVikingAssault->buffs = {};
-	m_dummyVikingAssault->is_powered = false;
-	m_dummyVikingAssault->last_seen_game_loop = 0;
+	SetBaseUnitValues(m_dummyVikingAssault, bot);
+}
+
+void Util::CreateDummyStimedMarine(CCBot & bot)
+{
+	m_dummyStimedMarine = new sc2::Unit;
+	m_dummyStimedMarine->unit_type = sc2::UNIT_TYPEID::TERRAN_MARINE;
+	m_dummyStimedMarine->is_flying = false;
+	m_dummyStimedMarine->health_max = 45;
+	m_dummyStimedMarine->radius = 0.375;
+	SetBaseUnitValues(m_dummyStimedMarine, bot);
+	m_dummyStimedMarine->buffs.push_back(sc2::BUFF_ID::STIMPACK);
+}
+
+void Util::CreateDummyStimedMarauder(CCBot & bot)
+{
+	m_dummyStimedMarauder = new sc2::Unit;
+	m_dummyStimedMarauder->unit_type = sc2::UNIT_TYPEID::TERRAN_MARAUDER;
+	m_dummyStimedMarauder->is_flying = false;
+	m_dummyStimedMarauder->health_max = 125;
+	m_dummyStimedMarauder->radius = 0.5625;
+	SetBaseUnitValues(m_dummyStimedMarauder, bot);
+	m_dummyStimedMarauder->buffs.push_back(sc2::BUFF_ID::STIMPACKMARAUDER);
+}
+
+void Util::SetBaseUnitValues(sc2::Unit * unit, CCBot & bot)
+{
+	unit->energy_max = 0;
+	unit->energy = 0;
+	unit->alliance = sc2::Unit::Self;
+	unit->owner = GetSelfPlayerId(bot);
+	unit->is_alive = true;
+	unit->shield_max = 0;
+	unit->shield = 0;
+	unit->display_type = sc2::Unit::Visible;
+	unit->build_progress = 1;
+	unit->cloak = sc2::Unit::NotCloaked;
+	unit->detect_range = 0;
+	unit->radar_range = 0;
+	unit->is_blip = false;
+	unit->mineral_contents = 0;
+	unit->is_burrowed = false;
+	unit->weapon_cooldown = 0;
+	unit->add_on_tag = 0;
+	unit->passengers = {};
+	unit->cargo_space_taken = 0;
+	unit->cargo_space_max = 0;
+	unit->assigned_harvesters = 0;
+	unit->ideal_harvesters = 0;
+	unit->engaged_target_tag = 0;
+	unit->buffs = {};
+	unit->is_powered = false;
+	unit->last_seen_game_loop = 0;
+}
+
+sc2::Unit Util::CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit)
+{
+	sc2::Unit dummy = sc2::Unit(*dummyPointer);
+	dummy.pos = unit->pos;
+	dummy.facing = unit->facing;
+	dummy.health = unit->health;
+	dummy.health_max = unit->health_max;	// Useful for Marines with combat shield upgrade
+	dummy.tag = unit->tag;
+	dummy.last_seen_game_loop = unit->last_seen_game_loop;
+	return dummy;
 }
 
 sc2::Unit Util::CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit)
 {
-	sc2::Unit vikingAssault = sc2::Unit(*m_dummyVikingAssault);
-	vikingAssault.pos = unit->pos;
-	vikingAssault.facing = unit->facing;
-	vikingAssault.health = unit->health;
-	vikingAssault.tag = unit->tag;
-	vikingAssault.last_seen_game_loop = unit->last_seen_game_loop;
-	return vikingAssault;
+	return CreateDummyFromUnit(m_dummyVikingAssault, unit);
+}
+
+sc2::Unit Util::CreateDummyStimedMarineFromUnit(const sc2::Unit * unit)
+{
+	sc2::Unit dummyStimedMarine = CreateDummyFromUnit(m_dummyStimedMarine, unit);
+	dummyStimedMarine.health -= 10;
+	return dummyStimedMarine;
+}
+
+sc2::Unit Util::CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit)
+{
+	sc2::Unit dummyStimedMarauder = CreateDummyFromUnit(m_dummyStimedMarauder, unit);
+	dummyStimedMarauder.health -= 20;
+	return dummyStimedMarauder;
 }
 
 bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
@@ -1457,7 +1512,7 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	if (!target)
 		return 0.f;
 
-	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
+	const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
 	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
 	
 	float maxRange = GetSpecialCaseRange(unit->unit_type, expectedWeaponType, ignoreSpells);
@@ -1907,7 +1962,7 @@ float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 	if (unitHasBuff(unit, sc2::BUFF_ID::STIMPACK) || unitHasBuff(unit, sc2::BUFF_ID::STIMPACKMARAUDER))
 		speedMultiplier *= 1.5f;
 	if (unitHasBuff(unit, sc2::BUFF_ID::MEDIVACSPEEDBOOST))
-		speedMultiplier *= 1.438f;
+		return 4.243f;	// 5.94 on liquipedia, but movement speed in the api is 0.7143 times inferior
 	// Check for our speed upgrades
 	if (unit->alliance == sc2::Unit::Self)
 	{
@@ -2471,13 +2526,26 @@ void Util::TimeControlDecreaseSpeed()
 	}
 }
 
-bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot)
+float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot)
 {
+	return SimulateCombat(units, units, enemyUnits, bot);
+}
+
+/**
+ * Uses the combat simulator of libvoxel that simulates units attacking each other, but without considering the positions of units.
+ * Returns a value between 1 and 0, representing the army supply remaining after the fight.
+ */
+float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, CCBot & bot)
+{
+	if (units.empty() || simulatedUnits.empty())
+		return 0.f;
+	if (enemyUnits.empty())
+		return 1.f;
 	const int playerId = GetSelfPlayerId(bot);
 	CombatState state;
 	for(int i=0; i<2; ++i)
 	{
-		const sc2::Units & playerUnits = i == 0 ? units : enemyUnits;
+		const sc2::Units & playerUnits = i == 0 ? simulatedUnits : enemyUnits;
 		for (const auto unit : playerUnits)
 		{
 			// Since bunkers deal no damage in the simulation, we swap them for 4 Marines with extra health
@@ -2490,6 +2558,14 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 			else
 				state.units.push_back(CombatUnit(*unit));
 		}
+	}
+	
+	// Calculate our army score to compare after the fight
+	float armySupplyScore = 0.f;
+	for (const auto unit : units)
+	{
+		const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
+		armySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit->health / unit->health_max);
 	}
 
 	CombatUpgrades player1upgrades = {};
@@ -2506,9 +2582,22 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 	// Simulate for at most 100 *game* seconds
 	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
 	settings.maxTime = 100;
-	CombatResult outcome = m_simulator->predict_engage(state, settings);
+	const CombatResult outcome = m_simulator->predict_engage(state, settings);
 	const int winner = outcome.state.owner_with_best_outcome();
-	return winner == playerId;
+	if (winner != playerId)
+		return 0.f;
+	
+	float resultArmySupplyScore = 0.f;
+	for (const auto & unit : outcome.state.units)
+	{
+		if (unit.owner == playerId && unit.health > 0)
+		{
+			const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[sc2::UnitTypeID(unit.type)];
+			resultArmySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit.health / unit.health_max);
+		}
+	}
+	const float armyRating = resultArmySupplyScore / armySupplyScore;
+	return armyRating;
 }
 
 int Util::GetSelfPlayerId(CCBot & bot)

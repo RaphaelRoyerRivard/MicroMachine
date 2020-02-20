@@ -1256,8 +1256,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		return false;
 
 	float unitsPower = 0.f;
+	float stimedUnitsPowerDifference = 0.f;
 	float targetsPower = 0.f;
 	bool morphFlyingVikings = false;
+	bool useStim = false;
+	std::map<const sc2::Unit *, sc2::Unit> simulatedStimedUnits;
 	std::map<const sc2::Unit*, const sc2::Unit*> closeUnitsTarget;
 
 	// The harass mode deactivation is a hack to not ignore ranged targets
@@ -1444,9 +1447,16 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			// If the unit has a target, add it to the close units and calculate its power
 			if (unitTarget)
 			{
+				const auto unitPower = Util::GetUnitPower(unitToSave, unitTarget, m_bot);
+				// If the unit can use Stim we simulate it to compare and find if it is worth using it
+				if (CanUseStim(unitToSave))
+				{
+					simulatedStimedUnits[unitToSave] = unitToSave->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE ? Util::CreateDummyStimedMarineFromUnit(unitToSave) : Util::CreateDummyStimedMarauderFromUnit(unitToSave);
+					stimedUnitsPowerDifference += Util::GetUnitPower(&simulatedStimedUnits[unitToSave], unitTarget, m_bot) - unitPower;
+				}
 				closeUnitsSet.insert(unitToSave);
 				closeUnitsTarget[unitToSave] = unitTarget;
-				unitsPower += Util::GetUnitPower(unitToSave, unitTarget, m_bot);
+				unitsPower += unitPower;
 				float unitRange = Util::GetAttackRangeForTarget(unitToSave, unitTarget, m_bot);
 				if (minUnitRange < 0 || unitRange < minUnitRange)
 					minUnitRange = unitRange;
@@ -1550,6 +1560,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	if (minUnitRange - maxThreatRange >= 2.f)
 		return false;
 
+	const bool enemyHasLongRangeUnits = maxThreatRange >= 10;
+
 	sc2::Units vikings;
 	sc2::Units tempests;
 	int injuredVikings = 0;
@@ -1575,28 +1587,53 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
-	bool winSimulation = Util::SimulateCombat(closeUnits, threatsToKeep, m_bot);
-	m_bot.StopProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
-	const bool formulaWin = unitsPower >= targetsPower;
+	float simulationResult = Util::SimulateCombat(closeUnits, threatsToKeep, m_bot);
+	bool winSimulation = simulationResult > 0.f;
+	bool formulaWin = unitsPower >= targetsPower;
 	bool shouldFight = winSimulation && formulaWin;
 
-	if(!vikings.empty() && !tempests.empty())
+	if (!simulatedStimedUnits.empty())
 	{
-		const auto otherEnemies = threatsToKeep.size() - tempests.size();
-		if (!winSimulation && otherEnemies > 0)
+		sc2::Units units;
+		for (const auto closeUnit : closeUnitsSet)
 		{
-			winSimulation = Util::SimulateCombat(vikings, tempests, m_bot);
+			const auto it = simulatedStimedUnits.find(closeUnit);
+			if (it != simulatedStimedUnits.end())
+				units.push_back(&it->second);
+			else
+				units.push_back(closeUnit);
 		}
-		shouldFight = winSimulation;
-		std::stringstream ss;
-		ss << getSquad()->getName() << ": " << vikings.size() << " Vikings (" << injuredVikings << " injured) vs " << tempests.size() << " Tempests (" << injuredTempests << " injured): " << (winSimulation ? "win" : "LOSE");
-		Util::Log(__FUNCTION__, ss.str(), m_bot);
-		m_bot.Commander().Combat().SetLogVikingActions(true);
+		const float stimedSimulationResult = Util::SimulateCombat(closeUnits, units, threatsToKeep, m_bot);
+		if (stimedSimulationResult > simulationResult && (enemyHasLongRangeUnits || unitsPower + stimedUnitsPowerDifference >= targetsPower))
+		{
+			winSimulation = true;
+			formulaWin = true;
+			shouldFight = true;
+			useStim = true;
+		}
 	}
-	else if(maxThreatRange >= 10)
+
+	if (!shouldFight)
 	{
-		shouldFight = winSimulation;	// We consider only the simulation for long range enemies because our formula is shit
+		if (!winSimulation && !vikings.empty() && !tempests.empty())
+		{
+			const auto otherEnemies = threatsToKeep.size() - tempests.size();
+			if (otherEnemies > 0)
+			{
+				winSimulation = Util::SimulateCombat(vikings, tempests, m_bot) > 0.f;
+			}
+			shouldFight = winSimulation;
+			std::stringstream ss;
+			ss << getSquad()->getName() << ": " << vikings.size() << " Vikings (" << injuredVikings << " injured) vs " << tempests.size() << " Tempests (" << injuredTempests << " injured): " << (winSimulation ? "win" : "LOSE");
+			Util::Log(__FUNCTION__, ss.str(), m_bot);
+			m_bot.Commander().Combat().SetLogVikingActions(true);
+		}
+		else if (enemyHasLongRangeUnits)
+		{
+			shouldFight = winSimulation;	// We consider only the simulation for long range enemies because our formula is shit
+		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
 
 	// Save result
 	m_combatSimulationResults[closeUnitsSet] = shouldFight;
@@ -1638,28 +1675,31 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			}
 		}
 
-		// Check if we should morph the Viking
-		if (shouldFight && morphFlyingVikings && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+		if (shouldFight)
 		{
-			const auto realViking = m_bot.GetUnitPtr(unit->tag);
-			if (realViking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+			// Morph the Viking
+			if (morphFlyingVikings && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 			{
-				const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, true, VIKING_MORPH_FRAME_COUNT, ACTION_DESCRIPTION_THREAT_FIGHT_MORPH);
-				m_bot.Commander().Combat().PlanAction(realViking, action);
+				const auto realViking = m_bot.GetUnitPtr(unit->tag);
+				if (realViking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+				{
+					const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, true, VIKING_MORPH_FRAME_COUNT, ACTION_DESCRIPTION_THREAT_FIGHT_MORPH);
+					m_bot.Commander().Combat().PlanAction(realViking, action);
+					continue;
+				}
+			}
+
+			// Micro the Medivac
+			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
+			{
+				ExecuteHealLogic(unit, allyCombatUnits, false);
 				continue;
 			}
-		}
 
-		// Micro the Medivac
-		if (shouldFight && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
-		{
-			ExecuteHealLogic(unit, allyCombatUnits, false);
-			continue;
+			// Stim the Marine or Marauder
+			if (useStim && ExecuteStimLogic(unit))
+				continue;
 		}
-
-		// Stim
-		if (shouldFight && ExecuteStimLogic(unit))
-			continue;
 
 		auto movePosition = CCPosition();
 		const bool injured = unit->health / unit->health_max < 0.5f;
@@ -2023,6 +2063,16 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 
 bool RangedManager::ExecuteStimLogic(const sc2::Unit * unit) const
 {
+	if (!CanUseStim(unit))
+		return false;
+
+	const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::EFFECT_STIM, true, 0, "Stim");
+	m_bot.Commander().Combat().PlanAction(unit, action);
+	return true;
+}
+
+bool RangedManager::CanUseStim(const sc2::Unit * unit) const
+{
 	if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK))
 		return false;
 
@@ -2036,8 +2086,6 @@ bool RangedManager::ExecuteStimLogic(const sc2::Unit * unit) const
 	if (Util::unitHasBuff(unit, isMarine ? sc2::BUFF_ID::STIMPACK : sc2::BUFF_ID::STIMPACKMARAUDER))
 		return false;
 
-	const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::EFFECT_STIM, true, 0, "Stim");
-	m_bot.Commander().Combat().PlanAction(unit, action);
 	return true;
 }
 
