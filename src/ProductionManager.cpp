@@ -1882,6 +1882,9 @@ bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker
 		return false;
 	}
 
+	if (!worker.isValid())
+		return false;
+
 	//float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(b.finalPosition), false, m_bot);
 	float distance = Util::Dist(worker.getPosition(), Util::GetPosition(b.finalPosition));
 	const float speed = 2.8125f;//Always the same for workers, Util::getSpeedOfUnit(worker.getUnitPtr(), m_bot);
