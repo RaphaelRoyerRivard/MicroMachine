@@ -28,6 +28,9 @@ namespace Util
 	static std::vector<std::vector<bool>> m_pathable;
 	static std::vector<std::vector<bool>> m_placement;
 	static std::vector<std::vector<float>> m_terrainHeight;
+	static sc2::Unit * m_dummyVikingAssault;
+	static sc2::Unit * m_dummyStimedMarine;
+	static sc2::Unit * m_dummyStimedMarauder;
 
 	static bool allowDebug;
 	
@@ -116,7 +119,7 @@ namespace Util
 		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, float maxInfluence, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, bool shouldHeal, CCBot & bot);
-		CCPosition FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, CCBot & bot);
+		CCPosition FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, bool moveFarther, CCBot & bot);
 		float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);
 		CCPosition FindOptimalPathPosition(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot);
 		CCPosition FindOptimalPathToDodgeEffectAwayFromGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot);
@@ -124,7 +127,7 @@ namespace Util
 		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, float maxInfluence, bool flee, CCBot & bot);
 		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, float maxInfluence, bool flee, bool limitSearch, FailureReason & failureReason, CCBot & bot);
 		CCTilePosition GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
-		CCPosition GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, CCBot & bot);
+		CCPosition GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, bool moveFarther, CCBot & bot);
 		std::list<CCPosition> GetPositionListFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		float CalcEuclidianDistanceHeuristic(CCTilePosition from, CCTilePosition to, CCTilePosition secondaryGoal, CCBot & bot);
 		bool HasInfluenceOnTile(const CCTilePosition position, bool isFlying, CCBot & bot);
@@ -165,6 +168,15 @@ namespace Util
 	void CCUnitsToSc2Units(const std::vector<Unit> & units, sc2::Units & outUnits);
 	void Sc2UnitsToCCUnits(const sc2::Units & units, std::vector<Unit> & outUnits, CCBot & bot);
 
+	void CreateDummyUnits(CCBot & bot);
+	void CreateDummyVikingAssault(CCBot & bot);
+	void CreateDummyStimedMarine(CCBot & bot);
+	void CreateDummyStimedMarauder(CCBot & bot);
+	void SetBaseUnitValues(sc2::Unit * unit, CCBot & bot);
+	sc2::Unit CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit);
+	sc2::Unit CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit);
+	sc2::Unit CreateDummyStimedMarineFromUnit(const sc2::Unit * unit);
+	sc2::Unit CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit);
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
 	bool CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot);
     float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells = false);
@@ -183,11 +195,13 @@ namespace Util
 	float GetDps(const sc2::Unit * unit, CCBot & bot);
 	float GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetType, CCBot & bot);
     float GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
+	float GetAttackSpeedMultiplier(const sc2::Unit * unit);
     float GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	float GetDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
 	float GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
-	std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot);
-	std::vector<const sc2::Unit *> getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot);
+	void getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::Units & outThreats, CCBot & bot);
+	sc2::Units getThreats(const sc2::Unit * unit, const sc2::Units & targets, CCBot & bot);
+	sc2::Units getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot);
 	float getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCBot & m_bot);
 	float getThreatRange(bool isFlying, CCPosition position, float radius, const sc2::Unit * threat, CCBot & m_bot);
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
@@ -201,6 +215,7 @@ namespace Util
 	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
+	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbilities & availableAbilities);
     
     std::string     GetStringFromRace(const sc2::Race & race);
     sc2::Race       GetRaceFromString(const std::string & race);
@@ -280,5 +295,7 @@ namespace Util
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
 	float DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point);
 
-	bool SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
+	float SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
+	float SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, CCBot & bot);
+	int GetSelfPlayerId(CCBot & bot);
 };

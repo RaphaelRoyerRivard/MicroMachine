@@ -761,7 +761,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 #endif
 
-					if (hellionCount >= 2 && !isTechQueuedOrStarted(MetaTypeEnum::InfernalPreIgniter) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HIGHCAPACITYBARRELS))
+					if (hellionCount >= 5 && !m_bot.Strategy().isEarlyRushed() && !isTechQueuedOrStarted(MetaTypeEnum::InfernalPreIgniter) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HIGHCAPACITYBARRELS))
 					{
 						queueTech(MetaTypeEnum::InfernalPreIgniter);
 					}
@@ -803,7 +803,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings() || proxyMaraudersStrategy)
 				{
 #ifndef NO_UNITS
-					if (vikingCount < 1 && !m_queue.contains(MetaTypeEnum::Viking))
+					const int minVikingCount = proxyMaraudersStrategy ? 2 : 1;
+					if (vikingCount < minVikingCount && !m_queue.contains(MetaTypeEnum::Viking))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
@@ -2086,6 +2087,9 @@ bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker
 	{
 		return false;
 	}
+
+	if (!worker.isValid())
+		return false;
 
 	//float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(b.finalPosition), false, m_bot);
 	float distance = Util::Dist(worker.getPosition(), Util::GetPosition(b.finalPosition));

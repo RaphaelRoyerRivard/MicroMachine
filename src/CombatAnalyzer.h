@@ -24,6 +24,8 @@ class CombatAnalyzer {
 	std::map<sc2::UNIT_TYPEID, int> deadCountByType;
 	std::list<std::pair<CCPosition, uint32_t>> m_areasUnderDetection;
 
+	bool m_enemyHasCombatAirUnit = false;
+
 	//Stats for each unit types
 	std::map<sc2::UNIT_TYPEID, int> lightCountByType;
 	int totalGroundLightCount = 0;
@@ -113,6 +115,7 @@ public:
 	bool shouldProduceGroundAntiAir();
 	bool shouldProduceAirAntiGround();
 	bool shouldProduceAirAntiAir();
+	bool enemyHasCombatAirUnit() const { return m_enemyHasCombatAirUnit; }
 	void detectUpgrades(Unit & unit, UnitState & state);
 	void detectTechs(Unit & unit, UnitState & state);
 };

@@ -67,6 +67,11 @@ const UnitType & Unit::getType() const
     return m_unitType;
 }
 
+bool Unit::hasAttribute(sc2::Attribute attribute) const
+{
+	const auto & unitData = getUnitData(m_unit->unit_type);
+	return Util::Contains(attribute, unitData.attributes);
+}
 
 CCPosition Unit::getPosition() const
 {

@@ -51,6 +51,7 @@ void CombatAnalyzer::lowPriorityChecks()
 	psiCountByType.clear();
 	massiveCountByType.clear();
 
+	m_enemyHasCombatAirUnit = false;
 	totalKnownWorkerCount = 0;
 	totalAirUnitsCount = 0;
 	totalGroundUnitsCount = 0;
@@ -112,7 +113,12 @@ void CombatAnalyzer::lowPriorityChecks()
 		}
 
 		if (unit.isFlying())
+		{
 			totalAirUnitsCount++;
+			// This will ignore Observers, Warp Prisms and Overlords (+Cocoons)
+			if (unit.getType().isCombatUnit() && (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) > 0 || unit.getUnitPtr()->energy_max > 0))
+				m_enemyHasCombatAirUnit = true;
+		}
 		else
 			totalGroundUnitsCount++;
 
@@ -405,6 +411,26 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 	m_bot.StopProfiling("0.10.4.4.2.2        updateState");
 	if (state.WasAttacked())
 	{
+		// TODO remove when we can detect all range upgrades
+		m_bot.StartProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
+		const CCTilePosition tilePosition = Util::GetTilePosition(unit.getPosition());
+		if (Util::PathFinding::HasCombatInfluenceOnTile(tilePosition, unit.isFlying(), m_bot))
+		{
+			if (unit.isFlying() && !m_bot.Strategy().enemyHasHiSecAutoTracking())
+			{
+				for (const auto & enemyMissileTurret : m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
+				{
+					if (Util::DistSq(unit, enemyMissileTurret) < 10 * 10)
+					{
+						m_bot.Strategy().setEnemyHasHiSecAutoTracking(true);
+						Util::Log(__FUNCTION__, unit.getType().getName() + " got hit near by a missile turret at a distance of " + std::to_string(Util::Dist(unit, enemyMissileTurret)), m_bot);
+						m_bot.Actions()->SendChat("Is that a range upgrade on your missile turrets?");
+						break;
+					}
+				}
+			}
+		}
+		m_bot.StopProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
 		m_bot.StartProfiling("0.10.4.4.2.1        saveDetectedArea");
 		if (unit.getUnitPtr()->cloak == sc2::Unit::CloakedAllied && !Util::IsPositionUnderDetection(unit.getPosition(), m_bot))
 		{

@@ -31,11 +31,16 @@ struct CombatUnit {
 	float energy;
 	bool is_flying;
 	float buffTimer = 0;
+	std::vector<sc2::BUFF_ID> buffs;
 	void modifyHealth(float delta);
 
 	CombatUnit() {}
-	CombatUnit (int owner, sc2::UNIT_TYPEID type, int health, bool flying) : owner(owner), type(type), health(health), health_max(health), shield(0), shield_max(0), energy(50), is_flying(flying) {}
-	CombatUnit(const sc2::Unit& unit) : owner(unit.owner), type(unit.unit_type), health(unit.health), health_max(unit.health_max), shield(unit.shield), shield_max(unit.shield_max), energy(unit.energy), is_flying(unit.is_flying) {}
+	CombatUnit(int owner, sc2::UNIT_TYPEID type, int health, bool flying) : owner(owner), type(type), health(health), health_max(health), shield(0), shield_max(0), energy(50), is_flying(flying), buffs({}) {}
+	CombatUnit(const sc2::Unit& unit) : owner(unit.owner), type(unit.unit_type), health(unit.health), health_max(unit.health_max), shield(unit.shield), shield_max(unit.shield_max), energy(unit.energy), is_flying(unit.is_flying)
+	{
+		for (const auto & buff : unit.buffs)
+			buffs.push_back(buff.ToType());
+	}
 };
 
 struct CombatState {

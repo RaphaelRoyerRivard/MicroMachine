@@ -42,6 +42,10 @@ private:
 	bool m_harassMode = false;
 	std::map<const sc2::Unit *, FlyingHelperMission> m_cycloneFlyingHelpers;
 	std::map<const sc2::Unit *, const sc2::Unit *> m_cyclonesWithHelper;
+	std::map<std::set<const sc2::Unit *>, bool> m_combatSimulationResults;
+	std::map<sc2::Tag, sc2::Unit> m_dummyAssaultVikings;
+	std::map<const sc2::Unit *, sc2::Units> m_threatsForUnit;
+	std::map<const sc2::Unit *, std::map<std::set<const sc2::Unit *>, const sc2::Unit *>> m_threatTargetForUnit;	//<unit, <potential targets, target>>
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
 
 	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
@@ -50,7 +54,7 @@ private:
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets, sc2::Units &otherSquadsUnits);
 	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets, sc2::AvailableAbilities &rangedUnitAbilities, sc2::Units &otherSquadsUnits);
 	bool MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbilities & abilities);
-	bool IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started, sc2::AvailableAbilities & abilities) const;
+	bool IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started, const sc2::AvailableAbilities & abilities) const;
 	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit, bool checkInfluence = true) const;
 	bool ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger) const;
 	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger);
@@ -68,12 +72,17 @@ private:
 	const sc2::Unit * ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, bool & lockOnAvailable, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * target, sc2::AvailableAbilities & abilities);
 	void LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * target);
 	bool CycloneHasTarget(const sc2::Unit * cyclone) const;
-	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & threats, sc2::Units & otherSquadsUnits);
-	void ExecuteCycloneLogic(const sc2::Unit * rangedUnit, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal, sc2::AvailableAbilities & abilities);
-	bool ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper);
-	bool ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats);
+	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & rangedUnitTargets, sc2::Units & otherSquadsUnits);
+	void ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDisabled, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal, sc2::AvailableAbilities & abilities);
+	bool ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper);
+	bool ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, sc2::Units & allyUnits, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper, sc2::AvailableAbilities & abilities);
 	bool ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats, CCPosition goal);
 	bool ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & targets);
+	bool ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal) const;
+	const sc2::Unit * GetHealTarget(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool filterFullHealthUnits) const;
+	bool ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target) const;
+	bool ExecuteStimLogic(const sc2::Unit * unit) const;
+	bool CanUseStim(const sc2::Unit * unit) const;
 	bool QueryIsAbilityAvailable(const sc2::Unit* unit, sc2::ABILITY_ID abilityId) const;
 	bool CanUseKD8Charge(const sc2::Unit * reaper);
 	bool ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::Units & threats);
@@ -85,7 +94,8 @@ private:
 	CCPosition GetAttractionVectorToFriendlyUnits(const sc2::Unit * rangedUnit, sc2::Units & rangedUnits) const;
 	bool MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const;
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
-	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits = false) const;
+	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool filterHigherUnits = false, bool considerOnlyUnitsInRange = false, bool filterPassiveBuildings = true);
+	sc2::Units & getThreats(const sc2::Unit * rangedUnit, const sc2::Units & targets);
 	void CleanLockOnTargets() const;
 	void CalcBestFlyingCycloneHelpers();
 };

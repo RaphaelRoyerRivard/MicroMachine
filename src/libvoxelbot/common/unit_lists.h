@@ -27,9 +27,9 @@ struct AvailableUnitTypes {
     AvailableUnitTypes(std::initializer_list<BuildOrderItem> types);
 
     int getIndex (sc2::UPGRADE_ID upgrade) const {
-        assert((int)upgrade < (int)upgrade2index.size());
+        //assert((int)upgrade < (int)upgrade2index.size());
         auto res = upgrade2index[(int)upgrade];
-        assert(res != -1);
+        //assert(res != -1);
         return res;
     }
 

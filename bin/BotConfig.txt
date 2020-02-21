@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.7.17",
+        "BotVersion"                : "1.8.3",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "Random",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "DiscoBloodbathLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -124,7 +124,8 @@
         "BuildingSpacing"           : 0,
         "PylonSpacing"              : 3,
         "SelectStartingBuildBasedOnHistory" : true,
-        "PrintGreetingMessage"      : true
+        "PrintGreetingMessage"      : false,
+        "RandomProxyLocation"       : false
     },
 
     "Debug" :
@@ -134,7 +135,7 @@
 		"TimeControl"				: true,
 		
         "DrawGameInfo"              : false, 
-        "DrawProductionInfo"        : false,
+        "DrawProductionInfo"        : true,
         "DrawBaseLocationInfo"      : false,
         "DrawBaseTiles"             : false,
         "DrawStartingRamp"		    : false,
@@ -162,7 +163,8 @@
 		"DrawDamageHealthRatio"		: true,
         "DrawRangedUnitActions"     : false,
         "DrawResourcesProximity"    : false,
-        "DrawCombatInformation"     : false
+        "DrawCombatInformation"     : false,
+        "DrawPathfindingTiles"      : false
     },
     
     "Modules" :

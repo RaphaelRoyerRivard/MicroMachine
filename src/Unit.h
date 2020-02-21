@@ -35,7 +35,7 @@ public:
     bool operator == (const Unit & rhs) const;
 
     const UnitType & getType() const;
-
+	bool hasAttribute(sc2::Attribute attribute) const;
     CCPosition getPosition() const;
     CCTilePosition getTilePosition() const;
 	float getHitPointsPercentage() const;

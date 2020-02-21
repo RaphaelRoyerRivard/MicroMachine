@@ -48,12 +48,20 @@ class StrategyManager
 		"PROXY_CYCLONES",
 		"EARLY_EXPAND",
 		"STANDARD",
-		"WORKER_RUSH",
+		"WORKER_RUSH",	// removed
 		"PROXY_MARAUDERS"
 	};
 
 	std::map<StartingStrategy, sc2::Race> RACE_SPECIFIC_STRATEGIES = {
 		{ PROXY_MARAUDERS, sc2::Race::Protoss }
+	};
+
+	// Only strategies in this list and in the race specific list can be chosen
+	std::vector<std::string> STRATEGY_ORDER = {
+		"PROXY_MARAUDERS",
+		"EARLY_EXPAND",
+		"PROXY_CYCLONES",
+		"STANDARD"
 	};
 	
     CCBot & m_bot;

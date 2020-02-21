@@ -307,16 +307,19 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 		auto& enemyUnitType = enemyUnit.getType();
 		if (enemyUnitType.isCombatUnit() || enemyUnitType.isWorker() || (enemyUnitType.isAttackingBuilding() && enemyUnit.getUnitPtr()->build_progress >= 1.f))
 		{
-			if(enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
+			if (enemyUnit.getAPIUnitType() != sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || enemyUnit.isPowered())
 			{
-				const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
-				const float radius = Util::GetSpecialCaseRange(enemyUnit.getAPIUnitType(), sc2::Weapon::TargetType::Ground);
-				updateInfluenceMap(dps, radius, 1.f, enemyUnit.getPosition(), true, true, true, false);
-			}
-			else
-			{
-				updateGroundInfluenceMapForUnit(enemyUnit);
-				updateAirInfluenceMapForUnit(enemyUnit);
+				if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
+				{
+					const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
+					const float radius = Util::GetSpecialCaseRange(enemyUnit.getAPIUnitType(), sc2::Weapon::TargetType::Ground);
+					updateInfluenceMap(dps, radius, 1.f, enemyUnit.getPosition(), true, true, true, false);
+				}
+				else
+				{
+					updateGroundInfluenceMapForUnit(enemyUnit);
+					updateAirInfluenceMapForUnit(enemyUnit);
+				}
 			}
 		}
 		if(updateBlockedTiles && enemyUnitType.isBuilding() && !enemyUnit.isFlying() && enemyUnit.getUnitPtr()->unit_type != sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
@@ -422,12 +425,16 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 				targetType = sc2::Weapon::TargetType::Any;
 				break;*/
 		}
-		for(auto & pos : effect.positions)
+		if (radius > 0)
 		{
-			if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Air)
-				updateInfluenceMap(dps, radius, 1.f, pos, false, true, true, false);
-			if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Ground)
-				updateInfluenceMap(dps, radius, 1.f, pos, true, true, true, false);
+			radius += 1;	// just a buffer to prevent our units to push the others into the effect's range
+			for (auto & pos : effect.positions)
+			{
+				if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Air)
+					updateInfluenceMap(dps, radius, 1.f, pos, false, true, true, false);
+				if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Ground)
+					updateInfluenceMap(dps, radius, 1.f, pos, true, true, true, false);
+			}
 		}
 	}
 }
@@ -452,7 +459,7 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 		return;
 	if (!ground && enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_TEMPEST)
 		range += 2;
-	const float speed = std::max(1.5f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
+	const float speed = std::max(2.5f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
 	updateInfluenceMap(dps, range, speed, enemyUnit.getPosition(), ground, !enemyUnit.isFlying(), false, enemyUnit.getUnitPtr()->cloak == sc2::Unit::Cloaked);
 }
 
@@ -828,6 +835,7 @@ void CombatCommander::updateHarassSquads()
 		const sc2::UnitTypeID unitTypeId = unit.getType().getAPIUnitType();
 		if ((unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARAUDER
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_MEDIVAC
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_REAPER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE
@@ -955,7 +963,7 @@ void CombatCommander::updateHarassSquads()
 			enemySupply += enemyUnit.getType().supplyRequired();
 		}
 	}
-	m_winAttackSimulation = Util::SimulateCombat(allyUnits, enemyUnits, m_bot);
+	m_winAttackSimulation = Util::SimulateCombat(allyUnits, enemyUnits, m_bot) > 0.f;
 	m_biggerArmy = allySupply >= enemySupply;
 
 	const SquadOrder harassOrder(SquadOrderTypes::Harass, GetClosestEnemyBaseLocation(), HarassOrderRadius, "Harass");
@@ -1099,7 +1107,7 @@ void CombatCommander::updateDefenseBuildings()
 
 void CombatCommander::handleWall()
 {
-	int SUPPLYDEPOT_DISTANCE = 7 * 7;	// 7 tiles ^ 2, because we use DistSq
+	int SUPPLYDEPOT_DISTANCE = 10 * 10;	// 10 tiles ^ 2, because we use DistSq
 
 	auto wallCenter = m_bot.Buildings().getWallPosition();
 	auto & enemies = m_bot.GetEnemyUnits();
