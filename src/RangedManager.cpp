@@ -1287,7 +1287,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	}
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
-	if (!target || !isTargetRanged(target) || (unitShouldHeal && !closeToEnemyTempest))
+	if (!target || !isTargetRanged(target))
 	{
 		m_harassMode = true;
 		return false;
@@ -1466,6 +1466,12 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	m_bot.StopProfiling("0.10.4.1.5.1.5.1          CalcCloseUnits");
 
 	if (closeUnitsSet.empty() || !Util::Contains(rangedUnit, closeUnitsSet))
+	{
+		m_harassMode = true;
+		return false;
+	}
+
+	if (closeUnitsSet.size() > 1 && unitShouldHeal && !closeToEnemyTempest)
 	{
 		m_harassMode = true;
 		return false;
