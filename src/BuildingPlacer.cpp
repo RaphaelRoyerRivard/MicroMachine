@@ -532,7 +532,7 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 	{
 		//We validate the player because if the opponent expand to a location we own (proxy), we don't want to build refineries there.
 		// base under attack condition was commented because it broke the bot when getting cannon rushed and also there is already pathfinding done to make sure the path to the geyser is safe.
-		if (!base->getResourceDepot().isValid() && base->getResourceDepot().getPlayer() == Players::Self)// || base->isUnderAttack())
+		if (!base->getResourceDepot().isValid() || base->getResourceDepot().getPlayer() != Players::Self)// || base->isUnderAttack())
 		{
 			continue;
 		}

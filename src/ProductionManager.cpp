@@ -1217,7 +1217,7 @@ void ProductionManager::lowPriorityChecks()
 			{
 				for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
 				{
-					if (!base->getResourceDepot().isValid())
+					if (!base->getResourceDepot().isValid() || base->getResourceDepot().getPlayer() != Players::Self)
 						continue;
 					
 					auto hasTurret = false;
