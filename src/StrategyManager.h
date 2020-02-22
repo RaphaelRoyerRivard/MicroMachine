@@ -27,6 +27,7 @@ enum StrategyPostBuildOrder {
 	NO_STRATEGY = -1,
 	TERRAN_CLASSIC = 0,
 	TERRAN_VS_PROTOSS = 1,
+	MARINE_MARAUDER = 2,
 	WORKER_RUSH_DEFENSE = 3
 };
 
@@ -102,6 +103,7 @@ public:
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
 	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
 	bool isProxyStartingStrategy() const;
+	bool isProxyFactoryStartingStrategy() const;
 	bool wasProxyStartingStrategy() const;
 	StrategyPostBuildOrder getCurrentStrategyPostBuildOrder() const;
     bool scoutConditionIsMet() const;

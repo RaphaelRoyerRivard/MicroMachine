@@ -251,6 +251,11 @@ bool StrategyManager::isProxyStartingStrategy() const
 	return m_startingStrategy == PROXY_CYCLONES || m_startingStrategy == PROXY_MARAUDERS;
 }
 
+bool StrategyManager::isProxyFactoryStartingStrategy() const
+{
+	return m_startingStrategy == PROXY_CYCLONES;
+}
+
 bool StrategyManager::wasProxyStartingStrategy() const
 {
 	return m_initialStartingStrategy == PROXY_CYCLONES || m_initialStartingStrategy == PROXY_MARAUDERS;
@@ -275,7 +280,7 @@ StrategyPostBuildOrder StrategyManager::getCurrentStrategyPostBuildOrder() const
 	{
 		//return TERRAN_VS_PROTOSS;
 	}
-	return TERRAN_CLASSIC;
+	return MARINE_MARAUDER;//TERRAN_CLASSIC;
 }
 
 const BuildOrder & StrategyManager::getOpeningBookBuildOrder() const
