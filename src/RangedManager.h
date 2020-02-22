@@ -47,6 +47,7 @@ private:
 	std::map<const sc2::Unit *, sc2::Units> m_threatsForUnit;
 	std::map<const sc2::Unit *, std::map<std::set<const sc2::Unit *>, const sc2::Unit *>> m_threatTargetForUnit;	//<unit, <potential targets, target>>
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
+	bool m_marauderAttackInitiated = false;
 
 	bool isAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit) const;
 	void setNextFrameAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * rangedUnit, uint32_t nextAvailableFrame);

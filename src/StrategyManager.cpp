@@ -195,6 +195,24 @@ void StrategyManager::onFrame(bool executeMacro)
 					m_bot.Commander().Production().clearQueue();
 				}
 			}
+			else if (m_startingStrategy == PROXY_MARAUDERS && barracksCount == 1)
+			{
+				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+				Unit proxyWorkerToRemove;
+				for (auto & proxyWorker : proxyWorkers)
+				{
+					if (!proxyWorker.isConstructing(MetaTypeEnum::Barracks.getUnitType()))
+					{
+						proxyWorkerToRemove = proxyWorker;
+						break;
+					}
+				}
+				if (proxyWorkerToRemove.isValid())
+				{
+					m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorkerToRemove);
+					proxyWorkerToRemove.move(m_bot.GetStartLocation());
+				}
+			}
 			else if (barracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
 			{
 				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();

@@ -302,6 +302,20 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		{
 			goal = m_bot.GetStartLocation();
 		}
+		else if (isMarauder && m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS)
+		{
+			if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), true) < 3)
+			{
+				if (!m_marauderAttackInitiated)
+				{
+					goal = Util::GetPosition(m_bot.Buildings().getProxyLocation());
+				}
+			}
+			else
+			{
+				m_marauderAttackInitiated = true;
+			}
+		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 

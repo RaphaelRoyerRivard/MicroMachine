@@ -192,6 +192,28 @@ void WorkerManager::handleMineralWorkers()
 {
 	handleMules();
 
+	Unit proxyWorker;
+	// Send second proxy worker for proxy Marauders strategy
+	if (m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS 
+		&& m_workerData.getProxyWorkers().size() == 1 
+		&& m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED, true) == 1)
+	{
+		float minDist = 0.f;
+		const auto & workers = getWorkers();
+		const auto rampPosition = Util::GetPosition(m_bot.Buildings().getWallPosition());
+		for (const auto & worker : workers)
+		{
+			const auto dist = Util::DistSq(worker, rampPosition);
+			if (!proxyWorker.isValid() || dist < minDist)
+			{
+				minDist = dist;
+				proxyWorker = worker;
+			}
+		}
+		proxyWorker.move(m_bot.Buildings().getProxyLocation());
+		m_workerData.setProxyWorker(proxyWorker);
+	}
+
 	//split workers on first frame
 	//TODO can be improved by preventing the worker from retargetting a very far mineral patch
 	if (!m_isFirstFrame || (int)m_bot.GetCurrentFrame() == 0)
@@ -217,7 +239,6 @@ void WorkerManager::handleMineralWorkers()
 	}
 	m_bot.StopProfiling("0.7.2.2     selectMinerals");
 
-	Unit proxyWorker;
 	if (m_bot.Strategy().isProxyStartingStrategy())
 	{
 		float minDist = 0.f;
