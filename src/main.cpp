@@ -267,7 +267,7 @@ int main(int argc, char* argv[])
 	{
 		bool loadSettings = false;
 		JSONTools::ReadBool("LoadSettings", j["SC2API"], loadSettings);
-		CCBot bot(botVersion);
+		CCBot bot(botVersion, !ForceStepMode);
 		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings, AllowDebug);
 
 		return 0;
@@ -282,8 +282,8 @@ int main(int argc, char* argv[])
 	}
 
     // Add the custom bot, it will control the players.
-    CCBot bot(botVersion);
-    CCBot bot2(botVersion);
+    CCBot bot(botVersion, !ForceStepMode);
+    CCBot bot2(botVersion, !ForceStepMode);
 
     Human human_bot;
 
@@ -315,7 +315,8 @@ int main(int argc, char* argv[])
     //          Setting this = N means the bot's onFrame gets called once every N frames
     //          The bot may crash or do unexpected things if its logic is not called every frame
     coordinator.SetStepSize(stepSize);
-    coordinator.SetRealtime(PlayerOneIsHuman && !ForceStepMode);
+    //coordinator.SetRealtime(PlayerOneIsHuman && !ForceStepMode);
+    coordinator.SetRealtime(!ForceStepMode);
 	coordinator.SetRawAffectsSelection(!AllowDebug);
 
     coordinator.SetParticipants({

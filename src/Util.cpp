@@ -91,12 +91,6 @@ struct Util::PathFinding::IMNode
 
 void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 {
-	// Initialize combat simulator
-	initMappings();
-	m_simulator = new CombatPredictor();
-	m_simulator->init();
-	m_simulator->getCombatEnvironment({}, {});
-	
 	switch (race)
 	{
 		case sc2::Race::Terran:
@@ -163,6 +157,14 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 	}
 
 	CreateDummyUnits(bot);
+}
+
+void Util::InitializeCombatSimulator()
+{
+	initMappings();
+	m_simulator = new CombatPredictor();
+	m_simulator->init();
+	m_simulator->getCombatEnvironment({}, {});
 }
 
 Util::PathFinding::IMNode* getLowestCostNode(std::set<Util::PathFinding::IMNode*> & set)

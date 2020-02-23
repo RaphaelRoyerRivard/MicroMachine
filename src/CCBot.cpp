@@ -1,7 +1,7 @@
 #include "CCBot.h"
 #include "Util.h"
 
-CCBot::CCBot(std::string botVersion)
+CCBot::CCBot(std::string botVersion, bool realtime)
 	: m_map(*this)
 	, m_bases(*this)
 	, m_unitInfo(*this)
@@ -17,6 +17,7 @@ CCBot::CCBot(std::string botVersion)
 	, m_botVersion(botVersion)
 	, m_previousMacroGameLoop(-1)
 	, m_player1IsHuman(false)
+	, m_realtime(realtime)
 {
 }
 
@@ -191,6 +192,8 @@ void CCBot::OnNuclearLaunchDetected() {}
 void CCBot::OnGameStart() //full start
 {	
     m_config.readConfigFile();
+	if (!m_realtime)
+		Util::InitializeCombatSimulator();
 	Util::Initialize(*this, GetPlayerRace(Players::Self), Observation()->GetGameInfo());
 
     // add all the possible start locations on the map
@@ -238,6 +241,11 @@ void CCBot::OnStep()
 	StopProfiling("0 Starcraft II");
 	StartProfiling("0.0 OnStep");	//Do not remove
 	m_gameLoop = Observation()->GetGameLoop();
+	if (m_realtime && !m_combatSimulatorInitialized && m_gameLoop > 50)
+	{
+		Util::InitializeCombatSimulator();
+		m_combatSimulatorInitialized = true;
+	}
 	if (!m_versionMessage.str().empty() && m_gameLoop >= 5)
 	{
 		Actions()->SendChat(m_versionMessage.str(), sc2::ChatChannel::Team);

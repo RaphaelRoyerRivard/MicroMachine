@@ -152,6 +152,7 @@ namespace Util
 	}
 
 	void Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo);
+	void InitializeCombatSimulator();
 	void SetAllowDebug(bool _allowDebug);
 
 	void SetMapName(std::string _mapName);

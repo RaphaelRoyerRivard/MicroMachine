@@ -239,7 +239,8 @@ void ProductionManager::manageBuildOrderQueue()
 		}
 #endif
 
-		if (!m_initialBuildOrderFinished || !ShouldSkipQueueItem(currentItem))	//Check initial BO first, allows to build refinery (and finish the BO) even if our barrack couldnt start for some reason. 
+		//if (!m_initialBuildOrderFinished || !ShouldSkipQueueItem(currentItem))	//Check initial BO first, allows to build refinery (and finish the BO) even if our barrack couldnt start for some reason. 
+		if (!ShouldSkipQueueItem(currentItem))	// Checking the initial BO first makes it so that in realtime we start the refinery before the barracks...
 		{
 			//check if we have the prerequirements.
 			if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
@@ -747,6 +748,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					if (maraudersCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES) && !isTechQueuedOrStarted(MetaTypeEnum::ConcussiveShells))
 					{
 						queueTech(MetaTypeEnum::ConcussiveShells);
+					}
+
+					if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
+					{
+						queueTech(MetaTypeEnum::Stimpack);
 					}
 				}
 #endif
