@@ -1352,16 +1352,21 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 						m_harassMode = true;
 						return true;
 					}
-					else
-					{
-						Util::DisplayError("Could not find an escape path towards target", "", m_bot);
-					}
 				}
 
-				const bool canAttackNow = range <= targetDist && rangedUnit->weapon_cooldown <= 0.f;
-				const int attackDuration = canAttackNow ? getAttackDuration(rangedUnit, target) : 0;
-				const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, false, attackDuration, "AttackThreatCloaked");
-				// Attack the target
+				const bool canAttackNow = range >= targetDist && rangedUnit->weapon_cooldown <= 0.f;
+				RangedUnitAction action;
+				if (canAttackNow)
+				{
+					// Attack the target
+					const int attackDuration = getAttackDuration(rangedUnit, target);
+					action = RangedUnitAction(MicroActionType::AttackUnit, target, false, attackDuration, "AttackThreatCloaked");
+				}
+				else
+				{
+					// Move towards the target
+					action = RangedUnitAction(MicroActionType::Move, target->pos, false, 0, "MoveTowardsThreatCloaked");
+				}
 				m_bot.Commander().Combat().PlanAction(rangedUnit, action);
 				m_harassMode = true;
 				return true;
