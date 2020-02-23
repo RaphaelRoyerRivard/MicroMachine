@@ -196,7 +196,8 @@ void WorkerManager::handleMineralWorkers()
 	// Send second proxy worker for proxy Marauders strategy
 	if (m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS 
 		&& m_workerData.getProxyWorkers().size() == 1 
-		&& m_bot.Buildings().getBuildingCountOfType(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED, true) == 1)
+		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true) == 1
+		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) < 1)
 	{
 		float minDist = 0.f;
 		const auto & workers = getWorkers();
