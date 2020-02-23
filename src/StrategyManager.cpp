@@ -280,7 +280,7 @@ StrategyPostBuildOrder StrategyManager::getCurrentStrategyPostBuildOrder() const
 	{
 		//return TERRAN_VS_PROTOSS;
 	}
-	return MARINE_MARAUDER;//TERRAN_CLASSIC;
+	return TERRAN_CLASSIC;//MARINE_MARAUDER;
 }
 
 const BuildOrder & StrategyManager::getOpeningBookBuildOrder() const
