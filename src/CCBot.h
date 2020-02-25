@@ -36,7 +36,7 @@ class CCBot : public sc2::Agent
 		std::chrono::steady_clock::time_point start;
 	};
 
-	uint32_t				m_gameLoop;
+	uint32_t				m_gameLoop = 0;
 	uint32_t				m_previousGameLoop;
 	int						m_previousMacroGameLoop;
 	bool					m_combatSimulatorInitialized = false;

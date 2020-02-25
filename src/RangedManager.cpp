@@ -1053,6 +1053,9 @@ bool RangedManager::ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::
 			return false;
 	}
 
+	if (Util::IsEnemyHiddenOnHighGround(rangedUnit, target, m_bot))
+		return false;
+
 	return true;
 }
 
@@ -1307,9 +1310,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		return false;
 	}
 	
-	const CCPosition closeToEnemy = !target ? CCPosition() : (target->pos + Util::Normalized(rangedUnit->pos - target->pos) * target->radius * 0.95);
-	const bool enemyIsHigher = !rangedUnit->is_flying && target && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos);
-	if (enemyIsHigher && !m_bot.Map().isVisible(closeToEnemy))
+	if (Util::IsEnemyHiddenOnHighGround(rangedUnit, target, m_bot))
 	{
 		// If the unit cannot just walk the ramp to reach the enemy
 		if (Util::PathFinding::FindOptimalPathDistance(rangedUnit, target->pos, true, m_bot) > 15)
@@ -1561,6 +1562,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			{
 				const auto unit = unitTargetPair.first;
 				const auto unitTarget = unitTargetPair.second;
+				if (Util::IsEnemyHiddenOnHighGround(unit, unitTarget, m_bot))
+				{
+					unitWillGetCloseEnough = true;
+					break;
+				}
 				const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 				const CCPosition futurePosition = unitTarget->pos + Util::Normalized(unit->pos - unitTarget->pos) * unitRange;
 				if (Util::Dist(threat->pos, futurePosition) <= threatRange)
@@ -1677,8 +1683,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 		const bool canAttackNow = unitRange * unitRange >= Util::DistSq(unit->pos, unitTarget->pos) && unit->weapon_cooldown <= 0.f;
 
-		// Even if the fight would be lost, should still attack if it can, but only if it is slower than the fastest enemy
-		if (!shouldFight && (!canAttackNow || Util::getSpeedOfUnit(unit, m_bot) > maxThreatSpeed))
+		// Even if the fight would be lost, should still attack if it can, but only if it is slower than the fastest enemy and its target is not on high ground
+		if (!shouldFight && (!canAttackNow || Util::getSpeedOfUnit(unit, m_bot) > maxThreatSpeed || Util::IsEnemyHiddenOnHighGround(unit, unitTarget, m_bot)))
 		{
 			continue;
 		}
@@ -2426,15 +2432,11 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
         BOT_ASSERT(target, "null target unit in getTarget");
 
 		// We don't want to target an enemy in the fog other than a worker (sometimes it could be good, but often it isn't)
-		if (!UnitType(target->unit_type, m_bot).isWorker() && target->last_seen_game_loop != m_bot.GetGameLoop())
-			continue;
+		/*if (!UnitType(target->unit_type, m_bot).isWorker() && target->last_seen_game_loop != m_bot.GetGameLoop())
+			continue;*/ //*edit: commented because we couldn't engage against cannons on top of cliffs
 
-		if (filterHigherUnits && !rangedUnit->is_flying && m_bot.Map().terrainHeight(target->pos) > m_bot.Map().terrainHeight(rangedUnit->pos))
-		{
-			const CCPosition closeToEnemy = !target ? CCPosition() : (target->pos + Util::Normalized(rangedUnit->pos - target->pos) * target->radius * 0.95);
-			if (!m_bot.Map().isVisible(closeToEnemy))
-				continue;
-		}
+		if (filterHigherUnits && Util::IsEnemyHiddenOnHighGround(rangedUnit, target, m_bot))
+			continue;
 
     	if (filterPassiveBuildings)
     	{

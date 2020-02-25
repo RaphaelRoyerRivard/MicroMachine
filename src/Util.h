@@ -215,6 +215,7 @@ namespace Util
 	bool unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId);
 	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
+	bool IsEnemyHiddenOnHighGround(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
 	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbilities & availableAbilities);
     

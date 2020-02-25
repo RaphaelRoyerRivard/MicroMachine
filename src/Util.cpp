@@ -10,7 +10,7 @@ const float HARASS_PATHFINDING_TILE_BASE_COST = 1.f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float PATHFINDING_TURN_COST = 3.f;
 const float PATHFINDING_SECONDARY_GOAL_COST = 10.f;
-const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
+const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 5.f;
 const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
 const float UNIT_CLUSTERING_MAX_DISTANCE = 5.f;
@@ -243,7 +243,7 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, bool shouldHeal, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), 0.f, false, false, shouldHeal, false, 0, true, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, bot.GetStartLocation(), 0.f, false, false, shouldHeal, false, 0, true, bot);
 	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
@@ -1898,10 +1898,11 @@ float Util::getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCB
 	const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 	const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 	const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
+	const float HARASS_THREAT_RANGE_MIN_SPEED_BONUS = 2.f;
 
 	const float heightBonus = unit->is_flying ? 0.f : Util::TerrainHeight(threat->pos) > Util::TerrainHeight(unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
 	const float tempestAirBonus = threat->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && unit->is_flying ? 2.f : 0.f;
-	const float speed = std::max(1.f, Util::getSpeedOfUnit(threat, m_bot));
+	const float speed = std::max(HARASS_THREAT_RANGE_MIN_SPEED_BONUS, Util::getSpeedOfUnit(threat, m_bot));
 	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + speed + heightBonus + tempestAirBonus + HARASS_THREAT_RANGE_BUFFER;
 
 	return threatRange;
@@ -2037,6 +2038,27 @@ bool Util::CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUn
 		return false;	// Unit doesn't have enough sight range
 	if (!unit->is_flying && bot.Map().terrainHeight(unit->pos) < bot.Map().terrainHeight(enemyUnit->pos))
 		return false;	// Unit can't see above cliff
+	return true;
+}
+
+bool Util::IsEnemyHiddenOnHighGround(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot)
+{
+	if (!unit || !enemyUnit)
+		return false;
+	
+	if (unit->is_flying)
+		return false;
+
+	if (bot.Map().terrainHeight(enemyUnit->pos) <= bot.Map().terrainHeight(unit->pos))
+		return false;
+
+	if (enemyUnit->is_flying && enemyUnit->last_seen_game_loop == bot.GetCurrentFrame())
+		return false;
+	
+	const CCPosition closeToEnemy = enemyUnit->pos + Normalized(unit->pos - enemyUnit->pos) * enemyUnit->radius * 0.95;
+	if (bot.Map().isVisible(closeToEnemy))
+		return false;
+
 	return true;
 }
 

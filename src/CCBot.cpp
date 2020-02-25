@@ -272,11 +272,6 @@ void CCBot::OnStep()
     setUnits();
 	StopProfiling("0.2 setUnits");
 
-	StartProfiling("0.3 clearDeadUnits");
-	clearDeadUnits();
-	clearDuplicateUnits();
-	StopProfiling("0.3 clearDeadUnits");
-
 	checkForConcede();
 
 	StartProfiling("0.4 m_map.onFrame");
@@ -510,9 +505,9 @@ void CCBot::setUnits()
 	m_unitCount.clear();
 	m_unitCompletedCount.clear();
 	m_strategy.setEnemyCurrentlyHasInvisible(false);
-#ifdef SC2API
 	bool firstPhoenix = true;
 	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
+	StartProfiling("0.2.1 loopAllUnits");
     for (auto & unitptr : Observation()->GetUnits())
     {
 		Unit unit(unitptr, *this);
@@ -743,6 +738,14 @@ void CCBot::setUnits()
 		}
         m_allUnits.push_back(unit);
     }
+	StopProfiling("0.2.1 loopAllUnits");
+
+	StartProfiling("0.2.2 clearDeadUnits");
+	clearDeadUnits();
+	StopProfiling("0.2.2 clearDeadUnits");
+	StartProfiling("0.2.3 clearDuplicateUnits");
+	clearDuplicateUnits();
+	StopProfiling("0.2.3 clearDuplicateUnits");
 
 	int armoredEnemies = 0;
 	m_knownEnemyUnits.clear();
@@ -798,12 +801,6 @@ void CCBot::setUnits()
 
 	m_strategy.setEnemyHasMassZerglings(m_enemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
 	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= 5);
-#else
-    for (auto & unit : BWAPI::Broodwar->getAllUnits())
-    {
-        m_allUnits.push_back(Unit(unit, *this));
-    }
-#endif
 }
 
 void CCBot::identifyEnemyRepairingSCVs()
@@ -1012,7 +1009,7 @@ void CCBot::clearDuplicateUnits()
 				const sc2::Unit* toKeep = nullptr;
 				for (auto& building : buildings)
 				{
-					if (!toKeep || building->last_seen_game_loop > toKeep->last_seen_game_loop)
+					if (!toKeep || building->display_type == sc2::Unit::Visible || (toKeep->display_type == sc2::Unit::Snapshot && building->last_seen_game_loop > toKeep->last_seen_game_loop))
 					{
 						if (toKeep)
 							unitsToRemove.push_back(toKeep->tag);
@@ -1320,6 +1317,21 @@ void CCBot::IssueGameStartCheats()
 	// Test for Reaper trade
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter - towardsCenter * 2.5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter + towardsCenter * 2.5, player2, 1);*/
+
+	// Test for reproducing pathing bugs with Cyclones in CatalystLE
+	/*const CCPosition leftLocation(53, 21);
+	const CCPosition rightLocation(59, 23);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, rightLocation, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, rightLocation, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, leftLocation, player2, 3);*/
+
+	// Test for reproducing bugs with units on top of cliffs on AcropolisLE
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, CCPosition(40, 117), player2, 6);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, CCPosition(40, 117), player1, 6);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, CCPosition(45, 124), player2, 4);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, CCPosition(46, 128), player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, CCPosition(40, 124), player2, 6);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, CCPosition(40, 124), player1, 1);
 }
 
 void CCBot::IssueCheats()
