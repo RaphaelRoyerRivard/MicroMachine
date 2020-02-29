@@ -810,11 +810,14 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit) const
 		else
 		{
 			float percentageMultiplier = 1.f;
+			bool forceHeal = false;
 			switch(rangedUnit->unit_type.ToType())
 			{
 				case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
-					/*if (isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit))
-						percentageMultiplier = 0.5f;*/	//BCs can fight longer since they can teleport back to safety
+					if (m_bot.Config().StarCraft2Version > "4.10.4"
+						&& m_bot.Analyzer().getUnitState(rangedUnit).GetRecentDamageTaken() * 1.8f >= rangedUnit->health
+						&& isAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, rangedUnit))
+						forceHeal = true;	// After version 4.10.4, Tactical Jump has a 1 second vulnerability
 					break;
 				case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
 					if (m_bot.Commander().Combat().getLockOnTargets().find(rangedUnit) != m_bot.Commander().Combat().getLockOnTargets().end())
@@ -824,7 +827,7 @@ bool RangedManager::ShouldUnitHeal(const sc2::Unit * rangedUnit) const
 				default:
 					break;
 			}
-			if (rangedUnit->health / rangedUnit->health_max < Util::HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE * percentageMultiplier)
+			if (forceHeal || rangedUnit->health / rangedUnit->health_max < Util::HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE * percentageMultiplier)
 			{
 				unitsBeingRepaired.insert(rangedUnit);
 				return true;

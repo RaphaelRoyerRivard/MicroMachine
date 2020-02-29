@@ -397,7 +397,7 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 	auto it = m_unitStates.find(tag);
 	if (it == m_unitStates.end())
 	{
-		UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy(), unit.getUnitPtr());
+		UnitState state = UnitState(unit.getUnitPtr());
 		state.Update();
 		m_unitStates[tag] = state;
 		m_bot.StopProfiling("0.10.4.4.2.1        addState");
@@ -457,6 +457,18 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 		detectTechs(unit, state);
 		m_bot.StopProfiling("0.10.4.4.2.3        detectTechs");*/
 	}
+}
+
+const UnitState & CombatAnalyzer::getUnitState(const sc2::Unit * unit)
+{
+	const auto it = m_unitStates.find(unit->tag);
+	if (it == m_unitStates.end())
+	{
+		UnitState state = UnitState(unit);
+		state.Update();
+		m_unitStates[unit->tag] = state;
+	}
+	return m_unitStates[unit->tag];
 }
 
 void CombatAnalyzer::increaseDeadEnemy(sc2::UNIT_TYPEID type)

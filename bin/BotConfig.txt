@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.8.3",
+        "BotVersion"                : "1.8.4",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "DiscoBloodbathLE.SC2Map",
+        "EnemyRace"                 : "Terran",
+        "MapFile"                   : "AcropolisLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -99,7 +99,8 @@
         "MaxWorkerRepairDistance"   : 20,
         "ScoutHarassEnemy"          : true,
         "EnableMultiThreading"      : false,
-        "TournamentMode"            : false
+        "TournamentMode"            : false,
+        "StarCraft2Version"         : "4.10.4"
     },
     
     "UCTConsideringDurations" :

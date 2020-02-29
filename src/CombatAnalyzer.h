@@ -110,6 +110,7 @@ public:
 	void UpdateRatio();
 	void checkUnitsState();
 	void checkUnitState(Unit unit);
+	const UnitState & getUnitState(const sc2::Unit * unit);
 	void increaseDeadEnemy(sc2::UNIT_TYPEID type);
 	bool shouldProduceGroundAntiGround();
 	bool shouldProduceGroundAntiAir();

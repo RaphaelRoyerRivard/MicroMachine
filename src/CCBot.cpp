@@ -1336,6 +1336,10 @@ void CCBot::IssueGameStartCheats()
 	// Test for reproducing bug where Reaper gets hit by zerglings on creep
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, enemyLocation, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, enemyLocation, player2, 5);
+	
+	// Test for checking if BCs can teleport before dying
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, mapCenter, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter, player2, 7);
 }
 
 void CCBot::IssueCheats()
