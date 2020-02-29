@@ -1065,7 +1065,11 @@ bool RangedManager::IsInRangeOfSlowerUnit(const sc2::Unit * rangedUnit, const sc
 	const float rangedUnitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
 	const float speedDiff = targetSpeed - rangedUnitSpeed;
 	if (speedDiff >= 0.f)
-		return false;	// Target is faster (or equal)
+	{
+		// We don't want to attack closeby ground enemies if our unit can flee over cliffs
+		if (target->is_flying || (!rangedUnit->is_flying && rangedUnit->unit_type != sc2::UNIT_TYPEID::TERRAN_REAPER))
+			return false;	// Target is faster (or equal)
+	}
 	const float targetRange = Util::GetAttackRangeForTarget(target, rangedUnit, m_bot);
 	if (targetRange == 0.f)
 		return false;	// Target cannot attack our unit

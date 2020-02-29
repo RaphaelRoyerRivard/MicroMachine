@@ -1332,6 +1332,10 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, CCPosition(46, 128), player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, CCPosition(40, 124), player2, 6);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, CCPosition(40, 124), player1, 1);
+
+	// Test for reproducing bug where Reaper gets hit by zerglings on creep
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, enemyLocation, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, enemyLocation, player2, 5);
 }
 
 void CCBot::IssueCheats()
