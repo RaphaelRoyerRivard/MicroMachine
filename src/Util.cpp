@@ -9,8 +9,8 @@ const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
 const float HARASS_PATHFINDING_TILE_BASE_COST = 1.f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float PATHFINDING_TURN_COST = 3.f;
-const float PATHFINDING_SECONDARY_GOAL_COST = 10.f;
-const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 5.f;
+const float PATHFINDING_SECONDARY_GOAL_HEURISTIC_MULTIPLIER = 10.f;
+const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
 const float UNIT_CLUSTERING_MAX_DISTANCE = 5.f;
@@ -249,7 +249,7 @@ CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CC
 
 CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, bool moveFarther, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, CCPosition(), range, false, false, false, false, 0, true, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, bot.GetStartLocation(), range, false, false, false, false, 0, true, bot);
 	return GetCommandPositionFromPath(path, unit, moveFarther, bot);
 }
 
@@ -292,7 +292,7 @@ CCPosition Util::PathFinding::FindOptimalPathPosition(const sc2::Unit * unit, CC
 CCPosition Util::PathFinding::FindOptimalPathToDodgeEffectAwayFromGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot)
 {
 	goal = unit->pos + (unit->pos - goal);
-	std::list<CCPosition> path = Util::PathFinding::FindOptimalPath(unit, goal, CCPosition(), range, false, true, false, false, 0, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), range, false, true, false, false, 0, false, bot);
 	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
@@ -319,9 +319,9 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	const auto maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (!limitSearch ? 20 : exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
-	const CCTilePosition startPosition = Util::GetTilePosition(unit->pos);
-	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
-	const CCTilePosition secondaryGoalPosition = Util::GetTilePosition(secondaryGoal);
+	const CCTilePosition startPosition = GetTilePosition(unit->pos);
+	const CCTilePosition goalPosition = GetTilePosition(goal);
+	const CCTilePosition secondaryGoalPosition = unit->is_flying ? CCTilePosition() : GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
 	bestCosts[start->getId()] = 0;
 	opened.insert(start);
@@ -437,13 +437,6 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
 				const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(neighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetCombatInfluenceOnTile(neighborPosition, unit, bot));
 				const float totalInfluenceOnTile = GetTotalInfluenceOnTile(neighborPosition, unit, bot);
-				float secondaryGoalCost = 0.f;
-				/*if(secondaryGoal != CCPosition())
-				{
-					const auto neighborDirection = Normalized(GetPosition(neighborPosition) - GetPosition(currentNode->position));
-					const auto secondaryGoalDirection = Normalized(secondaryGoal - GetPosition(currentNode->position));
-					secondaryGoalCost = (1 - GetDotProduct(neighborDirection, secondaryGoalDirection)) * PATHFINDING_SECONDARY_GOAL_COST;
-				}*/
 				// Consider turning cost to prevent our units from wiggling while fleeing, but not for workers that want to know if the path is safe
 				float turnCost = 0.f;
 				if (!exitOnInfluence)
@@ -458,7 +451,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 					const auto turnValue = std::min(1.f, 1 - dotProduct);
 					turnCost = turnValue * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
 				}
-				const float nodeCost = (influenceOnTile + creepCost + secondaryGoalCost + turnCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
+				const float nodeCost = (influenceOnTile + creepCost + turnCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
 				totalCost += currentNode->cost + nodeCost;
 
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition, secondaryGoalPosition, bot);
@@ -594,7 +587,7 @@ float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCT
 	if (secondaryGoal != CCTilePosition())
 	{
 		const auto dist = bot.Map().getGroundDistance(GetPosition(from), GetPosition(secondaryGoal));
-		heuristic += dist * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER * 2;
+		heuristic += dist * PATHFINDING_SECONDARY_GOAL_HEURISTIC_MULTIPLIER;
 	}
 	return heuristic;
 }

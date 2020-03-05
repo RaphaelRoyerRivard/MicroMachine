@@ -1119,7 +1119,13 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 	lockOnAvailable = Util::IsAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, abilities);
 	if (lockOnAvailable)
 	{
-		// Lock-On ability is not on cooldown
+		// The Cyclone could attack, but it should use its lock-on ability
+		shouldAttack = false;
+		shouldUseLockOn = true;
+	}
+	else
+	{
+		// Lock-On ability is not not available (maybe in use, maybe in cooldown)
 		const auto it = lockOnTargets.find(cyclone);
 		if (it != lockOnTargets.end())
 		{
@@ -1137,16 +1143,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				shouldAttack = false;
 			}
 		}
-		else
-		{
-			// The Cyclone could attack, but it should use its lock-on ability
-			shouldAttack = false;
-			shouldUseLockOn = true;
-		}
-	}
-	else
-	{
-		if (m_bot.Config().DrawHarassInfo)
+		else if (m_bot.Config().DrawHarassInfo)
 		{
 			auto & nextAvailableAbility = m_bot.Commander().Combat().getNextAvailableAbility();
 			m_bot.Map().drawCircle(cyclone->pos, float(nextAvailableAbility[sc2::ABILITY_ID::EFFECT_LOCKON][cyclone] - currentFrame) / CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT, sc2::Colors::Red);
