@@ -288,7 +288,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			goal = m_bot.GetStartLocation();
 		}
 		else*/
-		if (!isCycloneHelper && (isMarine || isRaven || isViking || isHellion || isMedivac))
+		if (!isCycloneHelper && (isMedivac || isRaven || ((isMarine || isViking || isHellion) && m_order.getType() != SquadOrderTypes::Defend)))
 		{
 			goal = GetBestSupportPosition(rangedUnit, allCombatAllies);
 		}

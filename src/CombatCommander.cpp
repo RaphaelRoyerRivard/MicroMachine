@@ -608,6 +608,8 @@ void CombatCommander::updateIdleSquad()
 	if (idleSquad.getUnits().empty())
 		return;
 
+	CleanActions(idleSquad.getUnits());
+
 	if (m_bot.GetCurrentFrame() - m_lastIdleSquadUpdateFrame >= 24)	// Every second
 	{
 		m_lastIdleSquadUpdateFrame = m_bot.GetCurrentFrame();
@@ -623,7 +625,8 @@ void CombatCommander::updateIdleSquad()
 		{
 			if (Util::DistSq(combatUnit, idlePosition) > 5.f * 5.f)
 			{
-				Micro::SmartMove(combatUnit.getUnitPtr(), idlePosition, m_bot);
+				const auto action = RangedUnitAction(MicroActionType::Move, idlePosition, false, 0, "IdleMove");
+				PlanAction(combatUnit.getUnitPtr(), action);
 			}
 		}
 	}
