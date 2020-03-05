@@ -1110,13 +1110,13 @@ void CombatCommander::handleWall()
 	int SUPPLYDEPOT_DISTANCE = 10 * 10;	// 10 tiles ^ 2, because we use DistSq
 
 	auto wallCenter = m_bot.Buildings().getWallPosition();
-	auto & enemies = m_bot.GetEnemyUnits();
+	auto & enemies = m_bot.GetKnownEnemyUnits();
 
 	for (auto & enemy : enemies)
 	{
-		if (enemy.second.isFlying() || enemy.second.getType().isBuilding())
+		if (enemy.isFlying() || enemy.getType().isBuilding())
 			continue;
-		CCTilePosition enemyPosition = enemy.second.getTilePosition();
+		CCTilePosition enemyPosition = enemy.getTilePosition();
 		int distance = Util::DistSq(enemyPosition, wallCenter);
 		if (distance < SUPPLYDEPOT_DISTANCE)
 		{//Raise wall
