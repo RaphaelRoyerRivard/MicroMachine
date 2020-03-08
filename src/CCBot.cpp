@@ -1350,6 +1350,13 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation + towardsCenter * 40, player1, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation + towardsCenter * 5, player2, 10);*/
+
+	// Test for reproducing bug where Banshees move into detection zones when attacking cloaked
+	/*Debug()->DebugGiveAllTech();
+	Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter - towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, mapCenter, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, mapCenter + towardsCenter * 8, player2, 1);*/
 }
 
 void CCBot::IssueCheats()

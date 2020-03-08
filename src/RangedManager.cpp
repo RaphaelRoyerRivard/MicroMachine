@@ -1360,6 +1360,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				}
 
 				const bool canAttackNow = range >= targetDist && rangedUnit->weapon_cooldown <= 0.f;
+				bool skipAction = false;
 				RangedUnitAction action;
 				if (canAttackNow)
 				{
@@ -1369,12 +1370,24 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				}
 				else
 				{
-					// Move towards the target
-					action = RangedUnitAction(MicroActionType::Move, target->pos, false, 0, "MoveTowardsThreatCloaked");
+					const CCPosition closeAttackPosition = rangedUnit->pos + Util::Normalized(target->pos - rangedUnit->pos) * 0.5f;
+					if (Util::IsPositionUnderDetection(closeAttackPosition, m_bot))
+					{
+						// Our unit would move into a detection zone if it continues moving towards its target, so we skip the action
+						skipAction = true;
+					}
+					else
+					{
+						// Move towards the target
+						action = RangedUnitAction(MicroActionType::Move, target->pos, false, 0, "MoveTowardsThreatCloaked");
+					}
 				}
-				m_bot.Commander().Combat().PlanAction(rangedUnit, action);
-				m_harassMode = true;
-				return true;
+				if (!skipAction)
+				{
+					m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+					m_harassMode = true;
+					return true;
+				}
 			}
 		}
 	}
