@@ -1297,7 +1297,7 @@ Unit WorkerManager::getDepotAtBasePosition(CCPosition basePosition) const
 			continue;
 		}
 		BaseLocation * baseLocation = m_bot.Bases().getBaseLocation(unit.getPosition());
-		if (baseLocation->getPosition().x == basePosition.x && baseLocation->getPosition().y == basePosition.y)
+		if (baseLocation && baseLocation->getPosition().x == basePosition.x && baseLocation->getPosition().y == basePosition.y)
 		{
 			return unit;
 		}

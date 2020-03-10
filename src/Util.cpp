@@ -656,7 +656,7 @@ float Util::PathFinding::GetTotalInfluenceOnTiles(CCPosition position, bool isFl
 	{
 		for (int y = minY; y < maxY; ++y)
 		{
-			const auto tilePosition = CCTilePosition(position.x + x, position.y + y);
+			const auto tilePosition = CCTilePosition(x, y);
 			if (DistSq(position, CCPosition(tilePosition.x + 0.5f, tilePosition.y + 0.5f)) > radius * radius)
 				continue;	// If center of tile is farther than radius, ignore
 			totalInfluence += GetTotalInfluenceOnTile(tilePosition, isFlying, bot);

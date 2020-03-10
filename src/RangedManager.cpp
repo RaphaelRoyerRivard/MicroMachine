@@ -921,8 +921,6 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 {
 	bool morph = false;
 	sc2::AbilityID morphAbility = 0;
-	//const auto airInfluence = Util::PathFinding::GetTotalInfluenceOnTiles(viking->pos, true, 2.f, m_bot);
-	//const auto groundInfluence = Util::PathFinding::GetTotalInfluenceOnTiles(viking->pos, false, 2.f, m_bot);
 	const auto airInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(viking->pos), true, m_bot);
 	const auto groundInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot);
 	if(unitShouldHeal && airInfluence <= groundInfluence)

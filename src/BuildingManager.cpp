@@ -1816,6 +1816,8 @@ void BuildingManager::castBuildingsAbilities()
 			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 		}
 	}
+
+	LiftOrLandDamagedBuildings();
 }
 
 void BuildingManager::RunProxyLogic()
@@ -1902,6 +1904,73 @@ void BuildingManager::RunProxyLogic()
 			{
 				Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 				m_barracksSentToEnemyBase = true;
+			}
+		}
+	}
+}
+
+void BuildingManager::LiftOrLandDamagedBuildings()
+{
+	const std::vector<sc2::UNIT_TYPEID> liftingTypes = {
+		sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER,
+		sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND,
+		sc2::UNIT_TYPEID::TERRAN_BARRACKS,
+		sc2::UNIT_TYPEID::TERRAN_FACTORY,
+		sc2::UNIT_TYPEID::TERRAN_STARPORT
+	};
+	const std::vector<sc2::UNIT_TYPEID> landingTypes = {
+		sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING,
+		sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING,
+		sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING,
+		sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING,
+		sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING
+	};
+	for (const auto & unitPair : m_bot.GetAllyUnits())
+	{
+		const auto & unit = unitPair.second;
+		if (!unit.isValid())
+			continue;
+		// If the unit can lift
+		if (Util::Contains(unit.getAPIUnitType(), liftingTypes))
+		{
+			// If the building is damaged
+			if (unit.getHitPointsPercentage() <= 50.f)
+			{
+				// We don't want to lift a wall building
+				if (Util::Contains(unit, m_wallBuilding))
+					continue;
+				// And there is danger on the ground but not in the air
+				const float groundInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(unit.getPosition()), unit.getUnitPtr(), m_bot);
+				const float airInfluence = Util::PathFinding::GetTotalInfluenceOnTiles(unit.getPosition(), true, unit.getUnitPtr()->radius, m_bot);
+				if (groundInfluence >= 40.f && airInfluence <= 0.f)
+				{
+					if (unit.isTraining())
+					{
+						// We don't want to cancel army units, so we only cancel the production of SCV
+						if (unit.getType().isResourceDepot())
+						{
+							Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::CANCEL_LAST, m_bot);
+						}
+					}
+					else
+					{
+						Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+						liftedBuildingPositions[unit.getTag()] = unit.getPosition();
+					}
+				}
+			}
+		}
+		// If the unit can land
+		else if (Util::Contains(unit.getAPIUnitType(), landingTypes))
+		{
+			CCPosition landingPosition = liftedBuildingPositions[unit.getTag()];
+			if (landingPosition != CCPosition())
+			{
+				// If there is no more danger on the ground
+				if (Util::PathFinding::GetTotalInfluenceOnTiles(landingPosition, false, unit.getUnitPtr()->radius, m_bot) <= 0.f)
+				{
+					Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
+				}
 			}
 		}
 	}
