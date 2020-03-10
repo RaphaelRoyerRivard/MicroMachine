@@ -136,6 +136,7 @@ namespace Util
 		bool HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, bool fromGround, CCBot & bot);
 		bool HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, bool fromGround, CCBot & bot);
 		float GetTotalInfluenceOnTiles(CCPosition position, bool isFlying, float radius, CCBot & bot);
+		float GetMaxInfluenceOnTiles(CCPosition position, bool isFlying, float radius, CCBot & bot);
 		float GetTotalInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 		float GetTotalInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
 		float GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);

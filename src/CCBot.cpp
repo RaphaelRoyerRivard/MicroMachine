@@ -1360,7 +1360,7 @@ void CCBot::IssueGameStartCheats()
 
 	// Test for checking if bases lift themselves when getting attacked by enemies that attack ground only
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, mapCenter, player2, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, mapCenter, player1, 3);*/
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, mapCenter, player1, 1);*/
 }
 
 void CCBot::IssueCheats()

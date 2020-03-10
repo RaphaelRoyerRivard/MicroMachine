@@ -665,6 +665,28 @@ float Util::PathFinding::GetTotalInfluenceOnTiles(CCPosition position, bool isFl
 	return totalInfluence;
 }
 
+float Util::PathFinding::GetMaxInfluenceOnTiles(CCPosition position, bool isFlying, float radius, CCBot & bot)
+{
+	float maxInfluence = 0.f;
+	const int minX = round(position.x - radius);
+	const int minY = round(position.y - radius);
+	const int maxX = round(position.x + radius);
+	const int maxY = round(position.y + radius);
+	for (int x = minX; x < maxX; ++x)
+	{
+		for (int y = minY; y < maxY; ++y)
+		{
+			const auto tilePosition = CCTilePosition(x, y);
+			if (DistSq(position, CCPosition(tilePosition.x + 0.5f, tilePosition.y + 0.5f)) > radius * radius)
+				continue;	// If center of tile is farther than radius, ignore
+			const auto influence = GetTotalInfluenceOnTile(tilePosition, isFlying, bot);
+			if (influence > maxInfluence)
+				maxInfluence = influence;
+		}
+	}
+	return maxInfluence;
+}
+
 float Util::PathFinding::GetTotalInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
 {
 	if (unit->radius >= 1.f)
