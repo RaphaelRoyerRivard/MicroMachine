@@ -4,7 +4,6 @@
 #include <list>
 
 const size_t IdlePriority = 0;
-const size_t WorkerFleePriority = 0;
 const size_t BackupPriority = 1;
 const size_t HarassPriority = 2;
 const size_t AttackPriority = 2;
@@ -12,6 +11,7 @@ const size_t ClearExpandPriority = 3;
 const size_t ScoutPriority = 3;
 const size_t BaseDefensePriority = 4;
 const size_t ScoutDefensePriority = 5;
+const size_t WorkerFleePriority = 5;
 const size_t DropPriority = 5;
 
 const float DefaultOrderRadius = 25;			//Order radius is the threat awareness range of units in the squad
@@ -638,6 +638,13 @@ void CombatCommander::updateWorkerFleeSquad()
 	for (auto & worker : m_bot.Workers().getWorkers())
 	{
 		const CCTilePosition tile = Util::GetTilePosition(worker.getPosition());
+		const float groundInfluence = Util::PathFinding::GetCombatInfluenceOnTile(tile, worker.isFlying(), m_bot);
+		bool fleeFromSlowThreats = false;
+		if (groundInfluence > 0.f && !m_bot.Strategy().isWorkerRushed())
+		{
+			const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
+			fleeFromSlowThreats = !WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits);
+		}
 		const bool flyingThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), false, m_bot);
 		const bool groundCloakedThreat = Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(tile, m_bot);
 		const bool groundThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), true, m_bot);
@@ -645,7 +652,7 @@ void CombatCommander::updateWorkerFleeSquad()
 		const auto job = m_bot.Workers().getWorkerData().getWorkerJob(worker);
 		const auto isProxyWorker = m_bot.Workers().getWorkerData().isProxyWorker(worker);
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
-		if ((((flyingThreat && !groundThreat) || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
+		if ((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
 			|| Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
 			|| (groundThreat && (injured || isProxyWorker) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))
 		{
@@ -1078,7 +1085,7 @@ void CombatCommander::updateScoutDefenseSquad()
 			Unit enemyWorkerUnit = *enemyUnitsInRegion.begin();
 			BOT_ASSERT(enemyWorkerUnit.isValid(), "null enemy worker unit");
 
-			Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit);
+			Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit, enemyUnitsInRegion);
 			if (workerDefender.isValid())
 			{
 				m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
@@ -1693,7 +1700,7 @@ void CombatCommander::updateDefenseSquads()
 				// If we have no more unit to defend we check for the workers
 				else if(support == "ground" && needsMoreSupport)
 				{
-					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit);
+					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit, region.enemyUnits);
 				}
 
 				// If no support is available
@@ -1765,6 +1772,9 @@ void CombatCommander::updateDefenseSquads()
 	}
 }
 
+/*
+ * This method is not used anymore.
+ */
 void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy)
 {
     auto & squadUnits = defenseSquad.getUnits();
@@ -1775,7 +1785,7 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, bool flyingD
 		if (unit.getType().isWorker())
 		{
 			if (unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT ||
-				!ShouldWorkerDefend(unit, defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy))
+				!ShouldWorkerDefend(unit, defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, defenseSquad.getTargets()))
 			{
 				m_bot.Workers().finishedWithWorker(unit);
 				defenseSquad.removeUnit(unit);
@@ -1849,18 +1859,18 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     if (!closestDefender.isValid() && type == "ground")
     {
         // we search for worker to defend.
-        closestDefender = findWorkerToAssignToSquad(defenseSquad, pos, closestEnemy);
+        closestDefender = findWorkerToAssignToSquad(defenseSquad, pos, closestEnemy, defenseSquad.getTargets());
     }
 
     return closestDefender;
 }
 
-Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy)
+Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits)
 {
     // get our worker unit that is mining that is closest to it
     Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
 
-	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy))
+	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy, enemyUnits))
 	{
         m_bot.Workers().setCombatWorker(workerDefender);
     }
@@ -1871,7 +1881,7 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
     return workerDefender;
 }
 
-bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy) const
+bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const
 {
 	if (!worker.isValid())
 		return false;
@@ -1894,9 +1904,25 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	const auto enemyDistanceToWorker = Util::DistSq(worker, closestEnemy);
 	if (isBuilding && enemyDistanceToBase < maxEnemyDistance * maxEnemyDistance && enemyDistanceToWorker < maxEnemyDistance * maxEnemyDistance)
 		return true;
+	// Worker should not defend against slow enemies, it should flee
+	if (!WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits))
+		return false;
 	// worker should not get too far from base and can fight only units close to it
 	if (Util::DistSq(worker, pos) < 15.f * 15.f && enemyDistanceToWorker < 7.f * 7.f)
 		return true;
+	return false;
+}
+
+bool CombatCommander::WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const
+{
+	const auto workerSpeed = Util::getSpeedOfUnit(worker, m_bot);
+	const auto threats = Util::getThreats(worker, enemyUnits, m_bot);
+	for (const auto threat : threats)
+	{
+		const auto threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+		if (threatSpeed / workerSpeed >= 1.15f || threat->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)	// Workers shouldn't flee against Zerglings
+			return true;
+	}
 	return false;
 }
 

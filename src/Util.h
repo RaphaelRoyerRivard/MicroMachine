@@ -278,6 +278,7 @@ namespace Util
     bool            IsZerg(const CCRace & race);
     bool            IsProtoss(const CCRace & race);
     bool            IsTerran(const CCRace & race);
+	bool			IsWorker(sc2::UNIT_TYPEID type);
 	int				ToMapKey(const CCTilePosition position);
 	CCTilePosition	FromCCTilePositionMapKey(const int mapKey);
     CCPositionType  TileToPosition(float tile);

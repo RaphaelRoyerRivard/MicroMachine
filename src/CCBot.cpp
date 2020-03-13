@@ -1361,6 +1361,13 @@ void CCBot::IssueGameStartCheats()
 	// Test for checking if bases lift themselves when getting attacked by enemies that attack ground only
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, mapCenter, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, mapCenter, player1, 1);*/
+
+	// Test for checking if workers flee DTs
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, m_startLocation - towardsCenter * 4, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, m_startLocation, player1, 2);*/
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, m_startLocation, player1, 2);
 }
 
 void CCBot::IssueCheats()

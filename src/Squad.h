@@ -52,7 +52,7 @@ public:
     Squad(const std::string & name, const SquadOrder & order, int maxRegroupDuration, int regroupCooldown, int minRetreatDuration, float maxDistanceFromCenter, size_t priority, CCBot & bot);
     Squad(CCBot & bot);
 
-	std::vector<Unit> getTargets() { return m_targets; }
+	const std::vector<Unit> & getTargets() const { return m_targets; }
 
     void onFrame();
     void setSquadOrder(const SquadOrder & so);

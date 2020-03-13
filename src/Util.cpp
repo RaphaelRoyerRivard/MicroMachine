@@ -321,7 +321,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = GetTilePosition(goal);
-	const CCTilePosition secondaryGoalPosition = unit->is_flying ? CCTilePosition() : GetTilePosition(secondaryGoal);
+	const CCTilePosition secondaryGoalPosition = unit->is_flying || Util::IsWorker(unit->unit_type) ? CCTilePosition() : GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
 	bestCosts[start->getId()] = 0;
 	opened.insert(start);
@@ -1898,7 +1898,7 @@ sc2::Units Util::getThreats(const sc2::Unit * unit, const std::vector<Unit> & ta
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
-	sc2::Units targetsPtrs(targets.size());
+	sc2::Units targetsPtrs;
 	for (auto& targetUnit : targets)
 		targetsPtrs.push_back(targetUnit.getUnitPtr());
 
@@ -2139,6 +2139,19 @@ bool Util::IsTerran(const CCRace & race)
 #else
     return race == BWAPI::Races::Terran;
 #endif
+}
+
+bool Util::IsWorker(sc2::UNIT_TYPEID type)
+{
+	switch (type)
+	{
+	case sc2::UNIT_TYPEID::TERRAN_SCV: return true;
+	case sc2::UNIT_TYPEID::TERRAN_MULE: return true;
+	case sc2::UNIT_TYPEID::PROTOSS_PROBE: return true;
+	case sc2::UNIT_TYPEID::ZERG_DRONE: return true;
+	case sc2::UNIT_TYPEID::ZERG_DRONEBURROWED: return true;
+	default: return false;
+	}
 }
 
 int Util::ToMapKey(const CCTilePosition position)
