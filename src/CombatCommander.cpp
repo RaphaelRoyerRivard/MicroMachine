@@ -156,7 +156,9 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		m_bot.StopProfiling("0.10.4.2.2    updateDefenseSquads");
 		updateClearExpandSquads();
 		updateScoutSquad();
+		m_bot.StartProfiling("0.10.4.2.3    updateHarassSquads");
 		updateHarassSquads();
+		m_bot.StopProfiling("0.10.4.2.3    updateHarassSquads");
 		updateAttackSquads();
         //updateBackupSquads();
     }
@@ -955,28 +957,82 @@ void CombatCommander::updateHarassSquads()
 	if (harassSquad.getUnits().empty())
 		return;
 
-	sc2::Units allyUnits;
-	auto allySupply = 0;
-	for (const auto & unit : harassSquad.getUnits())
-	{
-		allyUnits.push_back(unit.getUnitPtr());
-		allySupply += unit.getType().supplyRequired();
-	}
-	sc2::Units enemyUnits;
-	auto enemySupply = 0;
-	for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
-	{
-		const auto & enemyUnit = enemyUnitPair.second;
-		if (enemyUnit.getType().isCombatUnit() && !enemyUnit.getType().isBuilding())
-		{
-			enemyUnits.push_back(enemyUnit.getUnitPtr());
-			enemySupply += enemyUnit.getType().supplyRequired();
-		}
-	}
-	m_winAttackSimulation = Util::SimulateCombat(allyUnits, enemyUnits, m_bot) > 0.f;
-	m_biggerArmy = allySupply >= enemySupply;
+	CCPosition orderPosition = GetClosestEnemyBaseLocation();
 
-	const SquadOrder harassOrder(SquadOrderTypes::Harass, GetClosestEnemyBaseLocation(), HarassOrderRadius, "Harass");
+	// A retreat must last at least 5 seconds
+	if (m_bot.GetCurrentFrame() >= m_lastRetreatFrame + 5 * 22.4)
+	{
+		m_bot.StartProfiling("0.10.4.2.3.0     calcEnemies");
+		sc2::Units enemyUnits;
+		auto enemySupply = 0;
+		for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
+		{
+			const auto & enemyUnit = enemyUnitPair.second;
+			if (enemyUnit.getType().isCombatUnit() && !enemyUnit.getType().isBuilding())
+			{
+				enemyUnits.push_back(enemyUnit.getUnitPtr());
+				enemySupply += enemyUnit.getType().supplyRequired();
+			}
+		}
+		m_bot.StopProfiling("0.10.4.2.3.0     calcEnemies");
+		m_bot.StartProfiling("0.10.4.2.3.1     calcAllies");
+		sc2::Units allyUnits;
+		auto allySupply = 0;
+		const sc2::Unit* closestAlly = nullptr;
+		const sc2::Unit* closestAllyTarget = nullptr;
+		float minDist = 0.f;
+		for (const auto & unit : harassSquad.getUnits())
+		{
+			allyUnits.push_back(unit.getUnitPtr());
+			allySupply += unit.getType().supplyRequired();
+			const float dist = Util::DistSq(unit, orderPosition);
+			if (!closestAlly || dist < minDist)
+			{
+				const auto target = harassSquad.getRangedManager().getTarget(unit.getUnitPtr(), enemyUnits, false);
+				if (target)
+				{
+					closestAlly = unit.getUnitPtr();
+					closestAllyTarget = target;
+					minDist = dist;
+				}
+			}
+		}
+		m_bot.StopProfiling("0.10.4.2.3.1     calcAllies");
+		if (closestAlly)
+		{
+			m_bot.StartProfiling("0.10.4.2.3.2     calcCloseUnits");
+			std::set<const sc2::Unit*> closeUnitsSet;
+			allyUnits.clear();
+			Util::CCUnitsToSc2Units(GetCombatUnits(), allyUnits);
+			harassSquad.getRangedManager().CalcCloseUnits(closestAlly, closestAllyTarget, allyUnits, enemyUnits, closeUnitsSet);
+			allyUnits.clear();
+			allyUnits.insert(allyUnits.end(), closeUnitsSet.begin(), closeUnitsSet.end());
+			m_bot.StopProfiling("0.10.4.2.3.2     calcCloseUnits");
+			m_bot.StartProfiling("0.10.4.2.3.3     simulateCombat");
+			float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, m_bot);
+			m_bot.StopProfiling("0.10.4.2.3.3     simulateCombat");
+			if (m_winAttackSimulation)
+			{
+				m_winAttackSimulation = simulationResult > 0.f;
+				if (!m_winAttackSimulation)
+				{
+					m_bot.Actions()->SendChat("Cancel offensive", sc2::ChatChannel::Team);
+					m_lastRetreatFrame = m_bot.GetCurrentFrame();
+				}
+			}
+			else
+			{
+				m_winAttackSimulation = simulationResult > 0.5f;
+				if (m_winAttackSimulation)
+					m_bot.Actions()->SendChat("Relaunch offensive", sc2::ChatChannel::Team);
+			}
+			if (!m_winAttackSimulation)
+				orderPosition = m_bot.Strategy().isProxyStartingStrategy() ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_bot.GetStartLocation();
+		}
+		m_biggerArmy = allySupply >= enemySupply;
+	}
+
+	const SquadOrder harassOrder(SquadOrderTypes::Harass, orderPosition, HarassOrderRadius, "Harass");
 	harassSquad.setSquadOrder(harassOrder);
 }
 

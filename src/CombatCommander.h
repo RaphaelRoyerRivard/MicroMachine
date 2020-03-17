@@ -148,7 +148,8 @@ class CombatCommander
 	std::set<sc2::Tag> m_toggledCyclones;
 	bool m_hasEnoughVikingsAgainstTempests = true;
 	bool m_biggerArmy = false;
-	bool m_winAttackSimulation = false;
+	bool m_winAttackSimulation = true;
+	int m_lastRetreatFrame = 0;
 	bool m_logVikingActions = false;
 	bool m_allowEarlyBuildingAttack = false;
     bool            m_initialized;

@@ -93,8 +93,6 @@ void Squad::onFrame()
     }
     else*/ // otherwise, execute micro
     {
-		//m_rangedManager.setHarassMode(m_order.getType() == SquadOrderTypes::Harass);
-		m_rangedManager.setHarassMode(true);
         // Nothing to do if we have no units
         //if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend || m_order.getType() == SquadOrderTypes::Harass))
 		if (!m_units.empty() && m_order.getType() != SquadOrderTypes::Idle)

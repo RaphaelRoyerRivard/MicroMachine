@@ -53,6 +53,7 @@ public:
     Squad(CCBot & bot);
 
 	const std::vector<Unit> & getTargets() const { return m_targets; }
+	RangedManager & getRangedManager() { return m_rangedManager; }
 
     void onFrame();
     void setSquadOrder(const SquadOrder & so);
