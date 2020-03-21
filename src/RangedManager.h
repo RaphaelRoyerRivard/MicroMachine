@@ -40,8 +40,6 @@ private:
 		sc2::UNIT_TYPEID::TERRAN_HELLIONTANK
 	};
 	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
-	std::map<const sc2::Unit *, FlyingHelperMission> m_cycloneFlyingHelpers;
-	std::map<const sc2::Unit *, const sc2::Unit *> m_cyclonesWithHelper;
 	std::map<std::set<const sc2::Unit *>, bool> m_combatSimulationResults;
 	std::map<sc2::Tag, sc2::Unit> m_dummyAssaultVikings;
 	std::map<const sc2::Unit *, sc2::Units> m_threatsForUnit;
@@ -61,7 +59,6 @@ private:
 	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger);
 	bool ShouldBansheeUncloak(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal) const;
 	bool ExecuteBansheeUncloakLogic(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal);
-	bool ShouldUnitHeal(const sc2::Unit * rangedUnit) const;
 	bool TeleportBattlecruiser(const sc2::Unit * battlecruiser, CCPosition location);
 	CCPosition GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const;
 	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, bool unitShouldHeal, bool isCycloneHelper);
@@ -97,6 +94,4 @@ private:
 	bool MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const;
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	sc2::Units & getThreats(const sc2::Unit * rangedUnit, const sc2::Units & targets);
-	void CleanLockOnTargets() const;
-	void CalcBestFlyingCycloneHelpers();
 };

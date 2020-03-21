@@ -1934,7 +1934,7 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 		if (Util::Contains(unit.getAPIUnitType(), liftingTypes))
 		{
 			// If the building is damaged
-			if (unit.getHitPointsPercentage() <= 50.f)
+			if (unit.getHitPointsPercentage() <= 50.f && unit.getUnitPtr()->build_progress >= 1.f)
 			{
 				// We don't want to lift a wall building
 				if (Util::Contains(unit, m_wallBuilding))

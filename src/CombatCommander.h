@@ -114,6 +114,8 @@ struct RangedUnitAction
 	}
 };
 
+const float CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER = 4.f;
+
 class CombatCommander
 {
 	const int FRAME_BEFORE_SIGHTING_INVALIDATED = 25;
@@ -122,7 +124,8 @@ class CombatCommander
 	uint32_t m_lastLowPriorityFrame = 0;
 	uint32_t m_lastBlockedTilesResetFrame = 0;
 	uint32_t m_lastBlockedTilesUpdateFrame = 0;
-	uint32_t m_lastIdleSquadUpdateFrame = 0;
+	uint32_t m_lastIdlePositionUpdateFrame = 0;
+	CCPosition m_idlePosition;
     SquadData       m_squadData;
     std::vector<Unit>  m_combatUnits;
 	std::map<const sc2::Unit *, RangedUnitAction> unitActions;
@@ -147,7 +150,6 @@ class CombatCommander
 	std::set<sc2::Tag> m_newCyclones;
 	std::set<sc2::Tag> m_toggledCyclones;
 	bool m_hasEnoughVikingsAgainstTempests = true;
-	bool m_biggerArmy = false;
 	bool m_winAttackSimulation = true;
 	int m_lastRetreatFrame = 0;
 	bool m_logVikingActions = false;
@@ -158,9 +160,12 @@ class CombatCommander
 	int				m_currentBaseScoutingIndex;
 	std::vector<const BaseLocation*> m_visitedBaseLocations;
 	uint32_t			m_lastWorkerRushDetectionFrame = 0;
+	std::map<const sc2::Unit *, FlyingHelperMission> m_cycloneFlyingHelpers;
+	std::map<const sc2::Unit *, const sc2::Unit *> m_cyclonesWithHelper;
+	std::vector<sc2::AvailableAbilities> m_unitsAbilities;
 
 	void			clearYamatoTargets();
-
+	void			updateIdlePosition();
     void            updateScoutDefenseSquad();
 	void            updateDefenseBuildings();
 	void			handleWall();
@@ -221,6 +226,8 @@ public:
 	std::set<sc2::Tag> & getNewCyclones() { return m_newCyclones; }
 	std::set<sc2::Tag> & getToggledCyclones() { return m_toggledCyclones; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
+	const std::map<const sc2::Unit *, FlyingHelperMission> & getCycloneFlyingHelpers() const { return m_cycloneFlyingHelpers; }
+	const std::map<const sc2::Unit *, const sc2::Unit *> & getCyclonesWithHelper() const { return m_cyclonesWithHelper; }
 	float getTotalGroundInfluence(CCTilePosition tilePosition) const;
 	float getTotalAirInfluence(CCTilePosition tilePosition) const;
 	float getGroundCombatInfluence(CCTilePosition tilePosition) const;
@@ -235,7 +242,6 @@ public:
 	bool isTileBlocked(int x, int y);
 	bool hasEnoughVikingsAgainstTempests() const { return m_hasEnoughVikingsAgainstTempests; }
 	bool winAttackSimulation() const { return m_winAttackSimulation; }
-	bool hasBiggerArmy() const { return m_biggerArmy; }
 	void initInfluenceMaps();
 	CCPosition getMainAttackLocation();
 	void updateBlockedTilesWithNeutral();
@@ -247,5 +253,9 @@ public:
 	void CleanActions(const std::vector<Unit> &rangedUnits);
 	void ExecuteActions();
 	RangedUnitAction& GetRangedUnitAction(const sc2::Unit * combatUnit);
+	void CleanLockOnTargets() const;
+	void CalcBestFlyingCycloneHelpers();
+	bool ShouldUnitHeal(const sc2::Unit * unit) const;
+	bool GetUnitAbilities(const sc2::Unit * unit, sc2::AvailableAbilities & outUnitAbilities) const;
 };
 

@@ -2122,6 +2122,16 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 	return false;
 }
 
+bool Util::IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * unit, const std::vector<sc2::AvailableAbilities> & availableAbilitiesForUnits)
+{
+	for (const auto & availableAbilitiesForUnit : availableAbilitiesForUnits)
+	{
+		if (availableAbilitiesForUnit.unit_tag == unit->tag)
+			return IsAbilityAvailable(abilityId, availableAbilitiesForUnit);
+	}
+	return false;
+}
+
 bool Util::IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbilities & availableAbilities)
 {
 	for (const auto & availableAbility : availableAbilities.abilities)
