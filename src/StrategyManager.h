@@ -27,6 +27,7 @@ enum StrategyPostBuildOrder {
 	NO_STRATEGY = -1,
 	TERRAN_CLASSIC = 0,
 	TERRAN_VS_PROTOSS = 1,
+	MARINE_MARAUDER = 2,
 	WORKER_RUSH_DEFENSE = 3
 };
 
@@ -47,12 +48,20 @@ class StrategyManager
 		"PROXY_CYCLONES",
 		"EARLY_EXPAND",
 		"STANDARD",
-		"WORKER_RUSH",
+		"WORKER_RUSH",	// removed
 		"PROXY_MARAUDERS"
 	};
 
 	std::map<StartingStrategy, sc2::Race> RACE_SPECIFIC_STRATEGIES = {
 		{ PROXY_MARAUDERS, sc2::Race::Protoss }
+	};
+
+	// Only strategies in this list and in the race specific list can be chosen
+	std::vector<std::string> STRATEGY_ORDER = {
+		"PROXY_MARAUDERS",
+		"EARLY_EXPAND",
+		"PROXY_CYCLONES",
+		"STANDARD"
 	};
 	
     CCBot & m_bot;
@@ -70,6 +79,7 @@ class StrategyManager
 	bool m_shouldProduceAntiAirDefense = false;
 	bool m_enemyHasProtossHighTechAir = false;
 	bool m_enemyHasInvisible = false;
+	bool m_enemyCurrentlyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
 	bool m_enemyHasMassZerglings = false;
 	bool m_enemyHasHiSecAutoTracking = false;
@@ -93,6 +103,7 @@ public:
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
 	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
 	bool isProxyStartingStrategy() const;
+	bool isProxyFactoryStartingStrategy() const;
 	bool wasProxyStartingStrategy() const;
 	StrategyPostBuildOrder getCurrentStrategyPostBuildOrder() const;
     bool scoutConditionIsMet() const;
@@ -115,7 +126,9 @@ public:
 	bool enemyHasProtossHighTechAir() const { return m_enemyHasProtossHighTechAir; }
 	void setEnemyHasProtossHighTechAir(bool enemyHasHighTechAir) { m_enemyHasProtossHighTechAir = enemyHasHighTechAir; }
 	bool enemyHasInvisible() const { return m_enemyHasInvisible; }
+	bool enemyCurrentlyHasInvisible() const { return m_enemyCurrentlyHasInvisible; }
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
+	void setEnemyCurrentlyHasInvisible(bool enemyCurrentlyHasInvisible) { m_enemyCurrentlyHasInvisible = enemyCurrentlyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
 	bool enemyHasMassZerglings() const { return m_enemyHasMassZerglings; }

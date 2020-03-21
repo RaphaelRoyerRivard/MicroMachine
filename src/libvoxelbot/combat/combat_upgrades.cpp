@@ -11,9 +11,14 @@ CombatUpgrades::CombatUpgrades() {
 sc2::UPGRADE_ID CombatUpgrades::iterator::operator*() const { return availableUpgrades.getBuildOrderItem(index).upgradeID(); }
 
 bool CombatUpgrades::hasUpgrade(sc2::UPGRADE_ID upgrade) const {
-    return upgrades[availableUpgrades.getIndex(upgrade)];
+	const auto index = availableUpgrades.getIndex(upgrade);
+	if (index < 0 || index >= upgrades.size())
+		return false;
+    return upgrades[index];
 }
 
 void CombatUpgrades::add(sc2::UPGRADE_ID upgrade) {
-    upgrades[availableUpgrades.getIndex(upgrade)] = true;
+	const auto index = availableUpgrades.getIndex(upgrade);
+	if (index >= 0 && index < upgrades.size())
+		upgrades[index] = true;
 }

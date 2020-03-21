@@ -680,6 +680,13 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                         damageMultiplier *= min(1.0f, time / 4.0f);
                     }
 
+                	if (unit.type == UNIT_TYPEID::TERRAN_MARINE || unit.type == UNIT_TYPEID::TERRAN_MARAUDER)
+                	{
+						const auto stimBuffId = unit.type == UNIT_TYPEID::TERRAN_MARINE ? BUFF_ID::STIMPACK : BUFF_ID::STIMPACKMARAUDER;
+						if (std::find(unit.buffs.begin(), unit.buffs.end(), stimBuffId) != unit.buffs.end())
+							damageMultiplier *= 1.5f;
+                	}
+
                     other.modifyHealth(-dps * damageMultiplier * dt);
 
                     if (other.health == 0) {

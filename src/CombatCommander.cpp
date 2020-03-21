@@ -4,7 +4,6 @@
 #include <list>
 
 const size_t IdlePriority = 0;
-const size_t WorkerFleePriority = 0;
 const size_t BackupPriority = 1;
 const size_t HarassPriority = 2;
 const size_t AttackPriority = 2;
@@ -12,6 +11,7 @@ const size_t ClearExpandPriority = 3;
 const size_t ScoutPriority = 3;
 const size_t BaseDefensePriority = 4;
 const size_t ScoutDefensePriority = 5;
+const size_t WorkerFleePriority = 5;
 const size_t DropPriority = 5;
 
 const float DefaultOrderRadius = 25;			//Order radius is the threat awareness range of units in the squad
@@ -66,7 +66,7 @@ void CombatCommander::onStart()
 
     // the backup squad that will send reinforcements to the main attack squad
     SquadOrder backupSquadOrder(SquadOrderTypes::Attack, CCPosition(0, 0), DefaultOrderRadius, "Send backups");
-    m_squadData.addSquad("Backup1", Squad("Backup1", backupSquadOrder, BackupPriority, m_bot));
+    m_squadData.addSquad("Backup", Squad("Backup", backupSquadOrder, BackupPriority, m_bot));
 
     // the scout defense squad will handle chasing the enemy worker scout
 	// the -5 is to prevent enemy workers (during worker rush) to get outside the base defense range
@@ -138,14 +138,25 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 
     m_combatUnits = combatUnits;
 
+	sc2::Units units;
+	Util::CCUnitsToSc2Units(combatUnits, units);
+	m_unitsAbilities = m_bot.Query()->GetAbilitiesForUnits(units);
+
 	m_bot.StartProfiling("0.10.4.0    updateInfluenceMaps");
 	updateInfluenceMaps();
 	m_bot.StopProfiling("0.10.4.0    updateInfluenceMaps");
+
+	m_bot.StartProfiling("0.10.4.1    CalcBestFlyingCycloneHelpers");
+	CalcBestFlyingCycloneHelpers();
+	m_bot.StopProfiling("0.10.4.1    CalcBestFlyingCycloneHelpers");
+
+	updateIdlePosition();
 
 	m_bot.StartProfiling("0.10.4.2    updateSquads");
     if (isSquadUpdateFrame())
     {
 		updateIdleSquad();
+		updateBackupSquads();
 		updateWorkerFleeSquad();
         updateScoutDefenseSquad();
 		m_bot.StartProfiling("0.10.4.2.1    updateDefenseBuildings");
@@ -156,22 +167,23 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		m_bot.StopProfiling("0.10.4.2.2    updateDefenseSquads");
 		updateClearExpandSquads();
 		updateScoutSquad();
+		m_bot.StartProfiling("0.10.4.2.3    updateHarassSquads");
 		updateHarassSquads();
+		m_bot.StopProfiling("0.10.4.2.3    updateHarassSquads");
 		updateAttackSquads();
-        //updateBackupSquads();
     }
 	drawCombatInformation();
 	m_bot.StopProfiling("0.10.4.2    updateSquads");
 
-	m_bot.StartProfiling("0.10.4.1    m_squadData.onFrame");
+	m_bot.StartProfiling("0.10.4.3    m_squadData.onFrame");
 	m_squadData.onFrame();
-	m_bot.StopProfiling("0.10.4.1    m_squadData.onFrame");
+	m_bot.StopProfiling("0.10.4.3    m_squadData.onFrame");
 
 	ExecuteActions();
 
-	m_bot.StartProfiling("0.10.4.3    lowPriorityCheck");
+	m_bot.StartProfiling("0.10.4.4    lowPriorityCheck");
 	lowPriorityCheck();
-	m_bot.StopProfiling("0.10.4.3    lowPriorityCheck");
+	m_bot.StopProfiling("0.10.4.4    lowPriorityCheck");
 }
 
 void CombatCommander::lowPriorityCheck()
@@ -199,7 +211,8 @@ void CombatCommander::lowPriorityCheck()
 
 bool CombatCommander::shouldWeStartAttacking()
 {
-    return m_bot.Strategy().getCurrentStrategy().m_attackCondition.eval();
+    //return m_bot.Strategy().getCurrentStrategy().m_attackCondition.eval();
+	return true;
 }
 
 void CombatCommander::initInfluenceMaps()
@@ -591,6 +604,22 @@ void CombatCommander::drawBlockedTiles()
 	}
 }
 
+void CombatCommander::updateIdlePosition()
+{
+	if (m_bot.GetCurrentFrame() - m_lastIdlePositionUpdateFrame >= 24)	// Every second
+	{
+		m_lastIdlePositionUpdateFrame = m_bot.GetCurrentFrame();
+		auto idlePosition = m_bot.GetStartLocation();
+		const BaseLocation* farthestBase = m_bot.Bases().getFarthestOccupiedBaseLocation();
+		if (farthestBase)
+		{
+			const auto vectorAwayFromBase = Util::Normalized(farthestBase->getResourceDepot().getPosition() - Util::GetPosition(farthestBase->getCenterOfMinerals()));
+			idlePosition = farthestBase->getResourceDepot().getPosition() + vectorAwayFromBase * 5.f;
+		}
+		m_idlePosition = idlePosition;
+	}
+}
+
 void CombatCommander::updateIdleSquad()
 {
     Squad & idleSquad = m_squadData.getSquad("Idle");
@@ -608,23 +637,14 @@ void CombatCommander::updateIdleSquad()
 	if (idleSquad.getUnits().empty())
 		return;
 
-	if (m_bot.GetCurrentFrame() - m_lastIdleSquadUpdateFrame >= 24)	// Every second
+	CleanActions(idleSquad.getUnits());
+
+	for (auto & combatUnit : idleSquad.getUnits())
 	{
-		m_lastIdleSquadUpdateFrame = m_bot.GetCurrentFrame();
-		auto idlePosition = m_bot.GetStartLocation();
-		const BaseLocation* farthestBase = m_bot.Bases().getFarthestOccupiedBaseLocation();
-		if(farthestBase)
+		if (Util::DistSq(combatUnit, m_idlePosition) > 5.f * 5.f)
 		{
-			const auto vectorAwayFromBase = Util::Normalized(farthestBase->getResourceDepot().getPosition() - Util::GetPosition(farthestBase->getCenterOfMinerals()));
-			idlePosition = farthestBase->getResourceDepot().getPosition() + vectorAwayFromBase * 5.f;
-		}
-		
-		for (auto & combatUnit : idleSquad.getUnits())
-		{
-			if (Util::DistSq(combatUnit, idlePosition) > 5.f * 5.f)
-			{
-				Micro::SmartMove(combatUnit.getUnitPtr(), idlePosition, m_bot);
-			}
+			const auto action = RangedUnitAction(MicroActionType::Move, m_idlePosition, false, 0, "IdleMove");
+			PlanAction(combatUnit.getUnitPtr(), action);
 		}
 	}
 }
@@ -635,6 +655,13 @@ void CombatCommander::updateWorkerFleeSquad()
 	for (auto & worker : m_bot.Workers().getWorkers())
 	{
 		const CCTilePosition tile = Util::GetTilePosition(worker.getPosition());
+		const float groundInfluence = Util::PathFinding::GetCombatInfluenceOnTile(tile, worker.isFlying(), m_bot);
+		bool fleeFromSlowThreats = false;
+		if (groundInfluence > 0.f && !m_bot.Strategy().isWorkerRushed())
+		{
+			const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
+			fleeFromSlowThreats = !WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits);
+		}
 		const bool flyingThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), false, m_bot);
 		const bool groundCloakedThreat = Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(tile, m_bot);
 		const bool groundThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), true, m_bot);
@@ -642,7 +669,7 @@ void CombatCommander::updateWorkerFleeSquad()
 		const auto job = m_bot.Workers().getWorkerData().getWorkerJob(worker);
 		const auto isProxyWorker = m_bot.Workers().getWorkerData().isProxyWorker(worker);
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
-		if ((((flyingThreat && !groundThreat) || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
+		if ((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
 			|| Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
 			|| (groundThreat && (injured || isProxyWorker) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))
 		{
@@ -673,40 +700,135 @@ void CombatCommander::updateBackupSquads()
     }
 
     Squad & mainAttackSquad = m_squadData.getSquad("MainAttack");
-
-    int backupNo = 1;
-    while (m_squadData.squadExists("Backup" + std::to_string(backupNo)))
+    Squad & backupSquad = m_squadData.getSquad("Backup");
+	std::vector<Unit*> idleHellions;
+	std::vector<Unit*> idleMarines;
+	std::vector<Unit*> idleVikings;
+	std::vector<Unit*> idleCyclones;
+    for (auto & unit : m_combatUnits)
     {
-        Squad & backupSquad = m_squadData.getSquad("Backup" + std::to_string(backupNo));
+        BOT_ASSERT(unit.isValid(), "null unit in combat units");
 
-        for (auto & unit : m_combatUnits)
+		const sc2::UnitTypeID unitTypeId = unit.getType().getAPIUnitType();
+		if ((unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARAUDER
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_MEDIVAC
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_REAPER
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BANSHEE
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_RAVEN
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THOR
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THORAP
+			|| (unitTypeId == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_REAPER) >= 2))
+            && m_squadData.canAssignUnitToSquad(unit, backupSquad))
+            //TODO validate that the unit is near enough the backup squad, otherwise create another one
         {
-            BOT_ASSERT(unit.isValid(), "null unit in combat units");
-
-            // get every unit of a lower priority and put it into the attack squad
-            if (!unit.getType().isWorker()
-                && !(unit.getType().isOverlord())
-                && !(unit.getType().isQueen())
-                && m_squadData.canAssignUnitToSquad(unit, backupSquad))
-                //TODO validate that the unit is near enough the backup squad, otherwise create another one
-            {
+			if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION)
+				idleHellions.push_back(&unit);
+			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE)
+				idleMarines.push_back(&unit);
+			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+				idleVikings.push_back(&unit);
+			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+				idleCyclones.push_back(&unit);
+			else
                 m_squadData.assignUnitToSquad(unit, backupSquad);
-            }
         }
-
-		if (mainAttackSquad.isSuiciding())
+    }
+    
+	if (idleHellions.size() >= Util::HELLION_SQUAD_COUNT)
+	{
+		for (auto hellion : idleHellions)
 		{
-			SquadOrder retreatOrder(SquadOrderTypes::Retreat, CCPosition(0, 0), 25, "Retreat");
-			backupSquad.setSquadOrder(retreatOrder);
+			m_squadData.assignUnitToSquad(*hellion, backupSquad);
+		}
+	}
+	const auto battlecruisers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
+	if (idleMarines.size() >= 10 && battlecruisers > 0)
+	{
+		for (auto marine : idleMarines)
+		{
+			m_squadData.assignUnitToSquad(*marine, backupSquad);
+		}
+	}
+	const auto tempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
+	const auto VIKING_TEMPEST_RATIO = 2.5f;
+	const auto vikingsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true);
+	if (vikingsCount >= tempestCount * VIKING_TEMPEST_RATIO)
+	{
+		for (auto viking : idleVikings)
+		{
+			m_squadData.assignUnitToSquad(*viking, backupSquad);
+		}
+		m_hasEnoughVikingsAgainstTempests = true;
+	}
+	else
+	{
+		m_hasEnoughVikingsAgainstTempests = false;
+		auto vikings = backupSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER);
+		auto vikingsAssault = backupSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT);
+		vikings.insert(vikings.end(), vikingsAssault.begin(), vikingsAssault.end());
+		// Otherwise we remove our Vikings from the Backup Squad when they are close to our base
+		for (const auto & viking : vikings)
+		{
+			if (Util::DistSq(viking, m_bot.GetStartLocation()) < 10.f * 10.f)
+			{
+				backupSquad.removeUnit(viking);
+			}
+		}
+	}
+	if (!idleCyclones.empty())
+	{
+		bool addCyclones = false;
+		if (m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS)
+		{
+			addCyclones = true;
 		}
 		else
 		{
-			SquadOrder sendBackupsOrder(SquadOrderTypes::Attack, mainAttackSquad.calcCenter(), 25, "Send backups");
-			backupSquad.setSquadOrder(sendBackupsOrder);
+			for (const auto & unit : backupSquad.getUnits())
+			{
+				if (unit.isFlying())
+				{
+					addCyclones = true;
+					break;
+				}
+			}
+			if (!addCyclones)
+			{
+				for (const auto & unit : mainAttackSquad.getUnits())
+				{
+					if (unit.isFlying())
+					{
+						addCyclones = true;
+						break;
+					}
+				}
+			}
 		}
+		if (addCyclones)
+		{
+			for (auto cyclone : idleCyclones)
+			{
+				m_squadData.assignUnitToSquad(*cyclone, backupSquad);
+			}
+		}
+	}
 
-        ++backupNo;
-    }
+	if (mainAttackSquad.isSuiciding())
+	{
+		SquadOrder retreatOrder(SquadOrderTypes::Retreat, m_bot.GetStartLocation(), 25, "Retreat");
+		backupSquad.setSquadOrder(retreatOrder);
+	}
+	else
+	{
+		SquadOrder sendBackupsOrder(SquadOrderTypes::Attack, mainAttackSquad.calcCenter(), 25, "Send backups");
+		backupSquad.setSquadOrder(sendBackupsOrder);
+	}
 }
 
 void CombatCommander::updateClearExpandSquads()
@@ -822,150 +944,40 @@ void CombatCommander::updateScoutSquad()
 
 void CombatCommander::updateHarassSquads()
 {
-	Squad & harassSquad = m_squadData.getSquad("Harass");	
-	std::vector<Unit*> idleHellions;
-	std::vector<Unit*> idleMarines;
-	std::vector<Unit*> idleVikings;
-	std::vector<Unit*> idleCyclones;
-	for (auto & unit : m_combatUnits)
+	//TODO Check for specific harass units like Banshees and spread them to multiple enemy bases
+	Squad & harassSquad = m_squadData.getSquad("Harass");
+	/*const auto squadCenter = harassSquad.calcCenter();
+	Squad & backupSquad = m_squadData.getSquad("Backup");
+	for (auto & backupUnit : backupSquad.getUnits())
 	{
-		BOT_ASSERT(unit.isValid(), "null unit in combat units");
-
-		// put high mobility units in the harass squad
-		const sc2::UnitTypeID unitTypeId = unit.getType().getAPIUnitType();
-		if ((unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARAUDER
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_REAPER
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BANSHEE
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_RAVEN
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THOR
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THORAP
-			|| (unitTypeId == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_REAPER) >= 2))
-			&& m_squadData.canAssignUnitToSquad(unit, harassSquad))
+		bool closeEnough = harassSquad.getUnits().empty();
+		if (!closeEnough)
 		{
-			if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION)
-				idleHellions.push_back(&unit);
-			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE)
-				idleMarines.push_back(&unit);
-			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
-				idleVikings.push_back(&unit);
-			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
-				idleCyclones.push_back(&unit);
+			auto dist = Util::DistSq(backupUnit, squadCenter);
+			if (dist <= harassSquad.getSquadOrder().getRadius())
+				closeEnough = true;
 			else
-				m_squadData.assignUnitToSquad(unit, harassSquad);
-		}
-	}
-	if(idleHellions.size() >= Util::HELLION_SQUAD_COUNT)
-	{
-		for (auto hellion : idleHellions)
-		{
-			m_squadData.assignUnitToSquad(*hellion, harassSquad);
-		}
-	}
-	const auto battlecruisers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
-	if (idleMarines.size() >= 10 && battlecruisers > 0)
-	{
-		for (auto marine : idleMarines)
-		{
-			m_squadData.assignUnitToSquad(*marine, harassSquad);
-		}
-	}
-	const auto tempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
-	const auto VIKING_TEMPEST_RATIO = 2.5f;
-	const auto vikingsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true);
-	if(vikingsCount >= tempestCount * VIKING_TEMPEST_RATIO)
-	{
-		for (auto viking : idleVikings)
-		{
-			m_squadData.assignUnitToSquad(*viking, harassSquad);
-		}
-		m_hasEnoughVikingsAgainstTempests = true;
-	} 
-	else
-	{
-		/*const auto harassVikings = harassSquad.getUnitCountOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER) + harassSquad.getUnitCountOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT);
-		// If we have enough Vikings overall we can send them to fight
-		m_hasEnoughVikingsAgainstTempests = harassVikings + idleVikings.size() >= tempestCount * VIKING_TEMPEST_RATIO;
-		if (m_hasEnoughVikingsAgainstTempests)
-		{
-			for (auto viking : idleVikings)
 			{
-				m_squadData.assignUnitToSquad(*viking, harassSquad);
-			}
-		}
-		else*/
-		{
-			m_hasEnoughVikingsAgainstTempests = false;
-			auto vikings = harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER);
-			auto vikingsAssault = harassSquad.getUnitsOfType(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT);
-			vikings.insert(vikings.end(), vikingsAssault.begin(), vikingsAssault.end());
-			// Otherwise we remove our Vikings from the Harass Squad when they are close to our base
-			for (const auto & viking : vikings)
-			{
-				if(Util::DistSq(viking, m_bot.GetStartLocation()) < 10.f * 10.f)
+				for (auto & unit : harassSquad.getUnits())
 				{
-					harassSquad.removeUnit(viking);
+					dist = Util::DistSq(unit, backupUnit);
+					if (dist <= 10.f * 10.f)
+					{
+						closeEnough = true;
+						break;
+					}
 				}
 			}
 		}
-	}
-	if(!idleCyclones.empty())
-	{
-		bool addCyclones = false;
-		if (m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS)
-		{
-			addCyclones = true;
-		}
-		else
-		{
-			for (const auto & unit : harassSquad.getUnits())
-			{
-				if (unit.isFlying())
-				{
-					addCyclones = true;
-					break;
-				}
-			}
-		}
-		if (addCyclones)
-		{
-			for (auto cyclone : idleCyclones)
-			{
-				m_squadData.assignUnitToSquad(*cyclone, harassSquad);
-			}
-		}
-	}
+		if (closeEnough && m_squadData.canAssignUnitToSquad(backupUnit, harassSquad))
+			m_squadData.assignUnitToSquad(backupUnit, harassSquad);
+	}*/
 
 	if (harassSquad.getUnits().empty())
 		return;
 
-	sc2::Units allyUnits;
-	auto allySupply = 0;
-	for (const auto & unit : harassSquad.getUnits())
-	{
-		allyUnits.push_back(unit.getUnitPtr());
-		allySupply += unit.getType().supplyRequired();
-	}
-	sc2::Units enemyUnits;
-	auto enemySupply = 0;
-	for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
-	{
-		const auto & enemyUnit = enemyUnitPair.second;
-		if (enemyUnit.getType().isCombatUnit() && !enemyUnit.getType().isBuilding())
-		{
-			enemyUnits.push_back(enemyUnit.getUnitPtr());
-			enemySupply += enemyUnit.getType().supplyRequired();
-		}
-	}
-	m_winAttackSimulation = Util::SimulateCombat(allyUnits, enemyUnits, m_bot);
-	m_biggerArmy = allySupply >= enemySupply;
-
-	const SquadOrder harassOrder(SquadOrderTypes::Harass, GetClosestEnemyBaseLocation(), HarassOrderRadius, "Harass");
+	const CCPosition orderPosition = GetClosestEnemyBaseLocation();
+	const SquadOrder harassOrder(SquadOrderTypes::Harass, orderPosition, HarassOrderRadius, "Harass");
 	harassSquad.setSquadOrder(harassOrder);
 }
 
@@ -977,8 +989,9 @@ void CombatCommander::updateAttackSquads()
     }*/
 
     Squad & mainAttackSquad = m_squadData.getSquad("MainAttack");
-	
-	if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH && m_bot.GetCurrentFrame() >= 224)
+
+	// Worker rush strategy is not used anymore
+	/*if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH && m_bot.GetCurrentFrame() >= 224)
 	{
 		for (auto & scv : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SCV))
 		{
@@ -991,26 +1004,120 @@ void CombatCommander::updateAttackSquads()
 		
 		const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, getMainAttackLocation(), MainAttackOrderRadius, "Attack");
 		mainAttackSquad.setSquadOrder(mainAttackOrder);
+	}*/
+
+	const auto squadCenter = mainAttackSquad.calcCenter();
+	std::vector<Unit> unitsToTransfer;
+	Squad & backupSquad = m_squadData.getSquad("Backup");
+
+	for (auto & unit : mainAttackSquad.getUnits())
+	{
+		const auto dist = Util::DistSq(unit, squadCenter);
+		const auto radius = mainAttackSquad.getSquadOrder().getRadius();
+		if (dist > radius * radius)
+			unitsToTransfer.push_back(unit);
 	}
 
-    /*for (auto & unit : m_combatUnits)
-    {   
-        BOT_ASSERT(unit.isValid(), "null unit in combat units");
+	for (const auto & unit : unitsToTransfer)
+	{
+		mainAttackSquad.removeUnit(unit);
+		m_squadData.assignUnitToSquad(unit, backupSquad);
+	}
+	unitsToTransfer.clear();
+	
+	for (auto & backupUnit : backupSquad.getUnits())
+	{
+		bool closeEnough = mainAttackSquad.getUnits().empty();
+		if (!closeEnough)
+		{
+			auto dist = Util::DistSq(backupUnit, squadCenter);
+			const auto radius = mainAttackSquad.getSquadOrder().getRadius();
+			if (dist <= radius * radius)
+				closeEnough = true;
+			else
+			{
+				for (auto & unit : mainAttackSquad.getUnits())
+				{
+					dist = Util::DistSq(unit, backupUnit);
+					if (dist <= 10.f * 10.f)
+					{
+						closeEnough = true;
+						break;
+					}
+				}
+			}
+		}
+		if (closeEnough && m_squadData.canAssignUnitToSquad(backupUnit, mainAttackSquad))
+			unitsToTransfer.push_back(backupUnit);
+	}
+	
+	for (const auto & unit : unitsToTransfer)
+		m_squadData.assignUnitToSquad(unit, mainAttackSquad);
 
-        // get every unit of a lower priority and put it into the attack squad
-        if (!unit.getType().isWorker()
-            && !(unit.getType().isOverlord()) 
-            && !(unit.getType().isQueen()) 
-            && m_squadData.canAssignUnitToSquad(unit, mainAttackSquad))
-        {
-            m_squadData.assignUnitToSquad(unit, mainAttackSquad);
-        }
-    }
+	if (mainAttackSquad.getUnits().empty())
+		return;
 
-    if (mainAttackSquad.getUnits().empty())
-        return;
+	CCPosition orderPosition = GetClosestEnemyBaseLocation();
+	
+	// A retreat must last at least 5 seconds
+	if (m_bot.GetCurrentFrame() >= m_lastRetreatFrame + 5 * 22.4)
+	{
+		bool earlyCycloneRush = false;
+		if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
+		{
+			for (const auto & unit : m_combatUnits)
+			{
+				if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING)
+				{
+					earlyCycloneRush = true;
+					break;
+				}
+			}
+		}
 
-    if (mainAttackSquad.needsToRetreat())
+		// We don't want to stop the offensive with the proxy Cyclones strategy when we still have our flying Barracks
+		if (!earlyCycloneRush)
+		{
+			m_bot.StartProfiling("0.10.4.2.3.0     calcEnemies");
+			sc2::Units enemyUnits;
+			for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
+			{
+				const auto & enemyUnit = enemyUnitPair.second;
+				if (enemyUnit.getType().isCombatUnit() && !enemyUnit.getType().isBuilding())
+				{
+					enemyUnits.push_back(enemyUnit.getUnitPtr());
+				}
+			}
+			m_bot.StopProfiling("0.10.4.2.3.0     calcEnemies");
+			sc2::Units allyUnits;
+			m_bot.StartProfiling("0.10.4.2.3.1     simulateCombat");
+			Util::CCUnitsToSc2Units(mainAttackSquad.getUnits(), allyUnits);
+			const float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, m_bot);
+			m_bot.StopProfiling("0.10.4.2.3.1     simulateCombat");
+			if (m_winAttackSimulation)
+			{
+				m_winAttackSimulation = simulationResult > 0.f;
+				if (!m_winAttackSimulation)
+				{
+					m_bot.Actions()->SendChat("Cancel offensive", sc2::ChatChannel::Team);
+					m_lastRetreatFrame = m_bot.GetCurrentFrame();
+				}
+			}
+			else
+			{
+				m_winAttackSimulation = simulationResult > 0.5f;
+				if (m_winAttackSimulation)
+					m_bot.Actions()->SendChat("Relaunch offensive", sc2::ChatChannel::Team);
+			}
+			if (!m_winAttackSimulation)
+				orderPosition = m_bot.Strategy().isProxyStartingStrategy() ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_idlePosition;
+		}
+	}
+
+	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, HarassOrderRadius, "Attack");
+	mainAttackSquad.setSquadOrder(mainAttackOrder);
+
+    /*if (mainAttackSquad.needsToRetreat())
     {
         SquadOrder retreatOrder(SquadOrderTypes::Retreat, getMainAttackLocation(), DefaultOrderRadius, "Retreat!!");
         mainAttackSquad.setSquadOrder(retreatOrder);
@@ -1074,7 +1181,7 @@ void CombatCommander::updateScoutDefenseSquad()
 			Unit enemyWorkerUnit = *enemyUnitsInRegion.begin();
 			BOT_ASSERT(enemyWorkerUnit.isValid(), "null enemy worker unit");
 
-			Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit);
+			Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit, enemyUnitsInRegion);
 			if (workerDefender.isValid())
 			{
 				m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
@@ -1109,13 +1216,13 @@ void CombatCommander::handleWall()
 	int SUPPLYDEPOT_DISTANCE = 10 * 10;	// 10 tiles ^ 2, because we use DistSq
 
 	auto wallCenter = m_bot.Buildings().getWallPosition();
-	auto & enemies = m_bot.GetEnemyUnits();
+	auto & enemies = m_bot.GetKnownEnemyUnits();
 
 	for (auto & enemy : enemies)
 	{
-		if (enemy.second.isFlying() || enemy.second.getType().isBuilding())
+		if (enemy.isFlying() || enemy.getType().isBuilding())
 			continue;
-		CCTilePosition enemyPosition = enemy.second.getTilePosition();
+		CCTilePosition enemyPosition = enemy.getTilePosition();
 		int distance = Util::DistSq(enemyPosition, wallCenter);
 		if (distance < SUPPLYDEPOT_DISTANCE)
 		{//Raise wall
@@ -1689,7 +1796,7 @@ void CombatCommander::updateDefenseSquads()
 				// If we have no more unit to defend we check for the workers
 				else if(support == "ground" && needsMoreSupport)
 				{
-					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit);
+					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit, region.enemyUnits);
 				}
 
 				// If no support is available
@@ -1761,6 +1868,9 @@ void CombatCommander::updateDefenseSquads()
 	}
 }
 
+/*
+ * This method is not used anymore.
+ */
 void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy)
 {
     auto & squadUnits = defenseSquad.getUnits();
@@ -1771,7 +1881,7 @@ void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, bool flyingD
 		if (unit.getType().isWorker())
 		{
 			if (unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT ||
-				!ShouldWorkerDefend(unit, defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy))
+				!ShouldWorkerDefend(unit, defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, defenseSquad.getTargets()))
 			{
 				m_bot.Workers().finishedWithWorker(unit);
 				defenseSquad.removeUnit(unit);
@@ -1845,18 +1955,18 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     if (!closestDefender.isValid() && type == "ground")
     {
         // we search for worker to defend.
-        closestDefender = findWorkerToAssignToSquad(defenseSquad, pos, closestEnemy);
+        closestDefender = findWorkerToAssignToSquad(defenseSquad, pos, closestEnemy, defenseSquad.getTargets());
     }
 
     return closestDefender;
 }
 
-Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy)
+Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits)
 {
     // get our worker unit that is mining that is closest to it
     Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
 
-	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy))
+	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy, enemyUnits))
 	{
         m_bot.Workers().setCombatWorker(workerDefender);
     }
@@ -1867,7 +1977,7 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
     return workerDefender;
 }
 
-bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy) const
+bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const
 {
 	if (!worker.isValid())
 		return false;
@@ -1890,9 +2000,25 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	const auto enemyDistanceToWorker = Util::DistSq(worker, closestEnemy);
 	if (isBuilding && enemyDistanceToBase < maxEnemyDistance * maxEnemyDistance && enemyDistanceToWorker < maxEnemyDistance * maxEnemyDistance)
 		return true;
+	// Worker should not defend against slow enemies, it should flee
+	if (!WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits))
+		return false;
 	// worker should not get too far from base and can fight only units close to it
 	if (Util::DistSq(worker, pos) < 15.f * 15.f && enemyDistanceToWorker < 7.f * 7.f)
 		return true;
+	return false;
+}
+
+bool CombatCommander::WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const
+{
+	const auto workerSpeed = Util::getSpeedOfUnit(worker, m_bot);
+	const auto threats = Util::getThreats(worker, enemyUnits, m_bot);
+	for (const auto threat : threats)
+	{
+		const auto threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+		if (threatSpeed / workerSpeed >= 1.15f || threat->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)	// Workers shouldn't flee against Zerglings
+			return true;
+	}
 	return false;
 }
 
@@ -1991,8 +2117,8 @@ void CombatCommander::drawCombatInformation()
 {
     if (m_bot.Config().DrawCombatInformation)
     {
-		const auto str = "Bigger army: " + std::to_string(m_biggerArmy) + "\nWin simulation: " + std::to_string(m_winAttackSimulation);
-		const auto color = m_biggerArmy && m_winAttackSimulation ? sc2::Colors::Green : m_biggerArmy || m_winAttackSimulation ? sc2::Colors::Yellow : sc2::Colors::Red;
+		const auto str = "Win simulation: " + std::to_string(m_winAttackSimulation);
+		const auto color = m_winAttackSimulation ? sc2::Colors::Green : sc2::Colors::Red;
 		m_bot.Map().drawTextScreen(0.25f, 0.01f, str, color);
     }
 }
@@ -2251,6 +2377,10 @@ void CombatCommander::ExecuteActions()
 		const auto rangedUnit = unitAction.first;
 		auto & action = unitAction.second;
 
+		// Uninitialized action
+		if (action.description.empty())
+			continue;
+
 		if (m_logVikingActions && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 		{
 			std::stringstream ss;
@@ -2348,4 +2478,254 @@ void CombatCommander::ExecuteActions()
 RangedUnitAction& CombatCommander::GetRangedUnitAction(const sc2::Unit * combatUnit)
 {
 	return unitActions[combatUnit];
+}
+
+void CombatCommander::CleanLockOnTargets() const
+{
+	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+	for (auto it = lockOnTargets.cbegin(), next_it = it; it != lockOnTargets.cend(); it = next_it)
+	{
+		++next_it;
+		if (!it->first->is_alive)
+		{
+			lockOnTargets.erase(it);
+		}
+	}
+}
+
+void CombatCommander::CalcBestFlyingCycloneHelpers()
+{
+	m_cycloneFlyingHelpers.clear();
+	m_cyclonesWithHelper.clear();
+	CleanLockOnTargets();
+
+	// Get the Cyclones and their potential flying helpers in the squad
+	std::set<const sc2::Unit *> cyclones;
+	std::set<const sc2::Unit *> potentialFlyingCycloneHelpers;
+	for (const auto unit : m_combatUnits)
+	{
+		const auto unitPtr = unit.getUnitPtr();
+		const auto type = unitPtr->unit_type;
+
+		if (ShouldUnitHeal(unitPtr) || Util::isUnitLockedOn(unitPtr))
+			continue;
+
+		if (type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+		{
+			cyclones.insert(unitPtr);
+		}
+		else if (unit.isFlying())
+		{
+			potentialFlyingCycloneHelpers.insert(unitPtr);
+		}
+	}
+
+	if (cyclones.empty())
+		return;
+
+	// Gather Cyclones' targets
+	const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+	std::set<const sc2::Unit *> targets;
+	for (const auto & cyclone : lockOnTargets)
+	{
+		// The Cyclone's target will need to be followed
+		targets.insert(cyclone.second.first);
+		// Cyclone does not need to be followed anymore because it has a target
+		cyclones.erase(cyclone.first);
+	}
+
+	// Find clusters of targets to use less potential helpers
+	sc2::Units targetsVector;
+	for (const auto target : targets)
+		targetsVector.push_back(target);
+	const auto targetClusters = Util::GetUnitClusters(targetsVector, {}, true, m_bot);
+
+	// Choose the best air unit to keep vision of Cyclone's targets
+	for (const auto & targetCluster : targetClusters)
+	{
+		const sc2::Unit * closestHelper = nullptr;
+		float smallestDistSq = 0.f;
+		for (const auto potentialHelper : potentialFlyingCycloneHelpers)
+		{
+			const float distSq = Util::DistSq(targetCluster.m_center, potentialHelper->pos);
+			if (!closestHelper || distSq < smallestDistSq)
+			{
+				closestHelper = potentialHelper;
+				smallestDistSq = distSq;
+			}
+		}
+		if (closestHelper)
+		{
+			// Remove the helper from the set because it is now taken
+			potentialFlyingCycloneHelpers.erase(closestHelper);
+			// Save the helper
+			m_cycloneFlyingHelpers[closestHelper] = FlyingHelperMission(TRACK, targetCluster.m_center);
+			// Associate the helper with every Cyclone that had a target in that target cluster
+			for (const auto target : targetCluster.m_units)
+			{
+				for (const auto & cyclone : lockOnTargets)
+				{
+					if (target == cyclone.second.first)
+					{
+						m_cyclonesWithHelper[cyclone.first] = closestHelper;
+					}
+				}
+			}
+		}
+	}
+
+	// If there are Cyclones without target, follow them to give them vision
+	if (!cyclones.empty() && !potentialFlyingCycloneHelpers.empty())
+	{
+		// Do not consider Cyclones without target that are already near a helper
+		sc2::Units cyclonesVector;
+		for (const auto cyclone : cyclones)
+		{
+			bool covered = false;
+			for (const auto & helper : m_cycloneFlyingHelpers)
+			{
+				if (Util::DistSq(helper.first->pos, cyclone->pos) < CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER * CYCLONE_PREFERRED_MAX_DISTANCE_TO_HELPER)
+				{
+					// that cyclone doesn't need help from another flying unit
+					covered = true;
+					m_cyclonesWithHelper[cyclone] = helper.first;
+					break;
+				}
+			}
+			if (!covered)
+				cyclonesVector.push_back(cyclone);
+		}
+
+		// Find clusters of Cyclones without target to use less potential helpers
+		const auto cycloneClustersVector = Util::GetUnitClusters(cyclonesVector, { sc2::UNIT_TYPEID::TERRAN_CYCLONE }, false, m_bot);
+		std::list<Util::UnitCluster> cycloneClusters(cycloneClustersVector.begin(), cycloneClustersVector.end());
+
+		if (potentialFlyingCycloneHelpers.size() <= cycloneClusters.size())
+		{
+			// Choose the best air unit to give vision to Cyclones without target
+			for (const auto potentialHelper : potentialFlyingCycloneHelpers)
+			{
+				Util::UnitCluster closestCluster;
+				float smallestDistSq = 0.f;
+				for (const auto & cycloneCluster : cycloneClusters)
+				{
+					const float distSq = Util::DistSq(potentialHelper->pos, cycloneCluster.m_center);
+					if (closestCluster.m_units.empty() || distSq < smallestDistSq)
+					{
+						closestCluster = cycloneCluster;
+						smallestDistSq = distSq;
+					}
+				}
+				if (!closestCluster.m_units.empty())
+				{
+					// Remove the helper from the set because it is now taken
+					cycloneClusters.remove(closestCluster);
+					// Save the helper
+					m_cycloneFlyingHelpers[potentialHelper] = FlyingHelperMission(ESCORT, closestCluster.m_center);
+					// Associate the helper with every Cyclone in that Cyclone cluster
+					for (const auto cyclone : closestCluster.m_units)
+					{
+						m_cyclonesWithHelper[cyclone] = potentialHelper;
+					}
+				}
+			}
+		}
+		else
+		{
+			// Choose the best air unit to give vision to Cyclones without target
+			for (const auto & cycloneCluster : cycloneClusters)
+			{
+				const sc2::Unit * closestHelper = nullptr;
+				float smallestDistSq = 0.f;
+				for (const auto potentialHelper : potentialFlyingCycloneHelpers)
+				{
+					const float distSq = Util::DistSq(potentialHelper->pos, cycloneCluster.m_center);
+					if (!closestHelper || distSq < smallestDistSq)
+					{
+						closestHelper = potentialHelper;
+						smallestDistSq = distSq;
+					}
+				}
+				if (closestHelper)
+				{
+					// Remove the helper from the set because it is now taken
+					potentialFlyingCycloneHelpers.erase(closestHelper);
+					// Save the helper
+					m_cycloneFlyingHelpers[closestHelper] = FlyingHelperMission(ESCORT, cycloneCluster.m_center);
+					// Associate the helper with every Cyclone in that Cyclone cluster
+					for (const auto cyclone : cycloneCluster.m_units)
+					{
+						m_cyclonesWithHelper[cyclone] = closestHelper;
+					}
+				}
+			}
+		}
+	}
+}
+
+bool CombatCommander::ShouldUnitHeal(const sc2::Unit * unit) const
+{
+	auto & unitsBeingRepaired = m_bot.Commander().Combat().getUnitsBeingRepaired();
+	const UnitType unitType(unit->unit_type, m_bot);
+	const bool hasBaseOrMinerals = m_bot.Bases().getBaseCount(Players::Self, false) > 0 || m_bot.GetFreeMinerals() >= 450;
+	if (unitType.isRepairable() && !unitType.isBuilding() && hasBaseOrMinerals)
+	{
+		const auto it = unitsBeingRepaired.find(unit);
+		//If unit is being repaired
+		if (it != unitsBeingRepaired.end())
+		{
+			//and is not fully repaired
+			if (unit->health != unit->health_max)
+			{
+				return true;
+			}
+			else
+			{
+				unitsBeingRepaired.erase(unit);
+			}
+		}
+		//if unit is damaged enough to go back for repair
+		else
+		{
+			float percentageMultiplier = 1.f;
+			bool forceHeal = false;
+			switch (unit->unit_type.ToType())
+			{
+			case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
+				if (m_bot.Config().StarCraft2Version <= "4.10.4")
+					percentageMultiplier = 0.5f;
+				else if (m_bot.Analyzer().getUnitState(unit).GetRecentDamageTaken() * 1.8f >= unit->health
+					&& Util::IsAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, unit, m_unitsAbilities))
+					forceHeal = true;	// After version 4.10.4, Tactical Jump has a 1 second vulnerability
+				break;
+			case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
+				if (m_bot.Commander().Combat().getLockOnTargets().find(unit) != m_bot.Commander().Combat().getLockOnTargets().end())
+					return false;	// Cyclones with lock-on target should not go back to heal
+				percentageMultiplier = 1.5f;
+				break;
+			default:
+				break;
+			}
+			if (forceHeal || unit->health / unit->health_max < Util::HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE * percentageMultiplier)
+			{
+				unitsBeingRepaired.insert(unit);
+				return true;
+			}
+		}
+	}
+
+	return unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && unit->health / unit->health_max < 0.66f;
+}
+
+bool CombatCommander::GetUnitAbilities(const sc2::Unit * unit, sc2::AvailableAbilities & outUnitAbilities) const
+{
+	for (const auto & availableAbilitiesForUnit : m_unitsAbilities)
+	{
+		if (availableAbilitiesForUnit.unit_tag == unit->tag)
+		{
+			outUnitAbilities = availableAbilitiesForUnit;
+			return true;
+		}
+	}
+	return false;
 }

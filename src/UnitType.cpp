@@ -234,7 +234,6 @@ bool UnitType::isMineralWallPatch() const
 	return m_type.ToType() == sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD450;
 }
 
-
 bool UnitType::isWorker() const
 {
 #ifdef SC2API

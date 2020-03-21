@@ -53,15 +53,17 @@ void MeleeManager::executeMicro()
             			}
             		}
             	}
-				// If it is a worker that just attacked, we want it to mineral walk back
-				if (meleeUnit.getType().isWorker() && (meleeUnit.getUnitPtr()->weapon_cooldown > 10.f || injuredUnitInDanger))
+            	
+				// find the best target for this meleeUnit
+				Unit target = getTarget(meleeUnit, m_targets);
+            	
+				// If it is a worker that just attacked a non building unit, we want it to mineral walk back
+				if (meleeUnit.getType().isWorker() && (meleeUnit.getUnitPtr()->weapon_cooldown > 10.f || injuredUnitInDanger) && Util::getSpeedOfUnit(target.getUnitPtr(), m_bot) > 0.f)
 				{
 					Micro::SmartRightClick(meleeUnit.getUnitPtr(), m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getMinerals()[0].getUnitPtr(), m_bot);
 				}
 				else
 				{
-					// find the best target for this meleeUnit
-					Unit target = getTarget(meleeUnit, m_targets);
 					const sc2::Unit* repairTarget = nullptr;
 					const sc2::Unit* closestRepairTarget = nullptr;
 					float distanceToClosestRepairTarget = 0;

@@ -67,6 +67,11 @@ const UnitType & Unit::getType() const
     return m_unitType;
 }
 
+bool Unit::hasAttribute(sc2::Attribute attribute) const
+{
+	const auto & unitData = getUnitData(m_unit->unit_type);
+	return Util::Contains(attribute, unitData.attributes);
+}
 
 CCPosition Unit::getPosition() const
 {
@@ -200,12 +205,7 @@ bool Unit::isCompleted() const
 
 bool Unit::isTraining() const
 {
-    BOT_ASSERT(isValid(), "Unit is not valid");
-#ifdef SC2API
     return m_unit->orders.size() > 0;
-#else
-    return m_unit->isTraining();
-#endif
 }
 
 

@@ -36,9 +36,10 @@ class CCBot : public sc2::Agent
 		std::chrono::steady_clock::time_point start;
 	};
 
-	uint32_t				m_gameLoop;
+	uint32_t				m_gameLoop = 0;
 	uint32_t				m_previousGameLoop;
 	int						m_previousMacroGameLoop;
+	bool					m_combatSimulatorInitialized = false;
 	uint32_t				m_skippedFrames;
 	uint32_t				m_lastProfilingLagOutput = 0;
     MapTools                m_map;
@@ -84,11 +85,14 @@ class CCBot : public sc2::Agent
 	std::string m_botVersion;
 	std::string m_opponentId;
 	bool m_player1IsHuman;
+	bool m_realtime;
 	std::stringstream m_versionMessage;
 
 	std::chrono::steady_clock::time_point m_lastFrameEndTime;
 
 	//KeyState
+	bool keyDelete = false;
+	bool keyEnd = false;
 	bool key1 = false;
 	bool key2 = false;
 	bool key3 = false;
@@ -118,7 +122,7 @@ class CCBot : public sc2::Agent
 
 public:
 
-	CCBot(std::string botVersion = "");
+	CCBot(std::string botVersion, bool realtime);
 
 	void OnGameFullStart() override;
     void OnGameStart() override;
@@ -154,6 +158,7 @@ public:
     const CCPosition GetStartLocation() const;
 	const CCTilePosition GetBuildingArea() const;
 
+	void IssueGameStartCheats();
 	void IssueCheats();
     uint32_t GetCurrentFrame() const;
     int GetMinerals() const;

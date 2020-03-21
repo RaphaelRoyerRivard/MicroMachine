@@ -397,7 +397,7 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 	auto it = m_unitStates.find(tag);
 	if (it == m_unitStates.end())
 	{
-		UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy(), unit.getUnitPtr());
+		UnitState state = UnitState(unit.getUnitPtr());
 		state.Update();
 		m_unitStates[tag] = state;
 		m_bot.StopProfiling("0.10.4.4.2.1        addState");
@@ -411,6 +411,7 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 	m_bot.StopProfiling("0.10.4.4.2.2        updateState");
 	if (state.WasAttacked())
 	{
+		// TODO remove when we can detect all range upgrades
 		m_bot.StartProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
 		const CCTilePosition tilePosition = Util::GetTilePosition(unit.getPosition());
 		if (Util::PathFinding::HasCombatInfluenceOnTile(tilePosition, unit.isFlying(), m_bot))
@@ -423,20 +424,19 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 					{
 						m_bot.Strategy().setEnemyHasHiSecAutoTracking(true);
 						Util::Log(__FUNCTION__, unit.getType().getName() + " got hit near by a missile turret at a distance of " + std::to_string(Util::Dist(unit, enemyMissileTurret)), m_bot);
-						m_bot.Actions()->SendChat("Is that a range upgrade on your missile turrets? I ain't gonna fall for it again!");
+						m_bot.Actions()->SendChat("Is that a range upgrade on your missile turrets?");
 						break;
 					}
 				}
 			}
-			//TODO detect invis
 		}
 		m_bot.StopProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
-		m_bot.StartProfiling("0.10.4.4.2.2        saveDetectedArea");
+		m_bot.StartProfiling("0.10.4.4.2.1        saveDetectedArea");
 		if (unit.getUnitPtr()->cloak == sc2::Unit::CloakedAllied && !Util::IsPositionUnderDetection(unit.getPosition(), m_bot))
 		{
 			m_areasUnderDetection.push_back({ unit.getPosition(), m_bot.GetGameLoop() });
 		}
-		m_bot.StopProfiling("0.10.4.4.2.2        saveDetectedArea");
+		m_bot.StopProfiling("0.10.4.4.2.1        saveDetectedArea");
 
 		//Is building underconstruction. Cancel building
 		if (unit.isBeingConstructed())
@@ -447,21 +447,28 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 				unit.useAbility(sc2::ABILITY_ID::CANCEL);
 			}
 		}
-		/*auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
-		if (threats.empty() && state.HadRecentTreats())
-		{
-		//Invisible unit detected
-		m_bot.Strategy().setEnemyHasInvisible(true);
-		m_invisibleSighting[unit] = std::pair<CCPosition, uint32_t>(unit.getPosition(), m_bot.GetGameLoop());
-		}*/
+		
+		//TODO Temporarily commented out since the logic isn't finishes
+		/*m_bot.StartProfiling("0.10.4.4.2.3        detectUpgrades");
+		detectUpgrades(unit, state);
+		m_bot.StopProfiling("0.10.4.4.2.3        detectUpgrades");
+
+		m_bot.StartProfiling("0.10.4.4.2.3        detectTechs");
+		detectTechs(unit, state);
+		m_bot.StopProfiling("0.10.4.4.2.3        detectTechs");*/
 	}
-	/*else if (m_bot.GetGameLoop() % 5)
+}
+
+const UnitState & CombatAnalyzer::getUnitState(const sc2::Unit * unit)
+{
+	const auto it = m_unitStates.find(unit->tag);
+	if (it == m_unitStates.end())
 	{
-	m_bot.StartProfiling("0.10.4.4.2.4        updateThreats");
-	auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
-	state.UpdateThreat(!threats.empty());
-	m_bot.StopProfiling("0.10.4.4.2.4        updateThreats");
-	}*/
+		UnitState state = UnitState(unit);
+		state.Update();
+		m_unitStates[unit->tag] = state;
+	}
+	return m_unitStates[unit->tag];
 }
 
 void CombatAnalyzer::increaseDeadEnemy(sc2::UNIT_TYPEID type)
@@ -487,4 +494,283 @@ bool CombatAnalyzer::shouldProduceAirAntiGround()
 bool CombatAnalyzer::shouldProduceAirAntiAir()
 {
 	return false;
+}
+
+int CombatAnalyzer::getUnitUpgradeArmor(const sc2::Unit* unit)
+{
+	bool isEnemy = unit->owner != Players::Self;
+
+	switch ((sc2::UNIT_TYPEID)unit->unit_type)
+	{
+		case sc2::UNIT_TYPEID::TERRAN_MARINE:
+		case sc2::UNIT_TYPEID::TERRAN_MARAUDER:
+		case sc2::UNIT_TYPEID::TERRAN_SCV:
+		case sc2::UNIT_TYPEID::TERRAN_MULE:
+		case sc2::UNIT_TYPEID::TERRAN_REAPER:
+		case sc2::UNIT_TYPEID::TERRAN_GHOST:
+			return isEnemy ? opponentTerranBioArmor : selfTerranBioArmor;
+		case sc2::UNIT_TYPEID::TERRAN_HELLION:
+		case sc2::UNIT_TYPEID::TERRAN_SIEGETANK:
+		case sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED:
+		case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
+		case sc2::UNIT_TYPEID::TERRAN_THOR:
+		case sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT:
+		case sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
+		case sc2::UNIT_TYPEID::TERRAN_RAVEN:
+		case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
+		case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINE:
+		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
+		case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
+		case sc2::UNIT_TYPEID::TERRAN_LIBERATOR:
+		case sc2::UNIT_TYPEID::TERRAN_LIBERATORAG:
+			return isEnemy ? opponentTerranMechArmor : selfTerranMechArmor;
+		case sc2::UNIT_TYPEID::PROTOSS_ADEPT:
+		case sc2::UNIT_TYPEID::PROTOSS_ARCHON:
+		case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS:
+		case sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR:
+		case sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR:
+		case sc2::UNIT_TYPEID::PROTOSS_HIGHTEMPLAR:
+		case sc2::UNIT_TYPEID::PROTOSS_IMMORTAL:
+		case sc2::UNIT_TYPEID::PROTOSS_PROBE:
+		case sc2::UNIT_TYPEID::PROTOSS_SENTRY:
+		case sc2::UNIT_TYPEID::PROTOSS_STALKER:
+		case sc2::UNIT_TYPEID::PROTOSS_ZEALOT:
+			return isEnemy ? opponentProtossGroundArmor : selfProtossGroundArmor;
+		case sc2::UNIT_TYPEID::PROTOSS_CARRIER:
+		case sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR:
+		case sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIP:
+		case sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIPCORE:
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
+		case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
+		case sc2::UNIT_TYPEID::PROTOSS_PHOENIX:
+		case sc2::UNIT_TYPEID::PROTOSS_TEMPEST:
+		case sc2::UNIT_TYPEID::PROTOSS_VOIDRAY:
+		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISM:
+		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISMPHASING:
+			return isEnemy ? opponentProtossAirArmor : selfProtossAirArmor;
+		case sc2::UNIT_TYPEID::ZERG_BANELING:
+		case sc2::UNIT_TYPEID::ZERG_BANELINGBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_BROODLING:
+		case sc2::UNIT_TYPEID::ZERG_DRONE:
+		case sc2::UNIT_TYPEID::ZERG_DRONEBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_HYDRALISK:
+		case sc2::UNIT_TYPEID::ZERG_HYDRALISKBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_INFESTOR:
+		case sc2::UNIT_TYPEID::ZERG_INFESTORBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_INFESTORTERRAN:
+		case sc2::UNIT_TYPEID::ZERG_LOCUSTMP:
+		case sc2::UNIT_TYPEID::ZERG_LURKERMP:
+		case sc2::UNIT_TYPEID::ZERG_LURKERMPBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_QUEEN:
+		case sc2::UNIT_TYPEID::ZERG_QUEENBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_RAVAGER:
+		case sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON:
+		case sc2::UNIT_TYPEID::ZERG_ROACH:
+		case sc2::UNIT_TYPEID::ZERG_ROACHBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTBURROWEDMP:
+		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTMP:
+		case sc2::UNIT_TYPEID::ZERG_ULTRALISK:
+			//TODO Missing burrowed Ultralisk
+			//TODO Might want to check for chininous plating (+2 armor on Ultras), would have to change the switch a little.
+		case sc2::UNIT_TYPEID::ZERG_ZERGLING:
+		case sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED:
+			return isEnemy ? opponentZergGroundArmor : selfZergGroundArmor;
+		case sc2::UNIT_TYPEID::ZERG_BROODLORD:
+		case sc2::UNIT_TYPEID::ZERG_CORRUPTOR:
+		case sc2::UNIT_TYPEID::ZERG_LOCUSTMPFLYING:
+		case sc2::UNIT_TYPEID::ZERG_MUTALISK:
+		case sc2::UNIT_TYPEID::ZERG_OVERLORD:
+		case sc2::UNIT_TYPEID::ZERG_OVERSEER:
+		case sc2::UNIT_TYPEID::ZERG_VIPER:
+			return isEnemy ? opponentZergAirArmor : selfZergAirArmor;
+		default:
+			return 0;
+	}
+}
+
+int CombatAnalyzer::getUnitUpgradeWeapon(const sc2::Unit* unit)
+{
+	bool isEnemy = unit->owner != Players::Self;
+
+	switch ((sc2::UNIT_TYPEID)unit->unit_type)
+	{
+		case sc2::UNIT_TYPEID::TERRAN_MARINE:
+		case sc2::UNIT_TYPEID::TERRAN_MARAUDER:
+		case sc2::UNIT_TYPEID::TERRAN_SCV:
+		case sc2::UNIT_TYPEID::TERRAN_MULE:
+		case sc2::UNIT_TYPEID::TERRAN_REAPER:
+		case sc2::UNIT_TYPEID::TERRAN_GHOST:
+			return isEnemy ? opponentTerranBioWeapon : selfTerranBioWeapon;
+		case sc2::UNIT_TYPEID::TERRAN_HELLION:
+		case sc2::UNIT_TYPEID::TERRAN_SIEGETANK:
+		case sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED:
+		case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
+		case sc2::UNIT_TYPEID::TERRAN_THOR:
+		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINE:
+		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
+		case sc2::UNIT_TYPEID::TERRAN_CYCLONE:
+			return isEnemy ? opponentTerranGroundMechWeapon : selfTerranGroundMechWeapon;
+		case sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT:
+		case sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
+		case sc2::UNIT_TYPEID::TERRAN_RAVEN:
+		case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
+		case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+		case sc2::UNIT_TYPEID::TERRAN_LIBERATOR:
+		case sc2::UNIT_TYPEID::TERRAN_LIBERATORAG:
+			return isEnemy ? opponentTerranAirMechWeapon : selfTerranAirMechWeapon;
+		case sc2::UNIT_TYPEID::PROTOSS_ADEPT:
+		case sc2::UNIT_TYPEID::PROTOSS_ARCHON:
+		case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS:
+		case sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR:
+		case sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR:
+		case sc2::UNIT_TYPEID::PROTOSS_HIGHTEMPLAR:
+		case sc2::UNIT_TYPEID::PROTOSS_IMMORTAL:
+		case sc2::UNIT_TYPEID::PROTOSS_PROBE:
+		case sc2::UNIT_TYPEID::PROTOSS_SENTRY:
+		case sc2::UNIT_TYPEID::PROTOSS_STALKER:
+		case sc2::UNIT_TYPEID::PROTOSS_ZEALOT:
+			return isEnemy ? opponentProtossGroundWeapon : selfProtossGroundWeapon;
+		case sc2::UNIT_TYPEID::PROTOSS_CARRIER:
+		case sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR:
+		case sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIP:
+		case sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIPCORE:
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
+		case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
+		case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
+		case sc2::UNIT_TYPEID::PROTOSS_PHOENIX:
+		case sc2::UNIT_TYPEID::PROTOSS_TEMPEST:
+		case sc2::UNIT_TYPEID::PROTOSS_VOIDRAY:
+		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISM:
+		case sc2::UNIT_TYPEID::PROTOSS_WARPPRISMPHASING:
+			return isEnemy ? opponentProtossAirWeapon : selfProtossAirWeapon;
+		case sc2::UNIT_TYPEID::ZERG_ZERGLING:
+		case sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_BANELING:
+		case sc2::UNIT_TYPEID::ZERG_BANELINGBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_BROODLING:
+		case sc2::UNIT_TYPEID::ZERG_DRONE:
+		case sc2::UNIT_TYPEID::ZERG_DRONEBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_ULTRALISK:
+			//TODO Missing burrowed Ultralisk
+			return isEnemy ? opponentZergGroundMeleeWeapon : selfZergGroundMeleeWeapon;
+		case sc2::UNIT_TYPEID::ZERG_HYDRALISK:
+		case sc2::UNIT_TYPEID::ZERG_HYDRALISKBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_INFESTOR:
+		case sc2::UNIT_TYPEID::ZERG_INFESTORBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_INFESTORTERRAN:
+		case sc2::UNIT_TYPEID::ZERG_LOCUSTMP:
+		case sc2::UNIT_TYPEID::ZERG_LURKERMP:
+		case sc2::UNIT_TYPEID::ZERG_LURKERMPBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_QUEEN:
+		case sc2::UNIT_TYPEID::ZERG_QUEENBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_RAVAGER:
+		case sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON:
+		case sc2::UNIT_TYPEID::ZERG_ROACH:
+		case sc2::UNIT_TYPEID::ZERG_ROACHBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTBURROWEDMP:
+		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTMP:
+			return isEnemy ? opponentZergGroundMeleeWeapon : selfZergGroundMeleeWeapon;
+		case sc2::UNIT_TYPEID::ZERG_BROODLORD:
+		case sc2::UNIT_TYPEID::ZERG_CORRUPTOR:
+		case sc2::UNIT_TYPEID::ZERG_LOCUSTMPFLYING:
+		case sc2::UNIT_TYPEID::ZERG_MUTALISK:
+		case sc2::UNIT_TYPEID::ZERG_OVERLORD:
+		case sc2::UNIT_TYPEID::ZERG_OVERSEER:
+		case sc2::UNIT_TYPEID::ZERG_VIPER:
+			return isEnemy ? opponentZergAirWeapon : selfZergAirWeapon;
+		default:
+			return 0;
+	}
+}
+
+void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
+{
+	int healthLost = state.GetDamageTaken();
+	sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(unit.getAPIUnitType(), m_bot);
+	UnitType type = UnitType(unit.getAPIUnitType(), m_bot);
+	int unitUpgradeArmor = getUnitUpgradeArmor(unit.getUnitPtr());
+	
+	const sc2::Weapon::TargetType expectedWeaponType = unit.isFlying() ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
+	auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
+	for each (auto threat in threats)
+	{
+		//TODO validate unit is looking towards the unit
+
+		sc2::UnitTypeData threatTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
+		auto range = Util::GetAttackRangeForTarget(threat, unit.getUnitPtr(), m_bot, true);
+		auto distSq = Util::DistSq(unit.getPosition(), threat->pos) - type.radius() - threat->radius;
+		// If the threat is too far and cant have dealt damage (doesn't consider projectil travel time)
+		if (distSq > range * range)
+		{
+			//This threat cant hit the unit
+			continue;
+		}
+
+		float weaponDamage = Util::GetDamageForTarget(threat, unit.getUnitPtr(), m_bot);
+		
+		//Get the weapon, even if we have the range and damage, to see if there is another bonus damage that applies to the unit, if there is, apply the + on it.
+		sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
+		sc2::UnitTypeData targetTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)
+			{
+				int weaponLevel = getUnitUpgradeWeapon(threat);
+				for (int level = weaponLevel; level <= 3; level++)//We still try to detect level 3 upgrades, even if detecting it has no purpose, this way we can stop looping on all the threats.
+				{
+					weaponDamage -= (unitTypeData.armor + unitUpgradeArmor);
+					//TODO Attempt to figure out the upgrade level of the enemy
+					if (weaponDamage == healthLost)
+					{
+						//TODO Can detect range upgrades here
+						return;
+					}
+				}
+				break;//Only one weapon can hit air or ground (or both), there cannot be multiple that hit ground or air on a single unit.
+				//TODO validate this statement with the Thor, since it switches between two "stances"
+			}
+		}
+	}
+
+
+	switch (m_bot.GetPlayerRace(Players::Enemy))
+	{
+		case CCRace::Protoss:
+		{
+
+		}
+		case CCRace::Terran:
+		{
+
+		}
+		case CCRace::Zerg:
+		{
+
+		}
+	}
+}
+
+void CombatAnalyzer::detectTechs(Unit & unit, UnitState & state)
+{
+	m_bot.StartProfiling("0.10.4.4.2.3.1      checkForRangeUpgrade");
+	const CCTilePosition tilePosition = Util::GetTilePosition(unit.getPosition());
+	if (Util::PathFinding::HasCombatInfluenceOnTile(tilePosition, unit.isFlying(), m_bot))
+	{
+		if (unit.isFlying() && !m_bot.Strategy().enemyHasHiSecAutoTracking())
+		{
+			for (const auto & enemyMissileTurret : m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
+			{
+				if (Util::DistSq(unit, enemyMissileTurret) < 10 * 10)
+				{
+					m_bot.Strategy().setEnemyHasHiSecAutoTracking(true);
+					Util::Log(__FUNCTION__, unit.getType().getName() + " got hit near by a missile turret at a distance of " + std::to_string(Util::Dist(unit, enemyMissileTurret)), m_bot);
+					m_bot.Actions()->SendChat("Is that a range upgrade on your missile turrets? I ain't gonna fall for it again!");
+					break;
+				}
+			}
+		}
+	}
+	m_bot.StopProfiling("0.10.4.4.2.3.1      checkForRangeUpgrade");
 }

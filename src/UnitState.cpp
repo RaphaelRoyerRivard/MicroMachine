@@ -5,15 +5,15 @@ UnitState::UnitState()
 
 }
 
-UnitState::UnitState(CCHealth hitPoints, CCHealth shields, CCHealth energy, const sc2::Unit* unitPtr)
+UnitState::UnitState(const sc2::Unit* unitPtr)
 {
-	m_previousHitPoints = hitPoints;
-	m_previousShields = shields;
-	m_previousEnergy = energy;
+	m_previousHitPoints = unitPtr->health;
+	m_previousShields = unitPtr->shield;
+	m_previousEnergy = unitPtr->energy;
 
-	m_hitPoints = hitPoints;
-	m_shields = shields;
-	m_energy = energy;
+	m_hitPoints = unitPtr->health;
+	m_shields = unitPtr->shield;
+	m_energy = unitPtr->energy;
 
 	unit = unitPtr;
 
@@ -54,7 +54,7 @@ void UnitState::Update(CCHealth hitPoints, CCHealth shields, CCHealth energy)
 	m_totalRecentDamage += m_damageTaken;
 }
 
-bool UnitState::WasUpdated()
+bool UnitState::WasUpdated() const
 {
 	return wasUpdated;
 }
@@ -68,28 +68,28 @@ void UnitState::UpdateThreat(bool hasThreat)
 	m_recentThreat[CONSIDER_X_LAST_THREAT_CHECK - 1] = hasThreat;
 }
 
-bool UnitState::WasAttacked()
+bool UnitState::WasAttacked() const
 {
 	return GetDamageTaken() > 0;
 }
 
-int UnitState::GetDamageTaken()
+int UnitState::GetDamageTaken() const
 {
 	return m_damageTaken;
 }
 
-int UnitState::GetRecentDamageTaken()
+int UnitState::GetRecentDamageTaken() const
 {
 	return m_totalRecentDamage;
 }
 
-int UnitState::GetHealed()
+int UnitState::GetHealed() const
 {
 	int heal = m_shields - m_previousShields + m_hitPoints - m_previousHitPoints;
 	return heal > 0 ? heal : 0;
 }
 
-bool UnitState::HadRecentTreats()
+bool UnitState::HadRecentTreats() const
 {
 	for (int i = 0; i < CONSIDER_X_LAST_THREAT_CHECK; i++)
 	{
@@ -101,7 +101,7 @@ bool UnitState::HadRecentTreats()
 	return false;
 }
 
-sc2::UNIT_TYPEID UnitState::GetType()
+sc2::UNIT_TYPEID UnitState::GetType() const
 {
 	return unit->unit_type;
 }

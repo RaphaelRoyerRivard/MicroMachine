@@ -9,7 +9,7 @@ const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
 const float HARASS_PATHFINDING_TILE_BASE_COST = 1.f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float PATHFINDING_TURN_COST = 3.f;
-const float PATHFINDING_SECONDARY_GOAL_COST = 10.f;
+const float PATHFINDING_SECONDARY_GOAL_HEURISTIC_MULTIPLIER = 10.f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
 const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
@@ -91,12 +91,6 @@ struct Util::PathFinding::IMNode
 
 void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 {
-	// Initialize combat simulator
-	initMappings();
-	m_simulator = new CombatPredictor();
-	m_simulator->init();
-	m_simulator->getCombatEnvironment({}, {});
-	
 	switch (race)
 	{
 		case sc2::Race::Terran:
@@ -162,7 +156,15 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		}
 	}
 
-	CreateDummyVikingAssault(bot);
+	CreateDummyUnits(bot);
+}
+
+void Util::InitializeCombatSimulator()
+{
+	initMappings();
+	m_simulator = new CombatPredictor();
+	m_simulator->init();
+	m_simulator->getCombatEnvironment({}, {});
 }
 
 Util::PathFinding::IMNode* getLowestCostNode(std::set<Util::PathFinding::IMNode*> & set)
@@ -236,19 +238,19 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot);
 	}
 	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, false, getCloser, ignoreInfluence, maxInfluence, false, bot);
-	return GetCommandPositionFromPath(path, unit, bot);
+	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, bool shouldHeal, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), 0.f, false, false, shouldHeal, false, 0, true, bot);
-	return GetCommandPositionFromPath(path, unit, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, bot.GetStartLocation(), 0.f, false, false, shouldHeal, false, 0, true, bot);
+	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
-CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, bool moveFarther, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, CCPosition(), range, false, false, false, false, 0, true, bot);
-	return GetCommandPositionFromPath(path, unit, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, bot.GetStartLocation(), range, false, false, false, false, 0, true, bot);
+	return GetCommandPositionFromPath(path, unit, moveFarther, bot);
 }
 
 /*
@@ -284,14 +286,14 @@ CCPosition Util::PathFinding::FindOptimalPathPosition(const sc2::Unit * unit, CC
 	{
 		return {};
 	}
-	return GetCommandPositionFromPath(path, unit, bot);
+	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToDodgeEffectAwayFromGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot)
 {
 	goal = unit->pos + (unit->pos - goal);
-	std::list<CCPosition> path = Util::PathFinding::FindOptimalPath(unit, goal, CCPosition(), range, false, true, false, false, 0, false, bot);
-	return GetCommandPositionFromPath(path, unit, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), range, false, true, false, false, 0, false, bot);
+	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
 std::list<CCPosition> Util::PathFinding::FindOptimalPathWithoutLimit(const sc2::Unit * unit, CCPosition goal, CCBot & bot)
@@ -317,9 +319,9 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	const auto maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (!limitSearch ? 20 : exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
-	const CCTilePosition startPosition = Util::GetTilePosition(unit->pos);
-	const CCTilePosition goalPosition = Util::GetTilePosition(goal);
-	const CCTilePosition secondaryGoalPosition = Util::GetTilePosition(secondaryGoal);
+	const CCTilePosition startPosition = GetTilePosition(unit->pos);
+	const CCTilePosition goalPosition = GetTilePosition(goal);
+	const CCTilePosition secondaryGoalPosition = unit->is_flying || Util::IsWorker(unit->unit_type) ? CCTilePosition() : GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
 	bestCosts[start->getId()] = 0;
 	opened.insert(start);
@@ -341,18 +343,20 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		{
 			if (maxRange == 0.f)
 			{
-				shouldTriggerExit = !HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot);
+				shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
 			}
 			else
 			{
-				shouldTriggerExit = Dist(GetPosition(currentNode->position), goal) > maxRange || (!HasCombatInfluenceOnTile(currentNode, unit, bot) && !HasEffectInfluenceOnTile(currentNode, unit, bot));
+				if (Dist(GetPosition(currentNode->position), goal) > maxRange)
+					continue;	// We don't want to keep looking in that direction since it's too far from the goal
+				shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
 			}
 		}
 		else
 		{
 			if (exitOnInfluence)
 			{
-				shouldTriggerExit = HasCombatInfluenceOnTile(currentNode, unit, bot) || HasEffectInfluenceOnTile(currentNode, unit, bot);
+				shouldTriggerExit = HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
 			}
 			else if (maxInfluence > 0)
 			{
@@ -386,7 +390,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		if (shouldTriggerExit)
 		{
 			// If it exits on influence, we need to check if there is actually influence on the current tile. If so, we do not return a valid path
-			if(exitOnInfluence && (HasCombatInfluenceOnTile(currentNode, unit, bot) || HasEffectInfluenceOnTile(currentNode, unit, bot)))
+			if(exitOnInfluence && HasInfluenceOnTile(Util::GetPosition(currentNode->position), unit->is_flying, bot))
 			{
 				failureReason = INFLUENCE;
 			}
@@ -433,13 +437,6 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				const float creepCost = !unit->is_flying && bot.Observation()->HasCreep(GetPosition(neighborPosition)) ? HARASS_PATHFINDING_TILE_CREEP_COST : 0.f;
 				const float influenceOnTile = (exitOnInfluence || ignoreInfluence) ? 0.f : GetEffectInfluenceOnTile(neighborPosition, unit, bot) + (considerOnlyEffects ? 0.f : GetCombatInfluenceOnTile(neighborPosition, unit, bot));
 				const float totalInfluenceOnTile = GetTotalInfluenceOnTile(neighborPosition, unit, bot);
-				float secondaryGoalCost = 0.f;
-				/*if(secondaryGoal != CCPosition())
-				{
-					const auto neighborDirection = Normalized(GetPosition(neighborPosition) - GetPosition(currentNode->position));
-					const auto secondaryGoalDirection = Normalized(secondaryGoal - GetPosition(currentNode->position));
-					secondaryGoalCost = (1 - GetDotProduct(neighborDirection, secondaryGoalDirection)) * PATHFINDING_SECONDARY_GOAL_COST;
-				}*/
 				// Consider turning cost to prevent our units from wiggling while fleeing, but not for workers that want to know if the path is safe
 				float turnCost = 0.f;
 				if (!exitOnInfluence)
@@ -454,7 +451,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 					const auto turnValue = std::min(1.f, 1 - dotProduct);
 					turnCost = turnValue * PATHFINDING_TURN_COST * Dist(currentNode->position, neighborPosition);
 				}
-				const float nodeCost = (influenceOnTile + creepCost + secondaryGoalCost + turnCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
+				const float nodeCost = (influenceOnTile + creepCost + turnCost + HARASS_PATHFINDING_TILE_BASE_COST) * neighborDistance;
 				totalCost += currentNode->cost + nodeCost;
 
 				const float heuristic = CalcEuclidianDistanceHeuristic(neighborPosition, goalPosition, secondaryGoalPosition, bot);
@@ -536,7 +533,7 @@ CCTilePosition Util::PathFinding::GetNeighborNodePosition(int x, int y, IMNode* 
 	return neighborPosition;
 }
 
-CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, CCBot & bot)
+CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, bool moveFarther, CCBot & bot)
 {
 	CCPosition returnPos;
 	int i = 0;
@@ -544,7 +541,7 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 	{
 		++i;
 		returnPos = position;
-		//we want to retun a node close to the current position
+		//we want to return a node close to the current position
 		if (i >= 3)
 			break;
 	}
@@ -557,7 +554,7 @@ CCPosition Util::PathFinding::GetCommandPositionFromPath(std::list<CCPosition> &
 		if (squareDistance < 2.5f * 2.5f && terrainHeightDiff > CLIFF_MIN_HEIGHT_DIFFERENCE)
 			returnPos = rangedUnit->pos + Util::Normalized(returnPos - rangedUnit->pos) * 3.f;
 	}
-	if (Util::DistSq(rangedUnit->pos, returnPos) < 3*3)
+	if (moveFarther && Util::DistSq(rangedUnit->pos, returnPos) < 3*3)
 	{
 		returnPos = Normalized(returnPos - rangedUnit->pos) * 3 + rangedUnit->pos;
 	}
@@ -590,7 +587,7 @@ float Util::PathFinding::CalcEuclidianDistanceHeuristic(CCTilePosition from, CCT
 	if (secondaryGoal != CCTilePosition())
 	{
 		const auto dist = bot.Map().getGroundDistance(GetPosition(from), GetPosition(secondaryGoal));
-		heuristic += dist * HARASS_PATHFINDING_HEURISTIC_MULTIPLIER * 2;
+		heuristic += dist * PATHFINDING_SECONDARY_GOAL_HEURISTIC_MULTIPLIER;
 	}
 	return heuristic;
 }
@@ -659,13 +656,35 @@ float Util::PathFinding::GetTotalInfluenceOnTiles(CCPosition position, bool isFl
 	{
 		for (int y = minY; y < maxY; ++y)
 		{
-			const auto tilePosition = CCTilePosition(position.x + x, position.y + y);
+			const auto tilePosition = CCTilePosition(x, y);
 			if (DistSq(position, CCPosition(tilePosition.x + 0.5f, tilePosition.y + 0.5f)) > radius * radius)
 				continue;	// If center of tile is farther than radius, ignore
 			totalInfluence += GetTotalInfluenceOnTile(tilePosition, isFlying, bot);
 		}
 	}
 	return totalInfluence;
+}
+
+float Util::PathFinding::GetMaxInfluenceOnTiles(CCPosition position, bool isFlying, float radius, CCBot & bot)
+{
+	float maxInfluence = 0.f;
+	const int minX = round(position.x - radius);
+	const int minY = round(position.y - radius);
+	const int maxX = round(position.x + radius);
+	const int maxY = round(position.y + radius);
+	for (int x = minX; x < maxX; ++x)
+	{
+		for (int y = minY; y < maxY; ++y)
+		{
+			const auto tilePosition = CCTilePosition(x, y);
+			if (DistSq(position, CCPosition(tilePosition.x + 0.5f, tilePosition.y + 0.5f)) > radius * radius)
+				continue;	// If center of tile is farther than radius, ignore
+			const auto influence = GetTotalInfluenceOnTile(tilePosition, isFlying, bot);
+			if (influence > maxInfluence)
+				maxInfluence = influence;
+		}
+	}
+	return maxInfluence;
 }
 
 float Util::PathFinding::GetTotalInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot)
@@ -1118,12 +1137,22 @@ float Util::GetUnitPower(const sc2::Unit* unit, const sc2::Unit* target, CCBot& 
 
 float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 {
-	const float unitRange = target.isValid() ? GetAttackRangeForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot) : GetMaxAttackRange(unit.getUnitPtr(), bot);
+	const bool isMedivac = unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MEDIVAC;
+	float unitRange = 0.f;
+	if (target.isValid())
+	{
+		if (isMedivac)
+			unitRange = bot.Commander().Combat().getAbilityCastingRanges().at(sc2::ABILITY_ID::EFFECT_HEAL) + unit.getUnitPtr()->radius + target.getUnitPtr()->radius;
+		else
+			unitRange = GetAttackRangeForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot);
+	}
+	else
+		unitRange = GetMaxAttackRange(unit.getUnitPtr(), bot);
 	///////// HEALTH
 	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.5f);
 	///////// DPS
 	if (target.isValid())
-		unitPower *= Util::GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot);
+		unitPower *= isMedivac ? 12.6f : Util::GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot);
 	else
 		unitPower *= Util::GetDps(unit.getUnitPtr(), bot);
 	///////// DISTANCE
@@ -1239,49 +1268,104 @@ bool Util::IsProtoss(const CCRace & race)
 #endif
 }
 
+void Util::CreateDummyUnits(CCBot & bot)
+{
+	CreateDummyVikingAssault(bot);
+	CreateDummyStimedMarine(bot);
+	CreateDummyStimedMarauder(bot);
+}
+
 void Util::CreateDummyVikingAssault(CCBot & bot)
 {
 	m_dummyVikingAssault = new sc2::Unit;
 	m_dummyVikingAssault->unit_type = sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT;
 	m_dummyVikingAssault->is_flying = false;
 	m_dummyVikingAssault->health_max = 135;
-	m_dummyVikingAssault->energy_max = 0;
-	m_dummyVikingAssault->energy = 0;
-	m_dummyVikingAssault->alliance = sc2::Unit::Self;
-	m_dummyVikingAssault->owner = GetSelfPlayerId(bot);
-	m_dummyVikingAssault->is_alive = true;
-	m_dummyVikingAssault->shield_max = 0;
 	m_dummyVikingAssault->radius = 0.75;
-	m_dummyVikingAssault->display_type = sc2::Unit::Visible;
-	m_dummyVikingAssault->build_progress = 1;
-	m_dummyVikingAssault->cloak = sc2::Unit::NotCloaked;
-	m_dummyVikingAssault->detect_range = 0;
-	m_dummyVikingAssault->radar_range = 0;
-	m_dummyVikingAssault->is_blip = false;
-	m_dummyVikingAssault->mineral_contents = 0;
-	m_dummyVikingAssault->is_burrowed = false;
-	m_dummyVikingAssault->weapon_cooldown = 0;
-	m_dummyVikingAssault->add_on_tag = 0;
-	m_dummyVikingAssault->passengers = {};
-	m_dummyVikingAssault->cargo_space_taken = 0;
-	m_dummyVikingAssault->cargo_space_max = 0;
-	m_dummyVikingAssault->assigned_harvesters = 0;
-	m_dummyVikingAssault->ideal_harvesters = 0;
-	m_dummyVikingAssault->engaged_target_tag = 0;
-	m_dummyVikingAssault->buffs = {};
-	m_dummyVikingAssault->is_powered = false;
-	m_dummyVikingAssault->last_seen_game_loop = 0;
+	SetBaseUnitValues(m_dummyVikingAssault, bot);
+}
+
+void Util::CreateDummyStimedMarine(CCBot & bot)
+{
+	m_dummyStimedMarine = new sc2::Unit;
+	m_dummyStimedMarine->unit_type = sc2::UNIT_TYPEID::TERRAN_MARINE;
+	m_dummyStimedMarine->is_flying = false;
+	m_dummyStimedMarine->health_max = 45;
+	m_dummyStimedMarine->radius = 0.375;
+	SetBaseUnitValues(m_dummyStimedMarine, bot);
+	m_dummyStimedMarine->buffs.push_back(sc2::BUFF_ID::STIMPACK);
+}
+
+void Util::CreateDummyStimedMarauder(CCBot & bot)
+{
+	m_dummyStimedMarauder = new sc2::Unit;
+	m_dummyStimedMarauder->unit_type = sc2::UNIT_TYPEID::TERRAN_MARAUDER;
+	m_dummyStimedMarauder->is_flying = false;
+	m_dummyStimedMarauder->health_max = 125;
+	m_dummyStimedMarauder->radius = 0.5625;
+	SetBaseUnitValues(m_dummyStimedMarauder, bot);
+	m_dummyStimedMarauder->buffs.push_back(sc2::BUFF_ID::STIMPACKMARAUDER);
+}
+
+void Util::SetBaseUnitValues(sc2::Unit * unit, CCBot & bot)
+{
+	unit->energy_max = 0;
+	unit->energy = 0;
+	unit->alliance = sc2::Unit::Self;
+	unit->owner = GetSelfPlayerId(bot);
+	unit->is_alive = true;
+	unit->shield_max = 0;
+	unit->shield = 0;
+	unit->display_type = sc2::Unit::Visible;
+	unit->build_progress = 1;
+	unit->cloak = sc2::Unit::NotCloaked;
+	unit->detect_range = 0;
+	unit->radar_range = 0;
+	unit->is_blip = false;
+	unit->mineral_contents = 0;
+	unit->is_burrowed = false;
+	unit->weapon_cooldown = 0;
+	unit->add_on_tag = 0;
+	unit->passengers = {};
+	unit->cargo_space_taken = 0;
+	unit->cargo_space_max = 0;
+	unit->assigned_harvesters = 0;
+	unit->ideal_harvesters = 0;
+	unit->engaged_target_tag = 0;
+	unit->buffs = {};
+	unit->is_powered = false;
+	unit->last_seen_game_loop = 0;
+}
+
+sc2::Unit Util::CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit)
+{
+	sc2::Unit dummy = sc2::Unit(*dummyPointer);
+	dummy.pos = unit->pos;
+	dummy.facing = unit->facing;
+	dummy.health = unit->health;
+	dummy.health_max = unit->health_max;	// Useful for Marines with combat shield upgrade
+	dummy.tag = unit->tag;
+	dummy.last_seen_game_loop = unit->last_seen_game_loop;
+	return dummy;
 }
 
 sc2::Unit Util::CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit)
 {
-	sc2::Unit vikingAssault = sc2::Unit(*m_dummyVikingAssault);
-	vikingAssault.pos = unit->pos;
-	vikingAssault.facing = unit->facing;
-	vikingAssault.health = unit->health;
-	vikingAssault.tag = unit->tag;
-	vikingAssault.last_seen_game_loop = unit->last_seen_game_loop;
-	return vikingAssault;
+	return CreateDummyFromUnit(m_dummyVikingAssault, unit);
+}
+
+sc2::Unit Util::CreateDummyStimedMarineFromUnit(const sc2::Unit * unit)
+{
+	sc2::Unit dummyStimedMarine = CreateDummyFromUnit(m_dummyStimedMarine, unit);
+	dummyStimedMarine.health -= 10;
+	return dummyStimedMarine;
+}
+
+sc2::Unit Util::CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit)
+{
+	sc2::Unit dummyStimedMarauder = CreateDummyFromUnit(m_dummyStimedMarauder, unit);
+	dummyStimedMarauder.health -= 20;
+	return dummyStimedMarauder;
 }
 
 bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
@@ -1445,7 +1529,7 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	if (!target)
 		return 0.f;
 
-	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
+	const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
 	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
 	
 	float maxRange = GetSpecialCaseRange(unit->unit_type, expectedWeaponType, ignoreSpells);
@@ -1577,6 +1661,9 @@ float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetT
 			}
 		}
 	}
+
+	dps *= GetAttackSpeedMultiplier(unit);
+	
 	return dps;
 }
 
@@ -1608,7 +1695,16 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
         }
     }
 
+	dps *= GetAttackSpeedMultiplier(unit);
+
     return dps;
+}
+
+float Util::GetAttackSpeedMultiplier(const sc2::Unit * unit)
+{
+	if (unitHasBuff(unit, sc2::BUFF_ID::STIMPACK) || unitHasBuff(unit, sc2::BUFF_ID::STIMPACKMARAUDER))
+		return 1.5f;
+	return 1.f;
 }
 
 float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where)
@@ -1763,7 +1859,7 @@ void Util::getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::U
 	// for each possible threat
 	for (auto targetUnit : targets)
 	{
-		BOT_ASSERT(targetUnit, "null target unit in getThreats");
+		BOT_ASSERT(targetUnit, "null target unit in getThreats");//can happen if a unit is not defined in an enum (sc2_typeenums.h)
 		if (Util::GetDpsForTarget(targetUnit, unit, bot) == 0.f)
 			continue;
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
@@ -1802,7 +1898,7 @@ sc2::Units Util::getThreats(const sc2::Unit * unit, const std::vector<Unit> & ta
 {
 	BOT_ASSERT(unit, "null ranged unit in getThreats");
 
-	sc2::Units targetsPtrs(targets.size());
+	sc2::Units targetsPtrs;
 	for (auto& targetUnit : targets)
 		targetsPtrs.push_back(targetUnit.getUnitPtr());
 
@@ -1817,10 +1913,12 @@ float Util::getThreatRange(const sc2::Unit * unit, const sc2::Unit * threat, CCB
 	const float HARASS_THREAT_MIN_HEIGHT_DIFF = 2.f;
 	const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 	const float HARASS_THREAT_RANGE_HEIGHT_BONUS = 4.f;
+	const float HARASS_THREAT_RANGE_MIN_SPEED_BONUS = 2.f;
 
 	const float heightBonus = unit->is_flying ? 0.f : Util::TerrainHeight(threat->pos) > Util::TerrainHeight(unit->pos) + HARASS_THREAT_MIN_HEIGHT_DIFF ? HARASS_THREAT_RANGE_HEIGHT_BONUS : 0.f;
 	const float tempestAirBonus = threat->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && unit->is_flying ? 2.f : 0.f;
-	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + Util::getSpeedOfUnit(threat, m_bot) + heightBonus + tempestAirBonus + HARASS_THREAT_RANGE_BUFFER;
+	const float speed = std::max(HARASS_THREAT_RANGE_MIN_SPEED_BONUS, Util::getSpeedOfUnit(threat, m_bot));
+	const float threatRange = Util::GetAttackRangeForTarget(threat, unit, m_bot) + speed + heightBonus + tempestAirBonus + HARASS_THREAT_RANGE_BUFFER;
 
 	return threatRange;
 }
@@ -1856,8 +1954,7 @@ float Util::getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot)
 
 float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 {
-	float zergBonus = 1.f;
-	float slowModifier = 1.f;
+	float speedMultiplier = 1.f;
 	if(!unit->is_burrowed && !unit->is_flying && Unit(unit, bot).getType().getRace() == CCRace::Zerg)
 	{
 		/* From https://liquipedia.net/starcraft2/Creep
@@ -1866,21 +1963,33 @@ float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 		if(bot.Observation()->HasCreep(unit->pos))
 		{
 			if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_QUEEN)
-				zergBonus = 2.6667f;
+				speedMultiplier *= 2.6667f;
 			else if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_HYDRALISK)
-				zergBonus = 1.5f;
+				speedMultiplier *= 1.5f;
 			else if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_SPINECRAWLERUPROOTED || unit->unit_type == sc2::UNIT_TYPEID::ZERG_SPORECRAWLERUPROOTED)
-				zergBonus = 2.5f;
+				speedMultiplier *= 2.5f;
 			else if (unit->unit_type != sc2::UNIT_TYPEID::ZERG_DRONE && unit->unit_type != sc2::UNIT_TYPEID::ZERG_BROODLING && unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELING
 				&& unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELINGMARINE && unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELINGMARINESHIELD && unit->unit_type != sc2::UNIT_TYPEID::ZERG_CHANGELINGZEALOT)
-				zergBonus = 1.3f;
+				speedMultiplier *= 1.3f;
 		}
 		if (bot.Strategy().enemyHasMetabolicBoost() && unit->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)
-			zergBonus *= 1.6f;
+			speedMultiplier *= 1.6f;
 	}
 	if (unitHasBuff(unit, sc2::BUFF_ID::SLOW))
-		slowModifier = 0.5f;
-	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * zergBonus * slowModifier;
+		speedMultiplier *= 0.5f;
+	if (unitHasBuff(unit, sc2::BUFF_ID::STIMPACK) || unitHasBuff(unit, sc2::BUFF_ID::STIMPACKMARAUDER))
+		speedMultiplier *= 1.5f;
+	if (unitHasBuff(unit, sc2::BUFF_ID::MEDIVACSPEEDBOOST))
+		return 4.243f;	// 5.94 on liquipedia, but movement speed in the api is 0.7143 times inferior
+	// Check for our speed upgrades
+	if (unit->alliance == sc2::Unit::Self)
+	{
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
+			speedMultiplier *= 1.364f;
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC && bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MEDIVACINCREASESPEEDBOOST))
+			speedMultiplier *= 1.18f;
+	}
+	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * speedMultiplier;
 }
 
 CCPosition Util::getFacingVector(const sc2::Unit * unit)
@@ -1947,6 +2056,27 @@ bool Util::CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUn
 	return true;
 }
 
+bool Util::IsEnemyHiddenOnHighGround(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot)
+{
+	if (!unit || !enemyUnit)
+		return false;
+	
+	if (unit->is_flying)
+		return false;
+
+	if (bot.Map().terrainHeight(enemyUnit->pos) <= bot.Map().terrainHeight(unit->pos))
+		return false;
+
+	if (enemyUnit->is_flying && enemyUnit->last_seen_game_loop == bot.GetCurrentFrame())
+		return false;
+	
+	const CCPosition closeToEnemy = enemyUnit->pos + Normalized(unit->pos - enemyUnit->pos) * enemyUnit->radius * 0.95;
+	if (bot.Map().isVisible(closeToEnemy))
+		return false;
+
+	return true;
+}
+
 bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 {
 	const auto & enemyScans = bot.Commander().Combat().GetEnemyScans();
@@ -1992,6 +2122,26 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 	return false;
 }
 
+bool Util::IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * unit, const std::vector<sc2::AvailableAbilities> & availableAbilitiesForUnits)
+{
+	for (const auto & availableAbilitiesForUnit : availableAbilitiesForUnits)
+	{
+		if (availableAbilitiesForUnit.unit_tag == unit->tag)
+			return IsAbilityAvailable(abilityId, availableAbilitiesForUnit);
+	}
+	return false;
+}
+
+bool Util::IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbilities & availableAbilities)
+{
+	for (const auto & availableAbility : availableAbilities.abilities)
+	{
+		if (availableAbility.ability_id == abilityId)
+			return true;
+	}
+	return false;
+}
+
 bool Util::IsTerran(const CCRace & race)
 {
 #ifdef SC2API
@@ -1999,6 +2149,19 @@ bool Util::IsTerran(const CCRace & race)
 #else
     return race == BWAPI::Races::Terran;
 #endif
+}
+
+bool Util::IsWorker(sc2::UNIT_TYPEID type)
+{
+	switch (type)
+	{
+	case sc2::UNIT_TYPEID::TERRAN_SCV: return true;
+	case sc2::UNIT_TYPEID::TERRAN_MULE: return true;
+	case sc2::UNIT_TYPEID::PROTOSS_PROBE: return true;
+	case sc2::UNIT_TYPEID::ZERG_DRONE: return true;
+	case sc2::UNIT_TYPEID::ZERG_DRONEBURROWED: return true;
+	default: return false;
+	}
 }
 
 int Util::ToMapKey(const CCTilePosition position)
@@ -2359,6 +2522,14 @@ void Util::Log(const std::string & function, const std::string & message, CCBot 
 	file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 }
 
+void Util::ClearChat(CCBot & bot)
+{
+	for (int i = 0; i < 10; i++)
+	{
+		bot.Actions()->SendChat(" ");
+	}
+}
+
 int Util::GetTimeControlSpeed()
 {
 	return timeControlRatio;
@@ -2374,6 +2545,9 @@ void Util::TimeControlIncreaseSpeed()
 	switch (timeControlRatio)
 	{
 		case 5:
+			timeControlRatio = 15;
+			break;
+		case 15:
 			timeControlRatio = 50;
 			break;
 		case 50:
@@ -2396,11 +2570,11 @@ void Util::TimeControlDecreaseSpeed()
 
 	switch (timeControlRatio)
 	{
-		case 5:
+		case 15:
 			timeControlRatio = 5;
 			break;
 		case 50:
-			timeControlRatio = 5;
+			timeControlRatio = 15;
 			break;
 		case 100:
 			timeControlRatio = 50;
@@ -2414,12 +2588,26 @@ void Util::TimeControlDecreaseSpeed()
 	}
 }
 
-bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot)
+float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot)
 {
+	return SimulateCombat(units, units, enemyUnits, bot);
+}
+
+/**
+ * Uses the combat simulator of libvoxel that simulates units attacking each other, but without considering the positions of units.
+ * Returns a value between 1 and 0, representing the army supply remaining after the fight.
+ */
+float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, CCBot & bot)
+{
+	if (units.empty() || simulatedUnits.empty())
+		return 0.f;
+	if (enemyUnits.empty())
+		return 1.f;
+	const int playerId = GetSelfPlayerId(bot);
 	CombatState state;
 	for(int i=0; i<2; ++i)
 	{
-		const sc2::Units & playerUnits = i == 0 ? units : enemyUnits;
+		const sc2::Units & playerUnits = i == 0 ? simulatedUnits : enemyUnits;
 		for (const auto unit : playerUnits)
 		{
 			// Since bunkers deal no damage in the simulation, we swap them for 4 Marines with extra health
@@ -2433,10 +2621,21 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 				state.units.push_back(CombatUnit(*unit));
 		}
 	}
+	
+	// Calculate our army score to compare after the fight
+	float armySupplyScore = 0.f;
+	for (const auto unit : units)
+	{
+		const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
+		armySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit->health / unit->health_max);
+	}
 
 	CombatUpgrades player1upgrades = {};
 
 	CombatUpgrades player2upgrades = {};
+	
+	for (const auto upgrade : bot.Strategy().getCompletedUpgrades())
+		(playerId == 1 ? player1upgrades : player2upgrades).add(upgrade);
 	
 	state.environment = &m_simulator->getCombatEnvironment(player1upgrades, player2upgrades);
 	
@@ -2445,9 +2644,22 @@ bool Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnit
 	// Simulate for at most 100 *game* seconds
 	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
 	settings.maxTime = 100;
-	CombatResult outcome = m_simulator->predict_engage(state, settings);
+	const CombatResult outcome = m_simulator->predict_engage(state, settings);
 	const int winner = outcome.state.owner_with_best_outcome();
-	return winner == GetSelfPlayerId(bot);
+	if (winner != playerId)
+		return 0.f;
+	
+	float resultArmySupplyScore = 0.f;
+	for (const auto & unit : outcome.state.units)
+	{
+		if (unit.owner == playerId && unit.health > 0)
+		{
+			const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[sc2::UnitTypeID(unit.type)];
+			resultArmySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit.health / unit.health_max);
+		}
+	}
+	const float armyRating = resultArmySupplyScore / armySupplyScore;
+	return armyRating;
 }
 
 int Util::GetSelfPlayerId(CCBot & bot)
