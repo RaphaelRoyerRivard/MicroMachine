@@ -693,8 +693,8 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 	int unitUpgradeArmor = getUnitUpgradeArmor(unit.getUnitPtr());
 	
 	const sc2::Weapon::TargetType expectedWeaponType = unit.isFlying() ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
-	auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
-	for each (auto threat in threats)
+	auto threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
+	for (auto threat : threats)
 	{
 		//TODO validate unit is looking towards the unit
 
@@ -711,7 +711,6 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 		float weaponDamage = Util::GetDamageForTarget(threat, unit.getUnitPtr(), m_bot);
 		
 		//Get the weapon, even if we have the range and damage, to see if there is another bonus damage that applies to the unit, if there is, apply the + on it.
-		sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
 		sc2::UnitTypeData targetTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
 		for (auto & weapon : unitTypeData.weapons)
 		{
@@ -734,21 +733,23 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 		}
 	}
 
-
-	switch (m_bot.GetPlayerRace(Players::Enemy))
+	const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
+	switch (enemyRace)
 	{
 		case CCRace::Protoss:
 		{
-
+			break;
 		}
 		case CCRace::Terran:
 		{
-
+			break;
 		}
 		case CCRace::Zerg:
 		{
-
+			break;
 		}
+		default:
+			break;
 	}
 }
 
