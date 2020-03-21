@@ -607,7 +607,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 					else if (starportCount > starportAddonCount)
 					{
-						if (m_bot.Strategy().enemyHasProtossHighTechAir() || (m_bot.Strategy().shouldProduceAntiAirOffense() && starportTechLabCount > starportReactorCount) || (proxyMaraudersStrategy && starportTechLabCount >= starportReactorCount))
+						if (m_bot.Strategy().enemyHasProtossHighTechAir() || (m_bot.Strategy().shouldProduceAntiAirOffense() && starportTechLabCount > starportReactorCount) || (proxyMaraudersStrategy && starportReactorCount == 0))
 							toBuild = MetaTypeEnum::StarportReactor;
 						else//if (!proxyMaraudersStrategy || hasFusionCore), not required since it is either Reactor else it is TechLab
 							toBuild = MetaTypeEnum::StarportTechLab;
@@ -738,6 +738,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueAsHighestPriority(MetaTypeEnum::Raven, false);
 				}
 
+				bool enoughMedivacs = true;
 				if (proxyMaraudersStrategy)
 				{
 					if (!m_queue.contains(MetaTypeEnum::Marauder))
@@ -756,10 +757,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						queueTech(MetaTypeEnum::Stimpack);
 					}
 
-					// 1 Medivac for every 4 Marauders
-					if (maraudersCount > 3 && medivacCount < 1 + floor(maraudersCount / 4.f) && !m_queue.contains(MetaTypeEnum::Medivac))
+					// 1 Medivac for every 3 Marauders
+					if (maraudersCount > 0 && medivacCount < 1 + floor(maraudersCount / 3.f))
 					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Medivac, 0, false));
+						enoughMedivacs = false;
+						if (!m_queue.contains(MetaTypeEnum::Medivac))
+						{
+							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Medivac, 0, false));
+						}
 					}
 				}
 #endif
@@ -816,7 +821,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 #endif
 				}
-				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings() || (proxyMaraudersStrategy && medivacCount >= 2))
+				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings() || (proxyMaraudersStrategy && enoughMedivacs))
 				{
 #ifndef NO_UNITS
 					const int minVikingCount = proxyMaraudersStrategy ? 2 : 1;
