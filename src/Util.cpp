@@ -321,7 +321,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = GetTilePosition(goal);
-	const CCTilePosition secondaryGoalPosition = unit->is_flying || Util::IsWorker(unit->unit_type) ? CCTilePosition() : GetTilePosition(secondaryGoal);
+	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? CCTilePosition() : GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
 	bestCosts[start->getId()] = 0;
 	opened.insert(start);
