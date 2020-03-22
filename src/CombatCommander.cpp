@@ -1147,7 +1147,7 @@ void CombatCommander::updateScoutDefenseSquad()
 
     // get all of the enemy units in this region
     std::vector<Unit> enemyUnitsInRegion;
-	for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
+	for (auto & unit : m_bot.GetKnownEnemyUnits())
 	{
 		if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
 		{
@@ -1470,16 +1470,13 @@ void CombatCommander::updateDefenseSquads()
 
 			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
 			{
-				//we can ignore the first enemy worker in our region since we assume it is a scout (handled by scout defense)
 				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
 				{
 					// Need at least 3 workers for a worker rush (or 1 if the previous frame was a worker rush)
 					if (!m_bot.Strategy().isWorkerRushed() && enemyWorkers < 3)
-					{
 						++enemyWorkers;
-						continue;
-					}
-					workerRushed = true;
+					else
+						workerRushed = true;
 				}
 				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 7320)	// first 5 minutes
 				{
@@ -1502,6 +1499,10 @@ void CombatCommander::updateDefenseSquads()
 				region.enemyUnits.push_back(unit);
 			}
 		}
+
+		// We can ignore a single enemy worker in our region since we assume it is a scout (handled by scout defense)
+		if (region.enemyUnits.size() == 1 && enemyWorkers == 1)
+			region.enemyUnits.clear();
 
 		std::stringstream squadName;
 		squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
@@ -2012,14 +2013,17 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 bool CombatCommander::WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const
 {
 	const auto workerSpeed = Util::getSpeedOfUnit(worker, m_bot);
+	bool onlyWorkerThreats = true;
 	const auto threats = Util::getThreats(worker, enemyUnits, m_bot);
 	for (const auto threat : threats)
 	{
+		if (onlyWorkerThreats && !Util::IsWorker(threat->unit_type))
+			onlyWorkerThreats = false;
 		const auto threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
 		if (threatSpeed / workerSpeed >= 1.15f || threat->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING)	// Workers shouldn't flee against Zerglings
 			return true;
 	}
-	return false;
+	return onlyWorkerThreats;
 }
 
 std::map<Unit, std::pair<CCPosition, uint32_t>> & CombatCommander::GetInvisibleSighting()
