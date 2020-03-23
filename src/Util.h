@@ -163,6 +163,7 @@ namespace Util
 	bool Contains(O object, S structure) { return std::find(structure.begin(), structure.end(), object) != structure.end(); }
 	template< typename O, typename S>
 	typename S::iterator Find(O object, S structure) { return std::find(structure.begin(), structure.end(), object); }
+	inline bool StringStartsWith(std::string s, std::string find) { return s.rfind(find, 0) == 0; }
 
 	std::list<UnitCluster> GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, CCBot & bot);
 	std::list<UnitCluster> & GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, std::string queryName, CCBot & bot);

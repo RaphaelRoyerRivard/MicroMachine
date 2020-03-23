@@ -58,7 +58,7 @@ void CombatCommander::onStart()
 
 	// the harass attack squad that will pressure the enemy's main base workers
 	SquadOrder harassOrder(SquadOrderTypes::Harass, CCPosition(0, 0), HarassOrderRadius, "Harass");
-	m_squadData.addSquad("Harass", Squad("Harass", harassOrder, HarassPriority, m_bot));
+	m_squadData.addSquad("Harass1", Squad("Harass1", harassOrder, HarassPriority, m_bot));
 
     // the main attack squad that will pressure the enemy's closest base location
     SquadOrder mainAttackOrder(SquadOrderTypes::Attack, CCPosition(0, 0), MainAttackOrderRadius, "Attack");
@@ -718,14 +718,13 @@ void CombatCommander::updateBackupSquads()
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BANSHEE
+			//|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BANSHEE
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_RAVEN
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THOR
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THORAP
 			|| (unitTypeId == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_REAPER) >= 2))
             && m_squadData.canAssignUnitToSquad(unit, backupSquad))
-            //TODO validate that the unit is near enough the backup squad, otherwise create another one
         {
 			if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION)
 				idleHellions.push_back(&unit);
@@ -944,41 +943,64 @@ void CombatCommander::updateScoutSquad()
 
 void CombatCommander::updateHarassSquads()
 {
-	//TODO Check for specific harass units like Banshees and spread them to multiple enemy bases
-	Squad & harassSquad = m_squadData.getSquad("Harass");
-	/*const auto squadCenter = harassSquad.calcCenter();
-	Squad & backupSquad = m_squadData.getSquad("Backup");
-	for (auto & backupUnit : backupSquad.getUnits())
+	// TODO units might need to be placed into the idle squad
+	std::vector<Unit> harassUnits;
+	int i = 1;
+	while (m_squadData.squadExists("Harass" + std::to_string(i)))
 	{
-		bool closeEnough = harassSquad.getUnits().empty();
-		if (!closeEnough)
+		Squad & squad = m_squadData.getSquad("Harass" + std::to_string(i));
+		const auto & squadUnits = squad.getUnits();
+		harassUnits.insert(harassUnits.end(), squadUnits.begin(), squadUnits.end());
+		squad.clear();
+		++i;
+	}
+	const auto & baseLocations = m_bot.Bases().getOccupiedBaseLocations(Players::Enemy);
+	if (baseLocations.empty())
+		return;
+	
+	i = 0;
+	for (auto baseLocation : baseLocations)
+	{
+		++i;
+		std::string squadName = "Harass" + std::to_string(i);
+		const SquadOrder harassOrder(SquadOrderTypes::Harass, baseLocation->getPosition(), HarassOrderRadius, squadName);
+		if (!m_squadData.squadExists(squadName))
 		{
-			auto dist = Util::DistSq(backupUnit, squadCenter);
-			if (dist <= harassSquad.getSquadOrder().getRadius())
-				closeEnough = true;
-			else
-			{
-				for (auto & unit : harassSquad.getUnits())
-				{
-					dist = Util::DistSq(unit, backupUnit);
-					if (dist <= 10.f * 10.f)
-					{
-						closeEnough = true;
-						break;
-					}
-				}
-			}
+			Squad harassSquad(squadName, harassOrder, HarassPriority, m_bot);
+			m_squadData.addSquad(squadName, harassSquad);
 		}
-		if (closeEnough && m_squadData.canAssignUnitToSquad(backupUnit, harassSquad))
-			m_squadData.assignUnitToSquad(backupUnit, harassSquad);
-	}*/
+		else
+		{
+			Squad & squad = m_squadData.getSquad(squadName);
+			squad.setSquadOrder(harassOrder);
+		}
+	}
+	
+	Squad & idleSquad = m_squadData.getSquad("Idle");
+	for (auto & idleUnit : idleSquad.getUnits())
+	{
+		if (idleUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
+		{
+			harassUnits.push_back(idleUnit);
+		}
+	}
 
-	if (harassSquad.getUnits().empty())
+	if (harassUnits.empty())
 		return;
 
-	const CCPosition orderPosition = GetClosestEnemyBaseLocation();
-	const SquadOrder harassOrder(SquadOrderTypes::Harass, orderPosition, HarassOrderRadius, "Harass");
-	harassSquad.setSquadOrder(harassOrder);
+	i = 0;
+	for (auto & harassUnit : harassUnits)
+	{
+		++i;
+		std::string squadName = "Harass" + std::to_string(i);
+		if (!m_squadData.squadExists(squadName))
+		{
+			i = 1;
+			squadName = "Harass" + std::to_string(i);
+		}
+		auto & harassSquad = m_squadData.getSquad(squadName);
+		m_squadData.assignUnitToSquad(harassUnit, harassSquad);
+	}
 }
 
 void CombatCommander::updateAttackSquads()
@@ -1940,7 +1962,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
 
         const float dist = Util::DistSq(unit, closestEnemy);
         Squad *unitSquad = m_squadData.getUnitSquad(unit);
-        if (unitSquad && (unitSquad->getName() == "MainAttack" || unitSquad->getName() == "Harass") && Util::DistSq(unit.getPosition(), unitSquad->getSquadOrder().getPosition()) < dist)
+        if (unitSquad && (unitSquad->getName() == "MainAttack" || Util::StringStartsWith(unitSquad->getName(), "Harass")) && Util::DistSq(unit.getPosition(), unitSquad->getSquadOrder().getPosition()) < dist)
         {
             //We do not want to bring back the main attackers when they are closer to their objective than our base
             continue;
@@ -2159,19 +2181,19 @@ CCPosition CombatCommander::getMainAttackLocation()
 		}
     }
 
-	CCPosition harassSquadCenter = m_squadData.getSquad("Harass").calcCenter();
+	const CCPosition mainAttackSquadCenter = m_squadData.getSquad("MainAttack").calcCenter();
 	float lowestDistance = -1.f;
 	CCPosition closestEnemyPosition;
 
     // Second choice: Attack known enemy buildings
-	Squad& harassSquad = m_squadData.getSquad("Harass");
-    for (const auto & enemyUnit : harassSquad.getTargets())
+	Squad& mainAttackSquad = m_squadData.getSquad("MainAttack");
+    for (const auto & enemyUnit : mainAttackSquad.getTargets())
     {
         if (enemyUnit.getType().isBuilding() && enemyUnit.isAlive() && enemyUnit.getUnitPtr()->display_type != sc2::Unit::Hidden)
         {
 			if (enemyUnit.getType().isCreepTumor())
 				continue;
-			float dist = Util::DistSq(enemyUnit, harassSquadCenter);
+			float dist = Util::DistSq(enemyUnit, mainAttackSquadCenter);
 			if(lowestDistance < 0 || dist < lowestDistance)
 			{
 				lowestDistance = dist;
@@ -2185,13 +2207,13 @@ CCPosition CombatCommander::getMainAttackLocation()
 	}
 
     // Third choice: Attack visible enemy units that aren't overlords
-	for (const auto & enemyUnit : harassSquad.getTargets())
+	for (const auto & enemyUnit : mainAttackSquad.getTargets())
 	{
         if (!enemyUnit.getType().isOverlord() && enemyUnit.isAlive() && enemyUnit.getUnitPtr()->display_type != sc2::Unit::Hidden)
         {
 			if (enemyUnit.getType().isCreepTumor())
 				continue;
-			float dist = Util::DistSq(enemyUnit, harassSquadCenter);
+			float dist = Util::DistSq(enemyUnit, mainAttackSquadCenter);
 			if (lowestDistance < 0 || dist < lowestDistance)
 			{
 				lowestDistance = dist;
@@ -2520,7 +2542,11 @@ void CombatCommander::CalcBestFlyingCycloneHelpers()
 		}
 		else if (unit.isFlying())
 		{
-			potentialFlyingCycloneHelpers.insert(unitPtr);
+			auto squad = m_squadData.getUnitSquad(unit);
+			if (squad && !Util::StringStartsWith(squad->getName(), "Harass"))
+			{
+				potentialFlyingCycloneHelpers.insert(unitPtr);
+			}
 		}
 	}
 

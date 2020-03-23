@@ -315,7 +315,6 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	std::set<IMNode*> closed;
 	std::map<int, float> bestCosts;
 
-	const auto & lockOnTargets = bot.Commander().Combat().getLockOnTargets();
 	const auto maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (!limitSearch ? 20 : exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
