@@ -1225,7 +1225,7 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugGiveAllTech();
 
 	//Workers
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, Players::Enemy, 10);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, m_startLocation, Players::Enemy, 1);
 	
 	//Test for reproducing Reaper bug against Marine and SCV in DiscoBloodbathLE

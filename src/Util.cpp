@@ -315,13 +315,12 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	std::set<IMNode*> closed;
 	std::map<int, float> bestCosts;
 
-	const auto & lockOnTargets = bot.Commander().Combat().getLockOnTargets();
 	const auto maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (!limitSearch ? 20 : exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	const CCTilePosition startPosition = GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = GetTilePosition(goal);
-	const CCTilePosition secondaryGoalPosition = unit->is_flying || Util::IsWorker(unit->unit_type) ? CCTilePosition() : GetTilePosition(secondaryGoal);
+	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? CCTilePosition() : GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
 	bestCosts[start->getId()] = 0;
 	opened.insert(start);
