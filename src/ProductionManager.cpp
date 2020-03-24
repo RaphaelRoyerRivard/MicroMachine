@@ -413,7 +413,7 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 	const auto deadCCs = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
 	const auto deadOrbitals = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND);
 	const bool hasStartedFirstExpand = ccs + orbitals + deadCCs + deadOrbitals > 1;
-	const auto earlyExpand = m_bot.Strategy().getStartingStrategy() == EARLY_EXPAND && m_bot.GetCurrentFrame() < 3360 && m_bot.GetFreeMinerals() > 700 && !hasStartedFirstExpand;	// 2:30 min
+	const auto earlyExpand = m_bot.Strategy().getStartingStrategy() == EARLY_EXPAND && m_bot.GetCurrentFrame() < 3360 && m_bot.GetFreeMinerals() < 700 && !hasStartedFirstExpand;	// 2:30 min
 	const auto proxyMaraudersStrategy = m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS;
 	if (currentItem.type.getUnitType().isRefinery())
 	{
