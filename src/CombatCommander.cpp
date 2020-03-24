@@ -754,7 +754,7 @@ void CombatCommander::updateBackupSquads()
 			m_squadData.assignUnitToSquad(*marine, backupSquad);
 		}
 	}
-	const auto tempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
+	const auto tempestCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
 	const auto VIKING_TEMPEST_RATIO = 2.5f;
 	const auto vikingsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true);
 	if (vikingsCount >= tempestCount * VIKING_TEMPEST_RATIO)
