@@ -2096,7 +2096,7 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 	};
 	for(const auto detectorType : detectorTypes)
 	{
-		auto & detectors = bot.GetKnownEnemyUnits(detectorType);
+		auto & detectors = bot.GetEnemyUnits(detectorType);
 		for(const auto & detector : detectors)
 		{
 			const float distance = Util::DistSq(detector, position);

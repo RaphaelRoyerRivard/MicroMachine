@@ -418,7 +418,7 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 		{
 			if (unit.isFlying() && !m_bot.Strategy().enemyHasHiSecAutoTracking())
 			{
-				for (const auto & enemyMissileTurret : m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
+				for (const auto & enemyMissileTurret : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
 				{
 					if (Util::DistSq(unit, enemyMissileTurret) < 10 * 10)
 					{
@@ -761,7 +761,7 @@ void CombatAnalyzer::detectTechs(Unit & unit, UnitState & state)
 	{
 		if (unit.isFlying() && !m_bot.Strategy().enemyHasHiSecAutoTracking())
 		{
-			for (const auto & enemyMissileTurret : m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
+			for (const auto & enemyMissileTurret : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
 			{
 				if (Util::DistSq(unit, enemyMissileTurret) < 10 * 10)
 				{

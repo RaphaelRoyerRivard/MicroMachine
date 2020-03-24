@@ -671,14 +671,19 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
+				const int enemyVikingCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER).size();
+				const bool hasEnoughVikings = enemyVikingCount == 0 || vikingCount >= enemyVikingCount * 1.5f;
 				const int medivacCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Medivac.getUnitType(), false, true);
-				const int enemyTempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
+				const int enemyTempestCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
+				bool makeBattlecruisers = false;
 
-				if(finishedBaseCount >= 3)
+				if(finishedBaseCount >= 3 && hasEnoughVikings)
 				{
 #ifndef NO_UNITS
 					if (enemyTempestCount == 0)
 					{
+						makeBattlecruisers = true;
+						
 						if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
 						{
 							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
@@ -706,7 +711,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 				}
 
-				const bool stopBanshees = hasFusionCore || m_bot.Strategy().enemyHasProtossHighTechAir() || proxyMaraudersStrategy;
+				const bool stopBanshees = makeBattlecruisers || m_bot.Strategy().enemyHasProtossHighTechAir() || proxyMaraudersStrategy;
 				if (stopBanshees)
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Banshee);
@@ -924,7 +929,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 				const int battlecruiserCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), false, true);
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
-				const int enemyTempestCount = m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
+				const int enemyTempestCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
 
 				if (finishedBaseCount >= 3)
 				{

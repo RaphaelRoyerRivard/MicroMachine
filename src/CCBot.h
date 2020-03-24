@@ -189,7 +189,7 @@ public:
 	const std::set<const sc2::Unit *> & GetEnemySCVBuilders() const { return m_enemySCVBuilders; }
 	const std::set<const sc2::Unit *> & GetEnemyWorkersGoingInRefinery() const { return m_enemyWorkersGoingInRefinery; }
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
-	const std::vector<Unit> & GetKnownEnemyUnits(sc2::UnitTypeID type);
+	const std::vector<Unit> & GetEnemyUnits(sc2::UnitTypeID type);
 	const std::vector<Unit> & GetEnemyBuildingsUnderConstruction() const { return m_enemyBuildingsUnderConstruction; }
 	std::map<sc2::Tag, Unit> & GetNeutralUnits();
 	bool IsParasited(const sc2::Unit * unit) const;
