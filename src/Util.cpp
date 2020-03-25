@@ -2485,6 +2485,7 @@ void Util::CreateLog(CCBot & bot)
 	ss << buf << "_" << bot.GetOpponentId() << ".log";
 	file.open(ss.str());
 
+	SetMapName(bot.Observation()->GetGameInfo().map_name);
 	std::stringstream races;
 	races << Util::GetStringFromRace(bot.GetPlayerRace(Players::Self)) << " VS " << Util::GetStringFromRace(bot.GetPlayerRace(Players::Enemy)) << " on " << Util::GetMapName();
 	Util::LogNoFrame(races.str(), bot);

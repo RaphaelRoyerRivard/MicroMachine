@@ -694,11 +694,30 @@ void CCBot::setUnits()
 				{
 					m_strategy.setEnemyHasInvisible(true);
 					Actions()->SendChat("I see you are also attracted to the dark arts of invisibility.");
-					Util::DebugLog(__FUNCTION__, "Invis unit detected: " + unit.getType().getName(), *this);
+					Util::DebugLog(__FUNCTION__, "Invisible unit detected: " + unit.getType().getName(), *this);
 				}
 				///TODO if we see at least 1 burrowed roach, we might want to consider all roaches as potentially invisible
 				///TODO Should handle unit that CAN get invisible (banshee) and the Mothership (can turn others invisible).
 				m_strategy.setEnemyCurrentlyHasInvisible(true);
+			}
+			else
+			{
+				switch (unitptr->unit_type.ToType())
+				{
+				case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+				case sc2::UNIT_TYPEID::TERRAN_WIDOWMINE:
+				case sc2::UNIT_TYPEID::TERRAN_GHOST:
+					if (!m_strategy.enemyHasInvisible())
+					{
+						m_strategy.setEnemyHasInvisible(true);
+						Actions()->SendChat("I guess I should prepare against cloaked or burrowed units...");
+						Util::DebugLog(__FUNCTION__, "Potential invisible unit detected: " + unit.getType().getName(), *this);
+					}
+					m_strategy.setEnemyCurrentlyHasInvisible(true);
+					break;
+				default:
+					break;
+				}
 			}
 			if(!m_strategy.enemyHasInvisible())
 			{
@@ -708,6 +727,7 @@ void CCBot::setUnits()
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{
 					case sc2::UNIT_TYPEID::PROTOSS_DARKSHRINE:
+					case sc2::UNIT_TYPEID::TERRAN_GHOSTACADEMY:
 						m_strategy.setEnemyHasInvisible(true);
 						Actions()->SendChat("Planning on striking me with cloaked units?");
 						Util::DebugLog(__FUNCTION__, "Invis production building detected: " + unit.getType().getName(), *this);
