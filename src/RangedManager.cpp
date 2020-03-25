@@ -1713,6 +1713,11 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 			{
 				continue;
 			}
+			// Ignore units that are disabled
+			if (Util::isUnitDisabled(unit))
+			{
+				continue;
+			}
 
 			const sc2::Unit* unitTarget = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC ? GetHealTarget(unit, allyCombatUnits, false) : getTarget(unit, rangedUnitTargets, false);
 			const sc2::Unit* unitToSave = unit;
