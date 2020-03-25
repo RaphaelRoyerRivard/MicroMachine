@@ -2426,6 +2426,7 @@ void CombatCommander::ExecuteActions()
 		if (action.executed && (action.duration >= ACTION_REEXECUTION_FREQUENCY || m_bot.GetGameLoop() - action.executionFrame < ACTION_REEXECUTION_FREQUENCY))
 			continue;
 
+		std::stringstream ss;
 		bool skip = false;
 		m_bot.GetCommandMutex().lock();
 		switch (action.microActionType)
@@ -2474,7 +2475,9 @@ void CombatCommander::ExecuteActions()
 			Micro::SmartAbility(rangedUnit, action.abilityID, action.target, m_bot);
 			break;
 		case MicroActionType::Stop:
-			Micro::SmartStop(rangedUnit, m_bot);
+			//Micro::SmartStop(rangedUnit, m_bot);
+			ss << "MicroAction of type STOP with " << action.description << " sent to a " << sc2::UnitTypeToName(rangedUnit->unit_type);
+			Util::Log(__FUNCTION__, ss.str(), m_bot);
 			break;
 		case MicroActionType::RightClick:
 			Micro::SmartRightClick(rangedUnit, action.target, m_bot);
