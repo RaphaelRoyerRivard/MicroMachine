@@ -81,7 +81,8 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		return 0.f;
 	}
 
-	const float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot);
+	// We don't want to consider spells when we want to find an opportunistic target, otherwise our Cyclones will their they have too much range
+	const float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot, considerOnlyUnitsInRange);
 	const float targetRange = Util::GetAttackRangeForTarget(target, attacker, m_bot);
 
 	if (filterHighRangeUnits)
