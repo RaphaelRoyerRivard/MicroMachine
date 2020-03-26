@@ -436,7 +436,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if (closeTarget && ShouldAttackTarget(rangedUnit, closeTarget, threats))
 		{
 			const auto distToCloseTarget = Util::DistSq(rangedUnit->pos, closeTarget->pos);
-			const auto range = Util::GetAttackRangeForTarget(rangedUnit, closeTarget, m_bot);
+			const auto range = Util::GetAttackRangeForTarget(rangedUnit, closeTarget, m_bot, true);	// We want to ignore spells so Cyclones won't think they have over 7 range
 			if (distToCloseTarget > range * range)
 				std::cout << "Opportunistic attack should not be done" << std::endl;
 			const auto action = RangedUnitAction(MicroActionType::AttackUnit, closeTarget, false, getAttackDuration(rangedUnit, closeTarget), "OpportunisticAttack");
@@ -1123,20 +1123,20 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 					if(!hasGoodViewOfUnit)
 						continue;
 				}
-				const float dist = Util::Dist(cyclone->pos, threat->pos);
+				const float dist = Util::Dist(cyclone->pos, threat->pos) - threat->radius;
 				if (shouldHeal && dist > partialLockOnRange + threat->radius)
 					continue;
 				if (threat->display_type == sc2::Unit::Hidden)
 					continue;
 				// The lower the better
-				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 2.5f);
+				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 3.f);
 				const auto healthScore = 0.25f * (threat->health + threat->shield * 1.5f);
 				// The higher the better
 				const auto energyScore = 0.25f * threat->energy;
 				const auto detectorScore = 15 * (threat->detect_range > 0.f);
 				const auto threatRange = Util::GetAttackRangeForTarget(threat, cyclone, m_bot);
 				const auto threatDps = Util::GetDpsForTarget(threat, cyclone, m_bot);
-				const float powerScore = threatRange * threatDps * 3.f;
+				const float powerScore = threatRange * threatDps * 1.5f;
 				const float speedScore = Util::getSpeedOfUnit(threat, m_bot) * 6.f;
 				auto armoredScore = 0.f;
 				if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
@@ -1152,8 +1152,10 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				}
 			}
 			if (bestTarget)
+			{
 				target = bestTarget;
-			if (!target)
+			}
+			else
 			{
 				shouldUseLockOn = false;
 				shouldAttack = true;
