@@ -1625,9 +1625,17 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		else
 		{
 			// Attack the target
-			const int attackDuration = canAttackNow ? getAttackDuration(unit, unitTarget) : 0;
-			const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, true, attackDuration, ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK);
-			m_bot.Commander().Combat().PlanAction(unit, action);
+			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && !canAttackNow)
+			{
+				const auto action = RangedUnitAction(MicroActionType::AttackMove, unitTarget->pos, true, 0, ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK);
+				m_bot.Commander().Combat().PlanAction(unit, action);
+			}
+			else
+			{
+				const int attackDuration = canAttackNow ? getAttackDuration(unit, unitTarget) : 0;
+				const auto action = RangedUnitAction(MicroActionType::AttackUnit, unitTarget, true, attackDuration, ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK);
+				m_bot.Commander().Combat().PlanAction(unit, action);
+			}
 			// Keep track of damage dealt
 			const float damageDealt = Util::GetDpsForTarget(unit, unitTarget, m_bot) / 22.4f;
 			m_bot.Analyzer().increaseTotalDamage(damageDealt, unit->unit_type);

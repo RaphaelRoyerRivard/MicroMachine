@@ -148,23 +148,20 @@ void StrategyManager::onFrame(bool executeMacro)
 {
 	if (m_bot.Config().PrintGreetingMessage && m_bot.GetCurrentFrame() >= 5)
 	{
-		if (!m_greetingMessage.str().empty())
+		if (!m_greetingMessageSent)
 		{
 			m_bot.Actions()->SendChat(m_greetingMessage.str());
-			m_greetingMessage.str("");
-			m_greetingMessage.clear();
+			m_greetingMessageSent = true;
 		}
-		if (m_bot.GetCurrentFrame() >= 30 && !m_opponentHistory.str().empty())
+		if (m_bot.GetCurrentFrame() >= 30 && !m_opponentHistorySent)
 		{
 			m_bot.Actions()->SendChat(m_opponentHistory.str(), sc2::ChatChannel::Team);
-			m_opponentHistory.str("");
-			m_opponentHistory.clear();
+			m_opponentHistorySent = true;
 		}
-		if (m_bot.GetCurrentFrame() >= 55 && !m_strategyMessage.str().empty())
+		if (m_bot.GetCurrentFrame() >= 55 && !m_strategyMessageSent)
 		{
 			m_bot.Actions()->SendChat(m_strategyMessage.str(), sc2::ChatChannel::Team);
-			m_strategyMessage.str("");
-			m_strategyMessage.clear();
+			m_strategyMessageSent = true;
 		}
 	}
 	if (executeMacro)

@@ -90,6 +90,9 @@ class StrategyManager
 	std::stringstream m_greetingMessage;
 	std::stringstream m_opponentHistory;
 	std::stringstream m_strategyMessage;
+	bool m_greetingMessageSent = false;
+	bool m_opponentHistorySent = false;
+	bool m_strategyMessageSent = false;
 
     const UnitPairVector getProtossBuildOrderGoal() const;
     const UnitPairVector getTerranBuildOrderGoal() const;

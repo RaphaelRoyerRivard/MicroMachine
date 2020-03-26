@@ -817,7 +817,24 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (m_bot.Strategy().shouldProduceAntiAirOffense())
 				{
 #ifndef NO_UNITS
-					if (vikingCount < bansheeCount || vikingCount < battlecruiserCount * 2.5f || (!hasFusionCore && stopBanshees) || m_bot.Strategy().enemyHasProtossHighTechAir())
+					bool makeVikings = false;
+					if (m_bot.Strategy().enemyHasProtossHighTechAir())
+					{
+						makeVikings = true;
+					}
+					else if (!stopBanshees)
+					{
+						makeVikings = vikingCount < bansheeCount || (m_bot.GetFreeMinerals() >= 300 && m_bot.GetFreeGas() >= 225);
+					}
+					else if (makeBattlecruisers && hasFusionCore)
+					{
+						makeVikings = vikingCount < battlecruiserCount * 3 || (m_bot.GetFreeMinerals() >= 550 && m_bot.GetFreeGas() >= 375);
+					}
+					else
+					{
+						makeVikings = !hasFusionCore && stopBanshees;
+					}
+					if (makeVikings)
 					{
 						if (vikingCount < 50 && !m_queue.contains(MetaTypeEnum::Viking))
 						{
@@ -826,15 +843,19 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 #endif
 				}
-				else if (m_bot.Strategy().enemyOnlyHasFlyingBuildings() || (proxyMaraudersStrategy && enoughMedivacs))
+				else
 				{
-#ifndef NO_UNITS
-					const int minVikingCount = proxyMaraudersStrategy ? 2 : 1;
-					if (vikingCount < minVikingCount && !m_queue.contains(MetaTypeEnum::Viking))
+					const auto enemyOverseerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_OVERSEER).size();
+					if (m_bot.Strategy().enemyOnlyHasFlyingBuildings() || (proxyMaraudersStrategy && enoughMedivacs) || enemyOverseerCount >= 1)
 					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
-					}
+#ifndef NO_UNITS
+						const int minVikingCount = proxyMaraudersStrategy ? 2 : 1;
+						if (vikingCount < minVikingCount && !m_queue.contains(MetaTypeEnum::Viking))
+						{
+							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+						}
 #endif
+					}
 				}
 				break;
 			}
@@ -1412,14 +1433,14 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 	if (m_bot.GetSelfRace() == CCRace::Terran)
 	{
 		//check if we can prioritize a building with a reactor instead of a techlab
-		auto typeName = type.getName();
-		if (typeName == "Marine" ||
-			typeName == "Reaper" ||
-			typeName == "WidowMine" |
-			typeName == "Hellion" ||
-			typeName == "VikingFighter" ||
-			typeName == "Medivac" ||
-			typeName == "Liberator")
+		const auto unitType = type.getUnitType().getAPIUnitType();
+		if (unitType == sc2::UNIT_TYPEID::TERRAN_MARINE ||
+			unitType == sc2::UNIT_TYPEID::TERRAN_REAPER ||
+			unitType == sc2::UNIT_TYPEID::TERRAN_WIDOWMINE ||
+			unitType == sc2::UNIT_TYPEID::TERRAN_HELLION ||
+			unitType == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER ||
+			unitType == sc2::UNIT_TYPEID::TERRAN_MEDIVAC ||
+			unitType == sc2::UNIT_TYPEID::TERRAN_LIBERATOR)
 		{
 
 			for (auto & producerType : producerTypes)
