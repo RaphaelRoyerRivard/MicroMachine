@@ -2463,7 +2463,12 @@ void CombatCommander::ExecuteActions()
 					skip = true;
 			}
 			if (!skip)
-				Micro::SmartMove(rangedUnit, action.position, m_bot);
+			{
+				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+					Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
+				else
+					Micro::SmartMove(rangedUnit, action.position, m_bot);
+			}
 			break;
 		case MicroActionType::Ability:
 			Micro::SmartAbility(rangedUnit, action.abilityID, m_bot);
