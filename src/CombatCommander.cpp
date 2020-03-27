@@ -2443,7 +2443,12 @@ void CombatCommander::ExecuteActions()
 					skip = true;
 			}
 			if (!skip)
-				Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
+			{
+				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+					Micro::SmartMove(rangedUnit, action.position, m_bot);
+				else
+					Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
+			}
 			break;
 		case MicroActionType::AttackUnit:
 			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == action.target->tag)
@@ -2463,12 +2468,7 @@ void CombatCommander::ExecuteActions()
 					skip = true;
 			}
 			if (!skip)
-			{
-				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
-					Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
-				else
-					Micro::SmartMove(rangedUnit, action.position, m_bot);
-			}
+				Micro::SmartMove(rangedUnit, action.position, m_bot);
 			break;
 		case MicroActionType::Ability:
 			Micro::SmartAbility(rangedUnit, action.abilityID, m_bot);

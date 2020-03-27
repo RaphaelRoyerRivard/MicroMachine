@@ -686,7 +686,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						
 						if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
 						{
-							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 0, false));
+							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 1, false));
 						}
 
 						if (hasFusionCore)
