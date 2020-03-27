@@ -34,6 +34,7 @@ const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 40;
 const int THOR_MORPH_FRAME_COUNT = 40;
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK = "ThreatFightAttack";
+const std::string ACTION_DESCRIPTION_THREAT_FIGHT_BC_MOVE_ATTACK = "ThreatFightBCMoveAttack";
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_MOVE = "ThreatFightMove";
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_DODGE_EFFECT = "ThreatFightDodgeEffect";
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_MORPH = "ThreatFightMorph";
@@ -212,9 +213,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	// Ignore units that are executing a prioritized action
 	if (unitAction.prioritized)
 		return;
-	
-	// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
-	if (m_bot.Commander().Combat().ShouldSkipFrame(rangedUnit))
+
+	bool isUnitDisabled = Util::isUnitDisabled(rangedUnit);
+	// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps, but not for disabled BCs (they might have a canceled Yamato)
+	if (m_bot.Commander().Combat().ShouldSkipFrame(rangedUnit) && !(isBattlecruiser && isUnitDisabled))
 		return;
 
 	if (rangedUnit->is_selected)
@@ -300,7 +302,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
-	bool isUnitDisabled = Util::isUnitDisabled(rangedUnit);
 	// If our unit is affected by an Interference Matrix, it should back until the effect wears off
 	if (isUnitDisabled)
 	{
@@ -1540,7 +1541,14 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 
 		const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
-		const bool canAttackNow = unitRange * unitRange >= Util::DistSq(unit->pos, unitTarget->pos) && unit->weapon_cooldown <= 0.f;
+		bool canAttackNow = unit->weapon_cooldown <= 0.f;
+		if (canAttackNow)
+		{
+			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+				canAttackNow = unitRange > Util::Dist(unit->pos, unitTarget->pos) + 1;	// Otherwise the BC would stop moving at the limit of its range, so it gets kited too much
+			else
+				canAttackNow = unitRange * unitRange >= Util::DistSq(unit->pos, unitTarget->pos);
+		}
 
 		// Even if the fight would be lost, should still attack if it can, but only if it is slower than the fastest enemy and its target is not on high ground
 		if (!shouldFight && (!canAttackNow || Util::getSpeedOfUnit(unit, m_bot) > maxThreatSpeed || Util::IsEnemyHiddenOnHighGround(unit, unitTarget, m_bot)))
@@ -1604,7 +1612,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			{
 				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, true, m_bot);
 			}
-			else if(shouldChase)
+			if(movePosition == CCPosition() && shouldChase)
 			{
 				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, m_bot);
 				movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, true, m_bot);
@@ -1627,7 +1635,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			// Attack the target
 			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && !canAttackNow)
 			{
-				const auto action = RangedUnitAction(MicroActionType::AttackMove, unitTarget->pos, true, 0, ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK);
+				// BCs will stop attacking if there are too far from their prioritized target, but if they get a move command, they will keep attacking other units
+				const auto action = RangedUnitAction(MicroActionType::Move, unit->pos, true, 0, ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK);
 				m_bot.Commander().Combat().PlanAction(unit, action);
 			}
 			else
@@ -1964,6 +1973,9 @@ bool RangedManager::ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruise
 
 bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & targets)
 {
+	if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
+		return false;
+	
 	const size_t currentFrame = m_bot.GetCurrentFrame();
 	auto & queryYamatoAvailability = m_bot.Commander().Combat().getQueryYamatoAvailability();
 	if(queryYamatoAvailability.find(battlecruiser) != queryYamatoAvailability.end())
