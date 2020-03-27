@@ -1399,10 +1399,10 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_IMMORTAL, mapCenter + towardsCenter * 4, player1, 1);*/
 
 	// Test to reproduce attack bug of BCs while moving
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, mapCenter - towardsCenter * 11, player2, 1);
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, mapCenter - towardsCenter * 11, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, mapCenter, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 4, player1, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, mapCenter + towardsCenter * 4, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, mapCenter + towardsCenter * 4, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
