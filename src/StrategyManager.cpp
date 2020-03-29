@@ -148,23 +148,23 @@ void StrategyManager::onFrame(bool executeMacro)
 {
 	if (m_bot.Config().PrintGreetingMessage && m_bot.GetCurrentFrame() >= 5)
 	{
-		if (!m_greetingMessage.str().empty())
+		if (!m_greetingMessageSent)
 		{
 			m_bot.Actions()->SendChat(m_greetingMessage.str());
-			m_greetingMessage.str("");
-			m_greetingMessage.clear();
+			std::cout << "Greeting message sent" << std::endl;
+			m_greetingMessageSent = true;
 		}
-		if (m_bot.GetCurrentFrame() >= 10 && !m_opponentHistory.str().empty())
+		if (m_bot.GetCurrentFrame() >= 30 && !m_opponentHistorySent)
 		{
 			m_bot.Actions()->SendChat(m_opponentHistory.str(), sc2::ChatChannel::Team);
-			m_opponentHistory.str("");
-			m_opponentHistory.clear();
+			std::cout << "Opponent history sent" << std::endl;
+			m_opponentHistorySent = true;
 		}
-		if (m_bot.GetCurrentFrame() >= 15 && !m_strategyMessage.str().empty())
+		if (m_bot.GetCurrentFrame() >= 55 && !m_strategyMessageSent)
 		{
 			m_bot.Actions()->SendChat(m_strategyMessage.str(), sc2::ChatChannel::Team);
-			m_strategyMessage.str("");
-			m_strategyMessage.clear();
+			std::cout << "Strategy message sent" << std::endl;
+			m_strategyMessageSent = true;
 		}
 	}
 	if (executeMacro)
@@ -193,6 +193,24 @@ void StrategyManager::onFrame(bool executeMacro)
 				{
 					m_startingStrategy = STANDARD;
 					m_bot.Commander().Production().clearQueue();
+				}
+			}
+			else if (m_startingStrategy == PROXY_MARAUDERS && barracksCount == 1)
+			{
+				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+				Unit proxyWorkerToRemove;
+				for (auto & proxyWorker : proxyWorkers)
+				{
+					if (!proxyWorker.isConstructing(MetaTypeEnum::Barracks.getUnitType()))
+					{
+						proxyWorkerToRemove = proxyWorker;
+						break;
+					}
+				}
+				if (proxyWorkerToRemove.isValid())
+				{
+					m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorkerToRemove);
+					proxyWorkerToRemove.move(m_bot.GetStartLocation());
 				}
 			}
 			else if (barracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
@@ -262,7 +280,7 @@ StrategyPostBuildOrder StrategyManager::getCurrentStrategyPostBuildOrder() const
 	{
 		//return TERRAN_VS_PROTOSS;
 	}
-	return MARINE_MARAUDER;//TERRAN_CLASSIC;
+	return TERRAN_CLASSIC;//MARINE_MARAUDER;
 }
 
 const BuildOrder & StrategyManager::getOpeningBookBuildOrder() const

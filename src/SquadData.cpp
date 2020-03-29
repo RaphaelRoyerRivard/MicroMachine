@@ -114,7 +114,7 @@ void SquadData::verifySquadUniqueMembership()
 			const auto it = assigned.find(unit);
 			if(it != assigned.end())
             {
-                std::cout << "Warning: A " << unit.getType().getName() << " is in at least two squads: " << kv.second.getName() << " and " << it->second << "\n";
+                std::cout << "Warning: A " << unit.getType().getName() << "(" << unit.getID() << ") is in at least two squads: " << kv.second.getName() << " and " << it->second << "\n";
             }
 
             assigned[unit] = kv.second.getName();

@@ -23,17 +23,17 @@ class UnitState
 public:
 
 	UnitState();
-	UnitState(CCHealth hitPoints, CCHealth shields, CCHealth energy, const sc2::Unit* unitPtr);
+	UnitState(const sc2::Unit* unitPtr);
 	void Reset();
 	void Update();
 	void Update(CCHealth hitPoints, CCHealth shields, CCHealth energy);
-	bool WasUpdated();
+	bool WasUpdated() const;
 	void UpdateThreat(bool hasThreat);
 
-	bool WasAttacked();
-	int GetDamageTaken();
-	int GetRecentDamageTaken();
-	int GetHealed();
-	bool HadRecentTreats();
-	sc2::UNIT_TYPEID GetType();
+	bool WasAttacked() const;
+	int GetDamageTaken() const;
+	int GetRecentDamageTaken() const;
+	int GetHealed() const;
+	bool HadRecentTreats() const;
+	sc2::UNIT_TYPEID GetType() const;
 };

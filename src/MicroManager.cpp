@@ -81,7 +81,8 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		return 0.f;
 	}
 
-	const float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot);
+	// We don't want to consider spells when we want to find an opportunistic target, otherwise our Cyclones will their they have too much range
+	const float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot, considerOnlyUnitsInRange);
 	const float targetRange = Util::GetAttackRangeForTarget(target, attacker, m_bot);
 
 	if (filterHighRangeUnits)
@@ -162,7 +163,9 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		const auto & yamatoTargets = m_bot.Commander().Combat().getYamatoTargets();
 		const float yamatoTargetModifier = yamatoTargets.find(target->tag) != yamatoTargets.end() ? 0.1f : 1.f;
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
-		return (targetDps + unitDps - healthValue + proximityValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier;
+		//const float nydusModifier = target->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && target->build_progress < 1.f ? 100.f : 1.f;
+		const float nydusModifier = 1.f;	// It seems like attacking it does close to nothing since it has 3 armor
+		return (targetDps + unitDps - healthValue + proximityValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier;
 	}
 
 	return (proximityValue * 50 - healthValue) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units

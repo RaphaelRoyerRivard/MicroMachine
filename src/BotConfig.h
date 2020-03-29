@@ -99,6 +99,7 @@ public:
     bool HighestPriority;
 	bool EnableMultiThreading;
 	bool TournamentMode;
+	std::string StarCraft2Version;
     
     int WorkersPerRefinery;
     int BuildingSpacing;

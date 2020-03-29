@@ -457,6 +457,11 @@ void WorkerData::setProxyWorker(const Unit & unit)
 	m_proxyWorkers.insert(unit);
 }
 
+void WorkerData::removeProxyWorker(const Unit & unit)
+{
+	m_proxyWorkers.erase(unit);
+}
+
 void WorkerData::clearProxyWorkers()
 {
 	m_proxyWorkers.erase(m_proxyWorkers.begin(), m_proxyWorkers.end());

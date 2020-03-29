@@ -1,7 +1,7 @@
 #include "CCBot.h"
 #include "Util.h"
 
-CCBot::CCBot(std::string botVersion)
+CCBot::CCBot(std::string botVersion, bool realtime)
 	: m_map(*this)
 	, m_bases(*this)
 	, m_unitInfo(*this)
@@ -17,6 +17,7 @@ CCBot::CCBot(std::string botVersion)
 	, m_botVersion(botVersion)
 	, m_previousMacroGameLoop(-1)
 	, m_player1IsHuman(false)
+	, m_realtime(realtime)
 {
 }
 
@@ -191,6 +192,8 @@ void CCBot::OnNuclearLaunchDetected() {}
 void CCBot::OnGameStart() //full start
 {	
     m_config.readConfigFile();
+	if (!m_realtime)
+		Util::InitializeCombatSimulator();
 	Util::Initialize(*this, GetPlayerRace(Players::Self), Observation()->GetGameInfo());
 
     // add all the possible start locations on the map
@@ -238,6 +241,11 @@ void CCBot::OnStep()
 	StopProfiling("0 Starcraft II");
 	StartProfiling("0.0 OnStep");	//Do not remove
 	m_gameLoop = Observation()->GetGameLoop();
+	if (m_realtime && !m_combatSimulatorInitialized && m_gameLoop > 50)
+	{
+		Util::InitializeCombatSimulator();
+		m_combatSimulatorInitialized = true;
+	}
 	if (!m_versionMessage.str().empty() && m_gameLoop >= 5)
 	{
 		Actions()->SendChat(m_versionMessage.str(), sc2::ChatChannel::Team);
@@ -263,11 +271,6 @@ void CCBot::OnStep()
 	StartProfiling("0.2 setUnits");
     setUnits();
 	StopProfiling("0.2 setUnits");
-
-	StartProfiling("0.3 clearDeadUnits");
-	clearDeadUnits();
-	clearDuplicateUnits();
-	StopProfiling("0.3 clearDeadUnits");
 
 	checkForConcede();
 
@@ -502,9 +505,9 @@ void CCBot::setUnits()
 	m_unitCount.clear();
 	m_unitCompletedCount.clear();
 	m_strategy.setEnemyCurrentlyHasInvisible(false);
-#ifdef SC2API
 	bool firstPhoenix = true;
 	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
+	StartProfiling("0.2.1 loopAllUnits");
     for (auto & unitptr : Observation()->GetUnits())
     {
 		Unit unit(unitptr, *this);
@@ -691,11 +694,30 @@ void CCBot::setUnits()
 				{
 					m_strategy.setEnemyHasInvisible(true);
 					Actions()->SendChat("I see you are also attracted to the dark arts of invisibility.");
-					Util::DebugLog(__FUNCTION__, "Invis unit detected: " + unit.getType().getName(), *this);
+					Util::DebugLog(__FUNCTION__, "Invisible unit detected: " + unit.getType().getName(), *this);
 				}
 				///TODO if we see at least 1 burrowed roach, we might want to consider all roaches as potentially invisible
 				///TODO Should handle unit that CAN get invisible (banshee) and the Mothership (can turn others invisible).
 				m_strategy.setEnemyCurrentlyHasInvisible(true);
+			}
+			else
+			{
+				switch (unitptr->unit_type.ToType())
+				{
+				case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+				case sc2::UNIT_TYPEID::TERRAN_WIDOWMINE:
+				case sc2::UNIT_TYPEID::TERRAN_GHOST:
+					if (!m_strategy.enemyHasInvisible())
+					{
+						m_strategy.setEnemyHasInvisible(true);
+						Actions()->SendChat("I guess I should prepare against cloaked or burrowed units...");
+						Util::DebugLog(__FUNCTION__, "Potential invisible unit detected: " + unit.getType().getName(), *this);
+					}
+					m_strategy.setEnemyCurrentlyHasInvisible(true);
+					break;
+				default:
+					break;
+				}
 			}
 			if(!m_strategy.enemyHasInvisible())
 			{
@@ -705,6 +727,7 @@ void CCBot::setUnits()
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{
 					case sc2::UNIT_TYPEID::PROTOSS_DARKSHRINE:
+					case sc2::UNIT_TYPEID::TERRAN_GHOSTACADEMY:
 						m_strategy.setEnemyHasInvisible(true);
 						Actions()->SendChat("Planning on striking me with cloaked units?");
 						Util::DebugLog(__FUNCTION__, "Invis production building detected: " + unit.getType().getName(), *this);
@@ -735,6 +758,14 @@ void CCBot::setUnits()
 		}
         m_allUnits.push_back(unit);
     }
+	StopProfiling("0.2.1 loopAllUnits");
+
+	StartProfiling("0.2.2 clearDeadUnits");
+	clearDeadUnits();
+	StopProfiling("0.2.2 clearDeadUnits");
+	StartProfiling("0.2.3 clearDuplicateUnits");
+	clearDuplicateUnits();
+	StopProfiling("0.2.3 clearDuplicateUnits");
 
 	int armoredEnemies = 0;
 	m_knownEnemyUnits.clear();
@@ -790,12 +821,6 @@ void CCBot::setUnits()
 
 	m_strategy.setEnemyHasMassZerglings(m_enemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
 	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= 5);
-#else
-    for (auto & unit : BWAPI::Broodwar->getAllUnits())
-    {
-        m_allUnits.push_back(Unit(unit, *this));
-    }
-#endif
 }
 
 void CCBot::identifyEnemyRepairingSCVs()
@@ -1003,7 +1028,7 @@ void CCBot::clearDuplicateUnits()
 				const sc2::Unit* toKeep = nullptr;
 				for (auto& building : buildings)
 				{
-					if (!toKeep || building->last_seen_game_loop > toKeep->last_seen_game_loop)
+					if (!toKeep || building->display_type == sc2::Unit::Visible || (toKeep->display_type == sc2::Unit::Snapshot && building->last_seen_game_loop > toKeep->last_seen_game_loop))
 					{
 						if (toKeep)
 							unitsToRemove.push_back(toKeep->tag);
@@ -1219,7 +1244,7 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugGiveAllTech();
 
 	//Workers
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, Players::Enemy, 10);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, m_startLocation, Players::Enemy, 1);
 	
 	//Test for reproducing Reaper bug against Marine and SCV in DiscoBloodbathLE
@@ -1290,7 +1315,7 @@ void CCBot::IssueGameStartCheats()
 	
 	// Test for reproducing cliff bugs with Marauders
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenter * 20, player1, 4);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, enemyLocation, player2, 3);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, enemyLocation, player2, 4);
 		
 	// Test for reproducing Cannon rush defense bugs
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 10, player2, 1);
@@ -1305,7 +1330,7 @@ void CCBot::IssueGameStartCheats()
 	Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter - towardsCenter * 3, player1, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 3, player1, 2);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, mapCenter - towardsCenter * 7, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, mapCenter - towardsCenter * 3, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3, player2, 3);*/
 
 	// Test for Reaper trade
@@ -1314,6 +1339,100 @@ void CCBot::IssueGameStartCheats()
 
 	// Resource cheat
 	Debug()->DebugGiveAllResources();
+
+	// Test for reproducing pathing bugs with Cyclones in CatalystLE
+	/*const CCPosition leftLocation(53, 21);
+	const CCPosition rightLocation(59, 23);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, rightLocation, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, rightLocation, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, leftLocation, player2, 3);*/
+
+	// Test for reproducing bugs with units on top of cliffs on AcropolisLE
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, CCPosition(40, 117), player2, 6);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, CCPosition(40, 117), player1, 6);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, CCPosition(45, 124), player2, 4);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, CCPosition(46, 128), player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, CCPosition(40, 124), player2, 6);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, CCPosition(40, 124), player1, 1);
+
+	// Test for reproducing bug where Reaper gets hit by zerglings on creep
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, enemyLocation, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, enemyLocation, player2, 5);
+	
+	// Test for checking if BCs can teleport before dying
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, mapCenter, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter, player2, 7);
+
+	// Test for reproducing bug with Cyclones not fleeing after acquiring a Lock-On target
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_MUTALISK, mapCenter, player2, 1);*/
+
+	// Test for reproducing bug where Hellions are roaming the map with a Reaper instead of defending
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation + towardsCenter * 40, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation + towardsCenter * 5, player2, 10);*/
+
+	// Test for reproducing bug where Banshees move into detection zones when attacking cloaked
+	/*Debug()->DebugGiveAllTech();
+	Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter - towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, mapCenter, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, mapCenter + towardsCenter * 8, player2, 1);*/
+
+	// Test for checking if bases lift themselves when getting attacked by enemies that attack ground only
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, mapCenter, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, mapCenter, player1, 1);*/
+
+	// Test for checking if workers flee DTs
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, m_startLocation - towardsCenter * 4, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, m_startLocation, player1, 2);*/
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELING, m_startLocation, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, m_startLocation, player1, 2);
+	
+	// Test for checking the Lock-On priority of Cyclones
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter - towardsCenter * 7, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 7, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + towardsCenter * 1, player1, 4);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter + towardsCenter * 3, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ADEPT, mapCenter + towardsCenter * 2, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_IMMORTAL, mapCenter + towardsCenter * 4, player1, 1);*/
+
+	// Test to reproduce attack bug of BCs while moving
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, mapCenter - towardsCenter * 11, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 4, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, mapCenter + towardsCenter * 4, player1, 1);*/
+
+	// Test to reproduce bug where Medivac are moving through enemy influence
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, mapCenter - towardsCenter * 30, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter, player2, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, mapCenter - towardsCenter * 20, player2, 1);*/
+
+	// Test to reproduce bug where an Overlord would trigger the cancel of the offensive
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, mapCenter, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, mapCenter, player2, 1);*/
+
+	// Test to reproduce bug where Vikings are selected to defend against ground units
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, m_startLocation, player2, 1);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);*/
+
+	// Test for reproducing bug where units would not prioritize Nydus worms
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, m_startLocation + towardsCenter * 10, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation + towardsCenter * 5, player2, 10);*/
+
+	// Test to make sure our harass units do not try to trade too much
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter - towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + towardsCenter * 5, player1, 2);*/
 }
 
 void CCBot::IssueCheats()
@@ -1623,10 +1742,7 @@ const std::vector<Unit> & CCBot::GetKnownEnemyUnits() const
 	return m_knownEnemyUnits;
 }
 
-/*
- * Despite its confusing name, m_enemyUnitsPerType stores all enemies
- */
-const std::vector<Unit> & CCBot::GetKnownEnemyUnits(sc2::UnitTypeID type)
+const std::vector<Unit> & CCBot::GetEnemyUnits(sc2::UnitTypeID type)
 {
 	return m_enemyUnitsPerType[type];
 }

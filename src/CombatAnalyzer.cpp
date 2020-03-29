@@ -397,7 +397,7 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 	auto it = m_unitStates.find(tag);
 	if (it == m_unitStates.end())
 	{
-		UnitState state = UnitState(unit.getHitPoints(), unit.getShields(), unit.getEnergy(), unit.getUnitPtr());
+		UnitState state = UnitState(unit.getUnitPtr());
 		state.Update();
 		m_unitStates[tag] = state;
 		m_bot.StopProfiling("0.10.4.4.2.1        addState");
@@ -418,7 +418,7 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 		{
 			if (unit.isFlying() && !m_bot.Strategy().enemyHasHiSecAutoTracking())
 			{
-				for (const auto & enemyMissileTurret : m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
+				for (const auto & enemyMissileTurret : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
 				{
 					if (Util::DistSq(unit, enemyMissileTurret) < 10 * 10)
 					{
@@ -457,6 +457,18 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 		detectTechs(unit, state);
 		m_bot.StopProfiling("0.10.4.4.2.3        detectTechs");*/
 	}
+}
+
+const UnitState & CombatAnalyzer::getUnitState(const sc2::Unit * unit)
+{
+	const auto it = m_unitStates.find(unit->tag);
+	if (it == m_unitStates.end())
+	{
+		UnitState state = UnitState(unit);
+		state.Update();
+		m_unitStates[unit->tag] = state;
+	}
+	return m_unitStates[unit->tag];
 }
 
 void CombatAnalyzer::increaseDeadEnemy(sc2::UNIT_TYPEID type)
@@ -681,8 +693,8 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 	int unitUpgradeArmor = getUnitUpgradeArmor(unit.getUnitPtr());
 	
 	const sc2::Weapon::TargetType expectedWeaponType = unit.isFlying() ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
-	auto& threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
-	for each (auto threat in threats)
+	auto threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
+	for (auto threat : threats)
 	{
 		//TODO validate unit is looking towards the unit
 
@@ -699,7 +711,6 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 		float weaponDamage = Util::GetDamageForTarget(threat, unit.getUnitPtr(), m_bot);
 		
 		//Get the weapon, even if we have the range and damage, to see if there is another bonus damage that applies to the unit, if there is, apply the + on it.
-		sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
 		sc2::UnitTypeData targetTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
 		for (auto & weapon : unitTypeData.weapons)
 		{
@@ -722,21 +733,23 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 		}
 	}
 
-
-	switch (m_bot.GetPlayerRace(Players::Enemy))
+	const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
+	switch (enemyRace)
 	{
 		case CCRace::Protoss:
 		{
-
+			break;
 		}
 		case CCRace::Terran:
 		{
-
+			break;
 		}
 		case CCRace::Zerg:
 		{
-
+			break;
 		}
+		default:
+			break;
 	}
 }
 
@@ -748,7 +761,7 @@ void CombatAnalyzer::detectTechs(Unit & unit, UnitState & state)
 	{
 		if (unit.isFlying() && !m_bot.Strategy().enemyHasHiSecAutoTracking())
 		{
-			for (const auto & enemyMissileTurret : m_bot.GetKnownEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
+			for (const auto & enemyMissileTurret : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET))
 			{
 				if (Util::DistSq(unit, enemyMissileTurret) < 10 * 10)
 				{

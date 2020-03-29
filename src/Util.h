@@ -136,6 +136,7 @@ namespace Util
 		bool HasCombatInfluenceOnTile(const IMNode* node, const sc2::Unit * unit, bool fromGround, CCBot & bot);
 		bool HasCombatInfluenceOnTile(const CCTilePosition position, bool isFlying, bool fromGround, CCBot & bot);
 		float GetTotalInfluenceOnTiles(CCPosition position, bool isFlying, float radius, CCBot & bot);
+		float GetMaxInfluenceOnTiles(CCPosition position, bool isFlying, float radius, CCBot & bot);
 		float GetTotalInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
 		float GetTotalInfluenceOnTile(CCTilePosition tile, const sc2::Unit * unit, CCBot & bot);
 		float GetCombatInfluenceOnTile(CCTilePosition tile, bool isFlying, CCBot & bot);
@@ -152,6 +153,7 @@ namespace Util
 	}
 
 	void Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo);
+	void InitializeCombatSimulator();
 	void SetAllowDebug(bool _allowDebug);
 
 	void SetMapName(std::string _mapName);
@@ -161,6 +163,7 @@ namespace Util
 	bool Contains(O object, S structure) { return std::find(structure.begin(), structure.end(), object) != structure.end(); }
 	template< typename O, typename S>
 	typename S::iterator Find(O object, S structure) { return std::find(structure.begin(), structure.end(), object); }
+	inline bool StringStartsWith(std::string s, std::string find) { return s.rfind(find, 0) == 0; }
 
 	std::list<UnitCluster> GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, CCBot & bot);
 	std::list<UnitCluster> & GetUnitClusters(const sc2::Units & units, const std::vector<sc2::UNIT_TYPEID> & specialTypes, bool ignoreSpecialTypes, std::string queryName, CCBot & bot);
@@ -214,7 +217,9 @@ namespace Util
 	bool unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId);
 	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
+	bool IsEnemyHiddenOnHighGround(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
+	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * unit, const std::vector<sc2::AvailableAbilities> & availableAbilitiesForUnits);
 	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbilities & availableAbilities);
     
     std::string     GetStringFromRace(const sc2::Race & race);
@@ -275,6 +280,7 @@ namespace Util
     bool            IsZerg(const CCRace & race);
     bool            IsProtoss(const CCRace & race);
     bool            IsTerran(const CCRace & race);
+	bool			IsWorker(sc2::UNIT_TYPEID type);
 	int				ToMapKey(const CCTilePosition position);
 	CCTilePosition	FromCCTilePositionMapKey(const int mapKey);
     CCPositionType  TileToPosition(float tile);

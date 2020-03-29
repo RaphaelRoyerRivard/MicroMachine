@@ -37,9 +37,10 @@ class CCBot : public sc2::Agent
 		std::chrono::steady_clock::time_point start;
 	};
 
-	uint32_t				m_gameLoop;
+	uint32_t				m_gameLoop = 0;
 	uint32_t				m_previousGameLoop;
 	int						m_previousMacroGameLoop;
+	bool					m_combatSimulatorInitialized = false;
 	uint32_t				m_skippedFrames;
 	uint32_t				m_lastProfilingLagOutput = 0;
     MapTools                m_map;
@@ -85,6 +86,7 @@ class CCBot : public sc2::Agent
 	std::string m_botVersion;
 	std::string m_opponentId;
 	bool m_player1IsHuman;
+	bool m_realtime;
 	std::stringstream m_versionMessage;
 
 	std::chrono::steady_clock::time_point m_lastFrameEndTime;
@@ -121,7 +123,7 @@ class CCBot : public sc2::Agent
 
 public:
 
-	CCBot(std::string botVersion = "");
+	CCBot(std::string botVersion, bool realtime);
 
 	void OnGameFullStart() override;
     void OnGameStart() override;
@@ -188,7 +190,7 @@ public:
 	const std::set<const sc2::Unit *> & GetEnemySCVBuilders() const { return m_enemySCVBuilders; }
 	const std::set<const sc2::Unit *> & GetEnemyWorkersGoingInRefinery() const { return m_enemyWorkersGoingInRefinery; }
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
-	const std::vector<Unit> & GetKnownEnemyUnits(sc2::UnitTypeID type);
+	const std::vector<Unit> & GetEnemyUnits(sc2::UnitTypeID type);
 	const std::vector<Unit> & GetEnemyBuildingsUnderConstruction() const { return m_enemyBuildingsUnderConstruction; }
 	std::map<sc2::Tag, Unit> & GetNeutralUnits();
 	bool IsParasited(const sc2::Unit * unit) const;

@@ -32,12 +32,14 @@ class BuildingManager
 	std::list<Unit> m_wallBuilding;
 	std::map<UnitType, std::list<CCTilePosition>> m_nextBuildingPosition;
 	std::vector<std::pair<CCTilePosition, CCTilePosition>> m_previousNextBuildingPositionByBase;
+	std::map<sc2::Tag, CCPosition> liftedBuildingPositions;
 
     bool            m_debugMode;
 
     bool            isBuildingPositionExplored(const Building & b) const;
 	void			castBuildingsAbilities();
 	void			RunProxyLogic();
+	void			LiftOrLandDamagedBuildings();
 	Building		CancelBuilding(Building b);
 	void			updateBaseBuildings();
 

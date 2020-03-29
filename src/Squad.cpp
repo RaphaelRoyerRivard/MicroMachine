@@ -93,10 +93,7 @@ void Squad::onFrame()
     }
     else*/ // otherwise, execute micro
     {
-		//m_rangedManager.setHarassMode(m_order.getType() == SquadOrderTypes::Harass);
-		m_rangedManager.setHarassMode(true);
         // Nothing to do if we have no units
-        //if (!m_units.empty() && (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend || m_order.getType() == SquadOrderTypes::Harass))
 		if (!m_units.empty() && m_order.getType() != SquadOrderTypes::Idle)
 		{
 			m_bot.StartProfiling("0.10.4.1.3      SetSquadTargets");
@@ -147,8 +144,6 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 			continue;
 		if (!enemyUnit.isAlive())
 			continue;
-		/*if (enemyUnit.getHitPoints() <= 0.f)	// Remove cloaked units
-			continue;*/
 		if (visibilityFilter && !enemyUnit.isVisible())
 			continue;
 
@@ -164,7 +159,7 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		{
 			addUnit = Util::DistSq(enemyUnit, m_order.getPosition()) < m_order.getRadius() * m_order.getRadius();
 		} 
-		// if the order is to harass, we care about every unit around each of our units
+		// We also care about every enemy unit around each of our units
 		if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Harass || m_order.getType() == SquadOrderTypes::Scout || (m_order.getType() == SquadOrderTypes::Defend && !addUnit))
 		{
 			for (auto & unit : m_units)
@@ -555,15 +550,9 @@ void Squad::addUnit(const Unit & unit)
 
 void Squad::removeUnit(const Unit & unit)
 {
-    // this is O(n) but whatever
-    for (size_t i = 0; i < m_units.size(); ++i)
-    {
-        if (unit.getUnitPtr()->tag == m_units[i].getUnitPtr()->tag)
-        {
-            m_units.erase(m_units.begin() + i);
-            break;
-        }
-    }
+	const auto it = std::find(m_units.begin(), m_units.end(), unit);
+	if (it != m_units.end())
+		m_units.erase(it);
 }
 
 void Squad::giveBackWorkers()

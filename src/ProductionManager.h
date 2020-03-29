@@ -76,6 +76,7 @@ public:
 	bool meetsReservedResourcesWithExtra(const MetaType & type, int additionalMineral, int additionalGas, int additionalReservedMineral, int additionalReservedGas);
 	bool canMakeAtArrival(const Building & building, const Unit & worker, int additionalReservedMineral, int additionalReservedGas);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
+	int getSupplyNeedsFromProductionBuildings() const;
 	void clearQueue();
 	BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);
 };
