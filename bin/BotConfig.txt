@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.8.4",
+        "BotVersion"                : "1.9.8",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Terran",
-        "MapFile"                   : "AcropolisLE.SC2Map",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "WorldofSleepersLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -125,7 +125,7 @@
         "BuildingSpacing"           : 0,
         "PylonSpacing"              : 3,
         "SelectStartingBuildBasedOnHistory" : true,
-        "PrintGreetingMessage"      : false,
+        "PrintGreetingMessage"      : true,
         "RandomProxyLocation"       : false
     },
 
@@ -149,7 +149,7 @@
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
-        "DrawSquadInfo"             : false,
+        "DrawSquadInfo"             : true,
         "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
@@ -165,7 +165,7 @@
         "DrawRangedUnitActions"     : false,
         "DrawResourcesProximity"    : false,
         "DrawCombatInformation"     : false,
-        "DrawPathfindingTiles"      : false
+        "DrawPathfindingTiles"      : true
     },
     
     "Modules" :
