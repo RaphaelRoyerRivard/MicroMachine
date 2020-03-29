@@ -1480,7 +1480,20 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
 	float simulationResult = Util::SimulateCombat(closeUnits, threatsToKeep, m_bot);
-	bool winSimulation = simulationResult > 0.f;
+	float minDesiredOutcome = 0.f;
+	if (m_order.getType() == SquadOrderTypes::Harass)
+	{
+		minDesiredOutcome = 0.75f;
+		for (const auto closeUnit : closeUnits)
+		{
+			if (Util::Contains(closeUnit, otherSquadsUnits))
+			{
+				minDesiredOutcome = 0.f;
+				break;
+			}
+		}
+	}
+	bool winSimulation = simulationResult > minDesiredOutcome;
 	bool formulaWin = unitsPower >= targetsPower;
 	bool shouldFight = winSimulation && formulaWin;
 
