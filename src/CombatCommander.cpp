@@ -1490,7 +1490,7 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.StartProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		auto region = RegionArmyInformation(myBaseLocation, m_bot);
 
-		const CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotPosition());
+		const CCPosition basePosition = Util::GetPosition(myBaseLocation->getDepotTilePosition());
 
 		// calculate how many units are flying / ground units
 		bool unitOtherThanWorker = false;
@@ -2290,7 +2290,7 @@ CCPosition CombatCommander::GetClosestEnemyBaseLocation()
 	if (!closestEnemyBase)
 		return getMainAttackLocation();
 
-	const auto depotPosition = Util::GetPosition(closestEnemyBase->getDepotPosition());
+	const auto depotPosition = Util::GetPosition(closestEnemyBase->getDepotTilePosition());
 	const auto position = depotPosition + Util::Normalized(depotPosition - closestEnemyBase->getPosition()) * 3.f;
 	return position;
 }

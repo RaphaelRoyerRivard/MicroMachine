@@ -58,6 +58,9 @@ void GameCommander::handleUnitAssignments()
     // set each type of unit
     setScoutUnits();
     setCombatUnits();
+
+	// check for unit being carried and units carrying others
+	setCarryingAndCarried();
 }
 
 bool GameCommander::isAssigned(const Unit & unit) const
@@ -142,6 +145,86 @@ void GameCommander::setCombatUnits()
     }
 }
 
+void GameCommander::setCarryingAndCarried()
+{
+	//Reset lists
+	m_carried = std::vector<Unit>();
+	m_carrying = std::vector <Unit>();
+
+	auto current_nearCarrier = std::map<sc2::Tag, CCPosition>();
+
+	for (auto & unit : m_validUnits)
+	{
+		BOT_ASSERT(unit.isValid(), "Have a null unit in our valid units\n");
+		if (unit.isFlying())
+			continue;
+		setInside(unit.getTag(), false);
+
+		auto orders = unit.getUnitPtr()->orders;
+		if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV)
+		{
+			auto a = 1;
+		}
+
+		if (orders.size() > 0 && orders[0].ability_id == sc2::ABILITY_ID::MOVE)
+		{
+			bool targetFound = false;
+			for (auto & carrier : m_validUnits)
+			{
+				if (orders[0].target_unit_tag == carrier.getTag())//Find the target
+				{
+					targetFound = true;
+					auto carrierType = carrier.getType().getAPIUnitType();
+					//TODO doesn't handle CommandCenter
+					//TODO doesn't handle other races, needs special code for Warp prism, should be from the point of view of the prism, instead of the unit.
+					if (carrierType != sc2::UNIT_TYPEID::TERRAN_BUNKER && carrierType != sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
+					{
+						break;
+					}
+
+					current_nearCarrier[unit.getTag()] = unit.getPosition();
+
+					//Unit is inside a carrier. "dist <= pickupDistance" is used to flag the unit inside the unit 1 frame earlier, so next frame the unit should be inside.
+					if (canEnterCarrier(unit, carrier))
+					{
+						setInside(unit.getTag(), true);
+						m_carried.push_back(unit);
+						setCarryingUnit(unit.getTag(), &carrier);
+						if (std::find(m_carrying.begin(), m_carrying.end(), carrier) == m_carrying.end())
+						{
+							m_carrying.push_back(carrier);
+							addCarriedUnit(carrier.getTag(), &unit);
+						}
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	m_nearCarrier = current_nearCarrier;//Keep info for next frame
+}
+
+bool GameCommander::canEnterCarrier(Unit unit, Unit carrier)
+{
+	auto dist = Util::Dist(unit.getPosition(), carrier.getPosition());
+
+	int pickupRange;
+	switch ((sc2::UNIT_TYPEID)carrier.getType().getAPIUnitType())
+	{
+	case sc2::UNIT_TYPEID::TERRAN_MEDIVAC:
+		pickupRange = 1;
+		break;
+	case sc2::UNIT_TYPEID::TERRAN_BUNKER:
+	default:
+		pickupRange = 0;
+		break;
+	}
+	auto pickupDistance = unit.getUnitPtr()->radius + carrier.getUnitPtr()->radius + pickupRange;
+
+	return dist <= pickupDistance || m_nearCarrier[unit.getTag()] == unit.getPosition();
+}
+
 void GameCommander::onUnitCreate(const Unit & unit)
 {
 
@@ -165,4 +248,55 @@ void GameCommander::assignUnit(const Unit & unit, std::vector<Unit> & units)
     }
 
     units.push_back(unit);
+}
+
+
+bool GameCommander::isInside(sc2::Tag unit)
+{
+	return m_unitInside[unit];
+}
+
+void GameCommander::setInside(sc2::Tag unit, bool _inside)
+{
+	m_unitInside[unit] = _inside;
+}
+
+std::map<sc2::Tag, Unit*> GameCommander::getCarryingUnit()
+{
+	return m_unitCarryingUnit;
+}
+
+void GameCommander::setCarryingUnit(sc2::Tag carrier, Unit* carrying)
+{
+	m_unitCarryingUnit[carrier] = carrying;
+}
+
+std::map<sc2::Tag, std::vector<Unit*>> GameCommander::getCarriedUnits()
+{
+	return m_carriedUnits;
+}
+
+void GameCommander::addCarriedUnit(sc2::Tag carrier, Unit* carried)
+{
+	m_carriedUnits[carrier].push_back(carried);
+}
+
+void GameCommander::AddDelayedSmartAbility(Unit unit, sc2::AbilityID ability, CCPosition position)
+{
+	m_delayedSmartAbility.push_back(std::pair<Unit, std::pair<sc2::AbilityID, CCPosition>>(unit, std::pair<sc2::AbilityID, CCPosition>(ability, position)));
+}
+
+void GameCommander::GiveDelayedSmarAbilityOrders()
+{
+	for (auto command : m_delayedSmartAbility)
+	{
+		if (command.second.first == 0)
+		{
+			command.first.rightClick(command.second.second);
+		}
+		else
+		{
+			Micro::SmartAbility(command.first.getUnitPtr(), command.second.first, command.second.second, m_bot);
+		}
+	}
 }

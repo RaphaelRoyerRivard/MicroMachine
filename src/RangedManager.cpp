@@ -156,6 +156,10 @@ int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* tar
 
 void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets, sc2::Units &otherSquadsUnits)
 {
+#ifdef NO_MICRO
+	return;
+#endif
+
 	m_combatSimulationResults.clear();
 	m_threatsForUnit.clear();
 	m_threatTargetForUnit.clear();
