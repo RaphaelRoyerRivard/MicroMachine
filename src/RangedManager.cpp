@@ -1844,10 +1844,10 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 			}
 		}
 
-		if (!hasFlyingHelper)
+		if (!hasFlyingHelper && m_bot.Strategy().getStartingStrategy() != PROXY_MARAUDERS)
 		{
 			// If the target is too far, we don't want to chase it, we just leave
-			if (target)
+			if (target && cycloneShouldUseLockOn)
 			{
 				const float lockOnRange = m_bot.Commander().Combat().getAbilityCastingRanges().at(sc2::ABILITY_ID::EFFECT_LOCKON) + cyclone->radius + target->radius;
 				if (Util::DistSq(cyclone->pos, target->pos) > lockOnRange * lockOnRange)
