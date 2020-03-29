@@ -2101,6 +2101,8 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 					return true;
 				}
 			}
+			else
+				return false;
 		}
 		const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, false, 0, "Heal");
 		m_bot.Commander().Combat().PlanAction(medivac, action);

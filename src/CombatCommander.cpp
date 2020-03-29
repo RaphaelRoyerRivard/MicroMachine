@@ -322,6 +322,9 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 		{
 			if (enemyUnit.getAPIUnitType() != sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || enemyUnit.isPowered())
 			{
+				// Ignore influence of SCVs that are building
+				if (enemyUnitType.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV && Util::Contains(enemyUnit.getUnitPtr(), m_bot.GetEnemySCVBuilders()))
+					continue;
 				if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
 				{
 					const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
