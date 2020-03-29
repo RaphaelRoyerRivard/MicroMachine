@@ -518,7 +518,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	// build supply if we need some
 	const auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
-	if(m_bot.GetCurrentSupply() + 1.65 * getUnitTrainingBuildings(m_bot.GetSelfRace()).size() + finishedBaseCount > supplyWithAdditionalSupplyDepot
+	if(m_bot.GetCurrentSupply() + getSupplyNeedsFromProductionBuildings() + finishedBaseCount > supplyWithAdditionalSupplyDepot
 		&& !m_queue.contains(supplyProviderType)
 		&& supplyWithAdditionalSupplyDepot < 200
 		&& !m_bot.Strategy().isWorkerRushed())
@@ -1760,17 +1760,17 @@ std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
 	std::set<sc2::UnitTypeID> unitTrainingBuildingTypes;
 	switch (race)
 	{
-		case CCRace::Terran:
-			unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
-			unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_STARPORT);
-			unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_FACTORY);
-			break;
-		case CCRace::Protoss:
-			//TODO complete
-			break;
-		case CCRace::Zerg:
-			//TODO complete
-			break;
+	case CCRace::Terran:
+		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_STARPORT);
+		unitTrainingBuildingTypes.insert(sc2::UNIT_TYPEID::TERRAN_FACTORY);
+		break;
+	case CCRace::Protoss:
+		//TODO complete
+		break;
+	case CCRace::Zerg:
+		//TODO complete
+		break;
 	}
 
 	std::vector<Unit> trainers;
@@ -1788,6 +1788,37 @@ std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
 	}
 
 	return trainers;
+}
+
+int ProductionManager::getSupplyNeedsFromProductionBuildings() const
+{
+	std::map<sc2::UnitTypeID, int> unitTrainingBuildingTypesWithSupplyNeeds;
+	switch (m_bot.GetSelfRace())
+	{
+	case CCRace::Terran:
+		unitTrainingBuildingTypesWithSupplyNeeds[sc2::UNIT_TYPEID::TERRAN_BARRACKS] = 1;
+		unitTrainingBuildingTypesWithSupplyNeeds[sc2::UNIT_TYPEID::TERRAN_FACTORY] = 2;
+		unitTrainingBuildingTypesWithSupplyNeeds[sc2::UNIT_TYPEID::TERRAN_STARPORT] = 2;
+		break;
+	case CCRace::Protoss:
+		//TODO complete
+		break;
+	case CCRace::Zerg:
+		//TODO complete
+		break;
+	}
+
+	int supplyNeeds = 0;
+	for (const auto & typePair : unitTrainingBuildingTypesWithSupplyNeeds)
+	{
+		const auto & producers = m_bot.GetAllyUnits(typePair.first);
+		for (const auto & producer : producers)
+		{
+			supplyNeeds += typePair.second * (producer.getAddonTag() == 0 ? 1 : 2);
+		}
+	}
+
+	return supplyNeeds;
 }
 
 void ProductionManager::clearQueue()

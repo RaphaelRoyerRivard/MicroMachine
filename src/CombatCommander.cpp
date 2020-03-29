@@ -322,6 +322,9 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 		{
 			if (enemyUnit.getAPIUnitType() != sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || enemyUnit.isPowered())
 			{
+				// Ignore influence of SCVs that are building
+				if (enemyUnitType.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV && Util::Contains(enemyUnit.getUnitPtr(), m_bot.GetEnemySCVBuilders()))
+					continue;
 				if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
 				{
 					const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
@@ -943,7 +946,6 @@ void CombatCommander::updateScoutSquad()
 
 void CombatCommander::updateHarassSquads()
 {
-	// TODO units might need to be placed into the idle squad
 	std::vector<Unit> harassUnits;
 	int i = 1;
 	while (m_squadData.squadExists("Harass" + std::to_string(i)))
@@ -954,9 +956,16 @@ void CombatCommander::updateHarassSquads()
 		squad.clear();
 		++i;
 	}
-	const auto & baseLocations = m_bot.Bases().getOccupiedBaseLocations(Players::Enemy);
+	std::vector<const BaseLocation *> baseLocations;
+	const auto & occupiedBaseLocations = m_bot.Bases().getOccupiedBaseLocations(Players::Enemy);
+	baseLocations.insert(baseLocations.end(), occupiedBaseLocations.begin(), occupiedBaseLocations.end());
 	if (baseLocations.empty())
-		return;
+	{
+		const BaseLocation* enemyStartingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+		if (!enemyStartingBase)
+			return;
+		baseLocations.push_back(enemyStartingBase);
+	}
 	
 	i = 0;
 	for (auto baseLocation : baseLocations)
@@ -1100,6 +1109,17 @@ void CombatCommander::updateAttackSquads()
 		// We don't want to stop the offensive with the proxy Cyclones strategy when we still have our flying Barracks
 		if (!earlyCycloneRush)
 		{
+			sc2::Units allyUnits;
+			Util::CCUnitsToSc2Units(mainAttackSquad.getUnits(), allyUnits);
+			bool hasGround = false;
+			bool hasAir = false;
+			for (const auto ally : allyUnits)
+			{
+				if (hasGround && hasAir)
+					break;
+				hasGround = hasGround || !ally->is_flying;
+				hasAir = hasGround || !ally->is_flying;
+			}
 			m_bot.StartProfiling("0.10.4.2.3.0     calcEnemies");
 			sc2::Units enemyUnits;
 			for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
@@ -1107,13 +1127,13 @@ void CombatCommander::updateAttackSquads()
 				const auto & enemyUnit = enemyUnitPair.second;
 				if (enemyUnit.getType().isCombatUnit() && !enemyUnit.getType().isBuilding())
 				{
-					enemyUnits.push_back(enemyUnit.getUnitPtr());
+					const bool canAttack = (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot)) || (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
+					if (canAttack)
+						enemyUnits.push_back(enemyUnit.getUnitPtr());
 				}
 			}
 			m_bot.StopProfiling("0.10.4.2.3.0     calcEnemies");
-			sc2::Units allyUnits;
 			m_bot.StartProfiling("0.10.4.2.3.1     simulateCombat");
-			Util::CCUnitsToSc2Units(mainAttackSquad.getUnits(), allyUnits);
 			const float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, m_bot);
 			m_bot.StopProfiling("0.10.4.2.3.1     simulateCombat");
 			if (m_winAttackSimulation)

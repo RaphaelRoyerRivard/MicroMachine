@@ -1412,7 +1412,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 			auto it = sortedBases.begin();
 			if (m_bot.Config().RandomProxyLocation)
 			{
-				const int randomPossibleLocations = 3;
+				const int randomPossibleLocations = 2;
 				std::srand(std::time(nullptr));	// Initialize random seed
 				const auto maximumRandomBaseIndex = sortedBases.size() >= randomPossibleLocations ? randomPossibleLocations : sortedBases.size();
 				const auto randomValue = std::rand();

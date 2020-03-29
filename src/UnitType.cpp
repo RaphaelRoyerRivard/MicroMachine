@@ -64,7 +64,9 @@ bool UnitType::isCombatUnit() const
 	if (isEgg() || isLarva()) { return false; }
 	if (isBuilding())
 	{
-		if (getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING && m_bot->Strategy().getStartingStrategy() == PROXY_CYCLONES) { return true; }
+		const auto unitType = getAPIUnitType();
+		if (unitType == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING && m_bot->Strategy().getStartingStrategy() == PROXY_CYCLONES) { return true; }
+		if (unitType == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY || unitType == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL) { return true; }
 		if (isAttackingBuilding()) { return true; }
 		return false;
 	}
