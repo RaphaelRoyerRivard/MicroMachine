@@ -1145,7 +1145,8 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 					const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
 					armoredScore = 15 * Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes);
 				}
-				const float score = energyScore + detectorScore + armoredScore + powerScore + speedScore - healthScore - distanceScore;
+				const float nydusBonus = threat->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && threat->build_progress < 1.f ? 10000.f : 0.f;
+				const float score = energyScore + detectorScore + armoredScore + powerScore + speedScore + nydusBonus - healthScore - distanceScore;
 				if(!bestTarget || score > bestScore)
 				{
 					bestTarget = threat;
@@ -1167,7 +1168,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 		{
 			const auto type = UnitType(target->unit_type, m_bot);
 			// Prevent the use of Lock-On on passive buildings
-			if (type.isWorker() || (type.isBuilding() && !type.isAttackingBuilding()))
+			if (type.isWorker() || (type.isBuilding() && !type.isCombatUnit()))
 			{
 				shouldUseLockOn = false;
 				shouldAttack = true;
@@ -1235,7 +1236,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	}
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
-	if (!target || !isTargetRanged(target))
+	if (!target || (!isTargetRanged(target) && !morphFlyingVikings))
 	{
 		return false;
 	}

@@ -946,7 +946,6 @@ void CombatCommander::updateScoutSquad()
 
 void CombatCommander::updateHarassSquads()
 {
-	// TODO units might need to be placed into the idle squad
 	std::vector<Unit> harassUnits;
 	int i = 1;
 	while (m_squadData.squadExists("Harass" + std::to_string(i)))
@@ -957,9 +956,16 @@ void CombatCommander::updateHarassSquads()
 		squad.clear();
 		++i;
 	}
-	const auto & baseLocations = m_bot.Bases().getOccupiedBaseLocations(Players::Enemy);
+	std::vector<const BaseLocation *> baseLocations;
+	const auto & occupiedBaseLocations = m_bot.Bases().getOccupiedBaseLocations(Players::Enemy);
+	baseLocations.insert(baseLocations.end(), occupiedBaseLocations.begin(), occupiedBaseLocations.end());
 	if (baseLocations.empty())
-		return;
+	{
+		const BaseLocation* enemyStartingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+		if (!enemyStartingBase)
+			return;
+		baseLocations.push_back(enemyStartingBase);
+	}
 	
 	i = 0;
 	for (auto baseLocation : baseLocations)

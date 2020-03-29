@@ -1414,6 +1414,19 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, mapCenter, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, mapCenter, player2, 1);*/
+
+	// Test to reproduce bug where Vikings are selected to defend against ground units
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, m_startLocation, player2, 1);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);*/
+
+	// Test for reproducing bug where units would not prioritize Nydus worms
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, m_startLocation + towardsCenter * 10, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation + towardsCenter * 5, player2, 10);*/
 }
 
 void CCBot::IssueCheats()

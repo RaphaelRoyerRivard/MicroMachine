@@ -151,16 +151,19 @@ void StrategyManager::onFrame(bool executeMacro)
 		if (!m_greetingMessageSent)
 		{
 			m_bot.Actions()->SendChat(m_greetingMessage.str());
+			std::cout << "Greeting message sent" << std::endl;
 			m_greetingMessageSent = true;
 		}
 		if (m_bot.GetCurrentFrame() >= 30 && !m_opponentHistorySent)
 		{
 			m_bot.Actions()->SendChat(m_opponentHistory.str(), sc2::ChatChannel::Team);
+			std::cout << "Opponent history sent" << std::endl;
 			m_opponentHistorySent = true;
 		}
 		if (m_bot.GetCurrentFrame() >= 55 && !m_strategyMessageSent)
 		{
 			m_bot.Actions()->SendChat(m_strategyMessage.str(), sc2::ChatChannel::Team);
+			std::cout << "Strategy message sent" << std::endl;
 			m_strategyMessageSent = true;
 		}
 	}
