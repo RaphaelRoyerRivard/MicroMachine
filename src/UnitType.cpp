@@ -231,7 +231,7 @@ bool UnitType::isMineral() const
 
 bool UnitType::isMineralWallPatch() const
 {
-	return m_type.ToType() == sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD450;
+	return m_type.ToType() == sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD450 || (int)m_type.ToType() == 1982;//1982 is an unknown mineral field type used for walls
 }
 
 

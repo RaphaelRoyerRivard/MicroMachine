@@ -1185,6 +1185,94 @@ void ProductionManager::lowPriorityChecks()
 			}
 		}
 	}
+	
+	//build bunkers in mineral/gas field [optimize economy]
+	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran)
+	{
+		for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+		{
+			if (!base->getResourceDepot().isValid() || base->getResourceDepot().getPlayer() != Players::Self || !base->getResourceDepot().isCompleted() || base->isGeyserSplit())//TEMPORARY skip split geysers since they are not yet handled
+			{
+				continue;
+			}
+
+			//TODO needs to validate there is a geyser built next to the location
+			if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::Bunker.getUnitType()))
+			{
+				auto bunkers = base->getGasBunkers();
+				for (auto bunkerLocation : base->getGasBunkerLocations())
+				{
+					bool hasBunker = false;
+					for (auto bunker : bunkers)
+					{
+						if (bunkerLocation == bunker.getTilePosition())
+						{
+							hasBunker = true;
+							break;
+						}
+					}
+					if (!hasBunker)//Has no bunker so lets build one
+					{
+						m_bot.Buildings().getBuildingPlacer().freeTilesForBunker(bunkerLocation);
+						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(bunkerLocation.x, bunkerLocation.y));
+						auto boItem = BuildOrderItem(MetaTypeEnum::Bunker, 0, false);
+						create(worker, boItem, bunkerLocation);
+
+						break;
+					}
+				}
+			}
+		}
+		/*const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
+		if (engineeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
+		{
+			const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+			if (!shouldProduceAntiInvis && starportCount > 0)
+			{
+				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
+				if (vikingCount > 0)
+				{
+					m_queue.queueAsLowestPriority(MetaTypeEnum::EngineeringBay, false);
+				}
+			}
+			else
+			{
+				m_queue.queueAsHighestPriority(MetaTypeEnum::EngineeringBay, false);
+			}
+		}
+
+		if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::MissileTurret.getUnitType()))
+		{
+			const int completedEngineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), true, true);
+			if (completedEngineeringBayCount > 0)
+			{
+				for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+				{
+					if (!base->getResourceDepot().isValid() || base->getResourceDepot().getPlayer() != Players::Self)
+						continue;
+
+					auto hasTurret = false;
+					auto position = base->getTurretPosition();
+					auto buildings = m_bot.Buildings().getFinishedBuildings();
+					for (auto & b : buildings)
+					{
+						if (b.getTilePosition() == position)
+						{
+							hasTurret = true;
+							break;
+						}
+					}
+					if (!hasTurret)
+					{
+						m_bot.Buildings().getBuildingPlacer().freeTilesForTurrets(position);
+						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(position.x, position.y));
+						auto boItem = BuildOrderItem(MetaTypeEnum::MissileTurret, 0, false);
+						create(worker, boItem, position);
+					}
+				}
+			}
+		}*/
+	}
 
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)

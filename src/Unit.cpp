@@ -792,16 +792,7 @@ bool Unit::isCounterToUnit(const Unit& unit) const
 
 bool Unit::isReturningCargo() const
 {
-	auto orders = m_unit->orders;
-	if (!orders.empty())
-	{
-		//Not checking the abilities HARVEST_RETURN_DRONE, HARVEST_RETURN_MULE, HARVEST_RETURN_PROBE and HARVEST_RETURN_SCV, because they seem to never be used.
-		if (orders.at(0).ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
-		{
-			return true;
-		}
-	}
-	return false;
+	return m_bot->Workers().getWorkerData().isReturningCargo(*this);
 }
 
 void Unit::getBuildingLimits(CCTilePosition & bottomLeft, CCTilePosition & topRight) const

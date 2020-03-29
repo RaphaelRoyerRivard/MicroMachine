@@ -906,7 +906,6 @@ void CCBot::identifyEnemyWorkersGoingIntoRefinery()
 			}
 		}
 	}
-
 }
 
 void CCBot::clearDeadUnits()
@@ -1312,6 +1311,9 @@ void CCBot::IssueGameStartCheats()
 	// Test for Reaper trade
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter - towardsCenter * 2.5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter + towardsCenter * 2.5, player2, 1);*/
+
+	// Resource cheat
+	Debug()->DebugGiveAllResources();
 }
 
 void CCBot::IssueCheats()
@@ -1327,6 +1329,20 @@ void CCBot::IssueCheats()
 		}
 		Util::ClearChat(*this);
 	}
+
+	//Kill all aggressive enemy units, runs every frame to kill every visible enemy units
+	if (false)//Comment to activate
+	{
+		for (auto unit : GetEnemyUnits())
+		{
+			if (!unit.second.getType().isBuilding() && unit.second.isValid() && unit.second.isAlive() && unit.second.getUnitPtr()->display_type != sc2::Unit::Snapshot && unit.second.getUnitPtr()->display_type != sc2::Unit::Hidden)
+			{
+				Debug()->DebugKillUnit(unit.second.getUnitPtr());
+				Util::ClearChat(*this);
+			}
+		}
+	}
+
 	if (keyEnd)
 	{
 		for (auto u : Observation()->GetUnits())
@@ -1652,7 +1668,7 @@ const CCTilePosition CCBot::GetBuildingArea() const
 	{
 		if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
 			continue;
-		return base->getDepotPosition();
+		return base->getDepotTilePosition();
 	}
 
 	//If all bases are underattack, return the main base.

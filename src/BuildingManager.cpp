@@ -23,7 +23,7 @@ void BuildingManager::onFirstFrame()
 	{
 		//Ramp wall location
 		std::list<CCTilePosition> checkedTiles;
-		FindRampTiles(m_rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotPosition());
+		FindRampTiles(m_rampTiles, checkedTiles, m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getDepotTilePosition());
 		FindMainRamp(m_rampTiles);
 
 		auto tilesToBlock = FindRampTilesToPlaceBuilding(m_rampTiles);
@@ -115,6 +115,15 @@ void BuildingManager::lowPriorityChecks()
 				{
 					toRemove.push_back(remove);
 				}
+			}
+		}
+
+		if (building.buildingUnit.isValid() && building.buildingUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+		{
+			auto abilities = building.buildingUnit.getAbilities();
+			if (Util::IsAbilityAvailable(sc2::ABILITY_ID::UNLOADALL, abilities))
+			{
+				auto a = 1;
 			}
 		}
 	}
@@ -452,7 +461,7 @@ void BuildingManager::FindOpponentMainRamp()
 	{
 		std::list<CCTilePosition> checkedTiles;
 		std::list<CCTilePosition> rampTiles;
-		FindRampTiles(rampTiles, checkedTiles, enemyBaseLocation->getDepotPosition());
+		FindRampTiles(rampTiles, checkedTiles, enemyBaseLocation->getDepotTilePosition());
 		FindMainRamp(rampTiles);
 		CCPosition rampPos;
 		for (const auto & rampTile : rampTiles)
@@ -1369,7 +1378,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 		if (mainPath.empty())
 			return Util::GetTilePosition(m_bot.Map().center());
 		const auto startingBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-		const auto enemyBasePosition = Util::GetPosition(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getDepotPosition());
+		const auto enemyBasePosition = Util::GetPosition(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getDepotTilePosition());
 		const auto enemyNext = m_bot.Bases().getNextExpansion(Players::Enemy, false, false);
 		const auto & baseLocations = m_bot.Bases().getBaseLocations();	// Sorted by closest to enemy base
 		std::map<float, const BaseLocation*> sortedBases;
@@ -1379,14 +1388,14 @@ CCTilePosition BuildingManager::getProxyLocation()
 			if (baseLocation == enemyNext || baseLocation == startingBaseLocation)
 				continue;
 			const auto dist = baseLocation->getGroundDistance(m_enemyMainRamp);
-			const auto startingBaseDist = startingBaseLocation->getGroundDistance(baseLocation->getDepotPosition());
+			const auto startingBaseDist = startingBaseLocation->getGroundDistance(baseLocation->getDepotTilePosition());
 			const auto totalDist = dist * 2 + startingBaseDist;
-			const auto baseHeight = m_bot.Map().terrainHeight(baseLocation->getDepotPosition());
-			const auto basePosition = Util::GetPosition(baseLocation->getDepotPosition());
+			const auto baseHeight = m_bot.Map().terrainHeight(baseLocation->getDepotTilePosition());
+			const auto basePosition = Util::GetPosition(baseLocation->getDepotTilePosition());
 			const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
 			if (enemyRace == sc2::Zerg || enemyRace == sc2::Random)
 			{
-				if (Util::DistBetweenLineAndPoint(Util::GetPosition(startingBaseLocation->getDepotPosition()), enemyBasePosition, basePosition) < 15.f)
+				if (Util::DistBetweenLineAndPoint(Util::GetPosition(startingBaseLocation->getDepotTilePosition()), enemyBasePosition, basePosition) < 15.f)
 				{
 					continue;
 				}
@@ -1421,8 +1430,8 @@ CCTilePosition BuildingManager::getProxyLocation()
 					++it;
 			}
 			const auto closestBase = it->second;
-			m_proxyLocation = closestBase->getDepotPosition();
-			const auto depotPos = Util::GetPosition(closestBase->getDepotPosition());
+			m_proxyLocation = closestBase->getDepotTilePosition();
+			const auto depotPos = Util::GetPosition(closestBase->getDepotTilePosition());
 			const auto centerOfMinerals = Util::GetPosition(closestBase->getCenterOfMinerals());
 			m_proxyLocation2 = depotPos + Util::Normalized(depotPos - centerOfMinerals) * 8;
 			return m_proxyLocation;

@@ -14,6 +14,7 @@ class MetaTypeEnum
 		static MetaType Barracks;
 		static MetaType BarracksTechLab;
 		static MetaType BarracksReactor;
+		static MetaType Bunker;
 		static MetaType Factory;
 		static MetaType FactoryTechLab;
 		static MetaType FactoryReactor;

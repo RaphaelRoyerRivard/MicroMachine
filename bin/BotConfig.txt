@@ -23,7 +23,7 @@
         "PlayAsHuman"               : false,
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 10,
+        "EnemyDifficulty"           : 1,
         "EnemyRace"                 : "Protoss",
         "MapFile"                   : "DiscoBloodbathLE.SC2Map",
         "StepSize"                  : 1,
@@ -216,7 +216,7 @@
     "SC2API Strategy" :
     {
         "Protoss"                   : "Protoss_ZealotRush",
-        "Terran"                    : "Terran_RefineryOpener",
+        "Terran"                    : "Terran_FastExpand",
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "AutoCompleteBuildOrder"    : true,
@@ -251,40 +251,6 @@
                 "OpeningBuildOrder" : ["SCV", "SupplyDepot", "SCV", "Refinery", "SCV", "Barracks", "SCV", "SupplyDepot", "SCV", "SCV", "SCV", "Factory"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Reaper"], ">=", [ 1 ] ]
-            },
-            "Terran_ReaperHarass3"     : 
-            { 
-                "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV", 
-										"SupplyDepot", 
-										"SCV", 
-										"SCV", 
-										"Barracks",
-										"SCV",
-										"Refinery", 
-										"SCV", 
-										"Barracks", 
-										"SCV", 
-										"SCV", 
-										"SupplyDepot", 
-										"Reaper",
-										"SCV", 
-                                        "SupplyDepot", 
-										"Refinery", 
-										"SCV",
-										"Reaper",
-										"SCV",
-										"Barracks", 
-										"Reaper",
-										"SCV",
-										"SupplyDepot", 
-										"SCV", 
-										"Reaper",
-										"SCV", 
-										"Reaper",
-										"OrbitalCommand"],
-                "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
-                "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },
             "Terran_ReaperHarass4"     : 
             { 
@@ -339,7 +305,7 @@
 			"Terran_FastExpand"     : 
             { 
                 "Race"              : "Terran",  
-                "OpeningBuildOrder" : ["SCV","SupplyDepot","CommandCenter"],
+                "OpeningBuildOrder" : ["SCV","SupplyDepot","Barracks","CommandCenter"],
                 "ScoutCondition"    : [ ["Self", "SupplyDepot"], ">=", [ 1 ] ],
                 "AttackCondition"   : [ ["Self", "Marine"], ">=", [ 10 ] ]
             },

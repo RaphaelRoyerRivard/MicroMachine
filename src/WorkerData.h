@@ -20,6 +20,7 @@ class WorkerData
     std::set<Unit>          m_depots;
     std::map<int, int>      m_workerJobCount;
     std::map<Unit, int>     m_workerJobMap;
+	std::map<Unit, bool>	m_workerReturningCargoMap;
     std::map<Unit, int>     m_refineryWorkerCount;
     std::map<Unit, int>     m_depotWorkerCount;
     std::map<Unit, Unit>    m_workerRefineryMap;
@@ -48,6 +49,7 @@ public:
     int     getNumAssignedWorkers(const Unit & unit);
 	std::vector<Unit> getAssignedWorkersRefinery(const Unit & unit);
     int     getWorkerJob(const Unit & unit) const;
+	bool	isReturningCargo(const Unit & unit) const;
 	int		getCountWorkerAtDepot(const Unit & depot) const;
     Unit    getMineralToMine(const Unit & unit) const;
     Unit    getWorkerDepot(const Unit & unit) const;

@@ -4,6 +4,7 @@
 //#define NO_EXPANSION
 //#define NO_PRODUCTION
 //#define NO_BUILDING
+//#define NO_MICRO
 
 #ifdef PUBLIC_RELEASE
 #undef NO_UNITS
