@@ -1103,6 +1103,17 @@ void CombatCommander::updateAttackSquads()
 		// We don't want to stop the offensive with the proxy Cyclones strategy when we still have our flying Barracks
 		if (!earlyCycloneRush)
 		{
+			sc2::Units allyUnits;
+			Util::CCUnitsToSc2Units(mainAttackSquad.getUnits(), allyUnits);
+			bool hasGround = false;
+			bool hasAir = false;
+			for (const auto ally : allyUnits)
+			{
+				if (hasGround && hasAir)
+					break;
+				hasGround = hasGround || !ally->is_flying;
+				hasAir = hasGround || !ally->is_flying;
+			}
 			m_bot.StartProfiling("0.10.4.2.3.0     calcEnemies");
 			sc2::Units enemyUnits;
 			for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
@@ -1110,13 +1121,13 @@ void CombatCommander::updateAttackSquads()
 				const auto & enemyUnit = enemyUnitPair.second;
 				if (enemyUnit.getType().isCombatUnit() && !enemyUnit.getType().isBuilding())
 				{
-					enemyUnits.push_back(enemyUnit.getUnitPtr());
+					const bool canAttack = (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot)) || (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
+					if (canAttack)
+						enemyUnits.push_back(enemyUnit.getUnitPtr());
 				}
 			}
 			m_bot.StopProfiling("0.10.4.2.3.0     calcEnemies");
-			sc2::Units allyUnits;
 			m_bot.StartProfiling("0.10.4.2.3.1     simulateCombat");
-			Util::CCUnitsToSc2Units(mainAttackSquad.getUnits(), allyUnits);
 			const float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, m_bot);
 			m_bot.StopProfiling("0.10.4.2.3.1     simulateCombat");
 			if (m_winAttackSimulation)
