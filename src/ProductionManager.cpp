@@ -744,7 +744,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 				bool enoughMedivacs = true;
-				if (proxyMaraudersStrategy)
+				int enemyStalkerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_STALKER).size();
+				int enemyRoachAndRavagerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACH).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGER).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON).size();
+				if (proxyMaraudersStrategy || enemyStalkerCount + enemyRoachAndRavagerCount >= 5)
 				{
 					if (!m_queue.contains(MetaTypeEnum::Marauder))
 					{
