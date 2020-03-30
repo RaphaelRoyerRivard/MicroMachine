@@ -1480,7 +1480,20 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
 	float simulationResult = Util::SimulateCombat(closeUnits, threatsToKeep, m_bot);
-	bool winSimulation = simulationResult > 0.f;
+	float minDesiredOutcome = 0.f;
+	if (m_order.getType() == SquadOrderTypes::Harass)
+	{
+		minDesiredOutcome = 0.75f;
+		for (const auto closeUnit : closeUnits)
+		{
+			if (Util::Contains(closeUnit, otherSquadsUnits))
+			{
+				minDesiredOutcome = 0.f;
+				break;
+			}
+		}
+	}
+	bool winSimulation = simulationResult > minDesiredOutcome;
 	bool formulaWin = unitsPower >= targetsPower;
 	bool shouldFight = winSimulation && formulaWin;
 
@@ -2087,11 +2100,11 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 {
 	if (target)
 	{
+		const auto & abilityRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
+		const float healRange = abilityRanges.at(sc2::ABILITY_ID::EFFECT_HEAL) + medivac->radius + target->radius;
 		if (Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(medivac->pos), medivac->is_flying, m_bot))
 		{
-			const auto & abilityRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
-			const float healRange = abilityRanges.at(sc2::ABILITY_ID::EFFECT_HEAL) + medivac->radius;
-			CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(medivac, target, healRange + target->radius, false, m_bot);
+			CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(medivac, target, healRange, false, m_bot);
 			if (movePosition != CCPosition())
 			{
 				const float distSq = Util::DistSq(medivac->pos, movePosition);
@@ -2105,8 +2118,16 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 			else
 				return false;
 		}
-		const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, false, 0, "Heal");
-		m_bot.Commander().Combat().PlanAction(medivac, action);
+		if (Util::DistSq(medivac->pos, target->pos) <= healRange * healRange)
+		{
+			const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, false, 0, "Heal");
+			m_bot.Commander().Combat().PlanAction(medivac, action);
+		}
+		else
+		{
+			const auto action = RangedUnitAction(MicroActionType::Move, target->pos, false, 0, "MoveToHealTarget");
+			m_bot.Commander().Combat().PlanAction(medivac, action);
+		}
 		return true;
 	}
 
