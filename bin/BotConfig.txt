@@ -25,7 +25,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "WorldofSleepersLE.SC2Map",
+        "MapFile"                   : "AcropolisLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -217,7 +217,7 @@
     "SC2API Strategy" :
     {
         "Protoss"                   : "Protoss_ZealotRush",
-        "Terran"                    : "Terran_FastExpand",
+        "Terran"                    : "Terran_RefineryOpener",
         "Zerg"                      : "Zerg_2HatchRoach",
         
         "AutoCompleteBuildOrder"    : true,
