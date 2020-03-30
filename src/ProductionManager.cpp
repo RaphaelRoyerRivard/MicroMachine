@@ -759,13 +759,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						queueTech(MetaTypeEnum::ConcussiveShells);
 					}
 
-					if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
+					if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES) && maraudersCount >= 5 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
 					{
 						queueTech(MetaTypeEnum::Stimpack);
 					}
 
-					// 1 Medivac for every 3 Marauders
-					if (maraudersCount > 0 && medivacCount < 1 + floor(maraudersCount / 3.f))
+					// 1 Medivac for every 4 Marauders
+					if (maraudersCount > 0 && medivacCount < 1 + floor(maraudersCount / 4.f))
 					{
 						enoughMedivacs = false;
 						if (!m_queue.contains(MetaTypeEnum::Medivac))
