@@ -969,7 +969,7 @@ void CCBot::clearDeadUnits()
 		auto& unit = pair.second;
 		// Remove dead unit or old snapshot
 		if (!unit.isAlive() || 
-			unit.getPlayer() == Players::Self ||	// In case of one of our units get neural parasited, its alliance will switch
+			(unit.getPlayer() == Players::Self && unit.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_KD8CHARGE) ||	// In case of one of our units get neural parasited, its alliance will switch
 			(unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
 			&& m_map.isVisible(unit.getPosition())
 			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
