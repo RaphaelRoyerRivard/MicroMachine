@@ -750,6 +750,23 @@ void CCBot::setUnits()
 					break;
 				}
 			}
+			if(!m_strategy.enemyHasNydusWorm())
+			{
+				switch (sc2::UNIT_TYPEID(unitptr->unit_type))
+				{
+				case sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK:
+					m_strategy.setEnemyHasNydusWorm(true);
+					Actions()->SendChat("Worms. Really?");
+					Util::DebugLog(__FUNCTION__, "Nydus Network detected", *this);
+					break;
+				case sc2::UNIT_TYPEID::ZERG_NYDUSCANAL:
+					m_strategy.setEnemyHasNydusWorm(true);
+					Actions()->SendChat("Oh shit oh shit oh shit");
+					Util::DebugLog(__FUNCTION__, "Nydus Worm detected", *this);
+				default:
+					break;
+				}
+			}
 			m_lastSeenPosUnits[unitptr->tag] = std::pair<CCPosition, uint32_t>(unitptr->pos, GetGameLoop());
 		}
 		else //if(unitptr->alliance == sc2::Unit::Neutral)

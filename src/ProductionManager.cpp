@@ -779,7 +779,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
 				const bool massZergling = m_bot.Strategy().enemyHasMassZerglings();
 				// Against Zerg, produce at least 2 Hellions and then do more only if enemy has mass zerglings 
-				if (enemyRace == sc2::Race::Zerg && ((!proxyCyclonesStrategy && hellionCount < 2) || massZergling))
+				if (enemyRace == sc2::Race::Zerg && ((!proxyCyclonesStrategy && hellionCount < 2 && !m_bot.Strategy().enemyHasNydusWorm()) || massZergling))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 #ifndef NO_UNITS
