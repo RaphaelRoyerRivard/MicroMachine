@@ -55,12 +55,6 @@ std::string getexepath()
 }
 
 void handler(int sig) {
-	std::ofstream file;
-	time_t now = time(0);
-	char buf[80];
-	strftime(buf, sizeof(buf), "./data/crash_%Y-%m-%d--%H-%M-%S.log", localtime(&now));
-	file.open(buf);
-	
 	time_t t;
 	char buffer[80];
 	time(&t);
@@ -70,8 +64,7 @@ void handler(int sig) {
 	std::cout << str << std::endl;
 
 	// print out all the frames to stderr
-	fprintf(stderr, "Error: signal %d:\n", sig);
-	file << "Error: signal " << sig << std::endl;
+	fprintf(stdout, "Error: signal %d:\n", sig);
 
 #ifdef _WINDOWS
 	StackWalker sw;
@@ -94,7 +87,6 @@ void handler(int sig) {
 	if (addrlen == 0)
 	{
 		fprintf(stdout, "  <empty, possibly corrupt>\n");
-		file << "  <empty, possibly corrupt>" << std::endl;
 	}
 	else
 	{
@@ -139,20 +131,17 @@ void handler(int sig) {
 					if (status == 0) {
 						funcname = ret; // use possibly realloc()-ed string
 						fprintf(stdout, "  %s : %s+%s\n", symbollist[i], funcname, begin_offset);
-						file << "  " << symbollist[i] << " : " << funcname << "+" << begin_offset << std::endl;
 					}
 					else {
 						// demangling failed. Output function name as a C function with
 						// no arguments.
 						fprintf(stdout, "  %s : %s()+%s\n", symbollist[i], begin_name, begin_offset);
-						file << "  " << symbollist[i] << " : " << begin_name << "+" << begin_offset << std::endl;
 					}
 				}
 				else
 				{
 					// couldn't parse the line? print the whole line.
 					fprintf(stdout, "  %s\n", symbollist[i]);
-					file << "  " << symbollist[i] << std::endl;
 				}
 			}
 
@@ -162,8 +151,6 @@ void handler(int sig) {
 	}
 	fflush(stdout);
 #endif
-	file.flush();
-	file.close();
 	exit(1);
 }
 
