@@ -67,7 +67,7 @@ void handler(int sig) {
 	struct tm *timeinfo = localtime(&t);
 	strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", timeinfo);
 	std::string str(buffer);
-	std::cerr << str << std::endl;
+	std::cout << str << std::endl;
 
 	// print out all the frames to stderr
 	fprintf(stderr, "Error: signal %d:\n", sig);
@@ -81,7 +81,7 @@ void handler(int sig) {
 	void* arr[30];
 	size_t size;
 	size = backtrace(arr, 30);
-	backtrace_symbols_fd(arr, size, STDERR_FILENO);
+	backtrace_symbols_fd(arr, size, STDOUT_FILENO);
 
 	// Then show demangled stack trace
 	// https://panthema.net/2008/0901-stacktrace-demangled/
@@ -93,7 +93,7 @@ void handler(int sig) {
 
 	if (addrlen == 0)
 	{
-		fprintf(stderr, "  <empty, possibly corrupt>\n");
+		fprintf(stdout, "  <empty, possibly corrupt>\n");
 		file << "  <empty, possibly corrupt>" << std::endl;
 	}
 	else
@@ -138,20 +138,20 @@ void handler(int sig) {
 					char* ret = abi::__cxa_demangle(begin_name, funcname, &funcnamesize, &status);
 					if (status == 0) {
 						funcname = ret; // use possibly realloc()-ed string
-						fprintf(stderr, "  %s : %s+%s\n", symbollist[i], funcname, begin_offset);
+						fprintf(stdout, "  %s : %s+%s\n", symbollist[i], funcname, begin_offset);
 						file << "  " << symbollist[i] << " : " << funcname << "+" << begin_offset << std::endl;
 					}
 					else {
 						// demangling failed. Output function name as a C function with
 						// no arguments.
-						fprintf(stderr, "  %s : %s()+%s\n", symbollist[i], begin_name, begin_offset);
+						fprintf(stdout, "  %s : %s()+%s\n", symbollist[i], begin_name, begin_offset);
 						file << "  " << symbollist[i] << " : " << begin_name << "+" << begin_offset << std::endl;
 					}
 				}
 				else
 				{
 					// couldn't parse the line? print the whole line.
-					fprintf(stderr, "  %s\n", symbollist[i]);
+					fprintf(stdout, "  %s\n", symbollist[i]);
 					file << "  " << symbollist[i] << std::endl;
 				}
 			}
@@ -160,7 +160,7 @@ void handler(int sig) {
 			free(symbollist);
 		}
 	}
-	fflush(stderr);
+	fflush(stdout);
 #endif
 	file.flush();
 	file.close();
