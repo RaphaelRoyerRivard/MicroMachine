@@ -2501,6 +2501,7 @@ void Util::DebugLog(const std::string & function, CCBot & bot)
 	if (allowDebug)
 	{
 		file << bot.GetGameLoop() << ": " << function << std::endl;
+		std::cout << bot.GetGameLoop() << ": " << function << std::endl;
 	}
 }
 
@@ -2509,22 +2510,26 @@ void Util::DebugLog(const std::string & function, const std::string & message, C
 	if (allowDebug)
 	{
 		file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
+		std::cout << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 	}
 }
 
 void Util::LogNoFrame(const std::string & function, CCBot & bot)
 {
 	file << function << std::endl;
+	std::cout << function << std::endl;
 }
 
 void Util::Log(const std::string & function, CCBot & bot)
 {
 	file << bot.GetGameLoop() << ": " << function << std::endl;
+	std::cout << bot.GetGameLoop() << ": " << function << std::endl;
 }
 
 void Util::Log(const std::string & function, const std::string & message, CCBot & bot)
 {
 	file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
+	std::cout << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 }
 
 void Util::ClearChat(CCBot & bot)
