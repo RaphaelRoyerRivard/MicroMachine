@@ -78,6 +78,7 @@ class StrategyManager
 	bool m_shouldProduceAntiAirOffense = false;
 	bool m_shouldProduceAntiAirDefense = false;
 	bool m_enemyHasProtossHighTechAir = false;
+	bool m_enemyHasNydusWorm = false;
 	bool m_enemyHasInvisible = false;
 	bool m_enemyCurrentlyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
@@ -128,6 +129,8 @@ public:
 	void setShouldProduceAntiAirDefense(bool shouldProduceAntiAirDefense) { m_shouldProduceAntiAirDefense = shouldProduceAntiAirDefense; }
 	bool enemyHasProtossHighTechAir() const { return m_enemyHasProtossHighTechAir; }
 	void setEnemyHasProtossHighTechAir(bool enemyHasHighTechAir) { m_enemyHasProtossHighTechAir = enemyHasHighTechAir; }
+	bool enemyHasNydusWorm() const { return m_enemyHasNydusWorm; }
+	void setEnemyHasNydusWorm(bool enemyHasNydusWorm) { m_enemyHasNydusWorm = enemyHasNydusWorm; }
 	bool enemyHasInvisible() const { return m_enemyHasInvisible; }
 	bool enemyCurrentlyHasInvisible() const { return m_enemyCurrentlyHasInvisible; }
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }

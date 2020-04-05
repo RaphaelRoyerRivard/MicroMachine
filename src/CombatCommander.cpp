@@ -2468,6 +2468,11 @@ void CombatCommander::ExecuteActions()
 					Micro::SmartMove(rangedUnit, action.position, m_bot);
 				else
 					Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
+				if (CCPosition(rangedUnit->pos) == action.position)
+				{
+					ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " received a useless attack move command with description " << action.description;
+					Util::Log(__FUNCTION__, ss.str(), m_bot);
+				}
 			}
 			break;
 		case MicroActionType::AttackUnit:
@@ -2488,7 +2493,14 @@ void CombatCommander::ExecuteActions()
 					skip = true;
 			}
 			if (!skip)
+			{
 				Micro::SmartMove(rangedUnit, action.position, m_bot);
+				if (CCPosition(rangedUnit->pos) == action.position)
+				{
+					ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " received a useless move command with description " << action.description;
+					Util::Log(__FUNCTION__, ss.str(), m_bot);
+				}
+			}
 			break;
 		case MicroActionType::Ability:
 			Micro::SmartAbility(rangedUnit, action.abilityID, m_bot);
