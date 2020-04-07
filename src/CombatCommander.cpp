@@ -2552,7 +2552,7 @@ void CombatCommander::CleanLockOnTargets() const
 	for (auto it = lockOnTargets.cbegin(), next_it = it; it != lockOnTargets.cend(); it = next_it)
 	{
 		++next_it;
-		if (!it->first->is_alive)
+		if (!it->first->is_alive || it->first->last_seen_game_loop < m_bot.GetCurrentFrame())
 		{
 			lockOnTargets.erase(it);
 		}
