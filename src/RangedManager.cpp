@@ -1571,7 +1571,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const auto unit = unitAndTarget.first;
 		const auto unitTarget = unitAndTarget.second;
 
-		if (shouldFight && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ExecuteBansheeCloakLogic(unit, false))
+		if (shouldFight && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && Util::PathFinding::HasCombatInfluenceOnTile(Util::GetTilePosition(unit->pos), unit->is_flying, m_bot) && ExecuteBansheeCloakLogic(unit, false))
 		{
 			continue;
 		}
