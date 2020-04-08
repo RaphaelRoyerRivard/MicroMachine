@@ -587,6 +587,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const bool proxyMaraudersStrategy = startingStrategy == PROXY_MARAUDERS;
 				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
 				const auto reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
+
+				const int maraudersCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), false, true);
+				const int enemyStalkerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_STALKER).size();
+				const int enemyRoachAndRavagerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACH).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGER).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON).size();
+				const int enemyUnitsWeakAgainstMarauders = enemyStalkerCount + enemyRoachAndRavagerCount;
+				const bool pumpOutMarauders = proxyMaraudersStrategy || enemyUnitsWeakAgainstMarauders >= 5;
+				const bool produceMarauders = pumpOutMarauders || maraudersCount < enemyUnitsWeakAgainstMarauders;
 				
 				if (productionBuildingAddonCount < productionBuildingCount)
 				{//Addon
@@ -599,7 +606,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					const auto starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
 					const auto starportReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
 					const auto starportAddonCount = starportTechLabCount + starportReactorCount;
-					if ((reaperCount > 0 || proxyMaraudersStrategy) && barracksCount > barracksAddonCount && (proxyMaraudersStrategy || (proxyCyclonesStrategy && firstBarracksTechlab)))
+					if ((reaperCount > 0 || pumpOutMarauders) && barracksCount > barracksAddonCount && (pumpOutMarauders || (proxyCyclonesStrategy && firstBarracksTechlab)))
 					{
 						firstBarracksTechlab = false;
 						toBuild = MetaTypeEnum::BarracksTechLab;
@@ -625,7 +632,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				MetaType toBuild;
 				const int completedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
 				const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-				if (barracksCount < 1 || (proxyMaraudersStrategy && completedSupplyProviders == 1 && barracksCount < 2) || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount))
+				if (barracksCount < 1 || (pumpOutMarauders && completedSupplyProviders == 1 && barracksCount < 2) || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount))
 				{
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
@@ -635,7 +642,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					toBuild = MetaTypeEnum::Factory;
 					hasPicked = true;
 				}
-				else if (starportCount < finishedBaseCount && (!proxyMaraudersStrategy || totalBaseCount > 1))
+				else if (starportCount < finishedBaseCount && (!produceMarauders || totalBaseCount > 1))
 				{
 					toBuild = MetaTypeEnum::Starport;
 					hasPicked = true;
@@ -663,7 +670,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if (!proxyMaraudersStrategy && (reaperCount == 0 || (factoryCount == 0 && !m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)) && !m_queue.contains(MetaTypeEnum::Reaper))
+				if (!produceMarauders && (reaperCount == 0 || (factoryCount == 0 && !m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)) && !m_queue.contains(MetaTypeEnum::Reaper))
 				{
 					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
@@ -744,16 +751,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 				bool enoughMedivacs = true;
-				int enemyStalkerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_STALKER).size();
-				int enemyRoachAndRavagerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACH).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGER).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON).size();
-				if (proxyMaraudersStrategy || enemyStalkerCount + enemyRoachAndRavagerCount >= 5)
+				if (produceMarauders)
 				{
 					if (!m_queue.contains(MetaTypeEnum::Marauder))
 					{
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marauder, 0, false));
 					}
 
-					const int maraudersCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), false, true);
 					if (maraudersCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES) && !isTechQueuedOrStarted(MetaTypeEnum::ConcussiveShells))
 					{
 						queueTech(MetaTypeEnum::ConcussiveShells);

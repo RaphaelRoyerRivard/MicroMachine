@@ -2546,17 +2546,19 @@ RangedUnitAction& CombatCommander::GetRangedUnitAction(const sc2::Unit * combatU
 	return unitActions[combatUnit];
 }
 
-void CombatCommander::CleanLockOnTargets() const
+void CombatCommander::CleanLockOnTargets()
 {
-	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
-	for (auto it = lockOnTargets.cbegin(), next_it = it; it != lockOnTargets.cend(); it = next_it)
+	sc2::Units toRemove;
+	for (const auto & cyclonePair : m_lockOnTargets)
 	{
-		++next_it;
-		if (!it->first->is_alive || it->first->last_seen_game_loop < m_bot.GetCurrentFrame())
-		{
-			lockOnTargets.erase(it);
-		}
+		const auto cyclone = cyclonePair.first;
+		const auto target = cyclonePair.second.first;
+		if (!cyclone->is_alive || !target->is_alive || target->last_seen_game_loop < m_bot.GetCurrentFrame())
+			toRemove.push_back(cyclone);
 	}
+
+	for (const auto cyclone : toRemove)
+		m_lockOnTargets.erase(cyclone);
 }
 
 void CombatCommander::CalcBestFlyingCycloneHelpers()
