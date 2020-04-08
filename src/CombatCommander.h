@@ -253,7 +253,7 @@ public:
 	void CleanActions(const std::vector<Unit> &rangedUnits);
 	void ExecuteActions();
 	RangedUnitAction& GetRangedUnitAction(const sc2::Unit * combatUnit);
-	void CleanLockOnTargets() const;
+	void CleanLockOnTargets();
 	void CalcBestFlyingCycloneHelpers();
 	bool ShouldUnitHeal(const sc2::Unit * unit) const;
 	bool GetUnitAbilities(const sc2::Unit * unit, sc2::AvailableAbilities & outUnitAbilities) const;
