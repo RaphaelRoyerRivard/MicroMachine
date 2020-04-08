@@ -2452,7 +2452,9 @@ void CombatCommander::ExecuteActions()
 		switch (action.microActionType)
 		{
 		case MicroActionType::AttackMove:
-			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
+			if (action.position == rangedUnit->pos)
+				skip = true;
+			else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
 			{
 				const auto orderPos = rangedUnit->orders[0].target_pos;
 				const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
@@ -2468,11 +2470,6 @@ void CombatCommander::ExecuteActions()
 					Micro::SmartMove(rangedUnit, action.position, m_bot);
 				else
 					Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
-				if (action.position == rangedUnit->pos)
-				{
-					ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " received a useless attack move command with description " << action.description;
-					Util::Log(__FUNCTION__, ss.str(), m_bot);
-				}
 			}
 			break;
 		case MicroActionType::AttackUnit:
@@ -2482,7 +2479,9 @@ void CombatCommander::ExecuteActions()
 				Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
 			break;
 		case MicroActionType::Move:
-			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
+			if (action.position == rangedUnit->pos)
+				skip = true;
+			else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
 			{
 				const auto orderPos = rangedUnit->orders[0].target_pos;
 				const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
@@ -2495,11 +2494,6 @@ void CombatCommander::ExecuteActions()
 			if (!skip)
 			{
 				Micro::SmartMove(rangedUnit, action.position, m_bot);
-				if (action.position == rangedUnit->pos)
-				{
-					ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " received a useless move command with description " << action.description;
-					Util::Log(__FUNCTION__, ss.str(), m_bot);
-				}
 			}
 			break;
 		case MicroActionType::Ability:

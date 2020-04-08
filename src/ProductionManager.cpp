@@ -310,7 +310,7 @@ void ProductionManager::manageBuildOrderQueue()
 						// build supply if we need some (SupplyBlock)
 						if (producer.isValid())
 						{
-							if (m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+							if (m_bot.GetMaxSupply() < 200 && m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
 							{
 								supplyBlockedFrames++;
 #if _DEBUG
@@ -727,14 +727,22 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				else
 				{
-					if (!isTechQueuedOrStarted(MetaTypeEnum::BansheeCloak) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
+					if (m_bot.Strategy().isEarlyRushed())
 					{
-						queueTech(MetaTypeEnum::BansheeCloak);
+						m_queue.removeAllOfType(MetaTypeEnum::BansheeCloak);
+						m_queue.removeAllOfType(MetaTypeEnum::HyperflightRotors);
 					}
-
-					if (bansheeCount > 0 && m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
+					else
 					{
-						queueTech(MetaTypeEnum::HyperflightRotors);
+						if (!isTechQueuedOrStarted(MetaTypeEnum::BansheeCloak) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
+						{
+							queueTech(MetaTypeEnum::BansheeCloak);
+						}
+
+						if (bansheeCount > 0 && m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
+						{
+							queueTech(MetaTypeEnum::HyperflightRotors);
+						}
 					}
 
 #ifndef NO_UNITS
@@ -786,6 +794,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (enemyRace == sc2::Race::Zerg && ((!proxyCyclonesStrategy && hellionCount < 2 && !m_bot.Strategy().enemyHasNydusWorm()) || massZergling))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
+					m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
 #ifndef NO_UNITS
 					if (!m_queue.contains(MetaTypeEnum::Hellion))
 					{
@@ -801,6 +810,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				else
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
+					m_queue.removeAllOfType(MetaTypeEnum::InfernalPreIgniter);
 #ifndef NO_UNITS
 					if (!m_queue.contains(MetaTypeEnum::Cyclone))
 					{
@@ -808,10 +818,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 #endif
 
-					const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
-					if (cycloneCount > 0 && m_bot.Strategy().enemyHasSeveralArmoredUnits() && !isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
+					if (m_bot.Strategy().isEarlyRushed())
 					{
-						queueTech(MetaTypeEnum::MagFieldAccelerator);
+						m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
+					}
+					else
+					{
+						const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
+						if (cycloneCount > 0 && m_bot.Strategy().enemyHasSeveralArmoredUnits() && !isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
+						{
+							queueTech(MetaTypeEnum::MagFieldAccelerator);
+						}
 					}
 				}
 
