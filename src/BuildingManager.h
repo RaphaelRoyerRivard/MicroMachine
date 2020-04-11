@@ -57,6 +57,7 @@ public:
 
     BuildingManager(CCBot & bot);
 
+	bool IsProxySwapDone() const { return m_proxySwapDone; }
     void                onStart();
 	void				onFirstFrame();
     void                onFrame(bool executeMacro);

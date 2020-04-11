@@ -430,7 +430,8 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 				const auto unattachedTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::TechLab.getUnitType(), false, false, false);
 				const auto barracksTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, false, false);
 				const auto factoryTechlabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, false, false);
-				if (!hasBarracks || (completedFactoryCount > 0 && completedFactoryCount <= unattachedTechlabCount + barracksTechlabCount + factoryTechlabCount))
+				const auto proxySwapDone = m_bot.Buildings().IsProxySwapDone();
+				if (!hasBarracks || (completedFactoryCount > 0 && !proxySwapDone && completedFactoryCount <= unattachedTechlabCount + barracksTechlabCount + factoryTechlabCount))
 					shouldSkip = true;
 			}
 			else if (currentItem.type == MetaTypeEnum::Reaper)
@@ -718,7 +719,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 				}
 
-				const bool stopBanshees = makeBattlecruisers || m_bot.Strategy().enemyHasProtossHighTechAir() || proxyMaraudersStrategy;
+				const bool stopBanshees = (makeBattlecruisers && hasFusionCore) || m_bot.Strategy().enemyHasProtossHighTechAir() || proxyMaraudersStrategy;
 				if (stopBanshees)
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Banshee);
@@ -789,9 +790,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 
 				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true);
-				const bool massZergling = m_bot.Strategy().enemyHasMassZerglings();
-				// Against Zerg, produce at least 2 Hellions and then do more only if enemy has mass zerglings 
-				if (enemyRace == sc2::Race::Zerg && ((!proxyCyclonesStrategy && hellionCount < 2 && !m_bot.Strategy().enemyHasNydusWorm()) || massZergling))
+				const int deadHellionCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_HELLION);
+				const int enemyZealotCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_ZEALOT).size();
+				const int enemyZerglingCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLING).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED).size();
+				// We want at least 1 Hellion for every 2 enemy Zealot or 4 enemy Zergling. Against Zerg, we want to make at least 1 asap to defend against 
+				if (hellionCount * 2 < enemyZealotCount || hellionCount * 4 < enemyZerglingCount || (enemyRace == sc2::Race::Zerg && hellionCount + deadHellionCount == 0))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 					m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
