@@ -2024,6 +2024,8 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 {
 	if (!worker.isValid())
 		return false;
+	if (worker.getUnitPtr()->is_selected)
+		auto a = 0;
 	if (m_bot.Workers().getWorkerData().isProxyWorker(worker))
 		return false;
 	if (!m_squadData.canAssignUnitToSquad(worker, defenseSquad))
@@ -2039,7 +2041,7 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	// worker can fight buildings somewhat close to the base
 	const auto isBuilding = closestEnemy.getType().isBuilding();
 	const auto enemyDistanceToBase = Util::DistSq(closestEnemy, pos);
-	const auto maxEnemyDistance = closestEnemy.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL ? 30.f : 15.f;
+	const auto maxEnemyDistance = closestEnemy.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL ? 30.f : 20.f;
 	const auto enemyDistanceToWorker = Util::DistSq(worker, closestEnemy);
 	if (isBuilding && enemyDistanceToBase < maxEnemyDistance * maxEnemyDistance && enemyDistanceToWorker < maxEnemyDistance * maxEnemyDistance)
 		return true;
@@ -2047,7 +2049,7 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	if (!WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits))
 		return false;
 	// worker should not get too far from base and can fight only units close to it
-	if (Util::DistSq(worker, pos) < 15.f * 15.f && enemyDistanceToWorker < 7.f * 7.f)
+	if (enemyDistanceToBase < 15.f * 15.f && enemyDistanceToWorker < 7.f * 7.f)
 		return true;
 	return false;
 }
