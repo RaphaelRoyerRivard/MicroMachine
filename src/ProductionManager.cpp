@@ -585,7 +585,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case TERRAN_CLASSIC :
 			{
 				const bool proxyCyclonesStrategy = startingStrategy == PROXY_CYCLONES;
-				const bool proxyMaraudersStrategy = startingStrategy == PROXY_MARAUDERS;
+				const bool proxyMaraudersStrategy = startingStrategy == PROXY_MARAUDERS && m_bot.GetCurrentFrame() <= 6720;	// 5 minutes
 				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
 				const auto reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
 
