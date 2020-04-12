@@ -82,6 +82,7 @@ class StrategyManager
 	bool m_enemyHasInvisible = false;
 	bool m_enemyCurrentlyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
+	bool m_enemyHasBurrowingUpgrade = false;
 	bool m_enemyHasMassZerglings = false;
 	bool m_enemyHasHiSecAutoTracking = false;
 	bool m_enemyOnlyHasFlyingBuildings = false;
@@ -137,6 +138,8 @@ public:
 	void setEnemyCurrentlyHasInvisible(bool enemyCurrentlyHasInvisible) { m_enemyCurrentlyHasInvisible = enemyCurrentlyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
+	bool enemyHasBurrowingUpgrade() const { return m_enemyHasBurrowingUpgrade; }
+	void setEnemyHasBurrowingUpgrade(bool enemyHasBurrowingUpgrade) { m_enemyHasBurrowingUpgrade = enemyHasBurrowingUpgrade; }
 	bool enemyHasMassZerglings() const { return m_enemyHasMassZerglings; }
 	void setEnemyHasMassZerglings(bool enemyHasMassZerglings) { m_enemyHasMassZerglings = enemyHasMassZerglings; }
 	bool enemyHasHiSecAutoTracking() const { return m_enemyHasHiSecAutoTracking; }

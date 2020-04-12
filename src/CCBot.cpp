@@ -520,7 +520,6 @@ void CCBot::setUnits()
 			m_allyUnits[unitptr->tag] = unit;
 			m_allyUnitsPerType[unitptr->unit_type].push_back(unit);
 			bool isMorphingResourceDepot = false;
-			auto type = unit.getType();
 			if (unit.getType().isResourceDepot())
 			{
 				for(auto& order : unit.getUnitPtr()->orders)
@@ -1451,6 +1450,13 @@ void CCBot::IssueGameStartCheats()
 	// Test to make sure our harass units do not try to trade too much
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter - towardsCenter * 5, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + towardsCenter * 5, player1, 2);*/
+
+	// Test to detect burrowing units (against human player)
+	/*Debug()->DebugGiveAllTech();
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACH, m_startLocation + towardsCenter * 8, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT, m_startLocation + towardsCenter * 8, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, m_startLocation + towardsCenter * 8, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK, mapCenter, player1, 1);*/
 }
 
 void CCBot::IssueCheats()

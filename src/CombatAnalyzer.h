@@ -23,6 +23,7 @@ class CombatAnalyzer {
 	std::map<sc2::UNIT_TYPEID, int> deadEnemiesCountByType;
 	std::map<sc2::UNIT_TYPEID, int> deadCountByType;
 	std::list<std::pair<CCPosition, uint32_t>> m_areasUnderDetection;
+	std::set<const sc2::Unit *> enemyPickedUpUnits;
 
 	bool m_enemyHasCombatAirUnit = false;
 

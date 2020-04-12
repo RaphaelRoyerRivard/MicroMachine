@@ -1237,8 +1237,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	// The harass mode deactivation is to not ignore ranged targets
 	const sc2::Unit* target = getTarget(rangedUnit, rangedUnitTargets, false);
 	const auto & cycloneFlyingHelpers = m_bot.Commander().Combat().getCycloneFlyingHelpers();
+	const auto vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 	// If the Viking that is not a flying helper has no target, we try to see if it would have one if it was landed
-	if (!target && !m_bot.Analyzer().enemyHasCombatAirUnit() && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && cycloneFlyingHelpers.find(rangedUnit) == cycloneFlyingHelpers.end())
+	if (!target && (!m_bot.Analyzer().enemyHasCombatAirUnit() || vikingCount >= 40) && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && cycloneFlyingHelpers.find(rangedUnit) == cycloneFlyingHelpers.end())
 	{
 		auto it = m_dummyAssaultVikings.find(rangedUnit->tag);
 		if (it != m_dummyAssaultVikings.end())

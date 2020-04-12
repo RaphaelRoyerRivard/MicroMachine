@@ -68,9 +68,13 @@ void CombatAnalyzer::lowPriorityChecks()
 	totalGroundMassiveCount = 0;
 	totalAirMassiveCount = 0;
 
-	for (auto enemy : m_bot.GetEnemyUnits())
+	const auto enemyPlayerRace = m_bot.GetPlayerRace(Players::Enemy);
+	bool checkForBurrowedUpgrade = !m_bot.Strategy().enemyHasBurrowingUpgrade() && (enemyPlayerRace == sc2::Zerg || enemyPlayerRace == sc2::Random);
+	std::vector<sc2::UNIT_TYPEID> zergTransporters = { sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT, sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK };
+
+	for (const auto & enemy : m_bot.GetEnemyUnits())
 	{
-		auto unit = enemy.second;
+		const auto & unit = enemy.second;
 		sc2::UNIT_TYPEID type = (sc2::UNIT_TYPEID)unit.getAPIUnitType();
 		
 		if (m_bot.Data(unit).isBuilding)
@@ -117,7 +121,12 @@ void CombatAnalyzer::lowPriorityChecks()
 			totalAirUnitsCount++;
 			// This will ignore Observers, Warp Prisms and Overlords (+Cocoons)
 			if (unit.getType().isCombatUnit() && (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) > 0 || unit.getUnitPtr()->energy_max > 0))
-				m_enemyHasCombatAirUnit = true;
+			{
+				const std::vector<sc2::UNIT_TYPEID> flyingHallucinationTypes = { sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, sc2::UNIT_TYPEID::PROTOSS_PHOENIX, sc2::UNIT_TYPEID::PROTOSS_ORACLE };
+				// If the flying unit cannot be an hallucination or if it was seen in the past 2 minutes, we can consider it
+				if (!Util::Contains(unit.getAPIUnitType(), flyingHallucinationTypes) || m_bot.GetCurrentFrame() - unit.getUnitPtr()->last_seen_game_loop < 22.4 * 120)
+					m_enemyHasCombatAirUnit = true;
+			}
 		}
 		else
 			totalGroundUnitsCount++;
@@ -181,6 +190,66 @@ void CombatAnalyzer::lowPriorityChecks()
 				totalAirMassiveCount++;
 			else
 				totalGroundMassiveCount++;
+		}
+
+		// Clean picked up Zerg units
+		if (unit.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
+		{
+			const auto it = enemyPickedUpUnits.find(unit.getUnitPtr());
+			if (it != enemyPickedUpUnits.end())
+				enemyPickedUpUnits.erase(unit.getUnitPtr());
+		}
+		
+		// Detect burrowed Zerg units
+		if (checkForBurrowedUpgrade && !unit.isFlying() && !unit.getType().isBuilding() && !unit.getType().isWorker())
+		{
+			// We want to only consider units that we just saw disappear
+			const auto unitAge = m_bot.GetCurrentFrame() - unit.getUnitPtr()->last_seen_game_loop;
+			if (unitAge > 0 && unitAge <= 2)
+			{
+				bool canSeeSurroundingTiles = true;
+				for (int x = -1; x <= 1; ++x)
+				{
+					for (int y = -1; y <= 1; ++y)
+					{
+						if (!m_bot.Map().isVisible(unit.getPosition() + CCPosition(x, y)))
+						{
+							canSeeSurroundingTiles = false;
+							break;
+						}
+					}
+					if (!canSeeSurroundingTiles)
+						break;
+				}
+				if (canSeeSurroundingTiles)
+				{
+					if (enemyPickedUpUnits.find(unit.getUnitPtr()) == enemyPickedUpUnits.end())
+					{
+						bool mightBePickedUp = false;
+						for (const auto transporterType : zergTransporters)
+						{
+							for (const auto transporter : m_bot.GetEnemyUnits(transporterType))
+							{
+								const auto maxPickupRange = unit.getUnitPtr()->radius + transporter.getUnitPtr()->radius + 1.5f;
+								if (Util::DistSq(unit, transporter) < maxPickupRange * maxPickupRange)
+								{
+									mightBePickedUp = true;
+									enemyPickedUpUnits.insert(unit.getUnitPtr());
+									break;
+								}
+							}
+							if (mightBePickedUp)
+								break;
+						}
+						if (!mightBePickedUp)
+						{
+							m_bot.Strategy().setEnemyHasBurrowingUpgrade(true);
+							checkForBurrowedUpgrade = false;
+							m_bot.Actions()->SendChat("Stop hiding and fight, insect!");
+						}
+					}
+				}
+			}
 		}
 	}
 	
