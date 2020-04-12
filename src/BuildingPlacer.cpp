@@ -239,7 +239,7 @@ int BuildingPlacer::getBuildingCenterOffset(int x, int y, int width, int height)
 
 CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
 {
-	//If the space is not walkable, look arround for a walkable space. The result may not be the most optimal location.
+	//If the space is not walkable, look around for a walkable space. The result may not be the most optimal location.
 	const int MAX_OFFSET = 5;
 	int offset = 1;
 	int direction = 0;
