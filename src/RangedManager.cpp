@@ -307,8 +307,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			{
 				if (!m_marauderAttackInitiated)
 				{
-					goal = Util::GetPosition(m_bot.Buildings().getProxyLocation());
-					goalDescription = "Proxy";
+					goal = m_bot.Bases().getBaseLocations()[1]->getPosition();
+					goalDescription = "EnemyNat";
 				}
 			}
 			else

@@ -1458,7 +1458,7 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, m_startLocation + towardsCenter * 8, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK, mapCenter, player1, 1);*/
 
-	// Test to trigger the Barracks repositioning
+	// Test to trigger the Barracks repositioning on WorldofSleepersLE
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACH, m_startLocation + towardsCenter * 10 + towardsCenterY * 2, player2, 1);
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACH, enemyLocation, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, m_startLocation - towardsCenterX * 2 + towardsCenterY * 15, player1, 1);*/
