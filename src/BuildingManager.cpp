@@ -828,22 +828,110 @@ void BuildingManager::constructAssignedBuildings()
 						MetaType addonMetatype;
 						switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
 						{
-						case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
-						case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
-						case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+							{
+								addonMetatype = MetaTypeEnum::Reactor;
+								break;
+							}
+							case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
+							case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
+							case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
+							{
+								addonMetatype = MetaTypeEnum::TechLab;
+								break;
+							}
+						}
+						// If the building is flying, it's because it is in the transition to land somewhere it will have enough space for its addon
+						if (b.builderUnit.isFlying())
 						{
-							addonMetatype = MetaTypeEnum::Reactor;
-							break;
+							const auto landingPosition = liftedBuildingPositions[b.builderUnit.getTag()];
+							Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
 						}
-						case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
-						case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
-						case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
+						else
 						{
-							addonMetatype = MetaTypeEnum::TechLab;
-							break;
+							// Check if the addon position is blocked
+							bool blocked = false;
+							for (int x = 2; x <= 3; ++x)
+							{
+								for (int y = -1; y <= 0; ++y)
+								{
+									const auto addonPosition = b.builderUnit.getPosition() + CCPosition(x, y);
+									if (!getBuildingPlacer().buildable(b.type, addonPosition.x, addonPosition.y, true))
+									{
+										m_bot.Map().drawTile(Util::GetTilePosition(addonPosition), sc2::Colors::Red);
+										blocked = true;
+									}
+								}
+							}
+							if (blocked)
+							{
+								blocked = false;
+								// Check if the building can just move 2 tiles to the left
+								for (int x = -4; x <= -2; ++x)
+								{
+									for (int y = -1; y <= 1; ++y)
+									{
+										const auto newBuildingPosition = b.builderUnit.getPosition() + CCPosition(x, y);
+										if (!getBuildingPlacer().buildable(b.builderUnit.getType(), newBuildingPosition.x, newBuildingPosition.y, false))
+										{
+											m_bot.Map().drawTile(Util::GetTilePosition(newBuildingPosition), sc2::Colors::Red);
+											blocked = true;
+										}
+									}
+								}
+								CCPosition newBuildingPosition;
+								if (blocked)
+								{
+									// The building cannot move just 2 tiles to the left, so we need to find it a suitable spot
+									const auto tempBuilding = Building(b.builderUnit.getType(), b.builderUnit.getPosition());
+									newBuildingPosition = Util::GetPosition(getBuildingPlacer().getBuildLocationNear(tempBuilding, 0, false, true, true));
+								}
+								else
+								{
+									// Otherwise, just move the buildings 2 tiles to the left
+									newBuildingPosition = b.builderUnit.getPosition() - CCPosition(2, 0);
+								}
+								
+								if (newBuildingPosition == CCPosition())
+								{
+									std::stringstream ss;
+									ss << "Cannot find suitable spot for " << b.type.getName() << " to move so it could have a space for its addon";
+									Util::Log(__FUNCTION__, ss.str(), m_bot);
+									continue;
+								}
+
+								b.finalPosition = newBuildingPosition;
+								liftedBuildingPositions[b.builderUnit.getTag()] = newBuildingPosition;
+
+								// Free the reserved tiles under the building and for the addon
+								getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y - 1, 3, 1);
+								getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x + 3, b.builderUnit.getPosition().y, 2, 2);
+
+								// Reserve the files for the new location
+								getBuildingPlacer().reserveTiles(newBuildingPosition.x, newBuildingPosition.y - 1, 3, 4);
+								getBuildingPlacer().reserveTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2);
+
+								// Lift the building (the landing code is approx. 50 lines above)s
+								Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+							}
+							else // The addon position is not blocked
+							{
+								// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
+								const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
+								const auto it = liftedBuildingPositions.find(b.builderUnit.getTag());
+								if (it != liftedBuildingPositions.end() && !Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes))
+								{
+									liftedBuildingPositions.erase(it);
+									getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y, 3, 3);
+									getBuildingPlacer().freeTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2);
+								}
+
+								// Spam the build ability in case there is a unit blocking it
+								Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
+							}
 						}
-						}
-						b.builderUnit.build(b.type, b.finalPosition);
 					}
 					else
 					{
