@@ -857,7 +857,7 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	{
 		return closestBiggestCluster->m_center;
 	}
-	if (m_order.getType() == SquadOrderTypes::Defend || m_bot.GetCurrentSupply() == 200)
+	if (m_order.getType() == SquadOrderTypes::Defend || m_bot.GetCurrentSupply() >= 195)
 	{
 		return m_order.getPosition();
 	}

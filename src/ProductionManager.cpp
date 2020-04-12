@@ -323,7 +323,7 @@ void ProductionManager::manageBuildOrderQueue()
 							if (canMakeNow(producer, currentItem.type))
 							{
 								// create it and remove it from the _queue
-								if (create(producer, currentItem, m_bot.GetBuildingArea()))
+								if (create(producer, currentItem, m_bot.GetBuildingArea(currentItem.type)))
 								{
 									m_queue.removeCurrentHighestPriorityItem();
 
@@ -349,7 +349,7 @@ void ProductionManager::manageBuildOrderQueue()
 						// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
 						m_bot.StartProfiling("2.2.4     Build with premovement");
-						Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea());
+						Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea(currentItem.type));
 						//Get building location
 
 						m_bot.StartProfiling("2.2.5     getNextBuildingLocation");
@@ -593,8 +593,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyStalkerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_STALKER).size();
 				const int enemyRoachAndRavagerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACH).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGER).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON).size();
 				const int enemyUnitsWeakAgainstMarauders = enemyStalkerCount + enemyRoachAndRavagerCount;
+				const bool enemyEarlyRoachWarren = m_bot.GetCurrentFrame() < 4032 && !m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACHWARREN).empty();	// 3 minutes
 				const bool pumpOutMarauders = proxyMaraudersStrategy || enemyUnitsWeakAgainstMarauders >= 5;
-				const bool produceMarauders = pumpOutMarauders || maraudersCount < enemyUnitsWeakAgainstMarauders;
+				const bool produceMarauders = pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount < enemyUnitsWeakAgainstMarauders;
 				
 				if (productionBuildingAddonCount < productionBuildingCount)
 				{//Addon
