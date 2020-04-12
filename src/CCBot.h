@@ -156,7 +156,7 @@ public:
     const CCRace GetPlayerRace(int player) const;
 	const CCRace GetSelfRace() const;
     const CCPosition GetStartLocation() const;
-	const CCTilePosition GetBuildingArea() const;
+	const CCTilePosition GetBuildingArea(MetaType buildingType);
 
 	void IssueGameStartCheats();
 	void IssueCheats();

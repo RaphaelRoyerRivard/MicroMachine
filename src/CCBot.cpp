@@ -1781,9 +1781,9 @@ const CCPosition CCBot::GetStartLocation() const
 #endif
 }
 
-const CCTilePosition CCBot::GetBuildingArea() const
+const CCTilePosition CCBot::GetBuildingArea(MetaType buildingType)
 {
-	if (m_strategy.isEarlyRushed() || m_strategy.isWorkerRushed())
+	if (m_strategy.isEarlyRushed() || m_strategy.isWorkerRushed() || (buildingType == MetaTypeEnum::Starport && GetAllyUnits(buildingType.getUnitType().getAPIUnitType()).size() == 0))
 	{
 		//Build on the opposite direction (generally behind the minerals) from the ramp so it is safer.
 		auto wallPos = m_buildings.getWallPosition();
