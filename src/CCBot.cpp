@@ -1462,6 +1462,10 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACH, m_startLocation + towardsCenter * 10 + towardsCenterY * 2, player2, 1);
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACH, enemyLocation, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, m_startLocation - towardsCenterX * 2 + towardsCenterY * 15, player1, 1);*/
+
+	// Test to reproduce bug where burrowed Widow Mines are ignored by our units (against human player)
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED, m_startLocation + towardsCenter * 10, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation, player2, 1);*/
 }
 
 void CCBot::IssueCheats()

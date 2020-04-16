@@ -220,7 +220,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 
 	if (rangedUnit->is_selected)
-		m_bot.Strategy();
+		int a = 0;
 
 	if (isCyclone && MonitorCyclone(rangedUnit, rangedUnitAbilities))
 		return;
