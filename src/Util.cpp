@@ -1522,7 +1522,7 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 
 float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells)
 {
-	if (unit->build_progress < 1.f || (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered))
+	if ((Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f) || (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered))
 		return 0.f;
 
 	if (!target)
@@ -1668,7 +1668,7 @@ float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetT
 
 float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
-	if ((unit->display_type != sc2::Unit::Hidden && unit->build_progress < 1.f) || (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered))
+	if ((Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f) || (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered))
 		return 0.f;
     const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
     float dps = GetSpecialCaseDps(unit, bot, expectedWeaponType);
