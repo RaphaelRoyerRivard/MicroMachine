@@ -762,7 +762,7 @@ void BaseLocationManager::sortBaseLocationPtrs()
 	const BaseLocation * enemyStartingBaseLocation = m_playerStartingBaseLocations[Players::Enemy];
 	for(const auto baseLocation : m_baseLocationPtrs)
 	{
-		baseLocationDistances[baseLocation] = Util::DistSq(enemyStartingBaseLocation->getPosition(), baseLocation->getPosition());
+		baseLocationDistances[baseLocation] = m_bot.Map().getGroundDistance(enemyStartingBaseLocation->getPosition(), baseLocation->getPosition());
 	}
 	while(!baseLocationDistances.empty())
 	{
