@@ -220,7 +220,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 
 	if (rangedUnit->is_selected)
-		m_bot.Strategy();
+		int a = 0;
 
 	if (isCyclone && MonitorCyclone(rangedUnit, rangedUnitAbilities))
 		return;
@@ -1239,23 +1239,35 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	const auto & cycloneFlyingHelpers = m_bot.Commander().Combat().getCycloneFlyingHelpers();
 	const auto vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 	// If the Viking that is not a flying helper has no target, we try to see if it would have one if it was landed
-	if (!target && (!m_bot.Analyzer().enemyHasCombatAirUnit() || vikingCount >= 40) && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER && cycloneFlyingHelpers.find(rangedUnit) == cycloneFlyingHelpers.end())
+	if (!target && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 	{
-		auto it = m_dummyAssaultVikings.find(rangedUnit->tag);
-		if (it != m_dummyAssaultVikings.end())
+		if (!m_bot.Analyzer().enemyHasCombatAirUnit() || vikingCount >= 40)
 		{
-			rangedUnit = &it->second;
+			if (cycloneFlyingHelpers.find(rangedUnit) == cycloneFlyingHelpers.end())
+			{
+				auto it = m_dummyAssaultVikings.find(rangedUnit->tag);
+				if (it != m_dummyAssaultVikings.end())
+				{
+					rangedUnit = &it->second;
+				}
+				else
+				{
+					m_dummyAssaultVikings[rangedUnit->tag] = Util::CreateDummyVikingAssaultFromUnit(rangedUnit);
+					rangedUnit = &m_dummyAssaultVikings[rangedUnit->tag];
+				}
+				target = getTarget(rangedUnit, rangedUnitTargets, false);
+				if (target)
+				{
+					morphFlyingVikings = true;
+				}
+				else if (vikingCount >= 20)
+					Util::Log(__FUNCTION__, "Vikings won't land - no target", m_bot);
+			}
+			else if (vikingCount >= 20)
+				Util::Log(__FUNCTION__, "Vikings won't land - flying helper", m_bot);
 		}
-		else
-		{
-			m_dummyAssaultVikings[rangedUnit->tag] = Util::CreateDummyVikingAssaultFromUnit(rangedUnit);
-			rangedUnit = &m_dummyAssaultVikings[rangedUnit->tag];
-		}
-		target = getTarget(rangedUnit, rangedUnitTargets, false);
-		if (target)
-		{
-			morphFlyingVikings = true;
-		}
+		else if (vikingCount >= 20)
+			Util::Log(__FUNCTION__, "Vikings won't land - enemy air combat units", m_bot);
 	}
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
