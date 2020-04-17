@@ -247,9 +247,9 @@ void ProductionManager::manageBuildOrderQueue()
 			{
 				m_bot.StartProfiling("2.2.1     fixBuildOrderDeadlock");
 				fixBuildOrderDeadlock(currentItem);
-				currentItem = m_queue.getHighestPriorityItem();
+				//currentItem = m_queue.getHighestPriorityItem();
 				m_bot.StopProfiling("2.2.1     fixBuildOrderDeadlock");
-				continue;
+				//continue;
 			}
 
 			const auto barrackCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
@@ -1168,6 +1168,10 @@ void ProductionManager::QueueDeadBuildings()
 void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 {
 	const TypeData& typeData = m_bot.Data(item.type);
+
+	// We don't want addons to add new buildings to the queue
+	if (typeData.isAddon)
+		return;
 
 	// check to see if we have the prerequisites for the item
     if (!hasRequired(item.type, true))
