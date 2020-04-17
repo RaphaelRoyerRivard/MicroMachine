@@ -1790,7 +1790,7 @@ const CCPosition CCBot::GetStartLocation() const
 
 const CCTilePosition CCBot::GetBuildingArea(MetaType buildingType)
 {
-	if (m_strategy.isEarlyRushed() || m_strategy.isWorkerRushed() || (buildingType == MetaTypeEnum::Starport && GetAllyUnits(buildingType.getUnitType().getAPIUnitType()).size() == 0))
+	if (m_strategy.isEarlyRushed() || m_strategy.isWorkerRushed())
 	{
 		//Build on the opposite direction (generally behind the minerals) from the ramp so it is safer.
 		auto wallPos = m_buildings.getWallPosition();
@@ -1806,6 +1806,14 @@ const CCTilePosition CCBot::GetBuildingArea(MetaType buildingType)
 	{
 		if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
 			continue;
+
+		if (buildingType == MetaTypeEnum::Starport && GetAllyUnits(buildingType.getUnitType().getAPIUnitType()).empty())
+		{
+			const auto towardsBehind = Util::Normalized(base->getPosition() - Util::GetPosition(base->getDepotPosition()));
+			const auto behindBase = base->getPosition() + towardsBehind * 5;
+			return Util::GetTilePosition(behindBase);
+		}
+		
 		return base->getDepotPosition();
 	}
 
