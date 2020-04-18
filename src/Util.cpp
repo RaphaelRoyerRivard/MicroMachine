@@ -364,7 +364,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			if (!shouldTriggerExit)
 			{
 				shouldTriggerExit = (ignoreInfluence ||
-					(considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot)) &&
+					(considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot) || (maxInfluence > 0 && currentNode->influence <= maxInfluence)) &&
 					!HasEffectInfluenceOnTile(currentNode, unit, bot)) &&
 					Util::Dist(Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
 			}

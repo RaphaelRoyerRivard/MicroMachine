@@ -1469,6 +1469,16 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED, m_startLocation + towardsCenter * 10, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, m_startLocation, player2, 1);*/
+
+	// Test to check if our units can offensively kite through influence
+	//Debug()->DebugGiveAllTech();
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 4, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACH, mapCenter + towardsCenter * 3, player1, 5);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation + towardsCenter * 3, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation + towardsCenter * 15, player1, 10);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, enemyLocation - towardsCenter * 15, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, enemyLocation - towardsCenter * 15, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, enemyLocation - towardsCenter * 3, player2, 5);*/
 }
 
 void CCBot::IssueCheats()
@@ -1790,7 +1800,7 @@ const CCPosition CCBot::GetStartLocation() const
 
 const CCTilePosition CCBot::GetBuildingArea(MetaType buildingType)
 {
-	if (m_strategy.isEarlyRushed() || m_strategy.isWorkerRushed() || (buildingType == MetaTypeEnum::Starport && GetAllyUnits(buildingType.getUnitType().getAPIUnitType()).size() == 0))
+	if (m_strategy.isEarlyRushed() || m_strategy.isWorkerRushed())
 	{
 		//Build on the opposite direction (generally behind the minerals) from the ramp so it is safer.
 		auto wallPos = m_buildings.getWallPosition();
@@ -1806,6 +1816,14 @@ const CCTilePosition CCBot::GetBuildingArea(MetaType buildingType)
 	{
 		if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
 			continue;
+
+		if (buildingType == MetaTypeEnum::Starport && GetAllyUnits(buildingType.getUnitType().getAPIUnitType()).empty())
+		{
+			const auto towardsBehind = Util::Normalized(base->getPosition() - Util::GetPosition(base->getDepotPosition()));
+			const auto behindBase = base->getPosition() + towardsBehind * 5;
+			return Util::GetTilePosition(behindBase);
+		}
+		
 		return base->getDepotPosition();
 	}
 
