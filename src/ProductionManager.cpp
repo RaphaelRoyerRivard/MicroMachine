@@ -779,7 +779,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 
 					// 1 Medivac for every 4 Marauders
-					if (maraudersCount > 0 && medivacCount < 1 + floor(maraudersCount / 4.f))
+					if (medivacCount < floor(maraudersCount / 4.f))
 					{
 						enoughMedivacs = false;
 						if (!m_queue.contains(MetaTypeEnum::Medivac))
