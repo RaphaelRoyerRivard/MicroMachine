@@ -655,6 +655,11 @@ void CombatCommander::updateIdleSquad()
 void CombatCommander::updateWorkerFleeSquad()
 {
 	Squad & workerFleeSquad = m_squadData.getSquad("WorkerFlee");
+	if (m_bot.Strategy().isEarlyRushed())
+	{
+		workerFleeSquad.clear();
+		return;
+	}
 	for (auto & worker : m_bot.Workers().getWorkers())
 	{
 		const CCTilePosition tile = Util::GetTilePosition(worker.getPosition());
