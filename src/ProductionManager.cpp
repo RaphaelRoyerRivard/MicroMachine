@@ -890,7 +890,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 			case MARINE_MARAUDER:
 			{
-				const bool proxyCyclonesStrategy = startingStrategy == PROXY_CYCLONES;
+				/*const bool proxyCyclonesStrategy = startingStrategy == PROXY_CYCLONES;
 				const bool proxyMaraudersStrategy = startingStrategy == PROXY_MARAUDERS;
 				const bool hasFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
 				const auto reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true);
@@ -933,7 +933,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
 				const int completedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
 				const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-				if (barracksCount < 1 || (proxyMaraudersStrategy && completedBarracksCount == 1 && barracksCount < 2) || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount))
+				if (barracksCount < 1 || (proxyMaraudersStrategy && completedBarracksCount == 1 && barracksCount < 2) || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 && barracksCount * 2 < finishedBaseCount))	//For a BC and a Barracks
 				{
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
@@ -993,7 +993,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 						if (hasFusionCore)
 						{
-							if (m_bot.GetFreeMinerals() >= 450 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
+							if (m_bot.GetFreeMinerals() >= 450 && !m_queue.contains(MetaTypeEnum::Marine)) //for a BC
 							{
 								m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
 							}
@@ -1089,7 +1089,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 					}
 #endif
-				}
+				}*/
 				break;
 			}
 			case WORKER_RUSH_DEFENSE:

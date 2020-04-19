@@ -279,6 +279,7 @@ float UnitType::radius() const
 	if (isMineral()) { return 1; }//Not valid since its an oval.
 	if (isGeyser()) { return 1.8125f; }//Same as a Barrack
 	if (isAddon()) { return 1.25f; }//Same as supply depot
+	if (m_type == sc2::UNIT_TYPEID::TERRAN_AUTOTURRET) { return 1; }
 	else { return m_bot->Observation()->GetAbilityData()[m_bot->Data(*this).buildAbility].footprint_radius; }
 #else
 	return m_type.tileWidth() / 2;
@@ -291,6 +292,7 @@ int UnitType::tileWidth() const
     if (isMineral()) { return 2; }
     if (isGeyser()) { return 3; }
 	if (isAddon()) { return 2; }
+	if (m_type == sc2::UNIT_TYPEID::TERRAN_AUTOTURRET) { return 2; }
     else { return (int)(2 * m_bot->Observation()->GetAbilityData()[m_bot->Data(*this).buildAbility].footprint_radius); }
 #else
     return m_type.tileWidth();
@@ -303,6 +305,7 @@ int UnitType::tileHeight() const
     if (isMineral()) { return 1; }
     if (isGeyser()) { return 3; }
 	if (isAddon()) { return 2; }
+	if (m_type == sc2::UNIT_TYPEID::TERRAN_AUTOTURRET) { return 2; }
     else { return (int)(2 * m_bot->Observation()->GetAbilityData()[m_bot->Data(*this).buildAbility].footprint_radius); }
 #else
     return m_type.tileHeight();
