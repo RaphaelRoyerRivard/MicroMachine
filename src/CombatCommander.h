@@ -4,6 +4,7 @@
 #include "Squad.h"
 #include "SquadData.h"
 #include "BaseLocation.h"
+#include <list>  
 
 class CCBot;
 struct RegionArmyInformation;
