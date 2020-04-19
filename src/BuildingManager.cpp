@@ -1830,28 +1830,116 @@ void BuildingManager::castBuildingsAbilities()
 	
 	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
 	{
-		auto energy = b.getEnergy();
-		if (energy <= 0 || b.isFlying())
+		const auto energy = b.getEnergy();
+		if (energy < 50 || b.isFlying())
 		{
 			continue;
 		}
 
+		//Scan
 		// TODO decomment this block when we are ready to use the scans
 		/*bool hasInvisible = m_bot.Strategy().enemyHasInvisible();
-		//Scan
 		if (hasInvisible)
 		{
 			for (auto sighting : m_bot.Commander().Combat().GetInvisibleSighting())
 			{
-				if (energy >= 50)//TODO: do not scan if no combat unit close by
-				{
-					Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, sighting.second.first, m_bot);
-				}
+				//TODO: do not scan if no combat unit close by
+				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, sighting.second.first, m_bot);
 			}
 		}*/
 
+		const auto SCAN_RADIUS = 13;
+		const auto & burrowedUnits = m_bot.Analyzer().getBurrowedUnits();
+		if (!burrowedUnits.empty())
+		{
+			const auto & combatUnits = m_bot.Commander().Combat().GetCombatUnits();
+			sc2::Units closeBurrowedUnits;
+			for (const auto burrowedUnit : burrowedUnits)
+			{
+				if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
+					continue;	// Already visible
+
+				// Check if we have a combat unit near the burrowed unit
+				for (const auto & combatUnit : combatUnits)
+				{
+					auto range = Util::GetAttackRangeForTarget(combatUnit.getUnitPtr(), burrowedUnit, m_bot);
+					if (range <= 0.f)
+						continue;	// The combat unit cannot attack the burrowed unit
+					range += 5.f;	// We add a buffer of 5 tiles
+					const auto dist = Util::DistSq(combatUnit, burrowedUnit->pos);
+					if (dist <= range * range)
+					{
+						closeBurrowedUnits.push_back(burrowedUnit);
+						break;
+					}
+				}
+			}
+			if (!closeBurrowedUnits.empty())
+			{
+				// Calculate the middle point of all close burrowed unit
+				CCPosition middlePoint;
+				for (const auto closeBurrowedUnit : closeBurrowedUnits)
+				{
+					middlePoint += closeBurrowedUnit->pos;
+				}
+				middlePoint /= closeBurrowedUnits.size();
+				// Check to see if a scan on the middle point would cover all of the burrowed units
+				bool middleCoversAllPoints = true;
+				for (const auto closeBurrowedUnit : closeBurrowedUnits)
+				{
+					const auto dist = Util::DistSq(middlePoint, closeBurrowedUnit->pos);
+					if (dist > SCAN_RADIUS * SCAN_RADIUS)
+					{
+						middleCoversAllPoints = false;
+						break;
+					}
+				}
+				if (!middleCoversAllPoints)
+				{
+					// Find the burrowed unit that is the most close to the others
+					const sc2::Unit * mostCenteredUnit = nullptr;
+					int maxNumberOfCoveredUnits = -1;
+					for (const auto closeBurrowedUnit : closeBurrowedUnits)
+					{
+						int numberOfCoveredUnits = 0;
+						for (const auto otherCloseBurrowedUnit : closeBurrowedUnits)
+						{
+							if (Util::DistSq(closeBurrowedUnit->pos, otherCloseBurrowedUnit->pos) <= SCAN_RADIUS * SCAN_RADIUS)
+							{
+								++numberOfCoveredUnits;
+							}
+						}
+						if (numberOfCoveredUnits > maxNumberOfCoveredUnits)
+						{
+							mostCenteredUnit = closeBurrowedUnit;
+							maxNumberOfCoveredUnits = numberOfCoveredUnits;
+						}
+					}
+					middlePoint = mostCenteredUnit->pos;
+				}
+
+				// Check if we already have a scan near that point (might happen because we receive the observations 1 frame later)
+				bool closeScan = false;
+				const auto & scans = m_bot.Commander().Combat().getAllyScans();
+				for (const auto scanPosition : scans)
+				{
+					if (Util::DistSq(middlePoint, scanPosition) < 5.f * 5.f)
+					{
+						closeScan = true;
+						break;
+					}
+				}
+
+				if (!closeScan)
+				{
+					Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, middlePoint, m_bot);
+					m_bot.Commander().Combat().addAllyScan(middlePoint);
+				}
+			}
+		}
+
 		//Mule
-		if (energy >= 50)// && (!hasInvisible || energy >= 100))
+		//if (!hasInvisible || energy >= 100)
 		{
 			std::vector<CCUnitID> skipMinerals;
 			for (auto mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))

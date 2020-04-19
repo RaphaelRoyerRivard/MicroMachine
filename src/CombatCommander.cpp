@@ -123,6 +123,34 @@ void CombatCommander::clearYamatoTargets()
 	}
 }
 
+void CombatCommander::clearAllyScans()
+{
+	bool scansVisible = false;
+	for (auto & effect : m_bot.Observation()->GetEffects())
+	{
+		if (effect.effect_id == 6) // Scan
+		{
+			scansVisible = true;
+			std::vector<CCPosition> toRemove;
+			for (auto & pos : m_allyScans)
+			{
+				if (!Util::Contains(pos, effect.positions))
+				{
+					toRemove.push_back(pos);
+				}
+			}
+			for (auto & scan : toRemove)
+			{
+				m_allyScans.remove(scan);
+			}
+		}
+	}
+	if (!scansVisible)
+	{
+		m_allyScans.clear();
+	}
+}
+
 void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 {
     if (!m_attackStarted)
@@ -135,6 +163,8 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	CleanActions(combatUnits);
 
 	clearYamatoTargets();
+
+	clearAllyScans();
 
     m_combatUnits = combatUnits;
 
@@ -389,7 +419,10 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 				break;
 			case 6:	// Scanner Sweep
 				for (const auto & pos : effect.positions)
-					m_enemyScans.push_back(pos);
+				{
+					if (!Util::Contains(pos, m_allyScans))
+						m_enemyScans.push_back(pos);
+				}
 				continue;
 			case 7: // Nuke Dot
 				radius = 8.f;

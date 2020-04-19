@@ -235,6 +235,37 @@ bool MapTools::isVisible(int tileX, int tileY) const
     return m_bot.Observation()->GetVisibility(CCPosition(tileX + HALF_TILE, tileY + HALF_TILE)) == sc2::Visibility::Visible;
 }
 
+bool MapTools::isDetected(CCPosition pos) const
+{
+	// Check detectors
+	std::vector<sc2::UNIT_TYPEID> detectorTypes = { sc2::UNIT_TYPEID::TERRAN_RAVEN, sc2::UNIT_TYPEID::TERRAN_MISSILETURRET };
+	for (const auto detectorType : detectorTypes)
+	{
+		for (const auto & detector : m_bot.GetAllyUnits(detectorType))
+		{
+			const auto dist = Util::DistSq(detector, pos);
+			const auto detectRange = detector.getUnitPtr()->detect_range;
+			if (dist <= detectRange * detectRange)
+			{
+				return true;
+			}
+		}
+	}
+
+	// Check scans
+	const auto scanRadius = 13;
+	for (const auto scanPos : m_bot.Commander().Combat().getAllyScans())
+	{
+		const auto dist = Util::DistSq(pos, scanPos);
+		if (dist <= scanRadius * scanRadius)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool MapTools::isPowered(int tileX, int tileY) const
 {
 #ifdef SC2API
