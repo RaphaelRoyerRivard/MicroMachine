@@ -390,7 +390,6 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 void CombatCommander::updateInfluenceMapsWithEffects()
 {
 	m_enemyScans.clear();
-	const auto & allyScans = m_allyScans;
 	auto & effectDataVector = m_bot.Observation()->GetEffectData();
 	for (auto & effect : m_bot.Observation()->GetEffects())
 	{
@@ -421,7 +420,7 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 			case 6:	// Scanner Sweep
 				for (const auto & pos : effect.positions)
 				{
-					if (!Util::Contains(pos, allyScans))
+					if (!Util::Contains(pos, m_allyScans))
 						m_enemyScans.push_back(pos);
 				}
 				continue;
