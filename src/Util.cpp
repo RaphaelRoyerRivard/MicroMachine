@@ -249,7 +249,7 @@ CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CC
 
 CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, bool moveFarther, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, bot.GetStartLocation(), range, false, false, false, false, 0, true, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, bot.GetStartLocation(), range, false, false, true, false, 0, true, bot);
 	return GetCommandPositionFromPath(path, unit, moveFarther, bot);
 }
 
@@ -318,6 +318,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	const auto maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (!limitSearch ? 20 : exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
+	const auto startingInfluence = GetTotalInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
 	const CCTilePosition startPosition = GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = GetTilePosition(goal);
 	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? CCTilePosition() : GetTilePosition(secondaryGoal);
@@ -348,7 +349,8 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			{
 				if (Dist(GetPosition(currentNode->position), goal) > maxRange)
 					continue;	// We don't want to keep looking in that direction since it's too far from the goal
-				shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
+				//shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
+				shouldTriggerExit = GetTotalInfluenceOnTile(currentNode->position, unit->is_flying, bot) < startingInfluence;
 			}
 		}
 		else
@@ -366,7 +368,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				shouldTriggerExit = (ignoreInfluence ||
 					(considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot) || (maxInfluence > 0 && currentNode->influence <= maxInfluence)) &&
 					!HasEffectInfluenceOnTile(currentNode, unit, bot)) &&
-					Util::Dist(Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
+					Dist(GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
 			}
 		}
 		if (getCloser && shouldTriggerExit)
@@ -378,8 +380,16 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			else
 			{
 				shouldTriggerExit = false;
-				const CCPosition shiftedPos = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
-				if (closestNode == nullptr || Util::Dist(shiftedPos, goal) < Util::Dist(Util::GetPosition(closestNode->position) + CCPosition(0.5f, 0.5f), goal))
+				bool closer = false;
+				if (closestNode != nullptr)
+				{
+					const CCPosition shiftedPos = GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+					if (flee && maxRange > 0.f)
+						closer = Dist(shiftedPos, goal) < maxRange && GetTotalInfluenceOnTile(currentNode->position, unit->is_flying, bot) < GetTotalInfluenceOnTile(closestNode->position, unit->is_flying, bot);
+					else
+						closer = Dist(shiftedPos, goal) < Dist(GetPosition(closestNode->position) + CCPosition(0.5f, 0.5f), goal);
+				}
+				if (closestNode == nullptr || closer)
 				{
 					closestNode = currentNode;
 				}
@@ -389,7 +399,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		if (shouldTriggerExit)
 		{
 			// If it exits on influence, we need to check if there is actually influence on the current tile. If so, we do not return a valid path
-			if(exitOnInfluence && HasInfluenceOnTile(Util::GetPosition(currentNode->position), unit->is_flying, bot))
+			if(exitOnInfluence && HasInfluenceOnTile(GetPosition(currentNode->position), unit->is_flying, bot))
 			{
 				failureReason = INFLUENCE;
 			}
