@@ -24,6 +24,7 @@ class CombatAnalyzer {
 	std::map<sc2::UNIT_TYPEID, int> deadCountByType;
 	std::list<std::pair<CCPosition, uint32_t>> m_areasUnderDetection;
 	std::set<const sc2::Unit *> enemyPickedUpUnits;
+	std::set<const sc2::Unit *> burrowedUnits;
 
 	bool m_enemyHasCombatAirUnit = false;
 
@@ -59,6 +60,7 @@ class CombatAnalyzer {
 	int getUnitUpgradeArmor(const sc2::Unit* unit);
 	int getUnitUpgradeWeapon(const sc2::Unit* unit);
 
+	void DetectBurrowingUnits();
 	void clearAreasUnderDetection();
 	void UpdateTotalHealthLoss();
 	void drawDamageHealthRatio();
@@ -120,4 +122,5 @@ public:
 	bool enemyHasCombatAirUnit() const { return m_enemyHasCombatAirUnit; }
 	void detectUpgrades(Unit & unit, UnitState & state);
 	void detectTechs(Unit & unit, UnitState & state);
+	const std::set<const sc2::Unit *> & getBurrowedUnits() const { return burrowedUnits; }
 };

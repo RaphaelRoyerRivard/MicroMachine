@@ -68,10 +68,6 @@ void CombatAnalyzer::lowPriorityChecks()
 	totalGroundMassiveCount = 0;
 	totalAirMassiveCount = 0;
 
-	const auto enemyPlayerRace = m_bot.GetPlayerRace(Players::Enemy);
-	bool checkForBurrowedUpgrade = !m_bot.Strategy().enemyHasBurrowingUpgrade() && (enemyPlayerRace == sc2::Zerg || enemyPlayerRace == sc2::Random);
-	std::vector<sc2::UNIT_TYPEID> zergTransporters = { sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT, sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK };
-
 	for (const auto & enemy : m_bot.GetEnemyUnits())
 	{
 		const auto & unit = enemy.second;
@@ -199,59 +195,10 @@ void CombatAnalyzer::lowPriorityChecks()
 			if (it != enemyPickedUpUnits.end())
 				enemyPickedUpUnits.erase(unit.getUnitPtr());
 		}
-		
-		// Detect burrowed Zerg units
-		if (checkForBurrowedUpgrade && !unit.isFlying() && !unit.getType().isBuilding() && !unit.getType().isWorker())
-		{
-			// We want to only consider units that we just saw disappear
-			const auto unitAge = m_bot.GetCurrentFrame() - unit.getUnitPtr()->last_seen_game_loop;
-			if (unitAge > 0 && unitAge <= 2)
-			{
-				bool canSeeSurroundingTiles = true;
-				for (int x = -1; x <= 1; ++x)
-				{
-					for (int y = -1; y <= 1; ++y)
-					{
-						if (!m_bot.Map().isVisible(unit.getPosition() + CCPosition(x, y)))
-						{
-							canSeeSurroundingTiles = false;
-							break;
-						}
-					}
-					if (!canSeeSurroundingTiles)
-						break;
-				}
-				if (canSeeSurroundingTiles)
-				{
-					if (enemyPickedUpUnits.find(unit.getUnitPtr()) == enemyPickedUpUnits.end())
-					{
-						bool mightBePickedUp = false;
-						for (const auto transporterType : zergTransporters)
-						{
-							for (const auto transporter : m_bot.GetEnemyUnits(transporterType))
-							{
-								const auto maxPickupRange = unit.getUnitPtr()->radius + transporter.getUnitPtr()->radius + 1.5f;
-								if (Util::DistSq(unit, transporter) < maxPickupRange * maxPickupRange)
-								{
-									mightBePickedUp = true;
-									enemyPickedUpUnits.insert(unit.getUnitPtr());
-									break;
-								}
-							}
-							if (mightBePickedUp)
-								break;
-						}
-						if (!mightBePickedUp)
-						{
-							m_bot.Strategy().setEnemyHasBurrowingUpgrade(true);
-							checkForBurrowedUpgrade = false;
-							m_bot.Actions()->SendChat("Stop hiding and fight, insect!");
-						}
-					}
-				}
-			}
-		}
 	}
+
+	// Detect burrowed Zerg units
+	DetectBurrowingUnits();
 	
 	//TODO handle dead ally units
 
@@ -287,6 +234,112 @@ void CombatAnalyzer::lowPriorityChecks()
 		else if (production.isTechFinished(MetaTypeEnum::TerranShipWeaponsLevel3) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranVehicleAndShipArmorsLevel3))
 		{
 			production.queueTech(MetaTypeEnum::TerranVehicleAndShipArmorsLevel3);
+		}
+	}
+}
+
+void CombatAnalyzer::DetectBurrowingUnits()
+{
+	const auto enemyPlayerRace = m_bot.GetPlayerRace(Players::Enemy);
+	if (enemyPlayerRace != sc2::Zerg && enemyPlayerRace != sc2::Random)
+		return;
+	
+	std::vector<sc2::UNIT_TYPEID> zergTransporters = { sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT, sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK };
+
+	// Clear units that are not burrowed anymore
+	sc2::Units unitsToRemove;
+	for (const auto & burrowedUnit : burrowedUnits)
+	{
+		// We just saw the unit
+		if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
+		{
+			// And it was not burrowed anymore
+			if (!burrowedUnit->is_burrowed)
+				unitsToRemove.push_back(burrowedUnit);
+		}
+		// The unit is not where it burrowed previously
+		else if (m_bot.Map().isDetected(burrowedUnit->pos))
+		{
+			unitsToRemove.push_back(burrowedUnit);
+		}
+	}
+	for (const auto unit : unitsToRemove)
+	{
+		burrowedUnits.erase(unit);
+	}
+
+	unitsToRemove.clear();
+	for (const auto & pickedUpUnit : enemyPickedUpUnits)
+	{
+		// We just saw the unit
+		if (pickedUpUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
+		{
+			unitsToRemove.push_back(pickedUpUnit);
+		}
+	}
+	for (const auto unit : unitsToRemove)
+	{
+		enemyPickedUpUnits.erase(unit);
+	}
+	
+	for (const auto & enemy : m_bot.GetEnemyUnits())
+	{
+		const auto & unit = enemy.second;
+		if (!unit.isFlying() && !unit.getType().isBuilding() && !unit.getType().isWorker())
+		{
+			// We want to only consider units that we just saw disappear
+			const auto missingFrames = m_bot.GetCurrentFrame() - unit.getUnitPtr()->last_seen_game_loop;
+			if (missingFrames == 0 || missingFrames > 24)
+				continue;
+			// If we already flagged that unit as burrowed, no need to check again if it burrowed
+			if (burrowedUnits.find(unit.getUnitPtr()) != burrowedUnits.end())
+				continue;
+			
+			bool canSeeSurroundingTiles = true;
+			for (int x = -1; x <= 1; ++x)
+			{
+				for (int y = -1; y <= 1; ++y)
+				{
+					if (!m_bot.Map().isVisible(unit.getPosition() + CCPosition(x, y)))
+					{
+						canSeeSurroundingTiles = false;
+						break;
+					}
+				}
+				if (!canSeeSurroundingTiles)
+					break;
+			}
+			if (canSeeSurroundingTiles)
+			{
+				if (enemyPickedUpUnits.find(unit.getUnitPtr()) == enemyPickedUpUnits.end())
+				{
+					bool mightBePickedUp = false;
+					for (const auto transporterType : zergTransporters)
+					{
+						for (const auto transporter : m_bot.GetEnemyUnits(transporterType))
+						{
+							const auto maxPickupRange = unit.getUnitPtr()->radius + transporter.getUnitPtr()->radius + 1.5f;
+							if (Util::DistSq(unit, transporter) < maxPickupRange * maxPickupRange)
+							{
+								mightBePickedUp = true;
+								enemyPickedUpUnits.insert(unit.getUnitPtr());
+								break;
+							}
+						}
+						if (mightBePickedUp)
+							break;
+					}
+					if (!mightBePickedUp)
+					{
+						burrowedUnits.insert(unit.getUnitPtr());
+						if (!m_bot.Strategy().enemyHasBurrowingUpgrade())
+						{
+							m_bot.Strategy().setEnemyHasBurrowingUpgrade(true);
+							m_bot.Actions()->SendChat("Stop hiding and fight, insect!");
+						}
+					}
+				}
+			}
 		}
 	}
 }
