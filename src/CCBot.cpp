@@ -1486,6 +1486,11 @@ void CCBot::IssueGameStartCheats()
 	// Test for reproducing bug where BCs are not kiting
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER, mapCenter - towardsCenter * 4, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + towardsCenter * 3, player1, 8);*/
+
+	// Test for reproducing the bug where morphing units would be detected as burrowing
+	/*Debug()->DebugGiveAllResources();
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELINGNEST, enemyLocation - towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation + towardsCenter * 5, player1, 5);*/
 }
 
 void CCBot::IssueCheats()

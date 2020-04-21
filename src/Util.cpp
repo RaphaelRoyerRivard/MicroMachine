@@ -1458,11 +1458,11 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		range = 6.f;
 	}
-	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
+	/*else if (unitType == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
 	{
 		if (where == sc2::Weapon::TargetType::Ground)
 			range = 4.f;
-	}
+	}*/
 	else if (unitType == sc2::UNIT_TYPEID::ZERG_HYDRALISK)
 	{
 		range = 6.f;	// Always consider they have their range upgrade because we don't want to detect it manually
@@ -1773,11 +1773,11 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 		else
 			dps = 49.8f;
 	}
-	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
+	/*else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
 	{
-		if (where == sc2::Weapon::TargetType::Ground)
+		if (where == sc2::Weapon::TargetType::Ground && unit->energy >= 50)
 			dps = 12.7;
-	}
+	}*/
 
     return dps;
 }
@@ -1849,11 +1849,11 @@ float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapo
 		else
 			damage = 8.f;
 	}
-	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
+	/*else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
 	{
-		if (where == sc2::Weapon::TargetType::Ground)
+		if (where == sc2::Weapon::TargetType::Ground && unit->energy >= 50)
 			damage = 10.f;
-	}
+	}*/
 
 	return damage;
 }

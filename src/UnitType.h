@@ -68,6 +68,7 @@ public:
 
     // lazy functions to let me know if this type is a special type
     bool isOverlord() const;
+	bool isCocoon() const;
     bool isLarva() const;
     bool isEgg() const;
     bool isQueen() const;
