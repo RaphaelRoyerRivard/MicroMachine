@@ -298,20 +298,19 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			goal = m_bot.GetStartLocation();
 			goalDescription = "VikingStart";
 		}
-		else if (isMarauder && m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS)
+		else if (isMarauder && m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS && !m_marauderAttackInitiated)
 		{
-			if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), true) < 3)
+			goal = m_bot.Bases().getBaseLocations()[1]->getPosition();
+			goalDescription = "EnemyNat";
+			int groupedMarauders = 0;
+			const auto & marauders = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MARAUDER);
+			for (const auto marauder : marauders)
 			{
-				if (!m_marauderAttackInitiated)
-				{
-					goal = m_bot.Bases().getBaseLocations()[1]->getPosition();
-					goalDescription = "EnemyNat";
-				}
+				if (Util::DistSq(marauder, goal) <= 3 * 3)
+					++groupedMarauders;
 			}
-			else
-			{
+			if (groupedMarauders >= 3)
 				m_marauderAttackInitiated = true;
-			}
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
@@ -376,7 +375,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 		else
 			unitAttackRange = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot, true);
-		targetInAttackRange = distSqToTarget <= unitAttackRange * unitAttackRange;
+		targetInAttackRange = distSqToTarget <= unitAttackRange * unitAttackRange && target->last_seen_game_loop == m_bot.GetGameLoop();
 
 #ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
@@ -402,7 +401,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StartProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 	if (shouldAttack && targetInAttackRange && ShouldAttackTarget(rangedUnit, target, threats))
 	{
-		const auto action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit, target), "AttackTarget");
+		RangedUnitAction action = RangedUnitAction(MicroActionType::AttackUnit, target, unitShouldHeal, getAttackDuration(rangedUnit, target), "AttackTarget");
 		m_bot.Commander().Combat().PlanAction(rangedUnit, action);
 		m_bot.StopProfiling("0.10.4.1.5.1.4          ShouldAttackTarget");
 		const float damageDealt = isBattlecruiser ? Util::GetDpsForTarget(rangedUnit, target, m_bot) / 22.4f : Util::GetDamageForTarget(rangedUnit, target, m_bot);
@@ -447,11 +446,11 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 
-	// Opportunistic attack (usually on buildings)
+	// Opportunistic attack (often on buildings)
 	if ((shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat)
 	{
 		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true, true, false);
-		if (closeTarget && ShouldAttackTarget(rangedUnit, closeTarget, threats))
+		if (closeTarget && closeTarget->last_seen_game_loop == m_bot.GetGameLoop() && ShouldAttackTarget(rangedUnit, closeTarget, threats))
 		{
 			const auto distToCloseTarget = Util::DistSq(rangedUnit->pos, closeTarget->pos);
 			const auto range = Util::GetAttackRangeForTarget(rangedUnit, closeTarget, m_bot, true);	// We want to ignore spells so Cyclones won't think they have over 7 range
@@ -1277,11 +1276,16 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	
 	if (Util::IsEnemyHiddenOnHighGround(rangedUnit, target, m_bot))
 	{
-		// If the unit cannot just walk the ramp to reach the enemy
-		if (Util::PathFinding::FindOptimalPathDistance(rangedUnit, target->pos, true, m_bot) > 15)
+		// Check if the unit cannot just walk the ramp to reach the enemy
+		bool easilyWalkable = false;
+		if (AllowUnitToPathFind(rangedUnit, false))
 		{
-			return false;
+			const auto pathDistance = Util::PathFinding::FindOptimalPathDistance(rangedUnit, target->pos, true, m_bot);
+			if (pathDistance >= 0 && pathDistance <= 15)
+				easilyWalkable = true;
 		}
+		if (!easilyWalkable)
+			return false;
 	}
 
 	// Check if unit can fight cloaked

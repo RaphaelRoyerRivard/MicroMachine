@@ -238,7 +238,6 @@ bool UnitType::isMineralWallPatch() const
 
 bool UnitType::isWorker() const
 {
-#ifdef SC2API
     switch (m_type.ToType()) 
     {
         case sc2::UNIT_TYPEID::TERRAN_SCV           : return true;
@@ -248,9 +247,6 @@ bool UnitType::isWorker() const
         case sc2::UNIT_TYPEID::ZERG_DRONEBURROWED   : return true;
         default: return false;
     }
-#else
-    return m_type.isWorker();
-#endif
 }
 
 bool UnitType::isMule() const
@@ -265,112 +261,70 @@ bool UnitType::isCreepTumor() const
 
 CCPositionType UnitType::getAttackRange() const
 {
-#ifdef SC2API
     return Util::GetMaxAttackRange(m_bot->Observation()->GetUnitTypeData()[m_type], *m_bot);
-#else
-    // TODO: this is ground weapon range right now
-    return m_type.groundWeapon().maxRange();
-#endif
 }
 
 float UnitType::radius() const
 {
-#ifdef SC2API
 	if (isMineral()) { return 1; }//Not valid since its an oval.
 	if (isGeyser()) { return 1.8125f; }//Same as a Barrack
 	if (isAddon()) { return 1.25f; }//Same as supply depot
 	if (m_type == sc2::UNIT_TYPEID::TERRAN_AUTOTURRET) { return 1; }
 	else { return m_bot->Observation()->GetAbilityData()[m_bot->Data(*this).buildAbility].footprint_radius; }
-#else
-	return m_type.tileWidth() / 2;
-#endif
 }
 
 int UnitType::tileWidth() const
 {
-#ifdef SC2API
     if (isMineral()) { return 2; }
     if (isGeyser()) { return 3; }
 	if (isAddon()) { return 2; }
 	if (m_type == sc2::UNIT_TYPEID::TERRAN_AUTOTURRET) { return 2; }
     else { return (int)(2 * m_bot->Observation()->GetAbilityData()[m_bot->Data(*this).buildAbility].footprint_radius); }
-#else
-    return m_type.tileWidth();
-#endif
 }
 
 int UnitType::tileHeight() const
 {
-#ifdef SC2API
     if (isMineral()) { return 1; }
     if (isGeyser()) { return 3; }
 	if (isAddon()) { return 2; }
 	if (m_type == sc2::UNIT_TYPEID::TERRAN_AUTOTURRET) { return 2; }
     else { return (int)(2 * m_bot->Observation()->GetAbilityData()[m_bot->Data(*this).buildAbility].footprint_radius); }
-#else
-    return m_type.tileHeight();
-#endif
 }
 
 bool UnitType::isAddon() const
 {
-#ifdef SC2API
     return m_bot->Data(*this).isAddon;
-#else
-    return m_type.isAddon();
-#endif
 }
 
 bool UnitType::isBuilding() const
 {
-#ifdef SC2API
     return m_bot->Data(*this).isBuilding;
-#else
-    return m_type.isBuilding();
-#endif
 }
 
 int UnitType::supplyProvided() const
 {
-#ifdef SC2API
     return (int)m_bot->Observation()->GetUnitTypeData()[m_type].food_provided;
-#else
-    return m_type.supplyProvided();
-#endif
 }
 
 int UnitType::supplyRequired() const
 {
-#ifdef SC2API
     return (int)m_bot->Observation()->GetUnitTypeData()[m_type].food_required;
-#else
-    return m_type.supplyRequired();
-#endif
 }
 
 int UnitType::mineralPrice() const
 {
-#ifdef SC2API
 	BOT_ASSERT(m_type != 0, "Invalid type id");
     return (int)m_bot->Observation()->GetUnitTypeData()[m_type].mineral_cost;
-#else
-    return m_type.mineralPrice();
-#endif
 }
 
 int UnitType::gasPrice() const
 {
-#ifdef SC2API
 	BOT_ASSERT(m_type != 0, "Invalid type id");
     return (int)m_bot->Observation()->GetUnitTypeData()[m_type].vespene_cost;
-#else
-    return m_type.gasPrice();
-#endif
 }
 
 UnitType UnitType::GetUnitTypeFromName(const std::string & name, CCBot & bot)
 {
-#ifdef SC2API
 	const sc2::UnitTypes& unitTypes = bot.Observation()->GetUnitTypeData();
     for (const sc2::UnitTypeData & data : unitTypes)
     {
@@ -379,62 +333,41 @@ UnitType UnitType::GetUnitTypeFromName(const std::string & name, CCBot & bot)
             return UnitType(data.unit_type_id, bot);
         }
     }
-#else
-
-#endif
-
     return UnitType();
 }
 
 bool UnitType::isOverlord() const
 {
-#ifdef SC2API
     return m_type == sc2::UNIT_TYPEID::ZERG_OVERLORD || m_type == sc2::UNIT_TYPEID::ZERG_OVERLORDCOCOON || m_type == sc2::UNIT_TYPEID::ZERG_OVERSEER || m_type == sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT;
-#else
-    return m_type == BWAPI::UnitTypes::Zerg_Overlord;
-#endif
+}
+
+bool UnitType::isCocoon() const
+{
+	return m_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON || m_type == sc2::UNIT_TYPEID::ZERG_OVERLORDCOCOON || m_type == sc2::UNIT_TYPEID::ZERG_BROODLORDCOCOON || m_type == sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON || m_type == sc2::UNIT_TYPEID::ZERG_TRANSPORTOVERLORDCOCOON;
 }
 
 bool UnitType::isLarva() const
 {
-#ifdef SC2API
     return m_type == sc2::UNIT_TYPEID::ZERG_LARVA;
-#else
-    return m_type == BWAPI::UnitTypes::Zerg_Larva;
-#endif
 }
 
 bool UnitType::isEgg() const
 {
-#ifdef SC2API
     return m_type == sc2::UNIT_TYPEID::ZERG_EGG;
-#else
-    return m_type == BWAPI::UnitTypes::Zerg_Egg;
-#endif
 }
 
 bool UnitType::isQueen() const
 {
-#ifdef SC2API
     return m_type == sc2::UNIT_TYPEID::ZERG_QUEEN;
-#else
-    return m_type == BWAPI::UnitTypes::Zerg_Queen;
-#endif
 }
 
 bool UnitType::isTank() const
 {
-#ifdef SC2API
     return m_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK || m_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED;
-#else
-    return m_type == BWAPI::UnitTypes::Terran_Siege_Tank_Siege_Mode || m_type == BWAPI::UnitTypes::Terran_Siege_Tank_Tank_Mode;
-#endif
 }
 
 bool UnitType::isMorphedBuilding() const
 {
-#ifdef SC2API
-    
     switch (m_type.ToType())
     {
         case sc2::UNIT_TYPEID::ZERG_LAIR:                   { return true;  }
@@ -444,13 +377,6 @@ bool UnitType::isMorphedBuilding() const
         case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:       { return true;  }
         default:                                            { return false; }                                                            
     }
-#else
-    return  m_type == BWAPI::UnitTypes::Zerg_Sunken_Colony ||
-            m_type == BWAPI::UnitTypes::Zerg_Spore_Colony ||
-            m_type == BWAPI::UnitTypes::Zerg_Lair ||
-            m_type == BWAPI::UnitTypes::Zerg_Hive ||
-            m_type == BWAPI::UnitTypes::Zerg_Greater_Spire;
-#endif
 }
 
 bool UnitType::isAttackingBuilding() const

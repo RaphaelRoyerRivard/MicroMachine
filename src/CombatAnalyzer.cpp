@@ -285,7 +285,7 @@ void CombatAnalyzer::DetectBurrowingUnits()
 	for (const auto & enemy : m_bot.GetEnemyUnits())
 	{
 		const auto & unit = enemy.second;
-		if (!unit.isFlying() && !unit.getType().isBuilding() && !unit.getType().isEgg() && !unit.getType().isLarva() && !unit.getType().isWorker())
+		if (!unit.isFlying() && !unit.getType().isBuilding() && !unit.getType().isEgg() && !unit.getType().isLarva() && !unit.getType().isCocoon() && !unit.getType().isWorker())
 		{
 			// We want to only consider units that we just saw disappear
 			const auto missingFrames = m_bot.GetCurrentFrame() - unit.getUnitPtr()->last_seen_game_loop;
