@@ -2525,7 +2525,8 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		if (filterHigherUnits && Util::IsEnemyHiddenOnHighGround(rangedUnit, target, m_bot))
 			continue;
 
-    	if (filterPassiveBuildings)
+    	// We don't want Reapers to lose their time attacking buildings unless they are defending
+    	if (filterPassiveBuildings || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && m_order.getType() != SquadOrderTypes::Defend))
     	{
 			auto targetUnit = Unit(target, m_bot);
 			if (targetUnit.getType().isBuilding() && !targetUnit.getType().isCombatUnit())
