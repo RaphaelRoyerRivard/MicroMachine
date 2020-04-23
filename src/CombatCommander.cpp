@@ -18,7 +18,7 @@ const float DefaultOrderRadius = 25;			//Order radius is the threat awareness ra
 const float WorkerRushDefenseOrderRadius = 250;
 const float MainAttackOrderRadius = 15;
 const float HarassOrderRadius = 25;
-const float ScoutOrderRadius = 6;				//Small number to prevent the scout from targeting far units instead of going to the next base location
+const float ScoutOrderRadius = 15;				//Small number to prevent the scout from targeting far units instead of going to the next base location (cannot be too small otherwise the unit will ignore threats)
 const float MainAttackMaxDistance = 20;			//Distance from the center of the Main Attack Squad for a unit to be considered in it
 const float MainAttackMaxRegroupDuration = 100; //Max number of frames allowed for a regroup order
 const float MainAttackRegroupCooldown = 200;	//Min number of frames required to wait between regroup orders
@@ -2795,12 +2795,13 @@ bool CombatCommander::ShouldUnitHeal(const sc2::Unit * unit) const
 		{
 			float percentageMultiplier = 1.f;
 			bool forceHeal = false;
+			const bool isLockedOn = Util::unitHasBuff(unit, sc2::BUFF_ID::LOCKON);
 			switch (unit->unit_type.ToType())
 			{
 			case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
 				if (m_bot.Config().StarCraft2Version <= "4.10.4")
-					percentageMultiplier = 0.5f;
-				else if (m_bot.Analyzer().getUnitState(unit).GetRecentDamageTaken() * 1.8f >= unit->health
+					percentageMultiplier = isLockedOn ? 0.75f : 0.5f;
+				else if (m_bot.Analyzer().getUnitState(unit).GetRecentDamageTaken() * (isLockedOn ? 2.5f : 1.8f) >= unit->health
 					&& Util::IsAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, unit, m_unitsAbilities))
 					forceHeal = true;	// After version 4.10.4, Tactical Jump has a 1 second vulnerability
 				break;

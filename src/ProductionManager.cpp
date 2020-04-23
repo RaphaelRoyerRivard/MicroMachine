@@ -729,22 +729,35 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				else
 				{
-					if (m_bot.Strategy().isEarlyRushed())
-					{
-						m_queue.removeAllOfType(MetaTypeEnum::BansheeCloak);
-						m_queue.removeAllOfType(MetaTypeEnum::HyperflightRotors);
-					}
-					else
+					const auto earlyRushed = m_bot.Strategy().isEarlyRushed();
+					const auto bansheeInProduction = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true, true) > 0;
+					const auto researchBansheeCloak = !earlyRushed || bansheeInProduction;
+					const auto researchBansheeSpeed = !earlyRushed && bansheeCount > 0;
+
+					// Banshee Cloak upgrade
+					if (researchBansheeCloak)
 					{
 						if (!isTechQueuedOrStarted(MetaTypeEnum::BansheeCloak) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
 						{
 							queueTech(MetaTypeEnum::BansheeCloak);
 						}
+					}
+					else
+					{
+						m_queue.removeAllOfType(MetaTypeEnum::BansheeCloak);
+					}
 
-						if (bansheeCount > 0 && m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
+					// Banshee Speed upgrade
+					if (researchBansheeSpeed)
+					{
+						if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
 						{
 							queueTech(MetaTypeEnum::HyperflightRotors);
 						}
+					}
+					else
+					{
+						m_queue.removeAllOfType(MetaTypeEnum::HyperflightRotors);
 					}
 
 #ifndef NO_UNITS

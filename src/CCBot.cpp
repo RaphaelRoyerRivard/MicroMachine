@@ -1491,6 +1491,10 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugGiveAllResources();
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_BANELINGNEST, enemyLocation - towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_startLocation + towardsCenter * 5, player1, 5);*/
+
+	// Test to reproduce bug where Reaper scout would not avoid influence
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter - towardsCenter * 2, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter, player1, 5);*/
 }
 
 void CCBot::IssueCheats()
