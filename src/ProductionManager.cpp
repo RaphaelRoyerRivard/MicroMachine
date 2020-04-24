@@ -730,8 +730,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				else
 				{
 					const auto earlyRushed = m_bot.Strategy().isEarlyRushed();
-					const auto bansheeInProduction = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true, true) > 0;
-					const auto researchBansheeCloak = !earlyRushed || bansheeInProduction;
+					//const auto bansheeInProduction = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true, true) > 0;
+					const auto researchBansheeCloak = !earlyRushed;	// || bansheeInProduction;
 					const auto researchBansheeSpeed = !earlyRushed && bansheeCount > 0;
 
 					// Banshee Cloak upgrade
