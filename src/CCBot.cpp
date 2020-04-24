@@ -1960,7 +1960,7 @@ void CCBot::drawProfilingInfo()
 					if(GetCurrentFrame() - m_lastProfilingLagOutput >= 25 && stepTime > 10000)	// >10ms
 					{
 						m_lastProfilingLagOutput = GetCurrentFrame();
-						Util::DebugLog(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * time) + "ms", *this);
+						Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * time) + "ms", *this);
 					}
 				}
 			}

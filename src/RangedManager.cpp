@@ -1353,6 +1353,25 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 	}
 
+	// Check for saved result
+	for (const auto & combatSimulationResultPair : m_combatSimulationResults)
+	{
+		const auto & allyUnits = combatSimulationResultPair.first;
+		if (Util::Contains(rangedUnit, allyUnits))
+		//if (allyUnits == closeUnitsSet)
+		{
+			bool savedResult = combatSimulationResultPair.second;
+			if (savedResult)
+			{
+				auto action = m_bot.Commander().Combat().GetRangedUnitAction(rangedUnit);
+				std::stringstream ss;
+				ss << "ThreatFightingLogic was called again when all close units should have been given a prioritized action... Current unit of type " << sc2::UnitTypeToName(rangedUnit->unit_type) << " had a " << action.description << " action and is " << (Util::Contains(rangedUnit, allyUnits) ? "" : "not") << " part of the set";
+				Util::Log(__FUNCTION__, ss.str(), m_bot);
+			}
+			return savedResult;
+		}
+	}
+	
 	m_bot.StartProfiling("0.10.4.1.5.1.5.1          CalcCloseUnits");
 	float minUnitRange = -1;
 	// We create a set because we need an ordered data structure for accurate and efficient comparison with data in memory
@@ -1371,24 +1390,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	if (closeUnitsSet.size() > 1 && unitShouldHeal && !closeToEnemyTempest)
 	{
 		return false;
-	}
-
-	// Check for saved result
-	for (const auto & combatSimulationResultPair : m_combatSimulationResults)
-	{
-		const auto & allyUnits = combatSimulationResultPair.first;
-		if (allyUnits == closeUnitsSet)
-		{
-			bool savedResult = combatSimulationResultPair.second;
-			if (savedResult)
-			{
-				auto action = m_bot.Commander().Combat().GetRangedUnitAction(rangedUnit);
-				std::stringstream ss;
-				ss << "ThreatFightingLogic was called again when all close units should have been given a prioritized action... Current unit of type " << sc2::UnitTypeToName(rangedUnit->unit_type) << " had a " << action.description << " action and is " << (Util::Contains(rangedUnit, allyUnits) ? "" : "not") << " part of the set";
-				Util::Log(__FUNCTION__, ss.str(), m_bot);
-			}
-			return savedResult;
-		}
 	}
 
 	sc2::Units closeUnits;
