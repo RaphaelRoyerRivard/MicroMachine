@@ -314,14 +314,12 @@ void CCBot::OnStep()
 
 	StopProfiling("0.0 OnStep");	//Do not remove
 
-#ifdef SC2API
 #ifndef PUBLIC_RELEASE
 	if (Config().AllowDebug)
 	{
 		drawProfilingInfo();
 		Debug()->SendDebug();
 	}
-#endif
 #endif
 	StartProfiling("0 Starcraft II");
 
@@ -1859,119 +1857,114 @@ void CCBot::OnError(const std::vector<sc2::ClientError> & client_errors, const s
 		const auto errorId = int(clientError);
 		std::stringstream err;
 		err << "Client error: " << std::to_string(errorId) << std::endl;
-		Util::DebugLog(__FUNCTION__, err.str(), *this);
+		Util::Log(__FUNCTION__, err.str(), *this);
 	}
 	
 	for (const auto & protocolError : protocol_errors)
 	{
 		std::stringstream err;
 		err << "Protocol error error: " << protocolError << std::endl;
-		Util::DebugLog(__FUNCTION__, err.str(), *this);
+		Util::Log(__FUNCTION__, err.str(), *this);
 	}
 }
 
 void CCBot::StartProfiling(const std::string & profilerName)
 {
-#ifndef PUBLIC_RELEASE
-	if (m_config.DrawProfilingInfo)
-	{
-		auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
-		profiler.start = std::chrono::steady_clock::now();	// Set the start time (third element of the tuple) to now
-	}
-#endif
+	auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
+	profiler.start = std::chrono::steady_clock::now();	// Set the start time (third element of the tuple) to now
 }
 
 void CCBot::StopProfiling(const std::string & profilerName)
 {
-#ifndef PUBLIC_RELEASE
-	if (m_config.DrawProfilingInfo)
+	auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
+
+	const auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - profiler.start).count();
+
+	profiler.total += elapsedTime;						// Add the time to the total of the last 100 steps
+	auto & queue = profiler.queue;
+	if (queue.empty())
 	{
-		auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
-
-		const auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - profiler.start).count();
-
-		profiler.total += elapsedTime;						// Add the time to the total of the last 100 steps
-		auto & queue = profiler.queue;
-		if (queue.empty())
-		{
-			while (queue.size() < 49)
-				queue.push_front(0);						// Fill up the queue with zeros
-			queue.push_front(elapsedTime);					// Add the time to the queue
-		}
-		else
-			queue[0] += elapsedTime;						// Add the time to the queue
+		while (queue.size() < 49)
+			queue.push_front(0);						// Fill up the queue with zeros
+		queue.push_front(elapsedTime);					// Add the time to the queue
 	}
-#endif
+	else
+		queue[0] += elapsedTime;						// Add the time to the queue
 }
 
 void CCBot::drawProfilingInfo()
 {
-#ifdef PUBLIC_RELEASE
-	return;
-#endif
+	const std::string stepString = "0.0 OnStep";
+	long long stepTime = 0;
+	long long currentStepTime = 0;
+	const auto it = m_profilingTimes.find(stepString);
+	if(it != m_profilingTimes.end())
+	{
+		const auto & profiler = (*it).second;
+		stepTime = profiler.total / profiler.queue.size();
+		currentStepTime = profiler.queue[0];
+	}
+
+	std::string profilingInfo = "Profiling info (ms)";
+	if (m_config.IsRealTime)
+	{
+		int skipped = m_gameLoop - m_previousGameLoop - 1;
+		m_skippedFrames += skipped;
+		profilingInfo += "\nTotal skipped " + std::to_string(m_skippedFrames) + " frames.";
+		profilingInfo += "\nSkipped " + std::to_string(skipped) + " frames since last loop.";
+		m_previousGameLoop = m_gameLoop;
+	}
+	for (auto & mapPair : m_profilingTimes)
+	{
+		const std::string& key = mapPair.first;
+		auto& profiler = m_profilingTimes.at(mapPair.first);
+		auto& queue = profiler.queue;
+		const int queueCount = queue.size();
+		const long long time = profiler.total / std::max(queueCount, 1);
+		if (key == stepString)
+		{
+			long long maxFrameTime = 0;
+			for(auto frameTime : queue)
+			{
+				if (frameTime > maxFrameTime)
+					maxFrameTime = frameTime;
+			}
+			profilingInfo += "\n Recent Frame Max: " + std::to_string(0.001f * maxFrameTime);
+			if(maxFrameTime > 40900)	//limit for a frame in real time
+			{
+				profilingInfo += "!!!";
+			}
+			profilingInfo += "\n Recent Frame Avg: " + std::to_string(0.001f * time);
+		}
+		else if (time * 10 > stepTime)
+		{
+			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * time);
+			profilingInfo += " !";
+			if (time * 4 > stepTime)
+			{
+				profilingInfo += "!!";
+				/*if(GetCurrentFrame() - m_lastProfilingLagOutput >= 25 && stepTime > 10000)	// >10ms
+				{
+					m_lastProfilingLagOutput = GetCurrentFrame();
+					Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * time) + "ms", *this);
+				}*/
+			}
+		}
+
+		if (currentStepTime >= 1000000 && queue.size() > 0 && queue[0] > 0)	// 1s
+		{
+			Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * queue[0]) + "ms", *this);
+		}
+
+		if(queue.size() >= 50)
+		{
+			queue.push_front(0);
+			profiler.total -= queue[50];
+			queue.pop_back();
+		}
+	}
 	if (m_config.DrawProfilingInfo)
 	{
-		const std::string stepString = "0.0 OnStep";
-		long long stepTime = 0;
-		const auto it = m_profilingTimes.find(stepString);
-		if(it != m_profilingTimes.end())
-		{
-			stepTime = (*it).second.total / (*it).second.queue.size();
-		}
-
-		std::string profilingInfo = "Profiling info (ms)";
-		if (m_config.IsRealTime)
-		{
-			int skipped = m_gameLoop - m_previousGameLoop - 1;
-			m_skippedFrames += skipped;
-			profilingInfo += "\nTotal skipped " + std::to_string(m_skippedFrames) + " frames.";
-			profilingInfo += "\nSkipped " + std::to_string(skipped) + " frames since last loop.";
-			m_previousGameLoop = m_gameLoop;
-		}
-		for (auto & mapPair : m_profilingTimes)
-		{
-			const std::string& key = mapPair.first;
-			auto& profiler = m_profilingTimes.at(mapPair.first);
-			auto& queue = profiler.queue;
-			const int queueCount = queue.size();
-			const long long time = profiler.total / std::max(queueCount, 1);
-			if (key == stepString)
-			{
-				long long maxFrameTime = 0;
-				for(auto frameTime : queue)
-				{
-					if (frameTime > maxFrameTime)
-						maxFrameTime = frameTime;
-				}
-				profilingInfo += "\n Recent Frame Max: " + std::to_string(0.001f * maxFrameTime);
-				if(maxFrameTime > 40900)	//limit for a frame in real time
-				{
-					profilingInfo += "!!!";
-				}
-				profilingInfo += "\n Recent Frame Avg: " + std::to_string(0.001f * time);
-			}
-			else if (time * 10 > stepTime)
-			{
-				profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * time);
-				profilingInfo += " !";
-				if (time * 4 > stepTime)
-				{
-					profilingInfo += "!!";
-					if(GetCurrentFrame() - m_lastProfilingLagOutput >= 25 && stepTime > 10000)	// >10ms
-					{
-						m_lastProfilingLagOutput = GetCurrentFrame();
-						Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * time) + "ms", *this);
-					}
-				}
-			}
-
-			if(queue.size() >= 50)
-			{
-				queue.push_front(0);
-				profiler.total -= queue[50];
-				queue.pop_back();
-			}
-		}
 		m_map.drawTextScreen(0.72f, 0.1f, profilingInfo);
 	}
 }
