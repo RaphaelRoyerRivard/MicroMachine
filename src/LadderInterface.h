@@ -188,7 +188,7 @@ static void RunBot(int argc, char *argv[], CCBot *Agent, sc2::Race race, bool lo
 	coordinator.SetRawAffectsSelection(!allowDebug);
     // Step forward the game simulation.
     coordinator.JoinGame();
-    coordinator.SetTimeoutMS(10000);
+    coordinator.SetTimeoutMS(120000);	// 2 min
     std::cout << "Successfully joined game" << std::endl;
     while (coordinator.Update()) {
     }
