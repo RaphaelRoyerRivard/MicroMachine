@@ -20,12 +20,8 @@ class GameCommander
     std::vector<Unit>    m_combatUnits;
     std::vector<Unit>    m_scoutUnits;
 
-	std::map<sc2::Tag, CCPosition> m_nearCarrier;//Contians all units that are moving towards a carrier, the float is the distsq with his targeted carrier.
-	std::vector<Unit>	 m_carrying;
-	std::vector<Unit>	 m_carried;
-	std::map<sc2::Tag, bool> m_unitInside;//If the unit is inside something, only for Terran, doesn't consider CC
-	std::map<sc2::Tag, Unit*> m_unitCarryingUnit;
-	std::map<sc2::Tag, std::vector<Unit*>> m_carriedUnits;
+	std::vector<sc2::Tag> m_unitInside;
+	std::map<sc2::Tag, Unit*> m_unitCarrier;
 
 	std::vector<std::pair<Unit, std::pair<sc2::AbilityID, CCPosition>>> m_delayedSmartAbility;
 
@@ -50,7 +46,6 @@ public:
     void setScoutUnits();
     void setCombatUnits();
 	void setCarryingAndCarried();
-	bool canEnterCarrier(Unit unit, Unit carrier);
 
     bool shouldSendInitialScout();
 
@@ -59,11 +54,9 @@ public:
 
 	//Carrier and Carried
 	bool isInside(sc2::Tag unit);
-	void setInside(sc2::Tag unit, bool _inside);
-	std::map<sc2::Tag, Unit*> getCarryingUnit();
-	void setCarryingUnit(sc2::Tag carrier, Unit* carrying);
-	std::map<sc2::Tag, std::vector<Unit*>> getCarriedUnits();
-	void addCarriedUnit(sc2::Tag carrier, Unit* carried);
+	void setInside(sc2::Tag unit);
+	Unit* getCarrierForUnit(sc2::Tag unitTag);
+	Unit* setCarrierForUnit(sc2::Tag unitTag, Unit* carrier);
 	void AddDelayedSmartAbility(Unit unit, sc2::AbilityID ability, CCPosition position);
 	void GiveDelayedSmarAbilityOrders();
 };

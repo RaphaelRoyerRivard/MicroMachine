@@ -618,11 +618,8 @@ void WorkerManager::handleGasWorkers()
 								}
 								worker.rightClick(bunker.getPosition());
 
-								if (true || m_bot.Commander().canEnterCarrier(worker, bunker))
-								{
-									Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);
-									bunkerHasLoaded.push_back(bunker.getTag());
-								}
+								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);
+								bunkerHasLoaded.push_back(bunker.getTag());
 								hasReturningWorker = true;
 							}
 							else//Click to drop resource
@@ -639,11 +636,8 @@ void WorkerManager::handleGasWorkers()
 							else if(std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end())//Click to enter bunker
 							{
 								worker.rightClick(bunker.getPosition());
-								if (true || m_bot.Commander().canEnterCarrier(worker, bunker))
-								{
-									Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);
-									bunkerHasLoaded.push_back(bunker.getTag());
-								}
+								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);
+								bunkerHasLoaded.push_back(bunker.getTag());
 							}
 						}
 					}

@@ -148,81 +148,22 @@ void GameCommander::setCombatUnits()
 void GameCommander::setCarryingAndCarried()
 {
 	//Reset lists
-	m_carried = std::vector<Unit>();
-	m_carrying = std::vector <Unit>();
+	m_unitInside.clear();
+	m_unitCarrier.clear();
 
-	auto current_nearCarrier = std::map<sc2::Tag, CCPosition>();
-
-	for (auto & unit : m_validUnits)
+	for (auto & carrier : m_validUnits)
 	{
-		BOT_ASSERT(unit.isValid(), "Have a null unit in our valid units\n");
-		if (unit.isFlying())
+		if (carrier.getUnitPtr()->cargo_space_max == 0 || carrier.getUnitPtr()->cargo_space_taken == 0)
+		{
 			continue;
-		setInside(unit.getTag(), false);
-
-		auto orders = unit.getUnitPtr()->orders;
-		if (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV)
-		{
-			auto a = 1;
 		}
 
-		if (orders.size() > 0 && orders[0].ability_id == sc2::ABILITY_ID::MOVE)
+		for (auto & carried : carrier.getUnitPtr()->passengers)
 		{
-			bool targetFound = false;
-			for (auto & carrier : m_validUnits)
-			{
-				if (orders[0].target_unit_tag == carrier.getTag())//Find the target
-				{
-					targetFound = true;
-					auto carrierType = carrier.getType().getAPIUnitType();
-					//TODO doesn't handle CommandCenter
-					//TODO doesn't handle other races, needs special code for Warp prism, should be from the point of view of the prism, instead of the unit.
-					if (carrierType != sc2::UNIT_TYPEID::TERRAN_BUNKER && carrierType != sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
-					{
-						break;
-					}
-
-					current_nearCarrier[unit.getTag()] = unit.getPosition();
-
-					//Unit is inside a carrier. "dist <= pickupDistance" is used to flag the unit inside the unit 1 frame earlier, so next frame the unit should be inside.
-					if (canEnterCarrier(unit, carrier))
-					{
-						setInside(unit.getTag(), true);
-						m_carried.push_back(unit);
-						setCarryingUnit(unit.getTag(), &carrier);
-						if (std::find(m_carrying.begin(), m_carrying.end(), carrier) == m_carrying.end())
-						{
-							m_carrying.push_back(carrier);
-							addCarriedUnit(carrier.getTag(), &unit);
-						}
-						break;
-					}
-				}
-			}
+			setInside(carried.tag);
+			setCarrierForUnit(carried.tag, &carrier);
 		}
 	}
-
-	m_nearCarrier = current_nearCarrier;//Keep info for next frame
-}
-
-bool GameCommander::canEnterCarrier(Unit unit, Unit carrier)
-{
-	auto dist = Util::Dist(unit.getPosition(), carrier.getPosition());
-
-	int pickupRange;
-	switch ((sc2::UNIT_TYPEID)carrier.getType().getAPIUnitType())
-	{
-	case sc2::UNIT_TYPEID::TERRAN_MEDIVAC:
-		pickupRange = 1;
-		break;
-	case sc2::UNIT_TYPEID::TERRAN_BUNKER:
-	default:
-		pickupRange = 0;
-		break;
-	}
-	auto pickupDistance = unit.getUnitPtr()->radius + carrier.getUnitPtr()->radius + pickupRange;
-
-	return dist <= pickupDistance || m_nearCarrier[unit.getTag()] == unit.getPosition();
 }
 
 void GameCommander::onUnitCreate(const Unit & unit)
@@ -253,32 +194,22 @@ void GameCommander::assignUnit(const Unit & unit, std::vector<Unit> & units)
 
 bool GameCommander::isInside(sc2::Tag unit)
 {
-	return m_unitInside[unit];
+	return std::find(m_unitInside.begin(), m_unitInside.end(), unit) != m_unitInside.end();
 }
 
-void GameCommander::setInside(sc2::Tag unit, bool _inside)
+void GameCommander::setInside(sc2::Tag unit)
 {
-	m_unitInside[unit] = _inside;
+	m_unitInside.push_back(unit);
 }
 
-std::map<sc2::Tag, Unit*> GameCommander::getCarryingUnit()
+Unit* GameCommander::getCarrierForUnit(sc2::Tag unitTag)
 {
-	return m_unitCarryingUnit;
+	return m_unitCarrier[unitTag];
 }
 
-void GameCommander::setCarryingUnit(sc2::Tag carrier, Unit* carrying)
+Unit* GameCommander::setCarrierForUnit(sc2::Tag unitTag, Unit* carrier)
 {
-	m_unitCarryingUnit[carrier] = carrying;
-}
-
-std::map<sc2::Tag, std::vector<Unit*>> GameCommander::getCarriedUnits()
-{
-	return m_carriedUnits;
-}
-
-void GameCommander::addCarriedUnit(sc2::Tag carrier, Unit* carried)
-{
-	m_carriedUnits[carrier].push_back(carried);
+	return m_unitCarrier[unitTag] = carrier;
 }
 
 void GameCommander::AddDelayedSmartAbility(Unit unit, sc2::AbilityID ability, CCPosition position)

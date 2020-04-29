@@ -117,15 +117,6 @@ void BuildingManager::lowPriorityChecks()
 				}
 			}
 		}
-
-		if (building.buildingUnit.isValid() && building.buildingUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BUNKER)
-		{
-			auto abilities = building.buildingUnit.getAbilities();
-			if (Util::IsAbilityAvailable(sc2::ABILITY_ID::UNLOADALL, abilities))
-			{
-				auto a = 1;
-			}
-		}
 	}
 	removeBuildings(toRemove);
 }
