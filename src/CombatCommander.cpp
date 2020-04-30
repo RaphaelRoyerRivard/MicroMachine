@@ -2070,6 +2070,8 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 		return false;
 	if (closestEnemy.isFlying())
 		return false;
+	if (m_bot.Map().terrainHeight(worker.getPosition()) != m_bot.Map().terrainHeight(closestEnemy.getPosition()))
+		return false;
 	// do not check distances if it is to protect against a scout
 	if (defenseSquad.getName() == "ScoutDefense")
 		return true;
