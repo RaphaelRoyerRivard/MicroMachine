@@ -221,6 +221,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawResourcesProximity", debug, DrawResourcesProximity);
 			JSONTools::ReadBool("DrawCombatInformation", debug, DrawCombatInformation);
 			JSONTools::ReadBool("DrawPathfindingTiles", debug, DrawPathfindingTiles);
+			JSONTools::ReadBool("DrawBuildingBase", debug, DrawBuildingBase);
 			JSONTools::ReadBool("TimeControl", debug, TimeControl);
 		}
     }

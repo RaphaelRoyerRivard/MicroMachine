@@ -257,6 +257,8 @@ void BaseLocationManager::onFrame()
 
 		if (baseLocation != nullptr)
 		{
+			if (m_bot.Config().DrawBuildingBase)
+				m_bot.Map().drawLine(unit.getPosition(), baseLocation->getPosition(), sc2::Colors::Green);
 			baseLocation->setPlayerOccupying(Players::Self, true);
 			if (unit.getType().isResourceDepot())
 				baseLocation->setResourceDepot(unit);
