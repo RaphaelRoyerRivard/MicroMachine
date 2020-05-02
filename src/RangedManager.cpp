@@ -1273,12 +1273,13 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	{
 		return false;
 	}
-	
+
+	const float targetDist = Util::Dist(rangedUnit->pos, target->pos);
 	if (Util::IsEnemyHiddenOnHighGround(rangedUnit, target, m_bot))
 	{
 		// Check if the unit cannot just walk the ramp to reach the enemy
 		bool easilyWalkable = false;
-		if (AllowUnitToPathFind(rangedUnit, false))
+		if (targetDist <= 16 && AllowUnitToPathFind(rangedUnit, false))
 		{
 			const auto pathDistance = Util::PathFinding::FindOptimalPathDistance(rangedUnit, target->pos, true, m_bot);
 			if (pathDistance >= 0 && pathDistance <= 15)
@@ -1295,7 +1296,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		if (!Util::IsPositionUnderDetection(rangedUnit->pos, m_bot))
 		{
 			bool canFightCloaked = true;
-			const float targetDist = Util::Dist(rangedUnit->pos, target->pos);
 			if (targetDist > range)
 			{
 				const CCPosition closestAttackPosition = rangedUnit->pos + Util::Normalized(target->pos - rangedUnit->pos) * (targetDist - range);

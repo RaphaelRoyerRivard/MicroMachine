@@ -798,7 +798,7 @@ void CCBot::setUnits()
 		if (enemyUnit.getType().isBuilding() && enemyUnit.getBuildPercentage() < 1)
 			m_enemyBuildingsUnderConstruction.push_back(enemyUnit);
 
-		if (enemyUnit.isArmored() && !enemyUnit.getType().isBuilding())
+		if (enemyUnit.isArmored() && !enemyUnit.getType().isOverlord() && !enemyUnit.getType().isBuilding())
 			++armoredEnemies;
 
 		// If the unit is not were we last saw it, ignore it
@@ -1493,6 +1493,13 @@ void CCBot::IssueGameStartCheats()
 	// Test to reproduce bug where Reaper scout would not avoid influence
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter - towardsCenter * 2, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter, player1, 5);*/
+
+	// Test to reproduce bug where Reaper cannot move around Bunker (on WorldOfSleepersLE)
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, enemyLocation - towardsCenterY * 10, player2, 1);*/
+
+	// Test to reproduce bug where Cyclone cannot Lock-On to a bunker on high ground (on WorldOfSleepersLE)
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, enemyLocation - towardsCenterY * 15, player1, 1);
 }
 
 void CCBot::IssueCheats()
