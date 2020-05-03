@@ -1751,14 +1751,14 @@ const std::vector<Unit> CCBot::GetAllyGeyserUnits()
 		case CCRace::Protoss:
 		{
 			auto assimilator = GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR);//cannot be by reference, because its modified
-			auto& richAssimilator = GetAllyUnits(Util::GetRichAssimilatorId(*this));
+			auto& richAssimilator = GetAllyUnits(Util::GetRichAssimilatorId());
 			assimilator.insert(assimilator.end(), richAssimilator.begin(), richAssimilator.end());
 			return assimilator;
 		}
 		case CCRace::Zerg:
 		{
 			auto extractor = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_EXTRACTOR);//cannot be by reference, because its modified
-			auto& richExtractor = GetAllyUnits(Util::GetRichExtractorId(*this));
+			auto& richExtractor = GetAllyUnits(Util::GetRichExtractorId());
 			extractor.insert(extractor.end(), richExtractor.begin(), richExtractor.end());
 			return extractor;
 		}

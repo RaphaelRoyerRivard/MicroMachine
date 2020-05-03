@@ -21,7 +21,7 @@ public:
 	static sc2::UNIT_TYPEID getEnemyRefineryType(sc2::Race enemyRace);
 	static bool isTargetable(sc2::UnitTypeID unitTypeId);
 	static bool isDetector(sc2::UnitTypeID unitTypeId);
-	static bool isRefinery(sc2::UnitTypeID unitTypeId, CCBot & bot);
+	static bool isRefinery(sc2::UnitTypeID unitTypeId);
 
 #ifdef SC2API
     UnitType(const sc2::UnitTypeID & type, CCBot & bot);

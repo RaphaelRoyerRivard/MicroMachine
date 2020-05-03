@@ -91,6 +91,8 @@ struct Util::PathFinding::IMNode
 
 void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 {
+	richAssimilatorId = bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1980) : sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH;
+	richExtractorId = bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1981) : sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH;
 	switch (race)
 	{
 		case sc2::Race::Terran:
@@ -106,7 +108,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, bot);
-			Util::richRefineryType = UnitType(GetRichAssimilatorId(bot), bot);
+			Util::richRefineryType = UnitType(richAssimilatorId, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, bot);
 			break;
@@ -115,7 +117,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, bot);
-			Util::richRefineryType = UnitType(GetRichExtractorId(bot), bot);
+			Util::richRefineryType = UnitType(richExtractorId, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, bot);
 			break;
@@ -901,14 +903,14 @@ UnitType Util::GetWorkerType()
 	return workerType;
 }
 
-sc2::UNIT_TYPEID Util::GetRichAssimilatorId(CCBot & bot)
+sc2::UNIT_TYPEID Util::GetRichAssimilatorId()
 {
-	return bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1980) : sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH;
+	return richAssimilatorId;
 }
 
-sc2::UNIT_TYPEID Util::GetRichExtractorId(CCBot & bot)
+sc2::UNIT_TYPEID Util::GetRichExtractorId()
 {
-	return bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1981) : sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH;
+	return richExtractorId;
 }
 
 UnitType Util::GetRessourceDepotType()
