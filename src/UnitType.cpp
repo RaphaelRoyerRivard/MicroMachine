@@ -113,16 +113,16 @@ bool UnitType::isResourceDepot() const
 #endif
 }
 
-bool UnitType::isRefinery(sc2::UnitTypeID type)
+bool UnitType::isRefinery(sc2::UnitTypeID type, CCBot & bot)
 {
+	if (type.ToType() == Util::GetRichAssimilatorId(bot) || type.ToType() == Util::GetRichExtractorId(bot))
+		return true;
 	switch (type.ToType())
 	{
 	case sc2::UNIT_TYPEID::TERRAN_REFINERY:
 	case sc2::UNIT_TYPEID::TERRAN_REFINERYRICH:
 	case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR:
-	case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH:
 	case sc2::UNIT_TYPEID::ZERG_EXTRACTOR:
-	case sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH:
 		return true;
 	default:
 		return false;
@@ -131,7 +131,9 @@ bool UnitType::isRefinery(sc2::UnitTypeID type)
 
 bool UnitType::isRefinery() const
 {
-	return isRefinery(m_type);
+	if (!m_bot)
+		return false;
+	return isRefinery(m_type, *m_bot);
 }
 
 sc2::UNIT_TYPEID UnitType::getEnemyRefineryType(sc2::Race enemyRace)

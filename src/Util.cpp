@@ -106,7 +106,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH, bot);
+			Util::richRefineryType = UnitType(GetRichAssimilatorId(bot), bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, bot);
 			break;
@@ -115,7 +115,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH, bot);
+			Util::richRefineryType = UnitType(GetRichExtractorId(bot), bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, bot);
 			break;
@@ -899,6 +899,16 @@ UnitType Util::GetSupplyProvider()
 UnitType Util::GetWorkerType()
 {
 	return workerType;
+}
+
+sc2::UNIT_TYPEID Util::GetRichAssimilatorId(CCBot & bot)
+{
+	return bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1980) : sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH;
+}
+
+sc2::UNIT_TYPEID Util::GetRichExtractorId(CCBot & bot)
+{
+	return bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1981) : sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH;
 }
 
 UnitType Util::GetRessourceDepotType()

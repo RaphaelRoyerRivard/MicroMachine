@@ -277,6 +277,8 @@ namespace Util
 	UnitType		GetRichRefineryType();
 	UnitType        GetSupplyProvider();
 	UnitType        GetWorkerType();
+	sc2::UNIT_TYPEID GetRichAssimilatorId(CCBot & bot);
+	sc2::UNIT_TYPEID GetRichExtractorId(CCBot & bot);
     bool            IsZerg(const CCRace & race);
     bool            IsProtoss(const CCRace & race);
     bool            IsTerran(const CCRace & race);
