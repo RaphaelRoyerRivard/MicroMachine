@@ -21,9 +21,17 @@ CCBot::CCBot(std::string botVersion, bool realtime)
 {
 }
 
+CCBot::~CCBot()
+{
+	std::cout << "CCBot destructor" << std::endl;
+	std::cerr << "CCBot destructor" << std::endl;
+	CheckGameResult();
+}
+
 void CCBot::OnGameFullStart() {}
 void CCBot::OnGameEnd()
 {
+	CheckGameResult();
 	std::stringstream ss;
 	ss << "OnGameEnd ";
 	if (GetAllyUnits().size() > GetEnemyUnits().size())
@@ -1992,4 +2000,23 @@ void CCBot::drawTimeControl()
 std::mutex & CCBot::GetCommandMutex()
 {
 	return m_command_mutex;
+}
+
+void CCBot::CheckGameResult() const
+{
+	const uint32_t selfId = Util::GetSelfPlayerId(*this);
+	const auto & results = Observation()->GetResults();
+	for (const auto & playerResult : results)
+	{
+		std::stringstream ss;
+		if (playerResult.player_id == selfId)
+		{
+			// TODO save result
+			ss << "We";
+		}
+		else
+			ss << "Opponent";
+		ss << " (" << playerResult.player_id << ") got a result " << playerResult.result;
+		Util::Log(__FUNCTION__, ss.str(), *this);
+	}
 }

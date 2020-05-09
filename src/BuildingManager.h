@@ -40,7 +40,6 @@ class BuildingManager
 	void			castBuildingsAbilities();
 	void			RunProxyLogic();
 	void			LiftOrLandDamagedBuildings();
-	Building		CancelBuilding(Building b);
 	void			updateBaseBuildings();
 
     void            validateWorkersAndBuildings();		    // STEP 1
@@ -102,6 +101,9 @@ public:
 
 	void				updatePreviousBuildings();
 	void				updatePreviousBaseBuildings();
+	
+	Building			CancelBuilding(Building b);
+	Building			getBuildingOfBuilder(const Unit & builder) const;
 
 	BuildingPlacer& getBuildingPlacer();
 

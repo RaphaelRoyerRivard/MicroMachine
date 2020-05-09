@@ -1749,6 +1749,16 @@ Building BuildingManager::CancelBuilding(Building b)
 	return Building();
 }
 
+Building BuildingManager::getBuildingOfBuilder(const Unit & builder) const
+{
+	for (const auto & building : m_buildings)
+	{
+		if (building.builderUnit == builder)
+			return building;
+	}
+	return Building();
+}
+
 void BuildingManager::updateBaseBuildings()
 {
 	m_baseBuildings.clear();

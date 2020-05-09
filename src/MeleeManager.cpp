@@ -133,7 +133,10 @@ void MeleeManager::executeMicro()
 		{
 			if (Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(meleeUnit.getPosition()), meleeUnit.getUnitPtr(), m_bot) > 0)
 			{
-				CCPosition fleePosition = Util::PathFinding::FindOptimalPathToSafety(meleeUnit.getUnitPtr(), m_order.getPosition(), true, m_bot);
+				CCPosition goal = m_order.getPosition();
+				if (m_bot.Workers().getWorkerData().isProxyWorker(meleeUnit))
+					goal = m_bot.GetEnemyStartLocations().empty() ? m_bot.Map().center() : m_bot.GetEnemyStartLocations()[0];
+				CCPosition fleePosition = Util::PathFinding::FindOptimalPathToSafety(meleeUnit.getUnitPtr(), goal, true, m_bot);
 				if (fleePosition != CCPosition())
 				{
 					Micro::SmartMove(meleeUnit.getUnitPtr(), fleePosition, m_bot);

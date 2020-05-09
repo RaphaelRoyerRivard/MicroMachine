@@ -2548,7 +2548,7 @@ void Util::Log(const std::string & function, CCBot & bot)
 	std::cout << bot.GetGameLoop() << ": " << function << std::endl;
 }
 
-void Util::Log(const std::string & function, const std::string & message, CCBot & bot)
+void Util::Log(const std::string & function, const std::string & message, const CCBot & bot)
 {
 	file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 	std::cout << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
@@ -2694,7 +2694,7 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 	return armyRating;
 }
 
-int Util::GetSelfPlayerId(CCBot & bot)
+int Util::GetSelfPlayerId(const CCBot & bot)
 {
 	return bot.Observation()->GetGameInfo().player_info[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
 }

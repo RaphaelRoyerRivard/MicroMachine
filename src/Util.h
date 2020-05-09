@@ -268,7 +268,7 @@ namespace Util
 	void			DebugLog(const std::string & function, const std::string & message, CCBot & bot);
 	void			LogNoFrame(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, CCBot & bot);
-	void			Log(const std::string & function, const std::string & message, CCBot & bot);
+	void			Log(const std::string & function, const std::string & message, const CCBot & bot);
 	void			ClearChat(CCBot & bot);
 	int				GetTimeControlSpeed();
 	int				GetTimeControlMaxSpeed();
@@ -307,5 +307,5 @@ namespace Util
 
 	float SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
 	float SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, CCBot & bot);
-	int GetSelfPlayerId(CCBot & bot);
+	int GetSelfPlayerId(const CCBot & bot);
 };

@@ -694,7 +694,7 @@ int CombatAnalyzer::getUnitUpgradeArmor(const sc2::Unit* unit)
 		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTBURROWEDMP:
 		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTMP:
 		case sc2::UNIT_TYPEID::ZERG_ULTRALISK:
-			//TODO Missing burrowed Ultralisk
+		case sc2::UNIT_TYPEID::ZERG_ULTRALISKBURROWED:
 			//TODO Might want to check for chininous plating (+2 armor on Ultras), would have to change the switch a little.
 		case sc2::UNIT_TYPEID::ZERG_ZERGLING:
 		case sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED:
