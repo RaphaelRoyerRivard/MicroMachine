@@ -53,7 +53,7 @@ void CombatCommander::onStart()
 	m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
 	// the squad that consists of fleeing workers
-	SquadOrder fleeOrder(SquadOrderTypes::Retreat, CCPosition(), DefaultOrderRadius, "Worker flee");
+	SquadOrder fleeOrder(SquadOrderTypes::Retreat, m_bot.GetStartLocation(), DefaultOrderRadius, "Worker flee");
 	m_squadData.addSquad("WorkerFlee", Squad("WorkerFlee", fleeOrder, WorkerFleePriority, m_bot));
 
 	// the harass attack squad that will pressure the enemy's main base workers
@@ -723,6 +723,43 @@ void CombatCommander::updateWorkerFleeSquad()
 		}
 		else
 		{
+			// Cancel the proxy building in case our proxy worker is caught by a worker rush
+			if (isProxyWorker && groundThreat)
+			{
+				auto building = m_bot.Buildings().getBuildingOfBuilder(worker);
+				if (building.status != BuildingStatus::UnderConstruction)
+				{
+					int closeEnemyWorkers = 0;
+					const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
+					for (const auto & enemyUnit : enemyUnits)
+					{
+						if (enemyUnit.getType().isWorker() && Util::DistSq(enemyUnit, worker) < 10 * 10)
+						{
+							++closeEnemyWorkers;
+							if (closeEnemyWorkers > 1)
+								break;
+						}
+					}
+					if (closeEnemyWorkers > 1)
+					{
+						if (building.status == BuildingStatus::Assigned)
+						{
+							auto canceledBuilding = m_bot.Buildings().CancelBuilding(building);
+							if (canceledBuilding == building)
+								m_bot.Buildings().removeBuildings({ canceledBuilding });
+							m_bot.Strategy().setStartingStrategy(STANDARD);
+							m_bot.Commander().Production().clearQueue();
+						}
+						// Put it in the squad if it is not defending or already in the squad
+						if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
+						{
+							m_bot.Workers().setCombatWorker(worker);
+							workerFleeSquad.addUnit(worker);
+						}
+						continue;
+					}
+				}
+			}
 			const auto squad = m_squadData.getUnitSquad(worker);
 			if(squad != nullptr && squad == &workerFleeSquad)
 			{
@@ -1550,17 +1587,18 @@ void CombatCommander::updateDefenseSquads()
 
 			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
 			{
-				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
+				if (unit.getType().isWorker())
+					++enemyWorkers;
+				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4032 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
 				{
-					// Need at least 3 workers for a worker rush (or 1 if the previous frame was a worker rush)
-					if (!m_bot.Strategy().isWorkerRushed() && enemyWorkers < 3)
-						++enemyWorkers;
-					else
+					// Need at least 3 workers for a worker rush
+					if (enemyWorkers > 2)
 						workerRushed = true;
 				}
 				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 7320)	// first 5 minutes
 				{
-					earlyRushed = true;
+					if (!unit.getType().isWorker() || enemyWorkers > 2)
+						earlyRushed = true;
 				}
 
 				if (!unit.getType().isWorker())

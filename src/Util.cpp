@@ -91,6 +91,8 @@ struct Util::PathFinding::IMNode
 
 void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 {
+	richAssimilatorId = bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1980) : sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH;
+	richExtractorId = bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1981) : sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH;
 	switch (race)
 	{
 		case sc2::Race::Terran:
@@ -106,7 +108,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH, bot);
+			Util::richRefineryType = UnitType(richAssimilatorId, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, bot);
 			break;
@@ -115,7 +117,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH, bot);
+			Util::richRefineryType = UnitType(richExtractorId, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, bot);
 			break;
@@ -899,6 +901,16 @@ UnitType Util::GetSupplyProvider()
 UnitType Util::GetWorkerType()
 {
 	return workerType;
+}
+
+sc2::UNIT_TYPEID Util::GetRichAssimilatorId()
+{
+	return richAssimilatorId;
+}
+
+sc2::UNIT_TYPEID Util::GetRichExtractorId()
+{
+	return richExtractorId;
 }
 
 UnitType Util::GetRessourceDepotType()
@@ -2536,7 +2548,7 @@ void Util::Log(const std::string & function, CCBot & bot)
 	std::cout << bot.GetGameLoop() << ": " << function << std::endl;
 }
 
-void Util::Log(const std::string & function, const std::string & message, CCBot & bot)
+void Util::Log(const std::string & function, const std::string & message, const CCBot & bot)
 {
 	file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 	std::cout << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
@@ -2682,7 +2694,7 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 	return armyRating;
 }
 
-int Util::GetSelfPlayerId(CCBot & bot)
+int Util::GetSelfPlayerId(const CCBot & bot)
 {
 	return bot.Observation()->GetGameInfo().player_info[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
 }

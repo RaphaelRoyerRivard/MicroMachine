@@ -4,6 +4,7 @@
 //#define NO_EXPANSION
 //#define NO_PRODUCTION
 //#define NO_BUILDING
+//#define NO_MICRO
 
 #ifdef PUBLIC_RELEASE
 #undef NO_UNITS
@@ -123,6 +124,7 @@ class CCBot : public sc2::Agent
 public:
 
 	CCBot(std::string botVersion, bool realtime);
+	~CCBot();
 
 	void OnGameFullStart() override;
     void OnGameStart() override;
@@ -205,4 +207,5 @@ public:
 	void SetOpponentId(std::string opponentId) { m_opponentId = opponentId; }
 	bool IsPlayer1Human() const { return m_player1IsHuman; }
 	void SetPlayer1IsHuman(bool player1Human) { m_player1IsHuman = player1Human; }
+	void CheckGameResult() const;
 };

@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.9.9",
+        "BotVersion"                : "1.9.32",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -25,7 +25,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "WorldofSleepersLE.SC2Map",
+        "MapFile"                   : "ZenLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50
@@ -34,12 +34,12 @@
     "RandomMaps":
     [
         "WorldofSleepersLE.SC2Map",
-        "AcropolisLE.SC2Map",
-        "WintersGateLE.SC2Map",
-        "ThunderbirdLE.SC2Map",
         "TritonLE.SC2Map",
         "EphemeronLE.SC2Map",
-        "DiscoBloodbathLE.SC2Map"
+        "EternalEmpireLE.SC2Map",
+        "NightshadeLE.SC2Map",
+        "SimulacrumLE.SC2Map",
+        "ZenLE.SC2Map"
     ],
 	
 	"AllRandomMaps":
@@ -100,7 +100,7 @@
         "ScoutHarassEnemy"          : true,
         "EnableMultiThreading"      : false,
         "TournamentMode"            : false,
-        "StarCraft2Version"         : "4.10.4"
+        "StarCraft2Version"         : "4.11.4"
     },
     
     "UCTConsideringDurations" :
@@ -152,7 +152,7 @@
         "DrawSquadInfo"             : true,
         "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : false,
+        "DrawReservedBuildingTiles" : true,
         "DrawUnitPowerInfo"         : false,
         "DrawHarassInfo"            : true,
         "DrawMemoryInfo"            : false,
@@ -165,7 +165,8 @@
         "DrawRangedUnitActions"     : false,
         "DrawResourcesProximity"    : false,
         "DrawCombatInformation"     : false,
-        "DrawPathfindingTiles"      : true
+        "DrawPathfindingTiles"      : true,
+        "DrawBuildingBase"          : false
     },
     
     "Modules" :

@@ -21,9 +21,17 @@ CCBot::CCBot(std::string botVersion, bool realtime)
 {
 }
 
+CCBot::~CCBot()
+{
+	std::cout << "CCBot destructor" << std::endl;
+	std::cerr << "CCBot destructor" << std::endl;
+	CheckGameResult();
+}
+
 void CCBot::OnGameFullStart() {}
 void CCBot::OnGameEnd()
 {
+	CheckGameResult();
 	std::stringstream ss;
 	ss << "OnGameEnd ";
 	if (GetAllyUnits().size() > GetEnemyUnits().size())
@@ -798,7 +806,7 @@ void CCBot::setUnits()
 		if (enemyUnit.getType().isBuilding() && enemyUnit.getBuildPercentage() < 1)
 			m_enemyBuildingsUnderConstruction.push_back(enemyUnit);
 
-		if (enemyUnit.isArmored() && !enemyUnit.getType().isBuilding())
+		if (enemyUnit.isArmored() && !enemyUnit.getType().isOverlord() && !enemyUnit.getType().isBuilding())
 			++armoredEnemies;
 
 		// If the unit is not were we last saw it, ignore it
@@ -1493,6 +1501,13 @@ void CCBot::IssueGameStartCheats()
 	// Test to reproduce bug where Reaper scout would not avoid influence
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter - towardsCenter * 2, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter, player1, 5);*/
+
+	// Test to reproduce bug where Reaper cannot move around Bunker (on WorldOfSleepersLE)
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, enemyLocation - towardsCenterY * 10, player2, 1);*/
+
+	// Test to reproduce bug where Cyclone cannot Lock-On to a bunker on high ground (on WorldOfSleepersLE)
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, enemyLocation - towardsCenterY * 15, player1, 1);
 }
 
 void CCBot::IssueCheats()
@@ -1744,14 +1759,14 @@ const std::vector<Unit> CCBot::GetAllyGeyserUnits()
 		case CCRace::Protoss:
 		{
 			auto assimilator = GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR);//cannot be by reference, because its modified
-			auto& richAssimilator = GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH);
+			auto& richAssimilator = GetAllyUnits(Util::GetRichAssimilatorId());
 			assimilator.insert(assimilator.end(), richAssimilator.begin(), richAssimilator.end());
 			return assimilator;
 		}
 		case CCRace::Zerg:
 		{
 			auto extractor = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_EXTRACTOR);//cannot be by reference, because its modified
-			auto& richExtractor = GetAllyUnits(sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH);
+			auto& richExtractor = GetAllyUnits(Util::GetRichExtractorId());
 			extractor.insert(extractor.end(), richExtractor.begin(), richExtractor.end());
 			return extractor;
 		}
@@ -1985,4 +2000,23 @@ void CCBot::drawTimeControl()
 std::mutex & CCBot::GetCommandMutex()
 {
 	return m_command_mutex;
+}
+
+void CCBot::CheckGameResult() const
+{
+	const uint32_t selfId = Util::GetSelfPlayerId(*this);
+	const auto & results = Observation()->GetResults();
+	for (const auto & playerResult : results)
+	{
+		std::stringstream ss;
+		if (playerResult.player_id == selfId)
+		{
+			// TODO save result
+			ss << "We";
+		}
+		else
+			ss << "Opponent";
+		ss << " (" << playerResult.player_id << ") got a result " << playerResult.result;
+		Util::Log(__FUNCTION__, ss.str(), *this);
+	}
 }

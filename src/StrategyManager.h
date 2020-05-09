@@ -106,6 +106,7 @@ public:
 
     const Strategy & getCurrentStrategy() const;
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
+	void setStartingStrategy(StartingStrategy startingStrategy) { m_startingStrategy = startingStrategy; }
 	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
 	bool isProxyStartingStrategy() const;
 	bool isProxyFactoryStartingStrategy() const;

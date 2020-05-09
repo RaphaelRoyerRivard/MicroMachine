@@ -19,6 +19,8 @@ namespace Util
 	static CombatPredictor* m_simulator;
 
 	//used for optimisation
+	static sc2::UNIT_TYPEID richAssimilatorId;
+	static sc2::UNIT_TYPEID richExtractorId;
 	static UnitType refineryType;
 	static UnitType richRefineryType;
 	static UnitType depotType;
@@ -266,7 +268,7 @@ namespace Util
 	void			DebugLog(const std::string & function, const std::string & message, CCBot & bot);
 	void			LogNoFrame(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, CCBot & bot);
-	void			Log(const std::string & function, const std::string & message, CCBot & bot);
+	void			Log(const std::string & function, const std::string & message, const CCBot & bot);
 	void			ClearChat(CCBot & bot);
 	int				GetTimeControlSpeed();
 	int				GetTimeControlMaxSpeed();
@@ -277,6 +279,8 @@ namespace Util
 	UnitType		GetRichRefineryType();
 	UnitType        GetSupplyProvider();
 	UnitType        GetWorkerType();
+	sc2::UNIT_TYPEID GetRichAssimilatorId();
+	sc2::UNIT_TYPEID GetRichExtractorId();
     bool            IsZerg(const CCRace & race);
     bool            IsProtoss(const CCRace & race);
     bool            IsTerran(const CCRace & race);
@@ -303,5 +307,5 @@ namespace Util
 
 	float SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
 	float SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, CCBot & bot);
-	int GetSelfPlayerId(CCBot & bot);
+	int GetSelfPlayerId(const CCBot & bot);
 };

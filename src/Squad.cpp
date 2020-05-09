@@ -109,6 +109,10 @@ void Squad::onFrame()
             m_rangedManager.setOrder(m_order);
 			m_bot.StopProfiling("0.10.4.1.3      SetSquadTargets");
 
+#ifdef NO_MICRO
+			return;
+#endif
+			
 			m_bot.StartProfiling("0.10.4.1.4      ExecuteMeleeMicro");
             m_meleeManager.executeMicro();
 			m_bot.StopProfiling("0.10.4.1.4      ExecuteMeleeMicro");
