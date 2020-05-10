@@ -589,7 +589,22 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 	for (auto & base : getBaseLocations())
 	{
 		// skip mineral only and starting locations (TODO: fix this)
-		if (base->isMineralOnly() || base->isStartLocation() || base->isOccupiedByPlayer(Players::Self) || base->isOccupiedByPlayer(Players::Enemy))
+		if (base->isMineralOnly() || base->isStartLocation())
+		{
+			continue;
+		}
+		
+		if (base->isOccupiedByPlayer(Players::Self))
+		{
+			//Allow to expand to a base location we already own if it doesn't have a depot yet (or it was moved/destroyed).
+			auto depot = base->getResourceDepot();
+			if (depot.isValid() && depot.isAlive())
+			{
+				continue;
+			}
+		}
+		
+		if (base->isOccupiedByPlayer(Players::Enemy))
 		{
 			continue;
 		}

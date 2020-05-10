@@ -564,11 +564,24 @@ void WorkerManager::handleGasWorkers()
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
 	{
 		auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
+		auto depot = base->getResourceDepot();
+		bool hasUsableDepot = true;
+		if (!depot.isValid() || depot.getUnitPtr()->build_progress < 1)//Do not using the gas bunker with an unfinished or inexistant depot.
+		{
+			hasUsableDepot = false;
+		}
+
 		auto & workers = m_bot.Workers().m_workerData.getAssignedWorkersRefinery(geyser);
 		for (auto & bunker : base->getGasBunkers())
 		{
 			if (!bunker.isCompleted())
 			{
+				continue;
+			}
+
+			if (!hasUsableDepot)//If there is no depot or if its not finished, empty the bunker.
+			{
+				Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
 				continue;
 			}
 
