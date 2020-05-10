@@ -980,7 +980,11 @@ void CombatCommander::updateScoutSquad()
 		return;
 
 	Squad & scoutSquad = m_squadData.getSquad("Scout");
-	if (scoutSquad.getUnits().empty())
+	if (m_combatUnits.size() == 1)
+	{
+		scoutSquad.clear();	// Prevent our only combat unit to scout instead of fighting
+	}
+	else if (scoutSquad.getUnits().empty())
 	{
 		Unit bestCandidate;
 		float distanceFromBase = 0.f;
@@ -1200,9 +1204,11 @@ void CombatCommander::updateAttackSquads()
 			for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
 			{
 				const auto & enemyUnit = enemyUnitPair.second;
-				if (enemyUnit.getType().isCombatUnit() && !enemyUnit.getType().isBuilding())
+				if (enemyUnit.getType().isCombatUnit())
 				{
-					const bool canAttack = (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot)) || (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
+					const bool canAttack = (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY && enemyUnit.isPowered())
+										|| (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot))
+										|| (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
 					if (canAttack)
 						enemyUnits.push_back(enemyUnit.getUnitPtr());
 				}

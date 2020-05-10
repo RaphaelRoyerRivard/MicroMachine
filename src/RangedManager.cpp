@@ -1411,15 +1411,26 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		if (Util::Contains(enemy, allThreatsSet))
 			continue;
 		bool closeToThreat = false;
+		bool isShieldBattery = enemy->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY;
+		if (isShieldBattery && !enemy->is_powered)
+			continue;
 		for (const auto threat : allThreatsSet)
 		{
-			if (Util::DistSq(threat->pos, enemy->pos) <= 3.f * 3.f)
+			if (isShieldBattery)
+			{
+				if (threat->unit_type != sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY && Util::Dist(threat->pos, enemy->pos) <= 6.f + enemy->radius + threat->radius)
+				{
+					allThreatsSet.insert(enemy);
+					break;
+				}
+			}
+			else if (Util::DistSq(threat->pos, enemy->pos) <= 3.f * 3.f)
 			{
 				closeToThreat = true;
 				break;
 			}
 		}
-		if (!closeToThreat)
+		if (!closeToThreat || isShieldBattery)
 			continue;
 		const auto enemyTarget = getTarget(enemy, allyCombatUnits, false);
 		if (!enemyTarget)

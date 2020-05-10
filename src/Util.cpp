@@ -2696,5 +2696,8 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 
 int Util::GetSelfPlayerId(const CCBot & bot)
 {
-	return bot.Observation()->GetGameInfo().player_info[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
+	const auto & playerInfo = bot.Observation()->GetGameInfo().player_info;
+	if (playerInfo.empty())
+		return -1;
+	return playerInfo[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
 }

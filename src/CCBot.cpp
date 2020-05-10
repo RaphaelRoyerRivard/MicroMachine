@@ -1508,6 +1508,12 @@ void CCBot::IssueGameStartCheats()
 
 	// Test to reproduce bug where Cyclone cannot Lock-On to a bunker on high ground (on WorldOfSleepersLE)
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, enemyLocation - towardsCenterY * 15, player1, 1);
+	
+	// Test to check if Marauders know they won't be able to win against Stalkers with Shield Batteries
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 5, player2, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, mapCenter + towardsCenter * 5, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, mapCenter + towardsCenter * 6, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
@@ -2005,6 +2011,8 @@ std::mutex & CCBot::GetCommandMutex()
 void CCBot::CheckGameResult() const
 {
 	const uint32_t selfId = Util::GetSelfPlayerId(*this);
+	if (selfId < 0)
+		return;
 	const auto & results = Observation()->GetResults();
 	for (const auto & playerResult : results)
 	{
