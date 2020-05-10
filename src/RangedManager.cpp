@@ -53,21 +53,14 @@ RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
 void RangedManager::setTargets(const std::vector<Unit> & targets)
 {
     std::vector<Unit> rangedUnitTargets;
-	bool filterPassiveBuildings = false;
 	// We don't want to attack buildings (like a wall or proxy) if we never reached the enemy base
 	const BaseLocation* enemyStartingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-	const bool allowEarlyBuildingAttack = m_bot.Commander().Combat().getAllowEarlyBuildingAttack();
-	if (!allowEarlyBuildingAttack && enemyStartingBase && !m_bot.Map().isExplored(enemyStartingBase->getPosition()))
-	{
-		filterPassiveBuildings = true;
-	}
     for (auto & target : targets)
     {
         const auto targetPtr = target.getUnitPtr();
         if (!targetPtr) { continue; }
         if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_EGG) { continue; }
         if (targetPtr->unit_type == sc2::UNIT_TYPEID::ZERG_LARVA) { continue; }
-		if (filterPassiveBuildings && target.getType().isBuilding() && !target.getType().isCombatUnit() && target.getUnitPtr()->unit_type != sc2::UNIT_TYPEID::ZERG_CREEPTUMOR) { continue; }
 
         rangedUnitTargets.push_back(target);
     }
@@ -1412,7 +1405,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			continue;
 		bool closeToThreat = false;
 		bool isShieldBattery = enemy->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY;
-		if (isShieldBattery && !enemy->is_powered)
+		if (isShieldBattery && (!enemy->is_powered || enemy->build_progress < 1.f))
 			continue;
 		for (const auto threat : allThreatsSet)
 		{
@@ -1496,7 +1489,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	m_bot.StopProfiling("0.10.4.1.5.1.5.3          CalcThreatsPower");
 
 	// If our units have 2 more range, they should kite, not trade
-	if (minUnitRange - maxThreatRange >= 2.f)
+	if (!morphFlyingVikings && minUnitRange - maxThreatRange >= 2.f)
 	{
 		m_combatSimulationResults[closeUnitsSet] = false;
 		return false;

@@ -95,7 +95,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 			const float targetThreatRange = Util::getThreatRange(attacker, target, m_bot);
 			const float threatBuffer = targetThreatRange - targetRange;
 			const float damageDistance = distance - targetRange;
-			const float progression = damageDistance / threatBuffer;	// Between 0 and 1. The closer the enemy is, the closer to 0 it gets
+			const float progression = std::max(0.f, std::min(1.f, damageDistance / threatBuffer));	// Between 0 and 1. The closer the enemy is, the closer to 0 it gets
 			closeMeleeUnitBonus = 2 - progression;
 		}
 	}

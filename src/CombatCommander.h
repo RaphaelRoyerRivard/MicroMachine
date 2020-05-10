@@ -251,8 +251,6 @@ public:
 	CCPosition getMainAttackLocation();
 	void updateBlockedTilesWithNeutral();
 	void SetLogVikingActions(bool log);
-	bool getAllowEarlyBuildingAttack() const { return m_allowEarlyBuildingAttack; }
-	void setAllowEarlyBuildingAttack(bool allowEarlyBuildingAttack) { m_allowEarlyBuildingAttack = allowEarlyBuildingAttack; }
 	bool ShouldSkipFrame(const sc2::Unit * combatUnit) const;
 	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
 	void CleanActions(const std::vector<Unit> &rangedUnits);
