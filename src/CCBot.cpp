@@ -1338,7 +1338,7 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter + towardsCenter * 2.5, player2, 1);*/
 
 	// Resource cheat
-	Debug()->DebugGiveAllResources();
+	//Debug()->DebugGiveAllResources();
 
 	// Test for reproducing pathing bugs with Cyclones in CatalystLE
 	/*const CCPosition leftLocation(53, 21);
