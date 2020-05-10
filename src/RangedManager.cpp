@@ -334,7 +334,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	bool cycloneShouldStayCloseToTarget = false;
 	if (isCyclone)
 	{
-		ExecuteCycloneLogic(rangedUnit, isUnitDisabled, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, cycloneShouldStayCloseToTarget, rangedUnits, threats, target, goal, goalDescription, rangedUnitAbilities);
+		ExecuteCycloneLogic(rangedUnit, isUnitDisabled, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, cycloneShouldStayCloseToTarget, rangedUnits, threats, rangedUnitTargets, target, goal, goalDescription, rangedUnitAbilities);
 	}
 
 	const auto distSqToTarget = target ? Util::DistSq(rangedUnit->pos, target->pos) : 0.f;
@@ -1048,7 +1048,7 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 	return dirVec;
 }
 
-const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, bool & lockOnAvailable, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * target, sc2::AvailableAbilities & abilities)
+const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, bool & lockOnAvailable, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Units & rangedUnitTargets, const sc2::Unit * target, sc2::AvailableAbilities & abilities)
 {
 	const uint32_t currentFrame = m_bot.GetCurrentFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
@@ -1091,7 +1091,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 	// Check if the Cyclone would have a better Lock-On target
 	if (shouldUseLockOn)
 	{
-		if (!threats.empty())
+		if (!rangedUnitTargets.empty())
 		{
 			const auto cycloneHeight = m_bot.Map().terrainHeight(cyclone->pos);
 			auto & abilityCastingRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
@@ -1108,17 +1108,17 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			}
 			const sc2::Unit * bestTarget = nullptr;
 			float bestScore = 0.f;
-			for(const auto threat : threats)
+			for(const auto potentialTarget : rangedUnitTargets)
 			{
 				// Do not Lock On on workers
-				if (UnitType(threat->unit_type, m_bot).isWorker())
+				if (UnitType(potentialTarget->unit_type, m_bot).isWorker())
 					continue;
 				// Do not Lock On on units that are already Locked On unless they have a lot of hp
 				// Will target the unit only if it can absorb more than 3 missiles (20 damage each) per Cyclone Locked On to it
-				const auto it = lockedOnTargets.find(threat);
-				if (it != lockedOnTargets.end() && threat->health + threat->shield <= it->second * 60)
+				const auto it = lockedOnTargets.find(potentialTarget);
+				if (it != lockedOnTargets.end() && potentialTarget->health + potentialTarget->shield <= it->second * 60)
 					continue;
-				const float threatHeight = m_bot.Map().terrainHeight(threat->pos);
+				const float threatHeight = m_bot.Map().terrainHeight(potentialTarget->pos);
 				if (threatHeight > cycloneHeight)
 				{
 					bool hasGoodViewOfUnit = false;
@@ -1127,7 +1127,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 						const auto allyUnit = allyUnitPair.second.getUnitPtr();
 						if (allyUnit == cyclone)
 							continue;
-						const auto canSeeEnemy = Util::AllyUnitSeesEnemyUnit(allyUnit, threat, m_bot);
+						const auto canSeeEnemy = Util::AllyUnitSeesEnemyUnit(allyUnit, potentialTarget, m_bot);
 						if(canSeeEnemy)
 						{
 							hasGoodViewOfUnit = true;
@@ -1137,32 +1137,32 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 					if(!hasGoodViewOfUnit)
 						continue;
 				}
-				const float dist = Util::Dist(cyclone->pos, threat->pos) - threat->radius;
-				if (shouldHeal && dist > partialLockOnRange + threat->radius)
+				const float dist = Util::Dist(cyclone->pos, potentialTarget->pos) - potentialTarget->radius;
+				if (shouldHeal && dist > partialLockOnRange + potentialTarget->radius)
 					continue;
-				if (threat->display_type == sc2::Unit::Hidden)
+				if (potentialTarget->display_type == sc2::Unit::Hidden)
 					continue;
 				// The lower the better
 				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 3.f);
-				const auto healthScore = 0.25f * (threat->health + threat->shield * 1.5f);
+				const auto healthScore = 0.25f * (potentialTarget->health + potentialTarget->shield * 1.5f);
 				// The higher the better
-				const auto energyScore = 0.25f * threat->energy;
-				const auto detectorScore = 15 * (threat->detect_range > 0.f);
-				const auto threatRange = Util::GetAttackRangeForTarget(threat, cyclone, m_bot);
-				const auto threatDps = Util::GetDpsForTarget(threat, cyclone, m_bot);
+				const auto energyScore = 0.25f * potentialTarget->energy;
+				const auto detectorScore = 15 * (potentialTarget->detect_range > 0.f);
+				const auto threatRange = Util::GetAttackRangeForTarget(potentialTarget, cyclone, m_bot);
+				const auto threatDps = Util::GetDpsForTarget(potentialTarget, cyclone, m_bot);
 				const float powerScore = threatRange * threatDps * 1.5f;
-				const float speedScore = Util::getSpeedOfUnit(threat, m_bot) * 6.f;
+				const float speedScore = Util::getSpeedOfUnit(potentialTarget, m_bot) * 6.f;
 				auto armoredScore = 0.f;
 				if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
 				{
-					const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
+					const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(potentialTarget->unit_type, m_bot);
 					armoredScore = 15 * Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes);
 				}
-				const float nydusBonus = threat->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && threat->build_progress < 1.f ? 10000.f : 0.f;
+				const float nydusBonus = potentialTarget->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && potentialTarget->build_progress < 1.f ? 10000.f : 0.f;
 				const float score = energyScore + detectorScore + armoredScore + powerScore + speedScore + nydusBonus - healthScore - distanceScore;
 				if(!bestTarget || score > bestScore)
 				{
-					bestTarget = threat;
+					bestTarget = potentialTarget;
 					bestScore = score;
 				}
 			}
@@ -1843,10 +1843,10 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 	}
 }
 
-void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDisabled, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Unit * & target, CCPosition & goal, std::string & goalDescription, sc2::AvailableAbilities & abilities)
+void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDisabled, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Units & rangedUnitTargets, const sc2::Unit * & target, CCPosition & goal, std::string & goalDescription, sc2::AvailableAbilities & abilities)
 {
 	bool lockOnAvailable;
-	target = ExecuteLockOnLogic(cyclone, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, lockOnAvailable, rangedUnits, threats, target, abilities);
+	target = ExecuteLockOnLogic(cyclone, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, lockOnAvailable, rangedUnits, threats, rangedUnitTargets, target, abilities);
 
 	// If the Cyclone has a its Lock-On on a target with a big range (like a Tempest or Tank)
 	if (!shouldAttack && !cycloneShouldUseLockOn && !isUnitDisabled)

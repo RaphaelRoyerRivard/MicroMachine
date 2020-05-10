@@ -100,7 +100,7 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit, bool m
 {
 	//Handle stopping a job
 	int previousJob = getWorkerJob(worker);
-	const int spamOrderDuring = 90;//1 second is 24.4 frames, 90 / 15 is 6 attemps.
+	const int spamOrderDuring = 90;//1 second is 22.4 frames, 90 / 15 is 6 attempts.
 	if (previousJob == WorkerJobs::Gas)
 	{
 		m_reorderedGasWorker[worker] = std::pair<Unit, int>(jobUnit, spamOrderDuring);

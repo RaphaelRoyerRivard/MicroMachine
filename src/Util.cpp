@@ -1079,6 +1079,11 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 
 	for (auto & cluster : unitClusters)
 	{
+		if (cluster.m_units.empty())
+		{
+			cluster.m_center = CCPosition();
+			continue;
+		}
 		CCPosition center;
 		for(const auto unit : cluster.m_units)
 		{
@@ -2279,6 +2284,8 @@ sc2::Point2D Util::CalcLinearRegression(const std::vector<const sc2::Unit *> & u
 {
     float sumX = 0, sumY = 0, sumXSqr = 0, sumXY = 0, avgX, avgY, numerator, denominator, slope;
     size_t size = units.size();
+	if (size == 0)
+		return sc2::Point2D();
     for (auto unit : units)
     {
         sumX += unit->pos.x;
@@ -2426,6 +2433,8 @@ sc2::Point2DI Util::ConvertWorldToCamera(const sc2::Point2D camera_world, const 
     float camera_size = gameInfo->options.feature_layer.camera_width;
     int image_width = gameInfo->options.feature_layer.map_resolution_x;
     int image_height = gameInfo->options.feature_layer.map_resolution_y;
+	assert(image_width > 0);
+	assert(image_height > 0);
 
     // Pixels always cover a square amount of world space. The scale is determined
     // by making the shortest axis of the camera match the requested camera_size.
@@ -2440,6 +2449,7 @@ sc2::Point2DI Util::ConvertWorldToCamera(const sc2::Point2D camera_world, const 
     float image_relative_x = world.x - image_origin_x;
     float image_relative_y = image_origin_y - world.y;
 
+	assert(pixel_size > 0);
     int image_x = static_cast<int>(image_relative_x / pixel_size);
     int image_y = static_cast<int>(image_relative_y / pixel_size);
 
@@ -2659,7 +2669,7 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 	for (const auto unit : units)
 	{
 		const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
-		armySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit->health / unit->health_max);
+		armySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit->health / std::max(1.f, unit->health_max));
 	}
 
 	CombatUpgrades player1upgrades = {};
@@ -2690,7 +2700,7 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 			resultArmySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit.health / unit.health_max);
 		}
 	}
-	const float armyRating = resultArmySupplyScore / armySupplyScore;
+	const float armyRating = resultArmySupplyScore / std::max(1.f, armySupplyScore);
 	return armyRating;
 }
 

@@ -2141,7 +2141,7 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 
 bool CombatCommander::WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const
 {
-	const auto workerSpeed = Util::getSpeedOfUnit(worker, m_bot);
+	const auto workerSpeed = std::max(1.f, Util::getSpeedOfUnit(worker, m_bot));
 	bool onlyWorkerThreats = true;
 	const auto threats = Util::getThreats(worker, enemyUnits, m_bot);
 	for (const auto threat : threats)
