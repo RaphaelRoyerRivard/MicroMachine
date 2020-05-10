@@ -299,7 +299,7 @@ bool Squad::needsToRetreat()
 
 	float meleeSpeed = m_meleeManager.getAverageSquadSpeed() * m_meleeManager.getUnits().size();
 	float rangedSpeed = m_rangedManager.getAverageSquadSpeed() * m_rangedManager.getUnits().size();
-	float averageSpeed = (meleeSpeed + rangedSpeed) / m_units.size();
+	float averageSpeed = m_units.empty() ? 0 : (meleeSpeed + rangedSpeed) / m_units.size();
 	const std::vector<Unit> visibleTargets = calcVisibleTargets();
 	float averageTargetsSpeed = Util::getAverageSpeedOfUnits(visibleTargets, m_bot);
 	//TODO also consider the range (if targets are not in range, we should still back)

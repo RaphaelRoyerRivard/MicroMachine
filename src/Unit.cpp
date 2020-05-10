@@ -136,12 +136,7 @@ CCHealth Unit::getEnergy() const
 float Unit::getBuildPercentage() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
-#ifdef SC2API
     return m_unit->build_progress;
-#else
-    if (getType().isBuilding()) { return m_unit->getRemainingBuildTime() / (float)getType().getAPIUnitType().buildTime(); }
-    else { return m_unit->getRemainingTrainTime() / (float)getType().getAPIUnitType().buildTime(); }
-#endif
 }
 
 CCPlayer Unit::getPlayer() const
