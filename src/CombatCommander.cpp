@@ -980,7 +980,11 @@ void CombatCommander::updateScoutSquad()
 		return;
 
 	Squad & scoutSquad = m_squadData.getSquad("Scout");
-	if (scoutSquad.getUnits().empty())
+	if (m_combatUnits.size() == 1)
+	{
+		scoutSquad.clear();	// Prevent our only combat unit to scout instead of fighting
+	}
+	else if (scoutSquad.getUnits().empty())
 	{
 		Unit bestCandidate;
 		float distanceFromBase = 0.f;
