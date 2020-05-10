@@ -160,20 +160,6 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 			{
 				return false;
 			}
-
-			///TODO TEMPORARY, FIXES ISSUE WHERE MAPS MIGHT HAVE INVALID TERRAIN HEIGHT NEAR THE RAMP
-			//Validate terrain height
-			/*int terrainHeight = Util::TerrainHeight(tile.x, tile.y);
-			if (buildingTerrainHeight == -1)
-			{
-				buildingTerrainHeight = terrainHeight;
-			}
-			else if (buildingTerrainHeight != terrainHeight)
-			{
-				return false;
-			}*/
-
-			//Validate there is no building in the way (any player)
 		}
 	}
 	else
@@ -663,62 +649,6 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 			break;
 		}
 	}
-
-	//OLD way of doing it
-    /*for (auto & geyser : m_bot.UnitInfo().getUnits(Players::Neutral))
-    {
-        if (!geyser.getType().isGeyser())
-        {
-            continue;
-        }
-
-        CCPosition geyserPos(geyser.getPosition());
-
-		//Check if refinery is already assigned to a building task (m_building)
-		auto assigned = false;
-		for (auto & refinery : m_bot.Buildings().getBuildings())
-		{
-			if (!refinery.type.isGeyser())
-			{
-				continue;
-			}
-
-			if (Util::GetTilePosition(geyserPos) == refinery.finalPosition)
-			{
-				assigned = true;
-				break;
-			}
-		}
-		if (assigned)
-		{
-			continue;
-		}
-
-		for (auto & depot : depots)
-		{
-			if (Util::DistSq(depot, geyserPos) < 10 * 10)
-			{
-				//TODO Good?
-				//Skip base if underattack or if we can't figure out to which base it belongs
-				auto baseLocation = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
-				if (baseLocation != nullptr &&baseLocation->isUnderAttack())
-				{
-					continue;
-				}
-
-				const double homeDistance = Util::DistSq(geyser, homePosition);
-				if (homeDistance < minGeyserDistanceFromHome)
-				{
-					if (m_bot.Query()->Placement(sc2::ABILITY_ID::BUILD_REFINERY, geyserPos))
-					{
-						minGeyserDistanceFromHome = homeDistance;
-						closestGeyser = geyserPos;
-					}
-				}
-				break;
-			}
-		}
-    }*/
 	m_bot.StopProfiling("getRefineryPosition");
 
 #ifdef SC2API

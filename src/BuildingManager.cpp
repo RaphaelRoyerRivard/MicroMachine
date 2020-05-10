@@ -632,7 +632,15 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		m_bot.StartProfiling("0.8.3.1 getBuildingLocation");
 		// grab a worker unit from WorkerManager which is closest to this final position
 		bool isRushed = m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().isWorkerRushed();
-		CCTilePosition testLocation = getNextBuildingLocation(b, !isRushed, true);//Only check m_nextBuildLocation if we are not being rushed
+		CCTilePosition testLocation;
+		if (b.canBeBuiltElseWhere)
+		{
+			testLocation = getNextBuildingLocation(b, !isRushed, true);//Only check m_nextBuildLocation if we are not being rushed
+		}
+		else
+		{
+			testLocation = b.desiredPosition;
+		}
 		m_bot.StopProfiling("0.8.3.1 getBuildingLocation");
 
 		// Don't test the location if the building is already started
@@ -653,7 +661,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
 		const auto isPathToGoalSafe = Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot);
 		m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
-		if(!isPathToGoalSafe)
+		if(!isPathToGoalSafe && b.canBeBuiltElseWhere)
 		{
 			Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " isn't safe", m_bot);
 			//TODO checks twice if the path is safe for no reason if we get the same build location, should change location or change builder

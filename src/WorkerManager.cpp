@@ -64,11 +64,12 @@ void WorkerManager::lowPriorityChecks()
 		//if Depleted
 		if (geyser.getUnitPtr()->vespene_contents == 0)
 		{
-			//remove workers from depleted geyser
-			auto workers = m_workerData.getAssignedWorkersRefinery(geyser);
-			for (auto & worker : workers)
+			//Salvage gas bunkers, if any
+			auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
+			auto gasBunkers = base->getGasBunkers();
+			for (auto & bunker : gasBunkers)
 			{
-				m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
+				bunker.useAbility(sc2::ABILITY_ID::EFFECT_SALVAGE);
 			}
 		}
 	}
@@ -593,10 +594,6 @@ void WorkerManager::handleGasWorkers()
 							Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
 							hasUnload = true;
 						}
-						else
-						{
-							auto a = 1;
-						}
 					}
 				}
 
@@ -612,10 +609,6 @@ void WorkerManager::handleGasWorkers()
 							if ((std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end() || hasReturningWorker)
 								&& distRefinery < distDepot)//If the bunker is empty or if there is already a returning worker, click to enter bunker
 							{
-								if (hasReturningWorker)
-								{
-									auto a = 1;
-								}
 								worker.rightClick(bunker.getPosition());
 
 								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);
@@ -645,7 +638,7 @@ void WorkerManager::handleGasWorkers()
 			}
 			else
 			{
-				//UNHANDLED
+				//UNHANDLED SINGLE GEYSER
 			}
 		}
 	}
@@ -1467,11 +1460,6 @@ void WorkerManager::drawResourceDebugInfo()
 			continue;
 		}
 
-        if (worker.isIdle())
-        {
-            m_bot.Map().drawText(worker.getPosition(), m_workerData.getJobCode(worker));
-        }
-
         auto depot = m_workerData.getWorkerDepot(worker);
         if (depot.isValid())
         {
@@ -1520,7 +1508,10 @@ void WorkerManager::drawWorkerInformation()
 
     for (auto & worker : m_workerData.getWorkers())
     {
+		std::ostringstream oss;
 		auto code = m_workerData.getJobCode(worker);
+		oss << code;
+
 		if (strcmp(code, "B") == 0)
 		{
 			std::string buildingType = "UNKNOWN";
@@ -1532,14 +1523,14 @@ void WorkerManager::drawWorkerInformation()
 					break;
 				}
 			}
-			std::ostringstream oss;
-			oss << code << " (" << buildingType << ")";
-			m_bot.Map().drawText(worker.getPosition(), oss.str());
+
+			oss << " (" << buildingType << ")";
 		}
-		else
+		if (m_workerData.isProxyWorker(worker))
 		{
-			m_bot.Map().drawText(worker.getPosition(), code);
+			oss << " [Proxy]";
 		}
+		m_bot.Map().drawText(worker.getPosition(), oss.str());
     }
 }
  
