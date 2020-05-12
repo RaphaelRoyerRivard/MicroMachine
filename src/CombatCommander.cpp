@@ -1207,7 +1207,12 @@ void CombatCommander::updateAttackSquads()
 				// We want to consider only combat enemy units but not buildings unless we have a proxy strategy
 				if (enemyUnit.getType().isCombatUnit() && (!enemyUnit.getType().isBuilding() || m_bot.Strategy().isProxyStartingStrategy()))
 				{
-					const bool canAttack = (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY && enemyUnit.isPowered())
+					if ((enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON)
+						&& !enemyUnit.isPowered())
+						continue;
+					if (enemyUnit.getType().isBuilding() && !enemyUnit.isCompleted())
+						continue;
+					const bool canAttack = enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY
 										|| (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot))
 										|| (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
 					if (canAttack)
