@@ -1515,9 +1515,17 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, mapCenter + towardsCenter * 6, player1, 1);*/
 
 	// Test to check if Cyclones can Lock-On to Vikings
-	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter - towardsCenter * 5, player2, 5);
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter - towardsCenter * 5, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 5, player2, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter + towardsCenter * 3, player1, 5);*/
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + towardsCenter * 2, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter + towardsCenter * 4, player1, 1);*/
+
+	// Test to check if we cancel the proxy Marauders strategy
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter + towardsCenter * 30, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation + towardsCenterY * 3, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation + towardsCenterY * 3, player2, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation + towardsCenterY * 3, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, enemyLocation + towardsCenterY * 3, player2, 1);*/
 }
 
 void CCBot::IssueCheats()

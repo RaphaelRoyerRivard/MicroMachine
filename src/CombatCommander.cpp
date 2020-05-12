@@ -1705,13 +1705,13 @@ void CombatCommander::updateDefenseSquads()
 			const Unit& base = myBaseLocation->getResourceDepot();
 			if (base.isValid())
 			{
-				if (base.getUnitPtr()->cargo_space_taken == 0 && m_bot.Workers().getNumWorkers() > 0)
+				/*if (base.getUnitPtr()->cargo_space_taken == 0 && m_bot.Workers().getNumWorkers() > 0)
 				{
 					// Hide our last SCVs (should be 5, but is higher because some workers may end up dying on the way)
 					if (m_bot.Workers().getNumWorkers() <= 7)
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
 				}
-				else if (!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
+				else*/ if (!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
 					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 			}
 		}

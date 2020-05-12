@@ -525,7 +525,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 
 	m_bot.StartProfiling("0.10.4.1.5.1.8          PotentialFields");
-	CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange, unitShouldHeal);
+	const bool unitShouldBack = unitShouldHeal || !m_bot.Commander().Combat().winAttackSimulation();
+	CCPosition dirVec = GetDirectionVectorTowardsGoal(rangedUnit, target, goal, targetInAttackRange, unitShouldBack);
 
 	// Sum up the threats vector with the direction vector
 	if (!threats.empty())
@@ -1023,10 +1024,10 @@ bool RangedManager::IsInRangeOfSlowerUnit(const sc2::Unit * rangedUnit, const sc
 	return true;
 }
 
-CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange, bool unitShouldHeal) const
+CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * rangedUnit, const sc2::Unit * target, CCPosition goal, bool targetInAttackRange, bool unitShouldBack) const
 {
 	CCPosition dirVec(0.f, 0.f);
-	if (target && !unitShouldHeal)
+	if (target && !unitShouldBack)
 	{
 		// if not in range of target, add normalized vector towards target
 		if (!targetInAttackRange)

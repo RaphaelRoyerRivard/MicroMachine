@@ -298,7 +298,7 @@ bool UnitType::isAddon() const
 
 bool UnitType::isBuilding() const
 {
-    return m_bot->Data(*this).isBuilding;
+	return m_bot->Data(*this).isBuilding;
 }
 
 int UnitType::supplyProvided() const

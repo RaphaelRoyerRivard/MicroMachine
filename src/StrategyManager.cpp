@@ -221,6 +221,27 @@ void StrategyManager::onFrame(bool executeMacro)
 					proxyWorker.move(m_bot.GetStartLocation());
 				}
 				m_bot.Workers().getWorkerData().clearProxyWorkers();
+
+				// Cancel PROXY_MARAUDERS if the opponent has too much static defenses
+				if (!m_bot.Commander().Combat().winAttackSimulation())
+				{
+					int activeStaticDefenseUnits = 0;
+					const auto staticDefenseTypes = { sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY };
+					for (const auto staticDefenseType : staticDefenseTypes)
+					{
+						const auto & staticDefenseUnits = m_bot.GetEnemyUnits(staticDefenseType);
+						for (const auto & staticDefenseUnit : staticDefenseUnits)
+						{
+							if (staticDefenseUnit.isPowered() && staticDefenseUnit.isCompleted())
+								++activeStaticDefenseUnits;
+						}
+					}
+					if (activeStaticDefenseUnits >= 2)
+					{
+						m_startingStrategy = STANDARD;
+						m_bot.Commander().Production().clearQueue();
+					}
+				}
 			}
 		}
 		else if (m_startingStrategy == WORKER_RUSH)

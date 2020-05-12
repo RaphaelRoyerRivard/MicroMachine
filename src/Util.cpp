@@ -2655,7 +2655,7 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 			// Since bunkers deal no damage in the simulation, we swap them for 4 Marines with extra health
 			if(unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
 			{
-				const int owner = i + 1;
+				const int owner = i == 0 ? playerId : 3 - playerId;
 				for(int j=0; j < 4; ++j)
 					state.units.push_back(CombatUnit(owner, sc2::UNIT_TYPEID::TERRAN_MARINE, 200, false));
 			}
@@ -2663,6 +2663,18 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 				state.units.push_back(CombatUnit(*unit));
 		}
 	}
+
+	bool enemyHasOnlyBuildings = true;
+	for (const auto & enemyUnit : enemyUnits)
+	{
+		if (!UnitType(enemyUnit->unit_type, bot).isBuilding())
+		{
+			enemyHasOnlyBuildings = false;
+			break;
+		}
+	}
+	// If the opponent has only buildings, we want to be the attacker, otherwise we are the defenders (defenders do the first hit)
+	const int defenderPlayer = enemyHasOnlyBuildings ? 3 - playerId : playerId;
 	
 	// Calculate our army score to compare after the fight
 	float armySupplyScore = 0.f;
@@ -2686,7 +2698,7 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 	// Simulate for at most 100 *game* seconds
 	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
 	settings.maxTime = 100;
-	const CombatResult outcome = m_simulator->predict_engage(state, settings);
+	const CombatResult outcome = m_simulator->predict_engage(state, settings, nullptr, defenderPlayer);
 	const int winner = outcome.state.owner_with_best_outcome();
 	if (winner != playerId)
 		return 0.f;
