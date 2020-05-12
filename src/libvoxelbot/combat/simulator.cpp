@@ -500,7 +500,7 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                             size_t index = (j + offset) % g1.size();
 							index = index >= g1.size() || index < 0 ? 0 : index;
                             auto& other = *g1[index];
-                            if (index != i && !hasBeenHealed[index] && other.health > 0 && other.shield < other.shield_max) {
+                            if (index != i && !hasBeenHealed[index] && other.health > 0 && other.shield < other.shield_max && other.type != UNIT_TYPEID::PROTOSS_SHIELDBATTERY) {
                                 float delta = min(min(other.shield_max - other.shield, SHIELDS_PER_NORMAL_SPEED_SECOND * dt), unit.energy / ENERGY_USE_PER_SHIELD);
                                 assert(delta >= 0);
                                 other.shield += delta;
