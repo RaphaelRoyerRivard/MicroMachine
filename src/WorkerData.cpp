@@ -93,7 +93,30 @@ void WorkerData::updateWorker(const Unit & unit)
     {
         m_workers.insert(unit);
         m_workerJobMap[unit] = WorkerJobs::None;
+		m_workerReturningCargoMap[unit] = false;
     }
+	else
+	{
+		auto orders = unit.getUnitPtr()->orders;
+
+		if (!orders.empty())
+		{
+			if (m_workerReturningCargoMap[unit])
+			{
+				if (orders.at(0).ability_id == sc2::ABILITY_ID::HARVEST_GATHER)
+				{
+					m_workerReturningCargoMap[unit] = false;
+				}
+			}
+			else
+			{
+				if (orders.at(0).ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
+				{
+					m_workerReturningCargoMap[unit] = true;
+				}
+			}
+		}
+	}
 }
 
 void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit, bool mineralWorkerTargetJobUnit)
@@ -253,6 +276,17 @@ int WorkerData::getWorkerJob(const Unit & unit) const
     }
 
     return WorkerJobs::None;
+}
+
+bool WorkerData::isReturningCargo(const Unit & unit) const
+{
+	auto it = m_workerReturningCargoMap.find(unit);
+
+	if (it != m_workerReturningCargoMap.end())
+	{
+		return it->second;
+	}
+	return false;
 }
 
 Unit WorkerData::getMineralToMine(const Unit & unit) const

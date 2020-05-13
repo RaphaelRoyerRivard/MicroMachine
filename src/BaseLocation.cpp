@@ -77,7 +77,8 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
         if (containsPositionApproximative(pos))
         {
             m_isStartLocation = true;
-            m_depotPosition = Util::GetTilePosition(pos);
+			m_depotPosition = pos;
+            m_depotTilePosition = Util::GetTilePosition(pos);
 			break;
         }
     }
@@ -94,7 +95,8 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 				m_isPlayerStartLocation[Players::Self] = true;
 				m_isStartLocation = true;
 				m_isPlayerOccupying[Players::Self] = true;
-				m_depotPosition = Util::GetTilePosition(pos);
+				m_depotPosition = pos;
+				m_depotTilePosition = Util::GetTilePosition(pos);
 				break;
 			}
 		}
@@ -112,11 +114,49 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 
             if(m_bot.Buildings().getBuildingPlacer().canBuildDepotHere(tile.x, tile.y, m_minerals, m_geysers))
 			{
-                m_depotPosition = buildTile;
+				m_depotPosition = CCPosition(tile.x + 0.5, tile.y + 0.5);
+                m_depotTilePosition = buildTile;
                 break;
             }
         }
     }
+
+	//Determine if the geysers are together or split
+	if (m_geyserPositions.size() == 1)
+	{
+		m_isSplitGeyser = false;//If the base as one geyser only, we consider it has "Together"
+	}
+	else if (m_geyserPositions.size() == 2)
+	{
+		auto dist = Util::DistSq(m_geyserPositions[0], m_geyserPositions[1]);
+		if (dist > 36)//if further than 6 tiles away
+		{
+			m_isSplitGeyser = true;
+		}
+		else
+		{
+			m_isSplitGeyser = false;
+			CCTilePosition geyserDepotCenter = m_depotTilePosition;
+			for (auto & geyserPos : m_geyserPositions)
+			{
+				geyserDepotCenter.x += geyserPos.x;
+				geyserDepotCenter.y += geyserPos.y;
+			}
+			if (m_geyserPositions.size() > 0)
+			{
+				geyserDepotCenter.x /= (m_geyserPositions.size() + 1);
+				geyserDepotCenter.y /= (m_geyserPositions.size() + 1);
+			}
+
+			geyserDepotCenter = m_bot.Buildings().getBuildingPlacer().getBunkerBuildLocationNear(Building(MetaTypeEnum::Bunker.getUnitType(), geyserDepotCenter), m_depotTilePosition.x, m_depotTilePosition.y, m_geyserPositions);
+
+			m_gasBunkerLocations.push_back(geyserDepotCenter);
+		}
+	}
+	else
+	{
+		BOT_ASSERT(m_geyserPositions.size() <= 2, "Unexpected base layout detected.");
+	}
 
 	Building b(MetaTypeEnum::MissileTurret.getUnitType(), m_centerOfMinerals);
 	m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true, false, true);
@@ -127,10 +167,20 @@ const CCTilePosition & BaseLocation::getTurretPosition() const
 	return m_turretPosition;
 }
 
-// TODO: calculate the actual depot position
-const CCTilePosition & BaseLocation::getDepotPosition() const
+const std::vector<CCTilePosition> & BaseLocation::getGasBunkerLocations() const
+{
+	return m_gasBunkerLocations;
+}
+
+const CCPosition & BaseLocation::getDepotPosition() const
 {
 	return m_depotPosition;
+}
+
+// TODO: calculate the actual depot position
+const CCTilePosition & BaseLocation::getDepotTilePosition() const
+{
+	return m_depotTilePosition;
 }
 
 int BaseLocation::getOptimalMineralWorkerCount() const
@@ -242,7 +292,7 @@ bool BaseLocation::containsUnitApproximative(const Unit & unit, int maxDistance)
 	if (unit.isFlying())
 	{
 		maxDistance = maxDistance > 0 ? maxDistance : ApproximativeBaseLocationTileDistance;
-		return Util::DistSq(unit, Util::GetPosition(m_depotPosition)) < maxDistance * maxDistance;
+		return Util::DistSq(unit, Util::GetPosition(m_depotTilePosition)) < maxDistance * maxDistance;
 	}
 
 	return containsPositionApproximative(unit.getPosition(), maxDistance);
@@ -298,6 +348,11 @@ const std::vector<CCTilePosition> & BaseLocation::getClosestTiles() const
     return m_distanceMap.getSortedTiles();
 }
 
+const bool & BaseLocation::isGeyserSplit() const
+{
+	return m_isSplitGeyser;
+}
+
 void BaseLocation::draw()
 {
     CCPositionType radius = Util::TileToPosition(1.0f);
@@ -311,6 +366,7 @@ void BaseLocation::draw()
     ss << "Geysers:      " << m_geyserPositions.size() << "\n";
 	ss << "Under attack: " << (m_isUnderAttack ? "true" : "false") << "\n";
 	ss << "Blocked:      " << (m_isBlocked ? "true" : "false") << "\n";
+	ss << "Geyser type:  " << (m_isSplitGeyser ? "Split" : "Together") << "\n";
     ss << "Occupied By:  ";
 
     if (isOccupiedByPlayer(Players::Self))
@@ -328,6 +384,22 @@ void BaseLocation::draw()
 
     // draw the base bounding box
     m_bot.Map().drawBox(m_left, m_top, m_right, m_bottom);
+
+
+	//TODO TEMPORARY
+	for (auto gasBunkerPos : m_gasBunkerLocations)
+	{
+		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x, gasBunkerPos.y), CCColor(255,255,255));
+		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x-1, gasBunkerPos.y), CCColor(255, 255, 255));
+		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x, gasBunkerPos.y-1), CCColor(255, 255, 255));
+		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x-1, gasBunkerPos.y-1), CCColor(255, 255, 255));
+		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x, gasBunkerPos.y), CCColor(125, 125, 125));
+		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x+1, gasBunkerPos.y), CCColor(255, 255, 255));
+		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x, gasBunkerPos.y+1), CCColor(255, 255, 255));
+		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x+1, gasBunkerPos.y+1), CCColor(255, 255, 255));
+		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x-1, gasBunkerPos.y+1), CCColor(255, 255, 255));
+		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x + 1, gasBunkerPos.y - 1), CCColor(255, 255, 255));
+	}
 
     /*for (CCPositionType x=m_left; x < m_right; x += Util::TileToPosition(1.0f))
     {
@@ -356,10 +428,10 @@ void BaseLocation::draw()
 
     if (m_isStartLocation)
     {
-        m_bot.Map().drawCircle(Util::GetPosition(m_depotPosition), radius, CCColor(255, 0, 0));
+        m_bot.Map().drawCircle(Util::GetPosition(m_depotTilePosition), radius, CCColor(255, 0, 0));
     }
 
-    m_bot.Map().drawTile(m_depotPosition.x, m_depotPosition.y, CCColor(0, 0, 255));
+    m_bot.Map().drawTile(m_depotTilePosition.x, m_depotTilePosition.y, CCColor(0, 0, 255));
 
     //m_distanceMap.draw(m_bot);
 }

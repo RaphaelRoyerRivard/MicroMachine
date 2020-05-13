@@ -17,7 +17,7 @@ void BuildingPlacer::onStart()
 auto bases = m_bot.Bases().getBaseLocations();
 for (auto baseLocation : bases)
 {
-	const auto depotPosition = Util::GetPosition(baseLocation->getDepotPosition());
+	const auto depotPosition = Util::GetPosition(baseLocation->getDepotTilePosition());
 	const auto centerOfMinerals = Util::GetPosition(baseLocation->getCenterOfMinerals());
 	const auto towardsOutside = Util::Normalized(depotPosition - centerOfMinerals);
 	const auto basePosition = Util::GetTilePosition(depotPosition + towardsOutside * 2);
@@ -56,6 +56,81 @@ bool BuildingPlacer::canBuildDepotHere(int bx, int by, std::vector<Unit> mineral
 	return false;
 }
 
+bool BuildingPlacer::canBuildBunkerHere(int bx, int by, int depotX, int depotY, std::vector<CCPosition> geysersPos) const
+{
+	if (canBuildHere(bx, by, MetaTypeEnum::Bunker.getUnitType(), 0, true, false, false))//Do not need to check if interesting other buildings, since it is called at the start of the game only.
+	{
+		// check intersecting depot
+		for (int x = bx - 1; x <= bx + 1; x++)
+		{
+			for (int y = by - 1; y <= by + 1; y++)
+			{
+				for (int dx = depotX - 2; dx <= depotX + 2; dx++)
+				{
+					for (int dy = depotY - 2; dy <= depotY + 2; dy++)
+					{
+						if (x == dx && y == dy)
+						{
+							return false;
+						}
+					}
+				}
+			}
+		}
+
+		// check next to depot
+		bool nextToDepot = false;
+		for (int x = bx - 1; x <= bx + 1; x++)
+		{
+			for (int y = by - 1; y <= by + 1; y++)
+			{
+				for (int dx = -3; dx <= 3; dx++)
+				{
+					for (int dy = -3; dy <= 3; dy++)
+					{
+						if (abs(dx) == abs(dy))//Prevent bunker and depot from being diagonally adjacent, since its not efficient
+						{
+							continue;
+						}
+						if (x == depotX + dx && y == depotY + dy)
+						{
+							nextToDepot = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+		if (!nextToDepot)
+		{
+			return false;
+		}
+
+		//check too close to geyser
+		/*for (auto geyserPos : geysersPos)
+		{
+			for (int x = bx - 1; x <= bx + 1; x++)
+			{
+				for (int y = by - 1; y <= by + 1; y++)
+				{
+					for (int dx = geyserPos.x - 1; dx <= geyserPos.x + 1; dx++)
+					{
+						for (int dy = geyserPos.y - 1; dy <= geyserPos.y + 1; dy++)
+						{
+							if (x == dx && y == dy)
+							{
+								return false;
+							}
+						}
+					}
+				}
+			}
+		}*/
+		return true;
+	}
+	return false;
+}
+
 //returns true if we can build this type of unit here with the specified amount of space.
 bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int buildDistAround, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
 {
@@ -85,20 +160,6 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 			{
 				return false;
 			}
-
-			///TODO TEMPORARY, FIXES ISSUE WHERE MAPS MIGHT HAVE INVALID TERRAIN HEIGHT NEAR THE RAMP
-			//Validate terrain height
-			/*int terrainHeight = Util::TerrainHeight(tile.x, tile.y);
-			if (buildingTerrainHeight == -1)
-			{
-				buildingTerrainHeight = terrainHeight;
-			}
-			else if (buildingTerrainHeight != terrainHeight)
-			{
-				return false;
-			}*/
-
-			//Validate there is no building in the way (any player)
 		}
 	}
 	else
@@ -332,6 +393,30 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
     return CCTilePosition(0, 0);
 }
 
+CCTilePosition BuildingPlacer::getBunkerBuildLocationNear(const Building & b, int depotX, int depotY, std::vector<CCPosition> geysersPos) const
+{ 
+	//If the space is not walkable, look arround for a walkable space. The result may not be the most optimal location.
+	auto buildLocation = b.desiredPosition;
+
+	// get the precomputed vector of tile positions which are sorted closes to this location
+	auto & closestToBuilding = m_bot.Map().getClosestTilesTo(buildLocation);
+
+	// iterate through the list until we've found a suitable location
+	for (size_t i(0); i < closestToBuilding.size(); ++i)
+	{
+		auto & pos = closestToBuilding[i];
+
+		if (canBuildBunkerHere(pos.x, pos.y, depotX, depotY, geysersPos))
+		{
+			return pos;
+		}
+	}
+
+	//printf("Building Placer Failure: %s - Took %lf ms\n", b.type.getName().c_str(), ms);
+	printf("Building Placer Failure, couldn't find anywhere valide to place it");
+	return CCTilePosition(0, 0);
+}
+
 bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
 {
     // if it's a resource depot we don't care if it overlaps
@@ -350,8 +435,8 @@ bool BuildingPlacer::tileOverlapsBaseLocation(int x, int y, UnitType type) const
     for (const BaseLocation * base : m_bot.Bases().getBaseLocations())
     {
         // dimensions of the base location
-        int bx1 = (int)base->getDepotPosition().x;
-        int by1 = (int)base->getDepotPosition().y;
+        int bx1 = (int)base->getDepotTilePosition().x;
+        int by1 = (int)base->getDepotTilePosition().y;
 		int bx2 = bx1 + 4;// Util::GetTownHall(m_bot.GetSelfRace(), m_bot).tileWidth();
 		int by2 = by1 + 3;// Util::GetTownHall(m_bot.GetSelfRace(), m_bot).tileHeight();
 
@@ -519,6 +604,11 @@ void BuildingPlacer::freeTilesForTurrets(CCTilePosition position)
 	freeTiles(position.x, position.y, 2, 2);
 }
 
+void BuildingPlacer::freeTilesForBunker(CCTilePosition position)
+{
+	freeTiles(position.x, position.y, 3, 3);
+}
+
 CCTilePosition BuildingPlacer::getRefineryPosition()
 {
 	m_bot.StartProfiling("getRefineryPosition");
@@ -559,62 +649,6 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 			break;
 		}
 	}
-
-	//OLD way of doing it
-    /*for (auto & geyser : m_bot.UnitInfo().getUnits(Players::Neutral))
-    {
-        if (!geyser.getType().isGeyser())
-        {
-            continue;
-        }
-
-        CCPosition geyserPos(geyser.getPosition());
-
-		//Check if refinery is already assigned to a building task (m_building)
-		auto assigned = false;
-		for (auto & refinery : m_bot.Buildings().getBuildings())
-		{
-			if (!refinery.type.isGeyser())
-			{
-				continue;
-			}
-
-			if (Util::GetTilePosition(geyserPos) == refinery.finalPosition)
-			{
-				assigned = true;
-				break;
-			}
-		}
-		if (assigned)
-		{
-			continue;
-		}
-
-		for (auto & depot : depots)
-		{
-			if (Util::DistSq(depot, geyserPos) < 10 * 10)
-			{
-				//TODO Good?
-				//Skip base if underattack or if we can't figure out to which base it belongs
-				auto baseLocation = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
-				if (baseLocation != nullptr &&baseLocation->isUnderAttack())
-				{
-					continue;
-				}
-
-				const double homeDistance = Util::DistSq(geyser, homePosition);
-				if (homeDistance < minGeyserDistanceFromHome)
-				{
-					if (m_bot.Query()->Placement(sc2::ABILITY_ID::BUILD_REFINERY, geyserPos))
-					{
-						minGeyserDistanceFromHome = homeDistance;
-						closestGeyser = geyserPos;
-					}
-				}
-				break;
-			}
-		}
-    }*/
 	m_bot.StopProfiling("getRefineryPosition");
 
 #ifdef SC2API

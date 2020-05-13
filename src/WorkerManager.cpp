@@ -64,11 +64,12 @@ void WorkerManager::lowPriorityChecks()
 		//if Depleted
 		if (geyser.getUnitPtr()->vespene_contents == 0)
 		{
-			//remove workers from depleted geyser
-			auto workers = m_workerData.getAssignedWorkersRefinery(geyser);
-			for (auto & worker : workers)
+			//Salvage gas bunkers, if any
+			auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
+			auto gasBunkers = base->getGasBunkers();
+			for (auto & bunker : gasBunkers)
 			{
-				m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
+				bunker.useAbility(sc2::ABILITY_ID::EFFECT_SALVAGE);
 			}
 		}
 	}
@@ -390,39 +391,27 @@ void WorkerManager::handleGasWorkers()
 			}
 			break;
 		case 1:
-			/*if (numMineralWorker < numGasWorker + numRefinery)
+			if (gas > mineral * 5 && mineral + gas > ressourceTreshold)
 			{
 				gasWorkersTarget = 0;
 			}
-			else */if (gas > mineral * 5 && mineral + gas > ressourceTreshold)
-			{
-				gasWorkersTarget = 0;
-			}
-			else if (mineral > gas * 1.5f)
+			else if (mineral > gas * 1)
 			{
 				gasWorkersTarget = 2;
 			}
 			break;
 		case 2:
-			/*if (numMineralWorker < numGasWorker + numRefinery)
+			if (gas > mineral * 3 && mineral + gas > ressourceTreshold)
 			{
 				gasWorkersTarget = 1;
 			}
-			else */if (gas > mineral * 3 && mineral + gas > ressourceTreshold)
-			{
-				gasWorkersTarget = 1;
-			}
-			else if (mineral > gas * 2)
+			else if (mineral > gas * 1.5f)
 			{
 				gasWorkersTarget = 3;
 			}
 			break;
 		case 3:
-			/*if (numMineralWorker + numRefinery < numGasWorker)
-			{
-				gasWorkersTarget = 2;
-			}
-			else */if (gas > mineral * 2 && mineral + gas > ressourceTreshold)
+			if (gas > mineral * 2 && mineral + gas > ressourceTreshold)
 			{
 				gasWorkersTarget = 2;
 			}
@@ -431,10 +420,7 @@ void WorkerManager::handleGasWorkers()
 			gasWorkersTarget = 3;
 	}
 
-	/*if (numMineralWorker <= 6) Causes issues when having lots of bases but few workers.
-	{
-		gasWorkersTarget = 0;
-	}*/
+
 	if (m_bot.Strategy().isWorkerRushed())
 	{
 		gasWorkersTarget = 3;
@@ -447,10 +433,14 @@ void WorkerManager::handleGasWorkers()
         if (geyser.isCompleted() && geyser.getUnitPtr()->vespene_contents > 0)
         {
 			auto geyserPosition = geyser.getPosition();
+			auto base = m_bot.Bases().getBaseContainingPosition(geyserPosition, Players::Self);
 
             // get the number of workers currently assigned to it
             int numAssigned = m_workerData.getNumAssignedWorkers(geyser);
-			auto base = m_bot.Bases().getBaseContainingPosition(geyserPosition, Players::Self);
+
+			//TODO doesn't handle split geysers if only one of the geysers has a bunker.
+			//Bunker counts as a worker (for 2 and 3 only, we still want 1 worker at 1)
+			int geyserGasWorkersTarget = (base->getGasBunkers().size() > 0 && gasWorkersTarget > 1 ? gasWorkersTarget - 1 : gasWorkersTarget);
 
 			if (base == nullptr)
 			{
@@ -466,18 +456,16 @@ void WorkerManager::handleGasWorkers()
 				auto & depot = base->getResourceDepot();
 				if (depot.isValid() && depot.isCompleted())
 				{
-					if (numAssigned < gasWorkersTarget)
+					if (numAssigned < geyserGasWorkersTarget)
 					{
 						// if it's less than we want it to be, fill 'er up
 						bool shouldAssignThisWorker = true;
-						CCPosition positionWorkerOnItsWay = CCPosition(0, 0);
 						auto refineryWorkers = m_workerData.getAssignedWorkersRefinery(geyser);
 						for (auto & worker : refineryWorkers)
 						{
 							if (!isInsideGeyser(worker) && !isReturningCargo(worker))
 							{
 								shouldAssignThisWorker = false;
-								positionWorkerOnItsWay = worker.getPosition();
 								break;
 							}
 						}
@@ -494,7 +482,7 @@ void WorkerManager::handleGasWorkers()
 							}
 						}
 					}
-					else if (numAssigned > gasWorkersTarget)
+					else if (numAssigned > geyserGasWorkersTarget)
 					{
 						int mineralWorkerRoom = 26;//Number of free spaces for mineral workers
 						int mineralWorkersCount = m_workerData.getNumAssignedWorkers(depot);
@@ -502,7 +490,7 @@ void WorkerManager::handleGasWorkers()
 						mineralWorkerRoom = optimalWorkersCount - mineralWorkersCount;
 
 						// if it's more than we want it to be, empty it up
-						for (int i = 0; i<(numAssigned - gasWorkersTarget); ++i)
+						for (int i = 0; i<(numAssigned - geyserGasWorkersTarget); ++i)
 						{
 							//check if we have room for more mineral workers
 							if (mineralWorkerRoom <= 0)
@@ -534,6 +522,11 @@ void WorkerManager::handleGasWorkers()
 	{
 		for (auto & worker : m_bot.Workers().getWorkers())
 		{
+			if (m_bot.Commander().isInside(worker.getTag()))
+			{
+				continue;
+			}
+
 			auto it = reorderedGasWorker.find(worker);
 			if (it != reorderedGasWorker.end())
 			{
@@ -563,6 +556,102 @@ void WorkerManager::handleGasWorkers()
 				{
 					reorderedGasWorker.erase(it);
 				}
+			}
+		}
+	}
+
+	std::vector<sc2::Tag> bunkerHasLoaded;
+	for (auto & geyser : m_bot.GetAllyGeyserUnits())
+	{
+		auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
+		auto depot = base->getResourceDepot();
+		bool hasUsableDepot = true;
+		if (!depot.isValid() || depot.getUnitPtr()->build_progress < 1)//Do not using the gas bunker with an unfinished or inexistant depot.
+		{
+			hasUsableDepot = false;
+		}
+
+		auto & workers = m_bot.Workers().m_workerData.getAssignedWorkersRefinery(geyser);
+		for (auto & bunker : base->getGasBunkers())
+		{
+			if (!bunker.isCompleted())
+			{
+				continue;
+			}
+
+			if (!hasUsableDepot)//If there is no depot or if its not finished, empty the bunker.
+			{
+				Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+				continue;
+			}
+
+			auto hasUnload = false;
+			if (!base->isGeyserSplit())
+			{
+				for (auto & worker : workers)//Handle workers inside
+				{
+					if (m_bot.Commander().isInside(worker.getTag()))
+					{
+						if (!hasUnload)
+						{
+							if (worker.isReturningCargo())//drop on CC side
+							{
+								bunker.rightClick(base->getDepotPosition());
+								m_bot.Commander().AddDelayedSmartAbility(worker, 0, base->getDepotPosition());
+							}
+							else//drop on refinery side
+							{
+								bunker.rightClick(geyser.getPosition());
+								m_bot.Commander().AddDelayedSmartAbility(worker, 0, geyser.getPosition());
+							}
+							Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+							hasUnload = true;
+						}
+					}
+				}
+
+				bool hasReturningWorker = false;
+				for (auto & worker : workers)//Handle workers outside
+				{
+					if (!m_bot.Commander().isInside(worker.getTag()))
+					{
+						auto distRefinery = Util::DistSq(worker.getPosition(), geyser.getPosition());
+						auto distDepot = Util::DistSq(worker.getPosition(), base->getDepotPosition());
+						if (worker.isReturningCargo())
+						{
+							if ((std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end() || hasReturningWorker)
+								&& distRefinery < distDepot)//If the bunker is empty or if there is already a returning worker, click to enter bunker
+							{
+								worker.rightClick(bunker.getPosition());
+
+								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);
+								bunkerHasLoaded.push_back(bunker.getTag());
+								hasReturningWorker = true;
+							}
+							else//Click to drop resource
+							{
+								Micro::SmartAbility(worker.getUnitPtr(), sc2::ABILITY_ID::HARVEST_RETURN, m_bot);
+							}
+						}
+						else
+						{
+							if (distRefinery < distDepot)//Click to enter refinery
+							{
+								Micro::SmartAbility(worker.getUnitPtr(), sc2::ABILITY_ID::HARVEST_GATHER,geyser.getUnitPtr(), m_bot);
+							}
+							else if(std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end())//Click to enter bunker
+							{
+								worker.rightClick(bunker.getPosition());
+								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);
+								bunkerHasLoaded.push_back(bunker.getTag());
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				//UNHANDLED SINGLE GEYSER
 			}
 		}
 	}
@@ -1006,7 +1095,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 	const auto & baseLocations = m_bot.Bases().getBaseLocations();
 	for (const auto baseLocation : baseLocations)
 	{
-		if (Util::DistSq(pos, Util::GetPosition(baseLocation->getDepotPosition())) < 10 * 10)
+		if (Util::DistSq(pos, Util::GetPosition(baseLocation->getDepotTilePosition())) < 10 * 10)
 		{
 			base = baseLocation;
 			break;
@@ -1244,6 +1333,11 @@ Unit WorkerManager::getGasWorker(Unit refinery, bool checkReturningCargo, bool c
 	{
 		for (auto & worker : workers)
 		{
+			if (m_bot.Commander().isInside(worker.getTag()))
+			{
+				continue;
+			}
+
 			if (checkInsideRefinery)
 			{
 				//Skip workers inside the geyser
@@ -1379,11 +1473,6 @@ void WorkerManager::drawResourceDebugInfo()
 			continue;
 		}
 
-        if (worker.isIdle())
-        {
-            m_bot.Map().drawText(worker.getPosition(), m_workerData.getJobCode(worker));
-        }
-
         auto depot = m_workerData.getWorkerDepot(worker);
         if (depot.isValid())
         {
@@ -1432,7 +1521,10 @@ void WorkerManager::drawWorkerInformation()
 
     for (auto & worker : m_workerData.getWorkers())
     {
+		std::ostringstream oss;
 		auto code = m_workerData.getJobCode(worker);
+		oss << code;
+
 		if (strcmp(code, "B") == 0)
 		{
 			std::string buildingType = "UNKNOWN";
@@ -1444,14 +1536,14 @@ void WorkerManager::drawWorkerInformation()
 					break;
 				}
 			}
-			std::ostringstream oss;
-			oss << code << " (" << buildingType << ")";
-			m_bot.Map().drawText(worker.getPosition(), oss.str());
+
+			oss << " (" << buildingType << ")";
 		}
-		else
+		if (m_workerData.isProxyWorker(worker))
 		{
-			m_bot.Map().drawText(worker.getPosition(), code);
+			oss << " [Proxy]";
 		}
+		m_bot.Map().drawText(worker.getPosition(), oss.str());
     }
 }
  

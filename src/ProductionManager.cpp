@@ -264,7 +264,7 @@ void ProductionManager::manageBuildOrderQueue()
 				b.finalPosition = proxyLocation;
 				if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
 				{
-					if (create(producer, currentItem, proxyLocation, false, false))
+					if (create(producer, currentItem, proxyLocation, false, false, true))
 					{
 						m_queue.removeCurrentHighestPriorityItem();
 						break;
@@ -887,17 +887,17 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				else
 				{
+#ifndef NO_UNITS
 					const auto enemyOverseerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_OVERSEER).size();
 					if (m_bot.Strategy().enemyOnlyHasFlyingBuildings() || (proxyMaraudersStrategy && enoughMedivacs) || enemyOverseerCount >= 1)
 					{
-#ifndef NO_UNITS
 						const int minVikingCount = proxyMaraudersStrategy ? 2 : 1;
 						if (vikingCount < minVikingCount && !m_queue.contains(MetaTypeEnum::Viking))
 						{
 							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 						}
-#endif
 					}
+#endif
 				}
 				break;
 			}
@@ -1191,7 +1191,7 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     {
 		for (auto & required : typeData.requiredUnits)
 		{
-			if (!hasRequiredUnit(required, true))
+			if (!hasRequiredUnit(required, true) && !m_queue.contains(MetaType(required, m_bot)))
 			{
 				std::cout << item.type.getName() << " needs a requirement: " << required.getName() << "\n";
 				BuildOrderItem requiredItem = m_queue.queueItem(BuildOrderItem(MetaType(required, m_bot), 0, item.blocking));
@@ -1203,10 +1203,11 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     }
 
     // build the producer of the unit if we don't have one
-    if (!hasProducer(item.type, true))
+	MetaType builder = MetaType(typeData.whatBuilds[0], m_bot);
+    if (!hasProducer(item.type, true) && !m_queue.contains(builder))
     {
-		std::cout << item.type.getName() << " needs a producer: " << typeData.whatBuilds[0].getName() << "\n";
-		BuildOrderItem producerItem = m_queue.queueItem(BuildOrderItem(MetaType(typeData.whatBuilds[0], m_bot), 0, item.blocking));
+		std::cout << item.type.getName() << " needs a producer: " << builder.getName() << "\n";
+		BuildOrderItem producerItem = m_queue.queueItem(BuildOrderItem(builder, 0, item.blocking));
         fixBuildOrderDeadlock(producerItem);
     }
 
@@ -1214,12 +1215,15 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 	if (typeData.gasCost > 0)
     {
 		auto refinery = Util::GetRefineryType();
-		auto richRefinery = Util::GetRichRefineryType();
-		auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true);
-		auto richRefineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, richRefinery, false, true);
-		if (refineryCount + richRefineryCount == 0)
+		if (!m_queue.contains(MetaType(refinery, m_bot)))
 		{
-			m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), item.blocking);
+			auto richRefinery = Util::GetRichRefineryType();
+			auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true);
+			auto richRefineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, richRefinery, false, true);
+			if (refineryCount + richRefineryCount == 0)
+			{
+				m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), item.blocking);
+			}
 		}
     }
 }
@@ -1247,7 +1251,7 @@ void ProductionManager::lowPriorityChecks()
 					continue;
 				
 				const Unit& resourceDepot = base->getResourceDepot();
-				if (!resourceDepot.isValid() || !resourceDepot.isCompleted())
+				if (!resourceDepot.isValid())
 					continue;
 
 				auto& geysers = base->getGeysers();
@@ -1273,6 +1277,81 @@ void ProductionManager::lowPriorityChecks()
 					if (!refineryFound)
 					{
 						m_queue.queueAsLowestPriority(MetaType(refinery, m_bot), false);
+					}
+				}
+			}
+		}
+	}
+	
+	//build bunkers in mineral/gas field [optimize economy]
+	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran && m_bot.Workers().getGasWorkersTarget() > 0)
+	{
+		auto refineries = m_bot.GetAllyGeyserUnits();
+		for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+		{
+			if (!base->getResourceDepot().isValid() || base->getResourceDepot().getPlayer() != Players::Self || !base->getResourceDepot().isCompleted() || base->isGeyserSplit())//TEMPORARY skip split geysers since they are not yet handled
+			{
+				continue;
+			}
+
+			//Do not build a bunker if either geyser is low on gas or doesn't have at least a started refinery
+			if (!base->isGeyserSplit())
+			{
+				bool lowGasGeyser = false;
+				bool missingRefinery = false;
+
+				auto geysers = base->getGeysers();
+				for (auto geyser : geysers)
+				{
+					if (geyser.getUnitPtr()->vespene_contents <= 500)
+					{
+						lowGasGeyser = true;
+						break;
+					}
+
+					bool hasRefinery = false;
+					for (auto refinery : refineries)
+					{
+						if (geyser.getPosition() == refinery.getPosition())
+						{
+							hasRefinery = true;
+							break;
+						}
+					}
+					if (!hasRefinery)
+					{
+						missingRefinery = true;
+						break;
+					}
+				}
+				if (lowGasGeyser || missingRefinery)
+				{
+					continue;
+				}
+			}
+
+			if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::Bunker.getUnitType()))
+			{
+				auto bunkers = base->getGasBunkers();
+				for (auto bunkerLocation : base->getGasBunkerLocations())
+				{
+					bool hasBunker = false;
+					for (auto bunker : bunkers)
+					{
+						if (bunkerLocation == bunker.getTilePosition())
+						{
+							hasBunker = true;
+							break;
+						}
+					}
+					if (!hasBunker)//Has no bunker so lets build one
+					{
+						m_bot.Buildings().getBuildingPlacer().freeTilesForBunker(bunkerLocation);
+						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(bunkerLocation.x, bunkerLocation.y));
+						auto boItem = BuildOrderItem(MetaTypeEnum::Bunker, 0, false);
+						create(worker, boItem, bunkerLocation, true, true, false);
+
+						break;
 					}
 				}
 			}
@@ -1329,7 +1408,7 @@ void ProductionManager::lowPriorityChecks()
 						m_bot.Buildings().getBuildingPlacer().freeTilesForTurrets(position);
 						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(position.x, position.y));
 						auto boItem = BuildOrderItem(MetaTypeEnum::MissileTurret, 0, false);
-						create(worker, boItem, position);
+						create(worker, boItem, position, true, true, false);
 					}
 				}
 			}
@@ -2011,7 +2090,7 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used to create unit/tech/buildings (when we have the ressources)
-bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker)
+bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker, bool canBePlacedElsewhere)
 {
 	if (!producer.isValid())
 	{
@@ -2030,8 +2109,12 @@ bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCT
 		else
 		{
 			Building b(item.type.getUnitType(), desidredPosition);
-			b.reserveResources = reserveResources;
-			result = m_bot.Buildings().addBuildingTask(b, filterMovingWorker);
+			if (ValidateBuildingTiming(b))
+			{
+				b.reserveResources = reserveResources;
+				b.canBeBuiltElseWhere = canBePlacedElsewhere;
+				result = m_bot.Buildings().addBuildingTask(b, filterMovingWorker);
+			}
 		}
 	}
 	// if we're dealing with a non-building unit
@@ -2069,6 +2152,11 @@ bool ProductionManager::create(const Unit & producer, Building & b, bool filterM
     {
         return false;
     }
+
+	if (!ValidateBuildingTiming(b))
+	{
+		return false;
+	}
 
     if (b.type.isMorphedBuilding())
     {
@@ -2229,6 +2317,51 @@ bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker
 		return true;
 	}
 	return false;
+}
+
+bool ProductionManager::ValidateBuildingTiming(Building & b) const
+{
+	if (b.type.isRefinery())
+	{
+		auto nextRefinery = m_bot.Buildings().getBuildingPlacer().getRefineryPosition();
+		auto base = m_bot.Bases().getBaseContainingPosition(Util::GetPosition(nextRefinery), Players::Self);
+		if (base == nullptr)
+		{
+			return false;
+		}
+		auto depot = base->getResourceDepot();
+		if (!depot.isValid())
+		{
+			return false;
+		}
+		
+		auto worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(nextRefinery));
+		if (!worker.isValid())
+		{
+			return false;
+		}
+
+		auto depotGeyserDifferenceX = base->getDepotTilePosition().x - nextRefinery.x;
+		auto depotGeyserDifferenceY = base->getDepotTilePosition().y - nextRefinery.y;
+
+		auto offsetWorkerPos = worker.getPosition();//Offset the worker position by the difference between the depot and refinery. This should give an accurate distance between the worker and the refinery.
+		offsetWorkerPos.x += depotGeyserDifferenceX;
+		offsetWorkerPos.y += depotGeyserDifferenceY;
+
+		auto workerRefineryDistance = base->getGroundDistance(offsetWorkerPos);
+		float workerSpeed = Util::getSpeedOfUnit(worker.getUnitPtr(), m_bot);
+		float travelTime = workerRefineryDistance / (workerSpeed * 1.45f);//Multiply the worker speed by 1.45 because moving in diagonal is 41% faster. An extra 0.04 to make sure depot and refineries don't finish the same frame.
+		float progressRequired = 1 - ((21.f + travelTime) / 71.f);//Depot takes 71 seconds, refinery takes 21 seconds.
+
+		float progress = depot.getBuildPercentage();
+		if (progress < progressRequired)
+		{
+			//Skip building geysers at bases with a not quite built enough depot.
+			return false;
+		}
+	}
+	
+	return true;
 }
 
 void ProductionManager::drawProductionInformation()
