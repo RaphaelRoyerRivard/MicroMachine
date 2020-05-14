@@ -161,7 +161,7 @@ void BaseLocationManager::onStart()
 			CCPosition pos(Util::TileToPosition(x + 0.5f), Util::TileToPosition(y + 0.5f));
 			for (auto & base : m_baseLocationData)
 			{
-				if (minDistance > 0 && Util::DistSq(pos, Util::GetPosition(base.getDepotPosition())) > minDistance)
+				if (minDistance > 0 && Util::DistSq(pos, Util::GetPosition(base.getDepotTilePosition())) > minDistance)
 				{
 					continue;
 				}
@@ -172,7 +172,7 @@ void BaseLocationManager::onStart()
 					continue;
 				}
 
-				float heightDiff = abs(Util::TerrainHeight(pos) - Util::TerrainHeight(base.getDepotPosition()));
+				float heightDiff = abs(Util::TerrainHeight(pos) - Util::TerrainHeight(base.getDepotTilePosition()));
 				groundDistance += heightDiff * TerrainHeightCostMultiplier;
 				if (groundDistance >= (BaseLocationManager::NearBaseLocationTileDistance))
 				{
@@ -241,6 +241,7 @@ void BaseLocationManager::onFrame()
     {
         baseLocation.setPlayerOccupying(Players::Self, false);
 		baseLocation.setResourceDepot({});
+		baseLocation.clearGasBunkers();
         baseLocation.setPlayerOccupying(Players::Enemy, false);
     }
 	m_bot.StopProfiling("0.6.2   resetBaseLocations");
@@ -262,6 +263,16 @@ void BaseLocationManager::onFrame()
 			baseLocation->setPlayerOccupying(Players::Self, true);
 			if (unit.getType().isResourceDepot())
 				baseLocation->setResourceDepot(unit);
+			else if (unit.getType() == MetaTypeEnum::Bunker.getUnitType())
+			{
+				for (auto bunkerLocation : baseLocation->getGasBunkerLocations())
+				{
+					if (bunkerLocation == unit.getTilePosition())
+					{
+						baseLocation->addGasBunkers(unit);
+					}
+				}
+			}
 		}
     }
 	m_bot.StopProfiling("0.6.3   updateBaseLocations");
@@ -426,7 +437,7 @@ void BaseLocationManager::drawTileBaseLocationAssociations() const
 			const auto baseLocation = xRow[y];
 			if (baseLocation)
 			{
-				m_bot.Map().drawLine(CCPosition(x, y), Util::GetPosition(baseLocation->getDepotPosition()), sc2::Colors::White);
+				m_bot.Map().drawLine(CCPosition(x, y), Util::GetPosition(baseLocation->getDepotTilePosition()), sc2::Colors::White);
 			}
 		}
 	}
@@ -580,7 +591,22 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 	for (auto & base : getBaseLocations())
 	{
 		// skip mineral only and starting locations (TODO: fix this)
-		if (base->isMineralOnly() || base->isStartLocation() || base->isOccupiedByPlayer(Players::Self) || base->isOccupiedByPlayer(Players::Enemy))
+		if (base->isMineralOnly() || base->isStartLocation())
+		{
+			continue;
+		}
+		
+		if (base->isOccupiedByPlayer(Players::Self))
+		{
+			//Allow to expand to a base location we already own if it doesn't have a depot yet (or it was moved/destroyed).
+			auto depot = base->getResourceDepot();
+			if (depot.isValid() && depot.isAlive())
+			{
+				continue;
+			}
+		}
+		
+		if (base->isOccupiedByPlayer(Players::Enemy))
 		{
 			continue;
 		}
@@ -591,7 +617,7 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 		}
 
 		// get the tile position of the base
-		auto tile = base->getDepotPosition();
+		auto tile = base->getDepotTilePosition();
 		
 		//Check if buildable (creep check), using CC for building size, should work for all races.
 		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, MetaTypeEnum::CommandCenter.getUnitType(), 0, true, false, true))
@@ -633,7 +659,7 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 CCTilePosition BaseLocationManager::getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable) const
 {
 	auto closestBase = getNextExpansion(player, checkBlocked, checkBuildable);
-	return closestBase ? closestBase->getDepotPosition() : CCTilePosition(0, 0);
+	return closestBase ? closestBase->getDepotTilePosition() : CCTilePosition(0, 0);
 }
 
 CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
@@ -644,7 +670,7 @@ CCTilePosition BaseLocationManager::getBasePosition(int player, int index) const
 	if (player == Players::Self)
 		index = m_baseLocationPtrs.size() - index - 1;
 
-	CCTilePosition position = m_baseLocationPtrs[index]->getDepotPosition();
+	CCTilePosition position = m_baseLocationPtrs[index]->getDepotTilePosition();
 	BOT_ASSERT(position.x != 0.f || position.y != 0.f, "Base location is 0,0");
 	return position;
 }
@@ -685,7 +711,7 @@ CCTilePosition BaseLocationManager::getClosestBasePosition(const sc2::Unit* unit
 			minDistance = dist;
 			if (shiftTowardsResourceDepot)
 			{
-				CCPosition vectorTowardsBase = Util::GetPosition(base.getDepotPosition()) - base.getPosition();
+				CCPosition vectorTowardsBase = Util::GetPosition(base.getDepotTilePosition()) - base.getPosition();
 				Util::Normalize(vectorTowardsBase);
 				closestBase = Util::GetTilePosition(base.getPosition() + vectorTowardsBase);
 			}
@@ -702,7 +728,7 @@ const BaseLocation* BaseLocationManager::getBaseForDepotPosition(const CCTilePos
 {
 	for (auto & base : m_baseLocationData)
 	{
-		if (base.getDepotPosition() == position)
+		if (base.getDepotTilePosition() == position)
 		{
 			return &base;
 		}
@@ -714,7 +740,7 @@ const BaseLocation* BaseLocationManager::getBaseForDepot(const Unit depot) const
 {
 	for (auto & base : m_baseLocationData)
 	{
-		if (base.getDepotPosition() == depot.getTilePosition())
+		if (base.getDepotTilePosition() == depot.getTilePosition())
 		{
 			return &base;
 		}

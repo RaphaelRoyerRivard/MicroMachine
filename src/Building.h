@@ -24,6 +24,7 @@ public:
     bool            buildCommandGiven;
     bool            underConstruction;
 	bool			reserveResources = true;
+	bool			canBeBuiltElseWhere = true;
 
     Building();
 

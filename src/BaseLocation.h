@@ -14,13 +14,17 @@ class BaseLocation
     DistanceMap                 m_distanceMap;
 
 	CCTilePosition				m_turretPosition;
-    CCTilePosition              m_depotPosition;
+	CCPosition					m_depotPosition;
+    CCTilePosition              m_depotTilePosition;
     CCPosition                  m_centerOfResources;
     std::vector<Unit>           m_geysers;
     std::vector<Unit>           m_minerals;
 	Unit						m_resourceDepot;
+	std::vector<Unit>			m_gasBunkers;
 	bool						m_isUnderAttack;
 	bool						m_isBlocked;
+	bool						m_isSplitGeyser;
+	std::vector<CCTilePosition> m_gasBunkerLocations;
 
 	CCTilePosition				m_centerOfMinerals;
 
@@ -51,13 +55,18 @@ public:
 	bool containsUnitApproximative(const Unit & unit, int maxDistance = 0) const;
     bool containsPosition(const CCPosition & pos) const;
 	const CCTilePosition & getTurretPosition() const;
-    const CCTilePosition & getDepotPosition() const;
+	const std::vector<CCTilePosition> & getGasBunkerLocations() const;
+	const CCPosition & getDepotPosition() const;
+    const CCTilePosition & getDepotTilePosition() const;
 	int getOptimalMineralWorkerCount() const;
     const CCPosition & getPosition() const;
     const std::vector<Unit> & getGeysers() const;
     const std::vector<Unit> & getMinerals() const;
 	const Unit& getResourceDepot() const { return m_resourceDepot; }
 	void setResourceDepot(Unit resourceDepot) { m_resourceDepot = resourceDepot; }
+	const std::vector<Unit> & getGasBunkers() const { return m_gasBunkers; }
+	void clearGasBunkers() { m_gasBunkers = std::vector<Unit>(); }
+	void addGasBunkers(Unit gasBunker) { m_gasBunkers.push_back(gasBunker); }
 	bool isUnderAttack() const { return m_isUnderAttack; }
 	void setIsUnderAttack(bool isUnderAttack) { m_isUnderAttack = isUnderAttack; }
 	bool isBlocked() const { return m_isBlocked; }
@@ -69,6 +78,7 @@ public:
     void setPlayerOccupying(CCPlayer player, bool occupying);
 
     const std::vector<CCTilePosition> & getClosestTiles() const;
+	const bool & isGeyserSplit() const;
 
     void draw();
 };

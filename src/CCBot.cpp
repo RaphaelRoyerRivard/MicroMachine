@@ -953,7 +953,6 @@ void CCBot::identifyEnemyWorkersGoingIntoRefinery()
 			}
 		}
 	}
-
 }
 
 void CCBot::clearDeadUnits()
@@ -1362,6 +1361,9 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter - towardsCenter * 2.5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter + towardsCenter * 2.5, player2, 1);*/
 
+	// Resource cheat
+	//Debug()->DebugGiveAllResources();
+
 	// Test for reproducing pathing bugs with Cyclones in CatalystLE
 	/*const CCPosition leftLocation(53, 21);
 	const CCPosition rightLocation(59, 23);
@@ -1541,6 +1543,20 @@ void CCBot::IssueCheats()
 		}
 		Util::ClearChat(*this);
 	}
+
+	//Kill all aggressive enemy units, runs every frame to kill every visible enemy units
+	if (false)//Comment to activate
+	{
+		for (auto unit : GetEnemyUnits())
+		{
+			if (!unit.second.getType().isBuilding() && unit.second.isValid() && unit.second.isAlive() && unit.second.getUnitPtr()->display_type != sc2::Unit::Snapshot && unit.second.getUnitPtr()->display_type != sc2::Unit::Hidden)
+			{
+				Debug()->DebugKillUnit(unit.second.getUnitPtr());
+				Util::ClearChat(*this);
+			}
+		}
+	}
+
 	if (keyEnd)
 	{
 		for (auto u : Observation()->GetUnits())
@@ -1864,6 +1880,7 @@ const CCTilePosition CCBot::GetBuildingArea(MetaType buildingType)
 		if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
 			continue;
 
+		// Build the first Starport behind our base
 		if (buildingType == MetaTypeEnum::Starport && GetAllyUnits(buildingType.getUnitType().getAPIUnitType()).empty())
 		{
 			const auto towardsBehind = Util::Normalized(base->getPosition() - Util::GetPosition(base->getDepotPosition()));
@@ -1871,7 +1888,7 @@ const CCTilePosition CCBot::GetBuildingArea(MetaType buildingType)
 			return Util::GetTilePosition(behindBase);
 		}
 		
-		return base->getDepotPosition();
+		return base->getDepotTilePosition();
 	}
 
 	//If all bases are underattack, return the main base.

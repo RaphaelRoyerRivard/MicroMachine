@@ -8,6 +8,7 @@ MetaType MetaTypeEnum::Reactor;
 MetaType MetaTypeEnum::Barracks;
 MetaType MetaTypeEnum::BarracksTechLab;
 MetaType MetaTypeEnum::BarracksReactor;
+MetaType MetaTypeEnum::Bunker;
 MetaType MetaTypeEnum::Factory;
 MetaType MetaTypeEnum::FactoryTechLab;
 MetaType MetaTypeEnum::FactoryReactor;
@@ -112,6 +113,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::Barracks = MetaType("Barracks", m_bot);
 	MetaTypeEnum::BarracksTechLab = MetaType("BarracksTechLab", m_bot);
 	MetaTypeEnum::BarracksReactor = MetaType("BarracksReactor", m_bot);
+	MetaTypeEnum::Bunker = MetaType("Bunker", m_bot);
 	MetaTypeEnum::Factory = MetaType("Factory", m_bot);
 	MetaTypeEnum::FactoryTechLab = MetaType("FactoryTechLab", m_bot);
 	MetaTypeEnum::FactoryReactor = MetaType("FactoryReactor", m_bot);

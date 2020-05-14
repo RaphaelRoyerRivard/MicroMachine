@@ -27,6 +27,7 @@ public:
     // determines whether we can build at a given location
 	bool buildable(const UnitType type, int x, int y, bool ignoreReservedTiles = false) const;
 	bool canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const;
+	bool canBuildBunkerHere(int bx, int by, int depotX, int depotY, std::vector<CCPosition> geysersPos) const;
     bool canBuildHere(int bx, int by, const UnitType & type, int buildDist, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const;
 	bool isEnemyUnitBlocking(CCTilePosition center, UnitType type) const;
 	bool intersects(Unit unit, CCPosition buildingAbsoluteCenter, int buildingRadius) const;
@@ -37,6 +38,7 @@ public:
 
     // returns a build location near a building's desired location
     CCTilePosition getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const;
+	CCTilePosition getBunkerBuildLocationNear(const Building & b, int depotX, int depotY, std::vector<CCPosition> geysersPos) const;
 
     void drawReservedTiles();
 
@@ -44,5 +46,6 @@ public:
 	void reserveTiles(CCTilePosition start, CCTilePosition end);
     void freeTiles(int x, int y, int width, int height);
 	void freeTilesForTurrets(CCTilePosition position);
+	void freeTilesForBunker(CCTilePosition position);
     CCTilePosition getRefineryPosition();
 };

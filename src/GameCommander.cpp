@@ -58,6 +58,9 @@ void GameCommander::handleUnitAssignments()
     // set each type of unit
     setScoutUnits();
     setCombatUnits();
+
+	// check for unit being carried and units carrying others
+	setCarryingAndCarried();
 }
 
 bool GameCommander::isAssigned(const Unit & unit) const
@@ -142,6 +145,27 @@ void GameCommander::setCombatUnits()
     }
 }
 
+void GameCommander::setCarryingAndCarried()
+{
+	//Reset lists
+	m_unitInside.clear();
+	m_unitCarrier.clear();
+
+	for (auto & carrier : m_validUnits)
+	{
+		if (carrier.getUnitPtr()->cargo_space_max == 0 || carrier.getUnitPtr()->cargo_space_taken == 0)
+		{
+			continue;
+		}
+
+		for (auto & carried : carrier.getUnitPtr()->passengers)
+		{
+			setInside(carried.tag);
+			setCarrierForUnit(carried.tag, &carrier);
+		}
+	}
+}
+
 void GameCommander::onUnitCreate(const Unit & unit)
 {
 
@@ -165,4 +189,45 @@ void GameCommander::assignUnit(const Unit & unit, std::vector<Unit> & units)
     }
 
     units.push_back(unit);
+}
+
+
+bool GameCommander::isInside(sc2::Tag unit)
+{
+	return std::find(m_unitInside.begin(), m_unitInside.end(), unit) != m_unitInside.end();
+}
+
+void GameCommander::setInside(sc2::Tag unit)
+{
+	m_unitInside.push_back(unit);
+}
+
+Unit* GameCommander::getCarrierForUnit(sc2::Tag unitTag)
+{
+	return m_unitCarrier[unitTag];
+}
+
+Unit* GameCommander::setCarrierForUnit(sc2::Tag unitTag, Unit* carrier)
+{
+	return m_unitCarrier[unitTag] = carrier;
+}
+
+void GameCommander::AddDelayedSmartAbility(Unit unit, sc2::AbilityID ability, CCPosition position)
+{
+	m_delayedSmartAbility.push_back(std::pair<Unit, std::pair<sc2::AbilityID, CCPosition>>(unit, std::pair<sc2::AbilityID, CCPosition>(ability, position)));
+}
+
+void GameCommander::GiveDelayedSmarAbilityOrders()
+{
+	for (auto command : m_delayedSmartAbility)
+	{
+		if (command.second.first == 0)
+		{
+			command.first.rightClick(command.second.second);
+		}
+		else
+		{
+			Micro::SmartAbility(command.first.getUnitPtr(), command.second.first, command.second.second, m_bot);
+		}
+	}
 }

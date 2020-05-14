@@ -35,7 +35,7 @@ class ProductionManager
     bool    canMakeNow(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
     void    setBuildOrder(const BuildOrder & buildOrder);
-    bool    create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources = true, bool filterMovingWorker = true);
+    bool    create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources = true, bool filterMovingWorker = true, bool canBePlacedElsewhere = true);
 	bool    create(const Unit & producer, Building & b, bool filterMovingWorker = true);
     void    manageBuildOrderQueue();
 	bool	ShouldSkipQueueItem(const BuildOrderItem & currentItem) const;
@@ -47,6 +47,8 @@ class ProductionManager
 	bool	currentlyHasRequirement(MetaType currentItem) const;
 	bool	hasRequiredUnit(const UnitType& unitType, bool checkInQueue) const;
 	bool	hasProducer(const MetaType& metaType, bool checkInQueue);
+
+	bool	ValidateBuildingTiming(Building & b) const;
 
 public:
 	int supplyBlockedFrames = 0;
