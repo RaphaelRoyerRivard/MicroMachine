@@ -376,11 +376,8 @@ void WorkerManager::handleGasWorkers()
 {
 	int mineral = m_bot.GetMinerals();
 	int gas = m_bot.GetGas();
-	int numMineralWorker = getNumMineralWorkers();
-	int numGasWorker = getNumGasWorkers();
 	const int ressourceTreshold = 300;
 	int previousGasWorkersTarget = gasWorkersTarget;
-
 
 	switch (gasWorkersTarget)
 	{
@@ -393,7 +390,14 @@ void WorkerManager::handleGasWorkers()
 		case 1:
 			if (gas > mineral * 5 && mineral + gas > ressourceTreshold)
 			{
-				gasWorkersTarget = 0;
+				if (getNumMineralWorkers() <= 10)
+				{
+					gasWorkersTarget = 0;
+				}
+				else
+				{
+					gasWorkersTarget = 1;
+				}
 			}
 			else if (mineral > gas * 1)
 			{
