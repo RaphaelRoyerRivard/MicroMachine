@@ -2850,7 +2850,7 @@ bool CombatCommander::ShouldUnitHeal(const sc2::Unit * unit) const
 			case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
 				if (m_bot.Config().StarCraft2Version <= "4.10.4")
 					percentageMultiplier = isLockedOn ? 0.75f : 0.5f;
-				else if (m_bot.Analyzer().getUnitState(unit).GetRecentDamageTaken() * (isLockedOn ? 2.5f : 1.8f) >= unit->health
+				else if (m_bot.Analyzer().getUnitState(unit).GetRecentDamageTaken() * (isLockedOn ? 2.5f : 2.f) >= unit->health
 					&& Util::IsAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, unit, m_unitsAbilities))
 					forceHeal = true;	// After version 4.10.4, Tactical Jump has a 1 second vulnerability
 				break;
