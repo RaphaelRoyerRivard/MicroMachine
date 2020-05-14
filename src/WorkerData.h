@@ -29,7 +29,6 @@ class WorkerData
     std::map<Unit, std::set<Unit>> m_workerRepairing;
 	std::map<const BaseLocation*, std::list<Unit>> m_repairStationWorkers;
     std::map<Unit, Unit>    m_workerRepairTarget;
-	std::map<Unit, std::pair<Unit, int>> m_reorderedGasWorker;
 
     void clearPreviousJob(const Unit & unit);
     std::set<Unit> getWorkerRepairingThatTarget(const Unit & unit);
@@ -64,7 +63,6 @@ public:
 	void validateRepairStationWorkers();
     Unit getWorkerRepairTarget(const Unit & unit) const;
 	int getWorkerRepairingTargetCount(const Unit & unit);
-	std::map<Unit, std::pair<Unit, int>> & getReorderedGasWorkers();
     const std::set<Unit> getWorkerRepairingThatTargetC(const Unit & unit) const;
     void WorkerStoppedRepairing(const Unit & unit);
 };

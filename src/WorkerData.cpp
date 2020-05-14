@@ -121,14 +121,6 @@ void WorkerData::updateWorker(const Unit & unit)
 
 void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit, bool mineralWorkerTargetJobUnit)
 {
-	//Handle stopping a job
-	int previousJob = getWorkerJob(worker);
-	const int spamOrderDuring = 90;//1 second is 24.4 frames, 90 / 15 is 6 attemps.
-	if (previousJob == WorkerJobs::Gas)
-	{
-		m_reorderedGasWorker[worker] = std::pair<Unit, int>(jobUnit, spamOrderDuring);
-	}
-
 	clearPreviousJob(worker);
     m_workerJobMap[worker] = job;
     m_workerJobCount[job]++;
@@ -503,11 +495,6 @@ Unit WorkerData::getWorkerRepairTarget(const Unit & unit) const
         return it->second;
     }
     return {};
-}
-
-std::map<Unit, std::pair<Unit, int>> & WorkerData::getReorderedGasWorkers()
-{
-	return m_reorderedGasWorker;
 }
 
 const std::set<Unit> WorkerData::getWorkerRepairingThatTargetC(const Unit & unit) const
