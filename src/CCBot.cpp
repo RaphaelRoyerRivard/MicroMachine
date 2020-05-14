@@ -1694,6 +1694,19 @@ Unit CCBot::GetUnit(const CCUnitID & tag) const
 	return Unit(Observation()->GetUnit(tag), *(CCBot *)this);
 }
 
+Unit CCBot::GetUnit(const sc2::PassengerUnit & passenger)
+{
+	auto & units = this->GetAllyUnits((sc2::UNIT_TYPEID)passenger.unit_type);
+	for (auto & u : units)
+	{
+		if (u.getTag() == passenger.tag)
+		{
+			return u;
+		}
+	}
+	assert("Unit tag doesn't exist");
+}
+
 const sc2::Unit * CCBot::GetUnitPtr(const CCUnitID & tag) const
 {
 	return Observation()->GetUnit(tag);
