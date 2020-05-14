@@ -1704,7 +1704,8 @@ Unit CCBot::GetUnit(const sc2::PassengerUnit & passenger)
 			return u;
 		}
 	}
-	assert("Unit tag doesn't exist");
+	assert(false, "CCBot::GetUnit(const sc2::PassengerUnit & passenger) - Unit tag doesn't exist");
+	return {};
 }
 
 const sc2::Unit * CCBot::GetUnitPtr(const CCUnitID & tag) const

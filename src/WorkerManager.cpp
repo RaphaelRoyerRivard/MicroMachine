@@ -424,7 +424,6 @@ void WorkerManager::handleGasWorkers()
 			gasWorkersTarget = 3;
 	}
 
-
 	if (m_bot.Strategy().isWorkerRushed())
 	{
 		gasWorkersTarget = 3;
@@ -497,8 +496,8 @@ void WorkerManager::handleGasWorkers()
 						for (int i = 0; i<(numAssigned - geyserGasWorkersTarget); ++i)
 						{
 							//check if we have room for more mineral workers
-							if (mineralWorkerRoom <= 0)
-							{
+							if (mineralWorkerRoom <= 0 && numAssigned < 3)
+							{//Do not remove gas workers if we don't have room for an additional mineral worker, except if we are at 3 gas workers (exception for bunkers).
 								break;
 							}
 
@@ -509,7 +508,9 @@ void WorkerManager::handleGasWorkers()
 								{
 									Util::DisplayError(__FUNCTION__, "Worker assigned to a refinery is not a gas worker.", m_bot);
 								}
-								m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
+
+								gasWorker.stop();
+								workerRemovedFromGas.push_back(gasWorker);
 							}
 
 							mineralWorkerRoom--;
@@ -521,47 +522,18 @@ void WorkerManager::handleGasWorkers()
     }
 
 	//Spam order in case worker is in Refinery
-	auto & reorderedGasWorker = m_workerData.getReorderedGasWorkers();
-	if (reorderedGasWorker.size() > 0)
+	if (workerRemovedFromGas.size() > 0)
 	{
-		for (auto & worker : m_bot.Workers().getWorkers())
+		std::vector<Unit> modifiedReorderedGasWorker;
+		for (auto & worker : workerRemovedFromGas)
 		{
-			if (m_bot.Commander().isInside(worker.getTag()))
+			if(worker.getUnitPtr()->orders.size() > 0 || m_workerData.getWorkerJob(worker) == WorkerJobs::Gas)
 			{
-				continue;
-			}
-
-			auto it = reorderedGasWorker.find(worker);
-			if (it != reorderedGasWorker.end())
-			{
-				if (reorderedGasWorker[worker].second > 0)//If order hasn't changed
-				{
-					auto tick = reorderedGasWorker[worker].second--;
-					if (tick % 8)
-					{
-						continue;
-					}
-
-					auto target = it->first;
-					if (target.isValid() && target.getPosition().x != 0 && target.getPosition().y != 0)
-					{
-						worker.rightClick(it->first);
-					}
-					else
-					{//If no target unit, we stop
-						auto orders = worker.getUnitPtr()->orders;
-						if (orders.size() == 1 && orders[0].target_pos.x == 0 && orders[0].target_pos.y == 0)
-						{
-							worker.stop();
-						}
-					}
-				}
-				else
-				{
-					reorderedGasWorker.erase(it);
-				}
+				worker.stop();
+				modifiedReorderedGasWorker.push_back(worker);
 			}
 		}
+		workerRemovedFromGas = modifiedReorderedGasWorker;
 	}
 
 	std::vector<sc2::Tag> bunkerHasLoaded;
