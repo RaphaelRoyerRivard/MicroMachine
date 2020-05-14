@@ -176,6 +176,7 @@ public:
 	int GetFreeMinerals();
 	int GetFreeGas();
     Unit GetUnit(const CCUnitID & tag) const;
+	Unit GetUnit(const sc2::PassengerUnit & passenger);
 	const sc2::Unit * GetUnitPtr(const CCUnitID & tag) const;
     const std::vector<Unit> & GetUnits() const;
 	int GetUnitCount(sc2::UNIT_TYPEID type, bool completed = false, bool underConstruction = false);

@@ -376,11 +376,8 @@ void WorkerManager::handleGasWorkers()
 {
 	int mineral = m_bot.GetMinerals();
 	int gas = m_bot.GetGas();
-	int numMineralWorker = getNumMineralWorkers();
-	int numGasWorker = getNumGasWorkers();
 	const int ressourceTreshold = 300;
 	int previousGasWorkersTarget = gasWorkersTarget;
-
 
 	switch (gasWorkersTarget)
 	{
@@ -393,7 +390,14 @@ void WorkerManager::handleGasWorkers()
 		case 1:
 			if (gas > mineral * 5 && mineral + gas > ressourceTreshold)
 			{
-				gasWorkersTarget = 0;
+				if (getNumMineralWorkers() <= 10)
+				{
+					gasWorkersTarget = 0;
+				}
+				else
+				{
+					gasWorkersTarget = 1;
+				}
 			}
 			else if (mineral > gas * 1)
 			{
@@ -606,6 +610,20 @@ void WorkerManager::handleGasWorkers()
 							}
 							Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
 							hasUnload = true;
+						}
+					}
+				}
+				if (workers.size() == 0)//Empty bunkers if they they units inside that shouldn't be inside
+				{
+					auto passengers = bunker.getUnitPtr()->passengers;
+					for (auto passenger : passengers)
+					{
+						switch ((sc2::UNIT_TYPEID) passenger.unit_type)
+						{
+							case sc2::UNIT_TYPEID::TERRAN_SCV:
+							case sc2::UNIT_TYPEID::PROTOSS_PROBE:
+							case sc2::UNIT_TYPEID::ZERG_DRONE:
+								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
 						}
 					}
 				}
