@@ -1710,7 +1710,7 @@ Unit CCBot::GetUnit(const sc2::PassengerUnit & passenger)
 			return u;
 		}
 	}
-	assert(false, "CCBot::GetUnit(const sc2::PassengerUnit & passenger) - Unit tag doesn't exist");
+	BOT_ASSERT(false, "CCBot::GetUnit(const sc2::PassengerUnit & passenger) - Unit tag doesn't exist");
 	return {};
 }
 
