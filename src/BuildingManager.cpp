@@ -1173,10 +1173,18 @@ void BuildingManager::checkForCompletedBuildings()
         // if the unit has completed
         if (b.buildingUnit.isCompleted())
         {
+			// remove this unit from the under construction vector
+			toRemove.push_back(b);
+
+			//If building is part of the wall
+			if (std::find(m_wallBuildingPosition.begin(), m_wallBuildingPosition.end(), b.buildingUnit.getTilePosition()) != m_wallBuildingPosition.end())
+			{
+				m_wallBuildings.push_back(b.buildingUnit);
+			}
+        	
             // if we are terran, give the worker back to worker manager
             if (Util::IsTerran(m_bot.GetSelfRace()))
             {
-				auto type = b.type.getAPIUnitType();
 				if(b.type.isRefinery())//Worker that built the refinery, will be a gas worker for it.
 				{
 					m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Gas, b.buildingUnit);
@@ -1212,31 +1220,30 @@ void BuildingManager::checkForCompletedBuildings()
 						case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
 						case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
 						{
-							//Set rally in the middle of the minerals
-							auto position = b.buildingUnit.getPosition();
-							auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-							if (enemyBase == nullptr)
+							//If the building is in the wall
+							if (Util::Contains(b.buildingUnit, m_wallBuildings))
 							{
-								b.buildingUnit.rightClick(m_bot.Map().center());
+								//Set rally on our starting base
+								b.buildingUnit.rightClick(m_bot.GetStartLocation());
 							}
 							else
 							{
-								b.buildingUnit.rightClick(enemyBase->getPosition());
+								//Set rally in the middle of the minerals
+								const auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+								if (enemyBase == nullptr)
+								{
+									b.buildingUnit.rightClick(m_bot.Map().center());
+								}
+								else
+								{
+									b.buildingUnit.rightClick(enemyBase->getPosition());
+								}
 							}
 							break;
 						}
 					}
 				}
             }
-
-            // remove this unit from the under construction vector
-            toRemove.push_back(b);
-
-			//If building is part of the wall
-			if (std::find(m_wallBuildingPosition.begin(), m_wallBuildingPosition.end(), b.buildingUnit.getTilePosition()) != m_wallBuildingPosition.end())
-			{
-				m_wallBuilding.push_back(b.buildingUnit);
-			}
         }
     }
 
@@ -1431,7 +1438,7 @@ CCTilePosition BuildingManager::getWallPosition() const
 
 std::list<Unit> BuildingManager::getWallBuildings()
 {
-	return m_wallBuilding;
+	return m_wallBuildings;
 }
 
 CCTilePosition BuildingManager::getProxyLocation()
@@ -2131,7 +2138,7 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 			if (unit.getHitPointsPercentage() <= 50.f && unit.getUnitPtr()->build_progress >= 1.f)
 			{
 				// We don't want to lift a wall building
-				if (Util::Contains(unit, m_wallBuilding))
+				if (Util::Contains(unit, m_wallBuildings))
 					continue;
 				// And there is danger on the ground but not in the air
 				const auto recentDamageTaken = m_bot.Analyzer().getUnitState(unit.getUnitPtr()).GetRecentDamageTaken();

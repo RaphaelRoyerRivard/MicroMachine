@@ -1490,6 +1490,14 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 		if (!ignoreSpells)
 			range = 7.f;
 	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+	{
+		range = 6.f;
+	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_SENTRY)
+	{
+		range = 5.f;
+	}
 
 	return range;
 }
@@ -1796,6 +1804,14 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 		if (where == sc2::Weapon::TargetType::Ground && unit->energy >= 50)
 			dps = 12.7;
 	}*/
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+	{
+		dps = 16.8f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SENTRY)
+	{
+		dps = 8.4f;
+	}
 
     return dps;
 }
@@ -1872,6 +1888,14 @@ float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapo
 		if (where == sc2::Weapon::TargetType::Ground && unit->energy >= 50)
 			damage = 10.f;
 	}*/
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+	{
+		damage = 6.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SENTRY)
+	{
+		damage = 6.f;
+	}
 
 	return damage;
 }

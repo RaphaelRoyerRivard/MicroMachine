@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.9.32",
+        "BotVersion"                : "1.10.1",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,7 +24,7 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Terran",
+        "EnemyRace"                 : "Protoss",
         "MapFile"                   : "WorldofSleepersLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,

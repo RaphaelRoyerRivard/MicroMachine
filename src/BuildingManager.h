@@ -29,7 +29,7 @@ class BuildingManager
 	bool m_proxySwapDone = false;
 	bool m_barracksSentToEnemyBase = false;
 	std::list<CCTilePosition> m_wallBuildingPosition;
-	std::list<Unit> m_wallBuilding;
+	std::list<Unit> m_wallBuildings;
 	std::map<UnitType, std::list<CCTilePosition>> m_nextBuildingPosition;
 	std::vector<std::pair<CCTilePosition, CCTilePosition>> m_previousNextBuildingPositionByBase;
 	std::map<sc2::Tag, CCPosition> liftedBuildingPositions;
