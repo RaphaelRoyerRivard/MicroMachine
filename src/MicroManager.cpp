@@ -128,7 +128,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	if (target->cloak == sc2::Unit::CloakedDetected)
 		invisModifier = 2.f;
 	else if (target->is_burrowed && target->unit_type != sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED)
-		invisModifier = 2.f;
+		invisModifier = 3.f;
 
 	Unit targetUnit(target, m_bot);
 	if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())

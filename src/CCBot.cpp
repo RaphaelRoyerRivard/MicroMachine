@@ -1528,6 +1528,12 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation + towardsCenterY * 3, player2, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation + towardsCenterY * 3, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, enemyLocation + towardsCenterY * 3, player2, 1);*/
+
+	// Test to check if detected burrowed units are more prioritized
+	/*Debug()->DebugGiveAllTech();
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, m_startLocation + towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 5, player2, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACH, mapCenter + towardsCenter * 5, player1, 4);*/
 }
 
 void CCBot::IssueCheats()
