@@ -422,7 +422,7 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 	}
 	else if (currentItem.type.getUnitType().isResourceDepot())
 	{
-		shouldSkip = m_bot.Strategy().isEarlyRushed();
+		shouldSkip = m_bot.Strategy().isEarlyRushed() && m_bot.GetMinerals() < 800;
 	}
 	if (!shouldSkip)
 	{
