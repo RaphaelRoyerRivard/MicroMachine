@@ -1220,24 +1220,15 @@ void BuildingManager::checkForCompletedBuildings()
 						case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
 						case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
 						{
-							//If the building is in the wall
-							if (Util::Contains(b.buildingUnit, m_wallBuildings))
+							//Set rally towards enemy base
+							const auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+							if (enemyBase == nullptr)
 							{
-								//Set rally on our starting base
-								b.buildingUnit.rightClick(m_bot.GetStartLocation());
+								b.buildingUnit.rightClick(m_bot.Map().center());
 							}
 							else
 							{
-								//Set rally in the middle of the minerals
-								const auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-								if (enemyBase == nullptr)
-								{
-									b.buildingUnit.rightClick(m_bot.Map().center());
-								}
-								else
-								{
-									b.buildingUnit.rightClick(enemyBase->getPosition());
-								}
+								b.buildingUnit.rightClick(enemyBase->getPosition());
 							}
 							break;
 						}
@@ -1852,6 +1843,42 @@ const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool 
 void BuildingManager::castBuildingsAbilities()
 {
 	RunProxyLogic();
+
+	for (const auto & barracks : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS))
+	{
+		//If the building is in the wall
+		if (Util::Contains(barracks, m_wallBuildings))
+		{
+			const auto base = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+			if (base && base->isUnderAttack())
+			{
+				if (!m_wallsBarracksPointsTowardBase)
+				{
+					//Set rally on our starting base
+					barracks.rightClick(m_bot.GetStartLocation());
+					m_wallsBarracksPointsTowardBase = true;
+				}
+			}
+			else
+			{
+				if (m_wallsBarracksPointsTowardBase)
+				{
+					//Set rally towards enemy base
+					const auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+					if (enemyBase == nullptr)
+					{
+						barracks.rightClick(m_bot.Map().center());
+					}
+					else
+					{
+						barracks.rightClick(enemyBase->getPosition());
+					}
+					m_wallsBarracksPointsTowardBase = false;
+				}
+			}
+			break;
+		}
+	}
 	
 	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
 	{

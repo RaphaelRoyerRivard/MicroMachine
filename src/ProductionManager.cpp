@@ -420,6 +420,10 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 		const bool hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true) > 0;
 		shouldSkip = !hasBarracks;
 	}
+	else if (currentItem.type.getUnitType().isResourceDepot())
+	{
+		shouldSkip = m_bot.Strategy().isEarlyRushed();
+	}
 	if (!shouldSkip)
 	{
 		if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
