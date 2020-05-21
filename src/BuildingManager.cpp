@@ -2002,26 +2002,32 @@ void BuildingManager::castBuildingsAbilities()
 			CCTilePosition orbitalPosition;
 			const sc2::Unit* closestMineral = nullptr;
 			auto & bases = m_bot.Bases().getBaseLocations();//Sorted by closest to enemy base
-			for (auto base : bases)
+			// Check twice the base locations, but skip the under attack check the second time
+			for (int i = 0; i < 2; ++i)
 			{
-				if (!base->isOccupiedByPlayer(Players::Self))
-					continue;
-
-				if (base->isUnderAttack())
-					continue;
-
-				auto & depot = base->getResourceDepot();
-				if (!depot.isValid() || !depot.isCompleted())
-					continue;
-
-				closestMineral = getLargestCloseMineral(depot, false, skipMinerals);
-				if (closestMineral == nullptr)
+				for (auto base : bases)
 				{
-					continue;
+					if (!base->isOccupiedByPlayer(Players::Self))
+						continue;
+
+					if (i == 0 && base->isUnderAttack())
+						continue;
+
+					auto & depot = base->getResourceDepot();
+					if (!depot.isValid() || !depot.isCompleted())
+						continue;
+
+					closestMineral = getLargestCloseMineral(depot, false, skipMinerals);
+					if (closestMineral == nullptr)
+					{
+						continue;
+					}
+					orbitalPosition = base->getCenterOfMinerals();
+
+					break;
 				}
-				orbitalPosition = base->getCenterOfMinerals();
-				
-				break;
+				if (orbitalPosition != CCPosition())
+					break;
 			}
 			
 			if (closestMineral == nullptr)
@@ -2038,7 +2044,7 @@ void BuildingManager::castBuildingsAbilities()
 
 			auto point = closestMineral->pos;
 
-			if (m_bot.Config().StarCraft2Version < "4.11.0")//Validate version because we can drop the mule straigth on the mineral past this version
+			if (m_bot.Config().StarCraft2Version < "4.11.0" && orbitalPosition != CCPosition())//Validate version because we can drop the mule straigth on the mineral past this version
 			{
 				//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
 				point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
