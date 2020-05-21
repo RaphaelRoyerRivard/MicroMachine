@@ -1539,7 +1539,8 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter + towardsCenter * 30, player2, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, m_startLocation + towardsCenter * 12, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 5, player1, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 11, player1, 1);*/
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 11, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, m_startLocation + towardsCenter * 10, player1, 2);*/
 }
 
 void CCBot::IssueCheats()
