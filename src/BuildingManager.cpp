@@ -1818,9 +1818,13 @@ void BuildingManager::castBuildingsAbilities()
 
 			auto point = closestMineral->pos;
 
-			//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
-			point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
-			point.y = (point.y + (point.y + (point.y + orbitalPosition.y) / 2) / 2) / 2;
+			if (m_bot.Config().StarCraft2Version < "4.11.0")//Validate version because we can drop the mule straigth on the mineral past this version
+			{
+				//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
+				point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
+				point.y = (point.y + (point.y + (point.y + orbitalPosition.y) / 2) / 2) / 2;
+			}
+
 			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 		}
 	}
