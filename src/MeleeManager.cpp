@@ -59,10 +59,10 @@ void MeleeManager::executeMicro()
 					if (meleeUnit.getHitPointsPercentage() <= 25)
 					{
 						injured = true;
-						for (const auto target : m_targets)
+						for (const auto & threat : m_targets)
 						{
-							const auto enemyRange = Util::GetAttackRangeForTarget(target.getUnitPtr(), meleeUnit.getUnitPtr(), m_bot);
-							if (Util::Dist(target, meleeUnit) < enemyRange + 0.75f)
+							const auto enemyRange = Util::GetAttackRangeForTarget(threat.getUnitPtr(), meleeUnit.getUnitPtr(), m_bot);
+							if (Util::Dist(threat, meleeUnit) < enemyRange + 0.75f)
 							{
 								injuredUnitInDanger = true;
 								break;
@@ -71,7 +71,7 @@ void MeleeManager::executeMicro()
 					}
 
 					// If it is a worker that just attacked a non building unit, we want it to mineral walk back
-					if (meleeUnit.getType().isWorker() && (meleeUnit.getUnitPtr()->weapon_cooldown > 10.f || injuredUnitInDanger) && Util::getSpeedOfUnit(target.getUnitPtr(), m_bot) > 0.f)
+					if (meleeUnit.getType().isWorker() && (meleeUnit.getUnitPtr()->weapon_cooldown > 10.f || injuredUnitInDanger) && Util::getSpeedOfUnit(target.getUnitPtr(), m_bot) > 0.f && m_squad->getName() != "ScoutDefense")
 					{
 						Micro::SmartRightClick(meleeUnit.getUnitPtr(), m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getMinerals()[0].getUnitPtr(), m_bot);
 					}

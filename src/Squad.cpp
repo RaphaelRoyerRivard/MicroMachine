@@ -150,6 +150,8 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 			continue;
 		if (visibilityFilter && !enemyUnit.isVisible())
 			continue;
+		if (m_name == "ScoutDefense" && !enemyUnit.getType().isWorker())
+			continue;
 
 #ifndef PUBLIC_RELEASE
 		if(m_bot.Config().DrawMemoryInfo)

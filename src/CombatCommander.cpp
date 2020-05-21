@@ -1278,13 +1278,11 @@ void CombatCommander::updateScoutDefenseSquad()
 		if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
 		{
 			enemyUnitsInRegion.push_back(unit);
-			if (enemyUnitsInRegion.size() > 1)
-				break;
 		}
 	}
 
-    // if there's an enemy worker in our region
-    if (enemyUnitsInRegion.size() == 1)
+    // if there is at least one enemy worker in our region, but it is still not a worker rush
+    if (!enemyUnitsInRegion.empty() && !m_bot.Strategy().isWorkerRushed())
     {
 		// and there is an injured worker in the squad, remove it
 		if (!scoutDefenseSquad.isEmpty())
@@ -1307,7 +1305,7 @@ void CombatCommander::updateScoutDefenseSquad()
 			Unit enemyWorkerUnit = *enemyUnitsInRegion.begin();
 			BOT_ASSERT(enemyWorkerUnit.isValid(), "null enemy worker unit");
 
-			Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit, enemyUnitsInRegion);
+			const Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit, enemyUnitsInRegion);
 			if (workerDefender.isValid())
 			{
 				m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
@@ -1774,6 +1772,7 @@ void CombatCommander::updateDefenseSquads()
 			{
 				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
 				bool weakUnitAgainstOnlyBuildings = unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER;
+				bool proxyMarauderAgainstOnlyBuildings = m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS && unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MARAUDER;
 				bool immune = true;
 				bool detectionUseful = false;
 				float maxGroundDps = 0.f;
@@ -1790,6 +1789,14 @@ void CombatCommander::updateDefenseSquads()
 							continue;
 						if (Util::GetDpsForTarget(unit.getUnitPtr(), enemyUnit.getUnitPtr(), m_bot) > 0.f)
 							weakUnitAgainstOnlyBuildings = false;
+					}
+					// As soon as there is a non worker non building unit that the proxy Marauder should defend against, we consider that the weak unit can be useful
+					if (proxyMarauderAgainstOnlyBuildings)
+					{
+						if (enemyUnit.getType().isBuilding() || enemyUnit.getType().isWorker())
+							continue;
+						if (Util::GetDpsForTarget(unit.getUnitPtr(), enemyUnit.getUnitPtr(), m_bot) > 0.f)
+							proxyMarauderAgainstOnlyBuildings = false;
 					}
 					// We check if our unit is immune to the enemy unit (as soon as one enemy unit can attack our unit, we stop checking)
 					if (immune)
@@ -1996,56 +2003,6 @@ void CombatCommander::updateDefenseSquads()
 	}
 }
 
-/*
- * This method is not used anymore.
- */
-void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy)
-{
-    auto & squadUnits = defenseSquad.getUnits();
-
-    for (auto & unit : squadUnits)
-    {
-		// Let injured worker return mining, no need to sacrifice it
-		if (unit.getType().isWorker())
-		{
-			if (unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT ||
-				!ShouldWorkerDefend(unit, defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, defenseSquad.getTargets()))
-			{
-				m_bot.Workers().finishedWithWorker(unit);
-				defenseSquad.removeUnit(unit);
-			}
-		}
-        else if (unit.isAlive())
-        {
-			bool isUseful = (flyingDefendersNeeded && unit.canAttackAir()) || (groundDefendersNeeded && unit.canAttackGround());
-			if(!isUseful)
-				defenseSquad.removeUnit(unit);
-        }
-    }
-
-	if (flyingDefendersNeeded)
-	{
-		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "air");
-
-		while(defenderToAdd.isValid())
-		{
-			m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
-			defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "air");
-		}
-	}
-
-	if (groundDefendersNeeded)
-	{
-		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "ground");
-
-		while (defenderToAdd.isValid())
-		{
-			m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
-			defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "ground");
-		}
-	}
-}
-
 Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type)
 {
     Unit closestDefender;
@@ -2089,7 +2046,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     return closestDefender;
 }
 
-Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits)
+Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const
 {
     // get our worker unit that is mining that is closest to it
     Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
@@ -2115,9 +2072,22 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 		return false;
 	if (!m_squadData.canAssignUnitToSquad(worker, defenseSquad))
 		return false;
-	if (closestEnemy.isFlying())
-		return false;
-	if (m_bot.Map().terrainHeight(worker.getPosition()) != m_bot.Map().terrainHeight(closestEnemy.getPosition()))
+	const auto workerHeight = m_bot.Map().terrainHeight(worker.getPosition());
+	bool groundEnemyUnitOnSameHeight = false;
+	bool enemyBuildingOnSameHeight = false;
+	for (const auto & enemyUnit : enemyUnits)
+	{
+		if (!enemyUnit.isFlying() && workerHeight == m_bot.Map().terrainHeight(enemyUnit.getPosition()))
+		{
+			groundEnemyUnitOnSameHeight = true;
+			if (enemyUnit.getType().isBuilding())
+			{
+				enemyBuildingOnSameHeight = true;
+				break;
+			}
+		}
+	}
+	if (!groundEnemyUnitOnSameHeight)
 		return false;
 	// do not check distances if it is to protect against a scout
 	if (defenseSquad.getName() == "ScoutDefense")
@@ -2126,16 +2096,19 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	if (m_bot.Strategy().isWorkerRushed())
 		return true;
 	// worker can fight buildings somewhat close to the base
-	const auto isBuilding = closestEnemy.getType().isBuilding();
+	/*const auto isBuilding = closestEnemy.getType().isBuilding();
 	const auto enemyDistanceToBase = Util::DistSq(closestEnemy, pos);
 	const auto maxEnemyDistance = closestEnemy.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL ? 30.f : 20.f;
 	const auto enemyDistanceToWorker = Util::DistSq(worker, closestEnemy);
-	if (isBuilding && enemyDistanceToBase < maxEnemyDistance * maxEnemyDistance && enemyDistanceToWorker < maxEnemyDistance * maxEnemyDistance)
+	if (isBuilding && enemyDistanceToBase < maxEnemyDistance * maxEnemyDistance && enemyDistanceToWorker < maxEnemyDistance * maxEnemyDistance)*/
+	if (enemyBuildingOnSameHeight)
 		return true;
 	// Worker should not defend against slow enemies, it should flee
 	if (!WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits))
 		return false;
 	// worker should not get too far from base and can fight only units close to it
+	const auto enemyDistanceToBase = Util::DistSq(closestEnemy, pos);
+	const auto enemyDistanceToWorker = Util::DistSq(worker, closestEnemy);
 	if (enemyDistanceToBase < 15.f * 15.f && enemyDistanceToWorker < 7.f * 7.f)
 		return true;
 	return false;
