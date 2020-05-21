@@ -184,7 +184,7 @@ class CombatCommander
     bool            isSquadUpdateFrame();
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);
-    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits);
+    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const;
 	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const;
 	bool			WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const;
 
@@ -192,7 +192,6 @@ class CombatCommander
 	CCPosition		GetClosestEnemyBaseLocation();
 	CCPosition		GetNextBaseLocationToScout();
 
-    void            updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy);
     bool            shouldWeStartAttacking();
 	
 	void			resetInfluenceMaps();
