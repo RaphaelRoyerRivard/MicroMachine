@@ -1204,11 +1204,19 @@ void CombatCommander::updateAttackSquads()
 				// We want to consider only combat enemy units but not buildings unless we have a proxy strategy
 				if (enemyUnit.getType().isCombatUnit() && (!enemyUnit.getType().isBuilding() || m_bot.Strategy().isProxyStartingStrategy()))
 				{
-					if ((enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON)
-						&& !enemyUnit.isPowered())
-						continue;
-					if (enemyUnit.getType().isBuilding() && !enemyUnit.isCompleted())
-						continue;
+					if (enemyUnit.getType().isBuilding())
+					{
+						// Ignore buildings in construction
+						if (!enemyUnit.isCompleted())
+							continue;
+						// Ignore unpowered protoss buildings
+						if ((enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON)
+							&& !enemyUnit.isPowered())
+							continue;
+						// Ignore proxy buildings
+						if (m_bot.GetEnemyStartLocations().size() > 0 && Util::DistSq(enemyUnit, m_bot.GetStartLocation()) < Util::DistSq(enemyUnit, m_bot.GetEnemyStartLocations()[0]))
+							continue;
+					}
 					const bool canAttack = enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY
 										|| (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot))
 										|| (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));

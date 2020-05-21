@@ -386,7 +386,7 @@ void BaseLocation::draw()
     m_bot.Map().drawBox(m_left, m_top, m_right, m_bottom);
 
 
-	//TODO TEMPORARY
+	//Draw gas bunker
 	for (auto gasBunkerPos : m_gasBunkerLocations)
 	{
 		m_bot.Map().drawTile(CCPosition(gasBunkerPos.x, gasBunkerPos.y), CCColor(255,255,255));
