@@ -167,8 +167,15 @@ void BaseLocationManager::onStart()
 				}
 				
 				float groundDistance = base.getGroundDistance(pos);
-				if (groundDistance <= 0)
+				if (groundDistance < 0)
 				{
+					continue;
+				}
+
+				//Fix for a missing tile for the base position. Doesn't modify minDistance, to keep the original logic, but still have the missing tile included.
+				if (groundDistance == 0)
+				{
+					m_tileBaseLocations[x][y] = &base;
 					continue;
 				}
 
@@ -435,7 +442,10 @@ void BaseLocationManager::drawTileBaseLocationAssociations() const
 			const auto baseLocation = xRow[y];
 			if (baseLocation)
 			{
-				m_bot.Map().drawLine(CCPosition(x, y), Util::GetPosition(baseLocation->getDepotTilePosition()), sc2::Colors::White);
+				m_bot.Map().drawTile(x, y, CCColor(255, 255, 255));
+				
+				//Display all the tiles individually
+				//m_bot.Map().drawLine(CCPosition(x, y), Util::GetPosition(baseLocation->getDepotTilePosition()), sc2::Colors::White);
 			}
 		}
 	}
