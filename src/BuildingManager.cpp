@@ -546,7 +546,7 @@ void BuildingManager::validateWorkersAndBuildings()
 				{
 					auto remove = CancelBuilding(b);
 					toRemove.push_back(remove);
-					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
+					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
 				}
 				break;
 			}
