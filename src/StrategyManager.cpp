@@ -171,7 +171,8 @@ void StrategyManager::onFrame(bool executeMacro)
 	{
 		if (isProxyStartingStrategy())
 		{
-			const auto barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
+			const auto completedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
+			const auto completedSupplyDepotsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true);
 
 			if (m_bot.GetGameLoop() >= 448 && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 20s
 			{
@@ -183,7 +184,7 @@ void StrategyManager::onFrame(bool executeMacro)
 				}
 				
 				const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
-				if (barracksCount == 0)
+				if (completedBarracksCount == 0)
 				{
 					m_startingStrategy = STANDARD;
 					m_bot.Commander().Production().clearQueue();
@@ -216,7 +217,7 @@ void StrategyManager::onFrame(bool executeMacro)
 					}
 				}
 			}
-			else if (m_startingStrategy == PROXY_MARAUDERS && barracksCount == 1)
+			else if (m_startingStrategy == PROXY_MARAUDERS && completedBarracksCount == 1)
 			{
 				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
 				Unit proxyWorkerToRemove;
@@ -234,7 +235,29 @@ void StrategyManager::onFrame(bool executeMacro)
 					proxyWorkerToRemove.move(m_bot.GetStartLocation());
 				}
 			}
-			else if (barracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
+			else if (m_startingStrategy == PROXY_MARAUDERS && completedBarracksCount == 0 && completedSupplyDepotsCount > 0)
+			{
+				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+				if (proxyWorkers.size() < 2)
+				{
+					const auto & buildings = m_bot.Buildings().getBuildings();
+					for (const auto & building : buildings)
+					{
+						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+						{
+							if (building.buildingUnit.isValid())
+								Micro::SmartAbility(building.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::CANCEL, m_bot);
+							auto canceledBuilding = m_bot.Buildings().CancelBuilding(building);
+							if (canceledBuilding == building)
+								m_bot.Buildings().removeBuildings({ canceledBuilding });
+						}
+					}
+					m_bot.Workers().getWorkerData().clearProxyWorkers();
+					m_bot.Strategy().setStartingStrategy(STANDARD);
+					m_bot.Commander().Production().clearQueue();
+				}
+			}
+			else if (completedBarracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
 			{
 				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
 				for (const auto & proxyWorker : proxyWorkers)

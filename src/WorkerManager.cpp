@@ -196,9 +196,8 @@ void WorkerManager::handleMineralWorkers()
 	Unit proxyWorker;
 	// Send second proxy worker for proxy Marauders strategy
 	if (m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS 
-		&& m_workerData.getProxyWorkers().size() == 1 
-		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true) == 1
-		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) < 1)
+		&& !m_secondProxyWorkerSent
+		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true) == 1)
 	{
 		float minDist = 0.f;
 		const auto & workers = getWorkers();
@@ -214,6 +213,7 @@ void WorkerManager::handleMineralWorkers()
 		}
 		proxyWorker.move(m_bot.Buildings().getProxyLocation());
 		m_workerData.setProxyWorker(proxyWorker);
+		m_secondProxyWorkerSent = true;
 	}
 
 	//split workers on first frame
