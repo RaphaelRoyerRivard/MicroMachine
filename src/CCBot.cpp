@@ -1541,6 +1541,11 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 11, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, m_startLocation + towardsCenter * 10, player1, 2);*/
+
+	// Test to check if our Thors use their maximum dps
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_THORAP, mapCenter - towardsCenter * 3, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_IMMORTAL, mapCenter + towardsCenter * 6, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, mapCenter + towardsCenter * 0, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
