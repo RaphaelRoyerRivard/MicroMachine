@@ -235,11 +235,56 @@ void StrategyManager::onFrame(bool executeMacro)
 					proxyWorkerToRemove.move(m_bot.GetStartLocation());
 				}
 			}
-			else if (m_startingStrategy == PROXY_MARAUDERS && completedBarracksCount == 0 && completedSupplyDepotsCount > 0)
+			else if (completedBarracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
 			{
 				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
-				if (proxyWorkers.size() < 2)
+				for (const auto & proxyWorker : proxyWorkers)
 				{
+					proxyWorker.move(m_bot.GetStartLocation());
+				}
+				m_bot.Workers().getWorkerData().clearProxyWorkers();
+			}
+			else if (completedBarracksCount == 0)
+			{
+				bool cancelProxy = false;
+				const auto barracksUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
+				if (barracksUnderConstructionCount == 0)
+				{
+					const auto & buildings = m_bot.Buildings().getBuildings();
+					for (const auto & building : buildings)
+					{
+						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+						{
+							if (Util::DistSq(building.builderUnit, Util::GetPosition(building.finalPosition)) <= 3 * 3)
+							{
+								for (const auto & enemy : m_bot.GetKnownEnemyUnits())
+								{
+									const auto dist = Util::DistSq(building.builderUnit, enemy);
+									const auto builderTerrainHeight = m_bot.Map().terrainHeight(building.builderUnit.getPosition());
+									const auto enemyTerrainHeight = m_bot.Map().terrainHeight(enemy.getPosition());
+									if (dist <= 8 * 8 && builderTerrainHeight <= enemyTerrainHeight)
+									{
+										cancelProxy = true;
+										break;
+									}
+								}
+								if (cancelProxy)
+									break;
+							}
+						}
+					}
+				}
+				if (m_startingStrategy == PROXY_MARAUDERS && completedSupplyDepotsCount > 0)
+				{
+					const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+					if (proxyWorkers.size() < 2)
+					{
+						cancelProxy = true;
+					}
+				}
+				if (cancelProxy)
+				{
+					m_bot.Actions()->SendChat("FINE! No cheesing. Maybe next game :)");
 					const auto & buildings = m_bot.Buildings().getBuildings();
 					for (const auto & building : buildings)
 					{
@@ -256,15 +301,6 @@ void StrategyManager::onFrame(bool executeMacro)
 					m_bot.Strategy().setStartingStrategy(STANDARD);
 					m_bot.Commander().Production().clearQueue();
 				}
-			}
-			else if (completedBarracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
-			{
-				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
-				for (const auto & proxyWorker : proxyWorkers)
-				{
-					proxyWorker.move(m_bot.GetStartLocation());
-				}
-				m_bot.Workers().getWorkerData().clearProxyWorkers();
 			}
 		}
 		else if (m_startingStrategy == WORKER_RUSH)

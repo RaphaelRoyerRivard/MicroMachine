@@ -239,7 +239,6 @@ void ProductionManager::manageBuildOrderQueue()
 		}
 #endif
 
-		//if (!m_initialBuildOrderFinished || !ShouldSkipQueueItem(currentItem))	//Check initial BO first, allows to build refinery (and finish the BO) even if our barrack couldnt start for some reason. 
 		if (!ShouldSkipQueueItem(currentItem))	// Checking the initial BO first makes it so that in realtime we start the refinery before the barracks...
 		{
 			//check if we have the prerequirements.
@@ -812,10 +811,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int thorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Thor.getUnitType(), false, true);
 				const int deadHellionCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_HELLION);
 				const bool shouldProduceFirstCyclone = startingStrategy == PROXY_CYCLONES && cycloneCount == 0;
+				const auto finishedArmory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Armory.getUnitType(), true, true) > 0;
 				const int enemyZealotCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_ZEALOT).size();
 				const int enemyZerglingCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLING).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED).size();
-				// We want to build Thors against Protoss, but Cyclones too, except for the proxy Cyclone build where we don't want Thors
-				if (startingStrategy != PROXY_CYCLONES && enemyRace == sc2::Protoss && thorCount < cycloneCount + 2)
+				// We want to build Thors against Protoss, but only after we have an Armory and we don't want more Thors than Cyclones
+				if (startingStrategy != PROXY_CYCLONES && enemyRace == sc2::Protoss && finishedArmory && thorCount + 1 < cycloneCount)
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 					m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
