@@ -33,6 +33,7 @@ const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
 const int REAPER_KD8_CHARGE_COOLDOWN = 314 + REAPER_KD8_CHARGE_FRAME_COUNT + 7;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 40;
+const int THOR_GROUND_ATTACK_FRAME_COUNT = 21;
 const int THOR_MORPH_FRAME_COUNT = 40;
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK = "ThreatFightAttack";
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_BC_MOVE_ATTACK = "ThreatFightBCMoveAttack";
@@ -139,11 +140,14 @@ int RangedManager::getAttackDuration(const sc2::Unit* unit, const sc2::Unit* tar
 		attackFrameCount = HELLION_ATTACK_FRAME_COUNT;
 	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
 		attackFrameCount = CYCLONE_ATTACK_FRAME_COUNT;
+	else if (!target->is_flying && (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_THOR || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_THORAP))
+		attackFrameCount = THOR_GROUND_ATTACK_FRAME_COUNT;
 	const CCPosition targetDirection = Util::Normalized(target->pos - unit->pos);
 	const CCPosition facingVector = Util::getFacingVector(unit);
 	const float dot = sc2::Dot2D(targetDirection, facingVector);
 	const float value = 1 - dot;
-	const int rotationMultiplier = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER ? 4 : 2;
+	const auto slowRotationUnits = { sc2::UNIT_TYPEID::TERRAN_CYCLONE, sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, sc2::UNIT_TYPEID::TERRAN_THOR, sc2::UNIT_TYPEID::TERRAN_THORAP };
+	const int rotationMultiplier = Util::Contains(unit->unit_type, slowRotationUnits) ? 4 : 2;
 	attackFrameCount += value * rotationMultiplier;
 	return attackFrameCount;
 }
