@@ -423,6 +423,27 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 	{
 		shouldSkip = m_bot.Strategy().isEarlyRushed() && m_bot.GetMinerals() < 800;
 	}
+	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+	{
+		// We don't want to produce a Cyclone if we have no Banshee and an idle Starport with a Techlab
+		if (m_queue.contains(MetaTypeEnum::Banshee) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true) == 0)
+		{
+			const auto & starports = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_STARPORT);
+			for (const auto & starport : starports)
+			{
+				if (starport.getAddonTag() != 0)
+				{
+					const auto addon = m_bot.Observation()->GetUnit(starport.getAddonTag());
+					// If the Techlab is in production or if the Starport is idle, we want to wait
+					if (addon->unit_type == sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB && (addon->build_progress < 1 || starport.isIdle()))
+					{
+						shouldSkip = true;
+						break;
+					}
+				}
+			}
+		}
+	}
 	if (!shouldSkip)
 	{
 		if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
