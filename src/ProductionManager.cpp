@@ -431,15 +431,24 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 			const auto & starports = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_STARPORT);
 			for (const auto & starport : starports)
 			{
-				if (starport.getAddonTag() != 0)
+				// If the Starport is idle with a Techlab, we want to wait
+				if (starport.isIdle())
 				{
-					const auto addon = m_bot.Observation()->GetUnit(starport.getAddonTag());
-					// If the Techlab is in production or if the Starport is idle, we want to wait
-					if (addon->unit_type == sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB && (addon->build_progress < 1 || starport.isIdle()))
+					if (starport.getAddonTag() != 0)
 					{
-						shouldSkip = true;
-						break;
+						const auto addon = m_bot.Observation()->GetUnit(starport.getAddonTag());
+						if (addon->unit_type == sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB)
+						{
+							shouldSkip = true;
+							break;
+						}
 					}
+				}
+				// If the Techlab is in production, also we want to wait
+				else if (starport.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB)
+				{
+					shouldSkip = true;
+					break;
 				}
 			}
 		}
