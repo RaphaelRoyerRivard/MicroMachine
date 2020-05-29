@@ -1345,36 +1345,73 @@ void CombatCommander::updateDefenseBuildings()
 
 void CombatCommander::handleWall()
 {
-	int SUPPLYDEPOT_DISTANCE = 10 * 10;	// 10 tiles ^ 2, because we use DistSq
+	const int SUPPLYDEPOT_DISTANCE = 10 * 10;	// 10 tiles ^ 2, because we use DistSq
 
-	auto wallCenter = m_bot.Buildings().getWallPosition();
+	const auto wallCenter = m_bot.Buildings().getWallPosition();
 	auto & enemies = m_bot.GetKnownEnemyUnits();
 
-	for (auto & enemy : enemies)
+	// If there is at least one melee unit, raise the wall. Otherwise, check if we have units that want to go back in our base
+	bool raiseWall = false;
+	bool meleeEnemyUnit = false;
+	for (const auto & enemy : enemies)
 	{
 		if (enemy.isFlying() || enemy.getType().isBuilding())
 			continue;
 		CCTilePosition enemyPosition = enemy.getTilePosition();
-		int distance = Util::DistSq(enemyPosition, wallCenter);
+		const int distance = Util::DistSq(enemyPosition, wallCenter);
 		if (distance < SUPPLYDEPOT_DISTANCE)
-		{//Raise wall
-			for (auto & building : m_bot.Buildings().getWallBuildings())
+		{
+			raiseWall = true;
+			if (Util::GetMaxAttackRange(enemy.getUnitPtr(), m_bot) < 2)
 			{
-				if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
-				{
-					building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
-				}
+				meleeEnemyUnit = true;
+				break;
 			}
-			return;
 		}
 	}
-
-	//Lower wall
-	for (auto & building : m_bot.Buildings().getWallBuildings())
+	// If all enemies are ranged, check if we have a unit that would like to come back to our base. In that case, we don't want to raise our wall
+	if (raiseWall && !meleeEnemyUnit)
 	{
-		if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
+		const auto wallDistanceToBase = Util::DistSq(m_bot.GetStartLocation(), wallCenter);
+		for (const auto & allyPair : m_bot.GetAllyUnits())
 		{
-			building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+			const auto & allyUnit = allyPair.second;
+			if (allyUnit.isFlying() || allyUnit.getType().isBuilding())
+				continue;
+			const auto distance = Util::DistSq(allyUnit.getPosition(), wallCenter);
+			// Check if the unit is close enough to the wall
+			if (distance < SUPPLYDEPOT_DISTANCE)
+			{
+				// Check if the unit is further than the wall
+				const auto unitDistanceToBase = Util::DistSq(m_bot.GetStartLocation(), allyUnit.getPosition());
+				if (unitDistanceToBase > wallDistanceToBase)
+				{
+					raiseWall = false;
+					break;
+				}
+			}
+		}
+	}
+	//Raise wall
+	if (raiseWall)
+	{
+		for (auto & building : m_bot.Buildings().getWallBuildings())
+		{
+			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
+			{
+				building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
+			}
+		}
+	}
+	//Lower wall
+	else
+	{
+		for (auto & building : m_bot.Buildings().getWallBuildings())
+		{
+			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
+			{
+				building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+			}
 		}
 	}
 }
@@ -1610,7 +1647,7 @@ void CombatCommander::updateDefenseSquads()
 					if (enemyWorkers > 2)
 						workerRushed = true;
 				}
-				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 7320)	// first 5 minutes
+				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 9408)	// first 7 minutes
 				{
 					if (!unit.getType().isWorker() || enemyWorkers > 2)
 						earlyRushed = true;

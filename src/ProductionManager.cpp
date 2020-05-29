@@ -882,15 +882,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
 					}
 #endif
-
-					if (m_bot.Strategy().isEarlyRushed())
+					
+					if (m_bot.Strategy().isEarlyRushed() || cycloneCount < 1 || !m_bot.Strategy().enemyHasSeveralArmoredUnits())
 					{
 						m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
 					}
 					else
 					{
-						const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
-						if (cycloneCount > 0 && m_bot.Strategy().enemyHasSeveralArmoredUnits() && !isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
+						if (!isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
 						{
 							queueTech(MetaTypeEnum::MagFieldAccelerator);
 						}
