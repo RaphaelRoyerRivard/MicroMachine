@@ -453,6 +453,16 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 			}
 		}
 	}
+	else if (currentItem.type.isUpgrade())
+	{
+		if (m_bot.Strategy().isEarlyRushed())
+		{
+			if (currentItem.type.getUpgrade() != MetaTypeEnum::BansheeCloak.getUpgrade() && currentItem.type.getUpgrade() != MetaTypeEnum::ConcussiveShells.getUpgrade())
+			{
+				shouldSkip = true;
+			}
+		}
+	}
 	if (!shouldSkip)
 	{
 		if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
@@ -762,26 +772,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 				else
 				{
-					const auto earlyRushed = m_bot.Strategy().isEarlyRushed();
-					//const auto bansheeInProduction = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true, true) > 0;
-					const auto researchBansheeCloak = !earlyRushed;	// || bansheeInProduction;
-					const auto researchBansheeSpeed = !earlyRushed && bansheeCount > 0;
-
 					// Banshee Cloak upgrade
-					if (researchBansheeCloak)
+					if (!isTechQueuedOrStarted(MetaTypeEnum::BansheeCloak) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
 					{
-						if (!isTechQueuedOrStarted(MetaTypeEnum::BansheeCloak) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
-						{
-							queueTech(MetaTypeEnum::BansheeCloak);
-						}
-					}
-					else
-					{
-						m_queue.removeAllOfType(MetaTypeEnum::BansheeCloak);
+						queueTech(MetaTypeEnum::BansheeCloak);
 					}
 
 					// Banshee Speed upgrade
-					if (researchBansheeSpeed)
+					if (bansheeCount > 0)
 					{
 						if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
 						{
@@ -866,7 +864,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 #endif
 
-					if (hellionCount >= 5 && !m_bot.Strategy().isEarlyRushed() && !isTechQueuedOrStarted(MetaTypeEnum::InfernalPreIgniter) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HIGHCAPACITYBARRELS))
+					if (hellionCount >= 5 && !isTechQueuedOrStarted(MetaTypeEnum::InfernalPreIgniter) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HIGHCAPACITYBARRELS))
 					{
 						queueTech(MetaTypeEnum::InfernalPreIgniter);
 					}
@@ -883,7 +881,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 #endif
 					
-					if (m_bot.Strategy().isEarlyRushed() || cycloneCount < 1 || !m_bot.Strategy().enemyHasSeveralArmoredUnits())
+					if (cycloneCount < 1 || !m_bot.Strategy().enemyHasSeveralArmoredUnits())
 					{
 						m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
 					}

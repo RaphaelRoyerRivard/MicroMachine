@@ -518,17 +518,22 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 
+	// Dodge enemy influence
 	if (enemyThreatIsClose && Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit, m_bot) > 0.f)
 	{
-		m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
-		// If close to an unpathable position or in danger, use influence map to find safest path
-		CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, unitShouldHeal, m_bot);
-		if (safeTile != CCPosition())
+		// Only if our unit is not cloaked and safe
+		if (!Util::IsUnitCloakedAndSafe(rangedUnit, m_bot))
 		{
-			const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0, "PathfindFlee");
-			m_bot.Commander().Combat().PlanAction(rangedUnit, action);
-			m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
-			return;
+			m_bot.StartProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
+			// If close to an unpathable position or in danger, use influence map to find safest path
+			CCPosition safeTile = Util::PathFinding::FindOptimalPathToSafety(rangedUnit, goal, unitShouldHeal, m_bot);
+			if (safeTile != CCPosition())
+			{
+				const auto action = RangedUnitAction(MicroActionType::Move, safeTile, unitShouldHeal, isReaper ? REAPER_MOVE_FRAME_COUNT : 0, "PathfindFlee");
+				m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+				m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
+				return;
+			}
 		}
 	}
 
@@ -539,8 +544,12 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	// Sum up the threats vector with the direction vector
 	if (!threats.empty())
 	{
-		AdjustSummedFleeVec(summedFleeVec);
-		dirVec += summedFleeVec;
+		// Only if our unit is not cloaked and safe
+		if (!Util::IsUnitCloakedAndSafe(rangedUnit, m_bot))
+		{
+			AdjustSummedFleeVec(summedFleeVec);
+			dirVec += summedFleeVec;
+		}
 	}
 
 	// We repulse the Reaper from our closest harass unit

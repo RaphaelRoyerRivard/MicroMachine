@@ -221,6 +221,7 @@ namespace Util
 	bool CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool IsEnemyHiddenOnHighGround(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
+	bool IsUnitCloakedAndSafe(const sc2::Unit * unit, CCBot & bot);
 	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * unit, const std::vector<sc2::AvailableAbilities> & availableAbilitiesForUnits);
 	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbilities & availableAbilities);
     

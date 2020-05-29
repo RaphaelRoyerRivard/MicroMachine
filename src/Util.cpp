@@ -2160,6 +2160,7 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 			float detectionRange = detector.getUnitPtr()->detect_range;
 			if (detectionRange == 0)
 				detectionRange = detector.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE ? 13.75f : 11;
+			detectionRange += detector.getUnitPtr()->radius + 1;	// We want to add a small buffer
 			if(distance <= detectionRange * detectionRange)
 			{
 				return true;
@@ -2176,6 +2177,11 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 		}
 	}
 	return false;
+}
+
+bool Util::IsUnitCloakedAndSafe(const sc2::Unit * unit, CCBot & bot)
+{
+	return unit->cloak == sc2::Unit::CloakedAllied && !Util::IsPositionUnderDetection(unit->pos, bot) && unit->energy >= 5 && bot.Analyzer().getUnitState(unit).GetRecentDamageTaken() == 0;
 }
 
 bool Util::IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * unit, const std::vector<sc2::AvailableAbilities> & availableAbilitiesForUnits)

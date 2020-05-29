@@ -1546,6 +1546,15 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_THORAP, mapCenter - towardsCenter * 3, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_IMMORTAL, mapCenter + towardsCenter * 6, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, mapCenter + towardsCenter * 0, player1, 1);*/
+
+	// Test to reproduce the bug where Banshees would try to avoid influence even when they are Cloaked and where they would cloak themselves against Photon Cannon
+	/*Debug()->DebugGiveAllTech();
+	Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter + towardsCenter * 20, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOENIX, mapCenter + towardsCenter * 3, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterY * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenter * 3, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
