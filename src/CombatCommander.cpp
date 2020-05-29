@@ -1647,7 +1647,7 @@ void CombatCommander::updateDefenseSquads()
 					if (enemyWorkers > 2)
 						workerRushed = true;
 				}
-				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 7320)	// first 5 minutes
+				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 9408)	// first 7 minutes
 				{
 					if (!unit.getType().isWorker() || enemyWorkers > 2)
 						earlyRushed = true;
