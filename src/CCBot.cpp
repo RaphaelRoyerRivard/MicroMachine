@@ -841,6 +841,8 @@ void CCBot::setUnits()
 	identifyEnemyWorkersGoingIntoRefinery();
 	StopProfiling("0.2.3   identifyEnemyWorkersGoingIntoRefinery");
 
+	if (!m_strategy.shouldProduceAntiAirDefense())
+		m_strategy.setShouldProduceAntiAirDefense(m_enemyUnitsPerType[sc2::UNIT_TYPEID::PROTOSS_PHOENIX].size() >= 3);
 	m_strategy.setEnemyHasMassZerglings(m_enemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
 	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= 5);
 }
