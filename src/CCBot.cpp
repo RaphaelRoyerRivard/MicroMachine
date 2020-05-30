@@ -1561,6 +1561,10 @@ void CCBot::IssueGameStartCheats()
 	// Test to check if our harass squad units stop attacking buildings instead of going to the mineral line
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter + towardsCenter * 20, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenter * 13, player2, 1);*/
+
+	// Test to check if our harass squad units come back to defend or not
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + towardsCenter * 25 - towardsCenterY * 25, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
