@@ -841,6 +841,8 @@ void CCBot::setUnits()
 	identifyEnemyWorkersGoingIntoRefinery();
 	StopProfiling("0.2.3   identifyEnemyWorkersGoingIntoRefinery");
 
+	if (!m_strategy.shouldProduceAntiAirDefense())
+		m_strategy.setShouldProduceAntiAirDefense(m_enemyUnitsPerType[sc2::UNIT_TYPEID::PROTOSS_PHOENIX].size() >= 3);
 	m_strategy.setEnemyHasMassZerglings(m_enemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
 	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= 5);
 }
@@ -1555,6 +1557,14 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterY * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenter * 3, player1, 1);*/
+
+	// Test to check if our harass squad units stop attacking buildings instead of going to the mineral line
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter + towardsCenter * 20, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenter * 13, player2, 1);*/
+
+	// Test to check if our harass squad units come back to defend or not
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + towardsCenter * 25 - towardsCenterY * 25, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
