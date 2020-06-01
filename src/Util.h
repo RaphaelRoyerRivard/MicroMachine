@@ -211,6 +211,7 @@ namespace Util
 	float getThreatRange(bool isFlying, CCPosition position, float radius, const sc2::Unit * threat, CCBot & m_bot);
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
 	float getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
+	float getRealMovementSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
 	CCPosition getFacingVector(const sc2::Unit * unit);
 	bool isUnitFacingAnother(const sc2::Unit * unitA, const sc2::Unit * unitB);
 	bool isUnitLockedOn(const sc2::Unit * unit);

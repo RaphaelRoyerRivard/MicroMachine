@@ -1723,7 +1723,7 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
                         weaponDps += damageBonus.bonus;
                 }
                 weaponDps -= targetTypeData.armor;
-                weaponDps *= weapon.attacks / weapon.speed;
+                weaponDps *= weapon.attacks / weapon.speed * 1.4f;	// * 1.4f because the weapon speed is given in "normal" time instead of "faster"
                 if (weaponDps > dps)
                     dps = weaponDps;
             }
@@ -2046,6 +2046,15 @@ float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 			speedMultiplier *= 1.18f;
 	}
 	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * speedMultiplier;
+}
+
+/*
+ * Returns the number of tiles a unit can move in a second.
+ */
+float Util::getRealMovementSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
+{
+	const float speed = Util::getSpeedOfUnit(unit, bot);
+	return speed * 1.4f;
 }
 
 CCPosition Util::getFacingVector(const sc2::Unit * unit)

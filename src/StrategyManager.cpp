@@ -196,9 +196,11 @@ void StrategyManager::onFrame(bool executeMacro)
 					m_bot.Commander().Production().clearQueue();
 				}
 
-				// Cancel PROXY_MARAUDERS if the opponent has too much static defenses
+				// If our Marauders are getting overwhelmed, check if we should cancel our PROXY_MARAUDERS strategy
 				if (m_startingStrategy == PROXY_MARAUDERS && !m_bot.Commander().Combat().winAttackSimulation())
 				{
+					bool cancelProxy = false;
+					// Cancel PROXY_MARAUDERS if the opponent has too much static defenses
 					int activeStaticDefenseUnits = 0;
 					const auto staticDefenseTypes = { sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY };
 					for (const auto staticDefenseType : staticDefenseTypes)
@@ -211,6 +213,22 @@ void StrategyManager::onFrame(bool executeMacro)
 						}
 					}
 					if (activeStaticDefenseUnits >= 2)
+					{
+						cancelProxy = true;
+					}
+					else
+					{
+						// Cancel PROXY_MARAUDERS if the opponent has an immortal or air units
+						for (const auto enemyUnit : m_bot.GetKnownEnemyUnits())
+						{
+							// TODO do not cancel if the enemy is an hallucination
+							if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL || (enemyUnit.isFlying() && Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) > 0))
+							{
+								cancelProxy = true;
+							}
+						}
+					}
+					if (cancelProxy)
 					{
 						m_startingStrategy = STANDARD;
 						m_bot.Commander().Production().clearQueue();
@@ -264,6 +282,7 @@ void StrategyManager::onFrame(bool executeMacro)
 									const auto enemyTerrainHeight = m_bot.Map().terrainHeight(enemy.getPosition());
 									if (dist <= 8 * 8 && builderTerrainHeight <= enemyTerrainHeight)
 									{
+										// We want to cancel both the proxy Marauders strategy and the Barracks in the Building Manager
 										cancelProxy = true;
 										break;
 									}
@@ -290,11 +309,42 @@ void StrategyManager::onFrame(bool executeMacro)
 					{
 						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
 						{
+							bool cancel = true;
 							if (building.buildingUnit.isValid())
-								Micro::SmartAbility(building.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::CANCEL, m_bot);
-							auto canceledBuilding = m_bot.Buildings().CancelBuilding(building);
-							if (canceledBuilding == building)
-								m_bot.Buildings().removeBuildings({ canceledBuilding });
+							{
+								const auto & builder = building.builderUnit;
+								if (builder.isValid() && builder.isAlive() && Util::DistSq(builder, building.buildingUnit) < 3 * 3)
+								{
+									float totalPossibleDamageDealt = 0.f;
+									const float secondsUntilFinished = (1 - building.buildingUnit.getUnitPtr()->build_progress) * 46.f;
+									for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+									{
+										const auto tilesPerSecond = Util::getRealMovementSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot);
+										if (tilesPerSecond > 0.f)
+										{
+											const auto distance = Util::Dist(enemyUnit, builder);
+											const auto timeToGetThere = distance / tilesPerSecond;
+											const auto remainingTime = secondsUntilFinished - timeToGetThere;
+											if (remainingTime > 0)
+											{
+												const auto dps = Util::GetDpsForTarget(enemyUnit.getUnitPtr(), builder.getUnitPtr(), m_bot);
+												const auto damageDealt = remainingTime * dps;
+												totalPossibleDamageDealt += damageDealt;
+											}
+										}
+									}
+									if (totalPossibleDamageDealt < builder.getHitPoints())
+										cancel = false;
+								}
+								if (cancel)
+									Micro::SmartAbility(building.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::CANCEL, m_bot);
+							}
+							if (cancel)
+							{
+								auto canceledBuilding = m_bot.Buildings().CancelBuilding(building);
+								if (canceledBuilding == building)
+									m_bot.Buildings().removeBuildings({ canceledBuilding });
+							}
 						}
 					}
 					m_bot.Workers().getWorkerData().clearProxyWorkers();
