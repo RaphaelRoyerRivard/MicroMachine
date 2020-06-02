@@ -455,11 +455,35 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 	}
 	else if (currentItem.type.isUpgrade())
 	{
-		if (m_bot.Strategy().isEarlyRushed())
+		// We don't want to skip the Banshee Cloak or Concussive Shell upgrade as they are very important
+		if (currentItem.type.getUpgrade() != MetaTypeEnum::BansheeCloak.getUpgrade() && currentItem.type.getUpgrade() != MetaTypeEnum::ConcussiveShells.getUpgrade())
 		{
-			if (currentItem.type.getUpgrade() != MetaTypeEnum::BansheeCloak.getUpgrade() && currentItem.type.getUpgrade() != MetaTypeEnum::ConcussiveShells.getUpgrade())
+			// Do not research upgrade if we are under attack early (we want to save our resources)
+			if (m_bot.Strategy().isEarlyRushed())
 			{
 				shouldSkip = true;
+			}
+			else
+			{
+				// Do not research upgrade unless all our production structures are in use
+				const auto productionBuildingTypes = getProductionBuildingTypes(false);
+				for (const auto productionBuildingType : productionBuildingTypes)
+				{
+					// We don't care about Barracks, sometimes we do not use them
+					if (productionBuildingType == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+						continue;
+					const auto & productionBuildings = m_bot.GetAllyUnits(productionBuildingType);
+					for (const auto & productionBuilding : productionBuildings)
+					{
+						if (!productionBuilding.isBeingConstructed() && productionBuilding.isIdle())
+						{
+							shouldSkip = true;
+							break;
+						}
+					}
+					if (shouldSkip)
+						break;
+				}
 			}
 		}
 	}
@@ -1791,18 +1815,23 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
     return getClosestUnitToPosition(candidateProducers, closestTo);
 }
 
-std::vector<sc2::UNIT_TYPEID> ProductionManager::getProductionBuildingTypes() const
+std::vector<sc2::UNIT_TYPEID> ProductionManager::getProductionBuildingTypes(bool ignoreState) const
 {
 	switch (m_bot.GetSelfRace())
 	{
 		case CCRace::Terran:
 		{
-			return {sc2::UNIT_TYPEID::TERRAN_BARRACKS,
-				sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING,
-				sc2::UNIT_TYPEID::TERRAN_FACTORY,
-				sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING,
-				sc2::UNIT_TYPEID::TERRAN_STARPORT,
-				sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
+			if (ignoreState)
+				return { sc2::UNIT_TYPEID::TERRAN_BARRACKS,
+					sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING,
+					sc2::UNIT_TYPEID::TERRAN_FACTORY,
+					sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING,
+					sc2::UNIT_TYPEID::TERRAN_STARPORT,
+					sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
+			else
+				return { sc2::UNIT_TYPEID::TERRAN_BARRACKS,
+					sc2::UNIT_TYPEID::TERRAN_FACTORY,
+					sc2::UNIT_TYPEID::TERRAN_STARPORT };
 		}
 		case CCRace::Protoss:
 		{

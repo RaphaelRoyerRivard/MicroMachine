@@ -62,7 +62,7 @@ public:
 
 	bool	hasRequired(const MetaType& metaType, bool checkInQueue) const;
     Unit getProducer(const MetaType & type, CCPosition closestTo = CCPosition(0, 0)) const;
-	std::vector<sc2::UNIT_TYPEID> getProductionBuildingTypes() const;
+	std::vector<sc2::UNIT_TYPEID> getProductionBuildingTypes(bool ignoreState = true) const;
 	int getProductionBuildingsCount() const;
 	int getProductionBuildingsAddonsCount() const;
 	float getProductionScore() const;
