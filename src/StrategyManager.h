@@ -4,6 +4,7 @@
 #include "BuildOrder.h"
 #include "Condition.h"
 
+class Building;
 typedef std::pair<UnitType, size_t> UnitPair;
 typedef std::vector<UnitPair>       UnitPairVector;
 
@@ -108,6 +109,7 @@ public:
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
 	void setStartingStrategy(StartingStrategy startingStrategy) { m_startingStrategy = startingStrategy; }
 	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
+	bool shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers = false) const;
 	bool isProxyStartingStrategy() const;
 	bool isProxyFactoryStartingStrategy() const;
 	bool wasProxyStartingStrategy() const;

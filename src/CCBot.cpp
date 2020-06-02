@@ -841,8 +841,8 @@ void CCBot::setUnits()
 	identifyEnemyWorkersGoingIntoRefinery();
 	StopProfiling("0.2.3   identifyEnemyWorkersGoingIntoRefinery");
 
-	if (!m_strategy.shouldProduceAntiAirDefense())
-		m_strategy.setShouldProduceAntiAirDefense(m_enemyUnitsPerType[sc2::UNIT_TYPEID::PROTOSS_PHOENIX].size() >= 3);
+	/*if (!m_strategy.shouldProduceAntiAirDefense())
+		m_strategy.setShouldProduceAntiAirDefense(m_enemyUnitsPerType[sc2::UNIT_TYPEID::PROTOSS_PHOENIX].size() >= 3);*/	// Commented because it uses too much resources and is not very effective
 	m_strategy.setEnemyHasMassZerglings(m_enemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
 	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= 5);
 }

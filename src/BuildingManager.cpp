@@ -110,7 +110,7 @@ void BuildingManager::lowPriorityChecks()
 			if (!isAlreadyBuilt)
 			{
 				//We are trying to build in an invalid location, remove it so we build it elsewhere.
-				auto remove = CancelBuilding(building);
+				auto remove = CancelBuilding(building, false);
 				if (remove.finalPosition != CCTilePosition(0, 0))
 				{
 					toRemove.push_back(remove);
@@ -544,7 +544,7 @@ void BuildingManager::validateWorkersAndBuildings()
 				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
 					|| (m_bot.Strategy().isWorkerRushed() && m_buildingPlacer.isEnemyUnitBlocking(b.finalPosition, b.type)))
 				{
-					auto remove = CancelBuilding(b);
+					auto remove = CancelBuilding(b, false);
 					toRemove.push_back(remove);
 					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
 				}
@@ -563,7 +563,13 @@ void BuildingManager::validateWorkersAndBuildings()
 				if (!b.buildingUnit.isValid() || !b.buildingUnit.isAlive())
 				{
 					toRemove.push_back(b);
-					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
+					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from under construction buildings.", m_bot);
+				}
+				else if (m_bot.Strategy().wasProxyStartingStrategy() && !b.builderUnit.isAlive() && Util::DistSq(b.buildingUnit.getPosition(), m_proxyLocation) <= 15 * 15)
+				{
+					CancelBuilding(b, false);
+					toRemove.push_back(b);
+					Util::DebugLog("Cancelling proxy " + b.buildingUnit.getType().getName() + " and removing it from under construction buildings.", m_bot);
 				}
 				break;
 			}
@@ -1713,7 +1719,7 @@ void BuildingManager::removeNonStartedBuildingsOfType(sc2::UNIT_TYPEID type)
 	removeBuildings(toRemove);
 }
 
-Building BuildingManager::CancelBuilding(Building b)
+Building BuildingManager::CancelBuilding(Building b, bool removeFromBuildingsList, bool destroy)
 {
 	auto it = find(m_buildings.begin(), m_buildings.end(), b);
 	if (it != m_buildings.end())
@@ -1748,6 +1754,17 @@ Building BuildingManager::CancelBuilding(Building b)
 		if (b.builderUnit.isValid())
 		{
 			m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Idle);
+		}
+
+		//Cancel building
+		if (destroy && b.buildingUnit.isValid())
+		{
+			Micro::SmartAbility(b.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::CANCEL, m_bot);
+		}
+
+		if (removeFromBuildingsList)
+		{
+			removeBuildings({ b });
 		}
 
 		return b;

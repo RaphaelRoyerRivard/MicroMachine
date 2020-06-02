@@ -741,9 +741,19 @@ void CombatCommander::updateWorkerFleeSquad()
 					{
 						if (building.status == BuildingStatus::Assigned)
 						{
-							auto canceledBuilding = m_bot.Buildings().CancelBuilding(building);
-							if (canceledBuilding == building)
-								m_bot.Buildings().removeBuildings({ canceledBuilding });
+							std::vector<Unit> proxyWorkersToRemove;
+							for (const auto & proxyWorker : m_bot.Workers().getWorkerData().getProxyWorkers())
+							{
+								if (proxyWorker.getUnitPtr() != worker.getUnitPtr())
+								{
+									proxyWorkersToRemove.push_back(proxyWorker);
+								}
+							}
+							for (const auto & proxyWorker : proxyWorkersToRemove)
+							{
+								m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorker);
+							}
+							m_bot.Buildings().CancelBuilding(building);
 							m_bot.Strategy().setStartingStrategy(STANDARD);
 							m_bot.Commander().Production().clearQueue();
 						}
@@ -1373,6 +1383,7 @@ void CombatCommander::handleWall()
 	if (raiseWall && !meleeEnemyUnit)
 	{
 		const auto wallDistanceToBase = Util::DistSq(m_bot.GetStartLocation(), wallCenter);
+		const auto wallHeight = m_bot.Map().terrainHeight(wallCenter);
 		for (const auto & allyPair : m_bot.GetAllyUnits())
 		{
 			const auto & allyUnit = allyPair.second;
@@ -1386,8 +1397,13 @@ void CombatCommander::handleWall()
 				const auto unitDistanceToBase = Util::DistSq(m_bot.GetStartLocation(), allyUnit.getPosition());
 				if (unitDistanceToBase > wallDistanceToBase)
 				{
-					raiseWall = false;
-					break;
+					const auto unitHeight = m_bot.Map().terrainHeight(allyUnit.getPosition());
+					// If the unit is on low ground or if it is really close to the wall, we don't want to raise it
+					if (unitHeight < wallHeight || distance < 1.5f * 1.5f)
+					{
+						raiseWall = false;
+						break;
+					}
 				}
 			}
 		}

@@ -103,7 +103,7 @@ public:
 	void				updatePreviousBuildings();
 	void				updatePreviousBaseBuildings();
 	
-	Building			CancelBuilding(Building b);
+	Building			CancelBuilding(Building b, bool removeFromBuildingsList = true, bool destroy = true);
 	Building			getBuildingOfBuilder(const Unit & builder) const;
 
 	BuildingPlacer& getBuildingPlacer();
