@@ -190,6 +190,19 @@ void StrategyManager::onFrame(bool executeMacro)
 					m_bot.Commander().Production().clearQueue();
 					m_bot.Commander().Production().queueAsHighestPriority(MetaTypeEnum::Barracks, false);
 				}
+				else if (completedBarracksCount == 1)
+				{
+					const auto & buildings = m_bot.Buildings().getBuildings();
+					for (const auto & building : buildings)
+					{
+						if (Util::DistSq(m_bot.Buildings().getProxyLocation(), Util::GetPosition(building.finalPosition)) <= 15 * 15)
+						{
+							m_bot.Buildings().CancelBuilding(building);
+						}
+					}
+					m_startingStrategy = STANDARD;
+					m_bot.Commander().Production().clearQueue();
+				}
 				else if (!hasFactory && m_startingStrategy == PROXY_CYCLONES)
 				{
 					m_startingStrategy = STANDARD;
@@ -237,6 +250,7 @@ void StrategyManager::onFrame(bool executeMacro)
 			}
 			else if (m_startingStrategy == PROXY_MARAUDERS && completedBarracksCount == 1)
 			{
+				// Remove proxy worker that just finished its Barracks
 				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
 				Unit proxyWorkerToRemove;
 				for (auto & proxyWorker : proxyWorkers)
@@ -255,6 +269,7 @@ void StrategyManager::onFrame(bool executeMacro)
 			}
 			else if (completedBarracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
 			{
+				// Remove last proxy worker that finished its Barracks
 				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
 				for (const auto & proxyWorker : proxyWorkers)
 				{
@@ -266,6 +281,7 @@ void StrategyManager::onFrame(bool executeMacro)
 			{
 				bool cancelProxy = false;
 				const auto barracksUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
+				// We want to cancel our proxy strategy if the opponent has vision of our proxy location
 				if (barracksUnderConstructionCount == 0)
 				{
 					const auto & buildings = m_bot.Buildings().getBuildings();
@@ -293,12 +309,38 @@ void StrategyManager::onFrame(bool executeMacro)
 						}
 					}
 				}
-				if (m_startingStrategy == PROXY_MARAUDERS && completedSupplyDepotsCount > 0)
+				else if (barracksUnderConstructionCount == 1)
 				{
-					const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
-					if (proxyWorkers.size() < 2)
+					// We want to cancel the proxy if the enemy can kill our proxy worker before it finishes its building
+					const auto & buildings = m_bot.Buildings().getBuildings();
+					for (const auto & building : buildings)
 					{
-						cancelProxy = true;
+						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+						{
+							const auto & buildingUnit = building.buildingUnit;
+							if (buildingUnit.isValid())
+							{
+								// Will also return false if the proxy worker died
+								if (!shouldProxyBuilderFinishSafely(building, true))
+								{
+									cancelProxy = true;
+									break;
+								}
+							}
+						}
+					}
+				}
+				// If we still don't want to cancel the proxy
+				if (!cancelProxy)
+				{
+					// We want to cancel the proxy if one of our two proxy workers of the proxy Marauders strategy died
+					if (m_startingStrategy == PROXY_MARAUDERS && completedSupplyDepotsCount > 0)
+					{
+						const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+						if (proxyWorkers.size() < 2)
+						{
+							cancelProxy = true;
+						}
 					}
 				}
 				if (cancelProxy)
@@ -312,38 +354,11 @@ void StrategyManager::onFrame(bool executeMacro)
 							bool cancel = true;
 							if (building.buildingUnit.isValid())
 							{
-								const auto & builder = building.builderUnit;
-								if (builder.isValid() && builder.isAlive() && Util::DistSq(builder, building.buildingUnit) < 3 * 3)
-								{
-									float totalPossibleDamageDealt = 0.f;
-									const float secondsUntilFinished = (1 - building.buildingUnit.getUnitPtr()->build_progress) * 46.f;
-									for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
-									{
-										const auto tilesPerSecond = Util::getRealMovementSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot);
-										if (tilesPerSecond > 0.f)
-										{
-											const auto distance = Util::Dist(enemyUnit, builder);
-											const auto timeToGetThere = distance / tilesPerSecond;
-											const auto remainingTime = secondsUntilFinished - timeToGetThere;
-											if (remainingTime > 0)
-											{
-												const auto dps = Util::GetDpsForTarget(enemyUnit.getUnitPtr(), builder.getUnitPtr(), m_bot);
-												const auto damageDealt = remainingTime * dps;
-												totalPossibleDamageDealt += damageDealt;
-											}
-										}
-									}
-									if (totalPossibleDamageDealt < builder.getHitPoints())
-										cancel = false;
-								}
-								if (cancel)
-									Micro::SmartAbility(building.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::CANCEL, m_bot);
+								cancel = !shouldProxyBuilderFinishSafely(building);
 							}
 							if (cancel)
 							{
-								auto canceledBuilding = m_bot.Buildings().CancelBuilding(building);
-								if (canceledBuilding == building)
-									m_bot.Buildings().removeBuildings({ canceledBuilding });
+								m_bot.Buildings().CancelBuilding(building);
 							}
 						}
 					}
@@ -374,6 +389,38 @@ void StrategyManager::onFrame(bool executeMacro)
 			}
 		}
 	}
+}
+
+bool StrategyManager::shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers) const
+{
+	const auto & builder = building.builderUnit;
+	if (builder.isValid() && builder.isAlive() && Util::DistSq(builder, building.buildingUnit) < 3 * 3)
+	{
+		if (onlyInjuredWorkers && builder.getHitPointsPercentage() == 100.f)
+			return true;
+		
+		float totalPossibleDamageDealt = 0.f;
+		const float secondsUntilFinished = (1 - building.buildingUnit.getUnitPtr()->build_progress) * 46.f;
+		for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+		{
+			const auto tilesPerSecond = Util::getRealMovementSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot);
+			if (tilesPerSecond > 0.f)
+			{
+				const auto distance = Util::Dist(enemyUnit, builder);
+				const auto timeToGetThere = distance / tilesPerSecond;
+				const auto remainingTime = secondsUntilFinished - timeToGetThere;
+				if (remainingTime > 0)
+				{
+					const auto dps = Util::GetDpsForTarget(enemyUnit.getUnitPtr(), builder.getUnitPtr(), m_bot);
+					const auto damageDealt = remainingTime * dps;
+					totalPossibleDamageDealt += damageDealt;
+				}
+			}
+		}
+		if (totalPossibleDamageDealt < builder.getHitPoints())
+			return true;
+	}
+	return false;
 }
 
 bool StrategyManager::isProxyStartingStrategy() const
