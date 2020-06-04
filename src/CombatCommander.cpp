@@ -2305,7 +2305,7 @@ CCPosition CombatCommander::getMainAttackLocation()
     // First choice: Attack an enemy region if we can see units inside it
     if (enemyBaseLocation)
     {
-        CCPosition enemyBasePosition = enemyBaseLocation->getPosition();
+        const CCPosition enemyBasePosition = enemyBaseLocation->getDepotPosition();
         // If the enemy base hasn't been seen yet, go there.
         if (!m_bot.Map().isExplored(enemyBasePosition))
         {
