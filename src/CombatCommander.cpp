@@ -2556,12 +2556,12 @@ void CombatCommander::ExecuteActions()
 		if (action.description.empty())
 			continue;
 
-		if (m_logVikingActions && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+		/*if (m_logVikingActions && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 		{
 			std::stringstream ss;
 			ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " has action " << action.description;
 			Util::Log(__FUNCTION__, ss.str(), m_bot);
-		}
+		}*/
 
 #ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawRangedUnitActions)
