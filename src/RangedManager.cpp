@@ -590,11 +590,11 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	
 	// Unit cannot flee, we let it attack any close unit
-	std::stringstream ss;
+	/*std::stringstream ss;
 	ss << "Unit " << sc2::UnitTypeToName(rangedUnit->unit_type) << " cannot flee";
-	Util::Log(__FUNCTION__, ss.str(), m_bot);
+	Util::Log(__FUNCTION__, ss.str(), m_bot);*/
 	const auto actionType = m_bot.Data(rangedUnit->unit_type).isBuilding ? Move : AttackMove;
-	const auto action = RangedUnitAction(AttackMove, rangedUnit->pos, false, 0, "LastResort");
+	const auto action = RangedUnitAction(actionType, rangedUnit->pos, false, 0, "LastResort");
 	m_bot.Commander().Combat().PlanAction(rangedUnit, action);
 	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
 }
@@ -1269,14 +1269,14 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				{
 					morphFlyingVikings = true;
 				}
-				else if (vikingCount >= 20)
-					Util::Log(__FUNCTION__, "Vikings won't land - no target", m_bot);
+				/*else if (vikingCount >= 20)
+					Util::Log(__FUNCTION__, "Vikings won't land - no target", m_bot);*/
 			}
-			else if (vikingCount >= 20)
-				Util::Log(__FUNCTION__, "Vikings won't land - flying helper", m_bot);
+			/*else if (vikingCount >= 20)
+				Util::Log(__FUNCTION__, "Vikings won't land - flying helper", m_bot);*/
 		}
-		else if (vikingCount >= 20)
-			Util::Log(__FUNCTION__, "Vikings won't land - enemy air combat units", m_bot);
+		/*else if (vikingCount >= 20)
+			Util::Log(__FUNCTION__, "Vikings won't land - enemy air combat units", m_bot);*/
 	}
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
@@ -1589,10 +1589,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				winSimulation = Util::SimulateCombat(vikings, tempests, m_bot) > 0.f;
 			}
 			shouldFight = winSimulation;
-			std::stringstream ss;
+			/*std::stringstream ss;
 			ss << getSquad()->getName() << ": " << vikings.size() << " Vikings (" << injuredVikings << " injured) vs " << tempests.size() << " Tempests (" << injuredTempests << " injured): " << (winSimulation ? "win" : "LOSE");
 			Util::Log(__FUNCTION__, ss.str(), m_bot);
-			m_bot.Commander().Combat().SetLogVikingActions(true);
+			m_bot.Commander().Combat().SetLogVikingActions(true);*/
 		}
 		else if (enemyHasLongRangeUnits)
 		{
