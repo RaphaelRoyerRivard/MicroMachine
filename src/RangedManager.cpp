@@ -1332,7 +1332,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 					}
 				}
 
-				const bool canAttackNow = range >= targetDist && rangedUnit->weapon_cooldown <= 0.f;
+				const bool canAttackNow = range - 0.1f >= targetDist && rangedUnit->weapon_cooldown <= 0.f;	// Added a small buffer on the attack to allow Banshees to hit fleeing units
 				bool skipAction = false;
 				RangedUnitAction action;
 				if (canAttackNow)
