@@ -442,8 +442,9 @@ void WorkerManager::handleGasWorkers()
             int numAssigned = m_workerData.getNumAssignedWorkers(geyser);
 
 			//TODO doesn't handle split geysers if only one of the geysers has a bunker.
+			const auto & gasBunkers = base->getGasBunkers();
 			//Bunker counts as a worker (for 2 and 3 only, we still want 1 worker at 1)
-			int geyserGasWorkersTarget = (base->getGasBunkers().size() > 0 && gasWorkersTarget > 1 ? gasWorkersTarget - 1 : gasWorkersTarget);
+			int geyserGasWorkersTarget = (gasBunkers.size() > 0 && gasBunkers[0].isCompleted() && gasWorkersTarget > 1 ? gasWorkersTarget - 1 : gasWorkersTarget);
 
 			if (base == nullptr)
 			{
