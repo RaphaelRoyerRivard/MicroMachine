@@ -458,31 +458,36 @@ bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) 
 		// We don't want to skip the Banshee Cloak or Concussive Shell upgrade as they are very important
 		if (currentItem.type.getUpgrade() != MetaTypeEnum::BansheeCloak.getUpgrade() && currentItem.type.getUpgrade() != MetaTypeEnum::ConcussiveShells.getUpgrade())
 		{
-			// Do not research upgrade if we are under attack early (we want to save our resources)
-			if (m_bot.Strategy().isEarlyRushed())
+			const auto & typeData = m_bot.Data(currentItem.type);
+			// We don't want to skip the upgrade if we have a big bank of resources
+			if (m_bot.GetFreeMinerals() < typeData.mineralCost * 3 || m_bot.GetFreeGas() < typeData.gasCost * 3)
 			{
-				shouldSkip = true;
-			}
-			else
-			{
-				// Do not research upgrade unless all our production structures are in use
-				const auto productionBuildingTypes = getProductionBuildingTypes(false);
-				for (const auto productionBuildingType : productionBuildingTypes)
+				// Do not research upgrade if we are under attack early (we want to save our resources)
+				if (m_bot.Strategy().isEarlyRushed())
 				{
-					// We don't care about Barracks, sometimes we do not use them
-					if (productionBuildingType == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
-						continue;
-					const auto & productionBuildings = m_bot.GetAllyUnits(productionBuildingType);
-					for (const auto & productionBuilding : productionBuildings)
+					shouldSkip = true;
+				}
+				else
+				{
+					// Do not research upgrade unless all our production structures are in use
+					const auto productionBuildingTypes = getProductionBuildingTypes(false);
+					for (const auto productionBuildingType : productionBuildingTypes)
 					{
-						if (!productionBuilding.isBeingConstructed() && productionBuilding.isIdle())
+						// We don't care about Barracks, sometimes we do not use them
+						if (productionBuildingType == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+							continue;
+						const auto & productionBuildings = m_bot.GetAllyUnits(productionBuildingType);
+						for (const auto & productionBuilding : productionBuildings)
 						{
-							shouldSkip = true;
-							break;
+							if (!productionBuilding.isBeingConstructed() && (productionBuilding.isIdle() || productionBuilding.getUnitPtr()->orders[0].progress >= 0.8))
+							{
+								shouldSkip = true;
+								break;
+							}
 						}
+						if (shouldSkip)
+							break;
 					}
-					if (shouldSkip)
-						break;
 				}
 			}
 		}
@@ -803,7 +808,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 
 					// Banshee Speed upgrade
-					if (bansheeCount > 0)
+					if (bansheeCount > 1)
 					{
 						if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
 						{
