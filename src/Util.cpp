@@ -323,7 +323,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	const auto startingInfluence = GetTotalInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
 	const CCTilePosition startPosition = GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = GetTilePosition(goal);
-	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? CCTilePosition() : GetTilePosition(secondaryGoal);
+	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT ? CCTilePosition() : GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
 	bestCosts[start->getId()] = 0;
 	opened.insert(start);
@@ -1298,6 +1298,7 @@ bool Util::IsProtoss(const CCRace & race)
 void Util::CreateDummyUnits(CCBot & bot)
 {
 	CreateDummyVikingAssault(bot);
+	CreateDummyVikingFighter(bot);
 	CreateDummyStimedMarine(bot);
 	CreateDummyStimedMarauder(bot);
 }
@@ -1310,6 +1311,16 @@ void Util::CreateDummyVikingAssault(CCBot & bot)
 	m_dummyVikingAssault->health_max = 135;
 	m_dummyVikingAssault->radius = 0.75;
 	SetBaseUnitValues(m_dummyVikingAssault, bot);
+}
+
+void Util::CreateDummyVikingFighter(CCBot & bot)
+{
+	m_dummyVikingFighter = new sc2::Unit;
+	m_dummyVikingFighter->unit_type = sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER;
+	m_dummyVikingFighter->is_flying = true;
+	m_dummyVikingFighter->health_max = 135;
+	m_dummyVikingFighter->radius = 0.75;
+	SetBaseUnitValues(m_dummyVikingFighter, bot);
 }
 
 void Util::CreateDummyStimedMarine(CCBot & bot)
@@ -1376,9 +1387,27 @@ sc2::Unit Util::CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * 
 	return dummy;
 }
 
+sc2::Unit Util::CreateDummyFromUnit(const sc2::Unit * unit)
+{
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+		return CreateDummyVikingAssaultFromUnit(unit);
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+		return CreateDummyVikingFighterFromUnit(unit);
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE)
+		return CreateDummyStimedMarineFromUnit(unit);
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARAUDER)
+		return CreateDummyStimedMarauderFromUnit(unit);
+	return sc2::Unit();
+}
+
 sc2::Unit Util::CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit)
 {
 	return CreateDummyFromUnit(m_dummyVikingAssault, unit);
+}
+
+sc2::Unit Util::CreateDummyVikingFighterFromUnit(const sc2::Unit * unit)
+{
+	return CreateDummyFromUnit(m_dummyVikingFighter, unit);
 }
 
 sc2::Unit Util::CreateDummyStimedMarineFromUnit(const sc2::Unit * unit)
