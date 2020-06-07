@@ -1317,9 +1317,10 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation - towardsCenter * 3, player1, 1);*/
 
 	// Situation for testing the threat fighting morph of Vikings
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation + towardsCenter * 4, player1, 40);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, m_startLocation + towardsCenter * 4, player2, 15);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, mapCenter - towardsCenter * 8, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter + towardsCenter * 4, player2, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + towardsCenter * 4, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ZEALOT, m_startLocation + towardsCenter * 4, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, m_startLocation + towardsCenter * 4, player1, 1);
 
 	// Test for reproducing the bug of locked on burrowed widow mines (for use against human)
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, mapCenter, player2, 1);
@@ -1357,7 +1358,7 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter - towardsCenter * 3, player1, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 3, player1, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, mapCenter - towardsCenter * 3, player1, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3, player2, 3);*/
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3, player2, 4);*/
 
 	// Test for Reaper trade
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter - towardsCenter * 2.5, player1, 1);

@@ -31,6 +31,7 @@ namespace Util
 	static std::vector<std::vector<bool>> m_placement;
 	static std::vector<std::vector<float>> m_terrainHeight;
 	static sc2::Unit * m_dummyVikingAssault;
+	static sc2::Unit * m_dummyVikingFighter;
 	static sc2::Unit * m_dummyStimedMarine;
 	static sc2::Unit * m_dummyStimedMarauder;
 
@@ -175,11 +176,14 @@ namespace Util
 
 	void CreateDummyUnits(CCBot & bot);
 	void CreateDummyVikingAssault(CCBot & bot);
+	void CreateDummyVikingFighter(CCBot & bot);
 	void CreateDummyStimedMarine(CCBot & bot);
 	void CreateDummyStimedMarauder(CCBot & bot);
 	void SetBaseUnitValues(sc2::Unit * unit, CCBot & bot);
 	sc2::Unit CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit);
+	sc2::Unit CreateDummyFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit);
+	sc2::Unit CreateDummyVikingFighterFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummyStimedMarineFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit);
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
