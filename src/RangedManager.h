@@ -54,6 +54,7 @@ private:
 	int getAttackDuration(const sc2::Unit* unit, const sc2::Unit* target) const;
 	void HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets, sc2::Units &otherSquadsUnits);
 	void HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &rangedUnits, sc2::Units &rangedUnitTargets, sc2::AvailableAbilities &rangedUnitAbilities, sc2::Units &otherSquadsUnits);
+	void GetInfiltrationGoalPosition(const sc2::Unit * rangedUnit, CCPosition & goal, std::string & goalDescription) const;
 	bool MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbilities & abilities);
 	bool IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started, const sc2::AvailableAbilities & abilities) const;
 	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit, bool checkInfluence = true) const;

@@ -1566,6 +1566,17 @@ void CCBot::IssueGameStartCheats()
 	// Test to check if our harass squad units come back to defend or not
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + towardsCenter * 25 - towardsCenterY * 25, player1, 1);*/
+
+	// Test to try to reproduce the crash in threat fighting logic that happened after my new morphing Vikings code
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 13, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, mapCenter, player2, 3);*/
+
+	// Test to try to reproduce the bug where Thors would not go back to heal
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_THORAP, m_startLocation + towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, m_startLocation + towardsCenter * 15, player1, 2);*/
 }
 
 void CCBot::IssueCheats()

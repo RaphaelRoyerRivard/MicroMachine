@@ -317,6 +317,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			if (groupedMarauders >= 3)
 				m_marauderAttackInitiated = true;
 		}
+		else if (isBanshee && m_order.getType() == SquadOrderTypes::Harass)
+		{
+			GetInfiltrationGoalPosition(rangedUnit, goal, goalDescription);
+		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
@@ -601,6 +605,143 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	const auto action = RangedUnitAction(actionType, rangedUnit->pos, false, 0, "LastResort");
 	m_bot.Commander().Combat().PlanAction(rangedUnit, action);
 	m_bot.StopProfiling("0.10.4.1.5.1.8          PotentialFields");
+}
+
+void RangedManager::GetInfiltrationGoalPosition(const sc2::Unit * rangedUnit, CCPosition & goal, std::string & goalDescription) const
+{
+	const auto topY = m_bot.Map().mapMax().y;
+	const auto rightX = m_bot.Map().mapMax().x;
+	const auto bottomY = m_bot.Map().mapMin().y;
+	const auto leftX = m_bot.Map().mapMin().x;
+	const float unitToGoalDist = Util::DistSq(rangedUnit->pos, goal);
+	// Compute distance from unit to closest edge
+	std::list<std::pair<float, int>> unitDistanceToEdges = {
+		std::make_pair(Util::DistSq(rangedUnit->pos, CCPosition(rangedUnit->pos.x, topY)), 0),	// top
+		std::make_pair(Util::DistSq(rangedUnit->pos, CCPosition(rightX, rangedUnit->pos.y)), 1),	// right
+		std::make_pair(Util::DistSq(rangedUnit->pos, CCPosition(rangedUnit->pos.x, bottomY)), 2),	// bottom
+		std::make_pair(Util::DistSq(rangedUnit->pos, CCPosition(leftX, rangedUnit->pos.y)), 3)	// left
+	};
+	unitDistanceToEdges.sort();
+	// Compute distance from goal to closest edge
+	std::list<std::pair<float, int>> goalDistanceToEdges = {
+		std::make_pair(Util::DistSq(goal, CCPosition(goal.x, topY)), 0),	// top
+		std::make_pair(Util::DistSq(goal, CCPosition(rightX, goal.y)), 1),	// right
+		std::make_pair(Util::DistSq(goal, CCPosition(goal.x, bottomY)), 2),	// bottom
+		std::make_pair(Util::DistSq(goal, CCPosition(leftX, goal.y)), 3)	// left
+	};
+	goalDistanceToEdges.sort();
+
+	int i = 0;
+	int closeEdge = -1;
+	float goalDistanceToCloseEdge = 0;
+	for (const auto & goalDistanceToEdge : goalDistanceToEdges)
+	{
+		if (i++ == 2 || closeEdge >= 0)
+			break;
+		for (const auto & unitDistanceToEdge : unitDistanceToEdges)
+		{
+			if (unitDistanceToEdge.second == goalDistanceToEdge.second)
+			{
+				if (unitDistanceToEdge.first <= goalDistanceToEdge.first)
+				{
+					closeEdge = goalDistanceToEdge.second;
+					goalDistanceToCloseEdge = goalDistanceToEdge.first;
+				}
+				break;
+			}
+		}
+	}
+	
+	if (closeEdge >= 0)
+	{
+		if (unitToGoalDist <= goalDistanceToCloseEdge * 2)
+		{
+			// Our unit is getting close to the goal, it should go directly towards the goal
+		}
+		else
+		{
+			// Our unit is close to an edge that is also close to the goal, so it should continue on that edge while getting closer to the goal
+			if (closeEdge == 0)
+				goal = CCPosition(goal.x, topY);
+			else if (closeEdge == 1)
+				goal = CCPosition(rightX, goal.y);
+			else if (closeEdge == 2)
+				goal = CCPosition(goal.x, bottomY);
+			else
+				goal = CCPosition(leftX, goal.y);
+		}
+	}
+	else if (unitDistanceToEdges.front().first <= 5 * 5)
+	{
+		// Our unit is close to an edge, it should keep close to the edge until it is close enough to the goal
+		const auto topLeft = CCPosition(leftX, topY);
+		const auto topRight = CCPosition(rightX, topY);
+		const auto bottomLeft = CCPosition(leftX, bottomY);
+		const auto bottomRight = CCPosition(rightX, bottomY);
+		std::list<std::pair<float, int>> combinedDistanceToCorners = {
+			std::make_pair(Util::DistSq(rangedUnit->pos, topLeft) + Util::DistSq(goal, topLeft), 0),
+			std::make_pair(Util::DistSq(rangedUnit->pos, topRight) + Util::DistSq(goal, topRight), 1),
+			std::make_pair(Util::DistSq(rangedUnit->pos, bottomLeft) + Util::DistSq(goal, bottomLeft), 2),
+			std::make_pair(Util::DistSq(rangedUnit->pos, bottomRight) + Util::DistSq(goal, bottomRight), 3)
+		};
+		combinedDistanceToCorners.sort();
+		const int closestCornerId = combinedDistanceToCorners.front().second;
+		const CCPosition closestCorner = closestCornerId == 0 ? topLeft : closestCornerId == 1 ? topRight : closestCornerId == 2 ? bottomLeft : bottomRight;
+		goal = closestCorner;
+	}
+	else
+	{
+		// Our unit is far from the goal and far from an edge, so it should get closer to an edge
+		const auto towardsGoal = goal - rangedUnit->pos;
+		CCPosition clockwiseOrthogonal, counterClockwiseOrthogonal;
+		Util::GetOrthogonalVectors(towardsGoal, clockwiseOrthogonal, counterClockwiseOrthogonal);
+		const auto slope = clockwiseOrthogonal.x == 0 ? std::numeric_limits<float>::max() : clockwiseOrthogonal.y / clockwiseOrthogonal.x;	// m = delta_y / delta_x
+		const auto intercept = rangedUnit->pos.y - slope * rangedUnit->pos.x;	// b = y - mx
+		float minDist = -1;
+		CCPosition closestMapBorderPosition;
+		// Calculate the interceptions with map borders
+		if (slope != 0)
+		{
+			// x = (y - b) / m
+			const auto bottomX = (bottomY - intercept) / slope;
+			const auto bottomPosition = CCPosition(bottomX, bottomY);
+			const auto distToBottom = Util::DistSq(rangedUnit->pos, bottomPosition);
+			minDist = distToBottom;
+			closestMapBorderPosition = bottomPosition;
+			const auto topX = (topY - intercept) / slope;
+			const auto topPosition = CCPosition(topX, topY);
+			const auto distToTop = Util::DistSq(rangedUnit->pos, topPosition);
+			if (distToTop < minDist)
+			{
+				minDist = distToTop;
+				closestMapBorderPosition = topPosition;
+			}
+		}
+		if (slope != std::numeric_limits<float>::max())
+		{
+			// y = mx + b
+			const auto leftY = slope * leftX + intercept;
+			const auto leftPosition = CCPosition(leftX, leftY);
+			const auto distToLeft = Util::DistSq(rangedUnit->pos, leftPosition);
+			if (distToLeft < minDist)
+			{
+				minDist = distToLeft;
+				closestMapBorderPosition = leftPosition;
+			}
+			const auto rightY = slope * rightX + intercept;
+			const auto rightPosition = CCPosition(rightX, rightY);
+			const auto distToRight = Util::DistSq(rangedUnit->pos, rightPosition);
+			if (distToRight < minDist)
+			{
+				minDist = distToRight;
+				closestMapBorderPosition = rightPosition;
+			}
+		}
+		goal = closestMapBorderPosition;
+	}
+	goalDescription = "Infiltrate";
+	m_bot.Map().drawLine(rangedUnit->pos, goal);
+	m_bot.Map().drawCircle(goal, 0.5);
 }
 
 bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbilities & abilities)

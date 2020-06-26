@@ -1277,6 +1277,17 @@ float Util::GetDotProduct(const sc2::Point2D& v1, const sc2::Point2D& v2)
     return v1n.x * v2n.x + v1n.y * v2n.y;
 }
 
+/**
+ * Computes the two vectors that are perpendicular to the reference vector.
+ */
+void Util::GetOrthogonalVectors(const sc2::Point2D& referenceVector, sc2::Point2D& clockwiseVector, sc2::Point2D& counterClockwiseVector)
+{
+	clockwiseVector.x = referenceVector.y;
+	clockwiseVector.y = -referenceVector.x;
+	counterClockwiseVector.x = -referenceVector.y;
+	counterClockwiseVector.y = referenceVector.x;
+}
+
 bool Util::IsZerg(const CCRace & race)
 {
 #ifdef SC2API
@@ -2194,6 +2205,10 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 		auto & detectors = bot.GetEnemyUnits(detectorType);
 		for(const auto & detector : detectors)
 		{
+			if (detector.getType().isBuilding() && detector.getBuildPercentage() < 95)
+				continue;
+			if (detectorType == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !detector.isPowered())
+				continue;
 			const float distance = Util::DistSq(detector, position);
 			float detectionRange = detector.getUnitPtr()->detect_range;
 			if (detectionRange == 0)
@@ -2725,7 +2740,8 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 			if(unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
 			{
 				const int owner = i == 0 ? playerId : 3 - playerId;
-				for(int j=0; j < 4; ++j)
+				const int marineCount = owner == playerId ? unit->passengers.size() : 4;
+				for(int j=0; j < marineCount; ++j)
 					state.units.push_back(CombatUnit(owner, sc2::UNIT_TYPEID::TERRAN_MARINE, 200, false));
 			}
 			else
