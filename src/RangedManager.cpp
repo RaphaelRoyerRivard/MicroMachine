@@ -2077,7 +2077,8 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 		{
 			const auto lockOnTarget = it->second.first;
 			const auto enemyRange = Util::GetAttackRangeForTarget(lockOnTarget, cyclone, m_bot);
-			if (enemyRange >= 10.f)
+			const auto enemyDps = Util::GetDpsForTarget(lockOnTarget, cyclone, m_bot);
+			if (enemyRange >= 10.f && enemyDps > 0.f)
 			{
 				// We check if we have another unit that is close to it, but if not, the Cyclone should stay close to it
 				bool closeAlly = Util::AllyUnitSeesEnemyUnit(cyclone, lockOnTarget, m_bot);;

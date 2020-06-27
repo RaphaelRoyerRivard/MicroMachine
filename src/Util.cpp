@@ -1179,9 +1179,9 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.5f);
 	///////// DPS
 	if (target.isValid())
-		unitPower *= isMedivac ? 12.6f : Util::GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot);
+		unitPower *= isMedivac ? 12.6f : std::max(1.f, GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot));
 	else
-		unitPower *= Util::GetDps(unit.getUnitPtr(), bot);
+		unitPower *= std::max(1.f, GetDps(unit.getUnitPtr(), bot));
 	///////// DISTANCE
 	if (target.isValid())
 	{
@@ -1722,7 +1722,7 @@ float Util::GetDps(const sc2::Unit * unit, CCBot & bot)
 float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetType, CCBot & bot)
 {
 	float dps = GetSpecialCaseDps(unit, bot, targetType);
-	if (dps == 0.f)
+	if (dps < 0.f)
 	{
 		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
 		for (auto & weapon : unitTypeData.weapons)
@@ -1748,7 +1748,7 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
 		return 0.f;
     const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
     float dps = GetSpecialCaseDps(unit, bot, expectedWeaponType);
-    if (dps == 0.f)
+    if (dps < 0.f)
     {
 		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
 		sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
@@ -1784,7 +1784,7 @@ float Util::GetAttackSpeedMultiplier(const sc2::Unit * unit)
 
 float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where)
 {
-    float dps = 0.f;
+    float dps = -1.f;
 
     if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELING || unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
     {
@@ -1820,7 +1820,7 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	}
 	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
 	{
-		dps = 0.1f;	// hack so the cannons will be considered as weak
+		dps = 0.f;
 	}
 	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
 	{
@@ -1851,6 +1851,10 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SENTRY)
 	{
 		dps = 8.4f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_LIBERATORAG)
+	{
+		dps = 0.f;
 	}
 
     return dps;
