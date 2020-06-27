@@ -1296,6 +1296,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				const auto healthScore = 0.25f * (potentialTarget->health + potentialTarget->shield * 1.5f);
 				// The higher the better
 				const auto energyScore = 0.25f * potentialTarget->energy;
+				const auto energyLessSpellcasterScore = 15 * (potentialTarget->unit_type == sc2::UNIT_TYPEID::TERRAN_LIBERATORAG || potentialTarget->unit_type == sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR);
 				const auto detectorScore = 15 * (potentialTarget->detect_range > 0.f);
 				const auto threatRange = Util::GetAttackRangeForTarget(potentialTarget, cyclone, m_bot);
 				const auto threatDps = Util::GetDpsForTarget(potentialTarget, cyclone, m_bot);
@@ -1308,7 +1309,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 					armoredScore = 15 * Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes);
 				}
 				const float nydusBonus = potentialTarget->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && potentialTarget->build_progress < 1.f ? 10000.f : 0.f;
-				const float score = energyScore + detectorScore + armoredScore + powerScore + speedScore + nydusBonus - healthScore - distanceScore;
+				const float score = energyScore + energyLessSpellcasterScore + detectorScore + armoredScore + powerScore + speedScore + nydusBonus - healthScore - distanceScore;
 				if(!bestTarget || score > bestScore)
 				{
 					bestTarget = potentialTarget;
@@ -2077,7 +2078,8 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 		{
 			const auto lockOnTarget = it->second.first;
 			const auto enemyRange = Util::GetAttackRangeForTarget(lockOnTarget, cyclone, m_bot);
-			if (enemyRange >= 10.f)
+			const auto enemyDps = Util::GetDpsForTarget(lockOnTarget, cyclone, m_bot);
+			if (enemyRange >= 10.f && enemyDps > 0.f)
 			{
 				// We check if we have another unit that is close to it, but if not, the Cyclone should stay close to it
 				bool closeAlly = Util::AllyUnitSeesEnemyUnit(cyclone, lockOnTarget, m_bot);;
