@@ -678,6 +678,13 @@ void RangedManager::GetInfiltrationGoalPosition(const sc2::Unit * rangedUnit, CC
 		const auto topRight = CCPosition(rightX, topY);
 		const auto bottomLeft = CCPosition(leftX, bottomY);
 		const auto bottomRight = CCPosition(rightX, bottomY);
+		std::list<std::pair<float, int>> goalDistanceToCorners = {
+			std::make_pair(Util::DistSq(goal, topLeft), 0),
+			std::make_pair(Util::DistSq(goal, topRight), 1),
+			std::make_pair(Util::DistSq(goal, bottomLeft), 2),
+			std::make_pair(Util::DistSq(goal, bottomRight), 3)
+		};
+		goalDistanceToCorners.sort();
 		std::list<std::pair<float, int>> combinedDistanceToCorners = {
 			std::make_pair(Util::DistSq(rangedUnit->pos, topLeft) + Util::DistSq(goal, topLeft), 0),
 			std::make_pair(Util::DistSq(rangedUnit->pos, topRight) + Util::DistSq(goal, topRight), 1),
@@ -685,7 +692,9 @@ void RangedManager::GetInfiltrationGoalPosition(const sc2::Unit * rangedUnit, CC
 			std::make_pair(Util::DistSq(rangedUnit->pos, bottomRight) + Util::DistSq(goal, bottomRight), 3)
 		};
 		combinedDistanceToCorners.sort();
-		const int closestCornerId = combinedDistanceToCorners.front().second;
+		int closestCornerId = combinedDistanceToCorners.front().second;
+		if (closestCornerId == goalDistanceToCorners.back().second)	// We don't want our unit to go towards the farthest corner from the goal
+			closestCornerId = std::next(combinedDistanceToCorners.begin())->second;
 		const CCPosition closestCorner = closestCornerId == 0 ? topLeft : closestCornerId == 1 ? topRight : closestCornerId == 2 ? bottomLeft : bottomRight;
 		goal = closestCorner;
 	}
@@ -1607,6 +1616,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		if (threatSpeed > maxThreatSpeed)
 			maxThreatSpeed = threatSpeed;
 		const sc2::Unit* threatTarget = getTarget(threat, closeUnits, false);
+		if (!threatTarget)
+			continue;
 		const float threatRange = Util::GetAttackRangeForTarget(threat, threatTarget, m_bot);
 		const float threatDistance = threatTarget ? Util::Dist(threat->pos, threatTarget->pos) : 0.f;
 		// If the building threat is too far from its target to attack it (with a very small buffer)
@@ -1907,7 +1918,7 @@ const sc2::Unit* RangedManager::GetSimulatedUnit(const sc2::Unit * rangedUnit)
 		{
 			simulatedUnit = &it->second;
 		}
-		else
+		if (!simulatedUnit)
 		{
 			dummyMap[rangedUnit->tag] = Util::CreateDummyFromUnit(rangedUnit);
 			simulatedUnit = &dummyMap[rangedUnit->tag];
