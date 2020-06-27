@@ -1607,6 +1607,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		if (threatSpeed > maxThreatSpeed)
 			maxThreatSpeed = threatSpeed;
 		const sc2::Unit* threatTarget = getTarget(threat, closeUnits, false);
+		if (!threatTarget)
+			continue;
 		const float threatRange = Util::GetAttackRangeForTarget(threat, threatTarget, m_bot);
 		const float threatDistance = threatTarget ? Util::Dist(threat->pos, threatTarget->pos) : 0.f;
 		// If the building threat is too far from its target to attack it (with a very small buffer)
@@ -1907,7 +1909,7 @@ const sc2::Unit* RangedManager::GetSimulatedUnit(const sc2::Unit * rangedUnit)
 		{
 			simulatedUnit = &it->second;
 		}
-		else
+		if (!simulatedUnit)
 		{
 			dummyMap[rangedUnit->tag] = Util::CreateDummyFromUnit(rangedUnit);
 			simulatedUnit = &dummyMap[rangedUnit->tag];
