@@ -1306,6 +1306,19 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				// The higher the better
 				const auto energyScore = 0.25f * potentialTarget->energy;
 				const auto energyLessSpellcasterScore = 15 * (potentialTarget->unit_type == sc2::UNIT_TYPEID::TERRAN_LIBERATORAG || potentialTarget->unit_type == sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR);
+				auto harassingLiberatorScore = 0;
+				if (potentialTarget->unit_type == sc2::UNIT_TYPEID::TERRAN_LIBERATORAG && m_bot.Strategy().isEarlyRushed() && m_order.getType() == SquadOrderTypes::Defend)
+				{
+					const auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+					for (const auto base : bases)
+					{
+						if (Util::DistSq(potentialTarget->pos, base->getPosition()) < 20 * 20)
+						{
+							harassingLiberatorScore = 99999.f;	// Enough to attract all Cyclones in a 45 tiles radius
+							break;
+						}
+					}
+				}
 				const auto detectorScore = 15 * (potentialTarget->detect_range > 0.f);
 				const auto threatRange = Util::GetAttackRangeForTarget(potentialTarget, cyclone, m_bot);
 				const auto threatDps = Util::GetDpsForTarget(potentialTarget, cyclone, m_bot);
@@ -1318,7 +1331,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 					armoredScore = 15 * Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes);
 				}
 				const float nydusBonus = potentialTarget->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && potentialTarget->build_progress < 1.f ? 10000.f : 0.f;
-				const float score = energyScore + energyLessSpellcasterScore + detectorScore + armoredScore + powerScore + speedScore + nydusBonus - healthScore - distanceScore;
+				const float score = energyScore + energyLessSpellcasterScore + harassingLiberatorScore + detectorScore + armoredScore + powerScore + speedScore + nydusBonus - healthScore - distanceScore;
 				if(!bestTarget || score > bestScore)
 				{
 					bestTarget = potentialTarget;
@@ -1421,6 +1434,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			target = flyingTarget;
 			morphLandedVikings = true;
 		}
+	}
+	if (!rangedUnit)
+	{
+		Util::Log(__FUNCTION__, "rangedUnit is null #1", m_bot);
 	}
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
@@ -1618,6 +1635,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const sc2::Unit* threatTarget = getTarget(threat, closeUnits, false);
 		if (!threatTarget)
 			continue;
+		if (!threat)
+		{
+			Util::Log(__FUNCTION__, "threat is null #2", m_bot);
+		}
 		const float threatRange = Util::GetAttackRangeForTarget(threat, threatTarget, m_bot);
 		const float threatDistance = threatTarget ? Util::Dist(threat->pos, threatTarget->pos) : 0.f;
 		// If the building threat is too far from its target to attack it (with a very small buffer)
@@ -1633,6 +1654,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				{
 					unitWillGetCloseEnough = true;
 					break;
+				}
+				if (!unit)
+				{
+					Util::Log(__FUNCTION__, "unit is null #3", m_bot);
 				}
 				const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 				const CCPosition futurePosition = unitTarget->pos + Util::Normalized(unit->pos - unitTarget->pos) * unitRange;
@@ -1770,6 +1795,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			unit = m_bot.GetUnitPtr(unit->tag);
 		}
 
+		if (!unit)
+		{
+			Util::Log(__FUNCTION__, "unit is null #4", m_bot);
+		}
 		const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 		bool canAttackNow = unit->weapon_cooldown <= 0.f && unitRange > 0;
 		if (canAttackNow)
@@ -1816,6 +1845,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				}
 				else if (distSq < 4 * 4 && Util::GetGroundAttackRange(unitTarget, m_bot) <= 2.f)
 				{
+					if (!simulatedUnit)
+					{
+						Util::Log(__FUNCTION__, "simulatedUnit is null #5", m_bot);
+					}
 					const float simulatedUnitRange = Util::GetAttackRangeForTarget(simulatedUnit, unitTarget, m_bot);
 					auto saferPosition = Util::PathFinding::FindOptimalPathToSaferRange(simulatedUnit, unitTarget, simulatedUnitRange, true, m_bot);
 					if (saferPosition == CCPosition())
@@ -1854,6 +1887,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 		auto movePosition = CCPosition();
 		const bool injured = unit->health / unit->health_max < 0.5f;
+		if (!unitTarget)
+		{
+			Util::Log(__FUNCTION__, "unitTarget is null #6", m_bot);
+		}
 		const auto enemyRange = Util::GetAttackRangeForTarget(unitTarget, unit, m_bot);
 		const auto unitSpeed = Util::getSpeedOfUnit(unit, m_bot);
 		const auto enemySpeed = Util::getSpeedOfUnit(unitTarget, m_bot);
