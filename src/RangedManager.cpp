@@ -1435,10 +1435,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			morphLandedVikings = true;
 		}
 	}
-	if (!rangedUnit)
-	{
-		Util::Log(__FUNCTION__, "rangedUnit is null #1", m_bot);
-	}
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
 	if (!target || (!isTargetRanged(target) && !morphFlyingVikings))
@@ -1635,10 +1631,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const sc2::Unit* threatTarget = getTarget(threat, closeUnits, false);
 		if (!threatTarget)
 			continue;
-		if (!threat)
-		{
-			Util::Log(__FUNCTION__, "threat is null #2", m_bot);
-		}
 		const float threatRange = Util::GetAttackRangeForTarget(threat, threatTarget, m_bot);
 		const float threatDistance = threatTarget ? Util::Dist(threat->pos, threatTarget->pos) : 0.f;
 		// If the building threat is too far from its target to attack it (with a very small buffer)
@@ -1654,10 +1646,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				{
 					unitWillGetCloseEnough = true;
 					break;
-				}
-				if (!unit)
-				{
-					Util::Log(__FUNCTION__, "unit is null #3", m_bot);
 				}
 				const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 				const CCPosition futurePosition = unitTarget->pos + Util::Normalized(unit->pos - unitTarget->pos) * unitRange;
@@ -1775,7 +1763,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	// Save result
 	m_combatSimulationResults[closeUnitsSet] = shouldFight;
 
-	// For each of our close units
+	// Choose an action for each of our close units
 	for (auto & unitAndTarget : closeUnitsTarget)
 	{
 		auto unit = unitAndTarget.first;
@@ -1795,10 +1783,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			unit = m_bot.GetUnitPtr(unit->tag);
 		}
 
-		if (!unit)
-		{
-			Util::Log(__FUNCTION__, "unit is null #4", m_bot);
-		}
 		const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 		bool canAttackNow = unit->weapon_cooldown <= 0.f && unitRange > 0;
 		if (canAttackNow)
@@ -1847,7 +1831,18 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				{
 					if (!simulatedUnit)
 					{
-						Util::Log(__FUNCTION__, "simulatedUnit is null #5", m_bot);
+						std::stringstream ss;
+						ss << "simulatedUnit is null, it is " << (cycloneFlyingHelpers.find(unit) == cycloneFlyingHelpers.end() ? "not " : "") << "a flying helper";
+						if (unitTarget)
+						{
+							ss << " and its target is " << (unitTarget->is_flying ? "" : "not ") << "flying";
+						}
+						else
+						{
+							ss << " and it has no target";
+						}
+						Util::Log(__FUNCTION__, ss.str(), m_bot);
+						continue;
 					}
 					const float simulatedUnitRange = Util::GetAttackRangeForTarget(simulatedUnit, unitTarget, m_bot);
 					auto saferPosition = Util::PathFinding::FindOptimalPathToSaferRange(simulatedUnit, unitTarget, simulatedUnitRange, true, m_bot);
@@ -1887,10 +1882,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 		auto movePosition = CCPosition();
 		const bool injured = unit->health / unit->health_max < 0.5f;
-		if (!unitTarget)
-		{
-			Util::Log(__FUNCTION__, "unitTarget is null #6", m_bot);
-		}
 		const auto enemyRange = Util::GetAttackRangeForTarget(unitTarget, unit, m_bot);
 		const auto unitSpeed = Util::getSpeedOfUnit(unit, m_bot);
 		const auto enemySpeed = Util::getSpeedOfUnit(unitTarget, m_bot);
