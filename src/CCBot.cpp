@@ -1992,16 +1992,20 @@ void CCBot::StopProfiling(const std::string & profilerName)
 
 	const auto elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - profiler.start).count();
 
-	profiler.total += elapsedTime;						// Add the time to the total of the last 100 steps
+	profiler.total += elapsedTime;								// Add the time to the total of the last 100 steps
+	profiler.count++;											// Increase the number of times that profiler has been called
 	auto & queue = profiler.queue;
 	if (queue.empty())
 	{
 		while (queue.size() < 49)
-			queue.push_front(0);						// Fill up the queue with zeros
-		queue.push_front(elapsedTime);					// Add the time to the queue
+			queue.push_front(std::make_pair(0, 0));			// Fill up the queue with zeros
+		queue.push_front(std::make_pair(elapsedTime, 1));	// Add the time and count to the queue
 	}
 	else
-		queue[0] += elapsedTime;						// Add the time to the queue
+	{
+		queue[0].first += elapsedTime;							// Add the time to the queue
+		queue[0].second++;										// Increase the number of time that profiler has been called in that frame
+	}
 }
 
 void CCBot::drawProfilingInfo()
@@ -2014,7 +2018,7 @@ void CCBot::drawProfilingInfo()
 	{
 		const auto & profiler = (*it).second;
 		stepTime = profiler.total / profiler.queue.size();
-		currentStepTime = profiler.queue[0];
+		currentStepTime = profiler.queue[0].first;
 	}
 
 	std::string profilingInfo = "Profiling info (ms)";
@@ -2029,15 +2033,16 @@ void CCBot::drawProfilingInfo()
 	for (auto & mapPair : m_profilingTimes)
 	{
 		const std::string& key = mapPair.first;
-		auto& profiler = m_profilingTimes.at(mapPair.first);
+		auto& profiler = m_profilingTimes.at(key);
 		auto& queue = profiler.queue;
 		const int queueCount = queue.size();
 		const long long time = profiler.total / std::max(queueCount, 1);
 		if (key == stepString)
 		{
 			long long maxFrameTime = 0;
-			for(auto frameTime : queue)
+			for(const auto & frame : queue)
 			{
+				const auto frameTime = frame.first;
 				if (frameTime > maxFrameTime)
 					maxFrameTime = frameTime;
 			}
@@ -2050,7 +2055,7 @@ void CCBot::drawProfilingInfo()
 		}
 		else if (time * 10 > stepTime)
 		{
-			profilingInfo += "\n" + mapPair.first + ": " + std::to_string(0.001f * time);
+			profilingInfo += "\n" + key + ": (" + std::to_string(profiler.count) + ") " + std::to_string(0.001f * time);
 			profilingInfo += " !";
 			if (time * 4 > stepTime)
 			{
@@ -2063,15 +2068,16 @@ void CCBot::drawProfilingInfo()
 			}
 		}
 
-		if (currentStepTime >= 100000 && queue.size() > 0 && queue[0] > 0)	// 100ms
+		if (currentStepTime >= 100000 && queue.size() > 0 && queue[0].first > 0)	// 100ms
 		{
-			Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * queue[0]) + "ms", *this);
+			Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * queue[0].first) + "ms for " + std::to_string(queue[0].second) + " calls", *this);
 		}
 
 		if(queue.size() >= 50)
 		{
-			queue.push_front(0);
-			profiler.total -= queue[50];
+			queue.push_front(std::make_pair(0, 0));
+			profiler.total -= queue[50].first;
+			profiler.count -= queue[50].second;
 			queue.pop_back();
 		}
 	}
