@@ -322,14 +322,11 @@ void CCBot::OnStep()
 
 	StopProfiling("0.0 OnStep");	//Do not remove
 
-#ifndef PUBLIC_RELEASE
+	drawProfilingInfo();
 	if (Config().AllowDebug)
 	{
-		drawProfilingInfo();
 		Debug()->SendDebug();
 	}
-#endif
-	StartProfiling("0 Starcraft II");
 
 	if (Config().TimeControl)
 	{
@@ -346,6 +343,8 @@ void CCBot::OnStep()
 			drawTimeControl();
 		}
 	}
+
+	StartProfiling("0 Starcraft II");
 }
 
 #pragma optimize( "checkKeyState", off )
@@ -2064,7 +2063,7 @@ void CCBot::drawProfilingInfo()
 			}
 		}
 
-		if (currentStepTime >= 1000000 && queue.size() > 0 && queue[0] > 0)	// 1s
+		if (currentStepTime >= 100000 && queue.size() > 0 && queue[0] > 0)	// 100ms
 		{
 			Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * queue[0]) + "ms", *this);
 		}
