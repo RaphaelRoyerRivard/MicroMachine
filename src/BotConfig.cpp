@@ -29,7 +29,7 @@ BotConfig::BotConfig()
     DrawTileInfo = false;
     DrawWalkableSectors = false;
 	DrawBuildableSectors = false;
-	DrawBuildable = true;
+	DrawBuildable = false;
     DrawScoutInfo = false;
     DrawResourceInfo = false;
     DrawWorkerInfo = false;

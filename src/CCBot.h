@@ -31,9 +31,10 @@ class CCBot : public sc2::Agent
 {
 	struct Profiler
 	{
-		Profiler() :total(0) {};
-		std::deque<long long> queue;
+		Profiler() :total(0), count(0) {};
+		std::deque<std::pair<long long, int>> queue;
 		long long total;
+		int count;
 		std::chrono::steady_clock::time_point start;
 	};
 

@@ -228,8 +228,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (rangedUnit->is_selected)
 		int a = 0;
 
+	m_bot.StartProfiling("0.10.4.1.5.1.a          MonitorCyclone");
 	if (isCyclone && MonitorCyclone(rangedUnit, rangedUnitAbilities))
+	{
+		m_bot.StopProfiling("0.10.4.1.5.1.a          MonitorCyclone");
 		return;
+	}
+	m_bot.StopProfiling("0.10.4.1.5.1.a          MonitorCyclone");
 
 	sc2::Units allCombatAllies(rangedUnits);
 	allCombatAllies.insert(allCombatAllies.end(), otherSquadsUnits.begin(), otherSquadsUnits.end());
@@ -282,7 +287,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		else
 			Util::DisplayError("RangedManager healGoal is (0, 0)", "", m_bot, false);
 		if (isBattlecruiser && Util::DistSq(rangedUnit->pos, goal) > 15.f * 15.f && TeleportBattlecruiser(rangedUnit, goal))
+		{
+			m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 			return;
+		}
 	}
 	else
 	{
@@ -350,7 +358,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	bool cycloneShouldStayCloseToTarget = false;
 	if (isCyclone)
 	{
+		m_bot.StartProfiling("0.10.4.1.5.1.b          ExecuteCycloneLogic");
 		ExecuteCycloneLogic(rangedUnit, isUnitDisabled, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, cycloneShouldStayCloseToTarget, rangedUnits, threats, rangedUnitTargets, target, goal, goalDescription, rangedUnitAbilities);
+		m_bot.StopProfiling("0.10.4.1.5.1.b          ExecuteCycloneLogic");
 	}
 
 	const auto distSqToTarget = target ? Util::DistSq(rangedUnit->pos, target->pos) : 0.f;
@@ -364,11 +374,15 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
+	m_bot.StartProfiling("0.10.4.1.5.1.c          ExecutePrioritizedUnitAbilitiesLogic");
 	if (!isUnitDisabled && ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
 	{
+		m_bot.StopProfiling("0.10.4.1.5.1.c          ExecutePrioritizedUnitAbilitiesLogic");
 		return;
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.c          ExecutePrioritizedUnitAbilitiesLogic");
 
+	m_bot.StartProfiling("0.10.4.1.5.1.d          targetInAttackRange");
 	bool targetInAttackRange = false;
 	float unitAttackRange = 0.f;
 	if (target)
@@ -391,6 +405,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			m_bot.Map().drawLine(rangedUnit->pos, target->pos, targetInAttackRange ? sc2::Colors::Green : sc2::Colors::Yellow);
 #endif
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.d          targetInAttackRange");
 
 	if (cycloneShouldUseLockOn && targetInAttackRange)
 	{
@@ -428,6 +443,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.6          UnitAbilities");
 
+	m_bot.StartProfiling("0.10.4.1.5.1.e          summedFleeVec");
 	bool enemyThreatIsClose = false;
 	bool fasterEnemyThreat = false;
 	float unitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
@@ -448,6 +464,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 		summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.e          summedFleeVec");
 
 	// Banshee is about to get hit, it should cloak itself
 	if (isBanshee && enemyThreatIsClose && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
@@ -458,6 +475,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	// Opportunistic attack (often on buildings)
 	if ((shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat)
 	{
+		m_bot.StartProfiling("0.10.4.1.5.1.f          OpportunisticAttack");
 		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true, true, false);
 		if (closeTarget && closeTarget->last_seen_game_loop == m_bot.GetGameLoop() && ShouldAttackTarget(rangedUnit, closeTarget, threats))
 		{
@@ -469,8 +487,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			m_bot.Commander().Combat().PlanAction(rangedUnit, action);
 			const float damageDealt = isBattlecruiser ? Util::GetDpsForTarget(rangedUnit, closeTarget, m_bot) / 22.4f : Util::GetDamageForTarget(rangedUnit, closeTarget, m_bot);
 			m_bot.Analyzer().increaseTotalDamage(damageDealt, rangedUnit->unit_type);
+			m_bot.StopProfiling("0.10.4.1.5.1.f          OpportunisticAttack");
 			return;
 		}
+		m_bot.StopProfiling("0.10.4.1.5.1.f          OpportunisticAttack");
 	}
 
 	if (!unitShouldHeal && distSqToTarget < m_order.getRadius() * m_order.getRadius() && (target || !threats.empty()))
@@ -542,6 +562,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
 				return;
 			}
+			m_bot.StopProfiling("0.10.4.1.5.1.9          DefensivePathfinding");
 		}
 	}
 
