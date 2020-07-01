@@ -1576,6 +1576,11 @@ void CCBot::IssueGameStartCheats()
 	// Test to try to reproduce the bug where Thors would not go back to heal
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_THORAP, m_startLocation + towardsCenter * 5, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, m_startLocation + towardsCenter * 15, player1, 2);*/
+
+	// Test to reproduce micro performance issues
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation + towardsCenter * 25, player1, 5);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation + towardsCenter * 25, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation + towardsCenter * 8, player2, 50);*/
 }
 
 void CCBot::IssueCheats()

@@ -810,7 +810,7 @@ int CombatAnalyzer::getUnitUpgradeWeapon(const sc2::Unit* unit)
 void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 {
 	int healthLost = state.GetDamageTaken();
-	sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(unit.getAPIUnitType(), m_bot);
+	const sc2::UnitTypeData & unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(unit.getAPIUnitType(), m_bot);
 	UnitType type = UnitType(unit.getAPIUnitType(), m_bot);
 	int unitUpgradeArmor = getUnitUpgradeArmor(unit.getUnitPtr());
 	
@@ -820,7 +820,7 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 	{
 		//TODO validate unit is looking towards the unit
 
-		sc2::UnitTypeData threatTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
+		const sc2::UnitTypeData & threatTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
 		auto range = Util::GetAttackRangeForTarget(threat, unit.getUnitPtr(), m_bot, true);
 		auto distSq = Util::DistSq(unit.getPosition(), threat->pos) - type.radius() - threat->radius;
 		// If the threat is too far and cant have dealt damage (doesn't consider projectil travel time)
@@ -833,7 +833,7 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 		float weaponDamage = Util::GetDamageForTarget(threat, unit.getUnitPtr(), m_bot);
 		
 		//Get the weapon, even if we have the range and damage, to see if there is another bonus damage that applies to the unit, if there is, apply the + on it.
-		sc2::UnitTypeData targetTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
+		const sc2::UnitTypeData & targetTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
 		for (auto & weapon : unitTypeData.weapons)
 		{
 			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)

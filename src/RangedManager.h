@@ -39,7 +39,7 @@ private:
 		sc2::UNIT_TYPEID::TERRAN_HELLION,
 		sc2::UNIT_TYPEID::TERRAN_HELLIONTANK
 	};
-	std::map<const sc2::Unit *, uint32_t> nextPathFindingFrameForUnit;
+	std::map<const sc2::Unit *, std::map<std::string, uint32_t>> nextPathFindingFrameForUnit;
 	std::map<std::set<const sc2::Unit *>, bool> m_combatSimulationResults;
 	std::map<sc2::Tag, sc2::Unit> m_dummyAssaultVikings;
 	std::map<sc2::Tag, sc2::Unit> m_dummyFighterVikings;
@@ -57,7 +57,8 @@ private:
 	void GetInfiltrationGoalPosition(const sc2::Unit * rangedUnit, CCPosition & goal, std::string & goalDescription) const;
 	bool MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbilities & abilities);
 	bool IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool started, const sc2::AvailableAbilities & abilities) const;
-	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit, bool checkInfluence = true) const;
+	bool AllowUnitToPathFind(const sc2::Unit * rangedUnit, bool checkInfluence, std::string pathfindingType) const;
+	void PreventUnitToPathFind(const sc2::Unit * rangedUnit, std::string pathfindingType, bool hasTarget);
 	bool ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger) const;
 	bool ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger);
 	bool ShouldBansheeUncloak(const sc2::Unit * banshee, CCPosition goal, sc2::Units & threats, bool unitShouldHeal) const;
