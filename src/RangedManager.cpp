@@ -498,7 +498,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 		const bool checkInfluence = isCyclone || rangedUnit->weapon_cooldown > 0;	// We might want to get enter the enemy influence a bit to attack our target, but not with Cyclones
-		if (cycloneShouldUseLockOn || cycloneShouldStayCloseToTarget || AllowUnitToPathFind(rangedUnit, checkInfluence))
+		if (AllowUnitToPathFind(rangedUnit, checkInfluence, "Offensive"))
 		{
 			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
 			const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
@@ -517,13 +517,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 				return;
 			}
-			else
-			{
-				const int delay = target && rangedUnit->weapon_cooldown > 0 ? std::ceil(rangedUnit->weapon_cooldown) : HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
-				nextPathFindingFrameForUnit[rangedUnit] = m_bot.GetGameLoop() + delay;
-			}
+			PreventUnitToPathFind(rangedUnit, "Offensive", target);
 		}
-		else if (isCyclone && !shouldAttack && !cycloneShouldUseLockOn && target)
+		else if (isCyclone && !shouldAttack && !cycloneShouldUseLockOn && target && AllowUnitToPathFind(rangedUnit, false, "SaferRange"))
 		{
 			CCPosition movePosition = Util::PathFinding::FindOptimalPathToSaferRange(rangedUnit, target, unitAttackRange, true, m_bot);
 			if (movePosition != CCPosition())
@@ -534,6 +530,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 				return;
 			}
+			PreventUnitToPathFind(rangedUnit, "SaferRange", target);
 		}
 		m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 		m_bot.StopProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
@@ -907,12 +904,24 @@ bool RangedManager::IsCycloneLockOnCanceled(const sc2::Unit * cyclone, bool star
 	return false;
 }
 
-bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit, bool checkInfluence) const
+bool RangedManager::AllowUnitToPathFind(const sc2::Unit * rangedUnit, bool checkInfluence, std::string pathfindingType) const
 {
 	if (checkInfluence && Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit->is_flying, m_bot))
 		return false;
-	const uint32_t availableFrame = nextPathFindingFrameForUnit.find(rangedUnit) != nextPathFindingFrameForUnit.end() ? nextPathFindingFrameForUnit.at(rangedUnit) : m_bot.GetGameLoop();
-	return m_bot.GetGameLoop() >= availableFrame;
+	const auto it = nextPathFindingFrameForUnit.find(rangedUnit);
+	if (it != nextPathFindingFrameForUnit.end())
+	{
+		const auto it2 = it->second.find(pathfindingType);
+		if (it2 != it->second.end())
+			return m_bot.GetGameLoop() >= it2->second;
+	}
+	return true;
+}
+
+void RangedManager::PreventUnitToPathFind(const sc2::Unit * rangedUnit, std::string pathfindingType, bool hasTarget)
+{
+	const int delay = hasTarget && rangedUnit->weapon_cooldown > 0 ? std::ceil(rangedUnit->weapon_cooldown) : HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL;
+	nextPathFindingFrameForUnit[rangedUnit][pathfindingType] = m_bot.GetGameLoop() + delay;
 }
 
 bool RangedManager::ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger) const
@@ -1453,11 +1462,18 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	{
 		// Check if the unit cannot just walk the ramp to reach the enemy
 		bool easilyWalkable = false;
-		if (targetDist <= 16 && AllowUnitToPathFind(rangedUnit, false))
+		if (targetDist <= 16 && AllowUnitToPathFind(rangedUnit, false, "WalkableHighGround"))
 		{
 			const auto pathDistance = Util::PathFinding::FindOptimalPathDistance(rangedUnit, target->pos, true, m_bot);
-			if (pathDistance >= 0 && pathDistance <= 15)
-				easilyWalkable = true;
+			if (pathDistance >= 0)
+			{
+				if (pathDistance <= 15)
+					easilyWalkable = true;
+			}
+			else
+			{
+				PreventUnitToPathFind(rangedUnit, "WalkableHighGround", target);
+			}
 		}
 		if (!easilyWalkable)
 		{
@@ -1790,18 +1806,24 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const auto unitTarget = unitAndTarget.second;
 
 		// Cloak Banshee if threatened
+		m_bot.StartProfiling("0.10.4.1.5.1.5.5.1            CloakBanshee");
 		if (shouldFight && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && Util::PathFinding::HasCombatInfluenceOnTile(Util::GetTilePosition(unit->pos), unit->is_flying, m_bot) && ExecuteBansheeCloakLogic(unit, false))
 		{
+			m_bot.StopProfiling("0.10.4.1.5.1.5.5.1            CloakBanshee");
 			continue;
 		}
+		m_bot.StopProfiling("0.10.4.1.5.1.5.5.1            CloakBanshee");
 
 		// Make sure the unit pointer is the right one for the Vikings
+		m_bot.StartProfiling("0.10.4.1.5.1.5.5.2            GetRealViking");
 		if ((morphFlyingVikings && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT) || (morphLandedVikings && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER))
 		{
 			simulatedUnit = unit;
 			unit = m_bot.GetUnitPtr(unit->tag);
 		}
+		m_bot.StopProfiling("0.10.4.1.5.1.5.5.2            GetRealViking");
 
+		m_bot.StartProfiling("0.10.4.1.5.1.5.5.3            CanAttackNow");
 		const float unitRange = Util::GetAttackRangeForTarget(unit, unitTarget, m_bot);
 		bool canAttackNow = unit->weapon_cooldown <= 0.f && unitRange > 0;
 		if (canAttackNow)
@@ -1811,14 +1833,19 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			else
 				canAttackNow = unitRange * unitRange >= Util::DistSq(unit->pos, unitTarget->pos);
 		}
+		m_bot.StopProfiling("0.10.4.1.5.1.5.5.3            CanAttackNow");
 
+		m_bot.StartProfiling("0.10.4.1.5.1.5.5.4            ShouldAttackAnyway");
 		// Even if the fight would be lost, should still attack if it can, but only if it is slower than the fastest enemy and its target is not on high ground
 		if (!shouldFight && (!canAttackNow || Util::getSpeedOfUnit(unit, m_bot) > maxThreatSpeed || Util::IsEnemyHiddenOnHighGround(unit, unitTarget, m_bot)))
 		{
+			m_bot.StopProfiling("0.10.4.1.5.1.5.5.4            ShouldAttackAnyway");
 			continue;
 		}
+		m_bot.StopProfiling("0.10.4.1.5.1.5.5.4            ShouldAttackAnyway");
 
 		// If the unit is standing on effect influence, get it out of it before fighting
+		m_bot.StartProfiling("0.10.4.1.5.1.5.5.5            DodgeEffect");
 		if (Util::PathFinding::GetEffectInfluenceOnTile(Util::GetTilePosition(unit->pos), unit, m_bot) > 0.f)
 		{
 			CCPosition movePosition = Util::PathFinding::FindOptimalPathToDodgeEffectAwayFromGoal(unit, unitTarget->pos, unitRange, m_bot);
@@ -1827,6 +1854,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				const int actionDuration = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 				const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, actionDuration, ACTION_DESCRIPTION_THREAT_FIGHT_DODGE_EFFECT);
 				m_bot.Commander().Combat().PlanAction(unit, action);
+				m_bot.StopProfiling("0.10.4.1.5.1.5.5.5            DodgeEffect");
 				continue;
 			}
 			else
@@ -1834,12 +1862,14 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				Util::DisplayError("Could not find an escape path", "", m_bot);
 			}
 		}
+		m_bot.StopProfiling("0.10.4.1.5.1.5.5.5            DodgeEffect");
 		
 		if (shouldFight)
 		{
 			// Morph the flying Viking
 			if (morphFlyingVikings && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 			{
+				m_bot.StartProfiling("0.10.4.1.5.1.5.5.6            VikingFighterMoveOrMorph");
 				auto action = RangedUnitAction();
 				const auto distSq = Util::DistSq(unit->pos, unitTarget->pos);
 				if (distSq > 8 * 8)
@@ -1861,6 +1891,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 							ss << " and it has no target";
 						}
 						Util::Log(__FUNCTION__, ss.str(), m_bot);
+						m_bot.StopProfiling("0.10.4.1.5.1.5.5.6            VikingFighterMoveOrMorph");
 						continue;
 					}
 					const float simulatedUnitRange = Util::GetAttackRangeForTarget(simulatedUnit, unitTarget, m_bot);
@@ -1876,6 +1907,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 					action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, true, VIKING_MORPH_FRAME_COUNT, ACTION_DESCRIPTION_THREAT_FIGHT_MORPH);
 				}
 				m_bot.Commander().Combat().PlanAction(unit, action);
+				m_bot.StopProfiling("0.10.4.1.5.1.5.5.6            VikingFighterMoveOrMorph");
 				continue;
 			}
 
@@ -1890,15 +1922,26 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			// Micro the Medivac
 			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 			{
+				m_bot.StartProfiling("0.10.4.1.5.1.5.5.8            ExecuteHealLogic");
 				ExecuteHealLogic(unit, allyCombatUnits, false);
+				m_bot.StopProfiling("0.10.4.1.5.1.5.5.8            ExecuteHealLogic");
 				continue;
 			}
 
 			// Stim the Marine or Marauder if it is close enough to its target (to prevent using it from very far away)
 			if (useStim && Util::DistSq(unit->pos, unitTarget->pos) <= 10 * 10 && ExecuteStimLogic(unit))
-				continue;
+			{
+				m_bot.StartProfiling("0.10.4.1.5.1.5.5.9            ExecuteStimLogic");
+				if (ExecuteStimLogic(unit))
+				{
+					m_bot.StopProfiling("0.10.4.1.5.1.5.5.9            ExecuteStimLogic");
+					continue;
+				}
+				m_bot.StopProfiling("0.10.4.1.5.1.5.5.9            ExecuteStimLogic");
+			}
 		}
 
+		m_bot.StartProfiling("0.10.4.1.5.1.5.5.10            CalcMovePosition");
 		auto movePosition = CCPosition();
 		const bool injured = unit->health / unit->health_max < 0.5f;
 		const auto enemyRange = Util::GetAttackRangeForTarget(unitTarget, unit, m_bot);
@@ -1906,16 +1949,20 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const auto enemySpeed = Util::getSpeedOfUnit(unitTarget, m_bot);
 		const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > enemyRange && unitSpeed > enemySpeed);
 		const bool shouldChase = unitRange < enemyRange && enemySpeed > 0;	//unitSpeed >= enemySpeed;
-		if (!canAttackNow && AllowUnitToPathFind(unit, false))
+		if (!canAttackNow && AllowUnitToPathFind(unit, false, "ThreatFighting"))
 		{
 			if (shouldKite || (injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)))
 			{
 				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, true, m_bot);
+				if (movePosition == CCPosition())
+					PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
 			}
 			if(movePosition == CCPosition() && shouldChase)
 			{
 				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, m_bot);
 				movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, true, m_bot);
+				if (movePosition == CCPosition())
+					PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
 			}
 		}
 		if (movePosition == CCPosition() && unitTarget->last_seen_game_loop < m_bot.GetCurrentFrame())
@@ -1923,6 +1970,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			// The target is not visible, so we should move towards until it is visible so we can attack it
 			movePosition = unitTarget->pos;
 		}
+		m_bot.StopProfiling("0.10.4.1.5.1.5.5.10            CalcMovePosition");
 		if (movePosition != CCPosition())
 		{
 			// Flee but stay in range
@@ -1932,6 +1980,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 		else
 		{
+			m_bot.StartProfiling("0.10.4.1.5.1.5.5.11            AttackTarget");
 			// Attack the target
 			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER && unitRange < Util::Dist(unit->pos, unitTarget->pos) + 1)
 			{
@@ -1949,6 +1998,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			// Keep track of damage dealt
 			const float damageDealt = Util::GetDpsForTarget(unit, unitTarget, m_bot) / 22.4f;
 			m_bot.Analyzer().increaseTotalDamage(damageDealt, unit->unit_type);
+			m_bot.StopProfiling("0.10.4.1.5.1.5.5.11            AttackTarget");
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.5.5          GiveActions");
