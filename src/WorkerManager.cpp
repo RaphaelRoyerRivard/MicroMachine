@@ -58,6 +58,7 @@ void WorkerManager::lowPriorityChecks()
 	}
 	m_lastLowPriorityCheckFrame = currentFrame;
 
+	m_bot.StartProfiling("0.7.6.1     SalvageDepletedGeysers");
 	//Detect depleted geysers
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
 	{
@@ -73,12 +74,15 @@ void WorkerManager::lowPriorityChecks()
 			}
 		}
 	}
+	m_bot.StopProfiling("0.7.6.1     SalvageDepletedGeysers");
 
 	//Worker split between bases (transfer worker)
 	if (m_bot.Bases().getBaseCount(Players::Self, true) <= 1)
 	{//No point trying to split workers
 		return;
 	}
+
+	m_bot.StartProfiling("0.7.6.2     FindWorkersToDispatch");
 	bool needTransfer = false;
 	auto workers = getWorkers();
 	WorkerData workerData = m_bot.Workers().getWorkerData();
@@ -115,10 +119,12 @@ void WorkerManager::lowPriorityChecks()
 			needTransfer = true;
 		}
 	}
+	m_bot.StopProfiling("0.7.6.2     FindWorkersToDispatch");
 
 	//Dispatch workers to bases missing some
 	if (needTransfer)
 	{
+		m_bot.StartProfiling("0.7.6.3     DispatchWorkers");
 		for (auto & base : bases)
 		{
 			if (base->isUnderAttack())
@@ -171,9 +177,12 @@ void WorkerManager::lowPriorityChecks()
 				}
 			}
 		}
+		m_bot.StopProfiling("0.7.6.3     DispatchWorkers");
 	}
 
+	m_bot.StartProfiling("0.7.6.4     validateRepairStationWorkers");
 	workerData.validateRepairStationWorkers();
+	m_bot.StopProfiling("0.7.6.4     validateRepairStationWorkers");
 }
 
 void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)

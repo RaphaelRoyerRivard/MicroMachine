@@ -176,40 +176,58 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	updateInfluenceMaps();
 	m_bot.StopProfiling("0.10.4.0    updateInfluenceMaps");
 
-	m_bot.StartProfiling("0.10.4.1    CalcBestFlyingCycloneHelpers");
+	m_bot.StartProfiling("0.10.4.3    CalcBestFlyingCycloneHelpers");
 	CalcBestFlyingCycloneHelpers();
-	m_bot.StopProfiling("0.10.4.1    CalcBestFlyingCycloneHelpers");
+	m_bot.StopProfiling("0.10.4.3    CalcBestFlyingCycloneHelpers");
 
+	m_bot.StartProfiling("0.10.4.5    updateIdlePosition");
 	updateIdlePosition();
+	m_bot.StopProfiling("0.10.4.5    updateIdlePosition");
 
 	m_bot.StartProfiling("0.10.4.2    updateSquads");
     if (isSquadUpdateFrame())
     {
+		m_bot.StartProfiling("0.10.4.2.a    updateIdleSquad");
 		updateIdleSquad();
+		m_bot.StopProfiling("0.10.4.2.a    updateIdleSquad");
+		m_bot.StartProfiling("0.10.4.2.b    updateBackupSquads");
 		updateBackupSquads();
+		m_bot.StopProfiling("0.10.4.2.b    updateBackupSquads");
+		m_bot.StartProfiling("0.10.4.2.c    updateWorkerFleeSquad");
 		updateWorkerFleeSquad();
+		m_bot.StopProfiling("0.10.4.2.c    updateWorkerFleeSquad");
+		m_bot.StartProfiling("0.10.4.2.d    updateScoutDefenseSquad");
         updateScoutDefenseSquad();
+		m_bot.StopProfiling("0.10.4.2.d    updateScoutDefenseSquad");
 		m_bot.StartProfiling("0.10.4.2.1    updateDefenseBuildings");
 		updateDefenseBuildings();
 		m_bot.StopProfiling("0.10.4.2.1    updateDefenseBuildings");
 		m_bot.StartProfiling("0.10.4.2.2    updateDefenseSquads");
         updateDefenseSquads();
 		m_bot.StopProfiling("0.10.4.2.2    updateDefenseSquads");
+		m_bot.StartProfiling("0.10.4.2.e    updateClearExpandSquads");
 		updateClearExpandSquads();
+		m_bot.StopProfiling("0.10.4.2.e    updateClearExpandSquads");
+		m_bot.StartProfiling("0.10.4.2.f    updateScoutSquad");
 		updateScoutSquad();
+		m_bot.StopProfiling("0.10.4.2.f    updateScoutSquad");
 		m_bot.StartProfiling("0.10.4.2.3    updateHarassSquads");
 		updateHarassSquads();
 		m_bot.StopProfiling("0.10.4.2.3    updateHarassSquads");
+		m_bot.StartProfiling("0.10.4.2.4    updateAttackSquads");
 		updateAttackSquads();
+		m_bot.StopProfiling("0.10.4.2.4    updateAttackSquads");
     }
 	drawCombatInformation();
 	m_bot.StopProfiling("0.10.4.2    updateSquads");
 
-	m_bot.StartProfiling("0.10.4.3    m_squadData.onFrame");
+	m_bot.StartProfiling("0.10.4.1    m_squadData.onFrame");
 	m_squadData.onFrame();
-	m_bot.StopProfiling("0.10.4.3    m_squadData.onFrame");
+	m_bot.StopProfiling("0.10.4.1    m_squadData.onFrame");
 
+	m_bot.StartProfiling("0.10.4.6    updateIdlePosition");
 	ExecuteActions();
+	m_bot.StopProfiling("0.10.4.6    updateIdlePosition");
 
 	m_bot.StartProfiling("0.10.4.4    lowPriorityCheck");
 	lowPriorityCheck();

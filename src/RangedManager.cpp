@@ -1229,6 +1229,7 @@ CCPosition RangedManager::GetDirectionVectorTowardsGoal(const sc2::Unit * ranged
 
 const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, bool & lockOnAvailable, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Units & rangedUnitTargets, const sc2::Unit * target, sc2::AvailableAbilities & abilities)
 {
+	m_bot.StartProfiling("0.10.4.1.5.1.b.1.1              CheckIfLockOnAvailable");
 	const uint32_t currentFrame = m_bot.GetCurrentFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 	//lockOnAvailable = QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON);
@@ -1242,7 +1243,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 	}
 	else
 	{
-		// Lock-On ability is not not available (maybe in use, maybe in cooldown)
+		// Lock-On ability is not available (maybe in use, maybe in cooldown)
 		const auto it = lockOnTargets.find(cyclone);
 		if (it != lockOnTargets.end())
 		{
@@ -1266,7 +1267,9 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			m_bot.Map().drawCircle(cyclone->pos, float(nextAvailableAbility[sc2::ABILITY_ID::EFFECT_LOCKON][cyclone] - currentFrame) / CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT, sc2::Colors::Red);
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.b.1.1              CheckIfLockOnAvailable");
 
+	m_bot.StartProfiling("0.10.4.1.5.1.b.1.2              FindLockOnTarget");
 	// Check if the Cyclone would have a better Lock-On target
 	if (shouldUseLockOn)
 	{
@@ -1381,6 +1384,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			}
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.b.1.2              FindLockOnTarget");
 
 	return target;
 }
@@ -1424,6 +1428,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	const auto & cycloneFlyingHelpers = m_bot.Commander().Combat().getCycloneFlyingHelpers();
 	const auto vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 	// If the Viking that is not a flying helper has no target, we try to see if it would have one if it was landed
+	m_bot.StartProfiling("0.10.4.1.5.1.5.a          VikingMorph");
 	if (!target && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 	{
 		if (!m_bot.Analyzer().enemyHasCombatAirUnit() || vikingCount >= 40)
@@ -1456,13 +1461,16 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			morphLandedVikings = true;
 		}
 	}
+	
+	m_bot.StopProfiling("0.10.4.1.5.1.5.a          VikingMorph");
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
 	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
 	if (!target || (!isTargetRanged(target) && !morphFlyingVikings))
 	{
 		return false;
 	}
-
+	
+	m_bot.StartProfiling("0.10.4.1.5.1.5.b          HighGroundCheck");
 	const float targetDist = Util::Dist(rangedUnit->pos, target->pos);
 	if (Util::IsEnemyHiddenOnHighGround(rangedUnit, target, m_bot))
 	{
@@ -1475,10 +1483,15 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				easilyWalkable = true;
 		}
 		if (!easilyWalkable)
+		{
+			m_bot.StopProfiling("0.10.4.1.5.1.5.b          HighGroundCheck");
 			return false;
+		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.5.b          HighGroundCheck");
 
 	// Check if unit can fight cloaked
+	m_bot.StartProfiling("0.10.4.1.5.1.5.c          CloakedAttack");
 	if(rangedUnit->energy >= 5 && (rangedUnit->cloak == sc2::Unit::CloakedAllied || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ShouldBansheeCloak(rangedUnit, false))))
 	{
 		// If the unit is at an undetected position
@@ -1494,6 +1507,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			{
 				if (Util::PathFinding::HasCombatInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit, m_bot) && ExecuteBansheeCloakLogic(rangedUnit, false))
 				{
+					m_bot.StopProfiling("0.10.4.1.5.1.5.c          CloakedAttack");
 					return true;
 				}
 
@@ -1506,6 +1520,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 						const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, 0, "DodgeEffect");
 						// Move away from the effect
 						m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+						m_bot.StopProfiling("0.10.4.1.5.1.5.c          CloakedAttack");
 						return true;
 					}
 				}
@@ -1536,13 +1551,16 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				if (!skipAction)
 				{
 					m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+					m_bot.StopProfiling("0.10.4.1.5.1.5.c          CloakedAttack");
 					return true;
 				}
 			}
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.5.c          CloakedAttack");
 
 	// Check for saved result
+	m_bot.StartProfiling("0.10.4.1.5.1.5.d          CheckSavedResult");
 	for (const auto & combatSimulationResultPair : m_combatSimulationResults)
 	{
 		const auto & allyUnits = combatSimulationResultPair.first;
@@ -1557,9 +1575,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				ss << "ThreatFightingLogic was called again when all close units should have been given a prioritized action... Current unit of type " << sc2::UnitTypeToName(rangedUnit->unit_type) << " had a " << action.description << " action and is " << (Util::Contains(rangedUnit, allyUnits) ? "" : "not") << " part of the set";
 				Util::Log(__FUNCTION__, ss.str(), m_bot);
 			}
+			m_bot.StopProfiling("0.10.4.1.5.1.5.d          CheckSavedResult");
 			return savedResult;
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.5.d          CheckSavedResult");
 	
 	m_bot.StartProfiling("0.10.4.1.5.1.5.1          CalcCloseUnits");
 	float minUnitRange = -1;
@@ -1784,6 +1804,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	// Save result
 	m_combatSimulationResults[closeUnitsSet] = shouldFight;
 
+	m_bot.StartProfiling("0.10.4.1.5.1.5.5          GiveActions");
 	// Choose an action for each of our close units
 	for (auto & unitAndTarget : closeUnitsTarget)
 	{
@@ -1953,6 +1974,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			m_bot.Analyzer().increaseTotalDamage(damageDealt, unit->unit_type);
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.5.5          GiveActions");
 	return shouldFight;
 }
 
@@ -2126,12 +2148,15 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 
 void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDisabled, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Units & rangedUnitTargets, const sc2::Unit * & target, CCPosition & goal, std::string & goalDescription, sc2::AvailableAbilities & abilities)
 {
+	m_bot.StartProfiling("0.10.4.1.5.1.b.1            ExecuteLockOnLogic");
 	bool lockOnAvailable;
 	target = ExecuteLockOnLogic(cyclone, unitShouldHeal, shouldAttack, cycloneShouldUseLockOn, lockOnAvailable, rangedUnits, threats, rangedUnitTargets, target, abilities);
+	m_bot.StopProfiling("0.10.4.1.5.1.b.1            ExecuteLockOnLogic");
 
 	// If the Cyclone has a its Lock-On on a target with a big range (like a Tempest or Tank)
 	if (!shouldAttack && !cycloneShouldUseLockOn && !isUnitDisabled)
 	{
+		m_bot.StartProfiling("0.10.4.1.5.1.b.2            CheckIfNeedToStayClose");
 		const auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
 		const auto it = lockOnTargets.find(cyclone);
 		if (it != lockOnTargets.end())
@@ -2164,12 +2189,14 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 				}
 			}
 		}
+		m_bot.StopProfiling("0.10.4.1.5.1.b.2            CheckIfNeedToStayClose");
 	}
 
 	const auto cyclonesWithHelper = m_bot.Commander().Combat().getCyclonesWithHelper();
 	const auto cycloneWithHelperIt = cyclonesWithHelper.find(cyclone);
 	const bool hasFlyingHelper = cycloneWithHelperIt != cyclonesWithHelper.end();
 
+	m_bot.StartProfiling("0.10.4.1.5.1.b.3            DefineGoal");
 	if (!unitShouldHeal && !cycloneShouldStayCloseToTarget && m_order.getType() != SquadOrderTypes::Defend)
 	{
 		// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
@@ -2247,6 +2274,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 			goalDescription = "CooldownStart";
 		}
 	}
+	m_bot.StopProfiling("0.10.4.1.5.1.b.3            DefineGoal");
 }
 
 bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
