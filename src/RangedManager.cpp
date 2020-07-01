@@ -794,6 +794,7 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbil
 	// Check if Lock-On casting is canceled or over
 	auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+	auto & lockedOnTargets = m_bot.Commander().Combat().getLockedOnTargets();
 	const auto it = lockOnCastedFrame.find(cyclone);
 	if (it != lockOnCastedFrame.end())
 	{
@@ -803,18 +804,14 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbil
 		{
 			if (IsCycloneLockOnCanceled(cyclone, false, abilities))
 			{
+				lockOnCastedFrame.erase(cyclone);
+				const auto previousTarget = lockOnTargets[cyclone].first;
+				lockedOnTargets[previousTarget].erase(cyclone);
+				lockOnTargets.erase(cyclone);
 				// Query the game to make sure the Lock-On has really been canceled while casting
-				//if (QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON))
-				if (Util::IsAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, abilities))
-				{
-					lockOnCastedFrame.erase(cyclone);
-					lockOnTargets.erase(cyclone);
-				}
-				else
+				if (!Util::IsAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, abilities))
 				{
 					// The unit died right after the Lock-On was cast
-					lockOnCastedFrame.erase(cyclone);
-					lockOnTargets.erase(cyclone);
 					setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone, currentFrame + CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT);
 				}
 			}
@@ -838,7 +835,7 @@ bool RangedManager::MonitorCyclone(const sc2::Unit * cyclone, sc2::AvailableAbil
 		auto damagePerFrame = 400.f / 14.3f / 22.4f;
 		if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
 		{
-			const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(lockOnTarget->first->unit_type, m_bot);
+			const sc2::UnitTypeData & unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(lockOnTarget->first->unit_type, m_bot);
 			if (Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes))
 				damagePerFrame *= 2;
 		}
@@ -1232,6 +1229,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 	m_bot.StartProfiling("0.10.4.1.5.1.b.1.1              CheckIfLockOnAvailable");
 	const uint32_t currentFrame = m_bot.GetCurrentFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+	auto & lockedOnTargets = m_bot.Commander().Combat().getLockedOnTargets();
 	//lockOnAvailable = QueryIsAbilityAvailable(cyclone, sc2::ABILITY_ID::EFFECT_LOCKON);
 	//lockOnAvailable = isAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone);
 	lockOnAvailable = Util::IsAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, abilities);
@@ -1249,6 +1247,8 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 		{
 			if (IsCycloneLockOnCanceled(cyclone, true, abilities))
 			{
+				const auto previouslyLockedOnTarget = it->second.first;
+				lockedOnTargets[previouslyLockedOnTarget].erase(cyclone);
 				lockOnTargets.erase(cyclone);
 				setNextFrameAbilityAvailable(sc2::ABILITY_ID::EFFECT_LOCKON, cyclone, currentFrame + CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT);
 			}
@@ -1278,16 +1278,6 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			const auto cycloneHeight = m_bot.Map().terrainHeight(cyclone->pos);
 			auto & abilityCastingRanges = m_bot.Commander().Combat().getAbilityCastingRanges();
 			const auto partialLockOnRange = abilityCastingRanges[sc2::ABILITY_ID::EFFECT_LOCKON] + cyclone->radius;
-			std::map<const sc2::Unit *, int> lockedOnTargets;
-			for (const auto & lockOnTarget : lockOnTargets)
-			{
-				auto lockedOnTarget = lockOnTarget.second.first;
-				const auto it = lockedOnTargets.find(lockedOnTarget);
-				if (it == lockedOnTargets.end())
-					lockedOnTargets[lockedOnTarget] = 1;
-				else
-					lockedOnTargets[lockedOnTarget] += 1;
-			}
 			const sc2::Unit * bestTarget = nullptr;
 			float bestScore = 0.f;
 			for(const auto potentialTarget : rangedUnitTargets)
@@ -1298,27 +1288,11 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				// Do not Lock On on units that are already Locked On unless they have a lot of hp
 				// Will target the unit only if it can absorb more than 3 missiles (20 damage each) per Cyclone Locked On to it
 				const auto it = lockedOnTargets.find(potentialTarget);
-				if (it != lockedOnTargets.end() && potentialTarget->health + potentialTarget->shield <= it->second * 60)
+				if (it != lockedOnTargets.end() && potentialTarget->health + potentialTarget->shield <= it->second.size() * 60)
 					continue;
 				const float threatHeight = m_bot.Map().terrainHeight(potentialTarget->pos);
-				if (threatHeight > cycloneHeight)
-				{
-					bool hasGoodViewOfUnit = false;
-					for (const auto allyUnitPair : m_bot.GetAllyUnits())
-					{
-						const auto allyUnit = allyUnitPair.second.getUnitPtr();
-						if (allyUnit == cyclone)
-							continue;
-						const auto canSeeEnemy = Util::AllyUnitSeesEnemyUnit(allyUnit, potentialTarget, m_bot);
-						if(canSeeEnemy)
-						{
-							hasGoodViewOfUnit = true;
-							break;
-						}
-					}
-					if(!hasGoodViewOfUnit)
-						continue;
-				}
+				if (threatHeight > cycloneHeight && !Util::AllyUnitSeesEnemyUnit(cyclone, potentialTarget, m_bot))
+					continue;
 				const float dist = Util::Dist(cyclone->pos, potentialTarget->pos) - potentialTarget->radius;
 				if (shouldHeal && dist > partialLockOnRange + potentialTarget->radius)
 					continue;
@@ -1351,7 +1325,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				auto armoredScore = 0.f;
 				if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
 				{
-					const sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(potentialTarget->unit_type, m_bot);
+					const sc2::UnitTypeData & unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(potentialTarget->unit_type, m_bot);
 					armoredScore = 15 * Util::Contains(sc2::Attribute::Armored, unitTypeData.attributes);
 				}
 				const float nydusBonus = potentialTarget->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && potentialTarget->build_progress < 1.f ? 10000.f : 0.f;
@@ -1396,8 +1370,11 @@ void RangedManager::LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * ta
 	const auto pair = std::pair<const sc2::Unit *, uint32_t>(target, m_bot.GetGameLoop());
 	auto & lockOnCastedFrame = m_bot.Commander().Combat().getLockOnCastedFrame();
 	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
+	auto & lockedOnTargets = m_bot.Commander().Combat().getLockedOnTargets();
 	lockOnCastedFrame[cyclone] = pair;
 	lockOnTargets[cyclone] = pair;
+	auto & cycloneSet = lockedOnTargets[target];
+	cycloneSet.insert(cyclone);
 }
 
 bool RangedManager::CycloneHasTarget(const sc2::Unit * cyclone) const

@@ -34,6 +34,7 @@ namespace Util
 	static sc2::Unit * m_dummyVikingFighter;
 	static sc2::Unit * m_dummyStimedMarine;
 	static sc2::Unit * m_dummyStimedMarauder;
+	static std::map<const sc2::Unit *, std::pair<std::set<const sc2::Unit *>, std::set<const sc2::Unit *>>> m_seenEnemies;	// <enemy, <allies_with_vision, allies_without_vision>
 
 	static bool allowDebug;
 	
@@ -222,6 +223,7 @@ namespace Util
 	bool isUnitDisabled(const sc2::Unit * unit);
 	bool isUnitLifted(const sc2::Unit * unit);
 	bool unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId);
+	void ClearSeenEnemies();
 	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool IsEnemyHiddenOnHighGround(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
@@ -246,7 +248,7 @@ namespace Util
     sc2::Point2D    Normalized(const sc2::Point2D& point);
     float           GetDotProduct(const sc2::Point2D& v1, const sc2::Point2D& v2);
     void			GetOrthogonalVectors(const sc2::Point2D& referenceVector, sc2::Point2D& clockwiseVector, sc2::Point2D& counterClockwiseVector);
-    sc2::UnitTypeData GetUnitTypeDataFromUnitTypeId(const sc2::UnitTypeID unitTypeId, CCBot & bot);
+    const sc2::UnitTypeData & GetUnitTypeDataFromUnitTypeId(const sc2::UnitTypeID unitTypeId, CCBot & bot);
 
     sc2::UnitTypeID GetUnitTypeIDFromName(const std::string & name, CCBot & bot);
     sc2::UpgradeID  GetUpgradeIDFromName(const std::string & name, CCBot & bot);

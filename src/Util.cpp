@@ -1700,7 +1700,7 @@ float Util::GetAttackRangeBonus(const sc2::UnitTypeID unitType, CCBot & bot)
 
 float Util::GetArmor(const sc2::Unit * unit, CCBot & bot)
 {
-    sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+    const sc2::UnitTypeData & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
     return unitTypeData.armor;
 }
 
@@ -1724,7 +1724,7 @@ float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetT
 	float dps = GetSpecialCaseDps(unit, bot, targetType);
 	if (dps < 0.f)
 	{
-		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+		const sc2::UnitTypeData & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
 		for (auto & weapon : unitTypeData.weapons)
 		{
 			if (weapon.type == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Any || weapon.type == targetType)
@@ -1750,8 +1750,8 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
     float dps = GetSpecialCaseDps(unit, bot, expectedWeaponType);
     if (dps < 0.f)
     {
-		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-		sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
+		const sc2::UnitTypeData & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+		const sc2::UnitTypeData & targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
         for (auto & weapon : unitTypeData.weapons)
         {
             if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
@@ -1866,8 +1866,8 @@ float Util::GetDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target,
 	float damage = GetSpecialCaseDamage(unit, bot, expectedWeaponType);
 	if (damage == 0.f)
 	{
-		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-		sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
+		const sc2::UnitTypeData & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+		const sc2::UnitTypeData & targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
 		for (auto & weapon : unitTypeData.weapons)
 		{
 			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
@@ -2138,15 +2138,37 @@ bool Util::unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId)
 	return false;
 }
 
+void Util::ClearSeenEnemies()
+{
+	m_seenEnemies.clear();
+}
+
 bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot)
 {
+	auto & allyUnitsPair = m_seenEnemies[enemyUnit];
+	auto & alliesWithVisionOfEnemy = allyUnitsPair.first;
+	auto & alliesWithoutVisionOfEnemy = allyUnitsPair.second;
+	if (alliesWithVisionOfEnemy.size() > 1 || (alliesWithVisionOfEnemy.size() == 1 && alliesWithVisionOfEnemy.find(exceptUnit) == alliesWithVisionOfEnemy.end()))
+		return true;	// another ally unit can see the enemy unit
+	if (alliesWithoutVisionOfEnemy.size() == bot.GetAllyUnits().size())
+		return false;	// we already know no ally unit can see the enemy unit
+
+	// check if we have an ally unit that can see the enemy unit
 	for (const auto & allyUnit : bot.GetAllyUnits())
 	{
 		const auto allyUnitPtr = allyUnit.second.getUnitPtr();
-		if (allyUnitPtr == exceptUnit)
-			continue;
-		if (Util::CanUnitSeeEnemyUnit(allyUnitPtr, enemyUnit, bot))
-			return true;
+		if (alliesWithoutVisionOfEnemy.find(allyUnitPtr) != alliesWithoutVisionOfEnemy.end())
+			continue;	// we already know this ally unit can't see the enemy unit
+		if (CanUnitSeeEnemyUnit(allyUnitPtr, enemyUnit, bot))
+		{
+			alliesWithVisionOfEnemy.insert(allyUnitPtr);
+			if (allyUnitPtr != exceptUnit)
+				return true;
+		}
+		else
+		{
+			alliesWithoutVisionOfEnemy.insert(allyUnitPtr);
+		}
 	}
 	return false;
 }
@@ -2156,7 +2178,7 @@ bool Util::CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUn
 	const auto distSq = DistSq(unit->pos, enemyUnit->pos);
 	if (distSq > 20 * 20)
 		return false;	// Unit is just too far
-	const auto unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+	const auto & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
 	const auto sight = unitTypeData.sight_range + unit->radius + enemyUnit->radius;
 	if (distSq > sight * sight)
 		return false;	// Unit doesn't have enough sight range
@@ -2471,9 +2493,10 @@ sc2::UnitTypeID Util::GetUnitTypeIDFromName(const std::string & name, CCBot & bo
     return 0;
 }
 
-sc2::UnitTypeData Util::GetUnitTypeDataFromUnitTypeId(const sc2::UnitTypeID unitTypeId, CCBot & bot)
+const sc2::UnitTypeData & Util::GetUnitTypeDataFromUnitTypeId(const sc2::UnitTypeID unitTypeId, CCBot & bot)
 {
-    return bot.Observation()->GetUnitTypeData()[unitTypeId];
+	const auto & unitTypes = bot.Observation()->GetUnitTypeData();
+    return unitTypes[unitTypeId];
 }
 
 sc2::UpgradeID Util::GetUpgradeIDFromName(const std::string & name, CCBot & bot)

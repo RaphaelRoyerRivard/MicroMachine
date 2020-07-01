@@ -166,6 +166,8 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 
 	clearAllyScans();
 
+	Util::ClearSeenEnemies();
+
     m_combatUnits = combatUnits;
 
 	sc2::Units units;
@@ -2697,9 +2699,30 @@ void CombatCommander::CleanLockOnTargets()
 		if (!cyclone->is_alive || !target->is_alive || target->last_seen_game_loop < m_bot.GetCurrentFrame())
 			toRemove.push_back(cyclone);
 	}
-
 	for (const auto cyclone : toRemove)
 		m_lockOnTargets.erase(cyclone);
+
+	toRemove.clear();
+	for (auto & targetPair : m_lockedOnTargets)
+	{
+		const auto target = targetPair.first;
+		auto & cyclones = targetPair.second;
+		if (!target || !target->is_alive || target->last_seen_game_loop < m_bot.GetCurrentFrame())
+		{
+			toRemove.push_back(target);
+			continue;
+		}
+		sc2::Units toRemove2;
+		for (const auto cyclone : cyclones)
+		{
+			if (!cyclone->is_alive)
+				toRemove2.push_back(cyclone);
+		}
+		for (const auto cyclone : toRemove2)
+			cyclones.erase(cyclone);
+	}
+	for (const auto target : toRemove)
+		m_lockedOnTargets.erase(target);
 }
 
 void CombatCommander::CalcBestFlyingCycloneHelpers()
