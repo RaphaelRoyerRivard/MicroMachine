@@ -125,6 +125,7 @@ void WorkerManager::lowPriorityChecks()
 	if (needTransfer)
 	{
 		m_bot.StartProfiling("0.7.6.3     DispatchWorkers");
+		std::map<BaseLocation *, std::map<const sc2::Unit *, bool>> pathfindingCache;	// <to_base, <from_worker, result>>
 		for (auto & base : bases)
 		{
 			if (base->isUnderAttack())
@@ -145,16 +146,42 @@ void WorkerManager::lowPriorityChecks()
 				std::vector<Unit> toRemove;
 				int needed = optimalWorkers - workerCount;
 				int moved = 0;
-				for (auto it = dispatchedWorkers.begin(); it != dispatchedWorkers.end(); it++)
+				auto & cachedResults = pathfindingCache[base];
+				for (const auto & dispatchedWorker : dispatchedWorkers)
 				{
-					//Dont move workers if its not safe
-					if (!Util::PathFinding::IsPathToGoalSafe(it->getUnitPtr(), base->getPosition(), true, m_bot))
+					// Check if there is a cached result near the worker
+					bool foundCloseCachedResult = false;
+					bool closeCachedResult = false;
+					for (auto & cachedResult : cachedResults)
 					{
-						continue;
+						// If near and at the same height
+						if (Util::DistSq(dispatchedWorker, cachedResult.first->pos) <= 8 * 8 && m_bot.Map().terrainHeight(dispatchedWorker.getPosition()) == m_bot.Map().terrainHeight(cachedResult.first->pos))
+						{
+							foundCloseCachedResult = true;
+							closeCachedResult = cachedResult.second;
+							break;
+						}
+					}
+					if (foundCloseCachedResult)
+					{
+						if (!closeCachedResult)
+							continue;	// The close cached pathfinding wasn't safe
+					}
+					else
+					{
+						// Check if path is safe
+						const bool safe = Util::PathFinding::IsPathToGoalSafe(dispatchedWorker.getUnitPtr(), base->getPosition(), true, m_bot);
+						// Cache result
+						cachedResults[dispatchedWorker.getUnitPtr()] = safe;
+						//Dont move workers if its not safe
+						if (!safe)
+						{
+							continue;
+						}
 					}
 
-					m_workerData.setWorkerJob(*it, WorkerJobs::Minerals, depot, true);
-					toRemove.push_back(*it);
+					m_workerData.setWorkerJob(dispatchedWorker, WorkerJobs::Minerals, depot, true);
+					toRemove.push_back(dispatchedWorker);
 					moved++;
 					if (moved >= needed)
 					{
