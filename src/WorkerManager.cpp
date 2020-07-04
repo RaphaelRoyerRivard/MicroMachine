@@ -67,10 +67,10 @@ void WorkerManager::lowPriorityChecks()
 		{
 			//Salvage gas bunkers, if any
 			auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
-			auto gasBunkers = base->getGasBunkers();
+			auto & gasBunkers = base->getGasBunkers();
 			for (auto & bunker : gasBunkers)
 			{
-				bunker.useAbility(sc2::ABILITY_ID::EFFECT_SALVAGE);
+				Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SALVAGE, m_bot);
 			}
 		}
 	}

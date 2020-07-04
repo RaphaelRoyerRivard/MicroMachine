@@ -173,13 +173,13 @@ void ProductionManager::onFrame(bool executeMacro)
 {
 	if (executeMacro)
 	{
-		m_bot.StartProfiling("1.0 lowPriorityChecks");
+		m_bot.StartProfiling("0.10.2.1    lowPriorityChecks");
 		lowPriorityChecks();
 		validateUpgradesProgress();
-		m_bot.StopProfiling("1.0 lowPriorityChecks");
-		m_bot.StartProfiling("2.0 manageBuildOrderQueue");
+		m_bot.StopProfiling("0.10.2.1    lowPriorityChecks");
+		m_bot.StartProfiling("0.10.2.2    manageBuildOrderQueue");
 		manageBuildOrderQueue();
-		m_bot.StopProfiling("2.0 manageBuildOrderQueue");
+		m_bot.StopProfiling("0.10.2.2    manageBuildOrderQueue");
 		/*m_bot.StartProfiling("3.0 QueueDeadBuildings");
 		QueueDeadBuildings();
 		m_bot.StopProfiling("3.0 QueueDeadBuildings");*/
@@ -210,17 +210,17 @@ void ProductionManager::manageBuildOrderQueue()
 		m_queue.clearAll();
 	}
 
-	m_bot.StartProfiling("0.10.2.1    putImportantBuildOrderItemsInQueue");
+	m_bot.StartProfiling("0.10.2.2.1     putImportantBuildOrderItemsInQueue");
 	if(m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder)
     {
 		putImportantBuildOrderItemsInQueue();
     }
-	m_bot.StopProfiling("0.10.2.1    putImportantBuildOrderItemsInQueue");
+	m_bot.StopProfiling("0.10.2.2.1     putImportantBuildOrderItemsInQueue");
 
 	if (m_queue.isEmpty())
 		return;
 
-	m_bot.StartProfiling("0.10.2.2    checkQueue");
+	m_bot.StartProfiling("0.10.2.2.2     checkQueue");
     // the current item to be used
     MM::BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
 	int highestPriority = currentItem.priority;
@@ -244,10 +244,10 @@ void ProductionManager::manageBuildOrderQueue()
 			//check if we have the prerequirements.
 			if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
 			{
-				m_bot.StartProfiling("0.10.2.2.1     fixBuildOrderDeadlock");
+				m_bot.StartProfiling("0.10.2.2.2.1      fixBuildOrderDeadlock");
 				fixBuildOrderDeadlock(currentItem);
 				//currentItem = m_queue.getHighestPriorityItem();
-				m_bot.StopProfiling("0.10.2.2.1     fixBuildOrderDeadlock");
+				m_bot.StopProfiling("0.10.2.2.2.1      fixBuildOrderDeadlock");
 				//continue;
 			}
 
@@ -301,10 +301,10 @@ void ProductionManager::manageBuildOrderQueue()
 				{
 					auto data = m_bot.Data(currentItem.type);
 					// if we can make the current item
-					m_bot.StartProfiling("0.10.2.2.2     tryingToBuild");
+					m_bot.StartProfiling("0.10.2.2.2.2      tryingToBuild");
 					if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 					{
-						m_bot.StartProfiling("0.10.2.2.2.1      Build without premovement");
+						m_bot.StartProfiling("0.10.2.2.2.2.1      Build without premovement");
 						Unit producer = getProducer(currentItem.type);
 						// build supply if we need some (SupplyBlock)
 						if (producer.isValid())
@@ -319,22 +319,22 @@ void ProductionManager::manageBuildOrderQueue()
 #endif
 							}
 
-							m_bot.StartProfiling("0.10.2.2.2.1.1       canMakeNow");
+							m_bot.StartProfiling("0.10.2.2.2.2.1.1      canMakeNow");
 							const auto canProducerMakeItem = canMakeNow(producer, currentItem.type);
-							m_bot.StopProfiling("0.10.2.2.2.1.1       canMakeNow");
+							m_bot.StopProfiling("0.10.2.2.2.2.1.1      canMakeNow");
 							if (canProducerMakeItem)
 							{
 								// create it and remove it from the _queue
-								m_bot.StartProfiling("0.10.2.2.2.1.2       create");
+								m_bot.StartProfiling("0.10.2.2.2.2.1.2      create");
 								const auto producerCreatedItem = create(producer, currentItem, m_bot.GetBuildingArea(currentItem.type));
-								m_bot.StopProfiling("0.10.2.2.2.1.2       create");
+								m_bot.StopProfiling("0.10.2.2.2.2.1.2      create");
 								if (producerCreatedItem)
 								{
 									m_queue.removeCurrentHighestPriorityItem();
 
 									// don't actually loop around in here
-									m_bot.StopProfiling("0.10.2.2.2.1      Build without premovement");
-									m_bot.StopProfiling("0.10.2.2.2     tryingToBuild");
+									m_bot.StopProfiling("0.10.2.2.2.2.1      Build without premovement");
+									m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
 									break;
 								}
 								else if (!m_initialBuildOrderFinished)
@@ -344,7 +344,7 @@ void ProductionManager::manageBuildOrderQueue()
 								}
 							}
 						}
-						m_bot.StopProfiling("0.10.2.2.2.1      Build without premovement");
+						m_bot.StopProfiling("0.10.2.2.2.2.1      Build without premovement");
 					}
 					else if (data.isBuilding
 						&& !data.isAddon
@@ -353,13 +353,13 @@ void ProductionManager::manageBuildOrderQueue()
 					{
 						// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
-						m_bot.StartProfiling("0.10.2.2.2.2      Build with premovement");
+						m_bot.StartProfiling("0.10.2.2.2.2.2      Build with premovement");
 						Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea(currentItem.type));
 						//Get building location
 
-						m_bot.StartProfiling("0.10.2.2.2.2.1       getNextBuildingLocation");
+						m_bot.StartProfiling("0.10.2.2.2.2.2.1       getNextBuildingLocation");
 						const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, true, true);
-						m_bot.StopProfiling("0.10.2.2.2.2.1       getNextBuildingLocation");
+						m_bot.StopProfiling("0.10.2.2.2.2.2.1       getNextBuildingLocation");
 						if (targetLocation != CCTilePosition(0, 0))
 						{
 							Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
@@ -376,8 +376,8 @@ void ProductionManager::manageBuildOrderQueue()
 									}
 
 									// don't actually loop around in here
-									m_bot.StopProfiling("0.10.2.2.2.2      Build with premovement");
-									m_bot.StopProfiling("0.10.2.2.2     tryingToBuild");
+									m_bot.StopProfiling("0.10.2.2.2.2.2      Build with premovement");
+									m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
 									break;
 								}
 							}
@@ -389,9 +389,9 @@ void ProductionManager::manageBuildOrderQueue()
 								Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
 							}
 						}
-						m_bot.StopProfiling("0.10.2.2.2.2      Build with premovement");
+						m_bot.StopProfiling("0.10.2.2.2.2.2      Build with premovement");
 					}
-					m_bot.StopProfiling("0.10.2.2.2     tryingToBuild");
+					m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
 				}
 			}
 		}
@@ -406,7 +406,7 @@ void ProductionManager::manageBuildOrderQueue()
         // and get the next one
         currentItem = m_queue.getNextHighestPriorityItem();
     }
-	m_bot.StopProfiling("0.10.2.2    checkQueue");
+	m_bot.StopProfiling("0.10.2.2.2     checkQueue");
 }
 
 bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentItem) const

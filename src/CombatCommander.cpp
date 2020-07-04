@@ -1369,7 +1369,9 @@ void CombatCommander::updateScoutDefenseSquad()
 
 void CombatCommander::updateDefenseBuildings()
 {
+	m_bot.StartProfiling("0.10.4.2.1.1     handleWall");
 	handleWall();
+	m_bot.StopProfiling("0.10.4.2.1.1     handleWall");
 	lowerSupplyDepots();
 }
 
@@ -1380,6 +1382,7 @@ void CombatCommander::handleWall()
 	const auto wallCenter = m_bot.Buildings().getWallPosition();
 	auto & enemies = m_bot.GetKnownEnemyUnits();
 
+	m_bot.StartProfiling("0.10.4.2.1.1.1      CheckEnemies");
 	// If there is at least one melee unit, raise the wall. Otherwise, check if we have units that want to go back in our base
 	bool raiseWall = false;
 	bool meleeEnemyUnit = false;
@@ -1399,9 +1402,11 @@ void CombatCommander::handleWall()
 			}
 		}
 	}
+	m_bot.StopProfiling("0.10.4.2.1.1.1      CheckEnemies");
 	// If all enemies are ranged, check if we have a unit that would like to come back to our base. In that case, we don't want to raise our wall
 	if (raiseWall && !meleeEnemyUnit)
 	{
+		m_bot.StartProfiling("0.10.4.2.1.1.2      CheckAllies");
 		const auto wallDistanceToBase = Util::DistSq(m_bot.GetStartLocation(), wallCenter);
 		const auto wallHeight = m_bot.Map().terrainHeight(wallCenter);
 		for (const auto & allyPair : m_bot.GetAllyUnits())
@@ -1427,6 +1432,7 @@ void CombatCommander::handleWall()
 				}
 			}
 		}
+		m_bot.StopProfiling("0.10.4.2.1.1.2      CheckAllies");
 	}
 	//Raise wall
 	if (raiseWall)
@@ -1435,7 +1441,7 @@ void CombatCommander::handleWall()
 		{
 			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
 			{
-				building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
+				Micro::SmartAbility(building.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE, m_bot);
 			}
 		}
 	}
@@ -1446,7 +1452,7 @@ void CombatCommander::handleWall()
 		{
 			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
 			{
-				building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+				Micro::SmartAbility(building.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER, m_bot);
 			}
 		}
 	}
@@ -1458,7 +1464,7 @@ void CombatCommander::lowerSupplyDepots()
 	{
 		if(supplyDepot.isCompleted() && !Util::Contains(supplyDepot, m_bot.Buildings().getWallBuildings()))
 		{
-			supplyDepot.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+			Micro::SmartAbility(supplyDepot.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER, m_bot);
 		}
 	}
 }
