@@ -9,6 +9,8 @@
 #include "../utilities/mappings.h"
 #include "combat_upgrades.h"
 
+class CCBot;
+
 namespace libvoxelbot {
 	struct BuildState;
 }
@@ -91,8 +93,8 @@ public:
 	CombatEnvironment defaultCombatEnvironment;
 	CombatPredictor();
 	void init();
-	CombatResult predict_engage(const CombatState& state, bool debug=false, bool badMicro=false, CombatRecording* recording=nullptr, int defenderPlayer = 1) const;
-	CombatResult predict_engage(const CombatState& state, CombatSettings settings, CombatRecording* recording=nullptr, int defenderPlayer = 1) const;
+	CombatResult predict_engage(const CombatState& state, bool debug=false, bool badMicro=false, CombatRecording* recording=nullptr, int defenderPlayer = 1, CCBot * bot = nullptr) const;
+	CombatResult predict_engage(const CombatState& state, CombatSettings settings, CombatRecording* recording=nullptr, int defenderPlayer = 1, CCBot * bot = nullptr) const;
 
 	const CombatEnvironment& getCombatEnvironment(const CombatUpgrades& upgrades, const CombatUpgrades& targetUpgrades) const;
 

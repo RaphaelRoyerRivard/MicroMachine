@@ -18,12 +18,11 @@ namespace MM {
 		bool operator==(const BuildOrderItem & x) const;
 	};
 }
-using namespace MM;
 
 class BuildOrderQueue
 {
     CCBot & m_bot;
-    std::deque<BuildOrderItem> m_queue;
+    std::deque<MM::BuildOrderItem> m_queue;
 
     int m_lowestPriority;
     int m_highestPriority;
@@ -36,9 +35,9 @@ public:
 
     void clearAll();											// clears the entire build order queue
     void skipItem();											// increments skippedItems
-    BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);		// queues something at the highest priority
-	BuildOrderItem queueAsLowestPriority(const MetaType & type, bool blocking);		// queues something at the lowest priority
-	BuildOrderItem queueItem(const BuildOrderItem & b);			// queues something with a given priority
+    MM::BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);		// queues something at the highest priority
+    MM::BuildOrderItem queueAsLowestPriority(const MetaType & type, bool blocking);		// queues something at the lowest priority
+    MM::BuildOrderItem queueItem(const MM::BuildOrderItem & b);			// queues something with a given priority
     void removeHighestPriorityItem();								// removes the highest priority item
     void removeCurrentHighestPriorityItem();
 	void removeAllOfType(const MetaType & type);
@@ -46,8 +45,8 @@ public:
     size_t size();													// returns the size of the queue
 
     bool isEmpty();
-    BuildOrderItem getHighestPriorityItem();	// returns the highest priority item
-    BuildOrderItem getNextHighestPriorityItem();	// returns the highest priority item
+    MM::BuildOrderItem getHighestPriorityItem();	// returns the highest priority item
+    MM::BuildOrderItem getNextHighestPriorityItem();	// returns the highest priority item
 	int getCountOfType(const MetaType & type);	// returns the number of items of a type in the queue
 
     bool canSkipItem();
@@ -55,5 +54,5 @@ public:
 	bool contains(const MetaType & type) const;
 
     // overload the bracket operator for ease of use
-    BuildOrderItem operator [] (int i);
+    MM::BuildOrderItem operator [] (int i);
 };
