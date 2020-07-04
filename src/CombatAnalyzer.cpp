@@ -566,7 +566,7 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 			//If the building could die, cancel it.
 			if (state.GetRecentDamageTaken() >= 2 * unit.getHitPoints())
 			{
-				unit.useAbility(sc2::ABILITY_ID::CANCEL);
+				Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::CANCEL, m_bot);
 			}
 		}
 		
