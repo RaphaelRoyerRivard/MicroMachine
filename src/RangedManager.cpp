@@ -445,6 +445,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.e          summedFleeVec");
 	bool enemyThreatIsClose = false;
+	bool enemyThreatIsAboutToHit = false;
 	bool fasterEnemyThreat = false;
 	float unitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
 	CCPosition summedFleeVec(0, 0);
@@ -456,18 +457,21 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		// If our unit is almost in range of threat, use the influence map to find the best flee path
 		const float dist = Util::Dist(rangedUnit->pos, threat->pos);
 		const float threatRange = Util::getThreatRange(rangedUnit, threat, m_bot);
-		if (dist < threatRange + 0.5f)
+		const float threatAttackRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
+		if (dist < threatRange)
 		{
 			enemyThreatIsClose = true;
 			if (!fasterEnemyThreat && Util::getSpeedOfUnit(threat, m_bot) > unitSpeed)
 				fasterEnemyThreat = true;
 		}
+		if (!enemyThreatIsAboutToHit && dist < threatAttackRange + 0.5f)
+			enemyThreatIsAboutToHit = true;
 		summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.e          summedFleeVec");
 
 	// Banshee is about to get hit, it should cloak itself
-	if (isBanshee && enemyThreatIsClose && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
+	if (isBanshee && enemyThreatIsAboutToHit && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
 	{
 		return;
 	}
@@ -933,7 +937,8 @@ bool RangedManager::ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger)
 		return false;
 
 	// Cloak if the amount of energy is rather high or HP is low
-	return banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f) && !Util::IsPositionUnderDetection(banshee->pos, m_bot);
+	const bool cloak = banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f) && !Util::IsPositionUnderDetection(banshee->pos, m_bot);
+	return cloak;
 }
 
 bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger)

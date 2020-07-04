@@ -1581,6 +1581,12 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation + towardsCenter * 25, player1, 5);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation + towardsCenter * 25, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation + towardsCenter * 8, player2, 50);*/
+
+	// Test to reproduce bug where Banshees would cloak themselves against Spore Crawlers
+	/*Debug()->DebugGiveAllTech();
+	Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, enemyLocation + towardsCenter * 20, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_SPORECRAWLER, enemyLocation + towardsCenter * 5, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
