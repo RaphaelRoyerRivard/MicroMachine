@@ -1620,6 +1620,7 @@ struct RegionArmyInformation
 
 void CombatCommander::updateDefenseSquads()
 {
+	m_bot.StartProfiling("0.10.4.2.2.0      prepare");
 	// reset defense squads
 	for (const auto & kv : m_squadData.getSquads())
 	{
@@ -1646,6 +1647,7 @@ void CombatCommander::updateDefenseSquads()
 	bases.insert(ourBases.begin(), ourBases.end());
 	if (nextExpansion)
 		bases.insert(nextExpansion);
+	m_bot.StopProfiling("0.10.4.2.2.0      prepare");
 	for (BaseLocation * myBaseLocation : bases)
 	{
 		// don't defend inside the enemy region, this will end badly when we are stealing gas or cannon rushing
@@ -1723,7 +1725,7 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.StopProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		if (region.enemyUnits.empty())
 		{
-			m_bot.StartProfiling("0.10.4.2.2.3      clearRegion");
+			m_bot.StartProfiling("0.10.4.2.2.2      clearRegion");
 			// if a defense squad for this region exists, remove it
 			if (m_squadData.squadExists(squadName.str()))
 			{
@@ -1753,7 +1755,7 @@ void CombatCommander::updateDefenseSquads()
 					}
 				}
 			}
-			m_bot.StopProfiling("0.10.4.2.2.3      clearRegion");
+			m_bot.StopProfiling("0.10.4.2.2.2      clearRegion");
 
 			// and return, nothing to defend here
 			continue;
@@ -1821,17 +1823,14 @@ void CombatCommander::updateDefenseSquads()
 	{
 		if (enemyBaseLocation)
 		{
-			for (auto & unitPair : m_bot.GetAllyUnits())
+			for (auto & reaper : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REAPER))
 			{
 				float minDist = 0.f;
-				if (unitPair.second.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
+				const auto dist = Util::DistSq(reaper, enemyBaseLocation->getPosition());
+				if (!offensiveReaper || dist < minDist)
 				{
-					const auto dist = Util::DistSq(unitPair.second, enemyBaseLocation->getPosition());
-					if (!offensiveReaper || dist < minDist)
-					{
-						minDist = dist;
-						offensiveReaper = unitPair.second.getUnitPtr();
-					}
+					minDist = dist;
+					offensiveReaper = reaper.getUnitPtr();
 				}
 			}
 		}
