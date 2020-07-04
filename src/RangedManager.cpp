@@ -2308,22 +2308,34 @@ bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * range
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 	{
-		if (ExecuteBansheeUncloakLogic(rangedUnit, goal, threats, unitShouldHeal))
+		m_bot.StartProfiling("0.10.4.1.5.1.c.1           ExecuteBansheeUncloakLogic");
+		const bool bansheeUncloaked = ExecuteBansheeUncloakLogic(rangedUnit, goal, threats, unitShouldHeal);
+		m_bot.StopProfiling("0.10.4.1.5.1.c.1           ExecuteBansheeUncloakLogic");
+		if (bansheeUncloaked)
 			return true;
 	}
 
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
 	{
-		if (ExecuteOffensiveTeleportLogic(rangedUnit, threats, goal))
+		m_bot.StartProfiling("0.10.4.1.5.1.c.2           ExecuteOffensiveTeleportLogic");
+		const bool battlecruiserTeleported = ExecuteOffensiveTeleportLogic(rangedUnit, threats, goal);
+		m_bot.StopProfiling("0.10.4.1.5.1.c.2           ExecuteOffensiveTeleportLogic");
+		if (battlecruiserTeleported)
 			return true;
 
-		if (ExecuteYamatoCannonLogic(rangedUnit, targets))
+		m_bot.StartProfiling("0.10.4.1.5.1.c.3           ExecuteYamatoCannonLogic");
+		const bool battlecruiserUsedYamato = ExecuteYamatoCannonLogic(rangedUnit, targets);
+		m_bot.StopProfiling("0.10.4.1.5.1.c.3           ExecuteYamatoCannonLogic");
+		if (battlecruiserUsedYamato)
 			return true;
 	}
 
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_THOR || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_THORAP)
 	{
-		if (ExecuteThorMorphLogic(rangedUnit))
+		m_bot.StartProfiling("0.10.4.1.5.1.c.4           ExecuteThorMorphLogic");
+		const bool thorMorphed = ExecuteThorMorphLogic(rangedUnit);
+		m_bot.StopProfiling("0.10.4.1.5.1.c.4           ExecuteThorMorphLogic");
+		if (thorMorphed)
 			return true;
 	}
 

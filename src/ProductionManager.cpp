@@ -10,7 +10,7 @@ ProductionManager::ProductionManager(CCBot & bot)
 
 }
 
-void ProductionManager::setBuildOrder(const BuildOrder & buildOrder)
+void ProductionManager::setBuildOrder(const MM::BuildOrder & buildOrder)
 {
     m_queue.clearAll();
 
@@ -210,19 +210,19 @@ void ProductionManager::manageBuildOrderQueue()
 		m_queue.clearAll();
 	}
 
-	m_bot.StartProfiling("2.1   putImportantBuildOrderItemsInQueue");
+	m_bot.StartProfiling("0.10.2.1    putImportantBuildOrderItemsInQueue");
 	if(m_initialBuildOrderFinished && m_bot.Config().AutoCompleteBuildOrder)
     {
 		putImportantBuildOrderItemsInQueue();
     }
-	m_bot.StopProfiling("2.1   putImportantBuildOrderItemsInQueue");
+	m_bot.StopProfiling("0.10.2.1    putImportantBuildOrderItemsInQueue");
 
 	if (m_queue.isEmpty())
 		return;
 
-	m_bot.StartProfiling("2.2   checkQueue");
+	m_bot.StartProfiling("0.10.2.2    checkQueue");
     // the current item to be used
-    BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
+    MM::BuildOrderItem currentItem = m_queue.getHighestPriorityItem();
 	int highestPriority = currentItem.priority;
 	int additionalReservedMineral = 0;
 	int additionalReservedGas = 0;
@@ -244,10 +244,10 @@ void ProductionManager::manageBuildOrderQueue()
 			//check if we have the prerequirements.
 			if (!hasRequired(currentItem.type, true) || !hasProducer(currentItem.type, true))
 			{
-				m_bot.StartProfiling("2.2.1     fixBuildOrderDeadlock");
+				m_bot.StartProfiling("0.10.2.2.1     fixBuildOrderDeadlock");
 				fixBuildOrderDeadlock(currentItem);
 				//currentItem = m_queue.getHighestPriorityItem();
-				m_bot.StopProfiling("2.2.1     fixBuildOrderDeadlock");
+				m_bot.StopProfiling("0.10.2.2.1     fixBuildOrderDeadlock");
 				//continue;
 			}
 
@@ -301,10 +301,10 @@ void ProductionManager::manageBuildOrderQueue()
 				{
 					auto data = m_bot.Data(currentItem.type);
 					// if we can make the current item
-					m_bot.StartProfiling("2.2.2     tryingToBuild");
+					m_bot.StartProfiling("0.10.2.2.2     tryingToBuild");
 					if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
 					{
-						m_bot.StartProfiling("2.2.3     Build without premovement");
+						m_bot.StartProfiling("0.10.2.2.2.1      Build without premovement");
 						Unit producer = getProducer(currentItem.type);
 						// build supply if we need some (SupplyBlock)
 						if (producer.isValid())
@@ -319,16 +319,22 @@ void ProductionManager::manageBuildOrderQueue()
 #endif
 							}
 
-							if (canMakeNow(producer, currentItem.type))
+							m_bot.StartProfiling("0.10.2.2.2.1.1       canMakeNow");
+							const auto canProducerMakeItem = canMakeNow(producer, currentItem.type);
+							m_bot.StopProfiling("0.10.2.2.2.1.1       canMakeNow");
+							if (canProducerMakeItem)
 							{
 								// create it and remove it from the _queue
-								if (create(producer, currentItem, m_bot.GetBuildingArea(currentItem.type)))
+								m_bot.StartProfiling("0.10.2.2.2.1.2       create");
+								const auto producerCreatedItem = create(producer, currentItem, m_bot.GetBuildingArea(currentItem.type));
+								m_bot.StopProfiling("0.10.2.2.2.1.2       create");
+								if (producerCreatedItem)
 								{
 									m_queue.removeCurrentHighestPriorityItem();
 
 									// don't actually loop around in here
-									m_bot.StopProfiling("2.2.2     tryingToBuild");
-									m_bot.StopProfiling("2.2.3     Build without premovement");
+									m_bot.StopProfiling("0.10.2.2.2.1      Build without premovement");
+									m_bot.StopProfiling("0.10.2.2.2     tryingToBuild");
 									break;
 								}
 								else if (!m_initialBuildOrderFinished)
@@ -338,7 +344,7 @@ void ProductionManager::manageBuildOrderQueue()
 								}
 							}
 						}
-						m_bot.StopProfiling("2.2.3     Build without premovement");
+						m_bot.StopProfiling("0.10.2.2.2.1      Build without premovement");
 					}
 					else if (data.isBuilding
 						&& !data.isAddon
@@ -347,13 +353,13 @@ void ProductionManager::manageBuildOrderQueue()
 					{
 						// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
-						m_bot.StartProfiling("2.2.4     Build with premovement");
+						m_bot.StartProfiling("0.10.2.2.2.2      Build with premovement");
 						Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea(currentItem.type));
 						//Get building location
 
-						m_bot.StartProfiling("2.2.5     getNextBuildingLocation");
+						m_bot.StartProfiling("0.10.2.2.2.2.1       getNextBuildingLocation");
 						const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, true, true);
-						m_bot.StopProfiling("2.2.5     getNextBuildingLocation");
+						m_bot.StopProfiling("0.10.2.2.2.2.1       getNextBuildingLocation");
 						if (targetLocation != CCTilePosition(0, 0))
 						{
 							Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
@@ -370,8 +376,8 @@ void ProductionManager::manageBuildOrderQueue()
 									}
 
 									// don't actually loop around in here
-									m_bot.StopProfiling("2.2.2     tryingToBuild");
-									m_bot.StopProfiling("2.2.4     Build with premovement");
+									m_bot.StopProfiling("0.10.2.2.2.2      Build with premovement");
+									m_bot.StopProfiling("0.10.2.2.2     tryingToBuild");
 									break;
 								}
 							}
@@ -383,9 +389,9 @@ void ProductionManager::manageBuildOrderQueue()
 								Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
 							}
 						}
-						m_bot.StopProfiling("2.2.4     Build with premovement");
+						m_bot.StopProfiling("0.10.2.2.2.2      Build with premovement");
 					}
-					m_bot.StopProfiling("2.2.2     tryingToBuild");
+					m_bot.StopProfiling("0.10.2.2.2     tryingToBuild");
 				}
 			}
 		}
@@ -400,10 +406,10 @@ void ProductionManager::manageBuildOrderQueue()
         // and get the next one
         currentItem = m_queue.getNextHighestPriorityItem();
     }
-	m_bot.StopProfiling("2.2   checkQueue");
+	m_bot.StopProfiling("0.10.2.2    checkQueue");
 }
 
-bool ProductionManager::ShouldSkipQueueItem(const BuildOrderItem & currentItem) const
+bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentItem) const
 {
 	bool shouldSkip = false;
 	const auto completedFactoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
@@ -646,7 +652,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			{
 				if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
 				{
-					m_queue.queueItem(BuildOrderItem(workerMetatype, 1, false));
+					m_queue.queueItem(MM::BuildOrderItem(workerMetatype, 1, false));
 				}
 			}
 		}
@@ -697,7 +703,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 					if (hasPicked && !m_queue.contains(toBuild))
 					{
-						m_queue.queueItem(BuildOrderItem(toBuild, 1, false));
+						m_queue.queueItem(MM::BuildOrderItem(toBuild, 1, false));
 					}
 				}
 
@@ -746,7 +752,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #ifndef NO_UNITS
 				if (!produceMarauders && (reaperCount == 0 || (factoryCount == 0 && !m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)) && !m_queue.contains(MetaTypeEnum::Reaper))
 				{
-					m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
+					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
 				}
 #endif
 
@@ -767,14 +773,14 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						
 						if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
 						{
-							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Battlecruiser, 1, false));
+							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Battlecruiser, 1, false));
 						}
 
 						if (hasFusionCore)
 						{
 							if (m_bot.GetFreeMinerals() >= 450 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
 							{
-								m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+								m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
 							}
 
 							if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
@@ -823,7 +829,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #ifndef NO_UNITS
 					if (/*isTechStarted(MetaTypeEnum::BansheeCloak) &&*/ !m_queue.contains(MetaTypeEnum::Banshee))
 					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
+						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
 					}
 #endif
 				}
@@ -838,7 +844,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					if (!m_queue.contains(MetaTypeEnum::Marauder))
 					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Marauder, 0, false));
+						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marauder, 0, false));
 					}
 
 					if (maraudersCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES) && !isTechQueuedOrStarted(MetaTypeEnum::ConcussiveShells))
@@ -857,7 +863,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						enoughMedivacs = false;
 						if (!m_queue.contains(MetaTypeEnum::Medivac))
 						{
-							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Medivac, 0, false));
+							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Medivac, 0, false));
 						}
 					}
 				}
@@ -878,7 +884,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
 					if (!m_queue.contains(MetaTypeEnum::Thor))
 					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Thor, 0, false));
+						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Thor, 0, false));
 					}
 				}
 				// We want at least 1 Hellion for every 2 enemy Zealot or 4 enemy Zergling. Against Zerg, we want to make at least 1 asap to defend against 
@@ -889,7 +895,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #ifndef NO_UNITS
 					if (!m_queue.contains(MetaTypeEnum::Hellion))
 					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
+						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Hellion, 0, false));
 					}
 #endif
 
@@ -906,7 +912,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #ifndef NO_UNITS
 					if (!m_queue.contains(MetaTypeEnum::Cyclone))
 					{
-						m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
+						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
 					}
 #endif
 					
@@ -952,7 +958,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						if (vikingCount < 50 && !m_queue.contains(MetaTypeEnum::Viking))
 						{
-							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 						}
 					}
 #endif
@@ -966,7 +972,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						const int minVikingCount = proxyMaraudersStrategy ? 2 : 1;
 						if (vikingCount < minVikingCount && !m_queue.contains(MetaTypeEnum::Viking))
 						{
-							m_queue.queueItem(BuildOrderItem(MetaTypeEnum::Viking, 0, false));
+							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Viking, 0, false));
 						}
 					}
 #endif
@@ -1242,7 +1248,7 @@ void ProductionManager::QueueDeadBuildings()
 		MetaType type = MetaType(deadBuildings.at(i).getType(), m_bot);
 		if (!m_queue.contains(type))
 		{
-			m_queue.queueItem(BuildOrderItem(type, 0, false));
+			m_queue.queueItem(MM::BuildOrderItem(type, 0, false));
 		}
 	}
 
@@ -1250,7 +1256,7 @@ void ProductionManager::QueueDeadBuildings()
 	m_bot.Buildings().updatePreviousBaseBuildings();
 }
 
-void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
+void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
 {
 	const TypeData& typeData = m_bot.Data(item.type);
 
@@ -1266,7 +1272,7 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
 			if (!hasRequiredUnit(required, true) && !m_queue.contains(MetaType(required, m_bot)))
 			{
 				std::cout << item.type.getName() << " needs a requirement: " << required.getName() << "\n";
-				BuildOrderItem requiredItem = m_queue.queueItem(BuildOrderItem(MetaType(required, m_bot), 0, item.blocking));
+				MM::BuildOrderItem requiredItem = m_queue.queueItem(MM::BuildOrderItem(MetaType(required, m_bot), 0, item.blocking));
 				fixBuildOrderDeadlock(requiredItem);
 				break;
 			}
@@ -1279,7 +1285,7 @@ void ProductionManager::fixBuildOrderDeadlock(BuildOrderItem & item)
     if (!hasProducer(item.type, true) && !m_queue.contains(builder))
     {
 		std::cout << item.type.getName() << " needs a producer: " << builder.getName() << "\n";
-		BuildOrderItem producerItem = m_queue.queueItem(BuildOrderItem(builder, 0, item.blocking));
+		MM::BuildOrderItem producerItem = m_queue.queueItem(MM::BuildOrderItem(builder, 0, item.blocking));
         fixBuildOrderDeadlock(producerItem);
     }
 
@@ -1420,7 +1426,7 @@ void ProductionManager::lowPriorityChecks()
 					{
 						m_bot.Buildings().getBuildingPlacer().freeTilesForBunker(bunkerLocation);
 						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(bunkerLocation.x, bunkerLocation.y));
-						auto boItem = BuildOrderItem(MetaTypeEnum::Bunker, 0, false);
+						auto boItem = MM::BuildOrderItem(MetaTypeEnum::Bunker, 0, false);
 						create(worker, boItem, bunkerLocation, true, true, false);
 
 						break;
@@ -1479,7 +1485,7 @@ void ProductionManager::lowPriorityChecks()
 					{
 						m_bot.Buildings().getBuildingPlacer().freeTilesForTurrets(position);
 						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(position.x, position.y));
-						auto boItem = BuildOrderItem(MetaTypeEnum::MissileTurret, 0, false);
+						auto boItem = MM::BuildOrderItem(MetaTypeEnum::MissileTurret, 0, false);
 						create(worker, boItem, position, true, true, false);
 					}
 				}
@@ -2028,7 +2034,7 @@ void ProductionManager::clearQueue()
 	m_queue.clearAll();
 }
 
-BuildOrderItem ProductionManager::queueAsHighestPriority(const MetaType & type, bool blocking)
+MM::BuildOrderItem ProductionManager::queueAsHighestPriority(const MetaType & type, bool blocking)
 {
 	return m_queue.queueAsHighestPriority(type, blocking);
 }
@@ -2051,7 +2057,7 @@ bool ProductionManager::isTechFinished(const MetaType & type) const
 
 void ProductionManager::queueTech(const MetaType & type)
 {
-	m_queue.queueItem(BuildOrderItem(type, 0, false));
+	m_queue.queueItem(MM::BuildOrderItem(type, 0, false));
 	Util::DebugLog(__FUNCTION__, "Queue " + type.getName(), m_bot);
 }
 
@@ -2167,7 +2173,7 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used to create unit/tech/buildings (when we have the ressources)
-bool ProductionManager::create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker, bool canBePlacedElsewhere)
+bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker, bool canBePlacedElsewhere)
 {
 	if (!producer.isValid())
 	{
@@ -2255,7 +2261,6 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 		return true;
 	}
 
-#ifdef SC2API
 	sc2::AvailableAbilities available_abilities = m_bot.Query()->GetAbilitiesForUnit(producer.getUnitPtr());
 
 	// quick check if the unit can't do anything it certainly can't build the thing we want
@@ -2285,30 +2290,6 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 	}
 	
 	return false;
-#else
-	bool canMake = meetsReservedResources(type);
-	if (canMake)
-	{
-		if (type.isUnit())
-		{
-			canMake = BWAPI::Broodwar->canMake(type.getUnitType().getAPIUnitType(), producer.getUnitPtr());
-		}
-		else if (type.isTech())
-		{
-			canMake = BWAPI::Broodwar->canResearch(type.getTechType(), producer.getUnitPtr());
-		}
-		else if (type.isUpgrade())
-		{
-			canMake = BWAPI::Broodwar->canUpgrade(type.getUpgrade(), producer.getUnitPtr());
-		}
-		else
-		{
-			BOT_ASSERT(false, "Unknown type");
-		}
-	}
-
-	return canMake;
-#endif
 }
 
 bool ProductionManager::detectBuildOrderDeadlock()

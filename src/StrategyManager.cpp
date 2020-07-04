@@ -9,7 +9,7 @@ Strategy::Strategy()
 
 }
 
-Strategy::Strategy(const std::string & name, const CCRace & race, const BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition)
+Strategy::Strategy(const std::string & name, const CCRace & race, const MM::BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition)
     : m_name            (name)
     , m_race            (race)
     , m_buildOrder      (buildOrder)
@@ -460,7 +460,7 @@ StrategyPostBuildOrder StrategyManager::getCurrentStrategyPostBuildOrder() const
 	return TERRAN_CLASSIC;//MARINE_MARAUDER;
 }
 
-const BuildOrder & StrategyManager::getOpeningBookBuildOrder() const
+const MM::BuildOrder & StrategyManager::getOpeningBookBuildOrder() const
 {
     return getCurrentStrategy().m_buildOrder;
 }
@@ -594,7 +594,7 @@ void StrategyManager::readStrategyFile(const std::string & filename)
                 CCRace strategyRace = Util::GetRaceFromString(val["Race"].get<std::string>());
                 
                 BOT_ASSERT(val.count("OpeningBuildOrder") && val["OpeningBuildOrder"].is_array(), "Strategy is missing an OpeningBuildOrder arrau");
-                BuildOrder buildOrder;
+				MM::BuildOrder buildOrder;
                 const json & build = val["OpeningBuildOrder"];
                 for (size_t b(0); b < build.size(); b++)
                 {

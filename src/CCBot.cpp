@@ -2073,7 +2073,7 @@ void CCBot::drawProfilingInfo()
 			}
 		}
 
-		if (currentStepTime >= 100000 && queue.size() > 0 && queue[0].first > 0)	// 100ms
+		if (currentStepTime >= 50000 && queue.size() > 0 && queue[0].first > 0)	// 50ms
 		{
 			Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * queue[0].first) + "ms for " + std::to_string(queue[0].second) + " calls", *this);
 		}

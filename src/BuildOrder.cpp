@@ -1,33 +1,33 @@
 #include "BuildOrder.h"
 
-BuildOrder::BuildOrder()
+MM::BuildOrder::BuildOrder()
 {
 
 }
 
 
-BuildOrder::BuildOrder(const std::vector<MetaType> & vec)
+MM::BuildOrder::BuildOrder(const std::vector<MetaType> & vec)
     : m_buildOrder(vec)
 {
 
 }
 
-void BuildOrder::add(const MetaType & type)
+void MM::BuildOrder::add(const MetaType & type)
 {
     m_buildOrder.push_back(type);
 }
 
-size_t BuildOrder::size() const
+size_t MM::BuildOrder::size() const
 {
     return m_buildOrder.size();
 }
 
-const MetaType & BuildOrder::operator [] (const size_t & index) const
+const MetaType & MM::BuildOrder::operator [] (const size_t & index) const
 {
     return m_buildOrder[index];
 }
 
-MetaType & BuildOrder::operator [] (const size_t & index)
+MetaType & MM::BuildOrder::operator [] (const size_t & index)
 {
     return m_buildOrder[index];
 }

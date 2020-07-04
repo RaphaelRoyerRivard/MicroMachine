@@ -2756,6 +2756,7 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		return 0.f;
 	if (enemyUnits.empty())
 		return 1.f;
+	bot.StartProfiling("s.0 PrepareForCombatSimulation");
 	const int playerId = GetSelfPlayerId(bot);
 	CombatState state;
 	for(int i=0; i<2; ++i)
@@ -2799,22 +2800,32 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 	CombatUpgrades player1upgrades = {};
 
 	CombatUpgrades player2upgrades = {};
+
+	// TODO if we want to consider upgrades, we should detect enemy upgrades and get the combat environment in another thread
+	// TODO because it can take over 1s to generate a new one (happens when upgrades change)
+	/*for (const auto upgrade : bot.Strategy().getCompletedUpgrades())
+		(playerId == 1 ? player1upgrades : player2upgrades).add(upgrade);*/
+	bot.StopProfiling("s.0 PrepareForCombatSimulation");
 	
-	for (const auto upgrade : bot.Strategy().getCompletedUpgrades())
-		(playerId == 1 ? player1upgrades : player2upgrades).add(upgrade);
-	
+	bot.StartProfiling("s.1 getCombatEnvironment");
 	state.environment = &m_simulator->getCombatEnvironment(player1upgrades, player2upgrades);
-	
+	bot.StopProfiling("s.1 getCombatEnvironment");
+
+	bot.StartProfiling("s.2 predict_engage");
 	CombatSettings settings;
 	
 	// Simulate for at most 100 *game* seconds
 	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
 	settings.maxTime = 100;
-	const CombatResult outcome = m_simulator->predict_engage(state, settings, nullptr, defenderPlayer);
+	const CombatResult outcome = m_simulator->predict_engage(state, settings, nullptr, defenderPlayer, &bot);
+	bot.StopProfiling("s.2 predict_engage");
+	bot.StartProfiling("s.3 owner_with_best_outcome");
 	const int winner = outcome.state.owner_with_best_outcome();
+	bot.StopProfiling("s.3 owner_with_best_outcome");
 	if (winner != playerId)
 		return 0.f;
-	
+
+	bot.StartProfiling("s.4 ComputeArmyRating");
 	float resultArmySupplyScore = 0.f;
 	for (const auto & unit : outcome.state.units)
 	{
@@ -2825,6 +2836,7 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		}
 	}
 	const float armyRating = resultArmySupplyScore / std::max(1.f, armySupplyScore);
+	bot.StopProfiling("s.4 ComputeArmyRating");
 	return armyRating;
 }
 
