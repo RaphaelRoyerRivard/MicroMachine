@@ -473,7 +473,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 
 	// Opportunistic attack (often on buildings)
-	if ((shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat)
+	if ((shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat && (!isCyclone || !Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit->is_flying, m_bot)))
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.f          OpportunisticAttack");
 		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true, true, false);
@@ -497,7 +497,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-		const bool checkInfluence = isCyclone || rangedUnit->weapon_cooldown > 0;	// We might want to get enter the enemy influence a bit to attack our target, but not with Cyclones
+		const bool checkInfluence = !isCyclone && rangedUnit->weapon_cooldown > 0;
 		if (AllowUnitToPathFind(rangedUnit, checkInfluence, "Offensive"))
 		{
 			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
