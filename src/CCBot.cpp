@@ -1589,6 +1589,10 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_SPORECRAWLER, enemyLocation + towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, enemyLocation + towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, enemyLocation - towardsCenter * 15, player1, 2);*/
+
+	// Test to reproduce bug where our units can't finish a building behind mineral line of enemy
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, enemyLocation, player2, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BARRACKS, enemyLocation + towardsCenter * 15, player1, 1);*/
 }
 
 void CCBot::IssueCheats()

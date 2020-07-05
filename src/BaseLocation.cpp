@@ -87,7 +87,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 	if (!m_isStartLocation)
 	{
 		// if this base location position is near our own resource depot, it's our start location
-		for (auto & unit : m_bot.GetAllyUnits(Util::GetRessourceDepotType().getAPIUnitType()))
+		for (auto & unit : m_bot.GetAllyUnits(Util::GetResourceDepotType().getAPIUnitType()))
 		{
 			CCPosition pos = unit.getPosition();
 			if (unit.getType().isResourceDepot() && containsPositionApproximative(pos))

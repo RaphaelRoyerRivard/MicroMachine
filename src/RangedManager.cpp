@@ -242,7 +242,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
 	//TODO Find if filtering higher units would solve problems without creating new ones
 	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets, true, true);
-	if (!target && m_order.getType() != SquadOrderTypes::Harass)	// If no standard target is found, we check for a building that is not out of vision on higher ground
+	if (!target && (m_order.getType() != SquadOrderTypes::Harass || m_bot.Strategy().shouldFocusBuildings()))	// If no standard target is found, we check for a building that is not out of vision on higher ground
 		target = getTarget(rangedUnit, rangedUnitTargets, true, true, false, false);
 	m_bot.StopProfiling("0.10.4.1.5.1.0          getTarget");
 	m_bot.StartProfiling("0.10.4.1.5.1.1          getThreats");

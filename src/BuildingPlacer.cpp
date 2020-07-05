@@ -37,7 +37,7 @@ for (auto baseLocation : bases)
 
 bool BuildingPlacer::canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const
 {
-	UnitType depot = Util::GetRessourceDepotType();
+	UnitType depot = Util::GetResourceDepotType();
 	if (canBuildHere(bx, by, depot, 0, true, false, false))//Do not need to check if interesting other buildings, since it is called at the start of the game only.
 	{
 		// check the reserve map

@@ -914,7 +914,7 @@ sc2::UNIT_TYPEID Util::GetRichExtractorId()
 	return richExtractorId;
 }
 
-UnitType Util::GetRessourceDepotType()
+UnitType Util::GetResourceDepotType()
 {
 	return depotType;
 }

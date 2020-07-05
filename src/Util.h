@@ -283,7 +283,7 @@ namespace Util
 	int				GetTimeControlMaxSpeed();
 	void			TimeControlIncreaseSpeed();
 	void			TimeControlDecreaseSpeed();
-    UnitType        GetRessourceDepotType();
+    UnitType        GetResourceDepotType();
     UnitType        GetRefineryType();
 	UnitType		GetRichRefineryType();
 	UnitType        GetSupplyProvider();

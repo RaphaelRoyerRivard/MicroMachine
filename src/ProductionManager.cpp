@@ -608,7 +608,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	if (m_bot.GetSelfRace() == sc2::Race::Terran)
 	{
 		// Logic for building Orbital Commands and Refineries
-		UnitType depot = Util::GetRessourceDepotType();
+		UnitType depot = Util::GetResourceDepotType();
 		const size_t boughtDepotCount = m_bot.Buildings().countBoughtButNotBeingBuilt(depot.getAPIUnitType());
 		const size_t incompletedDepotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, depot, false, true, true);
 		const size_t completedDepotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, depot, true, true);//Only counts unupgraded CC, on purpose.
