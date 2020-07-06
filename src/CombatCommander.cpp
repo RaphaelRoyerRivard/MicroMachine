@@ -1407,28 +1407,47 @@ void CombatCommander::handleWall()
 	if (raiseWall && !meleeEnemyUnit)
 	{
 		m_bot.StartProfiling("0.10.4.2.1.1.2      CheckAllies");
-		const auto wallDistanceToBase = Util::DistSq(m_bot.GetStartLocation(), wallCenter);
 		const auto wallHeight = m_bot.Map().terrainHeight(wallCenter);
+		CCPosition rampPosition;
+		// Check 4 tiles around the wall position to find the start of the ramp
+		for (int x = -1; x < 2; x += 2)
+		{
+			for (int y = -1; y < 2; y += 2)
+			{
+				const auto tile = CCTilePosition(wallCenter.x + x * 2, wallCenter.y + y * 2);
+				if (m_bot.Map().terrainHeight(tile) < wallHeight)
+				{
+					m_bot.Map().drawTile(tile, sc2::Colors::Purple);
+					rampPosition = Util::GetPosition(tile);
+					break;
+				}
+			}
+			if (rampPosition != CCPosition())
+				break;
+		}
 		for (const auto & allyPair : m_bot.GetAllyUnits())
 		{
 			const auto & allyUnit = allyPair.second;
 			if (allyUnit.isFlying() || allyUnit.getType().isBuilding())
 				continue;
-			const auto distance = Util::DistSq(allyUnit.getPosition(), wallCenter);
+			const auto distanceToWall = Util::DistSq(allyUnit.getPosition(), wallCenter);
 			// Check if the unit is close enough to the wall
-			if (distance < SUPPLYDEPOT_DISTANCE)
+			if (distanceToWall < SUPPLYDEPOT_DISTANCE)
 			{
-				// Check if the unit is further than the wall
-				const auto unitDistanceToBase = Util::DistSq(m_bot.GetStartLocation(), allyUnit.getPosition());
-				if (unitDistanceToBase > wallDistanceToBase)
+				// If the unit is on low ground, we don't want to raise it
+				const auto unitHeight = m_bot.Map().terrainHeight(allyUnit.getPosition());
+				if (unitHeight < wallHeight)
 				{
-					const auto unitHeight = m_bot.Map().terrainHeight(allyUnit.getPosition());
-					// If the unit is on low ground or if it is really close to the wall, we don't want to raise it
-					if (unitHeight < wallHeight || distance < 1.5f * 1.5f)
-					{
-						raiseWall = false;
-						break;
-					}
+					raiseWall = false;
+					break;
+				}
+					
+				// Check if the unit is on top of the ramp but still inside the wall
+				const auto unitDistanceToRamp = Util::DistSq(allyUnit.getPosition(), rampPosition);
+				if (unitDistanceToRamp < 4 * 4)	// This is just slightly farther than the supply depots so if we have a unit that moves right next to the wall, it will lower
+				{
+					raiseWall = false;
+					break;
 				}
 			}
 		}
