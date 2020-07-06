@@ -1570,7 +1570,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			{
 				auto action = m_bot.Commander().Combat().GetRangedUnitAction(rangedUnit);
 				std::stringstream ss;
-				ss << "ThreatFightingLogic was called again when all close units should have been given a prioritized action... Current unit of type " << sc2::UnitTypeToName(rangedUnit->unit_type) << " had a " << action.description << " action and is " << (Util::Contains(rangedUnit, allyUnits) ? "" : "not") << " part of the set";
+				ss << "ThreatFightingLogic was called again when all close units should have been given a prioritized action... Current unit of type " << sc2::UnitTypeToName(rangedUnit->unit_type) << " had a " << action.description << " action and is " << (Util::Contains(rangedUnit, allyUnits) ? "" : "not ") << "part of the set";
 				Util::Log(__FUNCTION__, ss.str(), m_bot);
 			}
 			m_bot.StopProfiling("0.10.4.1.5.1.5.d          CheckSavedResult");
@@ -1928,7 +1928,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 			{
 				m_bot.StartProfiling("0.10.4.1.5.1.5.5.8            ExecuteHealLogic");
-				ExecuteHealLogic(unit, allyCombatUnits, false);
+				ExecuteHealLogic(unit, allyCombatUnits, false, true);
 				m_bot.StopProfiling("0.10.4.1.5.1.5.5.8            ExecuteHealLogic");
 				continue;
 			}
@@ -2457,7 +2457,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	return false;
 }
 
-bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal) const
+bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, bool prioritize) const
 {
 	if (medivac->unit_type != sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 		return false;
@@ -2500,7 +2500,7 @@ const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const 
 	return target;
 }
 
-bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target) const
+bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target, bool prioritize) const
 {
 	if (target)
 	{
@@ -2514,7 +2514,7 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 				const float distSq = Util::DistSq(medivac->pos, movePosition);
 				if (distSq > 0.25f)
 				{
-					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, false, 0, "MoveToSaferRange");
+					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, prioritize, 0, "MoveToSaferRange");
 					m_bot.Commander().Combat().PlanAction(medivac, action);
 					return true;
 				}
@@ -2524,12 +2524,12 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 		}
 		if (Util::DistSq(medivac->pos, target->pos) <= healRange * healRange)
 		{
-			const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, false, 0, "Heal");
+			const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, prioritize, 0, "Heal");
 			m_bot.Commander().Combat().PlanAction(medivac, action);
 		}
 		else
 		{
-			const auto action = RangedUnitAction(MicroActionType::Move, target->pos, false, 0, "MoveToHealTarget");
+			const auto action = RangedUnitAction(MicroActionType::Move, target->pos, prioritize, 0, "MoveToHealTarget");
 			m_bot.Commander().Combat().PlanAction(medivac, action);
 		}
 		return true;
