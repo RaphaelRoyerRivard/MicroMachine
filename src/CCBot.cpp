@@ -1593,6 +1593,10 @@ void CCBot::IssueGameStartCheats()
 	// Test to reproduce bug where our units can't finish a building behind mineral line of enemy
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, enemyLocation, player2, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BARRACKS, enemyLocation + towardsCenter * 15, player1, 1);*/
+
+	// Test to reproduce bug where Vikings would not land
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter, player2, 1);*/
 }
 
 void CCBot::IssueCheats()
