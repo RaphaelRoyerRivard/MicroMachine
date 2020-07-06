@@ -242,7 +242,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	m_bot.StartProfiling("0.10.4.1.5.1.0          getTarget");
 	//TODO Find if filtering higher units would solve problems without creating new ones
 	const sc2::Unit * target = getTarget(rangedUnit, rangedUnitTargets, true, true);
-	if (!target && m_order.getType() != SquadOrderTypes::Harass)	// If no standard target is found, we check for a building that is not out of vision on higher ground
+	if (!target && (m_order.getType() != SquadOrderTypes::Harass || m_bot.Strategy().shouldFocusBuildings()))	// If no standard target is found, we check for a building that is not out of vision on higher ground
 		target = getTarget(rangedUnit, rangedUnitTargets, true, true, false, false);
 	m_bot.StopProfiling("0.10.4.1.5.1.0          getTarget");
 	m_bot.StartProfiling("0.10.4.1.5.1.1          getThreats");
@@ -445,6 +445,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.e          summedFleeVec");
 	bool enemyThreatIsClose = false;
+	bool enemyThreatIsAboutToHit = false;
 	bool fasterEnemyThreat = false;
 	float unitSpeed = Util::getSpeedOfUnit(rangedUnit, m_bot);
 	CCPosition summedFleeVec(0, 0);
@@ -456,24 +457,27 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		// If our unit is almost in range of threat, use the influence map to find the best flee path
 		const float dist = Util::Dist(rangedUnit->pos, threat->pos);
 		const float threatRange = Util::getThreatRange(rangedUnit, threat, m_bot);
-		if (dist < threatRange + 0.5f)
+		const float threatAttackRange = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot);
+		if (dist < threatRange)
 		{
 			enemyThreatIsClose = true;
 			if (!fasterEnemyThreat && Util::getSpeedOfUnit(threat, m_bot) > unitSpeed)
 				fasterEnemyThreat = true;
 		}
+		if (!enemyThreatIsAboutToHit && dist < threatAttackRange + 0.5f)
+			enemyThreatIsAboutToHit = true;
 		summedFleeVec += GetFleeVectorFromThreat(rangedUnit, threat, fleeVec, dist, threatRange);
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.e          summedFleeVec");
 
 	// Banshee is about to get hit, it should cloak itself
-	if (isBanshee && enemyThreatIsClose && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
+	if (isBanshee && enemyThreatIsAboutToHit && ExecuteBansheeCloakLogic(rangedUnit, unitShouldHeal))
 	{
 		return;
 	}
 
 	// Opportunistic attack (often on buildings)
-	if ((shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat)
+	if ((shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat && (!isCyclone || !Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit->is_flying, m_bot)))
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.f          OpportunisticAttack");
 		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true, true, false);
@@ -497,7 +501,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
-		const bool checkInfluence = isCyclone || rangedUnit->weapon_cooldown > 0;	// We might want to get enter the enemy influence a bit to attack our target, but not with Cyclones
+		const bool checkInfluence = !isCyclone && rangedUnit->weapon_cooldown > 0;
 		if (AllowUnitToPathFind(rangedUnit, checkInfluence, "Offensive"))
 		{
 			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
@@ -933,7 +937,8 @@ bool RangedManager::ShouldBansheeCloak(const sc2::Unit * banshee, bool inDanger)
 		return false;
 
 	// Cloak if the amount of energy is rather high or HP is low
-	return banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f) && !Util::IsPositionUnderDetection(banshee->pos, m_bot);
+	const bool cloak = banshee->cloak == sc2::Unit::NotCloaked && (banshee->energy > 50.f || inDanger && banshee->energy > 25.f) && !Util::IsPositionUnderDetection(banshee->pos, m_bot);
+	return cloak;
 }
 
 bool RangedManager::ExecuteBansheeCloakLogic(const sc2::Unit * banshee, bool inDanger)
@@ -1530,7 +1535,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				else
 				{
 					const CCPosition closeAttackPosition = rangedUnit->pos + Util::Normalized(target->pos - rangedUnit->pos) * 0.5f;
-					if (Util::IsPositionUnderDetection(closeAttackPosition, m_bot))
+					if (Util::IsPositionUnderDetection(closeAttackPosition, m_bot) || unitShouldHeal)
 					{
 						// Our unit would move into a detection zone if it continues moving towards its target, so we skip the action
 						skipAction = true;
@@ -1565,7 +1570,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			{
 				auto action = m_bot.Commander().Combat().GetRangedUnitAction(rangedUnit);
 				std::stringstream ss;
-				ss << "ThreatFightingLogic was called again when all close units should have been given a prioritized action... Current unit of type " << sc2::UnitTypeToName(rangedUnit->unit_type) << " had a " << action.description << " action and is " << (Util::Contains(rangedUnit, allyUnits) ? "" : "not") << " part of the set";
+				ss << "ThreatFightingLogic was called again when all close units should have been given a prioritized action... Current unit of type " << sc2::UnitTypeToName(rangedUnit->unit_type) << " had a " << action.description << " action and is " << (Util::Contains(rangedUnit, allyUnits) ? "" : "not ") << "part of the set";
 				Util::Log(__FUNCTION__, ss.str(), m_bot);
 			}
 			m_bot.StopProfiling("0.10.4.1.5.1.5.d          CheckSavedResult");
@@ -1923,7 +1928,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 			{
 				m_bot.StartProfiling("0.10.4.1.5.1.5.5.8            ExecuteHealLogic");
-				ExecuteHealLogic(unit, allyCombatUnits, false);
+				ExecuteHealLogic(unit, allyCombatUnits, false, true);
 				m_bot.StopProfiling("0.10.4.1.5.1.5.5.8            ExecuteHealLogic");
 				continue;
 			}
@@ -2452,7 +2457,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	return false;
 }
 
-bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal) const
+bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, bool prioritize) const
 {
 	if (medivac->unit_type != sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 		return false;
@@ -2495,7 +2500,7 @@ const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const 
 	return target;
 }
 
-bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target) const
+bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target, bool prioritize) const
 {
 	if (target)
 	{
@@ -2509,7 +2514,7 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 				const float distSq = Util::DistSq(medivac->pos, movePosition);
 				if (distSq > 0.25f)
 				{
-					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, false, 0, "MoveToSaferRange");
+					const auto action = RangedUnitAction(MicroActionType::Move, movePosition, prioritize, 0, "MoveToSaferRange");
 					m_bot.Commander().Combat().PlanAction(medivac, action);
 					return true;
 				}
@@ -2519,12 +2524,12 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 		}
 		if (Util::DistSq(medivac->pos, target->pos) <= healRange * healRange)
 		{
-			const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, false, 0, "Heal");
+			const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, prioritize, 0, "Heal");
 			m_bot.Commander().Combat().PlanAction(medivac, action);
 		}
 		else
 		{
-			const auto action = RangedUnitAction(MicroActionType::Move, target->pos, false, 0, "MoveToHealTarget");
+			const auto action = RangedUnitAction(MicroActionType::Move, target->pos, prioritize, 0, "MoveToHealTarget");
 			m_bot.Commander().Combat().PlanAction(medivac, action);
 		}
 		return true;

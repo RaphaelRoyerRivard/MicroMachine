@@ -914,7 +914,7 @@ sc2::UNIT_TYPEID Util::GetRichExtractorId()
 	return richExtractorId;
 }
 
-UnitType Util::GetRessourceDepotType()
+UnitType Util::GetResourceDepotType()
 {
 	return depotType;
 }
@@ -1739,7 +1739,7 @@ float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetT
 
 	dps *= GetAttackSpeedMultiplier(unit);
 	
-	return dps;
+	return std::max(0.f, dps);
 }
 
 float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
@@ -1772,7 +1772,7 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
 
 	dps *= GetAttackSpeedMultiplier(unit);
 
-    return dps;
+    return std::max(0.f, dps);
 }
 
 float Util::GetAttackSpeedMultiplier(const sc2::Unit * unit)

@@ -1407,28 +1407,47 @@ void CombatCommander::handleWall()
 	if (raiseWall && !meleeEnemyUnit)
 	{
 		m_bot.StartProfiling("0.10.4.2.1.1.2      CheckAllies");
-		const auto wallDistanceToBase = Util::DistSq(m_bot.GetStartLocation(), wallCenter);
 		const auto wallHeight = m_bot.Map().terrainHeight(wallCenter);
+		CCPosition rampPosition;
+		// Check 4 tiles around the wall position to find the start of the ramp
+		for (int x = -1; x < 2; x += 2)
+		{
+			for (int y = -1; y < 2; y += 2)
+			{
+				const auto tile = CCTilePosition(wallCenter.x + x * 2, wallCenter.y + y * 2);
+				if (m_bot.Map().terrainHeight(tile) < wallHeight)
+				{
+					m_bot.Map().drawTile(tile, sc2::Colors::Purple);
+					rampPosition = Util::GetPosition(tile);
+					break;
+				}
+			}
+			if (rampPosition != CCPosition())
+				break;
+		}
 		for (const auto & allyPair : m_bot.GetAllyUnits())
 		{
 			const auto & allyUnit = allyPair.second;
 			if (allyUnit.isFlying() || allyUnit.getType().isBuilding())
 				continue;
-			const auto distance = Util::DistSq(allyUnit.getPosition(), wallCenter);
+			const auto distanceToWall = Util::DistSq(allyUnit.getPosition(), wallCenter);
 			// Check if the unit is close enough to the wall
-			if (distance < SUPPLYDEPOT_DISTANCE)
+			if (distanceToWall < SUPPLYDEPOT_DISTANCE)
 			{
-				// Check if the unit is further than the wall
-				const auto unitDistanceToBase = Util::DistSq(m_bot.GetStartLocation(), allyUnit.getPosition());
-				if (unitDistanceToBase > wallDistanceToBase)
+				// If the unit is on low ground, we don't want to raise it
+				const auto unitHeight = m_bot.Map().terrainHeight(allyUnit.getPosition());
+				if (unitHeight < wallHeight)
 				{
-					const auto unitHeight = m_bot.Map().terrainHeight(allyUnit.getPosition());
-					// If the unit is on low ground or if it is really close to the wall, we don't want to raise it
-					if (unitHeight < wallHeight || distance < 1.5f * 1.5f)
-					{
-						raiseWall = false;
-						break;
-					}
+					raiseWall = false;
+					break;
+				}
+					
+				// Check if the unit is on top of the ramp but still inside the wall
+				const auto unitDistanceToRamp = Util::DistSq(allyUnit.getPosition(), rampPosition);
+				if (unitDistanceToRamp < 4 * 4)	// This is just slightly farther than the supply depots so if we have a unit that moves right next to the wall, it will lower
+				{
+					raiseWall = false;
+					break;
 				}
 			}
 		}
@@ -1620,6 +1639,7 @@ struct RegionArmyInformation
 
 void CombatCommander::updateDefenseSquads()
 {
+	m_bot.StartProfiling("0.10.4.2.2.0      prepare");
 	// reset defense squads
 	for (const auto & kv : m_squadData.getSquads())
 	{
@@ -1646,6 +1666,7 @@ void CombatCommander::updateDefenseSquads()
 	bases.insert(ourBases.begin(), ourBases.end());
 	if (nextExpansion)
 		bases.insert(nextExpansion);
+	m_bot.StopProfiling("0.10.4.2.2.0      prepare");
 	for (BaseLocation * myBaseLocation : bases)
 	{
 		// don't defend inside the enemy region, this will end badly when we are stealing gas or cannon rushing
@@ -1723,7 +1744,7 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.StopProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		if (region.enemyUnits.empty())
 		{
-			m_bot.StartProfiling("0.10.4.2.2.3      clearRegion");
+			m_bot.StartProfiling("0.10.4.2.2.2      clearRegion");
 			// if a defense squad for this region exists, remove it
 			if (m_squadData.squadExists(squadName.str()))
 			{
@@ -1753,7 +1774,7 @@ void CombatCommander::updateDefenseSquads()
 					}
 				}
 			}
-			m_bot.StopProfiling("0.10.4.2.2.3      clearRegion");
+			m_bot.StopProfiling("0.10.4.2.2.2      clearRegion");
 
 			// and return, nothing to defend here
 			continue;
@@ -1821,17 +1842,14 @@ void CombatCommander::updateDefenseSquads()
 	{
 		if (enemyBaseLocation)
 		{
-			for (auto & unitPair : m_bot.GetAllyUnits())
+			for (auto & reaper : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REAPER))
 			{
 				float minDist = 0.f;
-				if (unitPair.second.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
+				const auto dist = Util::DistSq(reaper, enemyBaseLocation->getPosition());
+				if (!offensiveReaper || dist < minDist)
 				{
-					const auto dist = Util::DistSq(unitPair.second, enemyBaseLocation->getPosition());
-					if (!offensiveReaper || dist < minDist)
-					{
-						minDist = dist;
-						offensiveReaper = unitPair.second.getUnitPtr();
-					}
+					minDist = dist;
+					offensiveReaper = reaper.getUnitPtr();
 				}
 			}
 		}
