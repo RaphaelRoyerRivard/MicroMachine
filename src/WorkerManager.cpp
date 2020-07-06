@@ -510,7 +510,6 @@ void WorkerManager::handleGasWorkers()
 								}
 
 								gasWorker.stop();
-								workerRemovedFromGas.push_back(gasWorker);
 							}
 
 							mineralWorkerRoom--;
@@ -520,21 +519,6 @@ void WorkerManager::handleGasWorkers()
 			}
         }
     }
-
-	//Spam order in case worker is in Refinery
-	if (workerRemovedFromGas.size() > 0)
-	{
-		std::vector<Unit> modifiedReorderedGasWorker;
-		for (auto & worker : workerRemovedFromGas)
-		{
-			if(worker.getUnitPtr()->orders.size() > 0 || m_workerData.getWorkerJob(worker) == WorkerJobs::Gas)
-			{
-				worker.stop();
-				modifiedReorderedGasWorker.push_back(worker);
-			}
-		}
-		workerRemovedFromGas = modifiedReorderedGasWorker;
-	}
 
 	std::vector<sc2::Tag> bunkerHasLoaded;
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
@@ -942,7 +926,7 @@ void WorkerManager::handleRepairWorkers()
 	}
 }
 
-void WorkerManager::repairCombatBuildings()
+void WorkerManager::repairCombatBuildings()//Ignores if the path or the area around the building is safe or not.
 {
 	const float repairAt = 0.95f; //95% health
 	const int maxReparator = 5; //Turret and bunkers only
@@ -954,7 +938,6 @@ void WorkerManager::repairCombatBuildings()
 
 	bool completeWall = false;
 	bool checkedCompleteWall = false;
-	auto workers = getWorkers();
 	auto buildings = m_bot.Buildings().getFinishedBuildings();
 	for (auto building : buildings)
 	{
@@ -972,9 +955,9 @@ void WorkerManager::repairCombatBuildings()
 		int alreadyRepairing = 0;
 		switch ((sc2::UNIT_TYPEID)building.getAPIUnitType())
 		{
-			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
+			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS://Always MAX repair Planetary fortress
 				///TODO Doesn't use the gas workers
-				for (auto & worker : workers)///TODO order by closest to the target base location
+				for (auto & worker : getWorkers())///TODO order by closest to the target base location
 				{
 					auto depot = m_workerData.getWorkerDepot(worker);
 					if (depot.isValid() && depot.getID() == building.getID())
@@ -985,9 +968,18 @@ void WorkerManager::repairCombatBuildings()
 				break;
 			default:
 				bool shouldRepair = false;
+				bool onlyBaseWorker = false;
 				switch ((sc2::UNIT_TYPEID)building.getAPIUnitType())
 				{
-					case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET:
+					case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER://Always repair command center and orbital
+					case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING:
+					case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:
+					case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING:
+						maxReparator = 3;
+						shouldRepair = true;
+						onlyBaseWorker = true;
+						break;
+					case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET://Always repair MISSILETURRET and BUNKER
 					case sc2::UNIT_TYPEID::TERRAN_BUNKER:
 						shouldRepair = true;
 						break;
@@ -1044,6 +1036,7 @@ void WorkerManager::repairCombatBuildings()
 				if (shouldRepair)
 				{
 					int reparator = maxReparator - floor(maxReparator * building.getHitPointsPercentage() / 100);
+					std::set<Unit> workers = getWorkers();
 					for (auto & worker : workers)
 					{
 						Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
@@ -1056,9 +1049,36 @@ void WorkerManager::repairCombatBuildings()
 							}
 						}
 					}
+
 					for (int i = 0; i < reparator - alreadyRepairing; i++)
 					{
-						Unit worker = getClosestMineralWorkerTo(building.getPosition());
+						Unit worker;
+						if (onlyBaseWorker)
+						{
+							auto base = m_bot.Bases().getBaseContainingPosition(building.getPosition(), Players::Self);
+							auto depot = base->getResourceDepot();
+							if (depot.isValid())
+							{
+								for (auto & baseWorker : workers)///TODO order by closest to the target base location, allow gas workers
+								{
+									if (!isFree(baseWorker))
+									{
+										continue;
+									}
+									const auto workerDepot = m_workerData.getWorkerDepot(baseWorker);
+									if (workerDepot.isValid() && workerDepot.getID() == depot.getID())
+									{
+										worker = baseWorker;
+										break;
+									}
+								}
+							}
+						}
+						else
+						{
+							worker = getClosestMineralWorkerTo(building.getPosition());
+						}
+
 						if (worker.isValid())
 							setRepairWorker(worker, building);
 						else
@@ -1391,7 +1411,7 @@ Unit WorkerManager::getDepotAtBasePosition(CCPosition basePosition) const
 
 int WorkerManager::getWorkerCountAtBasePosition(CCPosition basePosition) const
 {
-	return m_bot.Workers().getWorkerData().getCountWorkerAtDepot(getDepotAtBasePosition(basePosition));
+	return getWorkerData().getCountWorkerAtDepot(getDepotAtBasePosition(basePosition));
 }
 
 // gets a builder for BuildingManager to use
