@@ -2350,6 +2350,15 @@ bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, i
 
 bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker, int additionalReservedMineral, int additionalReservedGas)
 {
+	if (!worker.isValid())
+		return false;
+
+	const int workerCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Minerals);
+	if (workerCount <= 3)//25% or less of the starting workers are mining. Do not consider the mineral gain rate as it is inconsistant and untrustable.
+	{//https://github.com/RaphaelRoyerRivard/MicroMachine/issues/847
+		return false;
+	}
+
 	const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals / 60.f / 16.f;
 	const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene / 60.f / 16.f;
 
@@ -2357,9 +2366,6 @@ bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker
 	{
 		return false;
 	}
-
-	if (!worker.isValid())
-		return false;
 
 	//float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(b.finalPosition), false, m_bot);
 	float distance = Util::Dist(worker.getPosition(), Util::GetPosition(b.finalPosition));
