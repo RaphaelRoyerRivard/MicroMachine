@@ -502,7 +502,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
 		const bool checkInfluence = !isCyclone && rangedUnit->weapon_cooldown > 0;
-		if (AllowUnitToPathFind(rangedUnit, checkInfluence, "Offensive"))
+		if ((!isCyclone || cycloneShouldUseLockOn || shouldAttack) && AllowUnitToPathFind(rangedUnit, checkInfluence, "Offensive"))
 		{
 			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
 			const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
