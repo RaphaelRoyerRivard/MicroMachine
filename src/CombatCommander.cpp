@@ -1280,7 +1280,7 @@ void CombatCommander::handleWall()
 							continue;
 						}
 						//If the unit is on the depot, dont try to raise. Otherwise it forces the unit to move which can cause micro issues.
-						if (Util::DistSq(Util::GetPosition(building.getTilePosition()), unit.second.getPosition()) <= pow(building.getType().radius() + unit.second.getType().radius(), 2))
+						if (Util::DistSq(Util::GetPosition(building.getTilePosition()), unit.second.getPosition()) <= pow(building.getUnitPtr()->radius + unit.second.getUnitPtr()->radius, 2))
 						{
 							willRaise = false;
 							break;
