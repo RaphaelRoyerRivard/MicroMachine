@@ -1275,7 +1275,7 @@ void CombatCommander::handleWall()
 					bool willRaise = true;
 					for (auto & unit : m_bot.GetAllyUnits())
 					{
-						if (unit.second.getType().isBuilding())
+						if (unit.second.getType().isBuilding() || unit.second.isFlying())
 						{
 							continue;
 						}
