@@ -1272,7 +1272,24 @@ void CombatCommander::handleWall()
 			{
 				if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
 				{
-					building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
+					bool willRaise = true;
+					for (auto & unit : m_bot.GetAllyUnits())
+					{
+						if (unit.second.getType().isBuilding())
+						{
+							continue;
+						}
+						//If the unit is on the depot, dont try to raise. Otherwise it forces the unit to move which can cause micro issues.
+						if (Util::DistSq(Util::GetPosition(building.getTilePosition()), unit.second.getPosition()) <= pow(building.getType().radius() + unit.second.getType().radius(), 2))
+						{
+							willRaise = false;
+							break;
+						}
+					}
+					if (willRaise)
+					{
+						building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
+					}
 				}
 			}
 			return;
