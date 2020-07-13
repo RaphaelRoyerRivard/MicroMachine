@@ -320,6 +320,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	const auto maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (!limitSearch ? 20 : exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
+	IMNode* exitNode = nullptr;						//only used when getCloser and maxInfluence are true
 	const auto startingInfluence = GetTotalInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
 	const CCTilePosition startPosition = GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = GetTilePosition(goal);
@@ -369,8 +370,8 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			if (!shouldTriggerExit)
 			{
 				shouldTriggerExit = (ignoreInfluence ||
-					(considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot) || (maxInfluence > 0 && currentNode->influence <= maxInfluence)) &&
-					!HasEffectInfluenceOnTile(currentNode, unit, bot)) &&
+					((considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot) || (maxInfluence > 0 && currentNode->influence <= maxInfluence)) &&
+					!HasEffectInfluenceOnTile(currentNode, unit, bot))) &&
 					Dist(GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
 			}
 		}
@@ -382,6 +383,8 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			}
 			else
 			{
+				if (numberOfTilesExploredAfterPathFound == 0)
+					exitNode = currentNode;
 				shouldTriggerExit = false;
 				bool closer = false;
 				if (closestNode != nullptr)
@@ -406,7 +409,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			{
 				failureReason = INFLUENCE;
 			}
-			else if (maxInfluence > 0 && currentNode->influence > maxInfluence)
+			else if (maxInfluence > 0 && (exitNode != nullptr ? exitNode->influence : currentNode->influence) > maxInfluence)
 			{
 				failureReason = INFLUENCE;
 			}
@@ -2143,7 +2146,7 @@ void Util::ClearSeenEnemies()
 	m_seenEnemies.clear();
 }
 
-bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot)
+bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, float visionBuffer, CCBot & bot)
 {
 	auto & allyUnitsPair = m_seenEnemies[enemyUnit];
 	auto & alliesWithVisionOfEnemy = allyUnitsPair.first;
@@ -2159,7 +2162,7 @@ bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit *
 		const auto allyUnitPtr = allyUnit.second.getUnitPtr();
 		if (alliesWithoutVisionOfEnemy.find(allyUnitPtr) != alliesWithoutVisionOfEnemy.end())
 			continue;	// we already know this ally unit can't see the enemy unit
-		if (CanUnitSeeEnemyUnit(allyUnitPtr, enemyUnit, bot))
+		if (CanUnitSeeEnemyUnit(allyUnitPtr, enemyUnit, visionBuffer, bot))
 		{
 			alliesWithVisionOfEnemy.insert(allyUnitPtr);
 			if (allyUnitPtr != exceptUnit)
@@ -2173,13 +2176,13 @@ bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit *
 	return false;
 }
 
-bool Util::CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot)
+bool Util::CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, float buffer, CCBot & bot)
 {
 	const auto distSq = DistSq(unit->pos, enemyUnit->pos);
 	if (distSq > 20 * 20)
 		return false;	// Unit is just too far
 	const auto & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-	const auto sight = unitTypeData.sight_range + unit->radius + enemyUnit->radius;
+	const auto sight = unitTypeData.sight_range + unit->radius + enemyUnit->radius - buffer;
 	if (distSq > sight * sight)
 		return false;	// Unit doesn't have enough sight range
 	if (!unit->is_flying && bot.Map().terrainHeight(unit->pos) < bot.Map().terrainHeight(enemyUnit->pos))
