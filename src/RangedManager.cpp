@@ -393,7 +393,8 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			unitAttackRange = 5.f;	// We want to stay close to the unit so we keep our Lock-On for a longer period
 		else if (!shouldAttack)
 		{
-			bool allyUnitSeesTarget = Util::AllyUnitSeesEnemyUnit(rangedUnit, target, m_bot);
+			// Cyclone with its Lock-On active
+			bool allyUnitSeesTarget = Util::AllyUnitSeesEnemyUnit(rangedUnit, target, 0.5f, m_bot);
 			unitAttackRange = (allyUnitSeesTarget ? 14.f : 10.f) + rangedUnit->radius + target->radius;
 		}
 		else
@@ -1305,7 +1306,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				if (it != lockedOnTargets.end() && potentialTarget->health + potentialTarget->shield <= it->second.size() * 60)
 					continue;
 				const float threatHeight = m_bot.Map().terrainHeight(potentialTarget->pos);
-				if (threatHeight > cycloneHeight && !Util::AllyUnitSeesEnemyUnit(cyclone, potentialTarget, m_bot))
+				if (threatHeight > cycloneHeight && !Util::AllyUnitSeesEnemyUnit(cyclone, potentialTarget, 0.f, m_bot))
 					continue;
 				const float dist = Util::Dist(cyclone->pos, potentialTarget->pos) - potentialTarget->radius;
 				if (shouldHeal && dist > partialLockOnRange + potentialTarget->radius)
@@ -2199,7 +2200,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 			if (enemyRange >= 10.f && enemyDps > 0.f)
 			{
 				// We check if we have another unit that is close to it, but if not, the Cyclone should stay close to it
-				bool closeAlly = Util::AllyUnitSeesEnemyUnit(cyclone, lockOnTarget, m_bot);;
+				bool closeAlly = Util::AllyUnitSeesEnemyUnit(cyclone, lockOnTarget, 0.5f, m_bot);
 				/*for (const auto ally : rangedUnits)
 				{
 					if (ally == cyclone)

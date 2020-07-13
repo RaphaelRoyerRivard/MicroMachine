@@ -82,7 +82,8 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	}
 	
 	// Check for close melee unit bonus
-	const float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot, considerOnlyUnitsInRange);
+	const bool ignoreSpells = filterHighRangeUnits;	// ATM only the Cyclone Lock-On is considered and we want to ignore it only in harass mode
+	const float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot, ignoreSpells);
 	const float targetRange = Util::GetAttackRangeForTarget(target, attacker, m_bot);
 	const float distance = Util::Dist(attacker->pos, target->pos);
 	float closeMeleeUnitBonus = 1.f;
