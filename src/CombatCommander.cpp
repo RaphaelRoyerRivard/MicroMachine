@@ -1460,7 +1460,24 @@ void CombatCommander::handleWall()
 		{
 			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
 			{
-				Micro::SmartAbility(building.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE, m_bot);
+				bool shouldRaise = true;
+				for (auto & unit : m_bot.GetAllyUnits())
+				{
+					if (unit.second.getType().isBuilding() || unit.second.isFlying())
+					{
+						continue;
+					}
+					//If the unit is on the depot, dont try to raise. Otherwise it forces the unit to move which can cause micro issues.
+					if (Util::DistSq(building.getPosition(), unit.second.getPosition()) <= pow(building.getUnitPtr()->radius + unit.second.getUnitPtr()->radius, 2))
+					{
+						shouldRaise = false;
+						break;
+					}
+				}
+				if (shouldRaise)
+				{
+					Micro::SmartAbility(building.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE, m_bot);
+				}
 			}
 		}
 	}
