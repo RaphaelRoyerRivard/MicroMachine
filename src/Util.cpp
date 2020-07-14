@@ -1440,43 +1440,38 @@ sc2::Unit Util::CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit)
 
 bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
 {
+	if (GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air) > 0.f)
+		return true;
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 	for (auto & weapon : unitTypeData.weapons)
 	{
 		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Air)
 			return true;
 	}
-	return GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air) > 0.f;
+	return false;
 }
 
 bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 {
+	if (GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground) > 0.f)
+		return true;
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 	for (auto & weapon : unitTypeData.weapons)
 	{
 		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Ground)
 			return true;
 	}
-	return GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground) > 0.f;
+	return false;
 }
 
 float Util::GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where, bool ignoreSpells)
 {
-	float range = Util::GetSpecialCaseRange(unit->unit_type, where, ignoreSpells);
-	if (range != 0)
-		return range;
-
-	if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
-	{
-		range = 0.1f;	// hack so the cannons will be considered as weak
-	}
-
-	return range;
+	return GetSpecialCaseRange(unit->unit_type, where, ignoreSpells);
 }
 
 float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where, bool ignoreSpells)
 {
-	float range = 0.f;
+	float range = -1.f;
 
 	if (unitType == sc2::UNIT_TYPEID::ZERG_BANELING || unitType == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
 	{
@@ -1541,6 +1536,10 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		range = 5.f;
 	}
+	else if (unitType == sc2::UNIT_TYPEID::TERRAN_LIBERATORAG)
+	{
+		range = 0.f;
+	}
 
 	return range;
 }
@@ -1550,11 +1549,14 @@ float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
 	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
 		return 0.f;
 
+	if ((unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !unit->is_powered)
+		return 0.f;
+
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
 	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground);
 
-	if (maxRange == 0.f)
+	if (maxRange < 0.f)
 	{
 		for (auto & weapon : unitTypeData.weapons)
 		{
@@ -1567,9 +1569,11 @@ float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
 	if (maxRange > 0.f)
 	{
 		maxRange += unit->radius;
-		maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+		if (unit->alliance == sc2::Unit::Enemy)
+			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
 	}
-	return maxRange;
+	
+	return std::max(0.f, maxRange);
 }
 
 float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
@@ -1577,10 +1581,13 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
 		return 0.f;
 
+	if ((unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !unit->is_powered)
+		return 0.f;
+
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
 	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air);
-	if (maxRange == 0.f)
+	if (maxRange < 0.f)
 	{
 		for (auto & weapon : unitTypeData.weapons)
 		{
@@ -1593,15 +1600,19 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 	if (maxRange > 0.f)
 	{
 		maxRange += unit->radius;
-		maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+		if (unit->alliance == sc2::Unit::Enemy)
+			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
 	}
 
-	return maxRange;
+	return std::max(0.f, maxRange);
 }
 
 float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells)
 {
-	if ((Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f) || (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered))
+	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+		return 0.f;
+
+	if ((unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !unit->is_powered)
 		return 0.f;
 
 	if (!target)
@@ -1611,7 +1622,7 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
 	
 	float maxRange = GetSpecialCaseRange(unit->unit_type, expectedWeaponType, ignoreSpells);
-	if (maxRange == 0.f)
+	if (maxRange < 0.f)
 	{
 		for (auto & weapon : unitTypeData.weapons)
 		{
@@ -1624,10 +1635,11 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	if (maxRange > 0.f)
 	{
 		maxRange += unit->radius + target->radius;
-		maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+		if (unit->alliance == sc2::Unit::Enemy)
+			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
 	}
 
-	return maxRange; 
+	return std::max(0.f, maxRange); 
 }
 
 float Util::GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot)
@@ -1647,44 +1659,61 @@ float Util::GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot)
 	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
 		return 0.f;
 
+	if ((unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !unit->is_powered)
+		return 0.f;
+
 	const sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
-
-	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Any);
-
-	if(maxRange == 0.f)
-		maxRange = GetMaxAttackRange(unitTypeData, bot);
-	else if(maxRange > 0.f)
-		maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+	
+	float maxRange = GetSpecialCaseRange(unitTypeData.unit_type_id);
+	if (maxRange < 0.f)
+	{
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			// can attack target with a weapon
+			if (weapon.range > maxRange)
+				maxRange = weapon.range;
+		}
+	}
 
 	if (maxRange > 0.f)
+	{
 		maxRange += unit->radius;
+		if (unit->alliance == sc2::Unit::Enemy)
+			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+	}
 
-	return maxRange;
+	return std::max(0.f, maxRange);
 }
 
+/*
+ * Do not call this method, it doesn't add the unit radius and the attack range bonus is valid only for enemy units.
+ */
 float Util::GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot)
 {
     const sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unitType]);
     return GetMaxAttackRange(unitTypeData, bot);
 }
 
+/*
+ * Do not call this method, it doesn't add the unit radius and the attack range bonus is valid only for enemy units.
+ */
 float Util::GetMaxAttackRange(sc2::UnitTypeData unitTypeData, CCBot & bot)
 {
-    float maxRange = 0.0f;
-    for (auto & weapon : unitTypeData.weapons)
-    {
-        // can attack target with a weapon
-        if (weapon.range > maxRange)
-            maxRange = weapon.range;
-    }
+	float maxRange = GetSpecialCaseRange(unitTypeData.unit_type_id);
+	if (maxRange < 0.f)
+	{
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			// can attack target with a weapon
+			if (weapon.range > maxRange)
+				maxRange = weapon.range;
+		}
+	}
 
-	if (maxRange == 0.f)
-		maxRange = GetSpecialCaseRange(unitTypeData.unit_type_id);
-
-	if(maxRange > 0.f)
+	if (maxRange > 0.f)
 		maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
 
-    return maxRange;
+    return std::max(0.f, maxRange);
 }
 
 float Util::GetAttackRangeBonus(const sc2::UnitTypeID unitType, CCBot & bot)

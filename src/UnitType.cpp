@@ -259,6 +259,9 @@ bool UnitType::isCreepTumor() const
 	return m_type.ToType() == sc2::UNIT_TYPEID::ZERG_CREEPTUMOR || m_type.ToType() == sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN || m_type.ToType() == sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED;
 }
 
+/*
+ * Do not call this method. Instead, get the unit pointer and use the Util::GetAttackRangeForTarget() method instead.
+ */
 CCPositionType UnitType::getAttackRange() const
 {
     return Util::GetMaxAttackRange(m_bot->Observation()->GetUnitTypeData()[m_type], *m_bot);
