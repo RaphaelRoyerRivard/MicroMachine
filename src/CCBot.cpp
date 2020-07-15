@@ -1613,6 +1613,13 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, enemyLocation + towardsCenterY * 10, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, enemyLocation + towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_SPORECRAWLER, enemyLocation + towardsCenterX * 5, player1, 1);*/
+	
+	// Test to reproduce a situation where cloak Banshees get too adventurous into a whole lot of enemies
+	/*Debug()->DebugGiveAllTech();
+	Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, enemyLocation - towardsCenterX * 15, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, enemyLocation - towardsCenterX * 5, player1, 6);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, enemyLocation + towardsCenterX * 3, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
