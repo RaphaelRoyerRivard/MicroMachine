@@ -363,7 +363,7 @@ void StrategyManager::onFrame(bool executeMacro)
 						}
 					}
 					m_bot.Workers().getWorkerData().clearProxyWorkers();
-					m_bot.Strategy().setStartingStrategy(STANDARD);
+					m_bot.Strategy().setStartingStrategy(EARLY_EXPAND);
 					m_bot.Commander().Production().clearQueue();
 				}
 			}
