@@ -2263,11 +2263,11 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 		auto & detectors = bot.GetEnemyUnits(detectorType);
 		for(const auto & detector : detectors)
 		{
-			if (detector.getType().isBuilding() && detector.getBuildPercentage() < 95)
+			if (detector.getType().isBuilding() && detector.getBuildProgress() < 0.95f)
 				continue;
 			if (detectorType == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !detector.isPowered())
 				continue;
-			const float distance = Util::DistSq(detector, position);
+			const float distance = DistSq(detector, position);
 			float detectionRange = detector.getUnitPtr()->detect_range;
 			if (detectionRange == 0)
 				detectionRange = detector.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE ? 13.75f : 11;
@@ -2282,7 +2282,7 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 	const int areaUnderDetectionSize = 10;
 	for(auto & area : areasUnderDetection)
 	{
-		if(Util::DistSq(position, area.first) < areaUnderDetectionSize * areaUnderDetectionSize)
+		if(DistSq(position, area.first) < areaUnderDetectionSize * areaUnderDetectionSize)
 		{
 			return true;
 		}

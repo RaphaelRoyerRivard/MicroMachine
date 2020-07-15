@@ -46,7 +46,7 @@ public:
 	sc2::Tag getTag() const;
     CCUnitID getID() const;
 	int getIDAsInt() const;
-    float getBuildPercentage() const;
+    float getBuildProgress() const;
     int getWeaponCooldown() const;
 	bool canAttackAir() const;
 	bool canAttackGround() const;

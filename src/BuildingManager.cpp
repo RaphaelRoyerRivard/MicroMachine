@@ -1330,7 +1330,7 @@ void BuildingManager::drawBuildingInformation()
 
         if (b.buildingUnit.isValid())
         {
-            dss << "Building: " << b.buildingUnit.getID() << "\n" << b.buildingUnit.getBuildPercentage();
+            dss << "Building: " << b.buildingUnit.getID() << "\n" << b.buildingUnit.getBuildProgress();
             m_bot.Map().drawText(b.buildingUnit.getPosition(), dss.str());
         }
         
@@ -2102,7 +2102,7 @@ void BuildingManager::RunProxyLogic()
 		// Lift Barracks
 		if (m_proxyBarracksPosition == CCPosition())
 		{
-			if (barracks.size() == 1 && factories.size() == 1 && barracksTechlabs.size() == 1 && barracksTechlabs[0].getBuildPercentage() == 1.0f)
+			if (barracks.size() == 1 && factories.size() == 1 && barracksTechlabs.size() == 1 && barracksTechlabs[0].getBuildProgress() == 1.0f)
 			{
 				Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 				return;
@@ -2128,7 +2128,7 @@ void BuildingManager::RunProxyLogic()
 		// Lift Factory
 		if (m_proxyFactoryPosition == CCPosition())
 		{
-			if (factories.size() == 1 && factories[0].getBuildPercentage() == 1.0f && techlabs.size() == 1 && techlabs[0].getBuildPercentage() == 1.0f)
+			if (factories.size() == 1 && factories[0].getBuildProgress() == 1.0f && techlabs.size() == 1 && techlabs[0].getBuildProgress() == 1.0f)
 			{
 				m_proxyFactoryPosition = factories[0].getPosition();
 				Micro::SmartAbility(factories[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);

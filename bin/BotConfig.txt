@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.10.22",
+        "BotVersion"                : "1.10.33",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Terran",
-        "MapFile"                   : "EternalEmpireLE.SC2Map",
+        "EnemyRace"                 : "Zerg",
+        "MapFile"                   : "NightshadeLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50

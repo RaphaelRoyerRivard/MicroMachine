@@ -2417,7 +2417,7 @@ bool ProductionManager::ValidateBuildingTiming(Building & b) const
 		float travelTime = workerRefineryDistance / (workerSpeed * 1.45f);//Multiply the worker speed by 1.45 because moving in diagonal is 41% faster. An extra 0.04 to make sure depot and refineries don't finish the same frame.
 		float progressRequired = 1 - ((21.f + travelTime) / 71.f);//Depot takes 71 seconds, refinery takes 21 seconds.
 
-		float progress = depot.getBuildPercentage();
+		float progress = depot.getBuildProgress();
 		if (progress < progressRequired)
 		{
 			//Skip building geysers at bases with a not quite built enough depot.
