@@ -756,7 +756,7 @@ void WorkerManager::handleIdleWorkers()
 					if(building.builderUnit == worker)
 					{
 						m_workerData.setWorkerJob(worker, WorkerJobs::Build, building.buildingUnit);
-						if(building.buildingUnit.isValid() && building.buildingUnit.getBuildPercentage() < 1.f)
+						if(building.buildingUnit.isValid() && building.buildingUnit.getBuildProgress() < 1.f)
 						{
 							Micro::SmartRightClick(worker.getUnitPtr(), building.buildingUnit.getUnitPtr(), m_bot);
 						}

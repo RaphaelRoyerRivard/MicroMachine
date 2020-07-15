@@ -802,7 +802,7 @@ void CCBot::setUnits()
 
 		m_enemyUnitsPerType[enemyUnitPtr->unit_type].push_back(enemyUnit);
 
-		if (enemyUnit.getType().isBuilding() && enemyUnit.getBuildPercentage() < 1)
+		if (enemyUnit.getType().isBuilding() && enemyUnit.getBuildProgress() < 1)
 			m_enemyBuildingsUnderConstruction.push_back(enemyUnit);
 
 		if (enemyUnit.isArmored() && !enemyUnit.getType().isOverlord() && !enemyUnit.getType().isBuilding())
@@ -1606,6 +1606,13 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation + towardsCenterX * 17, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation + towardsCenterY * 30, player1, 4);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation + towardsCenterY * 30, player1, 4);*/
+
+	// Test to reproduce bug where cloak Banshees dive on Queens even if a Spore Crawler is nearby
+	/*Debug()->DebugGiveAllTech();
+	Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, enemyLocation + towardsCenterY * 10, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, enemyLocation + towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_SPORECRAWLER, enemyLocation + towardsCenterX * 5, player1, 1);*/
 }
 
 void CCBot::IssueCheats()

@@ -133,7 +133,7 @@ CCHealth Unit::getEnergy() const
 #endif
 }
 
-float Unit::getBuildPercentage() const
+float Unit::getBuildProgress() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
     return m_unit->build_progress;
