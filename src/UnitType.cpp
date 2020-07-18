@@ -51,11 +51,7 @@ std::string UnitType::getName() const
 
 CCRace UnitType::getRace() const
 {
-#ifdef SC2API
     return m_bot->Observation()->GetUnitTypeData()[m_type].race;
-#else
-    return m_type.getRace();
-#endif
 }
 
 bool UnitType::isCombatUnit() const

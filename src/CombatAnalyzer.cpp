@@ -241,7 +241,7 @@ void CombatAnalyzer::lowPriorityChecks()
 void CombatAnalyzer::DetectBurrowingUnits()
 {
 	const auto enemyPlayerRace = m_bot.GetPlayerRace(Players::Enemy);
-	if (enemyPlayerRace != sc2::Zerg && enemyPlayerRace != sc2::Random)
+	if (enemyPlayerRace != sc2::Zerg)
 		return;
 	
 	std::vector<sc2::UNIT_TYPEID> zergTransporters = { sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT, sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK };

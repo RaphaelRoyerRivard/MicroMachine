@@ -1549,11 +1549,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				else
 				{
 					const CCPosition closeAttackPosition = rangedUnit->pos + Util::Normalized(target->pos - rangedUnit->pos) * 0.5f;
-					if (Util::IsPositionUnderDetection(closeAttackPosition, m_bot) || unitShouldHeal || targetDist < pow(range - 1, 2))
+					if (Util::IsPositionUnderDetection(closeAttackPosition, m_bot) || unitShouldHeal /*|| targetDist < pow(range - 1, 2)*/)
 					{
 						// Our unit would move into a detection zone if it continues moving towards its target
-						// or it needs to go back to heal or it is already close enough to its target (range - 1),
-						// so we skip the action
+						// or it needs to go back to heal so we skip the action
 						skipAction = true;
 					}
 					else

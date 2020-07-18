@@ -38,7 +38,7 @@ class ProductionManager
     bool    create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources = true, bool filterMovingWorker = true, bool canBePlacedElsewhere = true);
 	bool    create(const Unit & producer, Building & b, bool filterMovingWorker = true);
     void    manageBuildOrderQueue();
-	bool	ShouldSkipQueueItem(const MM::BuildOrderItem & currentItem) const;
+	bool	ShouldSkipQueueItem(const MM::BuildOrderItem & currentItem);
 	void	putImportantBuildOrderItemsInQueue();
 	void	QueueDeadBuildings();
 

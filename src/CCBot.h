@@ -80,6 +80,7 @@ class CCBot : public sc2::Agent
 	std::set<const sc2::Unit *> m_enemySCVBuilders;
 	std::set<const sc2::Unit *> m_enemyWorkersGoingInRefinery;
 	CCRace selfRace;
+	CCRace enemyRace = sc2::Random;
 	std::map<std::string, Profiler> m_profilingTimes;
 	std::mutex m_command_mutex;
 	bool m_concede;
@@ -156,8 +157,8 @@ public:
     const TypeData & Data(const Unit & unit);
 	const TypeData & Data(const sc2::UNIT_TYPEID & type);
 	uint32_t GetGameLoop() const;
-    const CCRace GetPlayerRace(int player) const;
-	const CCRace GetSelfRace() const;
+    CCRace GetPlayerRace(int player) const;
+	CCRace GetSelfRace() const;
     const CCPosition GetStartLocation() const;
 	const CCTilePosition GetBuildingArea(MetaType buildingType);
 
