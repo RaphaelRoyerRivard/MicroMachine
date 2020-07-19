@@ -250,8 +250,12 @@ void CombatAnalyzer::DetectBurrowingUnits()
 	sc2::Units unitsToRemove;
 	for (const auto & burrowedUnit : burrowedUnits)
 	{
+		if (!burrowedUnit->is_alive)
+		{
+			unitsToRemove.push_back(burrowedUnit);
+		}
 		// We just saw the unit
-		if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
+		else if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
 		{
 			// And it was not burrowed anymore
 			if (!burrowedUnit->is_burrowed)

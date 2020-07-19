@@ -943,8 +943,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Thor, 0, false));
 					}
 				}
-				// We want at least 1 Hellion for every 2 enemy Zealot or 4 enemy Zergling. Against Zerg, we want to make at least 1 asap to defend against 
-				else if (!shouldProduceFirstCyclone && ((hellionCount + 1) * 2 < enemyZealotCount || (hellionCount + 1) * 4 < enemyZerglingCount || (enemyRace == sc2::Race::Zerg && hellionCount + deadHellionCount == 0)))
+				// We want at least 1 Hellion for every 2 enemy Zealot or 4 enemy Zergling. Against Zerg, we want to make at least 1 asap to defend against potential zergling rushes (unless the opponent already has Roaches)
+				else if (!shouldProduceFirstCyclone && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ (hellionCount + 1) * 4 < enemyZerglingCount || (enemyRace == sc2::Race::Zerg && hellionCount + deadHellionCount == 0 && enemyRoachAndRavagerCount == 0)))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 					m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
