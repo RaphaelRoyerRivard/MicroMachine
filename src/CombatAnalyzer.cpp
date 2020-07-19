@@ -29,6 +29,9 @@ void CombatAnalyzer::onFrame()
 
 	drawDamageHealthRatio();
 
+	// Detect burrowed Zerg units
+	DetectBurrowingUnits();
+
 	lowPriorityChecks();
 //drawAreasUnderDetection();
 }
@@ -196,9 +199,6 @@ void CombatAnalyzer::lowPriorityChecks()
 				enemyPickedUpUnits.erase(unit.getUnitPtr());
 		}
 	}
-
-	// Detect burrowed Zerg units
-	DetectBurrowingUnits();
 	
 	//TODO handle dead ally units
 

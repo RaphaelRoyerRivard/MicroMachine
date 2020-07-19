@@ -290,6 +290,10 @@ void CCBot::OnStep()
     m_unitInfo.onFrame();
 	StopProfiling("0.5 m_unitInfo.onFrame");
 
+	StartProfiling("0.12 m_combatAnalyzer.onFrame");
+	m_combatAnalyzer.onFrame();
+	StopProfiling("0.12 m_combatAnalyzer.onFrame");
+
 	StartProfiling("0.6 m_bases.onFrame");
     m_bases.onFrame();
 	StopProfiling("0.6 m_bases.onFrame");
@@ -309,10 +313,6 @@ void CCBot::OnStep()
 	StartProfiling("0.11 m_repairStations.onFrame");
 	m_repairStations.onFrame();
 	StopProfiling("0.11 m_repairStations.onFrame");
-
-	StartProfiling("0.12 m_combatAnalyzer.onFrame");
-	m_combatAnalyzer.onFrame();
-	StopProfiling("0.12 m_combatAnalyzer.onFrame");
 
 	StartProfiling("0.10 m_gameCommander.onFrame");
 	m_gameCommander.onFrame(executeMacro);
@@ -1472,7 +1472,7 @@ void CCBot::IssueGameStartCheats()
 	// Test to detect burrowing units (against human player)
 	/*Debug()->DebugGiveAllTech();
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACH, mapCenter + towardsCenter * 8, player1, 2);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, m_startLocation + towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, m_startLocation + towardsCenter * 5, player2, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS, mapCenter, player2, 1);*/
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT, m_startLocation + towardsCenter * 8, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, m_startLocation + towardsCenter * 8, player1, 1);

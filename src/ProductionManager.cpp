@@ -419,7 +419,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	const auto deadOrbitals = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND);
 	const bool hasStartedFirstExpand = ccs + orbitals + deadCCs + deadOrbitals > 1;
 	const auto earlyExpand = m_bot.Strategy().getStartingStrategy() == EARLY_EXPAND && m_bot.GetCurrentFrame() < 3360 && m_bot.GetFreeMinerals() < 700 && !hasStartedFirstExpand;	// 2:30 min
-	const auto fastPF = m_bot.Strategy().getStartingStrategy() == FAST_PF && m_bot.GetCurrentFrame() < 4032 && m_bot.GetFreeMinerals() < 700;	// 3:00 min
+	const auto fastPF = m_bot.Strategy().getStartingStrategy() == FAST_PF && m_bot.GetFreeMinerals() < 700;
 	const auto proxyMaraudersStrategy = m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS;
 	if (currentItem.type.getUnitType().isRefinery())
 	{
@@ -581,11 +581,19 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 				shouldSkip = baseCount < 2;
 				if (!shouldSkip && currentItem.type == MetaTypeEnum::Refinery)
 				{
-					const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
-					if (!hasFactory)
+					const auto hasStarport = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true) > 0;
+					if (!hasStarport)
 					{
 						const auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true);
-						shouldSkip = refineryCount >= 2;
+						const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
+						if (!hasFactory)
+						{
+							shouldSkip = refineryCount >= 2;
+						}
+						else
+						{
+							shouldSkip = refineryCount >= 3;
+						}
 					}
 				}
 			}
@@ -809,9 +817,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if (!produceMarauders && (reaperCount == 0 || (factoryCount == 0 && !m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)) && !m_queue.contains(MetaTypeEnum::Reaper))
+				if (!produceMarauders && (reaperCount == 0 || (factoryCount == 0 && !m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)))
 				{
-					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
+					if (!m_queue.contains(MetaTypeEnum::Reaper))
+					{
+						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Reaper, 0, false));
+					}
+				}
+				else
+				{
+					m_queue.removeAllOfType(MetaTypeEnum::Reaper);
 				}
 #endif
 
@@ -1372,8 +1387,8 @@ void ProductionManager::lowPriorityChecks()
 
 	// build a refinery if we are missing one
 	//TODO doesn't handle extra hatcheries
-	auto refinery = Util::GetRefineryType();
-	if (m_bot.Workers().canHandleMoreRefinery() && !m_queue.contains(MetaType(refinery, m_bot)))
+	auto & refineryType = Util::GetRefineryType();
+	if (m_bot.Workers().canHandleMoreRefinery() && !m_queue.contains(MetaType(refineryType, m_bot)))
 	{
 		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
 		{
@@ -1410,7 +1425,7 @@ void ProductionManager::lowPriorityChecks()
 
 					if (!refineryFound)
 					{
-						m_queue.queueAsLowestPriority(MetaType(refinery, m_bot), false);
+						m_queue.queueAsLowestPriority(MetaType(refineryType, m_bot), false);
 					}
 				}
 			}
@@ -1420,7 +1435,7 @@ void ProductionManager::lowPriorityChecks()
 	//build bunkers in mineral/gas field [optimize economy]
 	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran && m_bot.Workers().getGasWorkersTarget() > 0)
 	{
-		auto refineries = m_bot.GetAllyGeyserUnits();
+		auto & refineries = m_bot.GetAllyGeyserUnits();
 		for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
 		{
 			if (!base->getResourceDepot().isValid() || base->getResourceDepot().getPlayer() != Players::Self || !base->getResourceDepot().isCompleted() || base->isGeyserSplit())//TEMPORARY skip split geysers since they are not yet handled
@@ -1434,8 +1449,8 @@ void ProductionManager::lowPriorityChecks()
 				bool lowGasGeyser = false;
 				bool missingRefinery = false;
 
-				auto geysers = base->getGeysers();
-				for (auto geyser : geysers)
+				auto & geysers = base->getGeysers();
+				for (auto & geyser : geysers)
 				{
 					if (geyser.getUnitPtr()->vespene_contents <= 500)
 					{
@@ -1444,7 +1459,7 @@ void ProductionManager::lowPriorityChecks()
 					}
 
 					bool hasRefinery = false;
-					for (auto refinery : refineries)
+					for (auto & refinery : refineries)
 					{
 						if (geyser.getPosition() == refinery.getPosition())
 						{
@@ -1466,11 +1481,11 @@ void ProductionManager::lowPriorityChecks()
 
 			if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::Bunker.getUnitType()))
 			{
-				auto bunkers = base->getGasBunkers();
-				for (auto bunkerLocation : base->getGasBunkerLocations())
+				auto & bunkers = base->getGasBunkers();
+				for (auto & bunkerLocation : base->getGasBunkerLocations())
 				{
 					bool hasBunker = false;
-					for (auto bunker : bunkers)
+					for (auto & bunker : bunkers)
 					{
 						if (bunkerLocation == bunker.getTilePosition())
 						{
@@ -1482,9 +1497,14 @@ void ProductionManager::lowPriorityChecks()
 					{
 						m_bot.Buildings().getBuildingPlacer().freeTilesForBunker(bunkerLocation);
 						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(bunkerLocation.x, bunkerLocation.y));
-						auto boItem = MM::BuildOrderItem(MetaTypeEnum::Bunker, 0, false);
-						create(worker, boItem, bunkerLocation, true, true, false);
-
+						if (worker.isValid())
+						{
+							if (Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), Util::GetPosition(bunkerLocation), false, m_bot))
+							{
+								auto boItem = MM::BuildOrderItem(MetaTypeEnum::Bunker, 0, false);
+								create(worker, boItem, bunkerLocation, true, true, false);
+							}
+						}
 						break;
 					}
 				}
