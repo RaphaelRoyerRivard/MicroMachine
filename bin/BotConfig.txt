@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.10.33",
+        "BotVersion"                : "1.11.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -100,7 +100,8 @@
         "ScoutHarassEnemy"          : true,
         "EnableMultiThreading"      : false,
         "TournamentMode"            : false,
-        "StarCraft2Version"         : "4.11.4"
+        "StarCraft2Version"         : "4.11.4",
+        "ArchonMode"                : false
     },
     
     "UCTConsideringDurations" :

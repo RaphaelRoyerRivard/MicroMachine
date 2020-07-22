@@ -655,25 +655,28 @@ void CCBot::setUnits()
 						}
 						// no break because more than one Phoenix probably means that there is a real fleet
 					default:
-						if (unit.getType().isBuilding() && !m_strategy.enemyOnlyHasFlyingBuildings())
+						if (unit.getType().isBuilding())
 						{
-							bool enemyHasGroundUnit = false;
-							for(auto & knownEnemyTypes : m_enemyUnitsPerType)
+							if (!m_strategy.enemyOnlyHasFlyingBuildings())
 							{
-								if(!knownEnemyTypes.second.empty())
+								bool enemyHasGroundUnit = false;
+								for (auto & knownEnemyTypes : m_enemyUnitsPerType)
 								{
-									if(!knownEnemyTypes.second[0].isFlying())
+									if (!knownEnemyTypes.second.empty())
 									{
-										enemyHasGroundUnit = true;
-										break;
+										if (!knownEnemyTypes.second[0].isFlying())
+										{
+											enemyHasGroundUnit = true;
+											break;
+										}
 									}
 								}
-							}
-							if(!enemyHasGroundUnit)
-							{
-								m_strategy.setEnemyOnlyHasFlyingBuildings(true);
-								Actions()->SendChat("Lifting your buildings won't save them for long.");
-								Util::DebugLog(__FUNCTION__, "Lifted building detected: " + unit.getType().getName(), *this);
+								if (!enemyHasGroundUnit)
+								{
+									m_strategy.setEnemyOnlyHasFlyingBuildings(true);
+									Actions()->SendChat("Lifting your buildings won't save them for long.");
+									Util::DebugLog(__FUNCTION__, "Lifted building detected: " + unit.getType().getName(), *this);
+								}
 							}
 						}
 						else if(!m_strategy.shouldProduceAntiAirOffense())

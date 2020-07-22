@@ -129,6 +129,7 @@ void BotConfig::readConfigFile()
 		JSONTools::ReadBool("EnableMultiThreading", micro, EnableMultiThreading);
 		JSONTools::ReadBool("TournamentMode", micro, TournamentMode);
 		JSONTools::ReadString("StarCraft2Version", micro, StarCraft2Version);
+		JSONTools::ReadBool("ArchonMode", micro, ArchonMode);
     }
 
     if (j.count("UCTConsideringDurations") && j["UCTConsideringDurations"].is_object())
