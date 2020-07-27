@@ -1387,7 +1387,7 @@ void ProductionManager::lowPriorityChecks()
 
 	// build a refinery if we are missing one
 	//TODO doesn't handle extra hatcheries
-	auto & refineryType = Util::GetRefineryType();
+	auto refineryType = Util::GetRefineryType();
 	if (m_bot.Workers().canHandleMoreRefinery() && !m_queue.contains(MetaType(refineryType, m_bot)))
 	{
 		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
