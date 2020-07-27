@@ -205,6 +205,7 @@ int main(int argc, char* argv[])
     bool PlayerOneIsHuman = false;
 	bool ForceStepMode = false;
 	bool AllowDebug = true;
+	bool ArchonMode = false;
 
 	if (j.count("Debug") && j["Debug"].is_object())
 	{
@@ -241,6 +242,7 @@ int main(int argc, char* argv[])
 		JSONTools::ReadBool("PlayAsHuman", info, PlayerOneIsHuman);
 		JSONTools::ReadBool("ForceStepMode", info, ForceStepMode);
         JSONTools::ReadBool("PlayVsItSelf", info, PlayVsItSelf);
+        JSONTools::ReadBool("ArchonMode", info, ArchonMode);
     }
     else
     {
@@ -255,7 +257,7 @@ int main(int argc, char* argv[])
 		bool loadSettings = false;
 		JSONTools::ReadBool("LoadSettings", j["SC2API"], loadSettings);
 		CCBot bot(botVersion, !ForceStepMode);
-		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings, AllowDebug);
+		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings, AllowDebug, ArchonMode);
 
 		return 0;
 	}
@@ -304,7 +306,7 @@ int main(int argc, char* argv[])
     coordinator.SetStepSize(stepSize);
     //coordinator.SetRealtime(PlayerOneIsHuman && !ForceStepMode);
     coordinator.SetRealtime(!ForceStepMode);
-	coordinator.SetRawAffectsSelection(!AllowDebug);
+	coordinator.SetRawAffectsSelection(!AllowDebug && !ArchonMode);
 
     coordinator.SetParticipants({
         spectatingPlayer,

@@ -28,7 +28,8 @@
         "MapFile"                   : "NightshadeLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
-        "NbBatchReplay"             : 50
+        "NbBatchReplay"             : 50,
+        "ArchonMode"                : false
     },
     
     "RandomMaps":
@@ -100,8 +101,7 @@
         "ScoutHarassEnemy"          : true,
         "EnableMultiThreading"      : false,
         "TournamentMode"            : false,
-        "StarCraft2Version"         : "4.11.4",
-        "ArchonMode"                : false
+        "StarCraft2Version"         : "4.11.4"
     },
     
     "UCTConsideringDurations" :

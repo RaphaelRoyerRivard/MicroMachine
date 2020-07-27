@@ -146,7 +146,7 @@ static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_op
     }
 }
 
-static void RunBot(int argc, char *argv[], CCBot *Agent, sc2::Race race, bool loadSettings, bool allowDebug)
+static void RunBot(int argc, char *argv[], CCBot *Agent, sc2::Race race, bool loadSettings, bool allowDebug, bool archonMode)
 {
     ConnectionOptions Options;
     ParseArguments(argc, argv, Options);
@@ -185,7 +185,7 @@ static void RunBot(int argc, char *argv[], CCBot *Agent, sc2::Race race, bool lo
     std::cout << "Connecting to port " << Options.GamePort << std::endl;
     coordinator.Connect(Options.GamePort);
     coordinator.SetupPorts(num_agents, Options.StartPort, false);
-	coordinator.SetRawAffectsSelection(!allowDebug);
+	coordinator.SetRawAffectsSelection(!allowDebug && !archonMode);
     // Step forward the game simulation.
     coordinator.JoinGame();
     coordinator.SetTimeoutMS(120000);	// 2 min
