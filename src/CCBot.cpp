@@ -290,6 +290,10 @@ void CCBot::OnStep()
     m_unitInfo.onFrame();
 	StopProfiling("0.5 m_unitInfo.onFrame");
 
+	StartProfiling("0.12 m_combatAnalyzer.onFrame");
+	m_combatAnalyzer.onFrame();
+	StopProfiling("0.12 m_combatAnalyzer.onFrame");
+
 	StartProfiling("0.6 m_bases.onFrame");
     m_bases.onFrame();
 	StopProfiling("0.6 m_bases.onFrame");
@@ -309,10 +313,6 @@ void CCBot::OnStep()
 	StartProfiling("0.11 m_repairStations.onFrame");
 	m_repairStations.onFrame();
 	StopProfiling("0.11 m_repairStations.onFrame");
-
-	StartProfiling("0.12 m_combatAnalyzer.onFrame");
-	m_combatAnalyzer.onFrame();
-	StopProfiling("0.12 m_combatAnalyzer.onFrame");
 
 	StartProfiling("0.10 m_gameCommander.onFrame");
 	m_gameCommander.onFrame(executeMacro);
@@ -527,21 +527,30 @@ void CCBot::setUnits()
 			bool isMorphingResourceDepot = false;
 			if (unit.getType().isResourceDepot())
 			{
+				bool alreadyCompleted = false;
 				for(auto& order : unit.getUnitPtr()->orders)
 				{
 					sc2::UnitTypeID morphType = 0;
 					switch(uint32_t(order.ability_id))
 					{
 					case uint32_t(sc2::ABILITY_ID::MORPH_ORBITALCOMMAND):
+						if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND)
+							alreadyCompleted = true;
 						morphType = sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND;
 						break;
 					case uint32_t(sc2::ABILITY_ID::MORPH_PLANETARYFORTRESS):
+						if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS)
+							alreadyCompleted = true;
 						morphType = sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS;
 						break;
 					case uint32_t(sc2::ABILITY_ID::MORPH_LAIR):
+						if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_LAIR)
+							alreadyCompleted = true;
 						morphType = sc2::UNIT_TYPEID::ZERG_LAIR;
 						break;
 					case uint32_t(sc2::ABILITY_ID::MORPH_HIVE):
+						if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_HIVE)
+							alreadyCompleted = true;
 						morphType = sc2::UNIT_TYPEID::ZERG_HIVE;
 						break;
 					default:
@@ -551,6 +560,10 @@ void CCBot::setUnits()
 					{
 						isMorphingResourceDepot = true;
 						++m_unitCount[morphType];
+						if (alreadyCompleted)
+						{
+							m_unitCompletedCount[unit.getAPIUnitType()]++;
+						}
 					}
 				}
 			}
@@ -580,6 +593,10 @@ void CCBot::setUnits()
 		}
 		else if (unitptr->alliance == sc2::Unit::Enemy)
 		{
+			if (enemyRace == sc2::Random)
+			{
+				enemyRace = unit.getType().getRace();
+			}
 			m_enemyUnits[unitptr->tag] = unit;
 			// If the enemy zergling was seen last frame
 			if (zergEnemy && !m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
@@ -638,25 +655,28 @@ void CCBot::setUnits()
 						}
 						// no break because more than one Phoenix probably means that there is a real fleet
 					default:
-						if (unit.getType().isBuilding() && !m_strategy.enemyOnlyHasFlyingBuildings())
+						if (unit.getType().isBuilding())
 						{
-							bool enemyHasGroundUnit = false;
-							for(auto & knownEnemyTypes : m_enemyUnitsPerType)
+							if (!m_strategy.enemyOnlyHasFlyingBuildings())
 							{
-								if(!knownEnemyTypes.second.empty())
+								bool enemyHasGroundUnit = false;
+								for (auto & knownEnemyTypes : m_enemyUnitsPerType)
 								{
-									if(!knownEnemyTypes.second[0].isFlying())
+									if (!knownEnemyTypes.second.empty())
 									{
-										enemyHasGroundUnit = true;
-										break;
+										if (!knownEnemyTypes.second[0].isFlying())
+										{
+											enemyHasGroundUnit = true;
+											break;
+										}
 									}
 								}
-							}
-							if(!enemyHasGroundUnit)
-							{
-								m_strategy.setEnemyOnlyHasFlyingBuildings(true);
-								Actions()->SendChat("Lifting your buildings won't save them for long.");
-								Util::DebugLog(__FUNCTION__, "Lifted building detected: " + unit.getType().getName(), *this);
+								if (!enemyHasGroundUnit)
+								{
+									m_strategy.setEnemyOnlyHasFlyingBuildings(true);
+									Actions()->SendChat("Lifting your buildings won't save them for long.");
+									Util::DebugLog(__FUNCTION__, "Lifted building detected: " + unit.getType().getName(), *this);
+								}
 							}
 						}
 						else if(!m_strategy.shouldProduceAntiAirOffense())
@@ -1147,10 +1167,11 @@ uint32_t CCBot::GetGameLoop() const
 	return m_gameLoop;
 }
 
-const CCRace CCBot::GetPlayerRace(int player) const
+CCRace CCBot::GetPlayerRace(int player) const
 {
-#ifdef SC2API
 	const bool playerSelf = player == Players::Self;
+	if (!playerSelf && enemyRace != sc2::Random)
+		return enemyRace;	// This way we can know what is the enemy race even when it has requested a random race
     const auto ourID = Observation()->GetPlayerID();
     for (auto & playerInfo : Observation()->GetGameInfo().player_info)
     {
@@ -1164,19 +1185,9 @@ const CCRace CCBot::GetPlayerRace(int player) const
 
     BOT_ASSERT(false, "Didn't find player to get their race");
     return sc2::Race::Random;
-#else
-    if (player == Players::Self)
-    {
-        return BWAPI::Broodwar->self()->getRace();
-    }
-    else
-    {
-        return BWAPI::Broodwar->enemy()->getRace();
-    }
-#endif
 }
 
-const CCRace CCBot::GetSelfRace() const
+CCRace CCBot::GetSelfRace() const
 {
 	return selfRace;
 }
@@ -1463,9 +1474,9 @@ void CCBot::IssueGameStartCheats()
 
 	// Test to detect burrowing units (against human player)
 	/*Debug()->DebugGiveAllTech();
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACH, m_startLocation + towardsCenter * 8, player1, 2);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation + towardsCenter * 8, player2, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, m_startLocation + towardsCenter * 5, player2, 2);*/
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ROACH, mapCenter + towardsCenter * 8, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, m_startLocation + towardsCenter * 5, player2, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS, mapCenter, player2, 1);*/
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT, m_startLocation + towardsCenter * 8, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, m_startLocation + towardsCenter * 8, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK, mapCenter, player1, 1);*/
@@ -1620,6 +1631,13 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, enemyLocation - towardsCenterX * 15, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, enemyLocation - towardsCenterX * 5, player1, 6);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, enemyLocation + towardsCenterX * 3, player1, 1);*/
+	
+	// Test to reproduce a bug where Banshees would not cloak and engage to defend against Stalkers and Void Rays
+	/*Debug()->DebugGiveAllTech();
+	Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation + towardsCenterX * 15, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation - towardsCenterX * 5, player1, 6);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation - towardsCenterX * 5, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
@@ -1817,7 +1835,7 @@ int CCBot::GetUnitCount(sc2::UNIT_TYPEID type, bool completed, bool underConstru
 	int total = completedCount;
 
 	auto unitType = UnitType(type, *this);
-	if (unitType.isBuilding())
+	if (unitType.isBuilding() && !unitType.isMorphedBuilding())
 	{
 		total += m_buildings.countBeingBuilt(unitType, underConstruction);
 	}

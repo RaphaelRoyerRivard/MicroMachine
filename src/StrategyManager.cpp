@@ -118,7 +118,8 @@ void StrategyManager::onStart()
 			}
 			outFile << j.dump();
 			outFile.close();
-			m_startingStrategy = m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? PROXY_MARAUDERS : EARLY_EXPAND;
+			m_startingStrategy = m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? PROXY_MARAUDERS : FAST_PF;
+			
 			if (m_bot.Config().PrintGreetingMessage)
 			{
 				m_greetingMessage << "Greetings stranger. I shall call you " << opponentId << " from now on. GLHF!";

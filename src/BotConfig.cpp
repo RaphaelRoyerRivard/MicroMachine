@@ -165,6 +165,7 @@ void BotConfig::readConfigFile()
         const json & sc2api = j["SC2API"];
         JSONTools::ReadBool("BatchReplayMode", sc2api, BatchReplayMode);
         JSONTools::ReadInt("NbBatchReplay", sc2api, NbBatchReplay);
+		JSONTools::ReadBool("ArchonMode", sc2api, ArchonMode);
     }
 
     // Parse the Macro Options

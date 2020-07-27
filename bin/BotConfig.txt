@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.10.33",
+        "BotVersion"                : "1.11.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -28,7 +28,8 @@
         "MapFile"                   : "NightshadeLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
-        "NbBatchReplay"             : 50
+        "NbBatchReplay"             : 50,
+        "ArchonMode"                : false
     },
     
     "RandomMaps":

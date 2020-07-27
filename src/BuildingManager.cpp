@@ -1859,8 +1859,11 @@ const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool 
 
 void BuildingManager::castBuildingsAbilities()
 {
+	m_bot.StartProfiling("0.8.8.1  RunProxyLogic");
 	RunProxyLogic();
+	m_bot.StopProfiling("0.8.8.1  RunProxyLogic");
 
+	m_bot.StartProfiling("0.8.8.2  Barracks");
 	for (const auto & barracks : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS))
 	{
 		//If the building is in the wall
@@ -1896,7 +1899,9 @@ void BuildingManager::castBuildingsAbilities()
 			break;
 		}
 	}
-	
+	m_bot.StopProfiling("0.8.8.2  Barracks");
+
+	m_bot.StartProfiling("0.8.8.3  OrbitalCommands");
 	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
 	{
 		const auto energy = b.getEnergy();
@@ -1904,6 +1909,8 @@ void BuildingManager::castBuildingsAbilities()
 		{
 			continue;
 		}
+
+		bool keepEnergy = false;
 
 		//Scan
 		// TODO decomment this block when we are ready to use the scans
@@ -1921,8 +1928,11 @@ void BuildingManager::castBuildingsAbilities()
 		const auto & burrowedUnits = m_bot.Analyzer().getBurrowedUnits();
 		if (!burrowedUnits.empty())
 		{
+			keepEnergy = true;
+			m_bot.StartProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedUnits");
 			const auto & combatUnits = m_bot.Commander().Combat().GetCombatUnits();
 			sc2::Units closeBurrowedUnits;
+			std::set<const sc2::Unit *> closeCombatUnits;
 			for (const auto burrowedUnit : burrowedUnits)
 			{
 				if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
@@ -1939,79 +1949,111 @@ void BuildingManager::castBuildingsAbilities()
 					if (dist <= range * range)
 					{
 						closeBurrowedUnits.push_back(burrowedUnit);
+						closeCombatUnits.insert(combatUnit.getUnitPtr());
 						break;
 					}
 				}
 			}
+			m_bot.StopProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedUnits");
 			if (!closeBurrowedUnits.empty())
 			{
-				// Calculate the middle point of all close burrowed unit
-				CCPosition middlePoint;
-				for (const auto closeBurrowedUnit : closeBurrowedUnits)
+				m_bot.StartProfiling("0.8.8.3.2   FindOtherTargets");
+				// Check if there are no other ground targets nearby
+				bool otherTargets = false;
+				for (const auto combatUnit : closeCombatUnits)
 				{
-					middlePoint += closeBurrowedUnit->pos;
-				}
-				middlePoint /= closeBurrowedUnits.size();
-				// Check to see if a scan on the middle point would cover all of the burrowed units
-				bool middleCoversAllPoints = true;
-				for (const auto closeBurrowedUnit : closeBurrowedUnits)
-				{
-					const auto dist = Util::DistSq(middlePoint, closeBurrowedUnit->pos);
-					if (dist > SCAN_RADIUS * SCAN_RADIUS)
+					for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
 					{
-						middleCoversAllPoints = false;
-						break;
+						const auto & enemyUnit = enemyUnitPair.second;
+						if (enemyUnit.isFlying() || 
+							(enemyUnit.getType().isBuilding() && !enemyUnit.getType().isCombatUnit()) || 
+							enemyUnit.isBurrowed() || 
+							enemyUnit.isCloaked() ||
+							enemyUnit.getUnitPtr()->last_seen_game_loop != m_bot.GetCurrentFrame())
+							continue;
+						if (Util::DistSq(enemyUnit, combatUnit->pos) < 10 * 10)
+						{
+							otherTargets = true;
+							break;
+						}
 					}
+					if (otherTargets)
+						break;
 				}
-				if (!middleCoversAllPoints)
+				m_bot.StopProfiling("0.8.8.3.2   FindOtherTargets");
+				
+				if (!otherTargets)
 				{
-					// Find the burrowed unit that is the most close to the others
-					const sc2::Unit * mostCenteredUnit = nullptr;
-					int maxNumberOfCoveredUnits = -1;
+					m_bot.StartProfiling("0.8.8.3.3   CalcScanPosition");
+					// Calculate the middle point of all close burrowed unit
+					CCPosition middlePoint;
 					for (const auto closeBurrowedUnit : closeBurrowedUnits)
 					{
-						int numberOfCoveredUnits = 0;
-						for (const auto otherCloseBurrowedUnit : closeBurrowedUnits)
+						middlePoint += closeBurrowedUnit->pos;
+					}
+					middlePoint /= closeBurrowedUnits.size();
+					// Check to see if a scan on the middle point would cover all of the burrowed units
+					bool middleCoversAllPoints = true;
+					for (const auto closeBurrowedUnit : closeBurrowedUnits)
+					{
+						const auto dist = Util::DistSq(middlePoint, closeBurrowedUnit->pos);
+						if (dist > SCAN_RADIUS * SCAN_RADIUS)
 						{
-							if (Util::DistSq(closeBurrowedUnit->pos, otherCloseBurrowedUnit->pos) <= SCAN_RADIUS * SCAN_RADIUS)
+							middleCoversAllPoints = false;
+							break;
+						}
+					}
+					if (!middleCoversAllPoints)
+					{
+						// Find the burrowed unit that is the most close to the others
+						const sc2::Unit * mostCenteredUnit = nullptr;
+						int maxNumberOfCoveredUnits = -1;
+						for (const auto closeBurrowedUnit : closeBurrowedUnits)
+						{
+							int numberOfCoveredUnits = 0;
+							for (const auto otherCloseBurrowedUnit : closeBurrowedUnits)
 							{
-								++numberOfCoveredUnits;
+								if (Util::DistSq(closeBurrowedUnit->pos, otherCloseBurrowedUnit->pos) <= SCAN_RADIUS * SCAN_RADIUS)
+								{
+									++numberOfCoveredUnits;
+								}
+							}
+							if (numberOfCoveredUnits > maxNumberOfCoveredUnits)
+							{
+								mostCenteredUnit = closeBurrowedUnit;
+								maxNumberOfCoveredUnits = numberOfCoveredUnits;
 							}
 						}
-						if (numberOfCoveredUnits > maxNumberOfCoveredUnits)
+						middlePoint = mostCenteredUnit->pos;
+					}
+					m_bot.StartProfiling("0.8.8.3.3   CalcScanPosition");
+
+					// Check if we already have a scan near that point (might happen because we receive the observations 1 frame later)
+					bool closeScan = false;
+					const auto & scans = m_bot.Commander().Combat().getAllyScans();
+					for (const auto scanPosition : scans)
+					{
+						if (Util::DistSq(middlePoint, scanPosition) < 5.f * 5.f)
 						{
-							mostCenteredUnit = closeBurrowedUnit;
-							maxNumberOfCoveredUnits = numberOfCoveredUnits;
+							closeScan = true;
+							break;
 						}
 					}
-					middlePoint = mostCenteredUnit->pos;
-				}
 
-				// Check if we already have a scan near that point (might happen because we receive the observations 1 frame later)
-				bool closeScan = false;
-				const auto & scans = m_bot.Commander().Combat().getAllyScans();
-				for (const auto scanPosition : scans)
-				{
-					if (Util::DistSq(middlePoint, scanPosition) < 5.f * 5.f)
+					if (!closeScan)
 					{
-						closeScan = true;
-						break;
+						Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, middlePoint, m_bot);
+						m_bot.Commander().Combat().addAllyScan(middlePoint);
 					}
-				}
-
-				if (!closeScan)
-				{
-					Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, middlePoint, m_bot);
-					m_bot.Commander().Combat().addAllyScan(middlePoint);
 				}
 			}
 		}
 
 		//Mule
-		//if (!hasInvisible || energy >= 100)
+		if (!keepEnergy || energy >= 100)
 		{
 			std::vector<CCUnitID> skipMinerals;
-			for (auto mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
+			for (const auto & mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
 			{
 				skipMinerals.push_back(m_bot.Workers().getMuleTargetTag(mule));
 			}
@@ -2071,8 +2113,11 @@ void BuildingManager::castBuildingsAbilities()
 			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 		}
 	}
+	m_bot.StopProfiling("0.8.8.3  OrbitalCommands");
 
+	m_bot.StartProfiling("0.8.8.4  DamagedBuildings");
 	LiftOrLandDamagedBuildings();
+	m_bot.StopProfiling("0.8.8.4  DamagedBuildings");
 }
 
 void BuildingManager::RunProxyLogic()

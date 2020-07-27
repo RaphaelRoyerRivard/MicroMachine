@@ -101,6 +101,7 @@ public:
 	bool EnableMultiThreading;
 	bool TournamentMode;
 	std::string StarCraft2Version;
+	bool ArchonMode;
     
     int WorkersPerRefinery;
     int BuildingSpacing;

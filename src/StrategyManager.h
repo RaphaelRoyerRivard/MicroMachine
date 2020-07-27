@@ -40,7 +40,8 @@ enum StartingStrategy
 	STANDARD = 2,
 	WORKER_RUSH = 3,
 	PROXY_MARAUDERS = 4,
-	COUNT = 5
+	FAST_PF = 5,
+	COUNT = 6
 };
 
 class StrategyManager
@@ -50,7 +51,8 @@ class StrategyManager
 		"EARLY_EXPAND",
 		"STANDARD",
 		"WORKER_RUSH",	// removed
-		"PROXY_MARAUDERS"
+		"PROXY_MARAUDERS",
+		"FAST_PF"
 	};
 
 	std::map<StartingStrategy, sc2::Race> RACE_SPECIFIC_STRATEGIES = {
@@ -60,6 +62,7 @@ class StrategyManager
 	// Only strategies in this list and in the race specific list can be chosen
 	std::vector<std::string> STRATEGY_ORDER = {
 		"PROXY_MARAUDERS",
+		"FAST_PF",
 		"EARLY_EXPAND",
 		"PROXY_CYCLONES",
 		"STANDARD"

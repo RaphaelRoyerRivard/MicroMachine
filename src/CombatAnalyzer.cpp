@@ -29,6 +29,9 @@ void CombatAnalyzer::onFrame()
 
 	drawDamageHealthRatio();
 
+	// Detect burrowed Zerg units
+	DetectBurrowingUnits();
+
 	lowPriorityChecks();
 //drawAreasUnderDetection();
 }
@@ -196,9 +199,6 @@ void CombatAnalyzer::lowPriorityChecks()
 				enemyPickedUpUnits.erase(unit.getUnitPtr());
 		}
 	}
-
-	// Detect burrowed Zerg units
-	DetectBurrowingUnits();
 	
 	//TODO handle dead ally units
 
@@ -241,7 +241,7 @@ void CombatAnalyzer::lowPriorityChecks()
 void CombatAnalyzer::DetectBurrowingUnits()
 {
 	const auto enemyPlayerRace = m_bot.GetPlayerRace(Players::Enemy);
-	if (enemyPlayerRace != sc2::Zerg && enemyPlayerRace != sc2::Random)
+	if (enemyPlayerRace != sc2::Zerg)
 		return;
 	
 	std::vector<sc2::UNIT_TYPEID> zergTransporters = { sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT, sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK };
@@ -250,8 +250,12 @@ void CombatAnalyzer::DetectBurrowingUnits()
 	sc2::Units unitsToRemove;
 	for (const auto & burrowedUnit : burrowedUnits)
 	{
+		if (!burrowedUnit->is_alive)
+		{
+			unitsToRemove.push_back(burrowedUnit);
+		}
 		// We just saw the unit
-		if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
+		else if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
 		{
 			// And it was not burrowed anymore
 			if (!burrowedUnit->is_burrowed)

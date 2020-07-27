@@ -2638,81 +2638,88 @@ void CombatCommander::ExecuteActions()
 
 		std::stringstream ss;
 		bool skip = false;
-		m_bot.GetCommandMutex().lock();
-		switch (action.microActionType)
+		if (m_bot.Config().ArchonMode && rangedUnit->is_selected)
 		{
-		case MicroActionType::AttackMove:
-			if (action.position == rangedUnit->pos)
-				skip = true;
-			else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
-			{
-				const auto orderPos = rangedUnit->orders[0].target_pos;
-				const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
-				const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
-				const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
-				const auto dist = Util::DistSq(orderPos, action.position);
-				if (sameDirection && dist < 1)
-					skip = true;
-			}
-			if (!skip)
-			{
-				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
-					Micro::SmartMove(rangedUnit, action.position, m_bot);
-				else
-					Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
-			}
-			break;
-		case MicroActionType::AttackUnit:
-			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == action.target->tag)
-				skip = true;
-			if (!skip)
-				Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
-			break;
-		case MicroActionType::Move:
-			if (action.position == rangedUnit->pos)
-				skip = true;
-			else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
-			{
-				const auto orderPos = rangedUnit->orders[0].target_pos;
-				const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
-				const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
-				const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
-				const auto dist = Util::DistSq(orderPos, action.position);
-				if (sameDirection && dist < 1)
-					skip = true;
-			}
-			if (!skip)
-			{
-				Micro::SmartMove(rangedUnit, action.position, m_bot);
-			}
-			break;
-		case MicroActionType::Ability:
-			Micro::SmartAbility(rangedUnit, action.abilityID, m_bot);
-			break;
-		case MicroActionType::AbilityPosition:
-			Micro::SmartAbility(rangedUnit, action.abilityID, action.position, m_bot);
-			break;
-		case MicroActionType::AbilityTarget:
-			Micro::SmartAbility(rangedUnit, action.abilityID, action.target, m_bot);
-			break;
-		case MicroActionType::Stop:
-			//Micro::SmartStop(rangedUnit, m_bot);
-			ss << "MicroAction of type STOP with " << action.description << " sent to a " << sc2::UnitTypeToName(rangedUnit->unit_type);
-			Util::Log(__FUNCTION__, ss.str(), m_bot);
-			break;
-		case MicroActionType::RightClick:
-			Micro::SmartRightClick(rangedUnit, action.target, m_bot);
-			break;
-		case MicroActionType::ToggleAbility:
-			Micro::SmartToggleAutoCast(rangedUnit, action.abilityID, m_bot);
-			break;
-		default:
-			const int type = action.microActionType;
-			Util::Log(__FUNCTION__, "Unknown MicroActionType: " + std::to_string(type), m_bot);
-			break;
+			skip = true;
 		}
-		m_bot.GetCommandMutex().unlock();
-
+		else
+		{
+			m_bot.GetCommandMutex().lock();
+			switch (action.microActionType)
+			{
+			case MicroActionType::AttackMove:
+				if (action.position == rangedUnit->pos)
+					skip = true;
+				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
+				{
+					const auto orderPos = rangedUnit->orders[0].target_pos;
+					const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
+					const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
+					const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
+					const auto dist = Util::DistSq(orderPos, action.position);
+					if (sameDirection && dist < 1)
+						skip = true;
+				}
+				if (!skip)
+				{
+					if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+						Micro::SmartMove(rangedUnit, action.position, m_bot);
+					else
+						Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
+				}
+				break;
+			case MicroActionType::AttackUnit:
+				if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == action.target->tag)
+					skip = true;
+				if (!skip)
+					Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
+				break;
+			case MicroActionType::Move:
+				if (action.position == rangedUnit->pos)
+					skip = true;
+				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
+				{
+					const auto orderPos = rangedUnit->orders[0].target_pos;
+					const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
+					const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
+					const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
+					const auto dist = Util::DistSq(orderPos, action.position);
+					if (sameDirection && dist < 1)
+						skip = true;
+				}
+				if (!skip)
+				{
+					Micro::SmartMove(rangedUnit, action.position, m_bot);
+				}
+				break;
+			case MicroActionType::Ability:
+				Micro::SmartAbility(rangedUnit, action.abilityID, m_bot);
+				break;
+			case MicroActionType::AbilityPosition:
+				Micro::SmartAbility(rangedUnit, action.abilityID, action.position, m_bot);
+				break;
+			case MicroActionType::AbilityTarget:
+				Micro::SmartAbility(rangedUnit, action.abilityID, action.target, m_bot);
+				break;
+			case MicroActionType::Stop:
+				//Micro::SmartStop(rangedUnit, m_bot);
+				ss << "MicroAction of type STOP with " << action.description << " sent to a " << sc2::UnitTypeToName(rangedUnit->unit_type);
+				Util::Log(__FUNCTION__, ss.str(), m_bot);
+				break;
+			case MicroActionType::RightClick:
+				Micro::SmartRightClick(rangedUnit, action.target, m_bot);
+				break;
+			case MicroActionType::ToggleAbility:
+				Micro::SmartToggleAutoCast(rangedUnit, action.abilityID, m_bot);
+				break;
+			default:
+				const int type = action.microActionType;
+				Util::Log(__FUNCTION__, "Unknown MicroActionType: " + std::to_string(type), m_bot);
+				break;
+			}
+			m_bot.GetCommandMutex().unlock();
+		}
+		
 		if (!skip)
 		{
 			action.executed = true;
