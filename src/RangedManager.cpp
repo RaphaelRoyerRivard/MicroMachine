@@ -1310,8 +1310,12 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			float bestScore = 0.f;
 			for(const auto potentialTarget : rangedUnitTargets)
 			{
+				const auto unitType = UnitType(potentialTarget->unit_type, m_bot);
 				// Do not Lock On on workers
-				if (UnitType(potentialTarget->unit_type, m_bot).isWorker())
+				if (unitType.isWorker())
+					continue;
+				// Do not Lock On on passive buildings
+				if (unitType.isBuilding() && !unitType.isAttackingBuilding())
 					continue;
 				// Do not Lock On on units that are already Locked On unless they have a lot of hp
 				// Will target the unit only if it can absorb more than 3 missiles (20 damage each) per Cyclone Locked On to it
