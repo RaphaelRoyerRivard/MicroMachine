@@ -72,7 +72,7 @@ void RangedManager::setTargets(const std::vector<Unit> & targets)
 
 void RangedManager::executeMicro()
 {
-    const std::vector<Unit> &units = getUnits();
+	const std::vector<Unit> &units = getUnits();
 	if (units.empty())
 		return;
 
@@ -2476,7 +2476,7 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	return false;
 }
 
-bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, bool prioritize) const
+bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, bool prioritize)
 {
 	if (medivac->unit_type != sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 		return false;
@@ -2486,7 +2486,7 @@ bool RangedManager::ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units
 	
 	const sc2::Unit * target = GetHealTarget(medivac, allyUnits, true);
 	
-	return ExecuteHealCommand(medivac, target);
+	return ExecuteHealCommand(medivac, target, prioritize);
 }
 
 const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool filterFullHealthUnits) const
@@ -2504,6 +2504,10 @@ const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const 
 	{
 		if (filterFullHealthUnits && ally->health >= ally->health_max)
 			continue;
+		const auto & medivacTargets = m_bot.Commander().Combat().getMedivacTargets();
+		const auto it = medivacTargets.find(ally);
+		if (it != medivacTargets.end() && it->second != medivac)
+			continue;	// If the target already has a Medivac that is healing it (other than the current Medivac)
 		const Unit allyUnit(ally, m_bot);
 		if (!allyUnit.getType().isCombatUnit() || !allyUnit.hasAttribute(sc2::Attribute::Biological))
 			continue;
@@ -2519,7 +2523,7 @@ const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const 
 	return target;
 }
 
-bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target, bool prioritize) const
+bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target, bool prioritize)
 {
 	if (target)
 	{
@@ -2545,6 +2549,7 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 		{
 			const auto action = RangedUnitAction(MicroActionType::AbilityTarget, sc2::ABILITY_ID::EFFECT_HEAL, target, prioritize, 0, "Heal");
 			m_bot.Commander().Combat().PlanAction(medivac, action);
+			m_bot.Commander().Combat().getMedivacTargets()[target] = medivac;
 		}
 		else
 		{

@@ -168,6 +168,8 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 
 	Util::ClearSeenEnemies();
 
+	m_medivacTargets.clear();
+
     m_combatUnits = combatUnits;
 
 	sc2::Units units;
