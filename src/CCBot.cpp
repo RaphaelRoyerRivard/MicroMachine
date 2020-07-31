@@ -248,6 +248,7 @@ void CCBot::OnStep()
 {
 	StopProfiling("0 Starcraft II");
 	StartProfiling("0.0 OnStep");	//Do not remove
+	const auto framesSinceLastStep = Observation()->GetGameLoop() - m_gameLoop;
 	m_gameLoop = Observation()->GetGameLoop();
 	if (m_realtime && !m_combatSimulatorInitialized && m_gameLoop > 50)
 	{
@@ -264,7 +265,7 @@ void CCBot::OnStep()
 	{
 		Util::ClearDisplayedErrors();
 	}
-	const bool executeMacro = m_gameLoop - m_previousMacroGameLoop > 1;
+	const bool executeMacro = m_gameLoop - m_previousMacroGameLoop > framesSinceLastStep;
 	if (executeMacro)
 		m_previousMacroGameLoop = m_gameLoop;
 	
