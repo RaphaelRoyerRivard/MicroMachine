@@ -735,10 +735,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 		if (!m_queue.contains(workerMetatype))//check queue
 		{
 			//[Worker limit][Max worker]
-			const int maxWorkersPerBase = 27;//21 mineral (to prepare for the next expansion), 6 gas
-			const int maxWorkers = maxWorkersPerBase * 3;//maximum of 3 bases.
+			auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+			int optimalWorkers = 0;
+			for (const auto base : bases)
+			{
+				optimalWorkers += base->getOptimalMineralWorkerCount() + base->getOptimalGasWorkerCount();
+			}
+			const int maxWorkersForNextExpansion = 18;	// 16 minerals + 6 gas
+			const int maxWorkers = 80;
 			const int workerCount = m_bot.Workers().getNumWorkers();
-			if (totalBaseCount * maxWorkersPerBase > workerCount && workerCount < maxWorkers)
+			if (optimalWorkers + maxWorkersForNextExpansion > workerCount && workerCount < maxWorkers)
 			{
 				if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
 				{
