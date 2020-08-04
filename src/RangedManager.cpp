@@ -315,14 +315,20 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		{
 			goal = m_bot.Bases().getBaseLocations()[1]->getPosition();
 			goalDescription = "EnemyNat";
-			int groupedMarauders = 0;
+			int groupedSupply = 0;
 			const auto & marauders = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MARAUDER);
 			for (const auto marauder : marauders)
 			{
 				if (Util::DistSq(marauder, goal) <= 3 * 3)
-					++groupedMarauders;
+					groupedSupply += 2;
 			}
-			if (groupedMarauders >= 3)
+			const auto & marines = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MARINE);
+			for (const auto marine : marines)
+			{
+				if (Util::DistSq(marine, goal) <= 3 * 3)
+					++groupedSupply;
+			}
+			if (groupedSupply >= 6)
 				m_marauderAttackInitiated = true;
 		}
 		else if (isBanshee && m_order.getType() == SquadOrderTypes::Harass)

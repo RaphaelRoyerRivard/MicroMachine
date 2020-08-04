@@ -390,6 +390,13 @@ void StrategyManager::onFrame(bool executeMacro)
 			}
 		}
 	}
+
+	if (m_bot.Config().DrawCurrentStartingStrategy)
+	{
+		std::stringstream ss;
+		ss << "Current strategy: " << STRATEGY_NAMES[m_startingStrategy];
+		m_bot.Map().drawTextScreen(0.01f, 0.35f, ss.str(), CCColor(255, 255, 0));
+	}
 }
 
 bool StrategyManager::shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers) const

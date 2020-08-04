@@ -230,13 +230,23 @@ sc2::Tag Unit::getAddonTag() const
 	return m_unit->add_on_tag;
 }
 
+bool Unit::isProducingAddon() const
+{
+	if (isValid() && !isIdle())
+	{
+		const auto & orders = getUnitPtr()->orders;
+		if (orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+			return true;
+	}
+	return false;
+}
+
 bool Unit::isProductionBuildingIdle() const
 {
 	if(getType().isBuilding())
 	{
 		//Check if this building is idle
-		auto & orders = getUnitPtr()->orders;
-		if (orders.empty() || orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+		if (isIdle() || isProducingAddon())
 		{
 			return true;
 		}

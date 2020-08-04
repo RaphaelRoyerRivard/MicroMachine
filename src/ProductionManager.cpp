@@ -541,10 +541,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 			}
 			else if (currentItem.type == MetaTypeEnum::CommandCenter)
 			{
-				/*const auto maraudersCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), false, true);
-				shouldSkip = maraudersCount < 2;
-				const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-				shouldSkip = factoryCount < 1;*/
+				//shouldSkip = m_bot.GetFreeMinerals() < 700;
 			}
 			else if (currentItem.type == MetaTypeEnum::Refinery)
 			{
@@ -555,6 +552,33 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 				if (hasRefinery && baseCount < 2)
 					shouldSkip = true;
 			}
+			/*else if (currentItem.type == MetaTypeEnum::BarracksTechLab)
+			{
+				const auto hasBarracksReactor = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true) > 0;
+				shouldSkip = !hasBarracksReactor;
+			}
+			else if (currentItem.type == MetaTypeEnum::Marine)
+			{
+				const auto & allBarracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+				bool idleReactor = false;
+				for (const auto & barracks : allBarracks)
+				{
+					const auto addonTag = barracks.getAddonTag();
+					if (addonTag > 0)
+					{
+						const auto addon = m_bot.Observation()->GetUnit(addonTag);
+						if (addon->unit_type == sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR && addon->build_progress == 1.f)
+						{
+							if (barracks.getUnitPtr()->orders.size() < 2)
+							{
+								idleReactor = true;
+								break;
+							}
+						}
+					}
+				}
+				shouldSkip = !idleReactor;
+			}*/
 		}
 		else if (earlyExpand)
 		{
@@ -746,38 +770,49 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{//Addon
 					bool hasPicked = false;
 					MetaType toBuild;
-					//const auto createdBarracksTechLabsCount = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB).size();
 					const auto barracksTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true);
 					const auto barracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
 					const auto barracksAddonCount = barracksTechLabCount + barracksReactorCount;
 					const auto starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
 					const auto starportReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
 					const auto starportAddonCount = starportTechLabCount + starportReactorCount;
-					if ((reaperCount > 0 || pumpOutMarauders) && barracksCount > barracksAddonCount && (pumpOutMarauders || (proxyCyclonesStrategy && firstBarracksTechlab)))
+					if (barracksCount > barracksAddonCount)
 					{
-						firstBarracksTechlab = false;
-						toBuild = MetaTypeEnum::BarracksTechLab;
-						hasPicked = true;
+						/*if (proxyMaraudersStrategy && barracksTechLabCount == 1 && barracksReactorCount == 0)
+						{
+							toBuild = MetaTypeEnum::BarracksReactor;
+							hasPicked = true;
+						}
+						else*/ if ((reaperCount > 0 || pumpOutMarauders) && (pumpOutMarauders || (proxyCyclonesStrategy && firstBarracksTechlab)))
+						{
+							firstBarracksTechlab = false;
+							toBuild = MetaTypeEnum::BarracksTechLab;
+							hasPicked = true;
+						}
+						
+						if (hasPicked && !m_queue.contains(toBuild))
+						{
+							m_queue.queueItem(MM::BuildOrderItem(toBuild, 1, false));
+							hasPicked = false;
+						}
 					}
-					else if (starportCount > starportAddonCount)
+
+					if (starportCount > starportAddonCount)
 					{
 						if (m_bot.Strategy().enemyHasProtossHighTechAir() || (m_bot.Strategy().shouldProduceAntiAirOffense() && starportTechLabCount > starportReactorCount) || (proxyMaraudersStrategy && starportReactorCount == 0))
 							toBuild = MetaTypeEnum::StarportReactor;
 						else//if (!proxyMaraudersStrategy || hasFusionCore), not required since it is either Reactor else it is TechLab
 							toBuild = MetaTypeEnum::StarportTechLab;
-						hasPicked = true;
-					}
-
-					if (hasPicked && !m_queue.contains(toBuild))
-					{
-						m_queue.queueItem(MM::BuildOrderItem(toBuild, 1, false));
+						if (!m_queue.contains(toBuild))
+						{
+							m_queue.queueItem(MM::BuildOrderItem(toBuild, 1, false));
+						}
 					}
 				}
 
 				//Building
 				bool hasPicked = false;
 				MetaType toBuild;
-				const int completedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
 				const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 				if (barracksCount < 1 || (pumpOutMarauders && completedSupplyProviders == 1 && barracksCount < 2) || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount))
 				{
@@ -909,6 +944,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueAsHighestPriority(MetaTypeEnum::Raven, false);
 				}
+
+				/*const auto completedBarracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), true, true);
+				if (proxyMaraudersStrategy && completedBarracksReactorCount > 0 && !m_queue.contains(MetaTypeEnum::Marine))
+				{
+					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+				}*/
 
 				bool enoughMedivacs = true;
 				if (produceMarauders)
@@ -2098,7 +2139,7 @@ int ProductionManager::getSupplyNeedsFromProductionBuildings() const
 		const auto & producers = m_bot.GetAllyUnits(typePair.first);
 		for (const auto & producer : producers)
 		{
-			supplyNeeds += typePair.second * (producer.getAddonTag() == 0 ? 1 : 2);
+			supplyNeeds += typePair.second * (producer.getAddonTag() == 0 && !producer.isProducingAddon() ? 1 : 2);
 		}
 	}
 

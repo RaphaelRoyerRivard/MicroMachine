@@ -67,6 +67,7 @@ public:
 	bool DrawCombatInformation;
 	bool DrawPathfindingTiles;
 	bool DrawBuildingBase;
+	bool DrawCurrentStartingStrategy;
 	bool TimeControl;
 	bool PrintGreetingMessage;
 	bool RandomProxyLocation;

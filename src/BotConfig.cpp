@@ -223,6 +223,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawCombatInformation", debug, DrawCombatInformation);
 			JSONTools::ReadBool("DrawPathfindingTiles", debug, DrawPathfindingTiles);
 			JSONTools::ReadBool("DrawBuildingBase", debug, DrawBuildingBase);
+			JSONTools::ReadBool("DrawCurrentStartingStrategy", debug, DrawCurrentStartingStrategy);
 			JSONTools::ReadBool("TimeControl", debug, TimeControl);
 		}
     }
