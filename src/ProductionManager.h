@@ -61,7 +61,7 @@ public:
     void    drawProductionInformation();
 
 	bool	hasRequired(const MetaType& metaType, bool checkInQueue) const;
-    Unit getProducer(const MetaType & type, CCPosition closestTo = CCPosition(0, 0)) const;
+	Unit getProducer(const MetaType & type, bool allowTraining = false, CCPosition closestTo = CCPosition(0, 0)) const;
 	std::vector<sc2::UNIT_TYPEID> getProductionBuildingTypes(bool ignoreState = true) const;
 	int getProductionBuildingsCount() const;
 	int getProductionBuildingsAddonsCount() const;
@@ -76,6 +76,7 @@ public:
 	bool queueUpgrade(const MetaType & type, bool balanceUpgrades, bool ifFinishedTryHigherLevel);
 	bool meetsReservedResources(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
 	bool meetsReservedResourcesWithExtra(const MetaType & type, int additionalMineral, int additionalGas, int additionalReservedMineral, int additionalReservedGas);
+	Unit meetsReservedResourcesWithCancelUnit(const MetaType & type, int additionalReservedMineral, int additionalReservedGas);
 	bool canMakeAtArrival(const Building & building, const Unit & worker, int additionalReservedMineral, int additionalReservedGas);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
 	int getSupplyNeedsFromProductionBuildings() const;

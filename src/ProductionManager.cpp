@@ -258,7 +258,7 @@ void ProductionManager::manageBuildOrderQueue()
 				(currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().isProxyFactoryStartingStrategy() && factoryCount == 0)))
 			{
 				const auto proxyLocation = Util::GetPosition(m_bot.Buildings().getProxyLocation());
-				Unit producer = getProducer(currentItem.type, proxyLocation);
+				Unit producer = getProducer(currentItem.type, false, proxyLocation);
 				Building b(currentItem.type.getUnitType(), proxyLocation);
 				b.finalPosition = proxyLocation;
 				if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
@@ -302,46 +302,51 @@ void ProductionManager::manageBuildOrderQueue()
 					auto data = m_bot.Data(currentItem.type);
 					// if we can make the current item
 					m_bot.StartProfiling("0.10.2.2.2.2      tryingToBuild");
-					if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))
+					bool needsCancellation = false;//Required because the morph/addon abilities are not available while training/producing.
+					Unit producer;
+					if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))//Get the producer if we have enough resources
 					{
-						m_bot.StartProfiling("0.10.2.2.2.2.1      Build without premovement");
-						Unit producer = getProducer(currentItem.type);
+						producer = getProducer(currentItem.type);
+					}
+					else//Try to get a producer that would have enough resources if we cancel what it is currently producing.
+					{
+						producer = meetsReservedResourcesWithCancelUnit(currentItem.type, additionalReservedMineral, additionalReservedGas);
+						needsCancellation = true;
+					}
+					if(producer.isValid())//If we found a producer, lets create it.
+					{
+						m_bot.StartProfiling("2.2.3     Build without premovement");
 						// build supply if we need some (SupplyBlock)
-						if (producer.isValid())
+						if (m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
 						{
 							if (m_bot.GetMaxSupply() < 200 && m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
 							{
 								supplyBlockedFrames++;
-#if _DEBUG
-								Util::DisplayError("Supply blocked. ", "0x00000007", m_bot);
-#else
 								Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", m_bot);
-#endif
 							}
-
-							m_bot.StartProfiling("0.10.2.2.2.2.1.1      canMakeNow");
-							const auto canProducerMakeItem = canMakeNow(producer, currentItem.type);
-							m_bot.StopProfiling("0.10.2.2.2.2.1.1      canMakeNow");
-							if (canProducerMakeItem)
+						}
+						m_bot.StartProfiling("0.10.2.2.2.2.1.1      canMakeNow");
+						const auto canProducerMakeItem = canMakeNow(producer, currentItem.type);
+						m_bot.StopProfiling("0.10.2.2.2.2.1.1      canMakeNow");
+						if (needsCancellation || canProducerMakeItem)
+						{
+							// create it and remove it from the _queue
+							m_bot.StartProfiling("0.10.2.2.2.2.1.2      create");
+							const auto producerCreatedItem = create(producer, currentItem, m_bot.GetBuildingArea(currentItem.type));
+							m_bot.StopProfiling("0.10.2.2.2.2.1.2      create");
+							if (producerCreatedItem)
 							{
-								// create it and remove it from the _queue
-								m_bot.StartProfiling("0.10.2.2.2.2.1.2      create");
-								const auto producerCreatedItem = create(producer, currentItem, m_bot.GetBuildingArea(currentItem.type));
-								m_bot.StopProfiling("0.10.2.2.2.2.1.2      create");
-								if (producerCreatedItem)
-								{
-									m_queue.removeCurrentHighestPriorityItem();
+								m_queue.removeCurrentHighestPriorityItem();
 
-									// don't actually loop around in here
-									m_bot.StopProfiling("0.10.2.2.2.2.1      Build without premovement");
-									m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
-									break;
-								}
-								else if (!m_initialBuildOrderFinished)
-								{
-									Util::DebugLog(__FUNCTION__, "Failed to place " + currentItem.type.getName() + " during initial build order. Skipping.", m_bot);
-									m_queue.removeCurrentHighestPriorityItem();
-								}
+								// don't actually loop around in here
+								m_bot.StopProfiling("0.10.2.2.2.2.1      Build without premovement");
+								m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
+								break;
+							}
+							else if (!m_initialBuildOrderFinished)
+							{
+								Util::DebugLog(__FUNCTION__, "Failed to place " + currentItem.type.getName() + " during initial build order. Skipping.", m_bot);
+								m_queue.removeCurrentHighestPriorityItem();
 							}
 						}
 						m_bot.StopProfiling("0.10.2.2.2.2.1      Build without premovement");
@@ -791,7 +796,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							toBuild = MetaTypeEnum::BarracksReactor;
 							hasPicked = true;
 						}
-						else*/ if ((reaperCount > 0 || pumpOutMarauders) && (!proxyCyclonesStrategy || firstBarracksTechlab || proxyCyclonesStrategyCompleted))
+						else*/ if ((reaperCount > 0 || pumpOutMarauders) && (produceMarauders || (proxyCyclonesStrategy && firstBarracksTechlab)))
 						{
 							firstBarracksTechlab = false;
 							toBuild = MetaTypeEnum::BarracksTechLab;
@@ -1751,7 +1756,7 @@ bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
 	return false;
 }
 
-Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo) const
+Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, CCPosition closestTo) const
 {
 	// get all the types of units that cna build this type
 	auto & producerTypes = m_bot.Data(type).whatBuilds;
@@ -1818,7 +1823,7 @@ Unit ProductionManager::getProducer(const MetaType & type, CCPosition closestTo)
 			if (unit.isFlying()) { continue; }
 
 			bool isBuilding = m_bot.Data(unit).isBuilding;
-			if (isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }//TODO might break other races
+			if (!allowTraining && isBuilding && unit.isTraining() && unit.getAddonTag() == 0) { continue; }//TODO might break other races
 			if (isBuilding && m_bot.GetSelfRace() == CCRace::Terran)
 			{
 				sc2::UNIT_TYPEID unitType = unit.getAPIUnitType();
@@ -2311,11 +2316,24 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 	{
 		if (item.type.getUnitType().isMorphedBuilding())
 		{
+			//Cancels in order to be able to morph
+			if (producer.getUnitPtr()->orders.size() > 0)
+			{
+				producer.cancel();
+			}
 			producer.morph(item.type.getUnitType());
 			result = true;
 		}
 		else
 		{
+			if (item.type.getUnitType().isAddon())
+			{
+				//Cancels in order to be able to build the addon
+				if (producer.getUnitPtr()->orders.size() > 0)
+				{
+					producer.cancel();
+				}
+			}
 			Building b(item.type.getUnitType(), desidredPosition);
 			if (ValidateBuildingTiming(b))
 			{
@@ -2459,18 +2477,172 @@ int ProductionManager::getExtraGas()
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResources(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
 {
-	const bool meetsRequiredMinerals = m_bot.Data(type).mineralCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetMinerals() : m_bot.GetFreeMinerals()) - additionalReservedMineral;
-	const bool meetsRequiredGas = m_bot.Data(type).gasCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetGas() : m_bot.GetFreeGas()) - additionalReservedGas;
+	const auto mineralCost = m_bot.Data(type).mineralCost;
+	const auto gasCost = m_bot.Data(type).gasCost;
+	const bool meetsRequiredMinerals = mineralCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetMinerals() : m_bot.GetFreeMinerals()) - additionalReservedMineral;
+	const bool meetsRequiredGas = gasCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetGas() : m_bot.GetFreeGas()) - additionalReservedGas;
 	return meetsRequiredMinerals && meetsRequiredGas;
 }
 
 // return whether or not we meet resources, including building reserves
 bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, int additionalMineral, int additionalGas, int additionalReservedMineral, int additionalReservedGas)
 {
-	BOT_ASSERT(!m_bot.Data(type).isAddon, "Addons cannot use extra ressources");
-	const bool meetsRequiredMinerals = m_bot.Data(type).mineralCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetMinerals() : m_bot.GetFreeMinerals()) + additionalMineral - additionalReservedMineral;
-	const bool meetsRequiredGas = m_bot.Data(type).gasCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetGas() : m_bot.GetFreeGas()) + additionalGas - additionalReservedGas;
+	const auto mineralCost = m_bot.Data(type).mineralCost;
+	const auto gasCost = m_bot.Data(type).gasCost;
+	const bool meetsRequiredMinerals = mineralCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetMinerals() : m_bot.GetFreeMinerals()) + additionalMineral - additionalReservedMineral;
+	const bool meetsRequiredGas = gasCost <= (m_bot.Strategy().isWorkerRushed() ? m_bot.GetGas() : m_bot.GetFreeGas()) + additionalGas - additionalReservedGas;
 	return meetsRequiredMinerals && meetsRequiredGas;
+}
+
+Unit ProductionManager::meetsReservedResourcesWithCancelUnit(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
+{
+	const float cancelMaxPercentage = 0.50f;
+
+	//TEMPORARY - Do not cancel units to make addons
+	if (type.isAddon())
+	{
+		return Unit();
+	}
+
+	//Will work for : Command Center, Barracks, Factory, Starport, Gateway and Hatchery
+	if (!type.isAddon() && !type.getUnitType().isMorphedBuilding())
+	{
+		return Unit();//We currently don't cancel units to build another unit type, we only cancel units to morph a building (addon is kind of a morph).
+	}
+	Unit producer = getProducer(type, true);
+	if (!producer.isValid())
+	{
+		return Unit();
+	}
+
+	//Calculate additionel resources if we cancel what is in production.
+	auto orders = producer.getUnitPtr()->orders;
+	if (orders.size() == 0)
+	{
+		return Unit();
+	}
+
+	int minerals = 0;
+	int gas = 0;
+	const auto order = orders[0];
+	if (order.progress > 0 && order.progress < cancelMaxPercentage)
+	{
+		const auto & unitType = m_bot.TechTree().getUnitTypeFromBuildingAbility(producer.getAPIUnitType(), order.ability_id.ToType());
+		if (unitType.isValid())
+		{
+			minerals = m_bot.Data(unitType).mineralCost;
+			gas = m_bot.Data(unitType).gasCost;
+		}
+		else
+		{
+			switch ((sc2::ABILITY_ID)order.ability_id)
+			{
+				//Zerg
+			case sc2::ABILITY_ID::TRAIN_QUEEN:
+				minerals = 150;
+				break;
+				//Terran
+			case sc2::ABILITY_ID::TRAIN_SCV:
+				minerals = 50;
+				break;
+			case sc2::ABILITY_ID::TRAIN_MARINE:
+				minerals = 50;
+				break;
+			case sc2::ABILITY_ID::TRAIN_MARAUDER:
+				minerals = 100;
+				gas = 25;
+				break;
+			case sc2::ABILITY_ID::TRAIN_GHOST:
+				minerals = 150;
+				gas = 125;
+				break;
+			case sc2::ABILITY_ID::TRAIN_REAPER:
+				minerals = 50;
+				gas = 50;
+				break;
+			case sc2::ABILITY_ID::TRAIN_HELLION:
+				minerals = 100;
+				break;
+			case sc2::ABILITY_ID::TRAIN_SIEGETANK:
+				minerals = 150;
+				gas = 125;
+				break;
+			case sc2::ABILITY_ID::TRAIN_WIDOWMINE:
+				minerals = 75;
+				gas = 25;
+				break;
+			case sc2::ABILITY_ID::TRAIN_CYCLONE:
+				minerals = 150;
+				gas = 100;
+				break;
+			case sc2::ABILITY_ID::TRAIN_THOR:
+				minerals = 300;
+				gas = 200;
+				break;
+			case sc2::ABILITY_ID::TRAIN_VIKINGFIGHTER:
+				minerals = 150;
+				gas = 75;
+				break;
+			case sc2::ABILITY_ID::TRAIN_MEDIVAC:
+				minerals = 100;
+				gas = 100;
+				break;
+			case sc2::ABILITY_ID::TRAIN_LIBERATOR:
+				minerals = 150;
+				gas = 150;
+				break;
+			case sc2::ABILITY_ID::TRAIN_RAVEN:
+				minerals = 100;
+				gas = 200;
+				break;
+			case sc2::ABILITY_ID::TRAIN_BANSHEE:
+				minerals = 150;
+				gas = 100;
+				break;
+			case sc2::ABILITY_ID::TRAIN_BATTLECRUISER:
+				minerals = 400;
+				gas = 300;
+				break;
+				//Protoss
+			case sc2::ABILITY_ID::TRAIN_ADEPT:
+				minerals = 100;
+				gas = 25;
+				break;
+			case sc2::ABILITY_ID::TRAIN_DARKTEMPLAR:
+				minerals = 125;
+				gas = 125;
+				break;
+			case sc2::ABILITY_ID::TRAIN_HIGHTEMPLAR:
+				minerals = 50;
+				gas = 150;
+				break;
+			case sc2::ABILITY_ID::TRAIN_SENTRY:
+				minerals = 50;
+				gas = 100;
+				break;
+			case sc2::ABILITY_ID::TRAIN_STALKER:
+				minerals = 125;
+				gas = 50;
+				break;
+			case sc2::ABILITY_ID::TRAIN_ZEALOT:
+				minerals = 100;
+				break;
+			}
+		}
+	}
+	if (minerals == 0 && gas == 0)//No resource to retreive from cancelling
+	{
+		return Unit();
+	}
+
+	if (!meetsReservedResourcesWithExtra(type, minerals, gas, additionalReservedMineral, additionalReservedGas))
+	{
+		return Unit();//We don't have enough, even if we cancel the unit.
+	}
+
+	//INCOMPLET CODE, need to check the orders to see what is being produced (all orders?) and see if it would be enough resources to build/morph what we want to. Return Unit() if the production % is too high.
+
+	return producer;
 }
 
 bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker, int additionalReservedMineral, int additionalReservedGas)

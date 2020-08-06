@@ -34,9 +34,11 @@ class TechTree
     CCBot & m_bot;
     std::map<UnitType, TypeData>  m_unitTypeData;
     std::map<CCUpgrade, TypeData> m_upgradeData;
+	std::map<sc2::UNIT_TYPEID, std::map<sc2::ABILITY_ID, UnitType>> m_buildingAbilitiesProductionTypes;	// <building type, <ability, unit type>>
 
     void initUnitTypeData();
     void initUpgradeData();
+	void initBuildingAbilitiesProductionTypes();
 
     void outputJSON(const std::string & filename) const;
 
@@ -48,4 +50,6 @@ public:
     const TypeData & getData(const UnitType & type);
     const TypeData & getData(const CCUpgrade & type) const;
     const TypeData & getData(const MetaType & type);
+
+	const UnitType & getUnitTypeFromBuildingAbility(sc2::UNIT_TYPEID buildingType, sc2::ABILITY_ID ability);
 };
