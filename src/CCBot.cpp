@@ -1652,6 +1652,12 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, mapCenter - towardsCenter * 5 + towardsCenterY * 5, player2, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3 - towardsCenterY * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3 + towardsCenterY * 5, player1, 1);*/
+
+	// Test to see if the right amount of workers is selected to repair the PF
+	/*Debug()->DebugGiveAllResources();
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS, mapCenter, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, mapCenter - towardsCenter * 3, player2, 10);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter + towardsCenter * 6, player1, 2);*/
 }
 
 void CCBot::IssueCheats()

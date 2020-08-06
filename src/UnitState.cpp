@@ -17,8 +17,7 @@ UnitState::UnitState(const sc2::Unit* unitPtr)
 
 	unit = unitPtr;
 
-	std::vector<int> temp(REMEMBER_X_LAST_DOMMAGE_TAKEN, 0);
-	m_recentDamage = temp;
+	m_recentDamage = std::vector<int>(REMEMBER_X_LAST_DOMMAGE_TAKEN, 0);
 }
 
 void UnitState::Reset()
