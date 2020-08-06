@@ -576,7 +576,14 @@ bool Unit::isVisible() const
 void Unit::stop() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
-    m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::STOP);
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::STOP);
+}
+
+void Unit::cancel() const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+	BOT_ASSERT(this->getType().isBuilding(), "Doesn't handle units right now.");
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::CANCEL_LAST);
 }
 
 void Unit::attackUnit(const Unit & target) const
