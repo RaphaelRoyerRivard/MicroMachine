@@ -59,6 +59,7 @@ public:
 	const CCPosition & getDepotPosition() const;
     const CCTilePosition & getDepotTilePosition() const;
 	int getOptimalMineralWorkerCount() const;
+	int getOptimalGasWorkerCount() const;
     const CCPosition & getPosition() const;
     const std::vector<Unit> & getGeysers() const;
     const std::vector<Unit> & getMinerals() const;

@@ -150,6 +150,7 @@ class CombatCommander
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnCastedFrame;
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnTargets;	// <cyclone, <target, frame>>
 	std::map<const sc2::Unit *, std::set<const sc2::Unit *>> m_lockedOnTargets;	// <target, cyclones>
+	std::map<const sc2::Unit *, const sc2::Unit *> m_medivacTargets;	// <target, medivac>
 	std::set<sc2::Tag> m_newCyclones;
 	std::set<sc2::Tag> m_toggledCyclones;
 	bool m_hasEnoughVikingsAgainstTempests = true;
@@ -227,6 +228,7 @@ public:
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> & getLockOnCastedFrame() { return m_lockOnCastedFrame; }
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> & getLockOnTargets() { return m_lockOnTargets; }
 	std::map<const sc2::Unit *, std::set<const sc2::Unit *>> & getLockedOnTargets() { return m_lockedOnTargets; }
+	std::map<const sc2::Unit *, const sc2::Unit *> & getMedivacTargets() { return m_medivacTargets; }
 	std::set<sc2::Tag> & getNewCyclones() { return m_newCyclones; }
 	std::set<sc2::Tag> & getToggledCyclones() { return m_toggledCyclones; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }

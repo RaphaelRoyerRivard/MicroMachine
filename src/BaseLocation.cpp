@@ -197,6 +197,19 @@ int BaseLocation::getOptimalMineralWorkerCount() const
 	return optimalWorkers;
 }
 
+int BaseLocation::getOptimalGasWorkerCount() const
+{
+	int optimalWorkers = 0;
+	for (auto & geyser : getGeysers())
+	{
+		if (geyser.getUnitPtr()->vespene_contents > 0)
+		{
+			optimalWorkers += getGasBunkers().size() > 0 ? 2 : 3;
+		}
+	}
+	return optimalWorkers;
+}
+
 void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 {
     m_isPlayerOccupying[player] = occupying;

@@ -230,13 +230,23 @@ sc2::Tag Unit::getAddonTag() const
 	return m_unit->add_on_tag;
 }
 
+bool Unit::isProducingAddon() const
+{
+	if (isValid() && !isIdle())
+	{
+		const auto & orders = getUnitPtr()->orders;
+		if (orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+			return true;
+	}
+	return false;
+}
+
 bool Unit::isProductionBuildingIdle() const
 {
 	if(getType().isBuilding())
 	{
 		//Check if this building is idle
-		auto & orders = getUnitPtr()->orders;
-		if (orders.empty() || orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+		if (isIdle() || isProducingAddon())
 		{
 			return true;
 		}
@@ -572,7 +582,14 @@ bool Unit::isVisible() const
 void Unit::stop() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
-    m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::STOP);
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::STOP);
+}
+
+void Unit::cancel() const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+	BOT_ASSERT(this->getType().isBuilding(), "Doesn't handle units right now.");
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::CANCEL_LAST);
 }
 
 void Unit::attackUnit(const Unit & target) const

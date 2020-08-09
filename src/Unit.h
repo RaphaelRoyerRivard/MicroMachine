@@ -73,10 +73,12 @@ public:
 	bool isCounterToUnit(const Unit& unit) const;
 	bool isReturningCargo() const;
 	sc2::Tag getAddonTag() const;
+	bool isProducingAddon() const;
 	bool isProductionBuildingIdle() const;
 	bool isMoving() const;
 
     void stop           () const;
+	void cancel			() const;
     void attackUnit     (const Unit & target) const;
     void attackMove     (const CCPosition & targetPosition) const;
     void move           (const CCPosition & targetPosition) const;

@@ -248,6 +248,7 @@ void CCBot::OnStep()
 {
 	StopProfiling("0 Starcraft II");
 	StartProfiling("0.0 OnStep");	//Do not remove
+	const auto framesSinceLastStep = Observation()->GetGameLoop() - m_gameLoop;
 	m_gameLoop = Observation()->GetGameLoop();
 	if (m_realtime && !m_combatSimulatorInitialized && m_gameLoop > 50)
 	{
@@ -264,7 +265,7 @@ void CCBot::OnStep()
 	{
 		Util::ClearDisplayedErrors();
 	}
-	const bool executeMacro = m_gameLoop - m_previousMacroGameLoop > 1;
+	const bool executeMacro = m_gameLoop - m_previousMacroGameLoop > framesSinceLastStep;
 	if (executeMacro)
 		m_previousMacroGameLoop = m_gameLoop;
 	
@@ -1638,6 +1639,29 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation + towardsCenterX * 15, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation - towardsCenterX * 5, player1, 6);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, m_startLocation - towardsCenterX * 5, player1, 1);*/
+
+	// Test to reproduce bug where Cyclones prioritize buildings instead of workers
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, mapCenter, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, mapCenter, player2, 1);*/
+
+	// Test to see if Medivacs can split themselves to heal different units
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 3 - towardsCenterY * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 3 + towardsCenterY * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, mapCenter - towardsCenter * 5 + towardsCenterY * 5, player2, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3 - towardsCenterY * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3 + towardsCenterY * 5, player1, 1);*/
+
+	// Test to see if the right amount of workers is selected to repair the PF
+	/*Debug()->DebugGiveAllResources();
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS, mapCenter, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, mapCenter - towardsCenter * 3, player2, 10);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter + towardsCenter * 6, player1, 2);*/
+
+	// Test to reproduce bug where Marauders would not get up the cliff to attack workers
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenter * 5 + towardsCenterY * 20, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, enemyLocation - towardsCenter * 5 + towardsCenterY * 15, player1, 5);*/
 }
 
 void CCBot::IssueCheats()

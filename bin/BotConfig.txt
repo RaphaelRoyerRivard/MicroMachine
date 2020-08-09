@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "NightshadeLE.SC2Map",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "SimulacrumLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50,
@@ -167,7 +167,8 @@
         "DrawResourcesProximity"    : false,
         "DrawCombatInformation"     : false,
         "DrawPathfindingTiles"      : true,
-        "DrawBuildingBase"          : false
+        "DrawBuildingBase"          : false,
+        "DrawCurrentStartingStrategy"   : true
     },
     
     "Modules" :
