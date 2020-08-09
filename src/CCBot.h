@@ -147,7 +147,7 @@ public:
 		  BaseLocationManager & Bases();
 		  CombatAnalyzer & Analyzer();
 		  GameCommander & Commander();
-		  TechTree & TechTree() { return m_techTree; }
+		  TechTree & Tech() { return m_techTree; }
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;
 	StrategyManager & Strategy();
