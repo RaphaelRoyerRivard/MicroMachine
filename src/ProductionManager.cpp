@@ -2527,7 +2527,7 @@ Unit ProductionManager::meetsReservedResourcesWithCancelUnit(const MetaType & ty
 	const auto order = orders[0];
 	if (order.progress > 0 && order.progress < cancelMaxPercentage)
 	{
-		const auto & unitType = m_bot.TechTree().getUnitTypeFromBuildingAbility(producer.getAPIUnitType(), order.ability_id.ToType());
+		const auto & unitType = m_bot.Tech().getUnitTypeFromBuildingAbility(producer.getAPIUnitType(), order.ability_id.ToType());
 		if (unitType.isValid())
 		{
 			minerals = m_bot.Data(unitType).mineralCost;
