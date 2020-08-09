@@ -1658,6 +1658,10 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS, mapCenter, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, mapCenter - towardsCenter * 3, player2, 10);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter + towardsCenter * 6, player1, 2);*/
+
+	// Test to reproduce bug where Marauders would not get up the cliff to attack workers
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenter * 5 + towardsCenterY * 20, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, enemyLocation - towardsCenter * 5 + towardsCenterY * 15, player1, 5);*/
 }
 
 void CCBot::IssueCheats()

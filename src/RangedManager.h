@@ -100,4 +100,5 @@ private:
 	bool MoveUnitWithDirectionVector(const sc2::Unit * rangedUnit, CCPosition & directionVector, CCPosition & outPathableTile) const;
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	sc2::Units & getThreats(const sc2::Unit * rangedUnit, const sc2::Units & targets);
+	const sc2::Unit * RangedManager::getTargetOnHighGround(const sc2::Unit * rangedUnit, const sc2::Units & targets, const sc2::Units & threats);
 };

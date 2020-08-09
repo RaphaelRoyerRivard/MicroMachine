@@ -249,6 +249,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	sc2::Units & threats = getThreats(rangedUnit, rangedUnitTargets);
 	m_bot.StopProfiling("0.10.4.1.5.1.1          getThreats");
 
+	if (!target)
+	{
+		m_bot.StartProfiling("0.10.4.1.5.1.0.a          getTargetOnHighGround");
+		target = getTargetOnHighGround(rangedUnit, rangedUnitTargets, threats);
+		m_bot.StopProfiling("0.10.4.1.5.1.0.a          getTargetOnHighGround");
+	}
+
 	CCPosition goal = m_order.getPosition();
 	std::string goalDescription = "Order";
 
@@ -512,7 +519,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if ((!isCyclone || cycloneShouldUseLockOn || shouldAttack) && AllowUnitToPathFind(rangedUnit, checkInfluence, "Offensive"))
 		{
 			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
-			const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget;
+			const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget || (target && target->last_seen_game_loop < m_bot.GetCurrentFrame());
 			const auto targetRange = target ? Util::GetAttackRangeForTarget(target, rangedUnit, m_bot) : 0.f;
 			const bool tolerateInfluenceToAttackTarget = targetRange > 0.f && unitAttackRange - targetRange >= 2 && ShouldAttackTarget(rangedUnit, target, threats);
 			const auto maxInfluence = (cycloneShouldUseLockOn && target) ? CYCLONE_MAX_INFLUENCE_FOR_LOCKON : tolerateInfluenceToAttackTarget ? MAX_INFLUENCE_FOR_OFFENSIVE_KITING : 0.f;
@@ -2969,6 +2976,41 @@ sc2::Units & RangedManager::getThreats(const sc2::Unit * rangedUnit, const sc2::
 	Util::getThreats(rangedUnit, targets, threats, m_bot);
 	m_threatsForUnit[rangedUnit] = threats;
 	return m_threatsForUnit[rangedUnit];
+}
+
+const sc2::Unit * RangedManager::getTargetOnHighGround(const sc2::Unit * rangedUnit, const sc2::Units & targets, const sc2::Units & threats)
+{
+	const sc2::Unit * target = nullptr;
+	bool inDanger = false;
+	for (const auto threat : threats)
+	{
+		const float distSq = Util::DistSq(rangedUnit->pos, threat->pos);
+		const float threatAttackRangeWithBuffer = Util::GetAttackRangeForTarget(threat, rangedUnit, m_bot) + 0.5f;
+		if (threatAttackRangeWithBuffer * threatAttackRangeWithBuffer < distSq)
+		{
+			inDanger = true;
+			break;
+		}
+	}
+	if (!inDanger)
+	{
+		target = getTarget(rangedUnit, targets, true, false);
+		if (target)
+		{
+			bool keepTarget = false;
+			if (AllowUnitToPathFind(rangedUnit, false, "ramp"))
+			{
+				const float groundDistanceToTarget = Util::PathFinding::FindOptimalPathDistance(rangedUnit, target->pos, true, m_bot);
+				if (groundDistanceToTarget >= 0.f && groundDistanceToTarget < 10.f)
+				{
+					keepTarget = true;
+				}
+			}
+			if (!keepTarget)
+				target = nullptr;
+		}
+	}
+	return target;
 }
 
 // according to http://wiki.teamliquid.net/starcraft2/Range
