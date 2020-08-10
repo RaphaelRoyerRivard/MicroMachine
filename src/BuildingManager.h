@@ -79,7 +79,7 @@ public:
 	std::vector<Unit>	getFinishedBuildings();
 	std::vector<Unit>	getPreviousBaseBuildings();
 	CCTilePosition		getWallPosition() const;
-	std::list<Unit>		getWallBuildings();
+	std::list<Unit> &	getWallBuildings();
 	CCPosition			getEnemyMainRamp() const { return m_enemyMainRamp; }
 	CCTilePosition		getProxyLocation();
 	CCPosition			getProxyLocation2();

@@ -1070,6 +1070,12 @@ void BuildingManager::checkForStartedConstruction()
 					m_bot.Bases().ClearBlockedLocations();
 				}
 
+				//If building is part of the wall
+				if (Util::Contains(b.buildingUnit.getTilePosition(), m_wallBuildingPosition))
+				{
+					m_wallBuildings.push_back(b.buildingUnit);
+				}
+
 				// only one building will match
 				break;
 			}
@@ -1181,12 +1187,6 @@ void BuildingManager::checkForCompletedBuildings()
         {
 			// remove this unit from the under construction vector
 			toRemove.push_back(b);
-
-			//If building is part of the wall
-			if (std::find(m_wallBuildingPosition.begin(), m_wallBuildingPosition.end(), b.buildingUnit.getTilePosition()) != m_wallBuildingPosition.end())
-			{
-				m_wallBuildings.push_back(b.buildingUnit);
-			}
         	
             // if we are terran, give the worker back to worker manager
             if (Util::IsTerran(m_bot.GetSelfRace()))
@@ -1433,7 +1433,7 @@ CCTilePosition BuildingManager::getWallPosition() const
 	return m_wallBuildingPosition.front();
 }
 
-std::list<Unit> BuildingManager::getWallBuildings()
+std::list<Unit> & BuildingManager::getWallBuildings()
 {
 	return m_wallBuildings;
 }

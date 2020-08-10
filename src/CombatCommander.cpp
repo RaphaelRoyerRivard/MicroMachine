@@ -1488,7 +1488,7 @@ void CombatCommander::handleWall()
 	{
 		for (auto & building : m_bot.Buildings().getWallBuildings())
 		{
-			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
+			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT && building.isCompleted())
 			{
 				Micro::SmartAbility(building.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER, m_bot);
 			}
