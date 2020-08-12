@@ -266,7 +266,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (isCycloneHelper)
 	{
 		const auto helperGoalPosition = cycloneFlyingHelperIt->second.position;
-		if (isFlyingBarracks || Util::DistSq(rangedUnit->pos, helperGoalPosition) < 20 * 20)
+		if (m_order.getType() != SquadOrderTypes::Defend && (isFlyingBarracks || Util::DistSq(rangedUnit->pos, helperGoalPosition) < 20 * 20))
 		{
 			goal = helperGoalPosition;
 			std::stringstream ss;
