@@ -110,7 +110,7 @@ void BuildingManager::lowPriorityChecks()
 			if (!isAlreadyBuilt)
 			{
 				//We are trying to build in an invalid location, remove it so we build it elsewhere.
-				auto remove = CancelBuilding(building);
+				auto remove = CancelBuilding(building, false);
 				if (remove.finalPosition != CCTilePosition(0, 0))
 				{
 					toRemove.push_back(remove);
@@ -544,9 +544,9 @@ void BuildingManager::validateWorkersAndBuildings()
 				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
 					|| (m_bot.Strategy().isWorkerRushed() && m_buildingPlacer.isEnemyUnitBlocking(b.finalPosition, b.type)))
 				{
-					auto remove = CancelBuilding(b);
+					auto remove = CancelBuilding(b, false);
 					toRemove.push_back(remove);
-					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
+					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
 				}
 				break;
 			}
@@ -563,7 +563,13 @@ void BuildingManager::validateWorkersAndBuildings()
 				if (!b.buildingUnit.isValid() || !b.buildingUnit.isAlive())
 				{
 					toRemove.push_back(b);
-					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from underconstruction buildings.", m_bot);
+					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from under construction buildings.", m_bot);
+				}
+				else if (m_bot.Strategy().wasProxyStartingStrategy() && !b.builderUnit.isAlive() && Util::DistSq(b.buildingUnit.getPosition(), m_proxyLocation) <= 15 * 15)
+				{
+					CancelBuilding(b, false);
+					toRemove.push_back(b);
+					Util::DebugLog("Cancelling proxy " + b.buildingUnit.getType().getName() + " and removing it from under construction buildings.", m_bot);
 				}
 				break;
 			}
@@ -836,22 +842,110 @@ void BuildingManager::constructAssignedBuildings()
 						MetaType addonMetatype;
 						switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
 						{
-						case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
-						case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
-						case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+							{
+								addonMetatype = MetaTypeEnum::Reactor;
+								break;
+							}
+							case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
+							case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
+							case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
+							{
+								addonMetatype = MetaTypeEnum::TechLab;
+								break;
+							}
+						}
+						// If the building is flying, it's because it is in the transition to land somewhere it will have enough space for its addon
+						if (b.builderUnit.isFlying())
 						{
-							addonMetatype = MetaTypeEnum::Reactor;
-							break;
+							const auto landingPosition = liftedBuildingPositions[b.builderUnit.getTag()];
+							Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
 						}
-						case sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB:
-						case sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB:
-						case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
+						else
 						{
-							addonMetatype = MetaTypeEnum::TechLab;
-							break;
+							// Check if the addon position is blocked
+							bool blocked = false;
+							for (int x = 2; x <= 3; ++x)
+							{
+								for (int y = -1; y <= 0; ++y)
+								{
+									const auto addonPosition = b.builderUnit.getPosition() + CCPosition(x, y);
+									if (!getBuildingPlacer().buildable(b.type, addonPosition.x, addonPosition.y, true))
+									{
+										m_bot.Map().drawTile(Util::GetTilePosition(addonPosition), sc2::Colors::Red);
+										blocked = true;
+									}
+								}
+							}
+							if (blocked)
+							{
+								blocked = false;
+								// Check if the building can just move 2 tiles to the left
+								for (int x = -4; x <= -2; ++x)
+								{
+									for (int y = -1; y <= 1; ++y)
+									{
+										const auto newBuildingPosition = b.builderUnit.getPosition() + CCPosition(x, y);
+										if (!getBuildingPlacer().buildable(b.builderUnit.getType(), newBuildingPosition.x, newBuildingPosition.y, false))
+										{
+											m_bot.Map().drawTile(Util::GetTilePosition(newBuildingPosition), sc2::Colors::Red);
+											blocked = true;
+										}
+									}
+								}
+								CCPosition newBuildingPosition;
+								if (blocked)
+								{
+									// The building cannot move just 2 tiles to the left, so we need to find it a suitable spot
+									const auto tempBuilding = Building(b.builderUnit.getType(), b.builderUnit.getPosition());
+									newBuildingPosition = Util::GetPosition(getBuildingPlacer().getBuildLocationNear(tempBuilding, 0, false, true, true));
+								}
+								else
+								{
+									// Otherwise, just move the buildings 2 tiles to the left
+									newBuildingPosition = b.builderUnit.getPosition() - CCPosition(2, 0);
+								}
+								
+								if (newBuildingPosition == CCPosition())
+								{
+									std::stringstream ss;
+									ss << "Cannot find suitable spot for " << b.type.getName() << " to move so it could have a space for its addon";
+									Util::Log(__FUNCTION__, ss.str(), m_bot);
+									continue;
+								}
+
+								b.finalPosition = newBuildingPosition;
+								liftedBuildingPositions[b.builderUnit.getTag()] = newBuildingPosition;
+
+								// Free the reserved tiles under the building and for the addon
+								getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y - 1, 3, 1);
+								getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x + 3, b.builderUnit.getPosition().y, 2, 2);
+
+								// Reserve the files for the new location
+								getBuildingPlacer().reserveTiles(newBuildingPosition.x, newBuildingPosition.y - 1, 3, 4);
+								getBuildingPlacer().reserveTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2);
+
+								// Lift the building (the landing code is approx. 50 lines above)s
+								Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
+							}
+							else // The addon position is not blocked
+							{
+								// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
+								const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
+								const auto it = liftedBuildingPositions.find(b.builderUnit.getTag());
+								if (it != liftedBuildingPositions.end() && !Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes))
+								{
+									liftedBuildingPositions.erase(it);
+									getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y, 3, 3);
+									getBuildingPlacer().freeTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2);
+								}
+
+								// Spam the build ability in case there is a unit blocking it
+								Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
+							}
 						}
-						}
-						b.builderUnit.build(b.type, b.finalPosition);
 					}
 					else
 					{
@@ -976,6 +1070,12 @@ void BuildingManager::checkForStartedConstruction()
 					m_bot.Bases().ClearBlockedLocations();
 				}
 
+				//If building is part of the wall
+				if (Util::Contains(b.buildingUnit.getTilePosition(), m_wallBuildingPosition))
+				{
+					m_wallBuildings.push_back(b.buildingUnit);
+				}
+
 				// only one building will match
 				break;
 			}
@@ -1085,10 +1185,12 @@ void BuildingManager::checkForCompletedBuildings()
         // if the unit has completed
         if (b.buildingUnit.isCompleted())
         {
+			// remove this unit from the under construction vector
+			toRemove.push_back(b);
+        	
             // if we are terran, give the worker back to worker manager
             if (Util::IsTerran(m_bot.GetSelfRace()))
             {
-				auto type = b.type.getAPIUnitType();
 				if(b.type.isRefinery())//Worker that built the refinery, will be a gas worker for it.
 				{
 					m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Gas, b.buildingUnit);
@@ -1124,9 +1226,8 @@ void BuildingManager::checkForCompletedBuildings()
 						case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
 						case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
 						{
-							//Set rally in the middle of the minerals
-							auto position = b.buildingUnit.getPosition();
-							auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+							//Set rally towards enemy base
+							const auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
 							if (enemyBase == nullptr)
 							{
 								b.buildingUnit.rightClick(m_bot.Map().center());
@@ -1140,15 +1241,6 @@ void BuildingManager::checkForCompletedBuildings()
 					}
 				}
             }
-
-            // remove this unit from the under construction vector
-            toRemove.push_back(b);
-
-			//If building is part of the wall
-			if (std::find(m_wallBuildingPosition.begin(), m_wallBuildingPosition.end(), b.buildingUnit.getTilePosition()) != m_wallBuildingPosition.end())
-			{
-				m_wallBuilding.push_back(b.buildingUnit);
-			}
         }
     }
 
@@ -1238,7 +1330,7 @@ void BuildingManager::drawBuildingInformation()
 
         if (b.buildingUnit.isValid())
         {
-            dss << "Building: " << b.buildingUnit.getID() << "\n" << b.buildingUnit.getBuildPercentage();
+            dss << "Building: " << b.buildingUnit.getID() << "\n" << b.buildingUnit.getBuildProgress();
             m_bot.Map().drawText(b.buildingUnit.getPosition(), dss.str());
         }
         
@@ -1341,9 +1433,9 @@ CCTilePosition BuildingManager::getWallPosition() const
 	return m_wallBuildingPosition.front();
 }
 
-std::list<Unit> BuildingManager::getWallBuildings()
+std::list<Unit> & BuildingManager::getWallBuildings()
 {
-	return m_wallBuilding;
+	return m_wallBuildings;
 }
 
 CCTilePosition BuildingManager::getProxyLocation()
@@ -1627,7 +1719,7 @@ void BuildingManager::removeNonStartedBuildingsOfType(sc2::UNIT_TYPEID type)
 	removeBuildings(toRemove);
 }
 
-Building BuildingManager::CancelBuilding(Building b)
+Building BuildingManager::CancelBuilding(Building b, bool removeFromBuildingsList, bool destroy)
 {
 	auto it = find(m_buildings.begin(), m_buildings.end(), b);
 	if (it != m_buildings.end())
@@ -1664,7 +1756,28 @@ Building BuildingManager::CancelBuilding(Building b)
 			m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Idle);
 		}
 
+		//Cancel building
+		if (destroy && b.buildingUnit.isValid())
+		{
+			Micro::SmartAbility(b.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::CANCEL, m_bot);
+		}
+
+		if (removeFromBuildingsList)
+		{
+			removeBuildings({ b });
+		}
+
 		return b;
+	}
+	return Building();
+}
+
+Building BuildingManager::getBuildingOfBuilder(const Unit & builder) const
+{
+	for (const auto & building : m_buildings)
+	{
+		if (building.builderUnit == builder)
+			return building;
 	}
 	return Building();
 }
@@ -1746,35 +1859,201 @@ const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool 
 
 void BuildingManager::castBuildingsAbilities()
 {
+	m_bot.StartProfiling("0.8.8.1  RunProxyLogic");
 	RunProxyLogic();
-	
+	m_bot.StopProfiling("0.8.8.1  RunProxyLogic");
+
+	m_bot.StartProfiling("0.8.8.2  Barracks");
+	for (const auto & barracks : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS))
+	{
+		//If the building is in the wall
+		if (Util::Contains(barracks, m_wallBuildings))
+		{
+			const auto base = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+			if (base && base->isUnderAttack())
+			{
+				if (!m_wallsBarracksPointsTowardBase)
+				{
+					//Set rally on our starting base
+					barracks.rightClick(m_bot.GetStartLocation());
+					m_wallsBarracksPointsTowardBase = true;
+				}
+			}
+			else
+			{
+				if (m_wallsBarracksPointsTowardBase)
+				{
+					//Set rally towards enemy base
+					const auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+					if (enemyBase == nullptr)
+					{
+						barracks.rightClick(m_bot.Map().center());
+					}
+					else
+					{
+						barracks.rightClick(enemyBase->getPosition());
+					}
+					m_wallsBarracksPointsTowardBase = false;
+				}
+			}
+			break;
+		}
+	}
+	m_bot.StopProfiling("0.8.8.2  Barracks");
+
+	m_bot.StartProfiling("0.8.8.3  OrbitalCommands");
 	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
 	{
-		auto energy = b.getEnergy();
-		if (energy <= 0 || b.isFlying())
+		const auto energy = b.getEnergy();
+		if (energy < 50 || b.isFlying())
 		{
 			continue;
 		}
 
+		bool keepEnergy = false;
+
+		//Scan
 		// TODO decomment this block when we are ready to use the scans
 		/*bool hasInvisible = m_bot.Strategy().enemyHasInvisible();
-		//Scan
 		if (hasInvisible)
 		{
 			for (auto sighting : m_bot.Commander().Combat().GetInvisibleSighting())
 			{
-				if (energy >= 50)//TODO: do not scan if no combat unit close by
-				{
-					Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, sighting.second.first, m_bot);
-				}
+				//TODO: do not scan if no combat unit close by
+				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, sighting.second.first, m_bot);
 			}
 		}*/
 
+		const auto SCAN_RADIUS = 13;
+		const auto & burrowedUnits = m_bot.Analyzer().getBurrowedUnits();
+		if (!burrowedUnits.empty())
+		{
+			keepEnergy = true;
+			m_bot.StartProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedUnits");
+			const auto & combatUnits = m_bot.Commander().Combat().GetCombatUnits();
+			sc2::Units closeBurrowedUnits;
+			std::set<const sc2::Unit *> closeCombatUnits;
+			for (const auto burrowedUnit : burrowedUnits)
+			{
+				if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
+					continue;	// Already visible
+
+				// Check if we have a combat unit near the burrowed unit
+				for (const auto & combatUnit : combatUnits)
+				{
+					auto range = Util::GetAttackRangeForTarget(combatUnit.getUnitPtr(), burrowedUnit, m_bot);
+					if (range <= 0.f)
+						continue;	// The combat unit cannot attack the burrowed unit
+					range += 5.f;	// We add a buffer of 5 tiles
+					const auto dist = Util::DistSq(combatUnit, burrowedUnit->pos);
+					if (dist <= range * range)
+					{
+						closeBurrowedUnits.push_back(burrowedUnit);
+						closeCombatUnits.insert(combatUnit.getUnitPtr());
+						break;
+					}
+				}
+			}
+			m_bot.StopProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedUnits");
+			if (!closeBurrowedUnits.empty())
+			{
+				m_bot.StartProfiling("0.8.8.3.2   FindOtherTargets");
+				// Check if there are no other ground targets nearby
+				bool otherTargets = false;
+				for (const auto combatUnit : closeCombatUnits)
+				{
+					for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
+					{
+						const auto & enemyUnit = enemyUnitPair.second;
+						if (enemyUnit.isFlying() || 
+							(enemyUnit.getType().isBuilding() && !enemyUnit.getType().isCombatUnit()) || 
+							enemyUnit.isBurrowed() || 
+							enemyUnit.isCloaked() ||
+							enemyUnit.getUnitPtr()->last_seen_game_loop != m_bot.GetCurrentFrame())
+							continue;
+						if (Util::DistSq(enemyUnit, combatUnit->pos) < 10 * 10)
+						{
+							otherTargets = true;
+							break;
+						}
+					}
+					if (otherTargets)
+						break;
+				}
+				m_bot.StopProfiling("0.8.8.3.2   FindOtherTargets");
+				
+				if (!otherTargets)
+				{
+					m_bot.StartProfiling("0.8.8.3.3   CalcScanPosition");
+					// Calculate the middle point of all close burrowed unit
+					CCPosition middlePoint;
+					for (const auto closeBurrowedUnit : closeBurrowedUnits)
+					{
+						middlePoint += closeBurrowedUnit->pos;
+					}
+					middlePoint /= closeBurrowedUnits.size();
+					// Check to see if a scan on the middle point would cover all of the burrowed units
+					bool middleCoversAllPoints = true;
+					for (const auto closeBurrowedUnit : closeBurrowedUnits)
+					{
+						const auto dist = Util::DistSq(middlePoint, closeBurrowedUnit->pos);
+						if (dist > SCAN_RADIUS * SCAN_RADIUS)
+						{
+							middleCoversAllPoints = false;
+							break;
+						}
+					}
+					if (!middleCoversAllPoints)
+					{
+						// Find the burrowed unit that is the most close to the others
+						const sc2::Unit * mostCenteredUnit = nullptr;
+						int maxNumberOfCoveredUnits = -1;
+						for (const auto closeBurrowedUnit : closeBurrowedUnits)
+						{
+							int numberOfCoveredUnits = 0;
+							for (const auto otherCloseBurrowedUnit : closeBurrowedUnits)
+							{
+								if (Util::DistSq(closeBurrowedUnit->pos, otherCloseBurrowedUnit->pos) <= SCAN_RADIUS * SCAN_RADIUS)
+								{
+									++numberOfCoveredUnits;
+								}
+							}
+							if (numberOfCoveredUnits > maxNumberOfCoveredUnits)
+							{
+								mostCenteredUnit = closeBurrowedUnit;
+								maxNumberOfCoveredUnits = numberOfCoveredUnits;
+							}
+						}
+						middlePoint = mostCenteredUnit->pos;
+					}
+					m_bot.StartProfiling("0.8.8.3.3   CalcScanPosition");
+
+					// Check if we already have a scan near that point (might happen because we receive the observations 1 frame later)
+					bool closeScan = false;
+					const auto & scans = m_bot.Commander().Combat().getAllyScans();
+					for (const auto scanPosition : scans)
+					{
+						if (Util::DistSq(middlePoint, scanPosition) < 5.f * 5.f)
+						{
+							closeScan = true;
+							break;
+						}
+					}
+
+					if (!closeScan)
+					{
+						Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, middlePoint, m_bot);
+						m_bot.Commander().Combat().addAllyScan(middlePoint);
+					}
+				}
+			}
+		}
+
 		//Mule
-		if (energy >= 50)// && (!hasInvisible || energy >= 100))
+		if (!keepEnergy || energy >= 100)
 		{
 			std::vector<CCUnitID> skipMinerals;
-			for (auto mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
+			for (const auto & mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
 			{
 				skipMinerals.push_back(m_bot.Workers().getMuleTargetTag(mule));
 			}
@@ -1782,26 +2061,32 @@ void BuildingManager::castBuildingsAbilities()
 			CCTilePosition orbitalPosition;
 			const sc2::Unit* closestMineral = nullptr;
 			auto & bases = m_bot.Bases().getBaseLocations();//Sorted by closest to enemy base
-			for (auto base : bases)
+			// Check twice the base locations, but skip the under attack check the second time
+			for (int i = 0; i < 2; ++i)
 			{
-				if (!base->isOccupiedByPlayer(Players::Self))
-					continue;
-
-				if (base->isUnderAttack())
-					continue;
-
-				auto & depot = base->getResourceDepot();
-				if (!depot.isValid() || !depot.isCompleted())
-					continue;
-
-				closestMineral = getLargestCloseMineral(depot, false, skipMinerals);
-				if (closestMineral == nullptr)
+				for (auto base : bases)
 				{
-					continue;
+					if (!base->isOccupiedByPlayer(Players::Self))
+						continue;
+
+					if (i == 0 && base->isUnderAttack())
+						continue;
+
+					auto & depot = base->getResourceDepot();
+					if (!depot.isValid() || !depot.isCompleted())
+						continue;
+
+					closestMineral = getLargestCloseMineral(depot, false, skipMinerals);
+					if (closestMineral == nullptr)
+					{
+						continue;
+					}
+					orbitalPosition = base->getCenterOfMinerals();
+
+					break;
 				}
-				orbitalPosition = base->getCenterOfMinerals();
-				
-				break;
+				if (orbitalPosition != CCPosition())
+					break;
 			}
 			
 			if (closestMineral == nullptr)
@@ -1818,7 +2103,7 @@ void BuildingManager::castBuildingsAbilities()
 
 			auto point = closestMineral->pos;
 
-			if (m_bot.Config().StarCraft2Version < "4.11.0")//Validate version because we can drop the mule straigth on the mineral past this version
+			if (m_bot.Config().StarCraft2Version < "4.11.0" && orbitalPosition != CCPosition())//Validate version because we can drop the mule straigth on the mineral past this version
 			{
 				//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
 				point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
@@ -1828,8 +2113,11 @@ void BuildingManager::castBuildingsAbilities()
 			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 		}
 	}
+	m_bot.StopProfiling("0.8.8.3  OrbitalCommands");
 
+	m_bot.StartProfiling("0.8.8.4  DamagedBuildings");
 	LiftOrLandDamagedBuildings();
+	m_bot.StopProfiling("0.8.8.4  DamagedBuildings");
 }
 
 void BuildingManager::RunProxyLogic()
@@ -1859,7 +2147,7 @@ void BuildingManager::RunProxyLogic()
 		// Lift Barracks
 		if (m_proxyBarracksPosition == CCPosition())
 		{
-			if (barracks.size() == 1 && factories.size() == 1 && barracksTechlabs.size() == 1 && barracksTechlabs[0].getBuildPercentage() == 1.0f)
+			if (barracks.size() == 1 && factories.size() == 1 && barracksTechlabs.size() == 1 && barracksTechlabs[0].getBuildProgress() == 1.0f)
 			{
 				Micro::SmartAbility(barracks[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 				return;
@@ -1885,7 +2173,7 @@ void BuildingManager::RunProxyLogic()
 		// Lift Factory
 		if (m_proxyFactoryPosition == CCPosition())
 		{
-			if (factories.size() == 1 && factories[0].getBuildPercentage() == 1.0f && techlabs.size() == 1 && techlabs[0].getBuildPercentage() == 1.0f)
+			if (factories.size() == 1 && factories[0].getBuildProgress() == 1.0f && techlabs.size() == 1 && techlabs[0].getBuildProgress() == 1.0f)
 			{
 				m_proxyFactoryPosition = factories[0].getPosition();
 				Micro::SmartAbility(factories[0].getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
@@ -1949,7 +2237,7 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 			if (unit.getHitPointsPercentage() <= 50.f && unit.getUnitPtr()->build_progress >= 1.f)
 			{
 				// We don't want to lift a wall building
-				if (Util::Contains(unit, m_wallBuilding))
+				if (Util::Contains(unit, m_wallBuildings))
 					continue;
 				// And there is danger on the ground but not in the air
 				const auto recentDamageTaken = m_bot.Analyzer().getUnitState(unit.getUnitPtr()).GetRecentDamageTaken();

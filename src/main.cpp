@@ -55,23 +55,16 @@ std::string getexepath()
 }
 
 void handler(int sig) {
-	std::ofstream file;
-	time_t now = time(0);
-	char buf[80];
-	strftime(buf, sizeof(buf), "./data/crash_%Y-%m-%d--%H-%M-%S.log", localtime(&now));
-	file.open(buf);
-	
 	time_t t;
 	char buffer[80];
 	time(&t);
 	struct tm *timeinfo = localtime(&t);
 	strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", timeinfo);
 	std::string str(buffer);
-	std::cerr << str << std::endl;
+	std::cout << str << std::endl;
 
 	// print out all the frames to stderr
-	fprintf(stderr, "Error: signal %d:\n", sig);
-	file << "Error: signal " << sig << std::endl;
+	fprintf(stdout, "Error: signal %d:\n", sig);
 
 #ifdef _WINDOWS
 	StackWalker sw;
@@ -81,7 +74,7 @@ void handler(int sig) {
 	void* arr[30];
 	size_t size;
 	size = backtrace(arr, 30);
-	backtrace_symbols_fd(arr, size, STDERR_FILENO);
+	backtrace_symbols_fd(arr, size, STDOUT_FILENO);
 
 	// Then show demangled stack trace
 	// https://panthema.net/2008/0901-stacktrace-demangled/
@@ -93,8 +86,7 @@ void handler(int sig) {
 
 	if (addrlen == 0)
 	{
-		fprintf(stderr, "  <empty, possibly corrupt>\n");
-		file << "  <empty, possibly corrupt>" << std::endl;
+		fprintf(stdout, "  <empty, possibly corrupt>\n");
 	}
 	else
 	{
@@ -138,21 +130,18 @@ void handler(int sig) {
 					char* ret = abi::__cxa_demangle(begin_name, funcname, &funcnamesize, &status);
 					if (status == 0) {
 						funcname = ret; // use possibly realloc()-ed string
-						fprintf(stderr, "  %s : %s+%s\n", symbollist[i], funcname, begin_offset);
-						file << "  " << symbollist[i] << " : " << funcname << "+" << begin_offset << std::endl;
+						fprintf(stdout, "  %s : %s+%s\n", symbollist[i], funcname, begin_offset);
 					}
 					else {
 						// demangling failed. Output function name as a C function with
 						// no arguments.
-						fprintf(stderr, "  %s : %s()+%s\n", symbollist[i], begin_name, begin_offset);
-						file << "  " << symbollist[i] << " : " << begin_name << "+" << begin_offset << std::endl;
+						fprintf(stdout, "  %s : %s()+%s\n", symbollist[i], begin_name, begin_offset);
 					}
 				}
 				else
 				{
 					// couldn't parse the line? print the whole line.
-					fprintf(stderr, "  %s\n", symbollist[i]);
-					file << "  " << symbollist[i] << std::endl;
+					fprintf(stdout, "  %s\n", symbollist[i]);
 				}
 			}
 
@@ -160,10 +149,8 @@ void handler(int sig) {
 			free(symbollist);
 		}
 	}
-	fflush(stderr);
+	fflush(stdout);
 #endif
-	file.flush();
-	file.close();
 	exit(1);
 }
 
@@ -218,6 +205,7 @@ int main(int argc, char* argv[])
     bool PlayerOneIsHuman = false;
 	bool ForceStepMode = false;
 	bool AllowDebug = true;
+	bool ArchonMode = false;
 
 	if (j.count("Debug") && j["Debug"].is_object())
 	{
@@ -254,6 +242,7 @@ int main(int argc, char* argv[])
 		JSONTools::ReadBool("PlayAsHuman", info, PlayerOneIsHuman);
 		JSONTools::ReadBool("ForceStepMode", info, ForceStepMode);
         JSONTools::ReadBool("PlayVsItSelf", info, PlayVsItSelf);
+        JSONTools::ReadBool("ArchonMode", info, ArchonMode);
     }
     else
     {
@@ -268,7 +257,7 @@ int main(int argc, char* argv[])
 		bool loadSettings = false;
 		JSONTools::ReadBool("LoadSettings", j["SC2API"], loadSettings);
 		CCBot bot(botVersion, !ForceStepMode);
-		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings, AllowDebug);
+		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings, AllowDebug, ArchonMode);
 
 		return 0;
 	}
@@ -317,7 +306,7 @@ int main(int argc, char* argv[])
     coordinator.SetStepSize(stepSize);
     //coordinator.SetRealtime(PlayerOneIsHuman && !ForceStepMode);
     coordinator.SetRealtime(!ForceStepMode);
-	coordinator.SetRawAffectsSelection(!AllowDebug);
+	coordinator.SetRawAffectsSelection(!AllowDebug && !ArchonMode);
 
     coordinator.SetParticipants({
         spectatingPlayer,

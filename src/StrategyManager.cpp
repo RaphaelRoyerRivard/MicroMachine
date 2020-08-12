@@ -9,7 +9,7 @@ Strategy::Strategy()
 
 }
 
-Strategy::Strategy(const std::string & name, const CCRace & race, const BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition)
+Strategy::Strategy(const std::string & name, const CCRace & race, const MM::BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition)
     : m_name            (name)
     , m_race            (race)
     , m_buildOrder      (buildOrder)
@@ -118,7 +118,8 @@ void StrategyManager::onStart()
 			}
 			outFile << j.dump();
 			outFile.close();
-			m_startingStrategy = m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? PROXY_MARAUDERS : EARLY_EXPAND;
+			m_startingStrategy = m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? PROXY_MARAUDERS : FAST_PF;
+			
 			if (m_bot.Config().PrintGreetingMessage)
 			{
 				m_greetingMessage << "Greetings stranger. I shall call you " << opponentId << " from now on. GLHF!";
@@ -171,7 +172,8 @@ void StrategyManager::onFrame(bool executeMacro)
 	{
 		if (isProxyStartingStrategy())
 		{
-			const auto barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
+			const auto completedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
+			const auto completedSupplyDepotsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true);
 
 			if (m_bot.GetGameLoop() >= 448 && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 20s
 			{
@@ -183,20 +185,73 @@ void StrategyManager::onFrame(bool executeMacro)
 				}
 				
 				const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
-				if (barracksCount == 0)
+				if (completedBarracksCount == 0)
 				{
 					m_startingStrategy = STANDARD;
 					m_bot.Commander().Production().clearQueue();
 					m_bot.Commander().Production().queueAsHighestPriority(MetaTypeEnum::Barracks, false);
+				}
+				else if (completedBarracksCount == 1)
+				{
+					const auto & buildings = m_bot.Buildings().getBuildings();
+					for (const auto & building : buildings)
+					{
+						if (Util::DistSq(m_bot.Buildings().getProxyLocation(), Util::GetPosition(building.finalPosition)) <= 15 * 15)
+						{
+							m_bot.Buildings().CancelBuilding(building);
+						}
+					}
+					m_startingStrategy = STANDARD;
+					m_bot.Commander().Production().clearQueue();
 				}
 				else if (!hasFactory && m_startingStrategy == PROXY_CYCLONES)
 				{
 					m_startingStrategy = STANDARD;
 					m_bot.Commander().Production().clearQueue();
 				}
+
+				// If our Marauders are getting overwhelmed, check if we should cancel our PROXY_MARAUDERS strategy
+				if (m_startingStrategy == PROXY_MARAUDERS && !m_bot.Commander().Combat().winAttackSimulation())
+				{
+					bool cancelProxy = false;
+					// Cancel PROXY_MARAUDERS if the opponent has too much static defenses
+					int activeStaticDefenseUnits = 0;
+					const auto staticDefenseTypes = { sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY };
+					for (const auto staticDefenseType : staticDefenseTypes)
+					{
+						const auto & staticDefenseUnits = m_bot.GetEnemyUnits(staticDefenseType);
+						for (const auto & staticDefenseUnit : staticDefenseUnits)
+						{
+							if (staticDefenseUnit.isPowered() && staticDefenseUnit.isCompleted())
+								++activeStaticDefenseUnits;
+						}
+					}
+					if (activeStaticDefenseUnits >= 2)
+					{
+						cancelProxy = true;
+					}
+					else
+					{
+						// Cancel PROXY_MARAUDERS if the opponent has an immortal or air units
+						for (const auto enemyUnit : m_bot.GetKnownEnemyUnits())
+						{
+							// TODO do not cancel if the enemy is an hallucination
+							if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL || (enemyUnit.isFlying() && Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) > 0))
+							{
+								cancelProxy = true;
+							}
+						}
+					}
+					if (cancelProxy)
+					{
+						m_startingStrategy = STANDARD;
+						m_bot.Commander().Production().clearQueue();
+					}
+				}
 			}
-			else if (m_startingStrategy == PROXY_MARAUDERS && barracksCount == 1)
+			else if (m_startingStrategy == PROXY_MARAUDERS && completedBarracksCount == 1)
 			{
+				// Remove proxy worker that just finished its Barracks
 				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
 				Unit proxyWorkerToRemove;
 				for (auto & proxyWorker : proxyWorkers)
@@ -213,14 +268,105 @@ void StrategyManager::onFrame(bool executeMacro)
 					proxyWorkerToRemove.move(m_bot.GetStartLocation());
 				}
 			}
-			else if (barracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
+			else if (completedBarracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
 			{
+				// Remove last proxy worker that finished its Barracks
 				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
 				for (const auto & proxyWorker : proxyWorkers)
 				{
 					proxyWorker.move(m_bot.GetStartLocation());
 				}
 				m_bot.Workers().getWorkerData().clearProxyWorkers();
+			}
+			else if (completedBarracksCount == 0)
+			{
+				bool cancelProxy = false;
+				const auto barracksUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
+				// We want to cancel our proxy strategy if the opponent has vision of our proxy location
+				if (barracksUnderConstructionCount == 0)
+				{
+					const auto & buildings = m_bot.Buildings().getBuildings();
+					for (const auto & building : buildings)
+					{
+						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+						{
+							if (Util::DistSq(building.builderUnit, Util::GetPosition(building.finalPosition)) <= 3 * 3)
+							{
+								for (const auto & enemy : m_bot.GetKnownEnemyUnits())
+								{
+									const auto dist = Util::DistSq(building.builderUnit, enemy);
+									const auto builderTerrainHeight = m_bot.Map().terrainHeight(building.builderUnit.getPosition());
+									const auto enemyTerrainHeight = m_bot.Map().terrainHeight(enemy.getPosition());
+									if (dist <= 8 * 8 && builderTerrainHeight <= enemyTerrainHeight)
+									{
+										// We want to cancel both the proxy Marauders strategy and the Barracks in the Building Manager
+										cancelProxy = true;
+										break;
+									}
+								}
+								if (cancelProxy)
+									break;
+							}
+						}
+					}
+				}
+				else if (barracksUnderConstructionCount == 1)
+				{
+					// We want to cancel the proxy if the enemy can kill our proxy worker before it finishes its building
+					const auto & buildings = m_bot.Buildings().getBuildings();
+					for (const auto & building : buildings)
+					{
+						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+						{
+							const auto & buildingUnit = building.buildingUnit;
+							if (buildingUnit.isValid())
+							{
+								// Will also return false if the proxy worker died
+								if (!shouldProxyBuilderFinishSafely(building, true))
+								{
+									cancelProxy = true;
+									break;
+								}
+							}
+						}
+					}
+				}
+				// If we still don't want to cancel the proxy
+				if (!cancelProxy)
+				{
+					// We want to cancel the proxy if one of our two proxy workers of the proxy Marauders strategy died
+					if (m_startingStrategy == PROXY_MARAUDERS && completedSupplyDepotsCount > 0)
+					{
+						const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+						if (proxyWorkers.size() < 2)
+						{
+							cancelProxy = true;
+						}
+					}
+				}
+				if (cancelProxy)
+				{
+					m_bot.Actions()->SendChat("FINE! No cheesing. Maybe next game :)");
+					const auto & buildings = m_bot.Buildings().getBuildings();
+					for (const auto & building : buildings)
+					{
+						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+						{
+							bool cancel = true;
+							if (building.buildingUnit.isValid())
+							{
+								cancel = !shouldProxyBuilderFinishSafely(building);
+							}
+							if (cancel)
+							{
+								m_bot.Buildings().CancelBuilding(building);
+							}
+						}
+					}
+					m_bot.Workers().getWorkerData().clearProxyWorkers();
+					m_bot.Strategy().setStartingStrategy(EARLY_EXPAND);
+					m_bot.Commander().Production().clearQueue();
+				}
 			}
 		}
 		else if (m_startingStrategy == WORKER_RUSH)
@@ -244,6 +390,45 @@ void StrategyManager::onFrame(bool executeMacro)
 			}
 		}
 	}
+
+	if (m_bot.Config().DrawCurrentStartingStrategy)
+	{
+		std::stringstream ss;
+		ss << "Current strategy: " << STRATEGY_NAMES[m_startingStrategy];
+		m_bot.Map().drawTextScreen(0.01f, 0.35f, ss.str(), CCColor(255, 255, 0));
+	}
+}
+
+bool StrategyManager::shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers) const
+{
+	const auto & builder = building.builderUnit;
+	if (builder.isValid() && builder.isAlive() && Util::DistSq(builder, building.buildingUnit) < 3 * 3)
+	{
+		if (onlyInjuredWorkers && builder.getHitPointsPercentage() == 100.f)
+			return true;
+		
+		float totalPossibleDamageDealt = 0.f;
+		const float secondsUntilFinished = (1 - building.buildingUnit.getUnitPtr()->build_progress) * 46.f;
+		for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+		{
+			const auto tilesPerSecond = Util::getRealMovementSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot);
+			if (tilesPerSecond > 0.f)
+			{
+				const auto distance = Util::Dist(enemyUnit, builder);
+				const auto timeToGetThere = distance / tilesPerSecond;
+				const auto remainingTime = secondsUntilFinished - timeToGetThere;
+				if (remainingTime > 0)
+				{
+					const auto dps = Util::GetDpsForTarget(enemyUnit.getUnitPtr(), builder.getUnitPtr(), m_bot);
+					const auto damageDealt = remainingTime * dps;
+					totalPossibleDamageDealt += damageDealt;
+				}
+			}
+		}
+		if (totalPossibleDamageDealt < builder.getHitPoints())
+			return true;
+	}
+	return false;
 }
 
 bool StrategyManager::isProxyStartingStrategy() const
@@ -283,7 +468,7 @@ StrategyPostBuildOrder StrategyManager::getCurrentStrategyPostBuildOrder() const
 	return TERRAN_CLASSIC;//MARINE_MARAUDER;
 }
 
-const BuildOrder & StrategyManager::getOpeningBookBuildOrder() const
+const MM::BuildOrder & StrategyManager::getOpeningBookBuildOrder() const
 {
     return getCurrentStrategy().m_buildOrder;
 }
@@ -417,7 +602,7 @@ void StrategyManager::readStrategyFile(const std::string & filename)
                 CCRace strategyRace = Util::GetRaceFromString(val["Race"].get<std::string>());
                 
                 BOT_ASSERT(val.count("OpeningBuildOrder") && val["OpeningBuildOrder"].is_array(), "Strategy is missing an OpeningBuildOrder arrau");
-                BuildOrder buildOrder;
+				MM::BuildOrder buildOrder;
                 const json & build = val["OpeningBuildOrder"];
                 for (size_t b(0); b < build.size(); b++)
                 {

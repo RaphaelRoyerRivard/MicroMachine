@@ -25,7 +25,7 @@ void UnitData::updateUnit(const Unit & unit)
     ui.lastHealth   = unit.getHitPoints();
     ui.lastShields  = unit.getShields();
     ui.type         = unit.getType();
-    ui.progress     = unit.getBuildPercentage();
+    ui.progress     = unit.getBuildProgress();
     ui.id           = unit.getID();
 
     if (firstSeen)

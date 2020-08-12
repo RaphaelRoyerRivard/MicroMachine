@@ -4,6 +4,7 @@
 #include "BuildOrder.h"
 #include "Condition.h"
 
+class Building;
 typedef std::pair<UnitType, size_t> UnitPair;
 typedef std::vector<UnitPair>       UnitPairVector;
 
@@ -15,12 +16,12 @@ struct Strategy
     CCRace      m_race;
     int         m_wins;
     int         m_losses;
-    BuildOrder  m_buildOrder;
+    MM::BuildOrder  m_buildOrder;
     Condition   m_scoutCondition;
     Condition   m_attackCondition;
 
     Strategy();
-    Strategy(const std::string & name, const CCRace & race, const BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition);
+    Strategy(const std::string & name, const CCRace & race, const MM::BuildOrder & buildOrder, const Condition & scoutCondition, const Condition & attackCondition);
 };
 
 enum StrategyPostBuildOrder {
@@ -39,7 +40,8 @@ enum StartingStrategy
 	STANDARD = 2,
 	WORKER_RUSH = 3,
 	PROXY_MARAUDERS = 4,
-	COUNT = 5
+	FAST_PF = 5,
+	COUNT = 6
 };
 
 class StrategyManager
@@ -49,7 +51,8 @@ class StrategyManager
 		"EARLY_EXPAND",
 		"STANDARD",
 		"WORKER_RUSH",	// removed
-		"PROXY_MARAUDERS"
+		"PROXY_MARAUDERS",
+		"FAST_PF"
 	};
 
 	std::map<StartingStrategy, sc2::Race> RACE_SPECIFIC_STRATEGIES = {
@@ -59,6 +62,7 @@ class StrategyManager
 	// Only strategies in this list and in the race specific list can be chosen
 	std::vector<std::string> STRATEGY_ORDER = {
 		"PROXY_MARAUDERS",
+		"FAST_PF",
 		"EARLY_EXPAND",
 		"PROXY_CYCLONES",
 		"STANDARD"
@@ -72,15 +76,17 @@ class StrategyManager
 	StartingStrategy m_initialStartingStrategy;
 	StartingStrategy m_startingStrategy;
     int                             m_totalGamesPlayed;
-    const BuildOrder                m_emptyBuildOrder;
+    const MM::BuildOrder            m_emptyBuildOrder;
 	bool m_workerRushed = false;
 	bool m_earlyRushed = false;
 	bool m_shouldProduceAntiAirOffense = false;
 	bool m_shouldProduceAntiAirDefense = false;
 	bool m_enemyHasProtossHighTechAir = false;
+	bool m_enemyHasNydusWorm = false;
 	bool m_enemyHasInvisible = false;
 	bool m_enemyCurrentlyHasInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
+	bool m_enemyHasBurrowingUpgrade = false;
 	bool m_enemyHasMassZerglings = false;
 	bool m_enemyHasHiSecAutoTracking = false;
 	bool m_enemyOnlyHasFlyingBuildings = false;
@@ -104,7 +110,9 @@ public:
 
     const Strategy & getCurrentStrategy() const;
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
+	void setStartingStrategy(StartingStrategy startingStrategy) { m_startingStrategy = startingStrategy; }
 	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
+	bool shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers = false) const;
 	bool isProxyStartingStrategy() const;
 	bool isProxyFactoryStartingStrategy() const;
 	bool wasProxyStartingStrategy() const;
@@ -116,7 +124,7 @@ public:
     void onEnd(const bool isWinner);
     void addStrategy(const std::string & name, const Strategy & strategy);
     const UnitPairVector getBuildOrderGoal() const;
-    const BuildOrder & getOpeningBookBuildOrder() const;
+    const MM::BuildOrder & getOpeningBookBuildOrder() const;
     void readStrategyFile(const std::string & str);
 	bool isWorkerRushed() const { return m_workerRushed; }
 	void setIsWorkerRushed(bool workerRushed) { m_workerRushed = workerRushed; }
@@ -128,12 +136,16 @@ public:
 	void setShouldProduceAntiAirDefense(bool shouldProduceAntiAirDefense) { m_shouldProduceAntiAirDefense = shouldProduceAntiAirDefense; }
 	bool enemyHasProtossHighTechAir() const { return m_enemyHasProtossHighTechAir; }
 	void setEnemyHasProtossHighTechAir(bool enemyHasHighTechAir) { m_enemyHasProtossHighTechAir = enemyHasHighTechAir; }
+	bool enemyHasNydusWorm() const { return m_enemyHasNydusWorm; }
+	void setEnemyHasNydusWorm(bool enemyHasNydusWorm) { m_enemyHasNydusWorm = enemyHasNydusWorm; }
 	bool enemyHasInvisible() const { return m_enemyHasInvisible; }
 	bool enemyCurrentlyHasInvisible() const { return m_enemyCurrentlyHasInvisible; }
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
 	void setEnemyCurrentlyHasInvisible(bool enemyCurrentlyHasInvisible) { m_enemyCurrentlyHasInvisible = enemyCurrentlyHasInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
+	bool enemyHasBurrowingUpgrade() const { return m_enemyHasBurrowingUpgrade; }
+	void setEnemyHasBurrowingUpgrade(bool enemyHasBurrowingUpgrade) { m_enemyHasBurrowingUpgrade = enemyHasBurrowingUpgrade; }
 	bool enemyHasMassZerglings() const { return m_enemyHasMassZerglings; }
 	void setEnemyHasMassZerglings(bool enemyHasMassZerglings) { m_enemyHasMassZerglings = enemyHasMassZerglings; }
 	bool enemyHasHiSecAutoTracking() const { return m_enemyHasHiSecAutoTracking; }

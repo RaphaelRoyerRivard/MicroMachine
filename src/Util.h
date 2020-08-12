@@ -19,6 +19,8 @@ namespace Util
 	static CombatPredictor* m_simulator;
 
 	//used for optimisation
+	static sc2::UNIT_TYPEID richAssimilatorId;
+	static sc2::UNIT_TYPEID richExtractorId;
 	static UnitType refineryType;
 	static UnitType richRefineryType;
 	static UnitType depotType;
@@ -29,8 +31,10 @@ namespace Util
 	static std::vector<std::vector<bool>> m_placement;
 	static std::vector<std::vector<float>> m_terrainHeight;
 	static sc2::Unit * m_dummyVikingAssault;
+	static sc2::Unit * m_dummyVikingFighter;
 	static sc2::Unit * m_dummyStimedMarine;
 	static sc2::Unit * m_dummyStimedMarauder;
+	static std::map<const sc2::Unit *, std::pair<std::set<const sc2::Unit *>, std::set<const sc2::Unit *>>> m_seenEnemies;	// <enemy, <allies_with_vision, allies_without_vision>
 
 	static bool allowDebug;
 	
@@ -173,11 +177,14 @@ namespace Util
 
 	void CreateDummyUnits(CCBot & bot);
 	void CreateDummyVikingAssault(CCBot & bot);
+	void CreateDummyVikingFighter(CCBot & bot);
 	void CreateDummyStimedMarine(CCBot & bot);
 	void CreateDummyStimedMarauder(CCBot & bot);
 	void SetBaseUnitValues(sc2::Unit * unit, CCBot & bot);
 	sc2::Unit CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit);
+	sc2::Unit CreateDummyFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit);
+	sc2::Unit CreateDummyVikingFighterFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummyStimedMarineFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit);
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
@@ -209,16 +216,19 @@ namespace Util
 	float getThreatRange(bool isFlying, CCPosition position, float radius, const sc2::Unit * threat, CCBot & m_bot);
 	float getAverageSpeedOfUnits(const std::vector<Unit>& units, CCBot & bot);
 	float getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
+	float getRealMovementSpeedOfUnit(const sc2::Unit * unit, CCBot & bot);
 	CCPosition getFacingVector(const sc2::Unit * unit);
 	bool isUnitFacingAnother(const sc2::Unit * unitA, const sc2::Unit * unitB);
 	bool isUnitLockedOn(const sc2::Unit * unit);
 	bool isUnitDisabled(const sc2::Unit * unit);
 	bool isUnitLifted(const sc2::Unit * unit);
 	bool unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId);
-	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot);
-	bool CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
+	void ClearSeenEnemies();
+	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, float visionBuffer, CCBot & bot);
+	bool CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, float buffer, CCBot & bot);
 	bool IsEnemyHiddenOnHighGround(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);
+	bool IsUnitCloakedAndSafe(const sc2::Unit * unit, CCBot & bot);
 	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * unit, const std::vector<sc2::AvailableAbilities> & availableAbilitiesForUnits);
 	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbilities & availableAbilities);
     
@@ -237,7 +247,8 @@ namespace Util
     void            Normalize(sc2::Point2D& point);
     sc2::Point2D    Normalized(const sc2::Point2D& point);
     float           GetDotProduct(const sc2::Point2D& v1, const sc2::Point2D& v2);
-    sc2::UnitTypeData GetUnitTypeDataFromUnitTypeId(const sc2::UnitTypeID unitTypeId, CCBot & bot);
+    void			GetOrthogonalVectors(const sc2::Point2D& referenceVector, sc2::Point2D& clockwiseVector, sc2::Point2D& counterClockwiseVector);
+    const sc2::UnitTypeData & GetUnitTypeDataFromUnitTypeId(const sc2::UnitTypeID unitTypeId, CCBot & bot);
 
     sc2::UnitTypeID GetUnitTypeIDFromName(const std::string & name, CCBot & bot);
     sc2::UpgradeID  GetUpgradeIDFromName(const std::string & name, CCBot & bot);
@@ -266,17 +277,19 @@ namespace Util
 	void			DebugLog(const std::string & function, const std::string & message, CCBot & bot);
 	void			LogNoFrame(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, CCBot & bot);
-	void			Log(const std::string & function, const std::string & message, CCBot & bot);
+	void			Log(const std::string & function, const std::string & message, const CCBot & bot);
 	void			ClearChat(CCBot & bot);
 	int				GetTimeControlSpeed();
 	int				GetTimeControlMaxSpeed();
 	void			TimeControlIncreaseSpeed();
 	void			TimeControlDecreaseSpeed();
-    UnitType        GetRessourceDepotType();
+    UnitType        GetResourceDepotType();
     UnitType        GetRefineryType();
 	UnitType		GetRichRefineryType();
 	UnitType        GetSupplyProvider();
 	UnitType        GetWorkerType();
+	sc2::UNIT_TYPEID GetRichAssimilatorId();
+	sc2::UNIT_TYPEID GetRichExtractorId();
     bool            IsZerg(const CCRace & race);
     bool            IsProtoss(const CCRace & race);
     bool            IsTerran(const CCRace & race);
@@ -303,5 +316,5 @@ namespace Util
 
 	float SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
 	float SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, CCBot & bot);
-	int GetSelfPlayerId(CCBot & bot);
+	int GetSelfPlayerId(const CCBot & bot);
 };

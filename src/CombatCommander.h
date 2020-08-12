@@ -4,6 +4,7 @@
 #include "Squad.h"
 #include "SquadData.h"
 #include "BaseLocation.h"
+#include <list>  
 
 class CCBot;
 struct RegionArmyInformation;
@@ -140,6 +141,7 @@ class CombatCommander
 	std::vector<std::vector<float>> m_groundFromGroundCloakedCombatInfluenceMap;
 	std::vector<std::vector<bool>> m_blockedTiles;
 	std::vector<CCPosition> m_enemyScans;
+	std::list<CCPosition> m_allyScans;
 	std::map<sc2::ABILITY_ID, std::map<const sc2::Unit *, uint32_t>> m_nextAvailableAbility;
 	std::map<sc2::ABILITY_ID, float> m_abilityCastingRanges;
 	std::set<const sc2::Unit *> m_unitsBeingRepaired;
@@ -147,6 +149,8 @@ class CombatCommander
 	std::map<const sc2::Tag, std::map<const sc2::Tag, uint32_t>> m_yamatoTargets;	// <target, <bc, frame>>
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnCastedFrame;
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> m_lockOnTargets;	// <cyclone, <target, frame>>
+	std::map<const sc2::Unit *, std::set<const sc2::Unit *>> m_lockedOnTargets;	// <target, cyclones>
+	std::map<const sc2::Unit *, const sc2::Unit *> m_medivacTargets;	// <target, medivac>
 	std::set<sc2::Tag> m_newCyclones;
 	std::set<sc2::Tag> m_toggledCyclones;
 	bool m_hasEnoughVikingsAgainstTempests = true;
@@ -165,6 +169,7 @@ class CombatCommander
 	std::vector<sc2::AvailableAbilities> m_unitsAbilities;
 
 	void			clearYamatoTargets();
+	void			clearAllyScans();
 	void			updateIdlePosition();
     void            updateScoutDefenseSquad();
 	void            updateDefenseBuildings();
@@ -181,7 +186,7 @@ class CombatCommander
     bool            isSquadUpdateFrame();
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);
-    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits);
+    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const;
 	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const;
 	bool			WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const;
 
@@ -189,7 +194,6 @@ class CombatCommander
 	CCPosition		GetClosestEnemyBaseLocation();
 	CCPosition		GetNextBaseLocationToScout();
 
-    void            updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy);
     bool            shouldWeStartAttacking();
 	
 	void			resetInfluenceMaps();
@@ -223,11 +227,15 @@ public:
 	std::map<const sc2::Tag, std::map<const sc2::Tag, uint32_t>> & getYamatoTargets() { return m_yamatoTargets; }
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> & getLockOnCastedFrame() { return m_lockOnCastedFrame; }
 	std::map<const sc2::Unit *, std::pair<const sc2::Unit *, uint32_t>> & getLockOnTargets() { return m_lockOnTargets; }
+	std::map<const sc2::Unit *, std::set<const sc2::Unit *>> & getLockedOnTargets() { return m_lockedOnTargets; }
+	std::map<const sc2::Unit *, const sc2::Unit *> & getMedivacTargets() { return m_medivacTargets; }
 	std::set<sc2::Tag> & getNewCyclones() { return m_newCyclones; }
 	std::set<sc2::Tag> & getToggledCyclones() { return m_toggledCyclones; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
 	const std::map<const sc2::Unit *, FlyingHelperMission> & getCycloneFlyingHelpers() const { return m_cycloneFlyingHelpers; }
 	const std::map<const sc2::Unit *, const sc2::Unit *> & getCyclonesWithHelper() const { return m_cyclonesWithHelper; }
+	const std::list<CCPosition> & getAllyScans() const { return m_allyScans; }
+	void addAllyScan(CCPosition scanPos) { m_allyScans.push_back(scanPos); }
 	float getTotalGroundInfluence(CCTilePosition tilePosition) const;
 	float getTotalAirInfluence(CCTilePosition tilePosition) const;
 	float getGroundCombatInfluence(CCTilePosition tilePosition) const;
@@ -246,14 +254,12 @@ public:
 	CCPosition getMainAttackLocation();
 	void updateBlockedTilesWithNeutral();
 	void SetLogVikingActions(bool log);
-	bool getAllowEarlyBuildingAttack() const { return m_allowEarlyBuildingAttack; }
-	void setAllowEarlyBuildingAttack(bool allowEarlyBuildingAttack) { m_allowEarlyBuildingAttack = allowEarlyBuildingAttack; }
 	bool ShouldSkipFrame(const sc2::Unit * combatUnit) const;
 	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
 	void CleanActions(const std::vector<Unit> &rangedUnits);
 	void ExecuteActions();
 	RangedUnitAction& GetRangedUnitAction(const sc2::Unit * combatUnit);
-	void CleanLockOnTargets() const;
+	void CleanLockOnTargets();
 	void CalcBestFlyingCycloneHelpers();
 	bool ShouldUnitHeal(const sc2::Unit * unit) const;
 	bool GetUnitAbilities(const sc2::Unit * unit, sc2::AvailableAbilities & outUnitAbilities) const;

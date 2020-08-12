@@ -152,6 +152,9 @@ bool MetaType::isUpgrade() const
     return m_type == MetaTypes::Upgrade;
 }
 
+/*
+ * Not used.
+ */
 bool MetaType::isTech() const
 {
     return m_type == MetaTypes::Tech;

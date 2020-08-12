@@ -29,10 +29,11 @@ class BuildingManager
 	bool m_proxySwapDone = false;
 	bool m_barracksSentToEnemyBase = false;
 	std::list<CCTilePosition> m_wallBuildingPosition;
-	std::list<Unit> m_wallBuilding;
+	std::list<Unit> m_wallBuildings;
 	std::map<UnitType, std::list<CCTilePosition>> m_nextBuildingPosition;
 	std::vector<std::pair<CCTilePosition, CCTilePosition>> m_previousNextBuildingPositionByBase;
 	std::map<sc2::Tag, CCPosition> liftedBuildingPositions;
+	bool m_wallsBarracksPointsTowardBase = false;
 
     bool            m_debugMode;
 
@@ -40,7 +41,6 @@ class BuildingManager
 	void			castBuildingsAbilities();
 	void			RunProxyLogic();
 	void			LiftOrLandDamagedBuildings();
-	Building		CancelBuilding(Building b);
 	void			updateBaseBuildings();
 
     void            validateWorkersAndBuildings();		    // STEP 1
@@ -57,6 +57,7 @@ public:
 
     BuildingManager(CCBot & bot);
 
+	bool IsProxySwapDone() const { return m_proxySwapDone; }
     void                onStart();
 	void				onFirstFrame();
     void                onFrame(bool executeMacro);
@@ -78,7 +79,7 @@ public:
 	std::vector<Unit>	getFinishedBuildings();
 	std::vector<Unit>	getPreviousBaseBuildings();
 	CCTilePosition		getWallPosition() const;
-	std::list<Unit>		getWallBuildings();
+	std::list<Unit> &	getWallBuildings();
 	CCPosition			getEnemyMainRamp() const { return m_enemyMainRamp; }
 	CCTilePosition		getProxyLocation();
 	CCPosition			getProxyLocation2();
@@ -101,8 +102,13 @@ public:
 
 	void				updatePreviousBuildings();
 	void				updatePreviousBaseBuildings();
+	
+	Building			CancelBuilding(Building b, bool removeFromBuildingsList = true, bool destroy = true);
+	Building			getBuildingOfBuilder(const Unit & builder) const;
 
 	BuildingPlacer& getBuildingPlacer();
 
     std::vector<UnitType> buildingsQueued() const;
+
+	bool				isProxyCyclonesStrategyCompleted() const { return m_barracksSentToEnemyBase; }
 };

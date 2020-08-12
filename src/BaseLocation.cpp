@@ -87,7 +87,7 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 	if (!m_isStartLocation)
 	{
 		// if this base location position is near our own resource depot, it's our start location
-		for (auto & unit : m_bot.GetAllyUnits(Util::GetRessourceDepotType().getAPIUnitType()))
+		for (auto & unit : m_bot.GetAllyUnits(Util::GetResourceDepotType().getAPIUnitType()))
 		{
 			CCPosition pos = unit.getPosition();
 			if (unit.getType().isResourceDepot() && containsPositionApproximative(pos))
@@ -192,6 +192,19 @@ int BaseLocation::getOptimalMineralWorkerCount() const
 		if (mineral.getUnitPtr()->mineral_contents > minimumMineral)
 		{
 			optimalWorkers += 2;
+		}
+	}
+	return optimalWorkers;
+}
+
+int BaseLocation::getOptimalGasWorkerCount() const
+{
+	int optimalWorkers = 0;
+	for (auto & geyser : getGeysers())
+	{
+		if (geyser.getUnitPtr()->vespene_contents > 0)
+		{
+			optimalWorkers += getGasBunkers().size() > 0 ? 2 : 3;
 		}
 	}
 	return optimalWorkers;

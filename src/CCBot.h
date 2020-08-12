@@ -31,9 +31,10 @@ class CCBot : public sc2::Agent
 {
 	struct Profiler
 	{
-		Profiler() :total(0) {};
-		std::deque<long long> queue;
+		Profiler() :total(0), count(0) {};
+		std::deque<std::pair<long long, int>> queue;
 		long long total;
+		int count;
 		std::chrono::steady_clock::time_point start;
 	};
 
@@ -79,6 +80,7 @@ class CCBot : public sc2::Agent
 	std::set<const sc2::Unit *> m_enemySCVBuilders;
 	std::set<const sc2::Unit *> m_enemyWorkersGoingInRefinery;
 	CCRace selfRace;
+	CCRace enemyRace = sc2::Random;
 	std::map<std::string, Profiler> m_profilingTimes;
 	std::mutex m_command_mutex;
 	bool m_concede;
@@ -124,6 +126,7 @@ class CCBot : public sc2::Agent
 public:
 
 	CCBot(std::string botVersion, bool realtime);
+	~CCBot();
 
 	void OnGameFullStart() override;
     void OnGameStart() override;
@@ -144,6 +147,7 @@ public:
 		  BaseLocationManager & Bases();
 		  CombatAnalyzer & Analyzer();
 		  GameCommander & Commander();
+		  TechTree & Tech() { return m_techTree; }
     const MapTools & Map() const;
     const UnitInfoManager & UnitInfo() const;
 	StrategyManager & Strategy();
@@ -154,10 +158,10 @@ public:
     const TypeData & Data(const Unit & unit);
 	const TypeData & Data(const sc2::UNIT_TYPEID & type);
 	uint32_t GetGameLoop() const;
-    const CCRace GetPlayerRace(int player) const;
-	const CCRace GetSelfRace() const;
+    CCRace GetPlayerRace(int player) const;
+	CCRace GetSelfRace() const;
     const CCPosition GetStartLocation() const;
-	const CCTilePosition GetBuildingArea() const;
+	const CCTilePosition GetBuildingArea(MetaType buildingType);
 
 	void IssueGameStartCheats();
 	void IssueCheats();
@@ -207,4 +211,5 @@ public:
 	void SetOpponentId(std::string opponentId) { m_opponentId = opponentId; }
 	bool IsPlayer1Human() const { return m_player1IsHuman; }
 	void SetPlayer1IsHuman(bool player1Human) { m_player1IsHuman = player1Human; }
+	void CheckGameResult() const;
 };

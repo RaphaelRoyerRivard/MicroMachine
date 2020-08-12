@@ -18,7 +18,7 @@ const float DefaultOrderRadius = 25;			//Order radius is the threat awareness ra
 const float WorkerRushDefenseOrderRadius = 250;
 const float MainAttackOrderRadius = 15;
 const float HarassOrderRadius = 25;
-const float ScoutOrderRadius = 6;				//Small number to prevent the scout from targeting far units instead of going to the next base location
+const float ScoutOrderRadius = 15;				//Small number to prevent the scout from targeting far units instead of going to the next base location (cannot be too small otherwise the unit will ignore threats)
 const float MainAttackMaxDistance = 20;			//Distance from the center of the Main Attack Squad for a unit to be considered in it
 const float MainAttackMaxRegroupDuration = 100; //Max number of frames allowed for a regroup order
 const float MainAttackRegroupCooldown = 200;	//Min number of frames required to wait between regroup orders
@@ -53,7 +53,7 @@ void CombatCommander::onStart()
 	m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
 	// the squad that consists of fleeing workers
-	SquadOrder fleeOrder(SquadOrderTypes::Retreat, CCPosition(), DefaultOrderRadius, "Worker flee");
+	SquadOrder fleeOrder(SquadOrderTypes::Retreat, m_bot.GetStartLocation(), DefaultOrderRadius, "Worker flee");
 	m_squadData.addSquad("WorkerFlee", Squad("WorkerFlee", fleeOrder, WorkerFleePriority, m_bot));
 
 	// the harass attack squad that will pressure the enemy's main base workers
@@ -123,6 +123,34 @@ void CombatCommander::clearYamatoTargets()
 	}
 }
 
+void CombatCommander::clearAllyScans()
+{
+	bool scansVisible = false;
+	for (auto & effect : m_bot.Observation()->GetEffects())
+	{
+		if (effect.effect_id == 6) // Scan
+		{
+			scansVisible = true;
+			std::vector<CCPosition> toRemove;
+			for (auto & pos : m_allyScans)
+			{
+				if (!Util::Contains(pos, effect.positions))
+				{
+					toRemove.push_back(pos);
+				}
+			}
+			for (auto & scan : toRemove)
+			{
+				m_allyScans.remove(scan);
+			}
+		}
+	}
+	if (!scansVisible)
+	{
+		m_allyScans.clear();
+	}
+}
+
 void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 {
     if (!m_attackStarted)
@@ -136,6 +164,12 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 
 	clearYamatoTargets();
 
+	clearAllyScans();
+
+	Util::ClearSeenEnemies();
+
+	m_medivacTargets.clear();
+
     m_combatUnits = combatUnits;
 
 	sc2::Units units;
@@ -146,40 +180,58 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	updateInfluenceMaps();
 	m_bot.StopProfiling("0.10.4.0    updateInfluenceMaps");
 
-	m_bot.StartProfiling("0.10.4.1    CalcBestFlyingCycloneHelpers");
+	m_bot.StartProfiling("0.10.4.3    CalcBestFlyingCycloneHelpers");
 	CalcBestFlyingCycloneHelpers();
-	m_bot.StopProfiling("0.10.4.1    CalcBestFlyingCycloneHelpers");
+	m_bot.StopProfiling("0.10.4.3    CalcBestFlyingCycloneHelpers");
 
+	m_bot.StartProfiling("0.10.4.5    updateIdlePosition");
 	updateIdlePosition();
+	m_bot.StopProfiling("0.10.4.5    updateIdlePosition");
 
 	m_bot.StartProfiling("0.10.4.2    updateSquads");
     if (isSquadUpdateFrame())
     {
+		m_bot.StartProfiling("0.10.4.2.a    updateIdleSquad");
 		updateIdleSquad();
+		m_bot.StopProfiling("0.10.4.2.a    updateIdleSquad");
+		m_bot.StartProfiling("0.10.4.2.b    updateBackupSquads");
 		updateBackupSquads();
+		m_bot.StopProfiling("0.10.4.2.b    updateBackupSquads");
+		m_bot.StartProfiling("0.10.4.2.c    updateWorkerFleeSquad");
 		updateWorkerFleeSquad();
+		m_bot.StopProfiling("0.10.4.2.c    updateWorkerFleeSquad");
+		m_bot.StartProfiling("0.10.4.2.d    updateScoutDefenseSquad");
         updateScoutDefenseSquad();
+		m_bot.StopProfiling("0.10.4.2.d    updateScoutDefenseSquad");
 		m_bot.StartProfiling("0.10.4.2.1    updateDefenseBuildings");
 		updateDefenseBuildings();
 		m_bot.StopProfiling("0.10.4.2.1    updateDefenseBuildings");
 		m_bot.StartProfiling("0.10.4.2.2    updateDefenseSquads");
         updateDefenseSquads();
 		m_bot.StopProfiling("0.10.4.2.2    updateDefenseSquads");
+		m_bot.StartProfiling("0.10.4.2.e    updateClearExpandSquads");
 		updateClearExpandSquads();
+		m_bot.StopProfiling("0.10.4.2.e    updateClearExpandSquads");
+		m_bot.StartProfiling("0.10.4.2.f    updateScoutSquad");
 		updateScoutSquad();
+		m_bot.StopProfiling("0.10.4.2.f    updateScoutSquad");
 		m_bot.StartProfiling("0.10.4.2.3    updateHarassSquads");
 		updateHarassSquads();
 		m_bot.StopProfiling("0.10.4.2.3    updateHarassSquads");
+		m_bot.StartProfiling("0.10.4.2.4    updateAttackSquads");
 		updateAttackSquads();
+		m_bot.StopProfiling("0.10.4.2.4    updateAttackSquads");
     }
 	drawCombatInformation();
 	m_bot.StopProfiling("0.10.4.2    updateSquads");
 
-	m_bot.StartProfiling("0.10.4.3    m_squadData.onFrame");
+	m_bot.StartProfiling("0.10.4.1    m_squadData.onFrame");
 	m_squadData.onFrame();
-	m_bot.StopProfiling("0.10.4.3    m_squadData.onFrame");
+	m_bot.StopProfiling("0.10.4.1    m_squadData.onFrame");
 
+	m_bot.StartProfiling("0.10.4.6    updateIdlePosition");
 	ExecuteActions();
+	m_bot.StopProfiling("0.10.4.6    updateIdlePosition");
 
 	m_bot.StartProfiling("0.10.4.4    lowPriorityCheck");
 	lowPriorityCheck();
@@ -389,7 +441,10 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 				break;
 			case 6:	// Scanner Sweep
 				for (const auto & pos : effect.positions)
-					m_enemyScans.push_back(pos);
+				{
+					if (!Util::Contains(pos, m_allyScans))
+						m_enemyScans.push_back(pos);
+				}
 				continue;
 			case 7: // Nuke Dot
 				radius = 8.f;
@@ -655,6 +710,7 @@ void CombatCommander::updateIdleSquad()
 void CombatCommander::updateWorkerFleeSquad()
 {
 	Squad & workerFleeSquad = m_squadData.getSquad("WorkerFlee");
+	const bool earlyRushed = m_bot.Strategy().isEarlyRushed();
 	for (auto & worker : m_bot.Workers().getWorkers())
 	{
 		const CCTilePosition tile = Util::GetTilePosition(worker.getPosition());
@@ -672,9 +728,10 @@ void CombatCommander::updateWorkerFleeSquad()
 		const auto job = m_bot.Workers().getWorkerData().getWorkerJob(worker);
 		const auto isProxyWorker = m_bot.Workers().getWorkerData().isProxyWorker(worker);
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
-		if ((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
-			|| Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
-			|| (groundThreat && (injured || isProxyWorker) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))
+		if (Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
+			|| (!earlyRushed &&
+				((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
+				|| (groundThreat && (injured || isProxyWorker) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))))
 		{
 			// Put it in the squad if it is not defending or already in the squad
 			if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
@@ -685,6 +742,53 @@ void CombatCommander::updateWorkerFleeSquad()
 		}
 		else
 		{
+			// Cancel the proxy building in case our proxy worker is caught by a worker rush
+			if (isProxyWorker && groundThreat)
+			{
+				auto building = m_bot.Buildings().getBuildingOfBuilder(worker);
+				if (building.status != BuildingStatus::UnderConstruction)
+				{
+					int closeEnemyWorkers = 0;
+					const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
+					for (const auto & enemyUnit : enemyUnits)
+					{
+						if (enemyUnit.getType().isWorker() && Util::DistSq(enemyUnit, worker) < 10 * 10)
+						{
+							++closeEnemyWorkers;
+							if (closeEnemyWorkers > 1)
+								break;
+						}
+					}
+					if (closeEnemyWorkers > 1)
+					{
+						if (building.status == BuildingStatus::Assigned)
+						{
+							std::vector<Unit> proxyWorkersToRemove;
+							for (const auto & proxyWorker : m_bot.Workers().getWorkerData().getProxyWorkers())
+							{
+								if (proxyWorker.getUnitPtr() != worker.getUnitPtr())
+								{
+									proxyWorkersToRemove.push_back(proxyWorker);
+								}
+							}
+							for (const auto & proxyWorker : proxyWorkersToRemove)
+							{
+								m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorker);
+							}
+							m_bot.Buildings().CancelBuilding(building);
+							m_bot.Strategy().setStartingStrategy(STANDARD);
+							m_bot.Commander().Production().clearQueue();
+						}
+						// Put it in the squad if it is not defending or already in the squad
+						if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
+						{
+							m_bot.Workers().setCombatWorker(worker);
+							workerFleeSquad.addUnit(worker);
+						}
+						continue;
+					}
+				}
+			}
 			const auto squad = m_squadData.getUnitSquad(worker);
 			if(squad != nullptr && squad == &workerFleeSquad)
 			{
@@ -905,7 +1009,11 @@ void CombatCommander::updateScoutSquad()
 		return;
 
 	Squad & scoutSquad = m_squadData.getSquad("Scout");
-	if (scoutSquad.getUnits().empty())
+	if (m_combatUnits.size() == 1)
+	{
+		scoutSquad.clear();	// Prevent our only combat unit to scout instead of fighting
+	}
+	else if (scoutSquad.getUnits().empty())
 	{
 		Unit bestCandidate;
 		float distanceFromBase = 0.f;
@@ -1125,9 +1233,25 @@ void CombatCommander::updateAttackSquads()
 			for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
 			{
 				const auto & enemyUnit = enemyUnitPair.second;
-				if (enemyUnit.getType().isCombatUnit() && !enemyUnit.getType().isBuilding())
+				// We want to consider only combat enemy units but not buildings unless we have a proxy strategy
+				if (enemyUnit.getType().isCombatUnit() && (!enemyUnit.getType().isBuilding() || m_bot.Strategy().isProxyStartingStrategy()))
 				{
-					const bool canAttack = (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot)) || (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
+					if (enemyUnit.getType().isBuilding())
+					{
+						// Ignore buildings in construction
+						if (!enemyUnit.isCompleted())
+							continue;
+						// Ignore unpowered protoss buildings
+						if ((enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON)
+							&& !enemyUnit.isPowered())
+							continue;
+						// Ignore proxy buildings
+						if (m_bot.GetEnemyStartLocations().size() > 0 && Util::DistSq(enemyUnit, m_bot.GetStartLocation()) < Util::DistSq(enemyUnit, m_bot.GetEnemyStartLocations()[0]))
+							continue;
+					}
+					const bool canAttack = enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY
+										|| (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot))
+										|| (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
 					if (canAttack)
 						enemyUnits.push_back(enemyUnit.getUnitPtr());
 				}
@@ -1194,13 +1318,11 @@ void CombatCommander::updateScoutDefenseSquad()
 		if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
 		{
 			enemyUnitsInRegion.push_back(unit);
-			if (enemyUnitsInRegion.size() > 1)
-				break;
 		}
 	}
 
-    // if there's an enemy worker in our region
-    if (enemyUnitsInRegion.size() == 1)
+    // if there is at least one enemy worker in our region, but it is still not a worker rush
+    if (!enemyUnitsInRegion.empty() && !m_bot.Strategy().isWorkerRushed())
     {
 		// and there is an injured worker in the squad, remove it
 		if (!scoutDefenseSquad.isEmpty())
@@ -1223,7 +1345,7 @@ void CombatCommander::updateScoutDefenseSquad()
 			Unit enemyWorkerUnit = *enemyUnitsInRegion.begin();
 			BOT_ASSERT(enemyWorkerUnit.isValid(), "null enemy worker unit");
 
-			Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit, enemyUnitsInRegion);
+			const Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit, enemyUnitsInRegion);
 			if (workerDefender.isValid())
 			{
 				m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
@@ -1249,59 +1371,127 @@ void CombatCommander::updateScoutDefenseSquad()
 
 void CombatCommander::updateDefenseBuildings()
 {
+	m_bot.StartProfiling("0.10.4.2.1.1     handleWall");
 	handleWall();
+	m_bot.StopProfiling("0.10.4.2.1.1     handleWall");
 	lowerSupplyDepots();
 }
 
 void CombatCommander::handleWall()
 {
-	int SUPPLYDEPOT_DISTANCE = 10 * 10;	// 10 tiles ^ 2, because we use DistSq
+	const int SUPPLYDEPOT_DISTANCE = 10 * 10;	// 10 tiles ^ 2, because we use DistSq
 
-	auto wallCenter = m_bot.Buildings().getWallPosition();
+	const auto wallCenter = m_bot.Buildings().getWallPosition();
 	auto & enemies = m_bot.GetKnownEnemyUnits();
 
-	for (auto & enemy : enemies)
+	m_bot.StartProfiling("0.10.4.2.1.1.1      CheckEnemies");
+	// If there is at least one melee unit, raise the wall. Otherwise, check if we have units that want to go back in our base
+	bool raiseWall = false;
+	bool meleeEnemyUnit = false;
+	for (const auto & enemy : enemies)
 	{
 		if (enemy.isFlying() || enemy.getType().isBuilding())
 			continue;
 		CCTilePosition enemyPosition = enemy.getTilePosition();
-		int distance = Util::DistSq(enemyPosition, wallCenter);
+		const int distance = Util::DistSq(enemyPosition, wallCenter);
 		if (distance < SUPPLYDEPOT_DISTANCE)
-		{//Raise wall
-			for (auto & building : m_bot.Buildings().getWallBuildings())
+		{
+			raiseWall = true;
+			if (Util::GetMaxAttackRange(enemy.getUnitPtr(), m_bot) < 2)
 			{
-				if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
-				{
-					bool willRaise = true;
-					for (auto & unit : m_bot.GetAllyUnits())
-					{
-						if (unit.second.getType().isBuilding() || unit.second.isFlying())
-						{
-							continue;
-						}
-						//If the unit is on the depot, dont try to raise. Otherwise it forces the unit to move which can cause micro issues.
-						if (Util::DistSq(Util::GetPosition(building.getTilePosition()), unit.second.getPosition()) <= pow(building.getUnitPtr()->radius + unit.second.getUnitPtr()->radius, 2))
-						{
-							willRaise = false;
-							break;
-						}
-					}
-					if (willRaise)
-					{
-						building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE);
-					}
-				}
+				meleeEnemyUnit = true;
+				break;
 			}
-			return;
 		}
 	}
-
-	//Lower wall
-	for (auto & building : m_bot.Buildings().getWallBuildings())
+	m_bot.StopProfiling("0.10.4.2.1.1.1      CheckEnemies");
+	// If all enemies are ranged, check if we have a unit that would like to come back to our base. In that case, we don't want to raise our wall
+	if (raiseWall && !meleeEnemyUnit)
 	{
-		if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)
+		m_bot.StartProfiling("0.10.4.2.1.1.2      CheckAllies");
+		const auto wallHeight = m_bot.Map().terrainHeight(wallCenter);
+		CCPosition rampPosition;
+		// Check 4 tiles around the wall position to find the start of the ramp
+		for (int x = -1; x < 2; x += 2)
 		{
-			building.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+			for (int y = -1; y < 2; y += 2)
+			{
+				const auto tile = CCTilePosition(wallCenter.x + x * 2, wallCenter.y + y * 2);
+				if (m_bot.Map().terrainHeight(tile) < wallHeight)
+				{
+					m_bot.Map().drawTile(tile, sc2::Colors::Purple);
+					rampPosition = Util::GetPosition(tile);
+					break;
+				}
+			}
+			if (rampPosition != CCPosition())
+				break;
+		}
+		for (const auto & allyPair : m_bot.GetAllyUnits())
+		{
+			const auto & allyUnit = allyPair.second;
+			if (allyUnit.isFlying() || allyUnit.getType().isBuilding())
+				continue;
+			const auto distanceToWall = Util::DistSq(allyUnit.getPosition(), wallCenter);
+			// Check if the unit is close enough to the wall
+			if (distanceToWall < SUPPLYDEPOT_DISTANCE)
+			{
+				// If the unit is on low ground, we don't want to raise it
+				const auto unitHeight = m_bot.Map().terrainHeight(allyUnit.getPosition());
+				if (unitHeight < wallHeight)
+				{
+					raiseWall = false;
+					break;
+				}
+					
+				// Check if the unit is on top of the ramp but still inside the wall
+				const auto unitDistanceToRamp = Util::DistSq(allyUnit.getPosition(), rampPosition);
+				if (unitDistanceToRamp < 4 * 4)	// This is just slightly farther than the supply depots so if we have a unit that moves right next to the wall, it will lower
+				{
+					raiseWall = false;
+					break;
+				}
+			}
+		}
+		m_bot.StopProfiling("0.10.4.2.1.1.2      CheckAllies");
+	}
+	//Raise wall
+	if (raiseWall)
+	{
+		for (auto & building : m_bot.Buildings().getWallBuildings())
+		{
+			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED)
+			{
+				bool shouldRaise = true;
+				for (auto & unit : m_bot.GetAllyUnits())
+				{
+					if (unit.second.getType().isBuilding() || unit.second.isFlying())
+					{
+						continue;
+					}
+					//If the unit is on the depot, dont try to raise. Otherwise it forces the unit to move which can cause micro issues.
+					if (Util::DistSq(building.getPosition(), unit.second.getPosition()) <= pow(building.getUnitPtr()->radius + unit.second.getUnitPtr()->radius, 2))
+					{
+						shouldRaise = false;
+						break;
+					}
+				}
+				if (shouldRaise)
+				{
+					Micro::SmartAbility(building.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE, m_bot);
+				}
+			}
+		}
+	}
+	//Lower wall
+	else
+	{
+		for (auto & building : m_bot.Buildings().getWallBuildings())
+		{
+			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT && building.isCompleted())
+			{
+				Micro::SmartAbility(building.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER, m_bot);
+			}
 		}
 	}
 }
@@ -1312,7 +1502,7 @@ void CombatCommander::lowerSupplyDepots()
 	{
 		if(supplyDepot.isCompleted() && !Util::Contains(supplyDepot, m_bot.Buildings().getWallBuildings()))
 		{
-			supplyDepot.useAbility(sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER);
+			Micro::SmartAbility(supplyDepot.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER, m_bot);
 		}
 	}
 }
@@ -1468,6 +1658,7 @@ struct RegionArmyInformation
 
 void CombatCommander::updateDefenseSquads()
 {
+	m_bot.StartProfiling("0.10.4.2.2.0      prepare");
 	// reset defense squads
 	for (const auto & kv : m_squadData.getSquads())
 	{
@@ -1494,6 +1685,7 @@ void CombatCommander::updateDefenseSquads()
 	bases.insert(ourBases.begin(), ourBases.end());
 	if (nextExpansion)
 		bases.insert(nextExpansion);
+	m_bot.StopProfiling("0.10.4.2.2.0      prepare");
 	for (BaseLocation * myBaseLocation : bases)
 	{
 		// don't defend inside the enemy region, this will end badly when we are stealing gas or cannon rushing
@@ -1529,17 +1721,18 @@ void CombatCommander::updateDefenseSquads()
 
 			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
 			{
-				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4392 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
+				if (unit.getType().isWorker())
+					++enemyWorkers;
+				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4032 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
 				{
-					// Need at least 3 workers for a worker rush (or 1 if the previous frame was a worker rush)
-					if (!m_bot.Strategy().isWorkerRushed() && enemyWorkers < 3)
-						++enemyWorkers;
-					else
+					// Need at least 3 workers for a worker rush
+					if (enemyWorkers > 2)
 						workerRushed = true;
 				}
-				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 7320)	// first 5 minutes
+				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 9408)	// first 7 minutes
 				{
-					earlyRushed = true;
+					if (!unit.getType().isWorker() || enemyWorkers > 2)
+						earlyRushed = true;
 				}
 
 				if (!unit.getType().isWorker())
@@ -1570,7 +1763,7 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.StopProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		if (region.enemyUnits.empty())
 		{
-			m_bot.StartProfiling("0.10.4.2.2.3      clearRegion");
+			m_bot.StartProfiling("0.10.4.2.2.2      clearRegion");
 			// if a defense squad for this region exists, remove it
 			if (m_squadData.squadExists(squadName.str()))
 			{
@@ -1600,7 +1793,7 @@ void CombatCommander::updateDefenseSquads()
 					}
 				}
 			}
-			m_bot.StopProfiling("0.10.4.2.2.3      clearRegion");
+			m_bot.StopProfiling("0.10.4.2.2.2      clearRegion");
 
 			// and return, nothing to defend here
 			continue;
@@ -1639,13 +1832,13 @@ void CombatCommander::updateDefenseSquads()
 			const Unit& base = myBaseLocation->getResourceDepot();
 			if (base.isValid())
 			{
-				if (base.getUnitPtr()->cargo_space_taken == 0 && m_bot.Workers().getNumWorkers() > 0)
+				/*if (base.getUnitPtr()->cargo_space_taken == 0 && m_bot.Workers().getNumWorkers() > 0)
 				{
 					// Hide our last SCVs (should be 5, but is higher because some workers may end up dying on the way)
 					if (m_bot.Workers().getNumWorkers() <= 7)
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
 				}
-				else if (!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
+				else*/ if (!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
 					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 			}
 		}
@@ -1668,17 +1861,14 @@ void CombatCommander::updateDefenseSquads()
 	{
 		if (enemyBaseLocation)
 		{
-			for (auto & unitPair : m_bot.GetAllyUnits())
+			for (auto & reaper : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REAPER))
 			{
 				float minDist = 0.f;
-				if (unitPair.second.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
+				const auto dist = Util::DistSq(reaper, enemyBaseLocation->getPosition());
+				if (!offensiveReaper || dist < minDist)
 				{
-					const auto dist = Util::DistSq(unitPair.second, enemyBaseLocation->getPosition());
-					if (!offensiveReaper || dist < minDist)
-					{
-						minDist = dist;
-						offensiveReaper = unitPair.second.getUnitPtr();
-					}
+					minDist = dist;
+					offensiveReaper = reaper.getUnitPtr();
 				}
 			}
 		}
@@ -1701,11 +1891,16 @@ void CombatCommander::updateDefenseSquads()
 			if (unit.getUnitPtr() == offensiveReaper)
 				continue;	// We want to keep at least one Reaper in the Harass squad (defined only when early rushed)
 
+			const auto unitSquad = m_squadData.getUnitSquad(unit);
+			const bool harassUnit = unitSquad && unitSquad->getSquadOrder().getType() == SquadOrderTypes::Harass;
+			const auto orderPositionDist = unitSquad ? Util::Dist(unit, unitSquad->getSquadOrder().getPosition()) : 0;
+
 			// We check how useful our unit would be for anti ground and anti air for each of our regions
 			for (auto & region : regions)
 			{
 				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
 				bool weakUnitAgainstOnlyBuildings = unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER;
+				bool proxyMarauderAgainstOnlyBuildings = m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS && unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MARAUDER;
 				bool immune = true;
 				bool detectionUseful = false;
 				float maxGroundDps = 0.f;
@@ -1713,6 +1908,8 @@ void CombatCommander::updateDefenseSquads()
 				const bool workerScout = region.enemyUnits.size() == 1 && region.enemyUnits[0].getType().isWorker();
 				if (workerScout)
 					continue;	// We do not want to send a combat unit against an enemy scout
+				if (harassUnit && orderPositionDist < distance)
+					continue;	// We do not want to make our harass units come back to defend if they are close to their harass target base
 				for (auto & enemyUnit : region.enemyUnits)
 				{
 					// As soon as there is a non building unit that the weak unit can attack, we consider that the weak unit can be useful
@@ -1722,6 +1919,14 @@ void CombatCommander::updateDefenseSquads()
 							continue;
 						if (Util::GetDpsForTarget(unit.getUnitPtr(), enemyUnit.getUnitPtr(), m_bot) > 0.f)
 							weakUnitAgainstOnlyBuildings = false;
+					}
+					// As soon as there is a non worker non building unit that the proxy Marauder should defend against, we consider that the weak unit can be useful
+					if (proxyMarauderAgainstOnlyBuildings)
+					{
+						if (enemyUnit.getType().isBuilding() || enemyUnit.getType().isWorker())
+							continue;
+						if (Util::GetDpsForTarget(unit.getUnitPtr(), enemyUnit.getUnitPtr(), m_bot) > 0.f)
+							proxyMarauderAgainstOnlyBuildings = false;
 					}
 					// We check if our unit is immune to the enemy unit (as soon as one enemy unit can attack our unit, we stop checking)
 					if (immune)
@@ -1928,56 +2133,6 @@ void CombatCommander::updateDefenseSquads()
 	}
 }
 
-/*
- * This method is not used anymore.
- */
-void CombatCommander::updateDefenseSquadUnits(Squad & defenseSquad, bool flyingDefendersNeeded, bool groundDefendersNeeded, Unit & closestEnemy)
-{
-    auto & squadUnits = defenseSquad.getUnits();
-
-    for (auto & unit : squadUnits)
-    {
-		// Let injured worker return mining, no need to sacrifice it
-		if (unit.getType().isWorker())
-		{
-			if (unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT ||
-				!ShouldWorkerDefend(unit, defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, defenseSquad.getTargets()))
-			{
-				m_bot.Workers().finishedWithWorker(unit);
-				defenseSquad.removeUnit(unit);
-			}
-		}
-        else if (unit.isAlive())
-        {
-			bool isUseful = (flyingDefendersNeeded && unit.canAttackAir()) || (groundDefendersNeeded && unit.canAttackGround());
-			if(!isUseful)
-				defenseSquad.removeUnit(unit);
-        }
-    }
-
-	if (flyingDefendersNeeded)
-	{
-		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "air");
-
-		while(defenderToAdd.isValid())
-		{
-			m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
-			defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "air");
-		}
-	}
-
-	if (groundDefendersNeeded)
-	{
-		Unit defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "ground");
-
-		while (defenderToAdd.isValid())
-		{
-			m_squadData.assignUnitToSquad(defenderToAdd, defenseSquad);
-			defenderToAdd = findClosestDefender(defenseSquad, defenseSquad.getSquadOrder().getPosition(), closestEnemy, "ground");
-		}
-	}
-}
-
 Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type)
 {
     Unit closestDefender;
@@ -2021,7 +2176,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     return closestDefender;
 }
 
-Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits)
+Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const
 {
     // get our worker unit that is mining that is closest to it
     Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
@@ -2041,11 +2196,28 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 {
 	if (!worker.isValid())
 		return false;
+	if (worker.getUnitPtr()->is_selected)
+		auto a = 0;
 	if (m_bot.Workers().getWorkerData().isProxyWorker(worker))
 		return false;
 	if (!m_squadData.canAssignUnitToSquad(worker, defenseSquad))
 		return false;
-	if (closestEnemy.isFlying())
+	const auto workerHeight = m_bot.Map().terrainHeight(worker.getPosition());
+	bool groundEnemyUnitOnSameHeight = false;
+	bool enemyBuildingOnSameHeight = false;
+	for (const auto & enemyUnit : enemyUnits)
+	{
+		if (!enemyUnit.isFlying() && workerHeight == m_bot.Map().terrainHeight(enemyUnit.getPosition()))
+		{
+			groundEnemyUnitOnSameHeight = true;
+			if (enemyUnit.getType().isBuilding())
+			{
+				enemyBuildingOnSameHeight = true;
+				break;
+			}
+		}
+	}
+	if (!groundEnemyUnitOnSameHeight)
 		return false;
 	// do not check distances if it is to protect against a scout
 	if (defenseSquad.getName() == "ScoutDefense")
@@ -2054,24 +2226,27 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	if (m_bot.Strategy().isWorkerRushed())
 		return true;
 	// worker can fight buildings somewhat close to the base
-	const auto isBuilding = closestEnemy.getType().isBuilding();
+	/*const auto isBuilding = closestEnemy.getType().isBuilding();
 	const auto enemyDistanceToBase = Util::DistSq(closestEnemy, pos);
-	const auto maxEnemyDistance = closestEnemy.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL ? 30.f : 15.f;
+	const auto maxEnemyDistance = closestEnemy.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL ? 30.f : 20.f;
 	const auto enemyDistanceToWorker = Util::DistSq(worker, closestEnemy);
-	if (isBuilding && enemyDistanceToBase < maxEnemyDistance * maxEnemyDistance && enemyDistanceToWorker < maxEnemyDistance * maxEnemyDistance)
+	if (isBuilding && enemyDistanceToBase < maxEnemyDistance * maxEnemyDistance && enemyDistanceToWorker < maxEnemyDistance * maxEnemyDistance)*/
+	if (enemyBuildingOnSameHeight)
 		return true;
 	// Worker should not defend against slow enemies, it should flee
 	if (!WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits))
 		return false;
 	// worker should not get too far from base and can fight only units close to it
-	if (Util::DistSq(worker, pos) < 15.f * 15.f && enemyDistanceToWorker < 7.f * 7.f)
+	const auto enemyDistanceToBase = Util::DistSq(closestEnemy, pos);
+	const auto enemyDistanceToWorker = Util::DistSq(worker, closestEnemy);
+	if (enemyDistanceToBase < 15.f * 15.f && enemyDistanceToWorker < 7.f * 7.f)
 		return true;
 	return false;
 }
 
 bool CombatCommander::WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const
 {
-	const auto workerSpeed = Util::getSpeedOfUnit(worker, m_bot);
+	const auto workerSpeed = std::max(1.f, Util::getSpeedOfUnit(worker, m_bot));
 	bool onlyWorkerThreats = true;
 	const auto threats = Util::getThreats(worker, enemyUnits, m_bot);
 	for (const auto threat : threats)
@@ -2193,7 +2368,7 @@ CCPosition CombatCommander::getMainAttackLocation()
     // First choice: Attack an enemy region if we can see units inside it
     if (enemyBaseLocation)
     {
-        CCPosition enemyBasePosition = enemyBaseLocation->getPosition();
+        const CCPosition enemyBasePosition = enemyBaseLocation->getDepotPosition();
         // If the enemy base hasn't been seen yet, go there.
         if (!m_bot.Map().isExplored(enemyBasePosition))
         {
@@ -2444,12 +2619,12 @@ void CombatCommander::ExecuteActions()
 		if (action.description.empty())
 			continue;
 
-		if (m_logVikingActions && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+		/*if (m_logVikingActions && rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 		{
 			std::stringstream ss;
 			ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " has action " << action.description;
 			Util::Log(__FUNCTION__, ss.str(), m_bot);
-		}
+		}*/
 
 #ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawRangedUnitActions)
@@ -2465,75 +2640,88 @@ void CombatCommander::ExecuteActions()
 
 		std::stringstream ss;
 		bool skip = false;
-		m_bot.GetCommandMutex().lock();
-		switch (action.microActionType)
+		if (m_bot.Config().ArchonMode && rangedUnit->is_selected)
 		{
-		case MicroActionType::AttackMove:
-			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
-			{
-				const auto orderPos = rangedUnit->orders[0].target_pos;
-				const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
-				const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
-				const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
-				const auto dist = Util::DistSq(orderPos, action.position);
-				if (sameDirection && dist < 1)
-					skip = true;
-			}
-			if (!skip)
-			{
-				if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
-					Micro::SmartMove(rangedUnit, action.position, m_bot);
-				else
-					Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
-			}
-			break;
-		case MicroActionType::AttackUnit:
-			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == action.target->tag)
-				skip = true;
-			if (!skip)
-				Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
-			break;
-		case MicroActionType::Move:
-			if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
-			{
-				const auto orderPos = rangedUnit->orders[0].target_pos;
-				const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
-				const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
-				const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
-				const auto dist = Util::DistSq(orderPos, action.position);
-				if (sameDirection && dist < 1)
-					skip = true;
-			}
-			if (!skip)
-				Micro::SmartMove(rangedUnit, action.position, m_bot);
-			break;
-		case MicroActionType::Ability:
-			Micro::SmartAbility(rangedUnit, action.abilityID, m_bot);
-			break;
-		case MicroActionType::AbilityPosition:
-			Micro::SmartAbility(rangedUnit, action.abilityID, action.position, m_bot);
-			break;
-		case MicroActionType::AbilityTarget:
-			Micro::SmartAbility(rangedUnit, action.abilityID, action.target, m_bot);
-			break;
-		case MicroActionType::Stop:
-			//Micro::SmartStop(rangedUnit, m_bot);
-			ss << "MicroAction of type STOP with " << action.description << " sent to a " << sc2::UnitTypeToName(rangedUnit->unit_type);
-			Util::Log(__FUNCTION__, ss.str(), m_bot);
-			break;
-		case MicroActionType::RightClick:
-			Micro::SmartRightClick(rangedUnit, action.target, m_bot);
-			break;
-		case MicroActionType::ToggleAbility:
-			Micro::SmartToggleAutoCast(rangedUnit, action.abilityID, m_bot);
-			break;
-		default:
-			const int type = action.microActionType;
-			Util::Log(__FUNCTION__, "Unknown MicroActionType: " + std::to_string(type), m_bot);
-			break;
+			skip = true;
 		}
-		m_bot.GetCommandMutex().unlock();
-
+		else
+		{
+			m_bot.GetCommandMutex().lock();
+			switch (action.microActionType)
+			{
+			case MicroActionType::AttackMove:
+				if (action.position == rangedUnit->pos)
+					skip = true;
+				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
+				{
+					const auto orderPos = rangedUnit->orders[0].target_pos;
+					const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
+					const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
+					const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
+					const auto dist = Util::DistSq(orderPos, action.position);
+					if (sameDirection && dist < 1)
+						skip = true;
+				}
+				if (!skip)
+				{
+					if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+						Micro::SmartMove(rangedUnit, action.position, m_bot);
+					else
+						Micro::SmartAttackMove(rangedUnit, action.position, m_bot);
+				}
+				break;
+			case MicroActionType::AttackUnit:
+				if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == action.target->tag)
+					skip = true;
+				if (!skip)
+					Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
+				break;
+			case MicroActionType::Move:
+				if (action.position == rangedUnit->pos)
+					skip = true;
+				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
+				{
+					const auto orderPos = rangedUnit->orders[0].target_pos;
+					const auto orderDirection = Util::Normalized(orderPos - rangedUnit->pos);
+					const auto actionDirection = Util::Normalized(action.position - rangedUnit->pos);
+					const auto sameDirection = sc2::Dot2D(orderDirection, actionDirection) > 0.95f;
+					const auto dist = Util::DistSq(orderPos, action.position);
+					if (sameDirection && dist < 1)
+						skip = true;
+				}
+				if (!skip)
+				{
+					Micro::SmartMove(rangedUnit, action.position, m_bot);
+				}
+				break;
+			case MicroActionType::Ability:
+				Micro::SmartAbility(rangedUnit, action.abilityID, m_bot);
+				break;
+			case MicroActionType::AbilityPosition:
+				Micro::SmartAbility(rangedUnit, action.abilityID, action.position, m_bot);
+				break;
+			case MicroActionType::AbilityTarget:
+				Micro::SmartAbility(rangedUnit, action.abilityID, action.target, m_bot);
+				break;
+			case MicroActionType::Stop:
+				//Micro::SmartStop(rangedUnit, m_bot);
+				ss << "MicroAction of type STOP with " << action.description << " sent to a " << sc2::UnitTypeToName(rangedUnit->unit_type);
+				Util::Log(__FUNCTION__, ss.str(), m_bot);
+				break;
+			case MicroActionType::RightClick:
+				Micro::SmartRightClick(rangedUnit, action.target, m_bot);
+				break;
+			case MicroActionType::ToggleAbility:
+				Micro::SmartToggleAutoCast(rangedUnit, action.abilityID, m_bot);
+				break;
+			default:
+				const int type = action.microActionType;
+				Util::Log(__FUNCTION__, "Unknown MicroActionType: " + std::to_string(type), m_bot);
+				break;
+			}
+			m_bot.GetCommandMutex().unlock();
+		}
+		
 		if (!skip)
 		{
 			action.executed = true;
@@ -2551,17 +2739,40 @@ RangedUnitAction& CombatCommander::GetRangedUnitAction(const sc2::Unit * combatU
 	return unitActions[combatUnit];
 }
 
-void CombatCommander::CleanLockOnTargets() const
+void CombatCommander::CleanLockOnTargets()
 {
-	auto & lockOnTargets = m_bot.Commander().Combat().getLockOnTargets();
-	for (auto it = lockOnTargets.cbegin(), next_it = it; it != lockOnTargets.cend(); it = next_it)
+	sc2::Units toRemove;
+	for (const auto & cyclonePair : m_lockOnTargets)
 	{
-		++next_it;
-		if (!it->first->is_alive)
-		{
-			lockOnTargets.erase(it);
-		}
+		const auto cyclone = cyclonePair.first;
+		const auto target = cyclonePair.second.first;
+		if (!cyclone->is_alive || !target->is_alive || target->last_seen_game_loop < m_bot.GetCurrentFrame())
+			toRemove.push_back(cyclone);
 	}
+	for (const auto cyclone : toRemove)
+		m_lockOnTargets.erase(cyclone);
+
+	toRemove.clear();
+	for (auto & targetPair : m_lockedOnTargets)
+	{
+		const auto target = targetPair.first;
+		auto & cyclones = targetPair.second;
+		if (!target || !target->is_alive || target->last_seen_game_loop < m_bot.GetCurrentFrame())
+		{
+			toRemove.push_back(target);
+			continue;
+		}
+		sc2::Units toRemove2;
+		for (const auto cyclone : cyclones)
+		{
+			if (!cyclone->is_alive)
+				toRemove2.push_back(cyclone);
+		}
+		for (const auto cyclone : toRemove2)
+			cyclones.erase(cyclone);
+	}
+	for (const auto target : toRemove)
+		m_lockedOnTargets.erase(target);
 }
 
 void CombatCommander::CalcBestFlyingCycloneHelpers()
@@ -2764,12 +2975,13 @@ bool CombatCommander::ShouldUnitHeal(const sc2::Unit * unit) const
 		{
 			float percentageMultiplier = 1.f;
 			bool forceHeal = false;
+			const bool isLockedOn = Util::unitHasBuff(unit, sc2::BUFF_ID::LOCKON);
 			switch (unit->unit_type.ToType())
 			{
 			case sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER:
 				if (m_bot.Config().StarCraft2Version <= "4.10.4")
-					percentageMultiplier = 0.5f;
-				else if (m_bot.Analyzer().getUnitState(unit).GetRecentDamageTaken() * 1.8f >= unit->health
+					percentageMultiplier = isLockedOn ? 0.75f : 0.5f;
+				else if (m_bot.Analyzer().getUnitState(unit).GetRecentDamageTaken() * (isLockedOn ? 2.5f : 2.f) >= unit->health
 					&& Util::IsAbilityAvailable(sc2::ABILITY_ID::EFFECT_TACTICALJUMP, unit, m_unitsAbilities))
 					forceHeal = true;	// After version 4.10.4, Tactical Jump has a 1 second vulnerability
 				break;

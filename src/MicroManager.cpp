@@ -80,10 +80,26 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	{
 		return 0.f;
 	}
-
-	// We don't want to consider spells when we want to find an opportunistic target, otherwise our Cyclones will their they have too much range
-	const float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot, considerOnlyUnitsInRange);
+	
+	// Check for close melee unit bonus
+	const bool ignoreSpells = filterHighRangeUnits;	// ATM only the Cyclone Lock-On is considered and we want to ignore it only in harass mode
+	const float attackerRange = Util::GetAttackRangeForTarget(attacker, target, m_bot, ignoreSpells);
 	const float targetRange = Util::GetAttackRangeForTarget(target, attacker, m_bot);
+	const float distance = Util::Dist(attacker->pos, target->pos);
+	float closeMeleeUnitBonus = 1.f;
+	if (targetRange > 0.f && targetRange < 2.f)
+	{
+		if (distance <= targetRange)
+			closeMeleeUnitBonus = 2.f;
+		else
+		{
+			const float targetThreatRange = Util::getThreatRange(attacker, target, m_bot);
+			const float threatBuffer = targetThreatRange - targetRange;
+			const float damageDistance = distance - targetRange;
+			const float progression = std::max(0.f, std::min(1.f, damageDistance / threatBuffer));	// Between 0 and 1. The closer the enemy is, the closer to 0 it gets
+			closeMeleeUnitBonus = 2 - progression;
+		}
+	}
 
 	if (filterHighRangeUnits)
 	{
@@ -96,7 +112,6 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		return 0.f;
 
 	const float healthValue = pow(target->health + target->shield, 0.5f);		//the more health a unit has, the less it is prioritized
-	const float distance = Util::Dist(attacker->pos, target->pos);
 	float proximityValue = 1.f;
 	if (distance > attackerRange)
 	{
@@ -107,14 +122,20 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		else
 			proximityValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
 	}
+	if (target->last_seen_game_loop < m_bot.GetGameLoop())
+		proximityValue *= 0.5f;
 
 	float invisModifier = 1.f;
 	if (target->cloak == sc2::Unit::CloakedDetected)
 		invisModifier = 2.f;
 	else if (target->is_burrowed && target->unit_type != sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED)
-		invisModifier = 2.f;
+		invisModifier = 3.f;
 
-	Unit targetUnit(target, m_bot);
+	const Unit attackerUnit(attacker, m_bot);
+	const Unit targetUnit(target, m_bot);
+	
+	const float antiBuildingModifier = attackerUnit.getType().isWorker() && targetUnit.getType().isBuilding() ? 10.f : 1.f;
+
 	if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
 	{
 		const float targetDps = Util::GetDpsForTarget(target, attacker, m_bot);
@@ -165,8 +186,11 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
 		//const float nydusModifier = target->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && target->build_progress < 1.f ? 100.f : 1.f;
 		const float nydusModifier = 1.f;	// It seems like attacking it does close to nothing since it has 3 armor
-		return (targetDps + unitDps - healthValue + proximityValue * 50) * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier;
+		return (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier;
 	}
 
+	if (antiBuildingModifier > 1.f)
+		return (proximityValue * 50 - healthValue) * invisModifier * antiBuildingModifier;	// Our workers should clear buildings instead of enemy units
+	
 	return (proximityValue * 50 - healthValue) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
 }

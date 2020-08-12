@@ -29,7 +29,7 @@ BotConfig::BotConfig()
     DrawTileInfo = false;
     DrawWalkableSectors = false;
 	DrawBuildableSectors = false;
-	DrawBuildable = true;
+	DrawBuildable = false;
     DrawScoutInfo = false;
     DrawResourceInfo = false;
     DrawWorkerInfo = false;
@@ -165,6 +165,7 @@ void BotConfig::readConfigFile()
         const json & sc2api = j["SC2API"];
         JSONTools::ReadBool("BatchReplayMode", sc2api, BatchReplayMode);
         JSONTools::ReadInt("NbBatchReplay", sc2api, NbBatchReplay);
+		JSONTools::ReadBool("ArchonMode", sc2api, ArchonMode);
     }
 
     // Parse the Macro Options
@@ -221,6 +222,8 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawResourcesProximity", debug, DrawResourcesProximity);
 			JSONTools::ReadBool("DrawCombatInformation", debug, DrawCombatInformation);
 			JSONTools::ReadBool("DrawPathfindingTiles", debug, DrawPathfindingTiles);
+			JSONTools::ReadBool("DrawBuildingBase", debug, DrawBuildingBase);
+			JSONTools::ReadBool("DrawCurrentStartingStrategy", debug, DrawCurrentStartingStrategy);
 			JSONTools::ReadBool("TimeControl", debug, TimeControl);
 		}
     }

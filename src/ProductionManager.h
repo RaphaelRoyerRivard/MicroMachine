@@ -25,6 +25,7 @@ class ProductionManager
 	std::map<std::string, MetaType> alternateUpgrades;//Tech do not have alternate upgrades
 	bool firstBarrackBuilt = false;
 	bool firstBarracksTechlab = true;
+	bool wantToQuickExpand = false;
 	UnitType supplyProvider;
 	MetaType supplyProviderType;
 	UnitType workerType;
@@ -34,15 +35,15 @@ class ProductionManager
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
     bool    canMakeNow(const Unit & producer, const MetaType & type);
     bool    detectBuildOrderDeadlock();
-    void    setBuildOrder(const BuildOrder & buildOrder);
-    bool    create(const Unit & producer, BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources = true, bool filterMovingWorker = true, bool canBePlacedElsewhere = true);
+    void    setBuildOrder(const MM::BuildOrder & buildOrder);
+    bool    create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources = true, bool filterMovingWorker = true, bool canBePlacedElsewhere = true);
 	bool    create(const Unit & producer, Building & b, bool filterMovingWorker = true);
     void    manageBuildOrderQueue();
-	bool	ShouldSkipQueueItem(const BuildOrderItem & currentItem) const;
+	bool	ShouldSkipQueueItem(const MM::BuildOrderItem & currentItem);
 	void	putImportantBuildOrderItemsInQueue();
 	void	QueueDeadBuildings();
 
-	void	fixBuildOrderDeadlock(BuildOrderItem & item);
+	void	fixBuildOrderDeadlock(MM::BuildOrderItem & item);
 	void	lowPriorityChecks();
 	bool	currentlyHasRequirement(MetaType currentItem) const;
 	bool	hasRequiredUnit(const UnitType& unitType, bool checkInQueue) const;
@@ -61,8 +62,8 @@ public:
     void    drawProductionInformation();
 
 	bool	hasRequired(const MetaType& metaType, bool checkInQueue) const;
-    Unit getProducer(const MetaType & type, bool allowTraining = false, CCPosition closestTo = CCPosition(0, 0)) const;
-	std::vector<sc2::UNIT_TYPEID> getProductionBuildingTypes() const;
+	Unit getProducer(const MetaType & type, bool allowTraining = false, CCPosition closestTo = CCPosition(0, 0)) const;
+	std::vector<sc2::UNIT_TYPEID> getProductionBuildingTypes(bool ignoreState = true) const;
 	int getProductionBuildingsCount() const;
 	int getProductionBuildingsAddonsCount() const;
 	float getProductionScore() const;
@@ -81,5 +82,6 @@ public:
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
 	int getSupplyNeedsFromProductionBuildings() const;
 	void clearQueue();
-	BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);
+	MM::BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);
+	void SetWantToQuickExpand(bool value);
 };

@@ -3,18 +3,20 @@
 #include "Common.h"
 #include "MetaType.h"
 
-class BuildOrder
+namespace MM
 {
-    std::vector<MetaType> m_buildOrder;
+	class BuildOrder
+	{
+		std::vector<MetaType> m_buildOrder;
 
-public:
+	public:
 
-    BuildOrder();
-    BuildOrder(const std::vector<MetaType> & buildVector);
+		BuildOrder();
+		BuildOrder(const std::vector<MetaType> & buildVector);
 
-    void add(const MetaType & type);
-    size_t size() const;
-    const MetaType & operator [] (const size_t & index) const;
-    MetaType & operator [] (const size_t & index);
-};
-
+		void add(const MetaType & type);
+		size_t size() const;
+		const MetaType & operator [] (const size_t & index) const;
+		MetaType & operator [] (const size_t & index);
+	};
+}

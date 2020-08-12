@@ -29,6 +29,9 @@ void CombatAnalyzer::onFrame()
 
 	drawDamageHealthRatio();
 
+	// Detect burrowed Zerg units
+	DetectBurrowingUnits();
+
 	lowPriorityChecks();
 //drawAreasUnderDetection();
 }
@@ -68,9 +71,9 @@ void CombatAnalyzer::lowPriorityChecks()
 	totalGroundMassiveCount = 0;
 	totalAirMassiveCount = 0;
 
-	for (auto enemy : m_bot.GetEnemyUnits())
+	for (const auto & enemy : m_bot.GetEnemyUnits())
 	{
-		auto unit = enemy.second;
+		const auto & unit = enemy.second;
 		sc2::UNIT_TYPEID type = (sc2::UNIT_TYPEID)unit.getAPIUnitType();
 		
 		if (m_bot.Data(unit).isBuilding)
@@ -117,7 +120,12 @@ void CombatAnalyzer::lowPriorityChecks()
 			totalAirUnitsCount++;
 			// This will ignore Observers, Warp Prisms and Overlords (+Cocoons)
 			if (unit.getType().isCombatUnit() && (Util::GetMaxAttackRange(unit.getUnitPtr(), m_bot) > 0 || unit.getUnitPtr()->energy_max > 0))
-				m_enemyHasCombatAirUnit = true;
+			{
+				const std::vector<sc2::UNIT_TYPEID> flyingHallucinationTypes = { sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, sc2::UNIT_TYPEID::PROTOSS_PHOENIX, sc2::UNIT_TYPEID::PROTOSS_ORACLE };
+				// If the flying unit cannot be an hallucination or if it was seen in the past 2 minutes, we can consider it
+				if (!Util::Contains(unit.getAPIUnitType(), flyingHallucinationTypes) || m_bot.GetCurrentFrame() - unit.getUnitPtr()->last_seen_game_loop < 22.4 * 120)
+					m_enemyHasCombatAirUnit = true;
+			}
 		}
 		else
 			totalGroundUnitsCount++;
@@ -182,6 +190,14 @@ void CombatAnalyzer::lowPriorityChecks()
 			else
 				totalGroundMassiveCount++;
 		}
+
+		// Clean picked up Zerg units
+		if (unit.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
+		{
+			const auto it = enemyPickedUpUnits.find(unit.getUnitPtr());
+			if (it != enemyPickedUpUnits.end())
+				enemyPickedUpUnits.erase(unit.getUnitPtr());
+		}
 	}
 	
 	//TODO handle dead ally units
@@ -218,6 +234,116 @@ void CombatAnalyzer::lowPriorityChecks()
 		else if (production.isTechFinished(MetaTypeEnum::TerranShipWeaponsLevel3) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranVehicleAndShipArmorsLevel3))
 		{
 			production.queueTech(MetaTypeEnum::TerranVehicleAndShipArmorsLevel3);
+		}
+	}
+}
+
+void CombatAnalyzer::DetectBurrowingUnits()
+{
+	const auto enemyPlayerRace = m_bot.GetPlayerRace(Players::Enemy);
+	if (enemyPlayerRace != sc2::Zerg)
+		return;
+	
+	std::vector<sc2::UNIT_TYPEID> zergTransporters = { sc2::UNIT_TYPEID::ZERG_OVERLORDTRANSPORT, sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK };
+
+	// Clear units that are not burrowed anymore
+	sc2::Units unitsToRemove;
+	for (const auto & burrowedUnit : burrowedUnits)
+	{
+		if (!burrowedUnit->is_alive)
+		{
+			unitsToRemove.push_back(burrowedUnit);
+		}
+		// We just saw the unit
+		else if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
+		{
+			// And it was not burrowed anymore
+			if (!burrowedUnit->is_burrowed)
+				unitsToRemove.push_back(burrowedUnit);
+		}
+		// The unit is not where it burrowed previously
+		else if (m_bot.Map().isDetected(burrowedUnit->pos))
+		{
+			unitsToRemove.push_back(burrowedUnit);
+		}
+	}
+	for (const auto unit : unitsToRemove)
+	{
+		burrowedUnits.erase(unit);
+	}
+
+	unitsToRemove.clear();
+	for (const auto & pickedUpUnit : enemyPickedUpUnits)
+	{
+		// We just saw the unit
+		if (pickedUpUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
+		{
+			unitsToRemove.push_back(pickedUpUnit);
+		}
+	}
+	for (const auto unit : unitsToRemove)
+	{
+		enemyPickedUpUnits.erase(unit);
+	}
+	
+	for (const auto & enemy : m_bot.GetEnemyUnits())
+	{
+		const auto & unit = enemy.second;
+		if (!unit.isFlying() && !unit.getType().isBuilding() && !unit.getType().isEgg() && !unit.getType().isLarva() && !unit.getType().isCocoon() && !unit.getType().isWorker())
+		{
+			// We want to only consider units that we just saw disappear
+			const auto missingFrames = m_bot.GetCurrentFrame() - unit.getUnitPtr()->last_seen_game_loop;
+			if (missingFrames == 0 || missingFrames > 24)
+				continue;
+			// If we already flagged that unit as burrowed, no need to check again if it burrowed
+			if (burrowedUnits.find(unit.getUnitPtr()) != burrowedUnits.end())
+				continue;
+			
+			bool canSeeSurroundingTiles = true;
+			for (int x = -1; x <= 1; ++x)
+			{
+				for (int y = -1; y <= 1; ++y)
+				{
+					if (!m_bot.Map().isVisible(unit.getPosition() + CCPosition(x, y)))
+					{
+						canSeeSurroundingTiles = false;
+						break;
+					}
+				}
+				if (!canSeeSurroundingTiles)
+					break;
+			}
+			if (canSeeSurroundingTiles)
+			{
+				if (enemyPickedUpUnits.find(unit.getUnitPtr()) == enemyPickedUpUnits.end())
+				{
+					bool mightBePickedUp = false;
+					for (const auto transporterType : zergTransporters)
+					{
+						for (const auto transporter : m_bot.GetEnemyUnits(transporterType))
+						{
+							const auto maxPickupRange = unit.getUnitPtr()->radius + transporter.getUnitPtr()->radius + 1.5f;
+							if (Util::DistSq(unit, transporter) < maxPickupRange * maxPickupRange)
+							{
+								mightBePickedUp = true;
+								enemyPickedUpUnits.insert(unit.getUnitPtr());
+								break;
+							}
+						}
+						if (mightBePickedUp)
+							break;
+					}
+					if (!mightBePickedUp)
+					{
+						burrowedUnits.insert(unit.getUnitPtr());
+						if (!m_bot.Strategy().enemyHasBurrowingUpgrade())
+						{
+							m_bot.Strategy().setEnemyHasBurrowingUpgrade(true);
+							m_bot.Actions()->SendChat("Stop hiding and fight, insect!");
+						}
+					}
+				}
+			}
 		}
 	}
 }
@@ -444,7 +570,7 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 			//If the building could die, cancel it.
 			if (state.GetRecentDamageTaken() >= 2 * unit.getHitPoints())
 			{
-				unit.useAbility(sc2::ABILITY_ID::CANCEL);
+				Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::CANCEL, m_bot);
 			}
 		}
 		
@@ -572,7 +698,7 @@ int CombatAnalyzer::getUnitUpgradeArmor(const sc2::Unit* unit)
 		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTBURROWEDMP:
 		case sc2::UNIT_TYPEID::ZERG_SWARMHOSTMP:
 		case sc2::UNIT_TYPEID::ZERG_ULTRALISK:
-			//TODO Missing burrowed Ultralisk
+		case sc2::UNIT_TYPEID::ZERG_ULTRALISKBURROWED:
 			//TODO Might want to check for chininous plating (+2 armor on Ultras), would have to change the switch a little.
 		case sc2::UNIT_TYPEID::ZERG_ZERGLING:
 		case sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED:
@@ -688,7 +814,7 @@ int CombatAnalyzer::getUnitUpgradeWeapon(const sc2::Unit* unit)
 void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 {
 	int healthLost = state.GetDamageTaken();
-	sc2::UnitTypeData unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(unit.getAPIUnitType(), m_bot);
+	const sc2::UnitTypeData & unitTypeData = Util::GetUnitTypeDataFromUnitTypeId(unit.getAPIUnitType(), m_bot);
 	UnitType type = UnitType(unit.getAPIUnitType(), m_bot);
 	int unitUpgradeArmor = getUnitUpgradeArmor(unit.getUnitPtr());
 	
@@ -698,7 +824,7 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 	{
 		//TODO validate unit is looking towards the unit
 
-		sc2::UnitTypeData threatTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
+		const sc2::UnitTypeData & threatTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
 		auto range = Util::GetAttackRangeForTarget(threat, unit.getUnitPtr(), m_bot, true);
 		auto distSq = Util::DistSq(unit.getPosition(), threat->pos) - type.radius() - threat->radius;
 		// If the threat is too far and cant have dealt damage (doesn't consider projectil travel time)
@@ -711,7 +837,7 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 		float weaponDamage = Util::GetDamageForTarget(threat, unit.getUnitPtr(), m_bot);
 		
 		//Get the weapon, even if we have the range and damage, to see if there is another bonus damage that applies to the unit, if there is, apply the + on it.
-		sc2::UnitTypeData targetTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
+		const sc2::UnitTypeData & targetTypeData = Util::GetUnitTypeDataFromUnitTypeId(threat->unit_type, m_bot);
 		for (auto & weapon : unitTypeData.weapons)
 		{
 			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType)

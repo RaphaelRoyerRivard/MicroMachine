@@ -4,13 +4,13 @@
 #include <functional>
 #include <random>
 #include <iostream>
-// #include "Bot.h"
 #include "../utilities/mappings.h"
 #include "../utilities/profiler.h"
 #include "../utilities/stdutils.h"
 #include "../utilities/predicates.h"
 #include "../common/unit_lists.h"
 #include "combat_environment.h"
+#include "../../CCBot.h"
 #include <sstream>
 #include <iomanip>
 #include <chrono>
@@ -87,7 +87,7 @@ void CombatRecording::writeCSV(string filename) {
 }
 
 void CombatRecorder::tick(const ObservationInterface* observation) {
-    vector<Unit> units;
+    vector<sc2::Unit> units;
     for (auto u : observation->GetUnits()) {
         units.push_back(*u);
     }
@@ -252,14 +252,16 @@ float timeToBeAbleToAttack (const CombatEnvironment& env, CombatUnit& unit, floa
 }
 
 // Owner = 1 is the defender, Owner != 1 is an attacker
-CombatResult CombatPredictor::predict_engage(const CombatState& inputState, bool debug, bool badMicro, CombatRecording* recording, int defenderPlayer) const {
+CombatResult CombatPredictor::predict_engage(const CombatState& inputState, bool debug, bool badMicro, CombatRecording* recording, int defenderPlayer, CCBot * bot) const {
     CombatSettings settings;
     settings.badMicro = badMicro;
     settings.debug = debug;
-    return predict_engage(inputState, settings, recording, defenderPlayer);
+    return predict_engage(inputState, settings, recording, defenderPlayer, bot);
 }
 
-CombatResult CombatPredictor::predict_engage(const CombatState& inputState, CombatSettings settings, CombatRecording* recording, int defenderPlayer) const {
+CombatResult CombatPredictor::predict_engage(const CombatState& inputState, CombatSettings settings, CombatRecording* recording, int defenderPlayer, CCBot * bot) const {
+	if (bot)
+		bot->StartProfiling("s.2.1 PrepareForEngagement");
 #if CACHE_COMBAT
     auto h = combatHash(inputState, badMicro, defenderPlayer);
     counter++;
@@ -334,8 +336,12 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
             u.buffTimer = 0;
         }
     }
-
+	
+	if (bot)
+		bot->StopProfiling("s.2.1 PrepareForEngagement");
     for (int it = 0; it < MAX_ITERATIONS && changed; it++) {
+		if (bot)
+			bot->StartProfiling("s.2.2 PrepareIteration");
         int hasAir1 = 0;
         int hasAir2 = 0;
         int hasGround1 = 0;
@@ -393,7 +399,11 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
         if (debug)
             cout << "Iteration " << it << " Time: " << time << endl;
         changed = false;
+		if (bot)
+			bot->StopProfiling("s.2.2 PrepareIteration");
 
+		if (bot)
+			bot->StartProfiling("s.2.3 GuardianShield");
         // Check guardian shields.
         // Guardian shield is approximated as each shield protecting a fixed area of units as long
         // as the shield is active. The first N units in each army, such that the total area of all units up to unit N, are assumed to be protected
@@ -421,6 +431,8 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
             guardianShieldCoversAllUnits[group] = guardianShieldedArea > totalArea;
             guardianShieldedUnitFraction[group] = min(0.8f, guardianShieldedArea / (0.001f+ totalArea));
         }
+		if (bot)
+			bot->StopProfiling("s.2.3 GuardianShield");
 
 
         for (int group = 0; group < 2; group++) {
@@ -458,16 +470,22 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
 
                 if (unit.health == 0)
                     continue;
-                
+
+				if (bot)
+					bot->StartProfiling("s.2.4 CalculateDPS");
                 auto& unitTypeData = getUnitData(unit.type);
                 float airDPS = env.calculateDPS(unit, true);
                 float groundDPS = env.calculateDPS(unit, false);
+				if (bot)
+					bot->StopProfiling("s.2.4 CalculateDPS");
 
                 if (debug)
                     cout << "Processing " << UnitTypeToName(unit.type) << " " << unit.health << "+" << unit.shield << " "
                          << "e=" << unit.energy << endl;
 
                 if (unit.type == UNIT_TYPEID::TERRAN_MEDIVAC) {
+					if (bot)
+						bot->StartProfiling("s.2.5 Medivac");
                     if (unit.energy > 0) {
                         // Pick a random target
                         size_t offset = (size_t)rand() % g1.size();
@@ -487,11 +505,15 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                             }
                         }
                     }
+					if (bot)
+						bot->StopProfiling("s.2.5 Medivac");
                     continue;
                 }
 
                 if (unit.type == UNIT_TYPEID::PROTOSS_SHIELDBATTERY) {
                     if (unit.energy > 0) {
+						if (bot)
+							bot->StartProfiling("s.2.6 ShieldBattery");
                         // Pick a random target
                         size_t offset = (size_t)rand() % g1.size();
                         const float SHIELDS_PER_NORMAL_SPEED_SECOND = 50.4 / 1.4f;
@@ -500,7 +522,7 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                             size_t index = (j + offset) % g1.size();
 							index = index >= g1.size() || index < 0 ? 0 : index;
                             auto& other = *g1[index];
-                            if (index != i && !hasBeenHealed[index] && other.health > 0 && other.shield < other.shield_max) {
+                            if (index != i && !hasBeenHealed[index] && other.health > 0 && other.shield < other.shield_max && other.type != UNIT_TYPEID::PROTOSS_SHIELDBATTERY) {
                                 float delta = min(min(other.shield_max - other.shield, SHIELDS_PER_NORMAL_SPEED_SECOND * dt), unit.energy / ENERGY_USE_PER_SHIELD);
                                 assert(delta >= 0);
                                 other.shield += delta;
@@ -512,12 +534,16 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                                 break;
                             }
                         }
+						if (bot)
+							bot->StopProfiling("s.2.6 ShieldBattery");
                     }
                     continue;
                 }
 
                 if (unit.type == UNIT_TYPEID::ZERG_INFESTOR) {
                     if (unit.energy > 25) {
+						if (bot)
+							bot->StartProfiling("s.2.7 Infestor");
                         // Spawn an infested terran
                         unit.energy -= 25;
                         auto u = makeUnit(unit.owner, UNIT_TYPEID::ZERG_INFESTORTERRAN);
@@ -529,6 +555,8 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                         // Note: a bit ugly, extracting a raw pointer from a shared one
                         g1.push_back(&**temporaryUnits.rbegin());
                         changed = true;
+						if (bot)
+							bot->StopProfiling("s.2.7 Infestor");
                     }
                     continue;
                 }
@@ -545,6 +573,8 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                 }
 
                 if (unit.type == UNIT_TYPEID::PROTOSS_SENTRY && unit.energy >= 75 && !didActivateGuardianShield) {
+					if (bot)
+						bot->StartProfiling("s.2.8 Sentry");
                     if (!guardianShieldCoversAllUnits[group]) {
                         unit.energy -= 75;
                         unit.buffTimer = 11.0f;
@@ -552,6 +582,8 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                         // If we didn't do this check then all guardian shields would go up in tick 1 even though fewer might be enough
                         didActivateGuardianShield = true;
                     }
+					if (bot)
+						bot->StopProfiling("s.2.8 Sentry");
                 }
 
                 if (airDPS == 0 && groundDPS == 0)
@@ -594,6 +626,8 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                 float bestScore = 0;
                 const WeaponInfo* bestWeapon = nullptr;
 
+				if (bot)
+					bot->StartProfiling("s.2.9 GetTarget");
                 for (size_t j = 0; j < g2.size(); j++) {
                     auto& other = *g2[j];
                     if (other.health == 0)
@@ -650,8 +684,12 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                         }
                     }
                 }
+				if (bot)
+					bot->StopProfiling("s.2.9 GetTarget");
 
                 if (bestTarget != nullptr) {
+					if (bot)
+						bot->StartProfiling("s.2.10 ComputeDamage");
                     if (isUnitMelee) {
                         numMeleeUnitsUsed += 1;
                     }
@@ -707,6 +745,8 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                     // If it is a melee unit, then splash is only applied to other melee units.
                     // TODO: Better rule: units only apply splash to other units that have a shorter range than themselves, or this unit has a higher movement speed than the other one
                     if (settings.enableSplash && remainingSplash > 0.001f && (!isUnitMelee || isMelee(other.type)) && g2.size() > 0) {
+						if (bot)
+							bot->StartProfiling("s.2.10.1  ComputeSplashDamage");
                         // Apply remaining splash to other random melee units
                         size_t offset = (size_t)rand() % g2.size();
                         for (size_t j = 0; j < g2.size() && remainingSplash > 0.001f; j++) {
@@ -731,7 +771,11 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                                 }
                             }
                         }
+						if (bot)
+							bot->StopProfiling("s.2.10.1  ComputeSplashDamage");
                     }
+					if (bot)
+						bot->StopProfiling("s.2.10 ComputeDamage");
                 }
             }
 

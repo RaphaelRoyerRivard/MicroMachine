@@ -17,6 +17,7 @@ class WorkerManager
 	int gasWorkersTarget = 3;
 	std::list<Unit> buildingAutomaticallyRepaired;
 	std::list<Unit> depletedGeyser;
+	bool m_secondProxyWorkerSent = false;
 
 	//<MuleId, <isReturningCargo, <harvest count, target mineral ID>>>, we are not removing killed mules from this map, but it doesn't really matter
 	std::map<CCUnitID, std::pair<bool, std::pair<int, sc2::Tag> > > muleHarvests;

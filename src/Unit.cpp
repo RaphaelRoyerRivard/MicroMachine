@@ -133,15 +133,10 @@ CCHealth Unit::getEnergy() const
 #endif
 }
 
-float Unit::getBuildPercentage() const
+float Unit::getBuildProgress() const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");
-#ifdef SC2API
     return m_unit->build_progress;
-#else
-    if (getType().isBuilding()) { return m_unit->getRemainingBuildTime() / (float)getType().getAPIUnitType().buildTime(); }
-    else { return m_unit->getRemainingTrainTime() / (float)getType().getAPIUnitType().buildTime(); }
-#endif
 }
 
 CCPlayer Unit::getPlayer() const
@@ -235,13 +230,23 @@ sc2::Tag Unit::getAddonTag() const
 	return m_unit->add_on_tag;
 }
 
+bool Unit::isProducingAddon() const
+{
+	if (isValid() && !isIdle())
+	{
+		const auto & orders = getUnitPtr()->orders;
+		if (orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+			return true;
+	}
+	return false;
+}
+
 bool Unit::isProductionBuildingIdle() const
 {
 	if(getType().isBuilding())
 	{
 		//Check if this building is idle
-		auto & orders = getUnitPtr()->orders;
-		if (orders.empty() || orders[0].ability_id == sc2::ABILITY_ID::BUILD_TECHLAB || orders[0].ability_id == sc2::ABILITY_ID::BUILD_REACTOR)
+		if (isIdle() || isProducingAddon())
 		{
 			return true;
 		}
@@ -364,6 +369,7 @@ bool Unit::isArmored() const
 		case sc2::UNIT_TYPEID::ZERG_INFESTOR:
 		case sc2::UNIT_TYPEID::ZERG_INFESTORBURROWED:
 		case sc2::UNIT_TYPEID::ZERG_ULTRALISK:
+		case sc2::UNIT_TYPEID::ZERG_ULTRALISKBURROWED:
 		case sc2::UNIT_TYPEID::ZERG_OVERLORD:
 		case sc2::UNIT_TYPEID::ZERG_OVERSEER:
 		case sc2::UNIT_TYPEID::ZERG_CORRUPTOR:

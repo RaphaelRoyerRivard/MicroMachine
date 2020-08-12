@@ -66,6 +66,8 @@ public:
 	bool DrawResourcesProximity;
 	bool DrawCombatInformation;
 	bool DrawPathfindingTiles;
+	bool DrawBuildingBase;
+	bool DrawCurrentStartingStrategy;
 	bool TimeControl;
 	bool PrintGreetingMessage;
 	bool RandomProxyLocation;
@@ -100,6 +102,7 @@ public:
 	bool EnableMultiThreading;
 	bool TournamentMode;
 	std::string StarCraft2Version;
+	bool ArchonMode;
     
     int WorkersPerRefinery;
     int BuildingSpacing;

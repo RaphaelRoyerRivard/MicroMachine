@@ -58,6 +58,7 @@ void WorkerManager::lowPriorityChecks()
 	}
 	m_lastLowPriorityCheckFrame = currentFrame;
 
+	m_bot.StartProfiling("0.7.6.1     SalvageDepletedGeysers");
 	//Detect depleted geysers
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
 	{
@@ -66,19 +67,22 @@ void WorkerManager::lowPriorityChecks()
 		{
 			//Salvage gas bunkers, if any
 			auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
-			auto gasBunkers = base->getGasBunkers();
+			auto & gasBunkers = base->getGasBunkers();
 			for (auto & bunker : gasBunkers)
 			{
-				bunker.useAbility(sc2::ABILITY_ID::EFFECT_SALVAGE);
+				Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SALVAGE, m_bot);
 			}
 		}
 	}
+	m_bot.StopProfiling("0.7.6.1     SalvageDepletedGeysers");
 
 	//Worker split between bases (transfer worker)
 	if (m_bot.Bases().getBaseCount(Players::Self, true) <= 1)
 	{//No point trying to split workers
 		return;
 	}
+
+	m_bot.StartProfiling("0.7.6.2     FindWorkersToDispatch");
 	bool needTransfer = false;
 	auto workers = getWorkers();
 	WorkerData workerData = m_bot.Workers().getWorkerData();
@@ -115,10 +119,13 @@ void WorkerManager::lowPriorityChecks()
 			needTransfer = true;
 		}
 	}
+	m_bot.StopProfiling("0.7.6.2     FindWorkersToDispatch");
 
 	//Dispatch workers to bases missing some
 	if (needTransfer)
 	{
+		m_bot.StartProfiling("0.7.6.3     DispatchWorkers");
+		std::map<BaseLocation *, std::map<const sc2::Unit *, bool>> pathfindingCache;	// <to_base, <from_worker, result>>
 		for (auto & base : bases)
 		{
 			if (base->isUnderAttack())
@@ -139,16 +146,42 @@ void WorkerManager::lowPriorityChecks()
 				std::vector<Unit> toRemove;
 				int needed = optimalWorkers - workerCount;
 				int moved = 0;
-				for (auto it = dispatchedWorkers.begin(); it != dispatchedWorkers.end(); it++)
+				auto & cachedResults = pathfindingCache[base];
+				for (const auto & dispatchedWorker : dispatchedWorkers)
 				{
-					//Dont move workers if its not safe
-					if (!Util::PathFinding::IsPathToGoalSafe(it->getUnitPtr(), base->getPosition(), true, m_bot))
+					// Check if there is a cached result near the worker
+					bool foundCloseCachedResult = false;
+					bool closeCachedResult = false;
+					for (auto & cachedResult : cachedResults)
 					{
-						continue;
+						// If near and at the same height
+						if (Util::DistSq(dispatchedWorker, cachedResult.first->pos) <= 8 * 8 && m_bot.Map().terrainHeight(dispatchedWorker.getPosition()) == m_bot.Map().terrainHeight(cachedResult.first->pos))
+						{
+							foundCloseCachedResult = true;
+							closeCachedResult = cachedResult.second;
+							break;
+						}
+					}
+					if (foundCloseCachedResult)
+					{
+						if (!closeCachedResult)
+							continue;	// The close cached pathfinding wasn't safe
+					}
+					else
+					{
+						// Check if path is safe
+						const bool safe = Util::PathFinding::IsPathToGoalSafe(dispatchedWorker.getUnitPtr(), base->getPosition(), true, m_bot);
+						// Cache result
+						cachedResults[dispatchedWorker.getUnitPtr()] = safe;
+						//Dont move workers if its not safe
+						if (!safe)
+						{
+							continue;
+						}
 					}
 
-					m_workerData.setWorkerJob(*it, WorkerJobs::Minerals, depot, true);
-					toRemove.push_back(*it);
+					m_workerData.setWorkerJob(dispatchedWorker, WorkerJobs::Minerals, depot, true);
+					toRemove.push_back(dispatchedWorker);
 					moved++;
 					if (moved >= needed)
 					{
@@ -171,9 +204,12 @@ void WorkerManager::lowPriorityChecks()
 				}
 			}
 		}
+		m_bot.StopProfiling("0.7.6.3     DispatchWorkers");
 	}
 
+	m_bot.StartProfiling("0.7.6.4     validateRepairStationWorkers");
 	workerData.validateRepairStationWorkers();
+	m_bot.StopProfiling("0.7.6.4     validateRepairStationWorkers");
 }
 
 void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)
@@ -196,9 +232,8 @@ void WorkerManager::handleMineralWorkers()
 	Unit proxyWorker;
 	// Send second proxy worker for proxy Marauders strategy
 	if (m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS 
-		&& m_workerData.getProxyWorkers().size() == 1 
-		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true) == 1
-		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) < 1)
+		&& !m_secondProxyWorkerSent
+		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true) == 1)
 	{
 		float minDist = 0.f;
 		const auto & workers = getWorkers();
@@ -214,6 +249,7 @@ void WorkerManager::handleMineralWorkers()
 		}
 		proxyWorker.move(m_bot.Buildings().getProxyLocation());
 		m_workerData.setProxyWorker(proxyWorker);
+		m_secondProxyWorkerSent = true;
 	}
 
 	//split workers on first frame
@@ -442,8 +478,9 @@ void WorkerManager::handleGasWorkers()
             int numAssigned = m_workerData.getNumAssignedWorkers(geyser);
 
 			//TODO doesn't handle split geysers if only one of the geysers has a bunker.
+			const auto & gasBunkers = base->getGasBunkers();
 			//Bunker counts as a worker (for 2 and 3 only, we still want 1 worker at 1)
-			int geyserGasWorkersTarget = (base->getGasBunkers().size() > 0 && gasWorkersTarget > 1 ? gasWorkersTarget - 1 : gasWorkersTarget);
+			int geyserGasWorkersTarget = (gasBunkers.size() > 0 && gasBunkers[0].isCompleted() && gasWorkersTarget > 1 ? gasWorkersTarget - 1 : gasWorkersTarget);
 
 			if (base == nullptr)
 			{
@@ -531,7 +568,7 @@ void WorkerManager::handleGasWorkers()
 			hasUsableDepot = false;
 		}
 
-		auto & workers = m_bot.Workers().m_workerData.getAssignedWorkersRefinery(geyser);
+		auto workers = m_bot.Workers().m_workerData.getAssignedWorkersRefinery(geyser);
 		for (auto & bunker : base->getGasBunkers())
 		{
 			if (!bunker.isCompleted())
@@ -719,7 +756,7 @@ void WorkerManager::handleIdleWorkers()
 					if(building.builderUnit == worker)
 					{
 						m_workerData.setWorkerJob(worker, WorkerJobs::Build, building.buildingUnit);
-						if(building.buildingUnit.isValid() && building.buildingUnit.getBuildPercentage() < 1.f)
+						if(building.buildingUnit.isValid() && building.buildingUnit.getBuildProgress() < 1.f)
 						{
 							Micro::SmartRightClick(worker.getUnitPtr(), building.buildingUnit.getUnitPtr(), m_bot);
 						}
@@ -953,141 +990,143 @@ void WorkerManager::repairCombatBuildings()//Ignores if the path or the area aro
 
 		int maxReparator = 5;
 		int alreadyRepairing = 0;
+		bool shouldRepair = false;
+		bool onlyBaseWorker = false;
 		switch ((sc2::UNIT_TYPEID)building.getAPIUnitType())
 		{
-			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS://Always MAX repair Planetary fortress
-				///TODO Doesn't use the gas workers
-				for (auto & worker : getWorkers())///TODO order by closest to the target base location
-				{
-					auto depot = m_workerData.getWorkerDepot(worker);
-					if (depot.isValid() && depot.getID() == building.getID())
+			case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER://Always repair command center and orbital
+			case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING:
+			case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:
+			case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING:
+				maxReparator = 3;
+				shouldRepair = true;
+				onlyBaseWorker = true;
+				break;
+			case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET://Always repair MISSILETURRET and BUNKER
+			case sc2::UNIT_TYPEID::TERRAN_BUNKER:
+				shouldRepair = true;
+				break;
+			case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
+				shouldRepair = true;
+				{	// scope needed to declare new variables in the switch case
+					// first SCV repairs the PF at 41.67 hp/s, the second at 20.83, the third at 10.42, etc.
+					const auto recentDamageTaken = m_bot.Analyzer().getUnitState(building.getUnitPtr()).GetRecentDamageTaken();
+					const auto baseRepairPerSecond = building.getUnitPtr()->health_max / 107.f;	// HP divided by construction time (CC + morph)
+					
+					maxReparator = 0;
+					float repairPerSecond = 0.f;
+					do
 					{
-						setRepairWorker(worker, building);
+						++maxReparator;
+						repairPerSecond += baseRepairPerSecond / maxReparator;
+					} while (repairPerSecond < recentDamageTaken);
+					++maxReparator;	// add a buffer of 1 SCV
+				}
+				break;
+			default:	// Allows to repair buildings in wall (repair wall)
+				//NOTE: commented out because we don't currently have a good way to check if the enemy has ranged units that could hit our workers.
+				//		We don't want to suicide all of our workers trying to repair. Should also only repair if its a full wall.
+				maxReparator = 3;
+				const auto buildingTilePos = building.getTilePosition();
+				const auto buildingPos = Util::GetPosition(buildingTilePos);
+				const auto buildingDistSq = Util::DistSq(buildingTilePos, m_bot.Buildings().getWallPosition());
+				if (buildingDistSq < 5 * 5)	// Within 5 tiles of the wall
+				{
+					if (!checkedCompleteWall)
+					{
+						std::vector<Unit> possibleWallBuildings;
+						//TODO maybe consider all types of buildings
+						const auto & barracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
+						const auto & supplyDepots = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT);
+						const auto & supplyDepotsLowered = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED);
+						possibleWallBuildings.insert(possibleWallBuildings.end(), barracks.begin(), barracks.end());
+						possibleWallBuildings.insert(possibleWallBuildings.end(), supplyDepots.begin(), supplyDepots.end());
+						possibleWallBuildings.insert(possibleWallBuildings.end(), supplyDepotsLowered.begin(), supplyDepotsLowered.end());
+						int wallBuildings = 0;
+						for (const auto & possibleWallBuilding : possibleWallBuildings)
+						{
+							const auto distSq = Util::DistSq(possibleWallBuilding, buildingPos);
+							if (distSq < 5 * 5)
+								wallBuildings += 1;
+						}
+						if (wallBuildings >= 3)
+							completeWall = true;
+						checkedCompleteWall = true;
+					}
+					if (!completeWall)
+					{
+						shouldRepair = false;
+						break;
+					}
+					shouldRepair = true;
+
+					for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+					{
+						const auto enemyDistSq = Util::DistSq(enemyUnit, buildingPos);
+						const auto enemyAttackRange = Util::GetAttackRangeForTarget(enemyUnit.getUnitPtr(), building.getUnitPtr(), m_bot);
+						if (enemyAttackRange > 3 && enemyDistSq < enemyAttackRange * enemyAttackRange)
+						{
+							shouldRepair = false;
+							break;
+						}
 					}
 				}
 				break;
-			default:
-				bool shouldRepair = false;
-				bool onlyBaseWorker = false;
-				switch ((sc2::UNIT_TYPEID)building.getAPIUnitType())
+		}
+		if (shouldRepair)
+		{
+			int reparator = maxReparator - floor(maxReparator * building.getHitPointsPercentage() / 100);
+			std::set<Unit> workers = getWorkers();
+			for (auto & worker : workers)
+			{
+				Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
+				if (repairedUnit.isValid() && repairedUnit.getID() == building.getID())
 				{
-					case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER://Always repair command center and orbital
-					case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING:
-					case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:
-					case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING:
-						maxReparator = 3;
-						shouldRepair = true;
-						onlyBaseWorker = true;
+					alreadyRepairing++;
+					if (reparator == alreadyRepairing)//Already enough repairer, stop checking how many are repairing
+					{
 						break;
-					case sc2::UNIT_TYPEID::TERRAN_MISSILETURRET://Always repair MISSILETURRET and BUNKER
-					case sc2::UNIT_TYPEID::TERRAN_BUNKER:
-						shouldRepair = true;
-						break;
-					default:	// Allows to repair buildings in wall (repair wall)
-						//NOTE: commented out because we don't currently have a good way to check if the enemy has ranged units that could hit our workers.
-						//		We don't want to suicide all of our workers trying to repair. Should also only repair if its a full wall.
-						maxReparator = 3;
-						const auto buildingTilePos = building.getTilePosition();
-						const auto buildingPos = Util::GetPosition(buildingTilePos);
-						const auto buildingDistSq = Util::DistSq(buildingTilePos, m_bot.Buildings().getWallPosition());
-						if (buildingDistSq < 5 * 5)	// Within 5 tiles of the wall
-						{
-							if (!checkedCompleteWall)
-							{
-								std::vector<Unit> possibleWallBuildings;
-								//TODO maybe consider all types of buildings
-								const auto & barracks = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS);
-								const auto & supplyDepots = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT);
-								const auto & supplyDepotsLowered = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED);
-								possibleWallBuildings.insert(possibleWallBuildings.end(), barracks.begin(), barracks.end());
-								possibleWallBuildings.insert(possibleWallBuildings.end(), supplyDepots.begin(), supplyDepots.end());
-								possibleWallBuildings.insert(possibleWallBuildings.end(), supplyDepotsLowered.begin(), supplyDepotsLowered.end());
-								int wallBuildings = 0;
-								for (const auto & possibleWallBuilding : possibleWallBuildings)
-								{
-									const auto distSq = Util::DistSq(possibleWallBuilding, buildingPos);
-									if (distSq < 5 * 5)
-										wallBuildings += 1;
-								}
-								if (wallBuildings >= 3)
-									completeWall = true;
-								checkedCompleteWall = true;
-							}
-							if (!completeWall)
-							{
-								shouldRepair = false;
-								break;
-							}
-							shouldRepair = true;
+					}
+				}
+			}
 
-							for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+			for (int i = 0; i < reparator - alreadyRepairing; i++)
+			{
+				Unit worker;
+				if (onlyBaseWorker)
+				{
+					auto base = m_bot.Bases().getBaseContainingPosition(building.getPosition(), Players::Self);
+					if (base != nullptr)
+					{
+						auto depot = base->getResourceDepot();
+						if (depot.isValid())
+						{
+							for (auto & baseWorker : workers)///TODO order by closest to the target base location, allow gas workers
 							{
-								const auto enemyDistSq = Util::DistSq(enemyUnit, buildingPos);
-								const auto enemyAttackRange = Util::GetAttackRangeForTarget(enemyUnit.getUnitPtr(), building.getUnitPtr(), m_bot);
-								if (enemyAttackRange > 3 && enemyDistSq < enemyAttackRange * enemyAttackRange)
+								if (!isFree(baseWorker))
 								{
-									shouldRepair = false;
+									continue;
+								}
+								const auto workerDepot = m_workerData.getWorkerDepot(baseWorker);
+								if (workerDepot.isValid() && workerDepot.getID() == depot.getID())
+								{
+									worker = baseWorker;
 									break;
 								}
 							}
 						}
-						break;
+					}
 				}
-				if (shouldRepair)
+				else
 				{
-					int reparator = maxReparator - floor(maxReparator * building.getHitPointsPercentage() / 100);
-					std::set<Unit> workers = getWorkers();
-					for (auto & worker : workers)
-					{
-						Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
-						if (repairedUnit.isValid() && repairedUnit.getID() == building.getID())
-						{
-							alreadyRepairing++;
-							if (reparator == alreadyRepairing)//Already enough repairer, stop checking how many are repairing
-							{
-								break;
-							}
-						}
-					}
-
-					for (int i = 0; i < reparator - alreadyRepairing; i++)
-					{
-						Unit worker;
-						if (onlyBaseWorker)
-						{
-							auto base = m_bot.Bases().getBaseContainingPosition(building.getPosition(), Players::Self);
-							if (base != nullptr)
-							{
-								auto depot = base->getResourceDepot();
-								if (depot.isValid())
-								{
-									for (auto & baseWorker : workers)///TODO order by closest to the target base location, allow gas workers
-									{
-										if (!isFree(baseWorker))
-										{
-											continue;
-										}
-										const auto workerDepot = m_workerData.getWorkerDepot(baseWorker);
-										if (workerDepot.isValid() && workerDepot.getID() == depot.getID())
-										{
-											worker = baseWorker;
-											break;
-										}
-									}
-								}
-							}
-						}
-						else
-						{
-							worker = getClosestMineralWorkerTo(building.getPosition());
-						}
-
-						if (worker.isValid())
-							setRepairWorker(worker, building);
-						else
-							break;
-					}
+					worker = getClosestMineralWorkerTo(building.getPosition());
 				}
+
+				if (worker.isValid())
+					setRepairWorker(worker, building);
+				else
+					break;
+			}
 		}
 	}
 }

@@ -109,6 +109,10 @@ void Squad::onFrame()
             m_rangedManager.setOrder(m_order);
 			m_bot.StopProfiling("0.10.4.1.3      SetSquadTargets");
 
+#ifdef NO_MICRO
+			return;
+#endif
+			
 			m_bot.StartProfiling("0.10.4.1.4      ExecuteMeleeMicro");
             m_meleeManager.executeMicro();
 			m_bot.StopProfiling("0.10.4.1.4      ExecuteMeleeMicro");
@@ -145,6 +149,8 @@ std::vector<Unit> Squad::calcTargets(bool visibilityFilter)
 		if (!enemyUnit.isAlive())
 			continue;
 		if (visibilityFilter && !enemyUnit.isVisible())
+			continue;
+		if (m_name == "ScoutDefense" && !enemyUnit.getType().isWorker())
 			continue;
 
 #ifndef PUBLIC_RELEASE
@@ -295,7 +301,7 @@ bool Squad::needsToRetreat()
 
 	float meleeSpeed = m_meleeManager.getAverageSquadSpeed() * m_meleeManager.getUnits().size();
 	float rangedSpeed = m_rangedManager.getAverageSquadSpeed() * m_rangedManager.getUnits().size();
-	float averageSpeed = (meleeSpeed + rangedSpeed) / m_units.size();
+	float averageSpeed = m_units.empty() ? 0 : (meleeSpeed + rangedSpeed) / m_units.size();
 	const std::vector<Unit> visibleTargets = calcVisibleTargets();
 	float averageTargetsSpeed = Util::getAverageSpeedOfUnits(visibleTargets, m_bot);
 	//TODO also consider the range (if targets are not in range, we should still back)

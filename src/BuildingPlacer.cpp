@@ -37,7 +37,7 @@ for (auto baseLocation : bases)
 
 bool BuildingPlacer::canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const
 {
-	UnitType depot = Util::GetRessourceDepotType();
+	UnitType depot = Util::GetResourceDepotType();
 	if (canBuildHere(bx, by, depot, 0, true, false, false))//Do not need to check if interesting other buildings, since it is called at the start of the game only.
 	{
 		// check the reserve map
@@ -300,7 +300,7 @@ int BuildingPlacer::getBuildingCenterOffset(int x, int y, int width, int height)
 
 CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
 {
-	//If the space is not walkable, look arround for a walkable space. The result may not be the most optimal location.
+	//If the space is not walkable, look around for a walkable space. The result may not be the most optimal location.
 	const int MAX_OFFSET = 5;
 	int offset = 1;
 	int direction = 0;

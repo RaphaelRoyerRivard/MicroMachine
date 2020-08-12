@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.8.4",
+        "BotVersion"                : "1.11.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,22 +24,23 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "EphemeronLE.SC2Map",
+        "EnemyRace"                 : "Protoss",
+        "MapFile"                   : "SimulacrumLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
-        "NbBatchReplay"             : 50
+        "NbBatchReplay"             : 50,
+        "ArchonMode"                : false
     },
     
     "RandomMaps":
     [
         "WorldofSleepersLE.SC2Map",
-        "AcropolisLE.SC2Map",
-        "WintersGateLE.SC2Map",
-        "ThunderbirdLE.SC2Map",
         "TritonLE.SC2Map",
         "EphemeronLE.SC2Map",
-        "DiscoBloodbathLE.SC2Map"
+        "EternalEmpireLE.SC2Map",
+        "NightshadeLE.SC2Map",
+        "SimulacrumLE.SC2Map",
+        "ZenLE.SC2Map"
     ],
 	
 	"AllRandomMaps":
@@ -100,7 +101,7 @@
         "ScoutHarassEnemy"          : true,
         "EnableMultiThreading"      : false,
         "TournamentMode"            : false,
-        "StarCraft2Version"         : "4.10.4"
+        "StarCraft2Version"         : "4.11.4"
     },
     
     "UCTConsideringDurations" :
@@ -125,7 +126,7 @@
         "BuildingSpacing"           : 0,
         "PylonSpacing"              : 3,
         "SelectStartingBuildBasedOnHistory" : true,
-        "PrintGreetingMessage"      : false,
+        "PrintGreetingMessage"      : true,
         "RandomProxyLocation"       : false
     },
 
@@ -149,10 +150,10 @@
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
-        "DrawSquadInfo"             : false,
+        "DrawSquadInfo"             : true,
         "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : false,
+        "DrawReservedBuildingTiles" : true,
         "DrawUnitPowerInfo"         : false,
         "DrawHarassInfo"            : true,
         "DrawMemoryInfo"            : false,
@@ -165,7 +166,9 @@
         "DrawRangedUnitActions"     : false,
         "DrawResourcesProximity"    : false,
         "DrawCombatInformation"     : false,
-        "DrawPathfindingTiles"      : false
+        "DrawPathfindingTiles"      : true,
+        "DrawBuildingBase"          : false,
+        "DrawCurrentStartingStrategy"   : true
     },
     
     "Modules" :

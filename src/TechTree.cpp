@@ -14,11 +14,10 @@ void TechTree::onStart()
 {
     initUnitTypeData();
     initUpgradeData();
+	initBuildingAbilitiesProductionTypes();
     outputJSON("TechTree.json");
 }
 
-
-#ifdef SC2API
 void TechTree::initUnitTypeData()
 {
     m_unitTypeData[UnitType(0, m_bot)] = TypeData();
@@ -28,7 +27,7 @@ void TechTree::initUnitTypeData()
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_bot)] =                   { sc2::Race::Protoss, 0, 0, 0, 0, true, true, false, false,  true, false, false, sc2::ABILITY_ID::BUILD_PYLON, 0, { UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_bot) }, {}, {} }; 
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, m_bot)] =                   { sc2::Race::Protoss, 0, 0, 0, 0, true, true, false, false, false,  true, false, sc2::ABILITY_ID::BUILD_NEXUS, 0, { UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_bot) }, {}, {} }; 
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, m_bot)] =             { sc2::Race::Protoss, 0, 0, 0, 0, true, true, false,  true, false, false, false, sc2::ABILITY_ID::BUILD_ASSIMILATOR, 0, { UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_bot) }, {}, {} };
-	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH, m_bot)] =			{ sc2::Race::Protoss, 0, 0, 0, 0, true, true, false,  true, false, false, false, sc2::ABILITY_ID::BUILD_ASSIMILATOR, 0, { UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_bot) }, {}, {} };
+	m_unitTypeData[UnitType(Util::GetRichAssimilatorId(), m_bot)] = { sc2::Race::Protoss, 0, 0, 0, 0, true, true, false,  true, false, false, false, sc2::ABILITY_ID::BUILD_ASSIMILATOR, 0, { UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_bot) }, {}, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, m_bot)] =         { sc2::Race::Protoss, 0, 0, 0, 0, true, true, false, false, false, false, false, sc2::ABILITY_ID::BUILD_CYBERNETICSCORE, 0, { UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_bot) }, { UnitType(sc2::UNIT_TYPEID::PROTOSS_GATEWAY, m_bot), UnitType(sc2::UNIT_TYPEID::PROTOSS_WARPGATE, m_bot) }, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::PROTOSS_DARKSHRINE, m_bot)] =              { sc2::Race::Protoss, 0, 0, 0, 0, true, true, false, false, false, false, false, sc2::ABILITY_ID::BUILD_DARKSHRINE, 0, { UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_bot) }, { UnitType(sc2::UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, m_bot) }, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON, m_bot)] =             { sc2::Race::Protoss, 0, 0, 0, 0, true, true, false, false, false, false, false, sc2::ABILITY_ID::BUILD_FLEETBEACON, 0, { UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_bot) }, { UnitType(sc2::UNIT_TYPEID::PROTOSS_STARGATE, m_bot) }, {} };
@@ -112,6 +111,7 @@ void TechTree::initUnitTypeData()
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::TERRAN_REAPER, m_bot)] =                   { sc2::Race::Terran, 0, 0, 1, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_REAPER, 0, { UnitType(sc2::UNIT_TYPEID::TERRAN_BARRACKS, m_bot) }, {}, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::TERRAN_KD8CHARGE, m_bot)] =                { sc2::Race::Terran, 0, 0, 1, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::EFFECT_CHARGE, 0, { UnitType(sc2::UNIT_TYPEID::TERRAN_REAPER, m_bot) }, {}, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::TERRAN_HELLION, m_bot)] =                  { sc2::Race::Terran, 0, 0, 2, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_HELLION, 0, { UnitType(sc2::UNIT_TYPEID::TERRAN_FACTORY, m_bot) }, {}, {} }; 
+    m_unitTypeData[UnitType(sc2::UNIT_TYPEID::TERRAN_HELLIONTANK, m_bot)] =              { sc2::Race::Terran, 0, 0, 2, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_HELLION, 0, { UnitType(sc2::UNIT_TYPEID::TERRAN_FACTORY, m_bot) }, {}, {} }; 
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_bot)] =                  { sc2::Race::Terran, 0, 0, 3, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_CYCLONE, 0, { UnitType(sc2::UNIT_TYPEID::TERRAN_FACTORY, m_bot) }, { UnitType(sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB, m_bot) }, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_bot)] =                { sc2::Race::Terran, 0, 0, 3, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_SIEGETANK, 0, { UnitType(sc2::UNIT_TYPEID::TERRAN_FACTORY, m_bot) }, { UnitType(sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB, m_bot) }, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, m_bot)] =          { sc2::Race::Terran, 0, 0, 3, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::MORPH_SIEGEMODE, 0, { UnitType(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_bot) }, {}, {} };
@@ -134,7 +134,7 @@ void TechTree::initUnitTypeData()
     // Zerg Buildings                                                                      m  g  s  t  unit  bld   wrk    rfn    sup    hall   add
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, m_bot)] =                   { sc2::Race::Zerg, 0, 0, 0, 0, true, true, false, false, false,  true, false, sc2::ABILITY_ID::BUILD_HATCHERY, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, m_bot) }, {}, {} };
 	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, m_bot)] =					 { sc2::Race::Zerg, 0, 0, 0, 0, true, true, false,  true, false, false, false, sc2::ABILITY_ID::BUILD_EXTRACTOR, 0,{ UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, m_bot) },{},{} };
-	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH, m_bot)] =					{ sc2::Race::Zerg, 0, 0, 0, 0, true, true, false,  true, false, false, false, sc2::ABILITY_ID::BUILD_EXTRACTOR, 0,{ UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, m_bot) },{},{} };
+	m_unitTypeData[UnitType(Util::GetRichExtractorId(), m_bot)] =					{ sc2::Race::Zerg, 0, 0, 0, 0, true, true, false,  true, false, false, false, sc2::ABILITY_ID::BUILD_EXTRACTOR, 0,{ UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, m_bot) },{},{} };
 	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_LURKERDENMP, m_bot)] =				 { sc2::Race::Zerg, 0, 0, 0, 0, true, true, false,  true, false, false, false, sc2::ABILITY_ID::BUILD_EXTRACTOR, 0,{ UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, m_bot) },{},{} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_SPAWNINGPOOL, m_bot)] =               { sc2::Race::Zerg, 0, 0, 0, 0, true, true, false, false, false, false, false, sc2::ABILITY_ID::BUILD_SPAWNINGPOOL, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, m_bot), UnitType(sc2::UNIT_TYPEID::ZERG_LAIR, m_bot), UnitType(sc2::UNIT_TYPEID::ZERG_HIVE, m_bot) }, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_EVOLUTIONCHAMBER, m_bot)] =           { sc2::Race::Zerg, 0, 0, 0, 0, true, true, false, false, false, false, false, sc2::ABILITY_ID::BUILD_EVOLUTIONCHAMBER, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, m_bot), UnitType(sc2::UNIT_TYPEID::ZERG_LAIR, m_bot), UnitType(sc2::UNIT_TYPEID::ZERG_HIVE, m_bot) }, {} };
@@ -183,6 +183,7 @@ void TechTree::initUnitTypeData()
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON, m_bot)] =              { sc2::Race::Zerg, 0, 0, 2, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::MORPH_RAVAGER, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_ROACH, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_ROACHWARREN, m_bot) }, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_SWARMHOSTMP, m_bot)] =                { sc2::Race::Zerg, 0, 0, 3, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_SWARMHOST, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_LARVA, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_INFESTATIONPIT, m_bot) }, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_ULTRALISK, m_bot)] =                  { sc2::Race::Zerg, 0, 0, 6, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_ULTRALISK, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_LARVA, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_ULTRALISKCAVERN, m_bot) }, {} };
+    m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_ULTRALISKBURROWED, m_bot)] =          { sc2::Race::Zerg, 0, 0, 6, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_ULTRALISK, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_LARVA, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_ULTRALISKCAVERN, m_bot) }, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_VIPER, m_bot)] =                      { sc2::Race::Zerg, 0, 0, 3, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_VIPER, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_LARVA, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_HIVE, m_bot) }, {} };
     m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_ZERGLING, m_bot)] =                   { sc2::Race::Zerg, 0, 0, 1, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_ZERGLING, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_LARVA, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_SPAWNINGPOOL, m_bot) }, {} };
 	m_unitTypeData[UnitType(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED, m_bot)] =			 { sc2::Race::Zerg, 0, 0, 1, 0, true, false, false, false, false, false, false, sc2::ABILITY_ID::TRAIN_ZERGLING, 0,{ UnitType(sc2::UNIT_TYPEID::ZERG_LARVA, m_bot) },{ UnitType(sc2::UNIT_TYPEID::ZERG_SPAWNINGPOOL, m_bot) },{} };
@@ -352,49 +353,20 @@ void TechTree::initUpgradeData()
     m_upgradeData[sc2::UPGRADE_ID::ZERGMISSILEWEAPONSLEVEL2] =          { sc2::Race::Zerg, 150, 150, 0, 3040, false, false, false, false, false, false, false, sc2::ABILITY_ID::RESEARCH_ZERGMISSILEWEAPONSLEVEL2, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_EVOLUTIONCHAMBER, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_LAIR, m_bot), UnitType(sc2::UNIT_TYPEID::ZERG_HIVE, m_bot) }, {sc2::UPGRADE_ID::ZERGMISSILEWEAPONSLEVEL1} };
     m_upgradeData[sc2::UPGRADE_ID::ZERGMISSILEWEAPONSLEVEL3] =          { sc2::Race::Zerg, 200, 200, 0, 3520, false, false, false, false, false, false, false, sc2::ABILITY_ID::RESEARCH_ZERGMISSILEWEAPONSLEVEL3, 0, { UnitType(sc2::UNIT_TYPEID::ZERG_EVOLUTIONCHAMBER, m_bot) }, { UnitType(sc2::UNIT_TYPEID::ZERG_HIVE, m_bot) }, {sc2::UPGRADE_ID::ZERGMISSILEWEAPONSLEVEL2} };
 }
-#else
-void TechTree::initUpgradeData()
+
+void TechTree::initBuildingAbilitiesProductionTypes()
 {
-    
-    m_unitTypeData[UnitType(BWAPI::UnitTypes::None, m_bot)] = TypeData();
-
-    for (auto & type : BWAPI::UnitTypes::allUnitTypes())
-    {
-        TypeData typeData;
-
-        typeData.race = type.getRace();
-        typeData.mineralCost = type.mineralPrice();
-        typeData.gasCost = type.gasPrice();
-        typeData.supplyCost = type.supplyRequired();
-        typeData.buildTime = type.buildTime();
-        typeData.isUnit = true;
-        typeData.isBuilding = type.isBuilding();
-        typeData.isWorker = type.isWorker();
-        typeData.isRefinery = type.isRefinery();
-        typeData.isSupplyProvider = type.supplyProvided() > 0 && !type.isResourceDepot();
-        typeData.isResourceDepot = type.isResourceDepot();
-        typeData.isAddon = type.isAddon();
-
-        std::vector<UnitType> whatBuilds;
-        whatBuilds.push_back(UnitType(type.whatBuilds().first, m_bot));
-        typeData.whatBuilds = whatBuilds;
-
-        std::vector<UnitType> requiredUnits;
-        for (auto & req : type.requiredUnits())
-        {
-            requiredUnits.push_back(UnitType(req.first, m_bot));
-        }
-        typeData.requiredUnits = requiredUnits;
-
-        m_unitTypeData[UnitType(type, m_bot)] = typeData;
-    }
+	for (const auto & unitTypeData : m_unitTypeData)
+	{
+		const auto & unitType = unitTypeData.first;
+		const auto & buildAbility = unitTypeData.second.buildAbility;
+		const auto & producers = unitTypeData.second.whatBuilds;
+		for (const auto & producer : producers)
+		{
+			m_buildingAbilitiesProductionTypes[producer.getAPIUnitType()][buildAbility.ToType()] = unitType;
+		}
+	}
 }
-
-void TechTree::initUnitTypeData()
-{
-
-}
-#endif
 
 const TypeData & TechTree::getData(const UnitType & type)
 {
@@ -433,6 +405,11 @@ const TypeData & TechTree::getData(const MetaType & type)
     BOT_ASSERT(false, "Can't getData this type: %s", type.getName().c_str());
 
     return m_unitTypeData.begin()->second;
+}
+
+const UnitType & TechTree::getUnitTypeFromBuildingAbility(sc2::UNIT_TYPEID buildingType, sc2::ABILITY_ID ability)
+{
+	return m_buildingAbilitiesProductionTypes[buildingType][ability];
 }
 
 void TechTree::outputJSON(const std::string & filename) const

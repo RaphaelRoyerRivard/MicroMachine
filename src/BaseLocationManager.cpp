@@ -265,6 +265,8 @@ void BaseLocationManager::onFrame()
 
 		if (baseLocation != nullptr)
 		{
+			if (m_bot.Config().DrawBuildingBase)
+				m_bot.Map().drawLine(unit.getPosition(), baseLocation->getPosition(), sc2::Colors::Green);
 			baseLocation->setPlayerOccupying(Players::Self, true);
 			if (unit.getType().isResourceDepot())
 				baseLocation->setResourceDepot(unit);
@@ -798,7 +800,7 @@ void BaseLocationManager::sortBaseLocationPtrs()
 	const BaseLocation * enemyStartingBaseLocation = m_playerStartingBaseLocations[Players::Enemy];
 	for(const auto baseLocation : m_baseLocationPtrs)
 	{
-		baseLocationDistances[baseLocation] = Util::DistSq(enemyStartingBaseLocation->getPosition(), baseLocation->getPosition());
+		baseLocationDistances[baseLocation] = m_bot.Map().getGroundDistance(enemyStartingBaseLocation->getPosition(), baseLocation->getPosition());
 	}
 	while(!baseLocationDistances.empty())
 	{

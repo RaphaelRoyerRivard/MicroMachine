@@ -91,6 +91,8 @@ struct Util::PathFinding::IMNode
 
 void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 {
+	richAssimilatorId = bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1980) : sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH;
+	richExtractorId = bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1981) : sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH;
 	switch (race)
 	{
 		case sc2::Race::Terran:
@@ -106,7 +108,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::PROTOSS_NEXUS, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH, bot);
+			Util::richRefineryType = UnitType(richAssimilatorId, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PROBE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::PROTOSS_PYLON, bot);
 			break;
@@ -115,7 +117,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::ZERG_HATCHERY, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTOR, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH, bot);
+			Util::richRefineryType = UnitType(richExtractorId, bot);
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::ZERG_DRONE, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::ZERG_OVERLORD, bot);
 			break;
@@ -235,7 +237,7 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 	if (target)
 	{
 		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
-		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot);
+		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot) || target->last_seen_game_loop < bot.GetCurrentFrame();
 	}
 	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, false, getCloser, ignoreInfluence, maxInfluence, false, bot);
 	return GetCommandPositionFromPath(path, unit, true, bot);
@@ -249,7 +251,7 @@ CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CC
 
 CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, bool moveFarther, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, bot.GetStartLocation(), range, false, false, false, false, 0, true, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, bot.GetStartLocation(), range, false, false, true, false, 0, true, bot);
 	return GetCommandPositionFromPath(path, unit, moveFarther, bot);
 }
 
@@ -318,9 +320,11 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	const auto maxExploredNode = HARASS_PATHFINDING_MAX_EXPLORED_NODE * (!limitSearch ? 20 : exitOnInfluence ? 5 : bot.Config().TournamentMode ? 3 : 1);
 	int numberOfTilesExploredAfterPathFound = 0;	//only used when getCloser is true
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
+	IMNode* exitNode = nullptr;						//only used when getCloser and maxInfluence are true
+	const auto startingInfluence = GetTotalInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
 	const CCTilePosition startPosition = GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = GetTilePosition(goal);
-	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? CCTilePosition() : GetTilePosition(secondaryGoal);
+	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT ? CCTilePosition() : GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
 	bestCosts[start->getId()] = 0;
 	opened.insert(start);
@@ -348,7 +352,9 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			{
 				if (Dist(GetPosition(currentNode->position), goal) > maxRange)
 					continue;	// We don't want to keep looking in that direction since it's too far from the goal
-				shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
+				//shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
+				const auto influenceOnTile = GetTotalInfluenceOnTile(currentNode->position, unit->is_flying, bot);
+				shouldTriggerExit = influenceOnTile < startingInfluence || influenceOnTile == 0;
 			}
 		}
 		else
@@ -364,9 +370,9 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			if (!shouldTriggerExit)
 			{
 				shouldTriggerExit = (ignoreInfluence ||
-					(considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot)) &&
-					!HasEffectInfluenceOnTile(currentNode, unit, bot)) &&
-					Util::Dist(Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
+					((considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot) || (maxInfluence > 0 && currentNode->influence <= maxInfluence)) &&
+					!HasEffectInfluenceOnTile(currentNode, unit, bot))) &&
+					Dist(GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
 			}
 		}
 		if (getCloser && shouldTriggerExit)
@@ -377,9 +383,19 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			}
 			else
 			{
+				if (numberOfTilesExploredAfterPathFound == 0)
+					exitNode = currentNode;
 				shouldTriggerExit = false;
-				const CCPosition shiftedPos = Util::GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
-				if (closestNode == nullptr || Util::Dist(shiftedPos, goal) < Util::Dist(Util::GetPosition(closestNode->position) + CCPosition(0.5f, 0.5f), goal))
+				bool closer = false;
+				if (closestNode != nullptr)
+				{
+					const CCPosition shiftedPos = GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+					if (flee && maxRange > 0.f)
+						closer = Dist(shiftedPos, goal) < maxRange && GetTotalInfluenceOnTile(currentNode->position, unit->is_flying, bot) < GetTotalInfluenceOnTile(closestNode->position, unit->is_flying, bot);
+					else
+						closer = Dist(shiftedPos, goal) < Dist(GetPosition(closestNode->position) + CCPosition(0.5f, 0.5f), goal);
+				}
+				if (closestNode == nullptr || closer)
 				{
 					closestNode = currentNode;
 				}
@@ -389,11 +405,11 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 		if (shouldTriggerExit)
 		{
 			// If it exits on influence, we need to check if there is actually influence on the current tile. If so, we do not return a valid path
-			if(exitOnInfluence && HasInfluenceOnTile(Util::GetPosition(currentNode->position), unit->is_flying, bot))
+			if(exitOnInfluence && HasInfluenceOnTile(GetPosition(currentNode->position), unit->is_flying, bot))
 			{
 				failureReason = INFLUENCE;
 			}
-			else if (maxInfluence > 0 && currentNode->influence > maxInfluence)
+			else if (maxInfluence > 0 && (exitNode != nullptr ? exitNode->influence : currentNode->influence) > maxInfluence)
 			{
 				failureReason = INFLUENCE;
 			}
@@ -891,7 +907,17 @@ UnitType Util::GetWorkerType()
 	return workerType;
 }
 
-UnitType Util::GetRessourceDepotType()
+sc2::UNIT_TYPEID Util::GetRichAssimilatorId()
+{
+	return richAssimilatorId;
+}
+
+sc2::UNIT_TYPEID Util::GetRichExtractorId()
+{
+	return richExtractorId;
+}
+
+UnitType Util::GetResourceDepotType()
 {
 	return depotType;
 }
@@ -1057,6 +1083,11 @@ std::list<Util::UnitCluster> & Util::GetUnitClusters(const sc2::Units & units, c
 
 	for (auto & cluster : unitClusters)
 	{
+		if (cluster.m_units.empty())
+		{
+			cluster.m_center = CCPosition();
+			continue;
+		}
 		CCPosition center;
 		for(const auto unit : cluster.m_units)
 		{
@@ -1151,9 +1182,9 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.5f);
 	///////// DPS
 	if (target.isValid())
-		unitPower *= isMedivac ? 12.6f : Util::GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot);
+		unitPower *= isMedivac ? 12.6f : std::max(1.f, GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot));
 	else
-		unitPower *= Util::GetDps(unit.getUnitPtr(), bot);
+		unitPower *= std::max(1.f, GetDps(unit.getUnitPtr(), bot));
 	///////// DISTANCE
 	if (target.isValid())
 	{
@@ -1216,7 +1247,7 @@ float Util::GetSpecialCasePower(const Unit &unit)
 	if (!unit.getType().isBuilding())
 		return 0.f;
 	const auto unitPtr = unit.getUnitPtr();
-	return (unitPtr->health_max + unitPtr->shield_max) / 5;
+	return (unitPtr->health_max + unitPtr->shield_max) / 8;	// will pull 4 workers for a Pylon
 }
 
 float Util::GetNorm(const sc2::Point2D& point)
@@ -1249,6 +1280,17 @@ float Util::GetDotProduct(const sc2::Point2D& v1, const sc2::Point2D& v2)
     return v1n.x * v2n.x + v1n.y * v2n.y;
 }
 
+/**
+ * Computes the two vectors that are perpendicular to the reference vector.
+ */
+void Util::GetOrthogonalVectors(const sc2::Point2D& referenceVector, sc2::Point2D& clockwiseVector, sc2::Point2D& counterClockwiseVector)
+{
+	clockwiseVector.x = referenceVector.y;
+	clockwiseVector.y = -referenceVector.x;
+	counterClockwiseVector.x = -referenceVector.y;
+	counterClockwiseVector.y = referenceVector.x;
+}
+
 bool Util::IsZerg(const CCRace & race)
 {
 #ifdef SC2API
@@ -1270,6 +1312,7 @@ bool Util::IsProtoss(const CCRace & race)
 void Util::CreateDummyUnits(CCBot & bot)
 {
 	CreateDummyVikingAssault(bot);
+	CreateDummyVikingFighter(bot);
 	CreateDummyStimedMarine(bot);
 	CreateDummyStimedMarauder(bot);
 }
@@ -1282,6 +1325,16 @@ void Util::CreateDummyVikingAssault(CCBot & bot)
 	m_dummyVikingAssault->health_max = 135;
 	m_dummyVikingAssault->radius = 0.75;
 	SetBaseUnitValues(m_dummyVikingAssault, bot);
+}
+
+void Util::CreateDummyVikingFighter(CCBot & bot)
+{
+	m_dummyVikingFighter = new sc2::Unit;
+	m_dummyVikingFighter->unit_type = sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER;
+	m_dummyVikingFighter->is_flying = true;
+	m_dummyVikingFighter->health_max = 135;
+	m_dummyVikingFighter->radius = 0.75;
+	SetBaseUnitValues(m_dummyVikingFighter, bot);
 }
 
 void Util::CreateDummyStimedMarine(CCBot & bot)
@@ -1348,9 +1401,27 @@ sc2::Unit Util::CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * 
 	return dummy;
 }
 
+sc2::Unit Util::CreateDummyFromUnit(const sc2::Unit * unit)
+{
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+		return CreateDummyVikingAssaultFromUnit(unit);
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+		return CreateDummyVikingFighterFromUnit(unit);
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE)
+		return CreateDummyStimedMarineFromUnit(unit);
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARAUDER)
+		return CreateDummyStimedMarauderFromUnit(unit);
+	return sc2::Unit();
+}
+
 sc2::Unit Util::CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit)
 {
 	return CreateDummyFromUnit(m_dummyVikingAssault, unit);
+}
+
+sc2::Unit Util::CreateDummyVikingFighterFromUnit(const sc2::Unit * unit)
+{
+	return CreateDummyFromUnit(m_dummyVikingFighter, unit);
 }
 
 sc2::Unit Util::CreateDummyStimedMarineFromUnit(const sc2::Unit * unit)
@@ -1369,43 +1440,38 @@ sc2::Unit Util::CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit)
 
 bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
 {
+	if (GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air) > 0.f)
+		return true;
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 	for (auto & weapon : unitTypeData.weapons)
 	{
 		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Air)
 			return true;
 	}
-	return GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air) > 0.f;
+	return false;
 }
 
 bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 {
+	if (GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground) > 0.f)
+		return true;
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 	for (auto & weapon : unitTypeData.weapons)
 	{
 		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == sc2::Weapon::TargetType::Ground)
 			return true;
 	}
-	return GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground) > 0.f;
+	return false;
 }
 
 float Util::GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where, bool ignoreSpells)
 {
-	float range = Util::GetSpecialCaseRange(unit->unit_type, where, ignoreSpells);
-	if (range != 0)
-		return range;
-
-	if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
-	{
-		range = 0.1f;	// hack so the cannons will be considered as weak
-	}
-
-	return range;
+	return GetSpecialCaseRange(unit->unit_type, where, ignoreSpells);
 }
 
 float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where, bool ignoreSpells)
 {
-	float range = 0.f;
+	float range = -1.f;
 
 	if (unitType == sc2::UNIT_TYPEID::ZERG_BANELING || unitType == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
 	{
@@ -1448,11 +1514,11 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		range = 6.f;
 	}
-	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
+	/*else if (unitType == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
 	{
 		if (where == sc2::Weapon::TargetType::Ground)
 			range = 4.f;
-	}
+	}*/
 	else if (unitType == sc2::UNIT_TYPEID::ZERG_HYDRALISK)
 	{
 		range = 6.f;	// Always consider they have their range upgrade because we don't want to detect it manually
@@ -1461,6 +1527,18 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		if (!ignoreSpells)
 			range = 7.f;
+	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+	{
+		range = 6.f;
+	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_SENTRY)
+	{
+		range = 5.f;
+	}
+	else if (unitType == sc2::UNIT_TYPEID::TERRAN_LIBERATORAG)
+	{
+		range = 0.f;
 	}
 
 	return range;
@@ -1471,11 +1549,14 @@ float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
 	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
 		return 0.f;
 
+	if ((unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !unit->is_powered)
+		return 0.f;
+
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
 	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground);
 
-	if (maxRange == 0.f)
+	if (maxRange < 0.f)
 	{
 		for (auto & weapon : unitTypeData.weapons)
 		{
@@ -1488,9 +1569,11 @@ float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
 	if (maxRange > 0.f)
 	{
 		maxRange += unit->radius;
-		maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+		if (unit->alliance == sc2::Unit::Enemy)
+			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
 	}
-	return maxRange;
+	
+	return std::max(0.f, maxRange);
 }
 
 float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
@@ -1498,10 +1581,13 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
 		return 0.f;
 
+	if ((unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !unit->is_powered)
+		return 0.f;
+
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
 	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air);
-	if (maxRange == 0.f)
+	if (maxRange < 0.f)
 	{
 		for (auto & weapon : unitTypeData.weapons)
 		{
@@ -1514,15 +1600,19 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 	if (maxRange > 0.f)
 	{
 		maxRange += unit->radius;
-		maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+		if (unit->alliance == sc2::Unit::Enemy)
+			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
 	}
 
-	return maxRange;
+	return std::max(0.f, maxRange);
 }
 
 float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells)
 {
-	if (unit->build_progress < 1.f || (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered))
+	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
+		return 0.f;
+
+	if ((unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !unit->is_powered)
 		return 0.f;
 
 	if (!target)
@@ -1532,7 +1622,7 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
 	
 	float maxRange = GetSpecialCaseRange(unit->unit_type, expectedWeaponType, ignoreSpells);
-	if (maxRange == 0.f)
+	if (maxRange < 0.f)
 	{
 		for (auto & weapon : unitTypeData.weapons)
 		{
@@ -1545,10 +1635,11 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	if (maxRange > 0.f)
 	{
 		maxRange += unit->radius + target->radius;
-		maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+		if (unit->alliance == sc2::Unit::Enemy)
+			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
 	}
 
-	return maxRange; 
+	return std::max(0.f, maxRange); 
 }
 
 float Util::GetMaxAttackRangeForTargets(const sc2::Unit * unit, const std::vector<const sc2::Unit *> & targets, CCBot & bot)
@@ -1568,44 +1659,61 @@ float Util::GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot)
 	if (Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f)
 		return 0.f;
 
+	if ((unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !unit->is_powered)
+		return 0.f;
+
 	const sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
-
-	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Any);
-
-	if(maxRange == 0.f)
-		maxRange = GetMaxAttackRange(unitTypeData, bot);
-	else if(maxRange > 0.f)
-		maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+	
+	float maxRange = GetSpecialCaseRange(unitTypeData.unit_type_id);
+	if (maxRange < 0.f)
+	{
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			// can attack target with a weapon
+			if (weapon.range > maxRange)
+				maxRange = weapon.range;
+		}
+	}
 
 	if (maxRange > 0.f)
+	{
 		maxRange += unit->radius;
+		if (unit->alliance == sc2::Unit::Enemy)
+			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+	}
 
-	return maxRange;
+	return std::max(0.f, maxRange);
 }
 
+/*
+ * Do not call this method, it doesn't add the unit radius and the attack range bonus is valid only for enemy units.
+ */
 float Util::GetMaxAttackRange(const sc2::UnitTypeID unitType, CCBot & bot)
 {
     const sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unitType]);
     return GetMaxAttackRange(unitTypeData, bot);
 }
 
+/*
+ * Do not call this method, it doesn't add the unit radius and the attack range bonus is valid only for enemy units.
+ */
 float Util::GetMaxAttackRange(sc2::UnitTypeData unitTypeData, CCBot & bot)
 {
-    float maxRange = 0.0f;
-    for (auto & weapon : unitTypeData.weapons)
-    {
-        // can attack target with a weapon
-        if (weapon.range > maxRange)
-            maxRange = weapon.range;
-    }
+	float maxRange = GetSpecialCaseRange(unitTypeData.unit_type_id);
+	if (maxRange < 0.f)
+	{
+		for (auto & weapon : unitTypeData.weapons)
+		{
+			// can attack target with a weapon
+			if (weapon.range > maxRange)
+				maxRange = weapon.range;
+		}
+	}
 
-	if (maxRange == 0.f)
-		maxRange = GetSpecialCaseRange(unitTypeData.unit_type_id);
-
-	if(maxRange > 0.f)
+	if (maxRange > 0.f)
 		maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
 
-    return maxRange;
+    return std::max(0.f, maxRange);
 }
 
 float Util::GetAttackRangeBonus(const sc2::UnitTypeID unitType, CCBot & bot)
@@ -1624,7 +1732,7 @@ float Util::GetAttackRangeBonus(const sc2::UnitTypeID unitType, CCBot & bot)
 
 float Util::GetArmor(const sc2::Unit * unit, CCBot & bot)
 {
-    sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+    const sc2::UnitTypeData & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
     return unitTypeData.armor;
 }
 
@@ -1646,9 +1754,9 @@ float Util::GetDps(const sc2::Unit * unit, CCBot & bot)
 float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetType, CCBot & bot)
 {
 	float dps = GetSpecialCaseDps(unit, bot, targetType);
-	if (dps == 0.f)
+	if (dps < 0.f)
 	{
-		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+		const sc2::UnitTypeData & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
 		for (auto & weapon : unitTypeData.weapons)
 		{
 			if (weapon.type == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Any || weapon.type == targetType)
@@ -1663,19 +1771,19 @@ float Util::GetDps(const sc2::Unit * unit, const sc2::Weapon::TargetType targetT
 
 	dps *= GetAttackSpeedMultiplier(unit);
 	
-	return dps;
+	return std::max(0.f, dps);
 }
 
 float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
-	if (unit->build_progress < 1.f || (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered))
+	if ((Unit(unit, bot).getType().isBuilding() && unit->build_progress < 1.f) || (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered))
 		return 0.f;
     const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
     float dps = GetSpecialCaseDps(unit, bot, expectedWeaponType);
-    if (dps == 0.f)
+    if (dps < 0.f)
     {
-		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-		sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
+		const sc2::UnitTypeData & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+		const sc2::UnitTypeData & targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
         for (auto & weapon : unitTypeData.weapons)
         {
             if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
@@ -1687,7 +1795,7 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
                         weaponDps += damageBonus.bonus;
                 }
                 weaponDps -= targetTypeData.armor;
-                weaponDps *= weapon.attacks / weapon.speed;
+                weaponDps *= weapon.attacks / weapon.speed * 1.4f;	// * 1.4f because the weapon speed is given in "normal" time instead of "faster"
                 if (weaponDps > dps)
                     dps = weaponDps;
             }
@@ -1696,7 +1804,7 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
 
 	dps *= GetAttackSpeedMultiplier(unit);
 
-    return dps;
+    return std::max(0.f, dps);
 }
 
 float Util::GetAttackSpeedMultiplier(const sc2::Unit * unit)
@@ -1708,7 +1816,7 @@ float Util::GetAttackSpeedMultiplier(const sc2::Unit * unit)
 
 float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where)
 {
-    float dps = 0.f;
+    float dps = -1.f;
 
     if (unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELING || unit->unit_type == sc2::UNIT_TYPEID::ZERG_BANELINGCOCOON)
     {
@@ -1744,7 +1852,7 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	}
 	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
 	{
-		dps = 0.1f;	// hack so the cannons will be considered as weak
+		dps = 0.f;
 	}
 	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
 	{
@@ -1763,10 +1871,22 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 		else
 			dps = 49.8f;
 	}
-	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
+	/*else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
 	{
-		if (where == sc2::Weapon::TargetType::Ground)
+		if (where == sc2::Weapon::TargetType::Ground && unit->energy >= 50)
 			dps = 12.7;
+	}*/
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+	{
+		dps = 16.8f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SENTRY)
+	{
+		dps = 8.4f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_LIBERATORAG)
+	{
+		dps = 0.f;
 	}
 
     return dps;
@@ -1778,8 +1898,8 @@ float Util::GetDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target,
 	float damage = GetSpecialCaseDamage(unit, bot, expectedWeaponType);
 	if (damage == 0.f)
 	{
-		sc2::UnitTypeData unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-		sc2::UnitTypeData targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
+		const sc2::UnitTypeData & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+		const sc2::UnitTypeData & targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
 		for (auto & weapon : unitTypeData.weapons)
 		{
 			if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
@@ -1839,10 +1959,18 @@ float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapo
 		else
 			damage = 8.f;
 	}
-	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
+	/*else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
 	{
-		if (where == sc2::Weapon::TargetType::Ground)
+		if (where == sc2::Weapon::TargetType::Ground && unit->energy >= 50)
 			damage = 10.f;
+	}*/
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+	{
+		damage = 6.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SENTRY)
+	{
+		damage = 6.f;
 	}
 
 	return damage;
@@ -1996,6 +2124,15 @@ float Util::getSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
 	return GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot).movement_speed * speedMultiplier;
 }
 
+/*
+ * Returns the number of tiles a unit can move in a second.
+ */
+float Util::getRealMovementSpeedOfUnit(const sc2::Unit * unit, CCBot & bot)
+{
+	const float speed = Util::getSpeedOfUnit(unit, bot);
+	return speed * 1.4f;
+}
+
 CCPosition Util::getFacingVector(const sc2::Unit * unit)
 {
 	return CCPosition(cos(unit->facing), sin(unit->facing));
@@ -2033,26 +2170,48 @@ bool Util::unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId)
 	return false;
 }
 
-bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, CCBot & bot)
+void Util::ClearSeenEnemies()
 {
+	m_seenEnemies.clear();
+}
+
+bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, float visionBuffer, CCBot & bot)
+{
+	auto & allyUnitsPair = m_seenEnemies[enemyUnit];
+	auto & alliesWithVisionOfEnemy = allyUnitsPair.first;
+	auto & alliesWithoutVisionOfEnemy = allyUnitsPair.second;
+	if (alliesWithVisionOfEnemy.size() > 1 || (alliesWithVisionOfEnemy.size() == 1 && alliesWithVisionOfEnemy.find(exceptUnit) == alliesWithVisionOfEnemy.end()))
+		return true;	// another ally unit can see the enemy unit
+	if (alliesWithoutVisionOfEnemy.size() == bot.GetAllyUnits().size())
+		return false;	// we already know no ally unit can see the enemy unit
+
+	// check if we have an ally unit that can see the enemy unit
 	for (const auto & allyUnit : bot.GetAllyUnits())
 	{
 		const auto allyUnitPtr = allyUnit.second.getUnitPtr();
-		if (allyUnitPtr == exceptUnit)
-			continue;
-		if (Util::CanUnitSeeEnemyUnit(allyUnitPtr, enemyUnit, bot))
-			return true;
+		if (alliesWithoutVisionOfEnemy.find(allyUnitPtr) != alliesWithoutVisionOfEnemy.end())
+			continue;	// we already know this ally unit can't see the enemy unit
+		if (CanUnitSeeEnemyUnit(allyUnitPtr, enemyUnit, visionBuffer, bot))
+		{
+			alliesWithVisionOfEnemy.insert(allyUnitPtr);
+			if (allyUnitPtr != exceptUnit)
+				return true;
+		}
+		else
+		{
+			alliesWithoutVisionOfEnemy.insert(allyUnitPtr);
+		}
 	}
 	return false;
 }
 
-bool Util::CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot)
+bool Util::CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, float buffer, CCBot & bot)
 {
 	const auto distSq = DistSq(unit->pos, enemyUnit->pos);
 	if (distSq > 20 * 20)
 		return false;	// Unit is just too far
-	const auto unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
-	const auto sight = unitTypeData.sight_range + unit->radius + enemyUnit->radius;
+	const auto & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+	const auto sight = unitTypeData.sight_range + unit->radius + enemyUnit->radius - buffer;
 	if (distSq > sight * sight)
 		return false;	// Unit doesn't have enough sight range
 	if (!unit->is_flying && bot.Map().terrainHeight(unit->pos) < bot.Map().terrainHeight(enemyUnit->pos))
@@ -2104,10 +2263,15 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 		auto & detectors = bot.GetEnemyUnits(detectorType);
 		for(const auto & detector : detectors)
 		{
-			const float distance = Util::DistSq(detector, position);
+			if (detector.getType().isBuilding() && detector.getBuildProgress() < 0.95f)
+				continue;
+			if (detectorType == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !detector.isPowered())
+				continue;
+			const float distance = DistSq(detector, position);
 			float detectionRange = detector.getUnitPtr()->detect_range;
 			if (detectionRange == 0)
 				detectionRange = detector.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE ? 13.75f : 11;
+			detectionRange += detector.getUnitPtr()->radius + 1;	// We want to add a small buffer
 			if(distance <= detectionRange * detectionRange)
 			{
 				return true;
@@ -2118,12 +2282,17 @@ bool Util::IsPositionUnderDetection(CCPosition position, CCBot & bot)
 	const int areaUnderDetectionSize = 10;
 	for(auto & area : areasUnderDetection)
 	{
-		if(Util::DistSq(position, area.first) < areaUnderDetectionSize * areaUnderDetectionSize)
+		if(DistSq(position, area.first) < areaUnderDetectionSize * areaUnderDetectionSize)
 		{
 			return true;
 		}
 	}
 	return false;
+}
+
+bool Util::IsUnitCloakedAndSafe(const sc2::Unit * unit, CCBot & bot)
+{
+	return unit->cloak == sc2::Unit::CloakedAllied && !Util::IsPositionUnderDetection(unit->pos, bot) && unit->energy >= 5 && bot.Analyzer().getUnitState(unit).GetRecentDamageTaken() == 0;
 }
 
 bool Util::IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * unit, const std::vector<sc2::AvailableAbilities> & availableAbilitiesForUnits)
@@ -2257,6 +2426,8 @@ sc2::Point2D Util::CalcLinearRegression(const std::vector<const sc2::Unit *> & u
 {
     float sumX = 0, sumY = 0, sumXSqr = 0, sumXY = 0, avgX, avgY, numerator, denominator, slope;
     size_t size = units.size();
+	if (size == 0)
+		return sc2::Point2D();
     for (auto unit : units)
     {
         sumX += unit->pos.x;
@@ -2354,9 +2525,10 @@ sc2::UnitTypeID Util::GetUnitTypeIDFromName(const std::string & name, CCBot & bo
     return 0;
 }
 
-sc2::UnitTypeData Util::GetUnitTypeDataFromUnitTypeId(const sc2::UnitTypeID unitTypeId, CCBot & bot)
+const sc2::UnitTypeData & Util::GetUnitTypeDataFromUnitTypeId(const sc2::UnitTypeID unitTypeId, CCBot & bot)
 {
-    return bot.Observation()->GetUnitTypeData()[unitTypeId];
+	const auto & unitTypes = bot.Observation()->GetUnitTypeData();
+    return unitTypes[unitTypeId];
 }
 
 sc2::UpgradeID Util::GetUpgradeIDFromName(const std::string & name, CCBot & bot)
@@ -2404,6 +2576,8 @@ sc2::Point2DI Util::ConvertWorldToCamera(const sc2::Point2D camera_world, const 
     float camera_size = gameInfo->options.feature_layer.camera_width;
     int image_width = gameInfo->options.feature_layer.map_resolution_x;
     int image_height = gameInfo->options.feature_layer.map_resolution_y;
+	assert(image_width > 0);
+	assert(image_height > 0);
 
     // Pixels always cover a square amount of world space. The scale is determined
     // by making the shortest axis of the camera match the requested camera_size.
@@ -2418,6 +2592,7 @@ sc2::Point2DI Util::ConvertWorldToCamera(const sc2::Point2D camera_world, const 
     float image_relative_x = world.x - image_origin_x;
     float image_relative_y = image_origin_y - world.y;
 
+	assert(pixel_size > 0);
     int image_x = static_cast<int>(image_relative_x / pixel_size);
     int image_y = static_cast<int>(image_relative_y / pixel_size);
 
@@ -2501,6 +2676,7 @@ void Util::DebugLog(const std::string & function, CCBot & bot)
 	if (allowDebug)
 	{
 		file << bot.GetGameLoop() << ": " << function << std::endl;
+		std::cout << bot.GetGameLoop() << ": " << function << std::endl;
 	}
 }
 
@@ -2509,22 +2685,26 @@ void Util::DebugLog(const std::string & function, const std::string & message, C
 	if (allowDebug)
 	{
 		file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
+		std::cout << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 	}
 }
 
 void Util::LogNoFrame(const std::string & function, CCBot & bot)
 {
 	file << function << std::endl;
+	std::cout << function << std::endl;
 }
 
 void Util::Log(const std::string & function, CCBot & bot)
 {
 	file << bot.GetGameLoop() << ": " << function << std::endl;
+	std::cout << bot.GetGameLoop() << ": " << function << std::endl;
 }
 
-void Util::Log(const std::string & function, const std::string & message, CCBot & bot)
+void Util::Log(const std::string & function, const std::string & message, const CCBot & bot)
 {
 	file << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
+	std::cout << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 }
 
 void Util::ClearChat(CCBot & bot)
@@ -2608,6 +2788,7 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		return 0.f;
 	if (enemyUnits.empty())
 		return 1.f;
+	bot.StartProfiling("s.0 PrepareForCombatSimulation");
 	const int playerId = GetSelfPlayerId(bot);
 	CombatState state;
 	for(int i=0; i<2; ++i)
@@ -2618,42 +2799,65 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 			// Since bunkers deal no damage in the simulation, we swap them for 4 Marines with extra health
 			if(unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
 			{
-				const int owner = i + 1;
-				for(int j=0; j < 4; ++j)
+				const int owner = i == 0 ? playerId : 3 - playerId;
+				const int marineCount = owner == playerId ? unit->passengers.size() : 4;
+				for(int j=0; j < marineCount; ++j)
 					state.units.push_back(CombatUnit(owner, sc2::UNIT_TYPEID::TERRAN_MARINE, 200, false));
 			}
 			else
 				state.units.push_back(CombatUnit(*unit));
 		}
 	}
+
+	bool enemyHasOnlyBuildings = true;
+	for (const auto & enemyUnit : enemyUnits)
+	{
+		if (!UnitType(enemyUnit->unit_type, bot).isBuilding())
+		{
+			enemyHasOnlyBuildings = false;
+			break;
+		}
+	}
+	// If the opponent has only buildings, we want to be the attacker, otherwise we are the defenders (defenders do the first hit)
+	const int defenderPlayer = enemyHasOnlyBuildings ? 3 - playerId : playerId;
 	
 	// Calculate our army score to compare after the fight
 	float armySupplyScore = 0.f;
 	for (const auto unit : units)
 	{
 		const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
-		armySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit->health / unit->health_max);
+		armySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit->health / std::max(1.f, unit->health_max));
 	}
 
 	CombatUpgrades player1upgrades = {};
 
 	CombatUpgrades player2upgrades = {};
+
+	// TODO if we want to consider upgrades, we should detect enemy upgrades and get the combat environment in another thread
+	// TODO because it can take over 1s to generate a new one (happens when upgrades change)
+	/*for (const auto upgrade : bot.Strategy().getCompletedUpgrades())
+		(playerId == 1 ? player1upgrades : player2upgrades).add(upgrade);*/
+	bot.StopProfiling("s.0 PrepareForCombatSimulation");
 	
-	for (const auto upgrade : bot.Strategy().getCompletedUpgrades())
-		(playerId == 1 ? player1upgrades : player2upgrades).add(upgrade);
-	
+	bot.StartProfiling("s.1 getCombatEnvironment");
 	state.environment = &m_simulator->getCombatEnvironment(player1upgrades, player2upgrades);
-	
+	bot.StopProfiling("s.1 getCombatEnvironment");
+
+	bot.StartProfiling("s.2 predict_engage");
 	CombatSettings settings;
 	
 	// Simulate for at most 100 *game* seconds
 	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
 	settings.maxTime = 100;
-	const CombatResult outcome = m_simulator->predict_engage(state, settings);
+	const CombatResult outcome = m_simulator->predict_engage(state, settings, nullptr, defenderPlayer, &bot);
+	bot.StopProfiling("s.2 predict_engage");
+	bot.StartProfiling("s.3 owner_with_best_outcome");
 	const int winner = outcome.state.owner_with_best_outcome();
+	bot.StopProfiling("s.3 owner_with_best_outcome");
 	if (winner != playerId)
 		return 0.f;
-	
+
+	bot.StartProfiling("s.4 ComputeArmyRating");
 	float resultArmySupplyScore = 0.f;
 	for (const auto & unit : outcome.state.units)
 	{
@@ -2663,11 +2867,15 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 			resultArmySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit.health / unit.health_max);
 		}
 	}
-	const float armyRating = resultArmySupplyScore / armySupplyScore;
+	const float armyRating = resultArmySupplyScore / std::max(1.f, armySupplyScore);
+	bot.StopProfiling("s.4 ComputeArmyRating");
 	return armyRating;
 }
 
-int Util::GetSelfPlayerId(CCBot & bot)
+int Util::GetSelfPlayerId(const CCBot & bot)
 {
-	return bot.Observation()->GetGameInfo().player_info[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
+	const auto & playerInfo = bot.Observation()->GetGameInfo().player_info;
+	if (playerInfo.empty())
+		return -1;
+	return playerInfo[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
 }

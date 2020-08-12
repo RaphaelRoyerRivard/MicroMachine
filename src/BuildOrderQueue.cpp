@@ -22,7 +22,7 @@ void BuildOrderQueue::clearAll()
     m_lowestPriority = 0;
 }
 
-BuildOrderItem BuildOrderQueue::getHighestPriorityItem()
+MM::BuildOrderItem BuildOrderQueue::getHighestPriorityItem()
 {
     // reset the number of skipped items to zero
     m_numSkippedItems = 0;
@@ -31,7 +31,7 @@ BuildOrderItem BuildOrderQueue::getHighestPriorityItem()
     return m_queue.back();
 }
 
-BuildOrderItem BuildOrderQueue::getNextHighestPriorityItem()
+MM::BuildOrderItem BuildOrderQueue::getNextHighestPriorityItem()
 {
     assert(m_queue.size() - 1 - m_numSkippedItems >= 0);
 
@@ -78,7 +78,7 @@ bool BuildOrderQueue::canSkipItem()
     return highestNotBlocking;
 }
 
-BuildOrderItem BuildOrderQueue::queueItem(const BuildOrderItem & b)
+MM::BuildOrderItem BuildOrderQueue::queueItem(const MM::BuildOrderItem & b)
 {
     // if the queue is empty, set the highest and lowest priorities
     if (m_queue.empty())
@@ -111,24 +111,24 @@ BuildOrderItem BuildOrderQueue::queueItem(const BuildOrderItem & b)
 	return b;
 }
 
-BuildOrderItem BuildOrderQueue::queueAsHighestPriority(const MetaType & type, bool blocking)
+MM::BuildOrderItem BuildOrderQueue::queueAsHighestPriority(const MetaType & type, bool blocking)
 {
     // the new priority will be higher
     int newPriority = m_highestPriority + m_defaultPrioritySpacing;
 
-	BuildOrderItem item(type, newPriority, blocking);
+	MM::BuildOrderItem item(type, newPriority, blocking);
     // queue the item
     queueItem(item);
 
 	return item;
 }
 
-BuildOrderItem BuildOrderQueue::queueAsLowestPriority(const MetaType & type, bool blocking)
+MM::BuildOrderItem BuildOrderQueue::queueAsLowestPriority(const MetaType & type, bool blocking)
 {
     // the new priority will be higher
     int newPriority = m_lowestPriority - m_defaultPrioritySpacing;
 
-	BuildOrderItem item(type, newPriority, blocking);
+	MM::BuildOrderItem item(type, newPriority, blocking);
 	// queue the item
 	queueItem(item);
 
@@ -183,7 +183,7 @@ bool BuildOrderQueue::isEmpty()
     return (m_queue.size() == 0);
 }
 
-BuildOrderItem BuildOrderQueue::operator [] (int i)
+MM::BuildOrderItem BuildOrderQueue::operator [] (int i)
 {
     return m_queue[i];
 }
@@ -232,19 +232,19 @@ bool BuildOrderQueue::contains(const MetaType & type) const
 }
 
 
-BuildOrderItem::BuildOrderItem(const MetaType & metatype, int priority, bool blocking)
+MM::BuildOrderItem::BuildOrderItem(const MetaType & metatype, int priority, bool blocking)
     : type(metatype)
     , priority(priority)
     , blocking(blocking)
 {
 }
 
-bool BuildOrderItem::operator < (const BuildOrderItem & x) const
+bool MM::BuildOrderItem::operator < (const MM::BuildOrderItem & x) const
 {
 	return priority < x.priority;
 }
 
-bool BuildOrderItem::operator == (const BuildOrderItem & x) const
+bool MM::BuildOrderItem::operator == (const MM::BuildOrderItem & x) const
 {
 	return type.getUnitType().getAPIUnitType() == x.type.getUnitType().getAPIUnitType() && priority == x.priority;
 }
