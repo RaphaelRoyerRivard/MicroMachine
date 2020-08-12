@@ -1662,6 +1662,10 @@ void CCBot::IssueGameStartCheats()
 	// Test to reproduce bug where Marauders would not get up the cliff to attack workers
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenter * 5 + towardsCenterY * 20, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, enemyLocation - towardsCenter * 5 + towardsCenterY * 15, player1, 5);*/
+
+	// Test to reproduce bug where Cyclone would pathfind in the range of a Liberator to kill it
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation + towardsCenterY * 15, player1, 1);*/
 }
 
 void CCBot::IssueCheats()

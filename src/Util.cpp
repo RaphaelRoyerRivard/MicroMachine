@@ -231,7 +231,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	return success;
 }
 
-CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, float maxInfluence, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool considerOnlyEffects, float maxInfluence, CCBot & bot)
 {
 	bool getCloser = false;
 	if (target)
@@ -239,7 +239,7 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
 		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot) || target->last_seen_game_loop < bot.GetCurrentFrame();
 	}
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, false, getCloser, ignoreInfluence, maxInfluence, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, considerOnlyEffects, getCloser, false, maxInfluence, false, bot);
 	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 

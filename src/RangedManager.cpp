@@ -519,13 +519,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if ((!isCyclone || cycloneShouldUseLockOn || shouldAttack) && AllowUnitToPathFind(rangedUnit, checkInfluence, "Offensive"))
 		{
 			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
-			const bool ignoreInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget || (target && target->last_seen_game_loop < m_bot.GetCurrentFrame());
+			const bool ignoreCombatInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget || (target && target->last_seen_game_loop < m_bot.GetCurrentFrame());
 			const auto targetRange = target ? Util::GetAttackRangeForTarget(target, rangedUnit, m_bot) : 0.f;
 			const bool tolerateInfluenceToAttackTarget = targetRange > 0.f && unitAttackRange - targetRange >= 2 && ShouldAttackTarget(rangedUnit, target, threats);
 			const auto maxInfluence = (cycloneShouldUseLockOn && target) ? CYCLONE_MAX_INFLUENCE_FOR_LOCKON : tolerateInfluenceToAttackTarget ? MAX_INFLUENCE_FOR_OFFENSIVE_KITING : 0.f;
-			const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
+			const CCPosition secondaryGoal = (!cycloneShouldUseLockOn && !shouldAttack && !ignoreCombatInfluence) ? m_bot.GetStartLocation() : CCPosition();	// Only set for Cyclones with lock-on target (other than Tempest)
 			const float maxRange = target ? unitAttackRange : 3.f;
-			CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreInfluence, maxInfluence, m_bot);
+			CCPosition closePositionInPath = Util::PathFinding::FindOptimalPathToTarget(rangedUnit, pathFindEndPos, secondaryGoal, target, maxRange, ignoreCombatInfluence, maxInfluence, m_bot);
 			if (closePositionInPath != CCPosition())
 			{
 				const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
