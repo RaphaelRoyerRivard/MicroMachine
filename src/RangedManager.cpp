@@ -1657,7 +1657,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		{
 			if (isShieldBattery)
 			{
-				if (threat->unit_type != sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY && Util::Dist(threat->pos, enemy->pos) <= 6.f + enemy->radius + threat->radius)
+				if (threat->unit_type != sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY && Util::Dist(threat->pos, enemy->pos) <= Util::GetAttackRangeForTarget(enemy, threat, m_bot))
 				{
 					allThreatsSet.insert(enemy);
 					break;
@@ -1692,8 +1692,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	// Calculate enemy power
 	for (auto threat : allThreats)
 	{
-		if(threat->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+		if (threat->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
+			continue;
+		if (threat->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY)	// Keep it but do not consider its power
 		{
+			threatsToKeep.push_back(threat);
 			continue;
 		}
 		const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
