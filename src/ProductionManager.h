@@ -25,6 +25,7 @@ class ProductionManager
 	std::map<std::string, MetaType> alternateUpgrades;//Tech do not have alternate upgrades
 	bool firstBarrackBuilt = false;
 	bool firstBarracksTechlab = true;
+	bool wantToQuickExpand = false;
 	UnitType supplyProvider;
 	MetaType supplyProviderType;
 	UnitType workerType;
@@ -82,4 +83,5 @@ public:
 	int getSupplyNeedsFromProductionBuildings() const;
 	void clearQueue();
 	MM::BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);
+	void SetWantToQuickExpand(bool value);
 };
