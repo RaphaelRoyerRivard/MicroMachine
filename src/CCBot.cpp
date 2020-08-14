@@ -1525,9 +1525,9 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, enemyLocation - towardsCenterY * 15, player1, 1);
 	
 	// Test to check if Marauders know they won't be able to win against Stalkers with Shield Batteries
-	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 5, player2, 3);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3, player1, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, mapCenter + towardsCenter * 5, player1, 3);
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 5, player2, 5);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, mapCenter + towardsCenter * 5, player1, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, mapCenter + towardsCenter * 6, player1, 1);*/
 
 	// Test to check if Cyclones can Lock-On to Vikings
@@ -1662,6 +1662,10 @@ void CCBot::IssueGameStartCheats()
 	// Test to reproduce bug where Marauders would not get up the cliff to attack workers
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenter * 5 + towardsCenterY * 20, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, enemyLocation - towardsCenter * 5 + towardsCenterY * 15, player1, 5);*/
+
+	// Test to reproduce bug where Cyclone would pathfind in the range of a Liberator to kill it
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation + towardsCenterY * 15, player1, 1);*/
 }
 
 void CCBot::IssueCheats()

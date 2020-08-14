@@ -1070,6 +1070,12 @@ void BuildingManager::checkForStartedConstruction()
 					m_bot.Bases().ClearBlockedLocations();
 				}
 
+				//If building is part of the wall
+				if (Util::Contains(b.buildingUnit.getTilePosition(), m_wallBuildingPosition))
+				{
+					m_wallBuildings.push_back(b.buildingUnit);
+				}
+
 				// only one building will match
 				break;
 			}
@@ -1181,12 +1187,6 @@ void BuildingManager::checkForCompletedBuildings()
         {
 			// remove this unit from the under construction vector
 			toRemove.push_back(b);
-
-			//If building is part of the wall
-			if (std::find(m_wallBuildingPosition.begin(), m_wallBuildingPosition.end(), b.buildingUnit.getTilePosition()) != m_wallBuildingPosition.end())
-			{
-				m_wallBuildings.push_back(b.buildingUnit);
-			}
         	
             // if we are terran, give the worker back to worker manager
             if (Util::IsTerran(m_bot.GetSelfRace()))
@@ -1433,7 +1433,7 @@ CCTilePosition BuildingManager::getWallPosition() const
 	return m_wallBuildingPosition.front();
 }
 
-std::list<Unit> BuildingManager::getWallBuildings()
+std::list<Unit> & BuildingManager::getWallBuildings()
 {
 	return m_wallBuildings;
 }
@@ -1674,8 +1674,9 @@ int BuildingManager::getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isC
 int BuildingManager::getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted) const
 {
 	int count = 0;
-	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))
+	for (auto & buildingPairs : m_bot.GetAllyUnits())
 	{
+		auto & building = buildingPairs.second;
 		if (std::find(b.begin(), b.end(), building.getAPIUnitType()) != b.end() && (!isCompleted || building.isCompleted()))
 		{
 			count++;

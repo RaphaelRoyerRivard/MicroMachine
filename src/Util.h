@@ -121,7 +121,7 @@ namespace Util
 
 		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
 		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot);
-		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, float maxInfluence, CCBot & bot);
+		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool considerOnlyEffects, float maxInfluence, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, bool shouldHeal, CCBot & bot);
 		CCPosition FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, bool moveFarther, CCBot & bot);
 		float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);

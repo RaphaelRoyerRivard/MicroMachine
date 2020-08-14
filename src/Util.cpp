@@ -231,7 +231,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	return success;
 }
 
-CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool ignoreInfluence, float maxInfluence, CCBot & bot)
+CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool considerOnlyEffects, float maxInfluence, CCBot & bot)
 {
 	bool getCloser = false;
 	if (target)
@@ -239,7 +239,7 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
 		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot) || target->last_seen_game_loop < bot.GetCurrentFrame();
 	}
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, false, getCloser, ignoreInfluence, maxInfluence, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, considerOnlyEffects, getCloser, false, maxInfluence, false, bot);
 	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
@@ -1540,6 +1540,10 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		range = 0.f;
 	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY)
+	{
+		range = 6.f;
+	}
 
 	return range;
 }
@@ -1637,6 +1641,8 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 		maxRange += unit->radius + target->radius;
 		if (unit->alliance == sc2::Unit::Enemy)
 			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+		if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY && (unit->alliance != target->alliance || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY))
+			maxRange = 0.f;
 	}
 
 	return std::max(0.f, maxRange); 
@@ -1804,6 +1810,9 @@ float Util::GetDpsForTarget(const sc2::Unit * unit, const sc2::Unit * target, CC
 
 	dps *= GetAttackSpeedMultiplier(unit);
 
+	if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY && (unit->alliance != target->alliance || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY))
+		dps = 0.f;
+
     return std::max(0.f, dps);
 }
 
@@ -1888,6 +1897,10 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	{
 		dps = 0.f;
 	}
+	/*else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY)	// Commented because we overestimate its unit power and we don't want it to generate influence
+	{
+		dps = 36.f;
+	}*/
 
     return dps;
 }
