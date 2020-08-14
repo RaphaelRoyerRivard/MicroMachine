@@ -1674,8 +1674,9 @@ int BuildingManager::getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isC
 int BuildingManager::getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted) const
 {
 	int count = 0;
-	for (auto building : m_bot.UnitInfo().getUnits(Players::Self))
+	for (auto & buildingPairs : m_bot.GetAllyUnits())
 	{
+		auto & building = buildingPairs.second;
 		if (std::find(b.begin(), b.end(), building.getAPIUnitType()) != b.end() && (!isCompleted || building.isCompleted()))
 		{
 			count++;

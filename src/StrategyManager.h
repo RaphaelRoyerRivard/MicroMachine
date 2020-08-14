@@ -63,9 +63,9 @@ class StrategyManager
 	std::vector<std::string> STRATEGY_ORDER = {
 		"PROXY_MARAUDERS",
 		"FAST_PF",
+		"STANDARD",
 		"EARLY_EXPAND",
-		"PROXY_CYCLONES",
-		"STANDARD"
+		"PROXY_CYCLONES"
 	};
 	
     CCBot & m_bot;
@@ -110,7 +110,7 @@ public:
 
     const Strategy & getCurrentStrategy() const;
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
-	void setStartingStrategy(StartingStrategy startingStrategy) { m_startingStrategy = startingStrategy; }
+	void setStartingStrategy(StartingStrategy startingStrategy);
 	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
 	bool shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers = false) const;
 	bool isProxyStartingStrategy() const;

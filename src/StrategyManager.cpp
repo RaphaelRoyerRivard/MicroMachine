@@ -91,7 +91,7 @@ void StrategyManager::onStart()
 				if (stratIndex < StartingStrategy::COUNT - 1)
 					m_opponentHistory << ", ";
 			}
-			m_startingStrategy = StartingStrategy(bestStrat);
+			setStartingStrategy(StartingStrategy(bestStrat));
 			if (m_bot.Config().PrintGreetingMessage)
 			{
 				const auto winPercentage = totalWins + totalLosses > 0 ? round(totalWins * 100 / (totalWins + totalLosses)) : 100;
@@ -118,7 +118,7 @@ void StrategyManager::onStart()
 			}
 			outFile << j.dump();
 			outFile.close();
-			m_startingStrategy = m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? PROXY_MARAUDERS : FAST_PF;
+			setStartingStrategy(m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? PROXY_MARAUDERS : FAST_PF);
 			
 			if (m_bot.Config().PrintGreetingMessage)
 			{
@@ -140,7 +140,7 @@ void StrategyManager::onStart()
 	}
 	else
 	{
-		m_startingStrategy = STANDARD;
+		setStartingStrategy(STANDARD);
 	}
 	m_initialStartingStrategy = m_startingStrategy;
 }
@@ -180,14 +180,14 @@ void StrategyManager::onFrame(bool executeMacro)
 				if (isWorkerRushed())
 				{
 					m_bot.Workers().getWorkerData().clearProxyWorkers();
-					m_startingStrategy = STANDARD;
+					setStartingStrategy(STANDARD);
 					return;
 				}
 				
 				const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
 				if (completedBarracksCount == 0)
 				{
-					m_startingStrategy = STANDARD;
+					setStartingStrategy(STANDARD);
 					m_bot.Commander().Production().clearQueue();
 					m_bot.Commander().Production().queueAsHighestPriority(MetaTypeEnum::Barracks, false);
 				}
@@ -201,12 +201,12 @@ void StrategyManager::onFrame(bool executeMacro)
 							m_bot.Buildings().CancelBuilding(building);
 						}
 					}
-					m_startingStrategy = STANDARD;
+					setStartingStrategy(STANDARD);
 					m_bot.Commander().Production().clearQueue();
 				}
 				else if (!hasFactory && m_startingStrategy == PROXY_CYCLONES)
 				{
-					m_startingStrategy = STANDARD;
+					setStartingStrategy(STANDARD);
 					m_bot.Commander().Production().clearQueue();
 				}
 
@@ -244,7 +244,7 @@ void StrategyManager::onFrame(bool executeMacro)
 					}
 					if (cancelProxy)
 					{
-						m_startingStrategy = STANDARD;
+						setStartingStrategy(STANDARD);
 						m_bot.Commander().Production().clearQueue();
 					}
 				}
@@ -364,7 +364,7 @@ void StrategyManager::onFrame(bool executeMacro)
 						}
 					}
 					m_bot.Workers().getWorkerData().clearProxyWorkers();
-					m_bot.Strategy().setStartingStrategy(EARLY_EXPAND);
+					setStartingStrategy(EARLY_EXPAND);
 					m_bot.Commander().Production().clearQueue();
 				}
 			}
@@ -385,7 +385,7 @@ void StrategyManager::onFrame(bool executeMacro)
 				}
 				if (!groundUnit)
 				{
-					m_startingStrategy = STANDARD;
+					setStartingStrategy(STANDARD);
 				}
 			}
 		}
@@ -397,6 +397,13 @@ void StrategyManager::onFrame(bool executeMacro)
 		ss << "Current strategy: " << STRATEGY_NAMES[m_startingStrategy];
 		m_bot.Map().drawTextScreen(0.01f, 0.35f, ss.str(), CCColor(255, 255, 0));
 	}
+}
+
+void StrategyManager::setStartingStrategy(StartingStrategy startingStrategy)
+{
+	m_startingStrategy = startingStrategy;
+	const bool quickExpand = startingStrategy == FAST_PF && m_bot.Bases().getBaseCount(Players::Self, false) < 2;
+	m_bot.Commander().Production().SetWantToQuickExpand(quickExpand);
 }
 
 bool StrategyManager::shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers) const

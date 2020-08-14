@@ -167,11 +167,6 @@ void ProductionManager::onStart()
 			break;
 		}
 	}
-
-	if (m_bot.Strategy().getInitialStartingStrategy() == FAST_PF)
-	{
-		SetWantToQuickExpand(true);
-	}
 }
 
 void ProductionManager::onFrame(bool executeMacro)
