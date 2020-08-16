@@ -1666,6 +1666,11 @@ void CCBot::IssueGameStartCheats()
 	// Test to reproduce bug where Cyclone would pathfind in the range of a Liberator to kill it
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation + towardsCenterY * 15, player1, 1);*/
+
+	// Test to see if we can transition from PROXY_MARAUDERS to FAST_PF
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STARGATE, enemyLocation + towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation + towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, enemyLocation, player1, 1);*/
 }
 
 void CCBot::IssueCheats()

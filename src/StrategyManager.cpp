@@ -226,25 +226,44 @@ void StrategyManager::onFrame(bool executeMacro)
 								++activeStaticDefenseUnits;
 						}
 					}
+
+					bool enemyHasFlyingUnits = false;
 					if (activeStaticDefenseUnits >= 2)
 					{
 						cancelProxy = true;
 					}
 					else
 					{
-						// Cancel PROXY_MARAUDERS if the opponent has an immortal or air units
-						for (const auto enemyUnit : m_bot.GetKnownEnemyUnits())
+						bool enemySentryUsedEnergy = false;
+						for (const auto & enemySentry : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_SENTRY))
 						{
-							// TODO do not cancel if the enemy is an hallucination
-							if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL || (enemyUnit.isFlying() && Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) > 0))
+							if (enemySentry.getEnergy() < 50)
 							{
-								cancelProxy = true;
+								enemySentryUsedEnergy = true;
+								break;
+							}
+						}
+						if (!enemySentryUsedEnergy)
+						{
+							// Cancel PROXY_MARAUDERS if the opponent has an immortal or attacking flying units
+							for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+							{
+								if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
+								{
+									cancelProxy = true;
+								}
+								else if (enemyUnit.isFlying() && Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) > 0)
+								{
+									cancelProxy = true;
+									enemyHasFlyingUnits = true;
+									break;
+								}
 							}
 						}
 					}
 					if (cancelProxy)
 					{
-						setStartingStrategy(STANDARD);
+						setStartingStrategy(enemyHasFlyingUnits ? EARLY_EXPAND : FAST_PF);
 						m_bot.Commander().Production().clearQueue();
 					}
 				}
@@ -402,7 +421,7 @@ void StrategyManager::onFrame(bool executeMacro)
 void StrategyManager::setStartingStrategy(StartingStrategy startingStrategy)
 {
 	m_startingStrategy = startingStrategy;
-	const bool quickExpand = startingStrategy == FAST_PF && m_bot.Bases().getBaseCount(Players::Self, false) < 2;
+	const bool quickExpand = (startingStrategy == FAST_PF || startingStrategy == EARLY_EXPAND) && m_bot.Bases().getBaseCount(Players::Self, false) < 2;
 	m_bot.Commander().Production().SetWantToQuickExpand(quickExpand);
 }
 
