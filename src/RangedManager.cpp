@@ -345,6 +345,11 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
+	if (ChangeBehaviorFromBuffs(rangedUnit, isUnitDisabled, allCombatAllies, goal, goalDescription, unitShouldHeal))
+	{
+		return;
+	}
+
 	// If our unit is affected by an Interference Matrix, it should back until the effect wears off
 	if (isUnitDisabled)
 	{
@@ -364,6 +369,45 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		goal = m_bot.GetStartLocation();
 		goalDescription = "LockedOnStart";
 		unitShouldHeal = true;
+	}
+	else if (Util::isUnitAffectedByParasiticBomb(rangedUnit))
+	{
+		bool closeFlyingAllies = false;
+		CCPosition closeFlyingAlliesRepulsionVector;
+		for (const auto ally : allCombatAllies)
+		{
+			if (ally == rangedUnit || !ally->is_flying)
+				continue;
+			float dist = Util::DistSq(rangedUnit->pos, ally->pos);
+			if (dist < ally->radius + 1.5f)
+			{
+				const auto repulsionVector = (2 + ally->radius - dist) * (rangedUnit->pos - ally->pos);
+				closeFlyingAlliesRepulsionVector += repulsionVector;
+				closeFlyingAllies = true;
+			}
+		}
+		if (closeFlyingAllies)
+		{
+			CCPosition movePosition;
+			if (closeFlyingAlliesRepulsionVector != CCPosition())
+			{
+				Util::Normalize(closeFlyingAlliesRepulsionVector);
+				movePosition = rangedUnit->pos + closeFlyingAlliesRepulsionVector * 3;
+			}
+			else
+			{
+				movePosition = !m_bot.GetEnemyStartLocations().empty() ? m_bot.GetEnemyStartLocations()[0] : m_bot.Map().center();
+			}
+			const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, 0, "ParasiticBombFlee");
+			m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+			return;
+		}
+		if (isViking)
+		{
+			const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, true, VIKING_MORPH_FRAME_COUNT, "ParasiticBombVikingMorph");
+			m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+			return;
+		}
 	}
 
 	bool shouldAttack = !isUnitDisabled;
@@ -2211,6 +2255,73 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 			}
 		}
 	}
+}
+
+bool RangedManager::ChangeBehaviorFromBuffs(const sc2::Unit * rangedUnit, bool isUnitDisabled, sc2::Units & allCombatAllies, CCPosition & goal, std::string & goalDescription, bool & unitShouldHeal)
+{
+	// If our unit is affected by an Interference Matrix, it should back until the effect wears off
+	if (isUnitDisabled)
+	{
+		goal = m_bot.GetStartLocation();
+		goalDescription = "DisabledStart";
+		unitShouldHeal = true;
+	}
+	// If our unit is targeted by an enemy Cyclone's Lock-On ability, it should back until the effect wears off
+	else if (Util::isUnitLockedOn(rangedUnit))
+	{
+		// Banshee in danger should cloak itself
+		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE && ExecuteBansheeCloakLogic(rangedUnit, true))
+		{
+			return true;
+		}
+
+		goal = m_bot.GetStartLocation();
+		goalDescription = "LockedOnStart";
+		unitShouldHeal = true;
+	}
+	// If our unit is affected by a Parasitic Bomb, we want it to get away from our other flying units and if it is a Viking, land it to avoid taking damage
+	else if (Util::isUnitAffectedByParasiticBomb(rangedUnit))
+	{
+		bool closeFlyingAllies = false;
+		CCPosition closeFlyingAlliesRepulsionVector;
+		for (const auto ally : allCombatAllies)
+		{
+			if (ally == rangedUnit || !ally->is_flying)
+				continue;
+			const float dist = Util::DistSq(rangedUnit->pos, ally->pos);
+			if (dist < ally->radius + 1.5f)
+			{
+				const auto repulsionVector = (2 + ally->radius - dist) * (rangedUnit->pos - ally->pos);
+				closeFlyingAlliesRepulsionVector += repulsionVector;
+				closeFlyingAllies = true;
+			}
+		}
+		// If we have close flying units, we want our affected unit to get away from them
+		if (closeFlyingAllies)
+		{
+			CCPosition movePosition;
+			if (closeFlyingAlliesRepulsionVector != CCPosition())
+			{
+				Util::Normalize(closeFlyingAlliesRepulsionVector);
+				movePosition = rangedUnit->pos + closeFlyingAlliesRepulsionVector * 3;
+			}
+			else
+			{
+				movePosition = !m_bot.GetEnemyStartLocations().empty() ? m_bot.GetEnemyStartLocations()[0] : m_bot.Map().center();
+			}
+			const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, 0, "ParasiticBombFlee");
+			m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+			return true;
+		}
+		// The Viking is far enough from our other flying units, we can land it to prevent damage
+		if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
+		{
+			const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, true, VIKING_MORPH_FRAME_COUNT, "ParasiticBombVikingMorph");
+			m_bot.Commander().Combat().PlanAction(rangedUnit, action);
+			return true;
+		}
+	}
+	return false;
 }
 
 void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDisabled, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Units & rangedUnitTargets, const sc2::Unit * & target, CCPosition & goal, std::string & goalDescription, sc2::AvailableAbilities & abilities)

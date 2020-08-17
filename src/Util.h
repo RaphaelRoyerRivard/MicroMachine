@@ -222,6 +222,7 @@ namespace Util
 	bool isUnitLockedOn(const sc2::Unit * unit);
 	bool isUnitDisabled(const sc2::Unit * unit);
 	bool isUnitLifted(const sc2::Unit * unit);
+	bool isUnitAffectedByParasiticBomb(const sc2::Unit * unit);
 	bool unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId);
 	void ClearSeenEnemies();
 	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, float visionBuffer, CCBot & bot);

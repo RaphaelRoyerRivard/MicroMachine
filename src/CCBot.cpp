@@ -1671,6 +1671,11 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STARGATE, enemyLocation + towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation + towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, enemyLocation, player1, 1);*/
+
+	// Test to see if the Vikings can dodge a Parasitic Bomb
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation, player2, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_VIPER, m_startLocation + towardsCenter * 25, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_HATCHERY, m_startLocation + towardsCenter * 25, 1);*/
 }
 
 void CCBot::IssueCheats()
