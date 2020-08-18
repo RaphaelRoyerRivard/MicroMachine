@@ -350,66 +350,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		return;
 	}
 
-	// If our unit is affected by an Interference Matrix, it should back until the effect wears off
-	if (isUnitDisabled)
-	{
-		goal = m_bot.GetStartLocation();
-		goalDescription = "DisabledStart";
-		unitShouldHeal = true;
-	}
-	// If our unit is targeted by an enemy Cyclone's Lock-On ability, it should back until the effect wears off
-	else if (Util::isUnitLockedOn(rangedUnit))
-	{
-		// Banshee in danger should cloak itself
-		if (isBanshee && ExecuteBansheeCloakLogic(rangedUnit, true))
-		{
-			return;
-		}
-
-		goal = m_bot.GetStartLocation();
-		goalDescription = "LockedOnStart";
-		unitShouldHeal = true;
-	}
-	else if (Util::isUnitAffectedByParasiticBomb(rangedUnit))
-	{
-		bool closeFlyingAllies = false;
-		CCPosition closeFlyingAlliesRepulsionVector;
-		for (const auto ally : allCombatAllies)
-		{
-			if (ally == rangedUnit || !ally->is_flying)
-				continue;
-			float dist = Util::DistSq(rangedUnit->pos, ally->pos);
-			if (dist < ally->radius + 1.5f)
-			{
-				const auto repulsionVector = (2 + ally->radius - dist) * (rangedUnit->pos - ally->pos);
-				closeFlyingAlliesRepulsionVector += repulsionVector;
-				closeFlyingAllies = true;
-			}
-		}
-		if (closeFlyingAllies)
-		{
-			CCPosition movePosition;
-			if (closeFlyingAlliesRepulsionVector != CCPosition())
-			{
-				Util::Normalize(closeFlyingAlliesRepulsionVector);
-				movePosition = rangedUnit->pos + closeFlyingAlliesRepulsionVector * 3;
-			}
-			else
-			{
-				movePosition = !m_bot.GetEnemyStartLocations().empty() ? m_bot.GetEnemyStartLocations()[0] : m_bot.Map().center();
-			}
-			const auto action = RangedUnitAction(MicroActionType::Move, movePosition, true, 0, "ParasiticBombFlee");
-			m_bot.Commander().Combat().PlanAction(rangedUnit, action);
-			return;
-		}
-		if (isViking)
-		{
-			const auto action = RangedUnitAction(MicroActionType::Ability, sc2::ABILITY_ID::MORPH_VIKINGASSAULTMODE, true, VIKING_MORPH_FRAME_COUNT, "ParasiticBombVikingMorph");
-			m_bot.Commander().Combat().PlanAction(rangedUnit, action);
-			return;
-		}
-	}
-
 	bool shouldAttack = !isUnitDisabled;
 	bool cycloneShouldUseLockOn = false;
 	bool cycloneShouldStayCloseToTarget = false;
