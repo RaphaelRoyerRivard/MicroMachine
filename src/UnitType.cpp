@@ -408,15 +408,52 @@ bool UnitType::isTank() const
 
 bool UnitType::isMorphedBuilding() const
 {
-    switch (m_type.ToType())
-    {
-        case sc2::UNIT_TYPEID::ZERG_LAIR:                   { return true;  }
-        case sc2::UNIT_TYPEID::ZERG_HIVE:                   { return true;  }
-        case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE:           { return true;  }
-        case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:    { return true;  }
-        case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND:       { return true;  }
-        default:                                            { return false; }                                                            
-    }
+	switch (m_type.ToType())
+	{
+	case sc2::UNIT_TYPEID::ZERG_LAIR: { return true;  }
+	case sc2::UNIT_TYPEID::ZERG_HIVE: { return true;  }
+	case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE: { return true;  }
+	case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: { return true;  }
+	case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND: { return true;  }
+	default: { return false; }
+	}
+}
+
+sc2::UNIT_TYPEID UnitType::getBaseUnitTypeOfMorphedBuilding() const
+{
+	switch (m_type.ToType())
+	{
+	case sc2::UNIT_TYPEID::ZERG_LAIR: { return sc2::UNIT_TYPEID::ZERG_HATCHERY; }
+	case sc2::UNIT_TYPEID::ZERG_HIVE: { return sc2::UNIT_TYPEID::ZERG_HATCHERY; }
+	case sc2::UNIT_TYPEID::ZERG_GREATERSPIRE: { return sc2::UNIT_TYPEID::ZERG_SPIRE; }
+	case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: { return sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER; }
+	case sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND: { return sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER; }
+	default: { return sc2::UNIT_TYPEID::INVALID; }
+	}
+}
+
+bool UnitType::isMorphableBuilding() const
+{
+	switch (m_type.ToType())
+	{
+	case sc2::UNIT_TYPEID::ZERG_HATCHERY: { return true; }
+	case sc2::UNIT_TYPEID::ZERG_LAIR: { return true; }
+	case sc2::UNIT_TYPEID::ZERG_SPIRE: { return true; }
+	case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER: { return true; }
+	default: { return false; }
+	}
+}
+
+std::vector<sc2::UNIT_TYPEID> UnitType::getMorphedUnitTypesOfBuilding() const
+{
+	switch (m_type.ToType())
+	{
+	case sc2::UNIT_TYPEID::ZERG_HATCHERY: { return { sc2::UNIT_TYPEID::ZERG_LAIR, sc2::UNIT_TYPEID::ZERG_HIVE}; }
+	case sc2::UNIT_TYPEID::ZERG_LAIR: { return { sc2::UNIT_TYPEID::ZERG_HIVE }; }
+	case sc2::UNIT_TYPEID::ZERG_SPIRE: { return { sc2::UNIT_TYPEID::ZERG_GREATERSPIRE }; }
+	case sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER: { return { sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS }; }
+	default: { return {}; }
+	}
 }
 
 bool UnitType::isAttackingBuilding() const
