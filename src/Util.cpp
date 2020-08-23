@@ -2173,6 +2173,11 @@ bool Util::isUnitLifted(const sc2::Unit * unit)
 	return unitHasBuff(unit, sc2::BUFF_ID::GRAVITONBEAM);
 }
 
+bool Util::isUnitAffectedByParasiticBomb(const sc2::Unit * unit)
+{
+	return unitHasBuff(unit, sc2::BUFF_ID::PARASITICBOMB);
+}
+
 bool Util::unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId)
 {
 	for (const auto buff : unit->buffs)
