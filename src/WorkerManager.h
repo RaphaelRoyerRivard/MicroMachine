@@ -19,8 +19,10 @@ class WorkerManager
 	std::list<Unit> depletedGeyser;
 	bool m_secondProxyWorkerSent = false;
 
-	//<MuleId, <isReturningCargo, <harvest count, target mineral ID>>>, we are not removing killed mules from this map, but it doesn't really matter
-	std::map<CCUnitID, std::pair<bool, std::pair<int, sc2::Tag> > > muleHarvests;
+	//<MuleId, <isReturningCargo, harvest count>>, we are not removing killed mules from this map, but it doesn't really matter
+	std::map<CCUnitID, std::pair<bool, int>> muleHarvests;
+	//Mineral ID, frame number of when the mineral field will no longer have a mule on it
+	std::map<CCUnitID, int> mineralMuleDeathFrame;
 
     mutable WorkerData  m_workerData;
     Unit m_previousClosestWorker;
@@ -58,8 +60,8 @@ public:
 	std::set<Unit> getWorkers() const;
 	WorkerData & getWorkerData() const;
 	
-	sc2::Tag getMuleTargetTag(const Unit mule);
-	void setMuleTargetTag(const Unit mule, const sc2::Tag mineral);
+	void setMineralMuleDeathFrame(sc2::Tag mineral);
+	bool isMineralMuleAvailable(sc2::Tag mineral);
 
     bool isWorkerScout(Unit worker) const;
     bool isFree(Unit worker) const;

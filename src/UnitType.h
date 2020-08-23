@@ -48,6 +48,8 @@ public:
     bool isDetector() const;
     bool isGeyser() const;
     bool isMineral() const;
+	bool isStandardMineral() const;
+	bool isRichMineral() const;
     bool isMineralWallPatch() const;
     bool isWorker() const;
 	bool isMule() const;

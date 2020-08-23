@@ -13,26 +13,27 @@ BuildingPlacer::BuildingPlacer(CCBot & bot)
 void BuildingPlacer::onStart()
 {
     m_reserveMap = std::vector< std::vector<bool> >(m_bot.Map().totalWidth(), std::vector<bool>(m_bot.Map().totalHeight(), false));
+	//[STUCK]TODO create other map here
 
-auto bases = m_bot.Bases().getBaseLocations();
-for (auto baseLocation : bases)
-{
-	const auto depotPosition = Util::GetPosition(baseLocation->getDepotTilePosition());
-	const auto centerOfMinerals = Util::GetPosition(baseLocation->getCenterOfMinerals());
-	const auto towardsOutside = Util::Normalized(depotPosition - centerOfMinerals);
-	const auto basePosition = Util::GetTilePosition(depotPosition + towardsOutside * 2);
-	auto minerals = baseLocation->getMinerals();
-	for (auto mineral : minerals)
+	auto bases = m_bot.Bases().getBaseLocations();
+	for (auto baseLocation : bases)
 	{
-		reserveTiles(basePosition, mineral.getTilePosition());
-	}
+		const auto depotPosition = Util::GetPosition(baseLocation->getDepotTilePosition());
+		const auto centerOfMinerals = Util::GetPosition(baseLocation->getCenterOfMinerals());
+		const auto towardsOutside = Util::Normalized(depotPosition - centerOfMinerals);
+		const auto basePosition = Util::GetTilePosition(depotPosition + towardsOutside * 2);
+		auto minerals = baseLocation->getMinerals();
+		for (auto mineral : minerals)
+		{
+			reserveTiles(basePosition, mineral.getTilePosition());
+		}
 
-	auto geysers = baseLocation->getGeysers();
-	for (auto geyser : geysers)
-	{
-		reserveTiles(basePosition, geyser.getTilePosition());
+		auto geysers = baseLocation->getGeysers();
+		for (auto geyser : geysers)
+		{
+			reserveTiles(basePosition, geyser.getTilePosition());
+		}
 	}
-}
 }
 
 bool BuildingPlacer::canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const
@@ -473,6 +474,11 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 		}
 	}
 
+	//Prevents buildings from being built next to each other, expect for defensive buildings (turret, bunker, photo cannon, spine and spore) and lowered supply depot.
+	//This WILL prevent Terran/Protoss from being able to walls with anything else than offensive buildings, some changes will need to be made to make it possible.
+	//[STUCK]TODO Check unittype to know if we need to validate the tile further or not
+	//[STUCK]Should be ignored for all offensive buildings.
+
 	//Check for supply depot in the way, they are not in the blockedTiles map
 	for (auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED))//TODO could be simplified
 	{
@@ -518,6 +524,8 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 
 void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)
 {
+	//[STUCK]TODO This logic has to change a bit or a new function needs to be added
+
 	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true);
 	for (auto tile : tiles)
 	{
@@ -527,6 +535,8 @@ void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)
 
 void BuildingPlacer::reserveTiles(CCTilePosition start, CCTilePosition end)//Used only for zones, not for buildings. Like mineral all the way to the depot for example.
 {
+	//[STUCK]TODO This logic has to change a bit or a new function needs to be added
+
 	int rwidth = (int)m_reserveMap.size();
 	int rheight = (int)m_reserveMap[0].size();
 	int minX;
@@ -588,10 +598,14 @@ void BuildingPlacer::drawReservedTiles()
 			}
         }
     }
+
+	//[STUCK]TODO draw other reserved tile type in a different color
 }
 
 void BuildingPlacer::freeTiles(int bx, int by, int width, int height)
 {
+	//[STUCK]TODO This logic has to change a bit or a new function needs to be added
+
 	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true);
 	for (auto tile : tiles)
 	{
@@ -680,6 +694,8 @@ bool BuildingPlacer::isGeyserAssigned(CCTilePosition geyserTilePos) const
 
 bool BuildingPlacer::isReserved(int x, int y) const
 {
+	//[STUCK]TODO This logic has to change a bit or a new function needs to be added
+
     int rwidth = (int)m_reserveMap.size();
     int rheight = (int)m_reserveMap[0].size();
     if (x < 0 || y < 0 || x >= rwidth || y >= rheight)

@@ -153,20 +153,7 @@ sc2::Tag Unit::getTag() const
 	return m_unit->tag;
 }
 
-CCUnitID Unit::getID() const
-{
-    BOT_ASSERT(isValid(), "Unit is not valid");
-#ifdef SC2API
-    CCUnitID id = m_unit->tag;
-#else
-    CCUnitID id = m_unit->getID();
-#endif
-
-    BOT_ASSERT(id == m_unitID, "Unit ID changed somehow");
-    return id;
-}
-
-int Unit::getIDAsInt() const
+int Unit::getTagAsInt() const
 {
 	BOT_ASSERT(isValid(), "Unit is not valid");
 #ifdef SC2API

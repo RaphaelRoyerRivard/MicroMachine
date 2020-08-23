@@ -204,8 +204,8 @@ bool UnitType::isMineral() const
 	sc2::UnitTypeData unitTypeData(m_bot->Observation()->GetUnitTypeData()[m_type]);
 	if (unitTypeData.has_minerals)
 		return true;
-    switch (m_type.ToType())
-    {
+	switch (m_type.ToType())
+	{
 		//Standard
 		case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD:
 		case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD750:
@@ -222,9 +222,50 @@ bool UnitType::isMineral() const
 		case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD750:
 			std::cout << "Unit type " << m_type << " has no mineral but is a mineral field" << std::endl;
 			return true;
+	default:
+		return false;
+	}
+}
+
+bool UnitType::isStandardMineral() const
+{
+	sc2::UnitTypeData unitTypeData(m_bot->Observation()->GetUnitTypeData()[m_type]);
+	if (!unitTypeData.has_minerals)
+		return false;
+	switch (m_type.ToType())
+	{
+		//Standard
+		case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD750:
+		case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD750:
+		case sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD750:
+		case sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD750:
+			return true;
 		default:
 			return false;
-    }
+	}
+}
+
+bool UnitType::isRichMineral() const
+{
+	sc2::UnitTypeData unitTypeData(m_bot->Observation()->GetUnitTypeData()[m_type]);
+	if (!unitTypeData.has_minerals)
+		return false;
+	switch (m_type.ToType())
+	{
+		//Rich
+		case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD750:
+		case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD750:
+			std::cout << "Unit type " << m_type << " has no mineral but is a mineral field" << std::endl;
+			return true;
+		default:
+			return false;
+	}
 }
 
 bool UnitType::isMineralWallPatch() const

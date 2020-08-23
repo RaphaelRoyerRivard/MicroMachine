@@ -89,8 +89,8 @@ public:
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);
 	const sc2::Unit *	getClosestMineral(const CCPosition position) const;
-	const sc2::Unit *	getLargestCloseMineral(const CCTilePosition position, bool checkUnderAttack = false, std::vector<CCUnitID> skipMinerals = {}) const;
-	const sc2::Unit *	getLargestCloseMineral(const Unit unit, bool checkUnderAttack = false, std::vector<CCUnitID> skipMinerals = {}) const;
+	const sc2::Unit *	getLargestCloseMineralForMules(const CCTilePosition position, bool checkUnderAttack = false, int minimumMineralContent = 0) const;
+	const sc2::Unit *	getLargestCloseMineralForMules(const Unit unit, bool checkUnderAttack = false, int minimumMineralContent = 0) const;
 
     bool                isBeingBuilt(UnitType type) const;
 	bool				isWallPosition(int x, int y) const;

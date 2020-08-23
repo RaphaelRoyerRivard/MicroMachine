@@ -158,6 +158,8 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 		BOT_ASSERT(m_geyserPositions.size() <= 2, "Unexpected base layout detected.");
 	}
 
+	m_isRich = m_minerals.at(0).getType().isRichMineral();
+
 	Building b(MetaTypeEnum::MissileTurret.getUnitType(), m_centerOfMinerals);
 	m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true, false, true);
 }
@@ -364,6 +366,11 @@ const std::vector<CCTilePosition> & BaseLocation::getClosestTiles() const
 const bool & BaseLocation::isGeyserSplit() const
 {
 	return m_isSplitGeyser;
+}
+
+const bool & BaseLocation::isRich() const
+{
+	return m_isRich;
 }
 
 void BaseLocation::draw()

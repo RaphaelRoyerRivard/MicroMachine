@@ -1884,32 +1884,32 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 
 			switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())
 			{
-			case sc2::UNIT_TYPEID::TERRAN_SCV:
-			case sc2::UNIT_TYPEID::PROTOSS_PROBE:
-			case sc2::UNIT_TYPEID::ZERG_DRONE:
-			{
-				if (!m_bot.Workers().isFree(unit))
+				case sc2::UNIT_TYPEID::TERRAN_SCV:
+				case sc2::UNIT_TYPEID::PROTOSS_PROBE:
+				case sc2::UNIT_TYPEID::ZERG_DRONE:
 				{
-					continue;
-				}
-				const auto & orders = unit.getUnitPtr()->orders;
-				bool isMoving = false;
-				for (const auto & order : orders)
-				{
-					if (order.ability_id == sc2::ABILITY_ID::MOVE)
+					if (!m_bot.Workers().isFree(unit))
 					{
-						isMoving = true;
-						break;
+						continue;
 					}
+					const auto & orders = unit.getUnitPtr()->orders;
+					bool isMoving = false;
+					for (const auto & order : orders)
+					{
+						if (order.ability_id == sc2::ABILITY_ID::MOVE)
+						{
+							isMoving = true;
+							break;
+						}
+					}
+					if (isMoving)
+						continue;
+					break;
 				}
-				if (isMoving)
+				case sc2::UNIT_TYPEID::TERRAN_MULE:
+				{
 					continue;
-				break;
-			}
-			case sc2::UNIT_TYPEID::TERRAN_MULE:
-			{
-				continue;
-			}
+				}
 			}
 
 			// TODO: if unit is not powered continue
