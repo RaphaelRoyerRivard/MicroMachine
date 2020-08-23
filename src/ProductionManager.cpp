@@ -248,160 +248,163 @@ void ProductionManager::manageBuildOrderQueue()
 				fixBuildOrderDeadlock(currentItem);
 				//currentItem = m_queue.getHighestPriorityItem();
 				m_bot.StopProfiling("0.10.2.2.2.1      fixBuildOrderDeadlock");
-				//continue;
 			}
-
-			const auto barrackCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
-			const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
-			// Proxy buildings
-			if (m_bot.GetCurrentFrame() < 4032 /* 3 min */ && ((currentItem.type == MetaTypeEnum::Barracks && m_bot.Strategy().isProxyStartingStrategy() && barrackCount < 2) || 
-				(currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().isProxyFactoryStartingStrategy() && factoryCount == 0)))
+			else
 			{
-				const auto proxyLocation = Util::GetPosition(m_bot.Buildings().getProxyLocation());
-				Unit producer = getProducer(currentItem.type, false, proxyLocation);
-				Building b(currentItem.type.getUnitType(), proxyLocation);
-				b.finalPosition = proxyLocation;
-				if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
+				const auto barrackCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
+				const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
+				// Proxy buildings
+				if (m_bot.GetCurrentFrame() < 4032 /* 3 min */ && ((currentItem.type == MetaTypeEnum::Barracks && m_bot.Strategy().isProxyStartingStrategy() && barrackCount < 2) ||
+					(currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().isProxyFactoryStartingStrategy() && factoryCount == 0)))
 				{
-					if (create(producer, currentItem, proxyLocation, false, false, true))
+					const auto proxyLocation = Util::GetPosition(m_bot.Buildings().getProxyLocation());
+					Unit producer = getProducer(currentItem.type, false, proxyLocation);
+					Building b(currentItem.type.getUnitType(), proxyLocation);
+					b.finalPosition = proxyLocation;
+					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
 					{
-						m_queue.removeCurrentHighestPriorityItem();
-						break;
+						if (create(producer, currentItem, proxyLocation, false, false, true))
+						{
+							m_queue.removeCurrentHighestPriorityItem();
+							break;
+						}
 					}
 				}
-			}
-			else if (currentlyHasRequirement(currentItem.type))
-			{
-				//Check if we already have an idle production building of that type
-				bool idleProductionBuilding = false;
+				else if (currentlyHasRequirement(currentItem.type))
+				{
+					//Check if we already have an idle production building of that type
+					bool idleProductionBuilding = false;
 #ifndef NO_UNITS
-				if (currentItem.type.isBuilding())
-				{
-					auto productionBuildingTypes = getProductionBuildingTypes();
-					const sc2::UnitTypeID itemType = currentItem.type.getUnitType().getAPIUnitType();
-
-					//If its a production building
-					if (std::find(productionBuildingTypes.begin(), productionBuildingTypes.end(), itemType) != productionBuildingTypes.end())
+					if (currentItem.type.isBuilding())
 					{
-						auto & productionBuildings = m_bot.GetAllyUnits(itemType);
-						for (auto & productionBuilding : productionBuildings)
+						auto productionBuildingTypes = getProductionBuildingTypes();
+						const sc2::UnitTypeID itemType = currentItem.type.getUnitType().getAPIUnitType();
+
+						//If its a production building
+						if (std::find(productionBuildingTypes.begin(), productionBuildingTypes.end(), itemType) != productionBuildingTypes.end())
 						{
-							//Check if this building is idle
-							if (productionBuilding.isProductionBuildingIdle() && !productionBuilding.isBeingConstructed())
+							auto & productionBuildings = m_bot.GetAllyUnits(itemType);
+							for (auto & productionBuilding : productionBuildings)
 							{
-								idleProductionBuilding = true;
-								break;
-							}
-						}
-					}
-				}
-#endif
-
-				if (!idleProductionBuilding)
-				{
-					auto data = m_bot.Data(currentItem.type);
-					// if we can make the current item
-					m_bot.StartProfiling("0.10.2.2.2.2      tryingToBuild");
-					bool needsCancellation = false;//Required because the morph/addon abilities are not available while training/producing.
-					Unit producer;
-					if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))//Get the producer if we have enough resources
-					{
-						producer = getProducer(currentItem.type);
-					}
-					else//Try to get a producer that would have enough resources if we cancel what it is currently producing.
-					{
-						producer = meetsReservedResourcesWithCancelUnit(currentItem.type, additionalReservedMineral, additionalReservedGas);
-						needsCancellation = true;
-					}
-					if(producer.isValid())//If we found a producer, lets create it.
-					{
-						m_bot.StartProfiling("2.2.3     Build without premovement");
-						// build supply if we need some (SupplyBlock)
-						if (m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
-						{
-							if (m_bot.GetMaxSupply() < 200 && m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
-							{
-								supplyBlockedFrames++;
-								Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", m_bot);
-							}
-						}
-						m_bot.StartProfiling("0.10.2.2.2.2.1.1      canMakeNow");
-						const auto canProducerMakeItem = canMakeNow(producer, currentItem.type);
-						m_bot.StopProfiling("0.10.2.2.2.2.1.1      canMakeNow");
-						if (needsCancellation || canProducerMakeItem)
-						{
-							// create it and remove it from the _queue
-							m_bot.StartProfiling("0.10.2.2.2.2.1.2      create");
-							const auto producerCreatedItem = create(producer, currentItem, m_bot.GetBuildingArea(currentItem.type));
-							m_bot.StopProfiling("0.10.2.2.2.2.1.2      create");
-							if (producerCreatedItem)
-							{
-								m_queue.removeCurrentHighestPriorityItem();
-
-								// don't actually loop around in here
-								m_bot.StopProfiling("0.10.2.2.2.2.1      Build without premovement");
-								m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
-								break;
-							}
-							else if (!m_initialBuildOrderFinished)
-							{
-								Util::DebugLog(__FUNCTION__, "Failed to place " + currentItem.type.getName() + " during initial build order. Skipping.", m_bot);
-								m_queue.removeCurrentHighestPriorityItem();
-							}
-						}
-						m_bot.StopProfiling("0.10.2.2.2.2.1      Build without premovement");
-					}
-					else if (data.isBuilding
-						&& !data.isAddon
-						&& !currentItem.type.getUnitType().isMorphedBuilding()
-						&& (!data.isResourceDepot || wantToQuickExpand))//If its a resource depot, we don't pre-move unless we want to expand quickly.
-					{
-						// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
-
-						m_bot.StartProfiling("0.10.2.2.2.2.2      Build with premovement");
-						Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea(currentItem.type));
-						//Get building location
-
-						m_bot.StartProfiling("0.10.2.2.2.2.2.1       getNextBuildingLocation");
-						const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, true, true);
-						m_bot.StopProfiling("0.10.2.2.2.2.2.1       getNextBuildingLocation");
-						if (targetLocation != CCTilePosition(0, 0))
-						{
-							Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
-							if (worker.isValid())
-							{
-								b.finalPosition = targetLocation;
-								if (canMakeAtArrival(b, worker, additionalReservedMineral, additionalReservedGas))
+								//Check if this building is idle
+								if (productionBuilding.isProductionBuildingIdle() && !productionBuilding.isBeingConstructed())
 								{
-									// create it and remove it from the _queue
-									if (create(worker, b) && worker.isValid())
-									{
-										worker.move(targetLocation);
-										m_queue.removeCurrentHighestPriorityItem();
-
-										if (wantToQuickExpand && currentItem.type.getUnitType() == Util::GetResourceDepotType())//Remove the quick expand flag once we expand
-										{
-											SetWantToQuickExpand(false);
-										}
-									}
-
-									// don't actually loop around in here
-									m_bot.StopProfiling("0.10.2.2.2.2.2      Build with premovement");
-									m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
+									idleProductionBuilding = true;
 									break;
 								}
 							}
 						}
-						else
-						{
-							if (currentItem.type.getUnitType().getAPIUnitType() != Util::GetRefineryType().getAPIUnitType())//Supresses the refinery related errors
-							{
-								Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
-							}
-						}
-						m_bot.StopProfiling("0.10.2.2.2.2.2      Build with premovement");
 					}
-					m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
+#endif
+
+					if (!idleProductionBuilding)
+					{
+						auto data = m_bot.Data(currentItem.type);
+						// if we can make the current item
+						m_bot.StartProfiling("0.10.2.2.2.2      tryingToBuild");
+						bool needsCancellation = false;//Required because the morph/addon abilities are not available while training/producing.
+						Unit producer;
+						if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))//Get the producer if we have enough resources
+						{
+							producer = getProducer(currentItem.type);
+						}
+						else//Try to get a producer that would have enough resources if we cancel what it is currently producing.
+						{
+							producer = meetsReservedResourcesWithCancelUnit(currentItem.type, additionalReservedMineral, additionalReservedGas);
+							needsCancellation = true;
+						}
+						if (producer.isValid())//If we found a producer, lets create it.
+						{
+							m_bot.StartProfiling("2.2.3     Build without premovement");
+							// build supply if we need some (SupplyBlock)
+							if (m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+							{
+								if (m_bot.GetMaxSupply() < 200 && m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
+								{
+									supplyBlockedFrames++;
+									Util::Log(__FUNCTION__, "Supply blocked | 0x00000007", m_bot);
+								}
+							}
+							m_bot.StartProfiling("0.10.2.2.2.2.1.1      canMakeNow");
+							const auto canProducerMakeItem = canMakeNow(producer, currentItem.type);
+							m_bot.StopProfiling("0.10.2.2.2.2.1.1      canMakeNow");
+							if (needsCancellation || canProducerMakeItem)
+							{
+								if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ENGINEERINGBAY)
+									int a = 0;
+								// create it and remove it from the _queue
+								m_bot.StartProfiling("0.10.2.2.2.2.1.2      create");
+								const auto producerCreatedItem = create(producer, currentItem, m_bot.GetBuildingArea(currentItem.type));
+								m_bot.StopProfiling("0.10.2.2.2.2.1.2      create");
+								if (producerCreatedItem)
+								{
+									m_queue.removeCurrentHighestPriorityItem();
+
+									// don't actually loop around in here
+									m_bot.StopProfiling("0.10.2.2.2.2.1      Build without premovement");
+									m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
+									break;
+								}
+								else if (!m_initialBuildOrderFinished)
+								{
+									Util::DebugLog(__FUNCTION__, "Failed to place " + currentItem.type.getName() + " during initial build order. Skipping.", m_bot);
+									m_queue.removeCurrentHighestPriorityItem();
+								}
+							}
+							m_bot.StopProfiling("0.10.2.2.2.2.1      Build without premovement");
+						}
+						else if (data.isBuilding
+							&& !data.isAddon
+							&& !currentItem.type.getUnitType().isMorphedBuilding()
+							&& (!data.isResourceDepot || wantToQuickExpand))//If its a resource depot, we don't pre-move unless we want to expand quickly.
+						{
+							// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
+
+							m_bot.StartProfiling("0.10.2.2.2.2.2      Build with premovement");
+							Building b(currentItem.type.getUnitType(), m_bot.GetBuildingArea(currentItem.type));
+							//Get building location
+
+							m_bot.StartProfiling("0.10.2.2.2.2.2.1       getNextBuildingLocation");
+							const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, true, true);
+							m_bot.StopProfiling("0.10.2.2.2.2.2.1       getNextBuildingLocation");
+							if (targetLocation != CCTilePosition(0, 0))
+							{
+								Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
+								if (worker.isValid())
+								{
+									b.finalPosition = targetLocation;
+									if (canMakeAtArrival(b, worker, additionalReservedMineral, additionalReservedGas))
+									{
+										// create it and remove it from the _queue
+										if (create(worker, b) && worker.isValid())
+										{
+											worker.move(targetLocation);
+											m_queue.removeCurrentHighestPriorityItem();
+
+											if (wantToQuickExpand && currentItem.type.getUnitType() == Util::GetResourceDepotType())//Remove the quick expand flag once we expand
+											{
+												SetWantToQuickExpand(false);
+											}
+										}
+
+										// don't actually loop around in here
+										m_bot.StopProfiling("0.10.2.2.2.2.2      Build with premovement");
+										m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
+										break;
+									}
+								}
+							}
+							else
+							{
+								if (currentItem.type.getUnitType().getAPIUnitType() != Util::GetRefineryType().getAPIUnitType())//Supresses the refinery related errors
+								{
+									Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
+								}
+							}
+							m_bot.StopProfiling("0.10.2.2.2.2.2      Build with premovement");
+						}
+						m_bot.StopProfiling("0.10.2.2.2.2      tryingToBuild");
+					}
 				}
 			}
 		}
@@ -436,7 +439,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 		const bool hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true) > 0;
 		shouldSkip = !hasBarracks;
 	}
-	else if (currentItem.type.getUnitType().isResourceDepot())
+	else if (currentItem.type.getUnitType().isResourceDepot() && !currentItem.type.getUnitType().isMorphedBuilding())
 	{
 		shouldSkip = m_bot.Strategy().isEarlyRushed() && m_bot.GetMinerals() < 800;
 	}
@@ -1715,6 +1718,22 @@ bool ProductionManager::hasRequiredUnit(const UnitType& unitType, bool checkInQu
 
 	if (checkInQueue && m_queue.contains(MetaType(unitType, m_bot)))
 		return true;
+	
+	if (unitType.isMorphableBuilding())
+	{
+		for (auto & morphedUnitTypeId : unitType.getMorphedUnitTypesOfBuilding())
+		{
+			auto morphedUnitType = UnitType(morphedUnitTypeId, m_bot);
+			if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, morphedUnitType, false, true) > 0)
+				return true;
+
+			if (m_bot.Buildings().isBeingBuilt(morphedUnitType))
+				return true;
+
+			if (checkInQueue && m_queue.contains(MetaType(morphedUnitType, m_bot)))
+				return true;
+		}
+	}
 
 	return false;
 }
