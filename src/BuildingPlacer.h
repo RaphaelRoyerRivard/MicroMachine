@@ -11,6 +11,7 @@ class BuildingPlacer
     CCBot & m_bot;
 
     std::vector< std::vector<bool> > m_reserveMap;
+	//[STUCK]TODO Declare other map here
 
     // queries for various BuildingPlacer data
 	bool isGeyserAssigned(CCTilePosition geyserTilePos) const;

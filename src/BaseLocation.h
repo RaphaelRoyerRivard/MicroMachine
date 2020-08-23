@@ -24,6 +24,7 @@ class BaseLocation
 	bool						m_isUnderAttack;
 	bool						m_isBlocked;
 	bool						m_isSplitGeyser;
+	bool						m_isRich;
 	std::vector<CCTilePosition> m_gasBunkerLocations;
 
 	CCTilePosition				m_centerOfMinerals;
@@ -80,6 +81,7 @@ public:
 
     const std::vector<CCTilePosition> & getClosestTiles() const;
 	const bool & isGeyserSplit() const;
+	const bool & isRich() const;
 
     void draw();
 };

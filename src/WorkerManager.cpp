@@ -102,7 +102,7 @@ void WorkerManager::lowPriorityChecks()
 				if (m_bot.Workers().isFree(worker))
 				{
 					const auto workerDepot = m_workerData.getWorkerDepot(worker);
-					if (workerDepot.isValid() && workerDepot.getID() == depot.getID())
+					if (workerDepot.isValid() && workerDepot.getTag() == depot.getTag())
 					{
 						dispatchedWorkers.push_back(worker);
 						extra--;
@@ -363,32 +363,45 @@ void WorkerManager::handleMineralWorkers()
 
 void WorkerManager::handleMules()
 {
-	for (auto mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
+	//Clear mineral patch of mule that expired
+	int frame = m_bot.GetCurrentFrame();
+	for (auto & i : mineralMuleDeathFrame)
+	{
+		if (frame >= i.second)
+		{
+			mineralMuleDeathFrame.erase(i.first);
+		}
+	}
+
+	for (auto & mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
 	{
 		if (!mule.isValid())
 		{
 			continue;
 		}
 
-		auto id = mule.getID();
+		auto id = mule.getTag();
 		if (muleHarvests.find(id) == muleHarvests.end())
 		{
-			muleHarvests[id] = std::pair<bool, std::pair<int, sc2::Tag>>();
+			muleHarvests[id] = std::pair<bool, int>();
 		}
 		else
 		{
 			//Do not run on first frame of Mule existance, or we might assign it to the wrong mineral
-			auto unit = mule.getUnitPtr();
-			if (unit->orders.size() == 0)
+			if (m_bot.Config().StarCraft2Version < "4.11.0")
 			{
-				auto mineral = m_bot.Buildings().getClosestMineral(unit->pos);
-				muleHarvests[id].second.second = mineral->tag;
-				mule.rightClick(mineral->pos);
+				auto unit = mule.getUnitPtr();
+				if (unit->orders.size() == 0)//version below 4.11.0 only
+				{
+					auto mineral = m_bot.Buildings().getClosestMineral(unit->pos);
+					mule.rightClick(mineral->pos);
+				}
 			}
 		}
 
 		if (isReturningCargo(mule))
 		{
+
 			muleHarvests[id].first = true;
 		}
 		else
@@ -396,11 +409,11 @@ void WorkerManager::handleMules()
 			if (muleHarvests[id].first)//Cargo was returned
 			{
 				muleHarvests[id].first = false;
-				muleHarvests[id].second.first++;
-				if (muleHarvests[id].second.first == 9)//Maximum of 9 harvest per mule, the mules can't finish the 10th.
+				muleHarvests[id].second++;
+				if (muleHarvests[id].second == 9)//Maximum of 9 harvest per mule, the mules can't finish the 10th.
 				{
 					auto position = m_bot.Map().center();
-					mule.move(position);	
+					mule.move(position);
 					muleHarvests.erase(id);
 				}
 			}
@@ -1080,7 +1093,7 @@ void WorkerManager::repairCombatBuildings()//Ignores if the path or the area aro
 			for (auto & worker : workers)
 			{
 				Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
-				if (repairedUnit.isValid() && repairedUnit.getID() == building.getID())
+				if (repairedUnit.isValid() && repairedUnit.getTag() == building.getTag())
 				{
 					alreadyRepairing++;
 					if (reparator == alreadyRepairing)//Already enough repairer, stop checking how many are repairing
@@ -1108,7 +1121,7 @@ void WorkerManager::repairCombatBuildings()//Ignores if the path or the area aro
 									continue;
 								}
 								const auto workerDepot = m_workerData.getWorkerDepot(baseWorker);
-								if (workerDepot.isValid() && workerDepot.getID() == depot.getID())
+								if (workerDepot.isValid() && workerDepot.getTag() == depot.getTag())
 								{
 									worker = baseWorker;
 									break;
@@ -1157,7 +1170,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 	// for each of our workers
 	for (auto & worker : m_workerData.getWorkers())
 	{
-		if (!worker.isValid() || std::find(workersToIgnore.begin(), workersToIgnore.end(), worker.getID()) != workersToIgnore.end()) { continue; }
+		if (!worker.isValid() || std::find(workersToIgnore.begin(), workersToIgnore.end(), worker.getTag()) != workersToIgnore.end()) { continue; }
 		const sc2::Unit* workerPtr = worker.getUnitPtr();
 		if (workerPtr->health < minHpPercentage * workerPtr->health_max)
 			continue;
@@ -1199,7 +1212,7 @@ Unit WorkerManager::getClosestGasWorkerTo(const CCPosition & pos, CCUnitID worke
 	// for each of our workers
 	for (auto & worker : m_workerData.getWorkers())
 	{
-		if (!worker.isValid() || worker.getID() == workerToIgnore) { continue; }
+		if (!worker.isValid() || worker.getTag() == workerToIgnore) { continue; }
 		const sc2::Unit* workerPtr = worker.getUnitPtr();
 		if (workerPtr->health < minHpPercentage * workerPtr->health_max)
 		{
@@ -1478,9 +1491,9 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMo
 		//TODO This shouldn't be needed (shouldn't happen), right?
 		for (auto & building : m_bot.Buildings().getBuildings())
 		{
-			if (building.builderUnit.isValid() && building.builderUnit.getID() == builderWorker.getID())
+			if (building.builderUnit.isValid() && building.builderUnit.getTag() == builderWorker.getTag())
 			{
-				invalidWorkers.push_back(builderWorker.getID());
+				invalidWorkers.push_back(builderWorker.getTag());
 				isValid = false;
 				break;
 			}
@@ -1582,7 +1595,7 @@ void WorkerManager::drawWorkerInformation()
 			std::string buildingType = "UNKNOWN";
 			for (auto b : m_bot.Buildings().getBuildings())
 			{
-				if (b.builderUnit.getID() == worker.getID())
+				if (b.builderUnit.getTag() == worker.getTag())
 				{
 					buildingType = b.type.getName();
 					break;
@@ -1676,22 +1689,12 @@ WorkerData & WorkerManager::getWorkerData() const
 	return m_workerData;
 }
 
-sc2::Tag WorkerManager::getMuleTargetTag(const Unit mule)
+void WorkerManager::setMineralMuleDeathFrame(sc2::Tag mineralTag)
 {
-	auto id = mule.getID();
-	if (muleHarvests.find(id) == muleHarvests.end())
-	{
-		muleHarvests[id] = std::pair<bool, std::pair<int, sc2::Tag>>();
-	}
-	return muleHarvests[id].second.second;
+	mineralMuleDeathFrame[mineralTag] = m_bot.GetCurrentFrame() + 1344;
 }
 
-void WorkerManager::setMuleTargetTag(const Unit mule, const sc2::Tag mineral)
+bool WorkerManager::isMineralMuleAvailable(sc2::Tag mineralTag)
 {
-	auto id = mule.getID();
-	if (muleHarvests.find(id) == muleHarvests.end())
-	{
-		muleHarvests[id] = std::pair<bool, std::pair<int, sc2::Tag>>();
-	}
-	muleHarvests[id].second.second = mineral;
+	return mineralMuleDeathFrame.find(mineralTag) == mineralMuleDeathFrame.end();
 }

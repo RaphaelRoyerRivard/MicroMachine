@@ -1325,12 +1325,12 @@ void BuildingManager::drawBuildingInformation()
 
         if (b.builderUnit.isValid())
         {
-            dss << "\n\nBuilder: " << b.builderUnit.getID() << "\n";
+            dss << "\n\nBuilder: " << b.builderUnit.getTag() << "\n";
         }
 
         if (b.buildingUnit.isValid())
         {
-            dss << "Building: " << b.buildingUnit.getID() << "\n" << b.buildingUnit.getBuildProgress();
+            dss << "Building: " << b.buildingUnit.getTag() << "\n" << b.buildingUnit.getBuildProgress();
             m_bot.Map().drawText(b.buildingUnit.getPosition(), dss.str());
         }
         
@@ -1340,7 +1340,7 @@ void BuildingManager::drawBuildingInformation()
         }
         else if (b.status == BuildingStatus::Assigned)
         {
-            ss << "Assigned " << b.type.getName() << "    " << b.builderUnit.getID() << " " << getBuildingWorkerCode(b) << " (" << b.finalPosition.x << "," << b.finalPosition.y << ")\n";
+            ss << "Assigned " << b.type.getName() << "    " << b.builderUnit.getTag() << " " << getBuildingWorkerCode(b) << " (" << b.finalPosition.x << "," << b.finalPosition.y << ")\n";
 
             int x1 = b.finalPosition.x;
             int y1 = b.finalPosition.y;
@@ -1828,15 +1828,15 @@ const sc2::Unit * BuildingManager::getClosestMineral(const CCPosition position) 
 	return mineralField;
 }
 
-const sc2::Unit * BuildingManager::getLargestCloseMineral(const CCTilePosition position, bool checkUnderAttack, std::vector<CCUnitID> skipMinerals) const
+const sc2::Unit * BuildingManager::getLargestCloseMineralForMules(const CCTilePosition position, bool checkUnderAttack, int minimumMineralContent) const
 {
 	auto base = m_bot.Bases().getBaseForDepotPosition(position);
 	if (base == nullptr)
 		return nullptr;
-	return getLargestCloseMineral(base->getResourceDepot(), checkUnderAttack, skipMinerals);
+	return getLargestCloseMineralForMules(base->getResourceDepot(), checkUnderAttack, minimumMineralContent);
 }
 
-const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool checkUnderAttack, std::vector<CCUnitID> skipMinerals) const
+const sc2::Unit * BuildingManager::getLargestCloseMineralForMules(const Unit unit, bool checkUnderAttack, int minimumMineralContent) const
 {
 	auto base = m_bot.Bases().getBaseForDepot(unit);
 	if (base == nullptr || (checkUnderAttack && base->isUnderAttack()))
@@ -1849,7 +1849,17 @@ const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool 
 	int maxMinerals = 0;
 	for (auto mineral : potentialMinerals)
 	{
+		if (!m_bot.Workers().isMineralMuleAvailable(mineral.getTag()))//skip mineral that already have mules
+		{
+			continue;
+		}
+
 		int mineralContent = mineral.getUnitPtr()->mineral_contents;
+		if (minimumMineralContent != 0 && mineralContent < minimumMineralContent)
+		{
+			continue;
+		}
+
 		if (mineralField == nullptr || mineralContent > maxMinerals) {
 			mineralField = mineral.getUnitPtr();
 			maxMinerals = mineralContent;
@@ -2053,31 +2063,29 @@ void BuildingManager::castBuildingsAbilities()
 		//Mule
 		if (!keepEnergy || energy >= 100)
 		{
-			std::vector<CCUnitID> skipMinerals;
-			for (const auto & mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
-			{
-				skipMinerals.push_back(m_bot.Workers().getMuleTargetTag(mule));
-			}
-
 			CCTilePosition orbitalPosition;
 			const sc2::Unit* closestMineral = nullptr;
 			auto & bases = m_bot.Bases().getBaseLocations();//Sorted by closest to enemy base
-			// Check twice the base locations, but skip the under attack check the second time
-			for (int i = 0; i < 2; ++i)
+			//0 = any regular base not under attack
+			//1 = any gold base not under attack
+			//2 = any base, even under attack
+			for (int i = 0; i < 3; ++i)
 			{
 				for (auto base : bases)
 				{
 					if (!base->isOccupiedByPlayer(Players::Self))
 						continue;
 
-					if (i == 0 && base->isUnderAttack())
+					if (i <= 0  && base->isRich())//Avoid rich bases, unless we have no other valid bases, not under attack
+						continue;
+					if (i <= 1 && base->isUnderAttack())//Avoid bases under attack, unless its our last option
 						continue;
 
 					auto & depot = base->getResourceDepot();
 					if (!depot.isValid() || !depot.isCompleted())
 						continue;
 
-					closestMineral = getLargestCloseMineral(depot, false, skipMinerals);
+					closestMineral = getLargestCloseMineralForMules(depot, false, 225);
 					if (closestMineral == nullptr)
 					{
 						continue;
@@ -2103,7 +2111,6 @@ void BuildingManager::castBuildingsAbilities()
 			}
 
 			auto point = closestMineral->pos;
-
 			if (m_bot.Config().StarCraft2Version < "4.11.0" && orbitalPosition != CCPosition())//Validate version because we can drop the mule straigth on the mineral past this version
 			{
 				//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
@@ -2112,6 +2119,7 @@ void BuildingManager::castBuildingsAbilities()
 			}
 
 			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
+			m_bot.Workers().setMineralMuleDeathFrame(closestMineral->tag);
 		}
 	}
 	m_bot.StopProfiling("0.8.8.3  OrbitalCommands");

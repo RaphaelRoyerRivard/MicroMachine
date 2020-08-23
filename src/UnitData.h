@@ -31,7 +31,7 @@ struct UnitInfo
 
     bool operator == (const Unit & unit) const
     {
-        return id == unit.getID();
+        return id == unit.getTag();
     }
 
     bool operator == (const UnitInfo & rhs) const

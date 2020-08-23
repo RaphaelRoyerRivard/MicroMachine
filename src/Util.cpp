@@ -68,7 +68,7 @@ struct Util::PathFinding::IMNode
 		return position != CCTilePosition(0, 0);
 	}
 
-	int getId() const
+	int getTag() const
 	{
 		return position.x * 1000 + position.y;
 	}
@@ -326,14 +326,14 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	const CCTilePosition goalPosition = GetTilePosition(goal);
 	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT ? CCTilePosition() : GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
-	bestCosts[start->getId()] = 0;
+	bestCosts[start->getTag()] = 0;
 	opened.insert(start);
 
 	while (!opened.empty() && closed.size() < maxExploredNode)
 	{
 		IMNode* currentNode = getLowestCostNode(opened);
 		opened.erase(currentNode);
-		if (bestCosts[currentNode->getId()] < currentNode->cost)
+		if (bestCosts[currentNode->getTag()] < currentNode->cost)
 			continue;	// No need to check that node, we already checked it with a lower cost
 		closed.insert(currentNode);
 		if (bot.Config().DrawPathfindingTiles)
@@ -473,7 +473,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				const float influence = totalInfluenceOnTile + currentNode->influence;
 				auto neighbor = new IMNode(neighborPosition, currentNode, totalCost, heuristic, influence);
 
-				if (bestCosts.find(neighbor->getId()) != bestCosts.end() && bestCosts[neighbor->getId()] <= totalCost)
+				if (bestCosts.find(neighbor->getTag()) != bestCosts.end() && bestCosts[neighbor->getTag()] <= totalCost)
 					continue;
 				
 				/*if (SetContainsNode(closed, neighbor, false))
@@ -482,7 +482,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				if (SetContainsNode(opened, neighbor, true))
 					continue;	// node already opened and of lower cost*/
 
-				bestCosts[neighbor->getId()] = totalCost;
+				bestCosts[neighbor->getTag()] = totalCost;
 				opened.insert(neighbor);
 			}
 		}
@@ -2346,12 +2346,12 @@ bool Util::IsWorker(sc2::UNIT_TYPEID type)
 {
 	switch (type)
 	{
-	case sc2::UNIT_TYPEID::TERRAN_SCV: return true;
-	case sc2::UNIT_TYPEID::TERRAN_MULE: return true;
-	case sc2::UNIT_TYPEID::PROTOSS_PROBE: return true;
-	case sc2::UNIT_TYPEID::ZERG_DRONE: return true;
-	case sc2::UNIT_TYPEID::ZERG_DRONEBURROWED: return true;
-	default: return false;
+		case sc2::UNIT_TYPEID::TERRAN_SCV: return true;
+		case sc2::UNIT_TYPEID::TERRAN_MULE: return true;
+		case sc2::UNIT_TYPEID::PROTOSS_PROBE: return true;
+		case sc2::UNIT_TYPEID::ZERG_DRONE: return true;
+		case sc2::UNIT_TYPEID::ZERG_DRONEBURROWED: return true;
+		default: return false;
 	}
 }
 
