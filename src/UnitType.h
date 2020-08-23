@@ -53,6 +53,9 @@ public:
 	bool isMule() const;
 	bool isCreepTumor() const;
     bool isMorphedBuilding() const;
+	sc2::UNIT_TYPEID getBaseUnitTypeOfMorphedBuilding() const;
+	bool isMorphableBuilding() const;
+	std::vector<sc2::UNIT_TYPEID> getMorphedUnitTypesOfBuilding() const;
     bool isAttackingBuilding() const;
     bool isAddon() const;
     CCPositionType getAttackRange() const;
