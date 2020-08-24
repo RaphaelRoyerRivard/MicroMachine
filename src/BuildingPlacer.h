@@ -30,8 +30,6 @@ public:
 	bool canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const;
 	bool canBuildBunkerHere(int bx, int by, int depotX, int depotY, std::vector<CCPosition> geysersPos) const;
     bool canBuildHere(int bx, int by, const UnitType & type, int buildDist, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const;
-	bool isEnemyUnitBlocking(CCTilePosition center, UnitType type) const;
-	bool intersects(Unit unit, CCPosition buildingAbsoluteCenter, int buildingRadius) const;
 	std::vector<CCTilePosition> getTilesForBuildLocation(Unit building) const;
 	std::vector<CCTilePosition> getTilesForBuildLocation(int bx, int by, const UnitType & type, int width, int height, bool includeExtraTiles) const;
 	CCTilePosition getBottomLeftForBuildLocation(int bx, int by, const UnitType & type) const;

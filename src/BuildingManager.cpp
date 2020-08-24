@@ -542,7 +542,7 @@ void BuildingManager::validateWorkersAndBuildings()
 			{
 				//If the worker died on the way to start the building construction or if the requirements are not met anymore
 				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
-					|| (m_bot.Strategy().isWorkerRushed() && m_buildingPlacer.isEnemyUnitBlocking(b.finalPosition, b.type)))
+					|| (m_bot.Strategy().isWorkerRushed() && isEnemyUnitNear(b.finalPosition)))
 				{
 					auto remove = CancelBuilding(b, false);
 					toRemove.push_back(remove);
@@ -957,10 +957,15 @@ void BuildingManager::constructAssignedBuildings()
 								// We want the worker to be close so it doesn't flag the base as blocked by error
 								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
 								// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
-								const bool blocked = closeEnough && !m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, true, false, false);
+								bool blocked = closeEnough && !m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, true, false, false);//Validates buildings in the way
+								if (!blocked)
+								{
+									blocked = isEnemyUnitNear(CCTilePosition(b.finalPosition.x, b.finalPosition.y));
+								}
+
 								if (blocked)
 								{
-									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true);
+									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true, getEnemyUnitsNear(b.finalPosition));
 									b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
 									b.buildCommandGiven = false;
 
@@ -2284,4 +2289,56 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 			}
 		}
 	}
+}
+
+bool BuildingManager::isEnemyUnitNear(CCTilePosition center) const
+{
+	const int flagUnitsWithinRadius = 10;
+	for (auto & tagUnit : m_bot.GetEnemyUnits())
+	{
+		if (tagUnit.second.getType().isBuilding())
+		{
+			continue;
+		}
+
+		auto x = tagUnit.second.getPosition().x;
+		auto y = tagUnit.second.getPosition().y;
+		auto r = tagUnit.second.getUnitPtr()->radius;
+
+		float distanceX = abs(x - center.x);
+		float distanceY = abs(y - center.y);
+
+		float distance_sq = pow(distanceX, 2) + pow(distanceY, 2);
+
+		return distance_sq <= pow(r + flagUnitsWithinRadius, 2);
+	}
+	return false;
+}
+
+std::vector<Unit> BuildingManager::getEnemyUnitsNear(CCTilePosition center) const
+{
+	const int flagUnitsWithinRadius = 10;
+	std::vector<Unit> enemyUnits;
+	for (auto & tagUnit : m_bot.GetEnemyUnits())
+	{
+		if (tagUnit.second.getType().isBuilding())
+		{
+			continue;
+		}
+
+		auto x = tagUnit.second.getPosition().x;
+		auto y = tagUnit.second.getPosition().y;
+		auto r = tagUnit.second.getUnitPtr()->radius;
+
+		float distanceX = abs(x - center.x);
+		float distanceY = abs(y - center.y);
+
+		float distance_sq = pow(distanceX, 2) + pow(distanceY, 2);
+
+		if (distance_sq <= pow(r + flagUnitsWithinRadius, 2))
+		{
+			enemyUnits.push_back(tagUnit.second);
+		}
+	}
+	return enemyUnits;
 }

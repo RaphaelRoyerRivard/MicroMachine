@@ -171,39 +171,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 		}
 	}
 
-    return !isEnemyUnitBlocking(CCTilePosition(bx, by), type);
-}
-
-bool BuildingPlacer::isEnemyUnitBlocking(CCTilePosition center, UnitType type) const
-{
-	for (auto tagUnit : m_bot.GetEnemyUnits())
-	{
-		if (tagUnit.second.getType().isBuilding())
-		{
-			continue;
-		}
-
-		if (intersects(tagUnit.second, Util::GetPosition(center), type.radius()))
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-//Check if a unit and a building location intersect
-bool BuildingPlacer::intersects(Unit unit, CCPosition buildingAbsoluteCenter, int buildingRadius) const
-{
-	auto x = unit.getPosition().x;
-	auto y = unit.getPosition().y;
-	auto r = unit.getUnitPtr()->radius;
-
-	float distanceX = abs(x - buildingAbsoluteCenter.x);
-	float distanceY = abs(y - buildingAbsoluteCenter.y);
-
-	float distance_sq = pow(distanceX, 2) + pow(distanceY, 2);
-
-	return distance_sq <= pow(r + buildingRadius, 2);
+	return true;
 }
 
 std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(Unit building) const
