@@ -380,14 +380,15 @@ void BaseLocation::draw()
     m_bot.Map().drawCircle(m_centerOfResources, radius, CCColor(255, 255, 0));
 	
     std::stringstream ss;
-    ss << "BaseLocation: " << m_baseID << "\n";
-    ss << "Start Loc:    " << (isStartLocation() ? "true" : "false") << "\n";
-    ss << "Minerals:     " << m_mineralPositions.size() << "\n";
-    ss << "Geysers:      " << m_geyserPositions.size() << "\n";
-	ss << "Under attack: " << (m_isUnderAttack ? "true" : "false") << "\n";
-	ss << "Blocked:      " << (m_isBlocked ? "true" : "false") << "\n";
-	ss << "Geyser type:  " << (m_isSplitGeyser ? "Split" : "Together") << "\n";
-    ss << "Occupied By:  ";
+    ss << "BaseLocation:    " << m_baseID << "\n";
+    ss << "Start Loc:       " << (isStartLocation() ? "true" : "false") << "\n";
+    ss << "Minerals:        " << m_mineralPositions.size() << "\n";
+    ss << "Geysers:         " << m_geyserPositions.size() << "\n";
+	ss << "Under attack:    " << (m_isUnderAttack ? "true" : "false") << "\n";
+	ss << "Blocked:         " << (m_isBlocked ? "true" : "false") << "\n";
+	ss << "Blocking units #:" << m_blockingUnits.size() << "\n";
+	ss << "Geyser type:     " << (m_isSplitGeyser ? "Split" : "Together") << "\n";
+    ss << "Occupied By:     ";
 
     if (isOccupiedByPlayer(Players::Self))
     {

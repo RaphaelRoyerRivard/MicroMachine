@@ -23,6 +23,7 @@ class BaseLocation
 	std::vector<Unit>			m_gasBunkers;
 	bool						m_isUnderAttack;
 	bool						m_isBlocked;
+	std::vector<Unit>			m_blockingUnits;
 	bool						m_isSplitGeyser;
 	bool						m_isRich;
 	std::vector<CCTilePosition> m_gasBunkerLocations;
@@ -73,6 +74,8 @@ public:
 	void setIsUnderAttack(bool isUnderAttack) { m_isUnderAttack = isUnderAttack; }
 	bool isBlocked() const { return m_isBlocked; }
 	void setIsBlocked(bool isBlocked) { m_isBlocked = isBlocked; }
+	void setBlockingUnits(std::vector<Unit> units) { m_blockingUnits = units;  }
+	std::vector<Unit> getBlockingUnits() { return m_blockingUnits; }
 	const CCTilePosition getCenterOfMinerals() const;
     bool isOccupiedByPlayer(CCPlayer player) const;
     bool isExplored() const;

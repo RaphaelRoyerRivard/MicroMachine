@@ -1676,6 +1676,12 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_startLocation, player2, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_VIPER, m_startLocation + towardsCenter * 25, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_HATCHERY, m_startLocation + towardsCenter * 25, 1);*/
+
+	// Test to see how the bot reacts to blocked expansions
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, enemyLocation, player1, 3);//Invisible/burrow
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, enemyLocation, player1, 3);//Creep
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, enemyLocation, player1, 3);//Creep tumor
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, enemyLocation, player1, 3);//Combat unit*/
 }
 
 void CCBot::IssueCheats()
