@@ -154,7 +154,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 	auto buildingTerrainHeight = -1;
 	if (!type.isRefinery())
 	{
-		for (auto tile : tiles)
+		for (auto & tile : tiles)
 		{
 			//Validate reserved tiles and buildable
 			if (!buildable(type, tile.x, tile.y, ignoreReserved))

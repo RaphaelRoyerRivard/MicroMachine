@@ -14,6 +14,7 @@ namespace Util
 	static float HARASS_REPAIR_STATION_MAX_HEALTH_PERCENTAGE = 0.3f;
 	static const int DELAY_BETWEEN_ERROR = 120;
 	static std::vector<std::string> displayedError;
+	static std::map<std::string, std::vector<int>> statistics;
 	static std::ofstream file;
 	static std::string mapName;
 	static CombatPredictor* m_simulator;
@@ -279,6 +280,8 @@ namespace Util
 	void			LogNoFrame(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, CCBot & bot);
 	void			Log(const std::string & function, const std::string & message, const CCBot & bot);
+	void			AddStatistic(const std::string & statisticName, int value);
+	void			DisplayStatistic(CCBot & bot, const std::string & statisticName);
 	void			ClearChat(CCBot & bot);
 	int				GetTimeControlSpeed();
 	int				GetTimeControlMaxSpeed();

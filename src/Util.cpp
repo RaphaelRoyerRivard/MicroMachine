@@ -2725,6 +2725,25 @@ void Util::Log(const std::string & function, const std::string & message, const 
 	std::cout << bot.GetGameLoop() << ": " << function << " | " << message << std::endl;
 }
 
+void Util::AddStatistic(const std::string & statisticName, int value)
+{
+	statistics[statisticName].push_back(value);
+}
+
+void Util::DisplayStatistic(CCBot & bot, const std::string & statisticName)
+{
+	auto & values = statistics[statisticName];
+	int total = 0;
+	for (auto & value : values)
+	{
+		total += value;
+		bot.Actions()->SendChat(statisticName + ": " + std::to_string(value));
+	}
+
+	bot.Actions()->SendChat(statisticName + " total: " + std::to_string(total));
+	bot.Actions()->SendChat(statisticName + " average: " + std::to_string(total /= values.size()));
+}
+
 void Util::ClearChat(CCBot & bot)
 {
 	for (int i = 0; i < 10; i++)
