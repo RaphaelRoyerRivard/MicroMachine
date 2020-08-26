@@ -19,6 +19,23 @@ void WorkerManager::onStart()
 
 void WorkerManager::onFrame(bool executeMacro)
 {
+	/*if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 336 == 0)//Every 15 seconds
+	{
+		const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals;
+		const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene;
+		Util::AddStatistic("Mineral", mineralRate);
+		//Util::AddStatistic("Gas", gasRate);
+	}
+	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 6720 == 0)//after 5 minutes
+	{
+		Util::DisplayStatistic(m_bot, "Mineral");
+		//Util::DisplayStatistic(m_bot, "Gas");
+	}
+	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 6721 == 0)
+	{
+		Util::ClearChat(m_bot);
+	}*/
+
 	m_bot.StartProfiling("0.7.1   m_workerData.updateAllWorkerData");
     m_workerData.updateAllWorkerData();
 	m_bot.StopProfiling("0.7.1   m_workerData.updateAllWorkerData");

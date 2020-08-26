@@ -758,13 +758,14 @@ const BaseLocation* BaseLocationManager::getBaseForDepot(const Unit depot) const
 	return nullptr;
 }
 
-void BaseLocationManager::SetLocationAsBlocked(const CCPosition position, bool isBlocked, std::vector<Unit> blockingUnits)
+void BaseLocationManager::SetLocationAsBlocked(const CCPosition position, bool isBlocked, bool isCreepBlocked, std::vector<Unit> blockingUnits)
 {
 	for (auto & base : m_baseLocationData)
 	{
 		if (base.containsPosition(position))
 		{
 			base.setIsBlocked(isBlocked);
+			base.setIsCreepBlocked(isCreepBlocked);
 			base.setBlockingUnits(blockingUnits);
 		}
 	}
@@ -774,8 +775,7 @@ void BaseLocationManager::ClearBlockedLocations()
 {
 	for (auto & baseLocation : m_baseLocationData)
 	{
-		baseLocation.setIsBlocked(false);
-		baseLocation.setBlockingUnits({});
+		baseLocation.clearBlocked();
 	}
 }
 

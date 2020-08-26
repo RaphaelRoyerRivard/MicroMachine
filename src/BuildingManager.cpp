@@ -958,14 +958,33 @@ void BuildingManager::constructAssignedBuildings()
 								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
 								// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
 								bool blocked = closeEnough && !m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, true, false, false);//Validates buildings in the way
-								if (!blocked)
+								bool creepBlocked = false;
+								if (blocked)//Verify if its a building or creep
+								{
+									if (m_bot.GetSelfRace() != CCRace::Zerg)
+									{
+										//Similar code can be found in BuildingPlacer.canBuildHere
+										auto tiles = getBuildingPlacer().getTilesForBuildLocation(b.finalPosition.x, b.finalPosition.y, b.type, b.type.tileWidth(), b.type.tileHeight(), false);
+										for (auto & tile : tiles)
+										{
+											//Validate if the tile has creep blocking the expand
+											if (m_bot.Observation()->HasCreep(CCPosition(tile.x, tile.y)))
+											{
+												blocked = true;
+												creepBlocked = true;
+												break;
+											}
+										}
+									}
+								}
+								else//Check for unit blocking
 								{
 									blocked = isEnemyUnitNear(CCTilePosition(b.finalPosition.x, b.finalPosition.y));
 								}
 
 								if (blocked)
 								{
-									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true, getEnemyUnitsNear(b.finalPosition));
+									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true, creepBlocked, getEnemyUnitsNear(b.finalPosition));
 									b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
 									b.buildCommandGiven = false;
 
