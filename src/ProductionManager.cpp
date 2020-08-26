@@ -1578,7 +1578,7 @@ void ProductionManager::lowPriorityChecks()
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
 	const bool shouldProduceAntiAirDefense = m_bot.Strategy().shouldProduceAntiAirDefense();
-	const bool shouldProduceAntiInvis = m_bot.Strategy().enemyHasInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
+	const bool shouldProduceAntiInvis = m_bot.Strategy().enemyHasCombatInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
 	if (shouldProduceAntiAirDefense || shouldProduceAntiInvis)
 	{
 		const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);

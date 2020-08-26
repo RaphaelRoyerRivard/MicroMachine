@@ -84,7 +84,9 @@ class StrategyManager
 	bool m_enemyHasProtossHighTechAir = false;
 	bool m_enemyHasNydusWorm = false;
 	bool m_enemyHasInvisible = false;
+	bool m_enemyHasCombatInvisible = false;
 	bool m_enemyCurrentlyHasInvisible = false;
+	bool m_enemyCurrentlyHasCombatInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
 	bool m_enemyHasBurrowingUpgrade = false;
 	bool m_enemyHasMassZerglings = false;
@@ -139,9 +141,13 @@ public:
 	bool enemyHasNydusWorm() const { return m_enemyHasNydusWorm; }
 	void setEnemyHasNydusWorm(bool enemyHasNydusWorm) { m_enemyHasNydusWorm = enemyHasNydusWorm; }
 	bool enemyHasInvisible() const { return m_enemyHasInvisible; }
+	bool enemyHasCombatInvisible() const { return m_enemyHasCombatInvisible; }
 	bool enemyCurrentlyHasInvisible() const { return m_enemyCurrentlyHasInvisible; }
+	bool enemyCurrentlyHasCombatInvisible() const { return m_enemyCurrentlyHasCombatInvisible; }
 	void setEnemyHasInvisible(bool enemyHasInvisible) { m_enemyHasInvisible = enemyHasInvisible; }
+	void setEnemyHasCombatInvisible(bool enemyHasCombatInvisible) { m_enemyHasCombatInvisible = enemyHasCombatInvisible; }
 	void setEnemyCurrentlyHasInvisible(bool enemyCurrentlyHasInvisible) { m_enemyCurrentlyHasInvisible = enemyCurrentlyHasInvisible; }
+	void setEnemyCurrentlyHasCombatInvisible(bool enemyCurrentlyHasCombatInvisible) { m_enemyCurrentlyHasCombatInvisible = enemyCurrentlyHasCombatInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
 	bool enemyHasBurrowingUpgrade() const { return m_enemyHasBurrowingUpgrade; }

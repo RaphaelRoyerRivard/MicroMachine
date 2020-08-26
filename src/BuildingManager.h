@@ -41,7 +41,7 @@ class BuildingManager
 	void			castBuildingsAbilities();
 	void			RunProxyLogic();
 	void			LiftOrLandDamagedBuildings();
-	bool			isEnemyUnitNear(CCTilePosition center) const;
+	bool			isEnemyUnitNear(CCTilePosition center, int radius = 10) const;
 	std::vector<Unit> getEnemyUnitsNear(CCTilePosition center) const;
 	void			updateBaseBuildings();
 
