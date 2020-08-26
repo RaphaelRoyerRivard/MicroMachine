@@ -174,6 +174,22 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 	return true;
 }
 
+bool BuildingPlacer::isBuildingBlockedByCreep(CCTilePosition pos, UnitType type) const
+{
+	//Similar code can be found in BuildingPlacer.canBuildHere
+	auto tiles = getTilesForBuildLocation(pos.x, pos.y, type, type.tileWidth(), type.tileHeight(), false);
+	for (auto & tile : tiles)
+	{
+		//Validate if the tile has creep blocking the expand
+		if (m_bot.Observation()->HasCreep(CCPosition(tile.x, tile.y)))
+		{
+			return true;
+			break;
+		}
+	}
+	return false;
+}
+
 std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(Unit building) const
 {
 	BOT_ASSERT(building.getType().isBuilding(), "Should not call getTilesForBuildLocation on a none building unit.");

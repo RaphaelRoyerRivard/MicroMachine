@@ -1682,7 +1682,9 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, enemyLocation, player1, 3);//Creep
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_LAIR, enemyLocation, player1, 1);//Creep
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, enemyLocation, player1, 3);//Creep tumor
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, enemyLocation, player1, 3);//Combat unit*/
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, enemyLocation, player1, 3);//Combat unit
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(54,104), player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(113, 104), player1, 3);*/
 }
 
 void CCBot::IssueCheats()

@@ -98,9 +98,9 @@ void BuildingManager::lowPriorityChecks()
 		{
 			//Detect if the building was created this frame and we just don't know about it yet.
 			bool isAlreadyBuilt = false;
-			for (auto b : m_bot.GetAllyUnits())
+			for (auto b : m_bot.GetAllyUnits(building.type.getAPIUnitType()))
 			{
-				if (building.finalPosition == b.second.getTilePosition() && building.type == b.second.getType())
+				if (building.finalPosition == b.getTilePosition())
 				{
 					isAlreadyBuilt = true;
 					break;
@@ -109,11 +109,22 @@ void BuildingManager::lowPriorityChecks()
 
 			if (!isAlreadyBuilt)
 			{
-				//We are trying to build in an invalid location, remove it so we build it elsewhere.
-				auto remove = CancelBuilding(building, false);
-				if (remove.finalPosition != CCTilePosition(0, 0))
+				if (building.type == Util::GetResourceDepotType())//Special code for expands, we want to flag them as blocked and build elsewhere.
 				{
-					toRemove.push_back(remove);
+					bool isCreepBlocked = getBuildingPlacer().isBuildingBlockedByCreep(building.finalPosition, building.type);
+
+					m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(building.finalPosition), true, isCreepBlocked, getEnemyUnitsNear(building.finalPosition));
+					building.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
+					building.buildCommandGiven = false;
+				}
+				else
+				{
+					//We are trying to build in an invalid or now blocked location, remove it so we build it elsewhere.
+					auto remove = CancelBuilding(building, false);
+					if (remove.finalPosition != CCTilePosition(0, 0))
+					{
+						toRemove.push_back(remove);
+					}
 				}
 			}
 		}
@@ -542,7 +553,7 @@ void BuildingManager::validateWorkersAndBuildings()
 			{
 				//If the worker died on the way to start the building construction or if the requirements are not met anymore
 				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
-					|| (m_bot.Strategy().isWorkerRushed() && isEnemyUnitNear(b.finalPosition)))
+					|| (m_bot.Strategy().isWorkerRushed() && isEnemyUnitNear(b.finalPosition, 5)))
 				{
 					auto remove = CancelBuilding(b, false);
 					toRemove.push_back(remove);
@@ -760,18 +771,6 @@ void BuildingManager::constructAssignedBuildings()
 		// TODO: not sure if this is the correct way to tell if the building is constructing
 		Unit & builderUnit = b.builderUnit;
 
-		//Prevent order spam 
-		/*if (b.buildCommandGiven && builderUnit.isValid())
-		{
-			auto & orders = b.builderUnit.getUnitPtr()->orders;
-			if (orders.size() != 0 && orders[0].ability_id != sc2::ABILITY_ID::PATROL)
-			{
-				//Is not idle and is not patroling, should be trying to build.
-				continue;
-			}
-		}*/
-
-
 		// if we're zerg and the builder unit is null, we assume it morphed into the building
 		bool isConstructing = false;
 		if (Util::IsZerg(m_bot.GetSelfRace()))
@@ -961,25 +960,15 @@ void BuildingManager::constructAssignedBuildings()
 								bool creepBlocked = false;
 								if (blocked)//Verify if its a building or creep
 								{
-									if (m_bot.GetSelfRace() != CCRace::Zerg)
+									if (m_bot.GetSelfRace() != CCRace::Zerg && getBuildingPlacer().isBuildingBlockedByCreep(b.finalPosition, b.type))
 									{
-										//Similar code can be found in BuildingPlacer.canBuildHere
-										auto tiles = getBuildingPlacer().getTilesForBuildLocation(b.finalPosition.x, b.finalPosition.y, b.type, b.type.tileWidth(), b.type.tileHeight(), false);
-										for (auto & tile : tiles)
-										{
-											//Validate if the tile has creep blocking the expand
-											if (m_bot.Observation()->HasCreep(CCPosition(tile.x, tile.y)))
-											{
-												blocked = true;
-												creepBlocked = true;
-												break;
-											}
-										}
+										blocked = true;
+										creepBlocked = true;
 									}
 								}
 								else//Check for unit blocking
 								{
-									blocked = isEnemyUnitNear(CCTilePosition(b.finalPosition.x, b.finalPosition.y));
+									blocked = isEnemyUnitNear(CCTilePosition(b.finalPosition.x, b.finalPosition.y), 10);
 								}
 
 								if (blocked)
@@ -1086,12 +1075,6 @@ void BuildingManager::checkForStartedConstruction()
 				{
 					// free this space
 					m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
-				}
-
-				//Clear blocked locations when starting an expansion
-				if (b.type.isResourceDepot())
-				{
-					m_bot.Bases().ClearBlockedLocations();
 				}
 
 				//If building is part of the wall
@@ -2310,9 +2293,8 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 	}
 }
 
-bool BuildingManager::isEnemyUnitNear(CCTilePosition center) const
+bool BuildingManager::isEnemyUnitNear(CCTilePosition center, int radius) const
 {
-	const int flagUnitsWithinRadius = 10;
 	for (auto & tagUnit : m_bot.GetEnemyUnits())
 	{
 		if (tagUnit.second.getType().isBuilding())
@@ -2329,7 +2311,7 @@ bool BuildingManager::isEnemyUnitNear(CCTilePosition center) const
 
 		float distance_sq = pow(distanceX, 2) + pow(distanceY, 2);
 
-		return distance_sq <= pow(r + flagUnitsWithinRadius, 2);
+		return distance_sq <= pow(r + radius, 2);
 	}
 	return false;
 }
