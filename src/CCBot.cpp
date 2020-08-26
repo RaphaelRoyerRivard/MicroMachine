@@ -1678,11 +1678,13 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_HATCHERY, m_startLocation + towardsCenter * 25, 1);*/
 
 	// Test to see how the bot reacts to blocked expansions
+	//const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false));
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, enemyLocation, player1, 3);//Invisible/burrow
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, enemyLocation, player1, 3);//Creep
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_LAIR, enemyLocation, player1, 1);//Creep
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, enemyLocation, player1, 3);//Creep tumor
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, enemyLocation, player1, 3);//Combat unit*/
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, nat, player1, 1);//Creep tumor*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, nat, player1, 3);//Combat unit
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);*/
 }
 
 void CCBot::IssueCheats()
