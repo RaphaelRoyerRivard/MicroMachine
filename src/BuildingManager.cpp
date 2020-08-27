@@ -971,14 +971,11 @@ void BuildingManager::constructAssignedBuildings()
 									blocked = isEnemyUnitNear(CCTilePosition(b.finalPosition.x, b.finalPosition.y), 10);
 								}
 
-								if (blocked)
-								{
-									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true, creepBlocked, getEnemyUnitsNear(b.finalPosition));
-									b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
-									b.buildCommandGiven = false;
+								m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true, creepBlocked, getEnemyUnitsNear(b.finalPosition));
+								b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
+								b.buildCommandGiven = false;
 
-									continue;
-								}
+								continue;
 							}
 						}
 					}
