@@ -229,9 +229,9 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	m_squadData.onFrame();
 	m_bot.StopProfiling("0.10.4.1    m_squadData.onFrame");
 
-	m_bot.StartProfiling("0.10.4.6    updateIdlePosition");
+	m_bot.StartProfiling("0.10.4.6    ExecuteActions");
 	ExecuteActions();
-	m_bot.StopProfiling("0.10.4.6    updateIdlePosition");
+	m_bot.StopProfiling("0.10.4.6    ExecuteActions");
 
 	m_bot.StartProfiling("0.10.4.4    lowPriorityCheck");
 	lowPriorityCheck();
@@ -683,19 +683,21 @@ void CombatCommander::updateIdlePosition()
 				}
 			}
 		}
+		const BaseLocation* baseLocation = nullptr;
 		if (farthestNextExpand != CCTilePosition())
 		{
-			idlePosition = Util::GetPosition(farthestNextExpand);
+			baseLocation = m_bot.Bases().getClosestBase(Util::GetPosition(farthestNextExpand), false);
 		}
 		else
 		{
 			// If we are not ready to expand, we send our idle army to our farthest base location
-			const BaseLocation* farthestBase = m_bot.Bases().getFarthestOccupiedBaseLocation();
-			if (farthestBase)
-			{
-				const auto vectorAwayFromBase = Util::Normalized(farthestBase->getResourceDepot().getPosition() - Util::GetPosition(farthestBase->getCenterOfMinerals()));
-				idlePosition = farthestBase->getResourceDepot().getPosition() + vectorAwayFromBase * 5.f;
-			}
+			baseLocation = m_bot.Bases().getFarthestOccupiedBaseLocation();
+		}
+		if (baseLocation)
+		{
+			// Don't go on the base location, but a bit in front to not block it
+			const auto vectorAwayFromBase = Util::Normalized(baseLocation->getDepotPosition() - Util::GetPosition(baseLocation->getCenterOfMinerals()));
+			idlePosition = baseLocation->getDepotPosition() + vectorAwayFromBase * 5.f;
 		}
 		m_idlePosition = idlePosition;
 	}
@@ -722,7 +724,7 @@ void CombatCommander::updateIdleSquad()
 
 	for (auto & combatUnit : idleSquad.getUnits())
 	{
-		if (Util::DistSq(combatUnit, m_idlePosition) > 5.f * 5.f)
+		if (Util::DistSq(combatUnit, m_idlePosition) > 5.f * 5.f && Util::getSpeedOfUnit(combatUnit.getUnitPtr(), m_bot) > 0)
 		{
 			const auto action = RangedUnitAction(MicroActionType::Move, m_idlePosition, false, 0, "IdleMove");
 			PlanAction(combatUnit.getUnitPtr(), action);
@@ -962,6 +964,8 @@ void CombatCommander::updateBackupSquads()
 
 void CombatCommander::updateClearExpandSquads()
 {
+	m_blockedExpandByInvis = false;
+
 	// reset clear expand squads
 	for (const auto & kv : m_squadData.getSquads())
 	{
@@ -980,19 +984,42 @@ void CombatCommander::updateClearExpandSquads()
 			std::stringstream squadName;
 			squadName << "Clear Expand " << basePosition.x << " " << basePosition.y;
 
-			const SquadOrder clearExpand(SquadOrderTypes::Attack, basePosition, DefaultOrderRadius, "Clear Blocked Expand");
+			const SquadOrder clearExpand(SquadOrderTypes::Clear, basePosition, DefaultOrderRadius, "Clear Blocked Expand");
 			// if we don't have a squad assigned to this blocked expand already, create one
 			if (!m_squadData.squadExists(squadName.str()))
 			{
 				m_squadData.addSquad(squadName.str(), Squad(squadName.str(), clearExpand, ClearExpandPriority, m_bot));
 			}
 
-			// assign units to the squad
+			// Assign the order to the squad
 			Squad & clearExpandSquad = m_squadData.getSquad(squadName.str());
 			clearExpandSquad.setSquadOrder(clearExpand);
 
+			// Check creep, visibility and detection of the base location
+			bool allCornersVisible = true;
+			bool allCornersDetected = true;
+			bool creepCleared = !m_bot.Observation()->HasCreep(basePosition);
+			int CORNER_DIST = 4;
+			for (int x = -CORNER_DIST; x <= CORNER_DIST; x += CORNER_DIST*2)
+			{
+				for (int y = -CORNER_DIST; y <= CORNER_DIST; y += CORNER_DIST*2)
+				{
+					const auto corner = basePosition + CCPosition(x, y);
+					if (m_bot.Observation()->HasCreep(corner))
+						creepCleared = false;
+					if (!m_bot.Map().isVisible(corner))
+					{
+						allCornersVisible = false;
+						allCornersDetected = false;
+					}
+					else if (!m_bot.Map().isDetected(corner))
+						allCornersDetected = false;
+				}
+			}
+
+			// Check the units requirement
 			const auto & blockingUnits = baseLocation->getBlockingUnits();
-			bool groundUnits = false;
+			bool groundUnits = blockingUnits.empty();	// If we see no unit that block the base, it's probably a burrowed unit
 			bool airUnits = false;
 			bool invisUnits = blockingUnits.empty();	// If we see no unit that block the base, it's probably a burrowed unit
 			for (const auto & blockingUnit : blockingUnits)
@@ -1001,9 +1028,49 @@ void CombatCommander::updateClearExpandSquads()
 					airUnits = true;
 				else
 					groundUnits = true;
-				if (blockingUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::Cloaked || blockingUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::CloakedDetected)
+				if (blockingUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::Cloaked || blockingUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::CloakedDetected || blockingUnit.getUnitPtr()->is_burrowed)
 					invisUnits = true;
 			}
+
+			// If we have the vision (and detection if required) of the base location corners, we overwrite the units requirement
+			if (allCornersVisible && (!invisUnits || allCornersDetected))
+			{
+				groundUnits = false;
+				airUnits = false;
+				invisUnits = false;
+
+				for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+				{
+					const auto dist = Util::DistSq(enemyUnit, basePosition);
+					if (dist > 10 * 10)
+						continue;
+					if (enemyUnit.isFlying())
+						airUnits = true;
+					else
+						groundUnits = true;
+					if (enemyUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::Cloaked || enemyUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::CloakedDetected || enemyUnit.getUnitPtr()->is_burrowed)
+						invisUnits = true;
+				}
+
+				if (!groundUnits && !airUnits && !invisUnits)
+				{
+					// If there is creep and we see no units, there might be a Creep Tumor nearby
+					if (!creepCleared)
+					{
+						groundUnits = true;
+						invisUnits = true;
+					}
+					else
+					{
+						clearExpandSquad.clear();
+						baseLocation->clearBlocked();
+						continue;
+					}
+				}
+			}
+
+			if (invisUnits)
+				m_blockedExpandByInvis = true;
 
 			// add closest unit in squad (one for each type of requirement)
 			Unit closestGroundAttackingUnit;
@@ -1058,6 +1125,10 @@ void CombatCommander::updateClearExpandSquads()
 					}
 				}
 			}
+
+			// If we don't have every type of unit needed, don't go to not waste time of our units (ex: Reaper against burrowed Zergling)
+			if ((groundUnits && !closestGroundAttackingUnit.isValid()) || (airUnits && !closestAirAttackingUnit.isValid()) || (invisUnits && !closestDetectorUnit.isValid()))
+				continue;
 
 			if (closestGroundAttackingUnit.isValid())
 				m_squadData.assignUnitToSquad(closestGroundAttackingUnit.getUnitPtr(), clearExpandSquad);
@@ -2745,7 +2816,7 @@ void CombatCommander::ExecuteActions()
 			switch (action.microActionType)
 			{
 			case MicroActionType::AttackMove:
-				if (action.position == rangedUnit->pos)
+				if (Util::DistSq(action.position, rangedUnit->pos) < 0.1f)
 					skip = true;
 				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
 				{
@@ -2772,7 +2843,7 @@ void CombatCommander::ExecuteActions()
 					Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
 				break;
 			case MicroActionType::Move:
-				if (action.position == rangedUnit->pos)
+				if (Util::DistSq(action.position, rangedUnit->pos) < 0.1f)
 					skip = true;
 				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
 				{
@@ -2894,7 +2965,7 @@ void CombatCommander::CalcBestFlyingCycloneHelpers()
 		else if (unit.isFlying())
 		{
 			auto squad = m_squadData.getUnitSquad(unit);
-			if (squad && !Util::StringStartsWith(squad->getName(), "Harass"))
+			if (squad && squad->getSquadOrder().getType() != SquadOrderTypes::Harass && squad->getSquadOrder().getType() != SquadOrderTypes::Clear)
 			{
 				potentialFlyingCycloneHelpers.insert(unitPtr);
 			}
