@@ -158,6 +158,8 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 		BOT_ASSERT(m_geyserPositions.size() <= 2, "Unexpected base layout detected.");
 	}
 
+	m_isRich = m_minerals.at(0).getType().isRichMineral();
+
 	Building b(MetaTypeEnum::MissileTurret.getUnitType(), m_centerOfMinerals);
 	m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, 0, true, false, true);
 }
@@ -213,6 +215,11 @@ int BaseLocation::getOptimalGasWorkerCount() const
 void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 {
     m_isPlayerOccupying[player] = occupying;
+
+	if (occupying && player == Players::Self && m_isBlocked && m_resourceDepot.isValid() && m_resourceDepot.isAlive())//If it was marked as blocked and we expanded there, clear the flag
+	{
+		clearBlocked();
+	}
 
     // if this base is a start location that's occupied by the enemy, it's that enemy's start location
     if (occupying && player == Players::Enemy && isStartLocation() && m_isPlayerStartLocation[player] == false)
@@ -366,6 +373,11 @@ const bool & BaseLocation::isGeyserSplit() const
 	return m_isSplitGeyser;
 }
 
+const bool & BaseLocation::isRich() const
+{
+	return m_isRich;
+}
+
 void BaseLocation::draw()
 {
     CCPositionType radius = Util::TileToPosition(1.0f);
@@ -373,14 +385,15 @@ void BaseLocation::draw()
     m_bot.Map().drawCircle(m_centerOfResources, radius, CCColor(255, 255, 0));
 	
     std::stringstream ss;
-    ss << "BaseLocation: " << m_baseID << "\n";
-    ss << "Start Loc:    " << (isStartLocation() ? "true" : "false") << "\n";
-    ss << "Minerals:     " << m_mineralPositions.size() << "\n";
-    ss << "Geysers:      " << m_geyserPositions.size() << "\n";
-	ss << "Under attack: " << (m_isUnderAttack ? "true" : "false") << "\n";
-	ss << "Blocked:      " << (m_isBlocked ? "true" : "false") << "\n";
-	ss << "Geyser type:  " << (m_isSplitGeyser ? "Split" : "Together") << "\n";
-    ss << "Occupied By:  ";
+    ss << "BaseLocation:    " << m_baseID << "\n";
+    ss << "Start Loc:       " << (isStartLocation() ? "true" : "false") << "\n";
+    ss << "Minerals:        " << m_mineralPositions.size() << "\n";
+    ss << "Geysers:         " << m_geyserPositions.size() << "\n";
+	ss << "Under attack:    " << (m_isUnderAttack ? "true" : "false") << "\n";
+	ss << "Blocked:         " << (m_isBlocked ? "true" : "false") << "\n";
+	ss << "Blocking units #:" << m_blockingUnits.size() << "\n";
+	ss << "Geyser type:     " << (m_isSplitGeyser ? "Split" : "Together") << "\n";
+    ss << "Occupied By:     ";
 
     if (isOccupiedByPlayer(Players::Self))
     {

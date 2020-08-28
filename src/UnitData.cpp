@@ -26,7 +26,7 @@ void UnitData::updateUnit(const Unit & unit)
     ui.lastShields  = unit.getShields();
     ui.type         = unit.getType();
     ui.progress     = unit.getBuildProgress();
-    ui.id           = unit.getID();
+    ui.id           = unit.getTag();
 
     if (firstSeen)
     {

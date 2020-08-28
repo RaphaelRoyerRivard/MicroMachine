@@ -251,14 +251,14 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 			else
 			{
-				const auto barrackCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
+				const auto barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
 				const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
 				// Proxy buildings
-				if (m_bot.GetCurrentFrame() < 4032 /* 3 min */ && ((currentItem.type == MetaTypeEnum::Barracks && m_bot.Strategy().isProxyStartingStrategy() && barrackCount < 2) ||
+				if (m_bot.GetCurrentFrame() < 4032 /* 3 min */ && ((currentItem.type == MetaTypeEnum::Barracks && m_bot.Strategy().isProxyStartingStrategy() && barracksCount < 2 && (m_bot.Strategy().getStartingStrategy() != PROXY_MARAUDERS || barracksCount > 0)) ||
 					(currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().isProxyFactoryStartingStrategy() && factoryCount == 0)))
 				{
 					const auto proxyLocation = Util::GetPosition(m_bot.Buildings().getProxyLocation());
-					Unit producer = getProducer(currentItem.type, false, proxyLocation);
+					Unit producer = getProducer(currentItem.type, false, proxyLocation, true);
 					Building b(currentItem.type.getUnitType(), proxyLocation);
 					b.finalPosition = proxyLocation;
 					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
@@ -1578,7 +1578,7 @@ void ProductionManager::lowPriorityChecks()
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
 	const bool shouldProduceAntiAirDefense = m_bot.Strategy().shouldProduceAntiAirDefense();
-	const bool shouldProduceAntiInvis = m_bot.Strategy().enemyHasInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
+	const bool shouldProduceAntiInvis = m_bot.Strategy().enemyHasCombatInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
 	if (shouldProduceAntiAirDefense || shouldProduceAntiInvis)
 	{
 		const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
@@ -1781,7 +1781,7 @@ bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
 	return false;
 }
 
-Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, CCPosition closestTo) const
+Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, CCPosition closestTo, bool allowMovingWorker) const
 {
 	// get all the types of units that cna build this type
 	auto & producerTypes = m_bot.Data(type).whatBuilds;
@@ -1903,32 +1903,35 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 
 			switch ((sc2::UNIT_TYPEID)unit.getAPIUnitType())
 			{
-			case sc2::UNIT_TYPEID::TERRAN_SCV:
-			case sc2::UNIT_TYPEID::PROTOSS_PROBE:
-			case sc2::UNIT_TYPEID::ZERG_DRONE:
-			{
-				if (!m_bot.Workers().isFree(unit))
+				case sc2::UNIT_TYPEID::TERRAN_SCV:
+				case sc2::UNIT_TYPEID::PROTOSS_PROBE:
+				case sc2::UNIT_TYPEID::ZERG_DRONE:
 				{
-					continue;
-				}
-				const auto & orders = unit.getUnitPtr()->orders;
-				bool isMoving = false;
-				for (const auto & order : orders)
-				{
-					if (order.ability_id == sc2::ABILITY_ID::MOVE)
+					if (!m_bot.Workers().isFree(unit))
 					{
-						isMoving = true;
-						break;
+						continue;
 					}
+					const auto & orders = unit.getUnitPtr()->orders;
+					bool isMoving = false;
+					if (!allowMovingWorker)
+					{
+						for (const auto & order : orders)
+						{
+							if (order.ability_id == sc2::ABILITY_ID::MOVE)
+							{
+								isMoving = true;
+								break;
+							}
+						}
+					}
+					if (isMoving)
+						continue;
+					break;
 				}
-				if (isMoving)
+				case sc2::UNIT_TYPEID::TERRAN_MULE:
+				{
 					continue;
-				break;
-			}
-			case sc2::UNIT_TYPEID::TERRAN_MULE:
-			{
-				continue;
-			}
+				}
 			}
 
 			// TODO: if unit is not powered continue

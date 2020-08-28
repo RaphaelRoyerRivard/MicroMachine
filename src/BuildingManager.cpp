@@ -98,9 +98,9 @@ void BuildingManager::lowPriorityChecks()
 		{
 			//Detect if the building was created this frame and we just don't know about it yet.
 			bool isAlreadyBuilt = false;
-			for (auto b : m_bot.GetAllyUnits())
+			for (auto b : m_bot.GetAllyUnits(building.type.getAPIUnitType()))
 			{
-				if (building.finalPosition == b.second.getTilePosition() && building.type == b.second.getType())
+				if (building.finalPosition == b.getTilePosition())
 				{
 					isAlreadyBuilt = true;
 					break;
@@ -109,11 +109,20 @@ void BuildingManager::lowPriorityChecks()
 
 			if (!isAlreadyBuilt)
 			{
-				//We are trying to build in an invalid location, remove it so we build it elsewhere.
-				auto remove = CancelBuilding(building, false);
-				if (remove.finalPosition != CCTilePosition(0, 0))
+				if (building.type == Util::GetResourceDepotType())//Special code for expands, we want to flag them as blocked and build elsewhere.
 				{
-					toRemove.push_back(remove);
+					m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(building.finalPosition), building.type);
+					building.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
+					building.buildCommandGiven = false;
+				}
+				else
+				{
+					//We are trying to build in an invalid or now blocked location, remove it so we build it elsewhere.
+					auto remove = CancelBuilding(building, false);
+					if (remove.finalPosition != CCTilePosition(0, 0))
+					{
+						toRemove.push_back(remove);
+					}
 				}
 			}
 		}
@@ -371,7 +380,7 @@ void BuildingManager::PlaceWallBuildings(std::vector<CCTilePosition> tilesToBloc
 		//TODO: Check remove the buildingTiles and try again in a different order. To try again, pop front tilesToBlock and push back the front.
 	}
 
-	bool barrackInWall = !m_bot.Strategy().isProxyStartingStrategy();
+	bool barrackInWall = !m_bot.Strategy().isProxyStartingStrategy() || m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS;
 	
 	if (barrackInWall)
 	{
@@ -542,7 +551,7 @@ void BuildingManager::validateWorkersAndBuildings()
 			{
 				//If the worker died on the way to start the building construction or if the requirements are not met anymore
 				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
-					|| (m_bot.Strategy().isWorkerRushed() && m_buildingPlacer.isEnemyUnitBlocking(b.finalPosition, b.type)))
+					|| (m_bot.Strategy().isWorkerRushed() && isEnemyUnitNear(b.finalPosition, 5)))
 				{
 					auto remove = CancelBuilding(b, false);
 					toRemove.push_back(remove);
@@ -760,18 +769,6 @@ void BuildingManager::constructAssignedBuildings()
 		// TODO: not sure if this is the correct way to tell if the building is constructing
 		Unit & builderUnit = b.builderUnit;
 
-		//Prevent order spam 
-		/*if (b.buildCommandGiven && builderUnit.isValid())
-		{
-			auto & orders = b.builderUnit.getUnitPtr()->orders;
-			if (orders.size() != 0 && orders[0].ability_id != sc2::ABILITY_ID::PATROL)
-			{
-				//Is not idle and is not patroling, should be trying to build.
-				continue;
-			}
-		}*/
-
-
 		// if we're zerg and the builder unit is null, we assume it morphed into the building
 		bool isConstructing = false;
 		if (Util::IsZerg(m_bot.GetSelfRace()))
@@ -860,7 +857,7 @@ void BuildingManager::constructAssignedBuildings()
 						// If the building is flying, it's because it is in the transition to land somewhere it will have enough space for its addon
 						if (b.builderUnit.isFlying())
 						{
-							const auto landingPosition = liftedBuildingPositions[b.builderUnit.getTag()];
+							const auto landingPosition = m_liftedBuildingPositions[b.builderUnit.getTag()];
 							Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
 						}
 						else
@@ -917,7 +914,7 @@ void BuildingManager::constructAssignedBuildings()
 								}
 
 								b.finalPosition = newBuildingPosition;
-								liftedBuildingPositions[b.builderUnit.getTag()] = newBuildingPosition;
+								m_liftedBuildingPositions[b.builderUnit.getTag()] = newBuildingPosition;
 
 								// Free the reserved tiles under the building and for the addon
 								getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y - 1, 3, 1);
@@ -934,10 +931,10 @@ void BuildingManager::constructAssignedBuildings()
 							{
 								// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
 								const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
-								const auto it = liftedBuildingPositions.find(b.builderUnit.getTag());
-								if (it != liftedBuildingPositions.end() && !Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes))
+								const auto it = m_liftedBuildingPositions.find(b.builderUnit.getTag());
+								if (it != m_liftedBuildingPositions.end() && !Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes))
 								{
-									liftedBuildingPositions.erase(it);
+									m_liftedBuildingPositions.erase(it);
 									getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y, 3, 3);
 									getBuildingPlacer().freeTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2);
 								}
@@ -957,15 +954,13 @@ void BuildingManager::constructAssignedBuildings()
 								// We want the worker to be close so it doesn't flag the base as blocked by error
 								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
 								// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
-								const bool blocked = closeEnough && !m_buildingPlacer.canBuildHere(b.finalPosition.x, b.finalPosition.y, b.type, 0, true, false, false);
-								if (blocked)
+								if (closeEnough)
 								{
-									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), true);
+									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), b.type);
 									b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
 									b.buildCommandGiven = false;
-
-									continue;
 								}
+								continue;
 							}
 						}
 					}
@@ -1062,12 +1057,6 @@ void BuildingManager::checkForStartedConstruction()
 				{
 					// free this space
 					m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
-				}
-
-				//Clear blocked locations when starting an expansion
-				if (b.type.isResourceDepot())
-				{
-					m_bot.Bases().ClearBlockedLocations();
 				}
 
 				//If building is part of the wall
@@ -1325,12 +1314,12 @@ void BuildingManager::drawBuildingInformation()
 
         if (b.builderUnit.isValid())
         {
-            dss << "\n\nBuilder: " << b.builderUnit.getID() << "\n";
+            dss << "\n\nBuilder: " << b.builderUnit.getTag() << "\n";
         }
 
         if (b.buildingUnit.isValid())
         {
-            dss << "Building: " << b.buildingUnit.getID() << "\n" << b.buildingUnit.getBuildProgress();
+            dss << "Building: " << b.buildingUnit.getTag() << "\n" << b.buildingUnit.getBuildProgress();
             m_bot.Map().drawText(b.buildingUnit.getPosition(), dss.str());
         }
         
@@ -1340,7 +1329,7 @@ void BuildingManager::drawBuildingInformation()
         }
         else if (b.status == BuildingStatus::Assigned)
         {
-            ss << "Assigned " << b.type.getName() << "    " << b.builderUnit.getID() << " " << getBuildingWorkerCode(b) << " (" << b.finalPosition.x << "," << b.finalPosition.y << ")\n";
+            ss << "Assigned " << b.type.getName() << "    " << b.builderUnit.getTag() << " " << getBuildingWorkerCode(b) << " (" << b.finalPosition.x << "," << b.finalPosition.y << ")\n";
 
             int x1 = b.finalPosition.x;
             int y1 = b.finalPosition.y;
@@ -1828,15 +1817,15 @@ const sc2::Unit * BuildingManager::getClosestMineral(const CCPosition position) 
 	return mineralField;
 }
 
-const sc2::Unit * BuildingManager::getLargestCloseMineral(const CCTilePosition position, bool checkUnderAttack, std::vector<CCUnitID> skipMinerals) const
+const sc2::Unit * BuildingManager::getLargestCloseMineralForMules(const CCTilePosition position, bool checkUnderAttack, int minimumMineralContent) const
 {
 	auto base = m_bot.Bases().getBaseForDepotPosition(position);
 	if (base == nullptr)
 		return nullptr;
-	return getLargestCloseMineral(base->getResourceDepot(), checkUnderAttack, skipMinerals);
+	return getLargestCloseMineralForMules(base->getResourceDepot(), checkUnderAttack, minimumMineralContent);
 }
 
-const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool checkUnderAttack, std::vector<CCUnitID> skipMinerals) const
+const sc2::Unit * BuildingManager::getLargestCloseMineralForMules(const Unit unit, bool checkUnderAttack, int minimumMineralContent) const
 {
 	auto base = m_bot.Bases().getBaseForDepot(unit);
 	if (base == nullptr || (checkUnderAttack && base->isUnderAttack()))
@@ -1849,7 +1838,17 @@ const sc2::Unit * BuildingManager::getLargestCloseMineral(const Unit unit, bool 
 	int maxMinerals = 0;
 	for (auto mineral : potentialMinerals)
 	{
+		if (!m_bot.Workers().isMineralMuleAvailable(mineral.getTag()))//skip mineral that already have mules
+		{
+			continue;
+		}
+
 		int mineralContent = mineral.getUnitPtr()->mineral_contents;
+		if (minimumMineralContent != 0 && mineralContent < minimumMineralContent)
+		{
+			continue;
+		}
+
 		if (mineralField == nullptr || mineralContent > maxMinerals) {
 			mineralField = mineral.getUnitPtr();
 			maxMinerals = mineralContent;
@@ -2053,31 +2052,29 @@ void BuildingManager::castBuildingsAbilities()
 		//Mule
 		if (!keepEnergy || energy >= 100)
 		{
-			std::vector<CCUnitID> skipMinerals;
-			for (const auto & mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
-			{
-				skipMinerals.push_back(m_bot.Workers().getMuleTargetTag(mule));
-			}
-
 			CCTilePosition orbitalPosition;
 			const sc2::Unit* closestMineral = nullptr;
 			auto & bases = m_bot.Bases().getBaseLocations();//Sorted by closest to enemy base
-			// Check twice the base locations, but skip the under attack check the second time
-			for (int i = 0; i < 2; ++i)
+			//0 = any regular base not under attack
+			//1 = any gold base not under attack
+			//2 = any base, even under attack
+			for (int i = 0; i < 3; ++i)
 			{
 				for (auto base : bases)
 				{
 					if (!base->isOccupiedByPlayer(Players::Self))
 						continue;
 
-					if (i == 0 && base->isUnderAttack())
+					if (i <= 0  && base->isRich())//Avoid rich bases, unless we have no other valid bases, not under attack
+						continue;
+					if (i <= 1 && base->isUnderAttack())//Avoid bases under attack, unless its our last option
 						continue;
 
 					auto & depot = base->getResourceDepot();
 					if (!depot.isValid() || !depot.isCompleted())
 						continue;
 
-					closestMineral = getLargestCloseMineral(depot, false, skipMinerals);
+					closestMineral = getLargestCloseMineralForMules(depot, false, 225);
 					if (closestMineral == nullptr)
 					{
 						continue;
@@ -2103,7 +2100,6 @@ void BuildingManager::castBuildingsAbilities()
 			}
 
 			auto point = closestMineral->pos;
-
 			if (m_bot.Config().StarCraft2Version < "4.11.0" && orbitalPosition != CCPosition())//Validate version because we can drop the mule straigth on the mineral past this version
 			{
 				//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
@@ -2112,6 +2108,7 @@ void BuildingManager::castBuildingsAbilities()
 			}
 
 			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
+			m_bot.Workers().setMineralMuleDeathFrame(closestMineral->tag);
 		}
 	}
 	m_bot.StopProfiling("0.8.8.3  OrbitalCommands");
@@ -2229,20 +2226,33 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 	for (const auto & unitPair : m_bot.GetAllyUnits())
 	{
 		const auto & unit = unitPair.second;
+
 		if (!unit.isValid())
 			continue;
+
+		//Clean up the list of flying commandcenter wanting to land
+		if (m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end())
+		{
+			if (!unit.isAlive() || (unit.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING && unit.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING))
+			{
+				m_commandCenterLandPosition.erase(unit.getTag());
+			}
+		}
+
 		// If the unit can lift
 		if (Util::Contains(unit.getAPIUnitType(), liftingTypes))
 		{
 			// If the building is damaged
-			if (unit.getHitPointsPercentage() <= 50.f && unit.getUnitPtr()->build_progress >= 1.f)
+			if (unit.getHitPointsPercentage() <= 50.f && unit.isCompleted())
 			{
 				// We don't want to lift a wall building
 				if (Util::Contains(unit, m_wallBuildings))
 					continue;
-				// And there is danger on the ground but not in the air
+				// The recent damage taken is too high.
+				// Need to validate recentDamageTaken >= 10 because of the fire (The exact recentDamageTaken is 4), otherwise we lift/land repeatedly until we burn or are repaired.
 				const auto recentDamageTaken = m_bot.Analyzer().getUnitState(unit.getUnitPtr()).GetRecentDamageTaken();
 				const bool takenTooMuchDamage = recentDamageTaken >= 50.f || (unit.getHitPointsPercentage() <= 25.f && recentDamageTaken >= 10.f);
+				// And there is danger on the ground but not in the air
 				const float airInfluence = Util::PathFinding::GetTotalInfluenceOnTiles(unit.getPosition(), true, unit.getUnitPtr()->radius, m_bot);
 				if (takenTooMuchDamage && airInfluence <= 0.f)
 				{
@@ -2257,7 +2267,7 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 					else
 					{
 						Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
-						liftedBuildingPositions[unit.getTag()] = unit.getPosition();
+						m_liftedBuildingPositions[unit.getTag()] = unit.getPosition();
 					}
 				}
 			}
@@ -2265,7 +2275,24 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 		// If the unit can land
 		else if (Util::Contains(unit.getAPIUnitType(), landingTypes))
 		{
-			CCPosition landingPosition = liftedBuildingPositions[unit.getTag()];
+			CCPosition landingPosition;
+			if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran &&
+				(unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING || 
+				unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING))
+			{
+				landingPosition = Util::GetPosition(m_bot.Bases().getNextExpansionPosition(Players::Self, true, true));
+				if (unit.getUnitPtr()->orders.size() == 0 && 
+					m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end() && m_commandCenterLandPosition[unit.getTag()] == landingPosition)
+				{//The land order likely was cancelled, the expand is most likely blocked.
+					m_bot.Bases().SetLocationAsBlocked(landingPosition, unit.getType());
+				}
+				m_commandCenterLandPosition[unit.getTag()] = landingPosition;
+			}
+			else
+			{
+				landingPosition = m_liftedBuildingPositions[unit.getTag()];
+			}
+
 			if (landingPosition != CCPosition())
 			{
 				// If there is no more danger on the ground
@@ -2276,4 +2303,27 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 			}
 		}
 	}
+}
+
+bool BuildingManager::isEnemyUnitNear(CCTilePosition center, int radius) const
+{
+	for (auto & tagUnit : m_bot.GetEnemyUnits())
+	{
+		if (tagUnit.second.getType().isBuilding())
+		{
+			continue;
+		}
+
+		auto x = tagUnit.second.getPosition().x;
+		auto y = tagUnit.second.getPosition().y;
+		auto r = tagUnit.second.getUnitPtr()->radius;
+
+		float distanceX = abs(x - center.x);
+		float distanceY = abs(y - center.y);
+
+		float distance_sq = pow(distanceX, 2) + pow(distanceY, 2);
+
+		return distance_sq <= pow(r + radius, 2);
+	}
+	return false;
 }

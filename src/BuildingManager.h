@@ -32,8 +32,9 @@ class BuildingManager
 	std::list<Unit> m_wallBuildings;
 	std::map<UnitType, std::list<CCTilePosition>> m_nextBuildingPosition;
 	std::vector<std::pair<CCTilePosition, CCTilePosition>> m_previousNextBuildingPositionByBase;
-	std::map<sc2::Tag, CCPosition> liftedBuildingPositions;
+	std::map<sc2::Tag, CCPosition> m_liftedBuildingPositions;
 	bool m_wallsBarracksPointsTowardBase = false;
+	std::map<sc2::Tag, CCPosition> m_commandCenterLandPosition;
 
     bool            m_debugMode;
 
@@ -41,6 +42,8 @@ class BuildingManager
 	void			castBuildingsAbilities();
 	void			RunProxyLogic();
 	void			LiftOrLandDamagedBuildings();
+	bool			isEnemyUnitNear(CCTilePosition center, int radius = 10) const;
+	std::vector<Unit> getEnemyUnitsNear(CCTilePosition center) const;
 	void			updateBaseBuildings();
 
     void            validateWorkersAndBuildings();		    // STEP 1
@@ -89,8 +92,8 @@ public:
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);
 	const sc2::Unit *	getClosestMineral(const CCPosition position) const;
-	const sc2::Unit *	getLargestCloseMineral(const CCTilePosition position, bool checkUnderAttack = false, std::vector<CCUnitID> skipMinerals = {}) const;
-	const sc2::Unit *	getLargestCloseMineral(const Unit unit, bool checkUnderAttack = false, std::vector<CCUnitID> skipMinerals = {}) const;
+	const sc2::Unit *	getLargestCloseMineralForMules(const CCTilePosition position, bool checkUnderAttack = false, int minimumMineralContent = 0) const;
+	const sc2::Unit *	getLargestCloseMineralForMules(const Unit unit, bool checkUnderAttack = false, int minimumMineralContent = 0) const;
 
     bool                isBeingBuilt(UnitType type) const;
 	bool				isWallPosition(int x, int y) const;

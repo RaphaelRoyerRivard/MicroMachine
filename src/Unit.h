@@ -44,8 +44,7 @@ public:
     CCHealth getEnergy() const;
     CCPlayer getPlayer() const;
 	sc2::Tag getTag() const;
-    CCUnitID getID() const;
-	int getIDAsInt() const;
+	int getTagAsInt() const;
     float getBuildProgress() const;
     int getWeaponCooldown() const;
 	bool canAttackAir() const;

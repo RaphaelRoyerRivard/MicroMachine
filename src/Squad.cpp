@@ -551,7 +551,8 @@ const SquadOrder & Squad::getSquadOrder()	const
 
 void Squad::addUnit(const Unit & unit)
 {
-	m_units.push_back(unit);
+	if (!containsUnit(unit))
+		m_units.push_back(unit);
 }
 
 void Squad::removeUnit(const Unit & unit)
@@ -559,6 +560,10 @@ void Squad::removeUnit(const Unit & unit)
 	const auto it = std::find(m_units.begin(), m_units.end(), unit);
 	if (it != m_units.end())
 		m_units.erase(it);
+	else
+	{
+		auto a = 1;
+	}
 }
 
 void Squad::giveBackWorkers()

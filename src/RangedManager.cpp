@@ -301,7 +301,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	else
 	{
-		if (!isCycloneHelper && (isMedivac || isRaven || ((isMarine || isViking || isHellion) && m_order.getType() != SquadOrderTypes::Defend)))
+		if (!isCycloneHelper && (isMedivac || isRaven || ((isMarine || isViking || isHellion) && m_order.getType() != SquadOrderTypes::Defend)) && m_order.getType() != SquadOrderTypes::Clear)
 		{
 			goal = GetBestSupportPosition(rangedUnit, allCombatAllies);
 			goalDescription = "Support";
@@ -1021,6 +1021,8 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 			continue;
 		if (!typesToConsider.empty() && !Util::Contains(rangedUnit->unit_type, typesToConsider))
 			continue;
+		if (UnitType(rangedUnit->unit_type, m_bot).isBuilding())
+			continue;
 		validUnits.push_back(rangedUnit);
 	}
 	const auto clusters = Util::GetUnitClusters(validUnits, typesToIgnore, true, clusterQueryName, m_bot);
@@ -1050,11 +1052,11 @@ CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, c
 	{
 		return closestBiggestCluster->m_center;
 	}
-	if (m_order.getType() == SquadOrderTypes::Defend || m_bot.GetCurrentSupply() >= 195)
+	if (m_order.getType() == SquadOrderTypes::Defend || m_order.getType() == SquadOrderTypes::Clear || m_bot.GetCurrentSupply() >= 195)
 	{
 		return m_order.getPosition();
 	}
-	return m_bot.GetStartLocation();
+	return m_bot.Commander().Combat().GetIdlePosition();
 }
 
 bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, bool unitShouldHeal, bool isCycloneHelper)
