@@ -229,9 +229,9 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	m_squadData.onFrame();
 	m_bot.StopProfiling("0.10.4.1    m_squadData.onFrame");
 
-	m_bot.StartProfiling("0.10.4.6    updateIdlePosition");
+	m_bot.StartProfiling("0.10.4.6    ExecuteActions");
 	ExecuteActions();
-	m_bot.StopProfiling("0.10.4.6    updateIdlePosition");
+	m_bot.StopProfiling("0.10.4.6    ExecuteActions");
 
 	m_bot.StartProfiling("0.10.4.4    lowPriorityCheck");
 	lowPriorityCheck();
@@ -668,11 +668,36 @@ void CombatCommander::updateIdlePosition()
 	{
 		m_lastIdlePositionUpdateFrame = m_bot.GetCurrentFrame();
 		auto idlePosition = m_bot.GetStartLocation();
-		const BaseLocation* farthestBase = m_bot.Bases().getFarthestOccupiedBaseLocation();
-		if (farthestBase)
+		// Send our idle army to next expand location if we are ready to build
+		float farthestDist = 0.f;
+		CCTilePosition farthestNextExpand;
+		for (const auto & building : m_bot.Buildings().getBuildings())
 		{
-			const auto vectorAwayFromBase = Util::Normalized(farthestBase->getResourceDepot().getPosition() - Util::GetPosition(farthestBase->getCenterOfMinerals()));
-			idlePosition = farthestBase->getResourceDepot().getPosition() + vectorAwayFromBase * 5.f;
+			if (building.type.isResourceDepot() && building.status > BuildingStatus::Unassigned && !building.buildingUnit.isValid())
+			{
+				float dist = Util::DistSq(building.finalPosition, m_bot.GetStartLocation());
+				if (dist > farthestDist)
+				{
+					farthestDist = dist;
+					farthestNextExpand = building.finalPosition;
+				}
+			}
+		}
+		const BaseLocation* baseLocation = nullptr;
+		if (farthestNextExpand != CCTilePosition())
+		{
+			baseLocation = m_bot.Bases().getClosestBase(Util::GetPosition(farthestNextExpand), false);
+		}
+		else
+		{
+			// If we are not ready to expand, we send our idle army to our farthest base location
+			baseLocation = m_bot.Bases().getFarthestOccupiedBaseLocation();
+		}
+		if (baseLocation)
+		{
+			// Don't go on the base location, but a bit in front to not block it
+			const auto vectorAwayFromBase = Util::Normalized(baseLocation->getDepotPosition() - Util::GetPosition(baseLocation->getCenterOfMinerals()));
+			idlePosition = baseLocation->getDepotPosition() + vectorAwayFromBase * 5.f;
 		}
 		m_idlePosition = idlePosition;
 	}
@@ -688,7 +713,7 @@ void CombatCommander::updateIdleSquad()
         // if it hasn't been assigned to a squad yet, put it in the low priority idle squad
         if (m_squadData.canAssignUnitToSquad(unit, idleSquad))
         {
-            idleSquad.addUnit(unit);
+			m_squadData.assignUnitToSquad(unit, idleSquad);
         }
     }
 
@@ -699,7 +724,7 @@ void CombatCommander::updateIdleSquad()
 
 	for (auto & combatUnit : idleSquad.getUnits())
 	{
-		if (Util::DistSq(combatUnit, m_idlePosition) > 5.f * 5.f)
+		if (Util::DistSq(combatUnit, m_idlePosition) > 5.f * 5.f && Util::getSpeedOfUnit(combatUnit.getUnitPtr(), m_bot) > 0)
 		{
 			const auto action = RangedUnitAction(MicroActionType::Move, m_idlePosition, false, 0, "IdleMove");
 			PlanAction(combatUnit.getUnitPtr(), action);
@@ -737,7 +762,7 @@ void CombatCommander::updateWorkerFleeSquad()
 			if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
 			{
 				m_bot.Workers().setCombatWorker(worker);
-				workerFleeSquad.addUnit(worker);
+				m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 			}
 		}
 		else
@@ -783,7 +808,7 @@ void CombatCommander::updateWorkerFleeSquad()
 						if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
 						{
 							m_bot.Workers().setCombatWorker(worker);
-							workerFleeSquad.addUnit(worker);
+							m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 						}
 						continue;
 					}
@@ -939,6 +964,8 @@ void CombatCommander::updateBackupSquads()
 
 void CombatCommander::updateClearExpandSquads()
 {
+	m_blockedExpandByInvis = false;
+
 	// reset clear expand squads
 	for (const auto & kv : m_squadData.getSquads())
 	{
@@ -957,20 +984,101 @@ void CombatCommander::updateClearExpandSquads()
 			std::stringstream squadName;
 			squadName << "Clear Expand " << basePosition.x << " " << basePosition.y;
 
-			const SquadOrder clearExpand(SquadOrderTypes::Attack, basePosition, DefaultOrderRadius, "Clear Blocked Expand");
+			const SquadOrder clearExpand(SquadOrderTypes::Clear, basePosition, DefaultOrderRadius, "Clear Blocked Expand");
 			// if we don't have a squad assigned to this blocked expand already, create one
 			if (!m_squadData.squadExists(squadName.str()))
 			{
 				m_squadData.addSquad(squadName.str(), Squad(squadName.str(), clearExpand, ClearExpandPriority, m_bot));
 			}
 
-			// assign units to the squad
+			// Assign the order to the squad
 			Squad & clearExpandSquad = m_squadData.getSquad(squadName.str());
 			clearExpandSquad.setSquadOrder(clearExpand);
 
-			// add closest unit in squad
-			Unit closestUnit;
-			float distance = 0.f;
+			// Check creep, visibility and detection of the base location
+			bool allCornersVisible = true;
+			bool allCornersDetected = true;
+			bool creepCleared = !m_bot.Observation()->HasCreep(basePosition);
+			int CORNER_DIST = 4;
+			for (int x = -CORNER_DIST; x <= CORNER_DIST; x += CORNER_DIST*2)
+			{
+				for (int y = -CORNER_DIST; y <= CORNER_DIST; y += CORNER_DIST*2)
+				{
+					const auto corner = basePosition + CCPosition(x, y);
+					if (m_bot.Observation()->HasCreep(corner))
+						creepCleared = false;
+					if (!m_bot.Map().isVisible(corner))
+					{
+						allCornersVisible = false;
+						allCornersDetected = false;
+					}
+					else if (!m_bot.Map().isDetected(corner))
+						allCornersDetected = false;
+				}
+			}
+
+			// Check the units requirement
+			const auto & blockingUnits = baseLocation->getBlockingUnits();
+			bool groundUnits = blockingUnits.empty();	// If we see no unit that block the base, it's probably a burrowed unit
+			bool airUnits = false;
+			bool invisUnits = blockingUnits.empty();	// If we see no unit that block the base, it's probably a burrowed unit
+			for (const auto & blockingUnit : blockingUnits)
+			{
+				if (blockingUnit.isFlying())
+					airUnits = true;
+				else
+					groundUnits = true;
+				if (blockingUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::Cloaked || blockingUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::CloakedDetected || blockingUnit.getUnitPtr()->is_burrowed)
+					invisUnits = true;
+			}
+
+			// If we have the vision (and detection if required) of the base location corners, we overwrite the units requirement
+			if (allCornersVisible && (!invisUnits || allCornersDetected))
+			{
+				groundUnits = false;
+				airUnits = false;
+				invisUnits = false;
+
+				for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+				{
+					const auto dist = Util::DistSq(enemyUnit, basePosition);
+					if (dist > 10 * 10)
+						continue;
+					if (enemyUnit.isFlying())
+						airUnits = true;
+					else
+						groundUnits = true;
+					if (enemyUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::Cloaked || enemyUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::CloakedDetected || enemyUnit.getUnitPtr()->is_burrowed)
+						invisUnits = true;
+				}
+
+				if (!groundUnits && !airUnits && !invisUnits)
+				{
+					// If there is creep and we see no units, there might be a Creep Tumor nearby
+					if (!creepCleared)
+					{
+						groundUnits = true;
+						invisUnits = true;
+					}
+					else
+					{
+						clearExpandSquad.clear();
+						baseLocation->clearBlocked();
+						continue;
+					}
+				}
+			}
+
+			if (invisUnits)
+				m_blockedExpandByInvis = true;
+
+			// add closest unit in squad (one for each type of requirement)
+			Unit closestGroundAttackingUnit;
+			Unit closestAirAttackingUnit;
+			Unit closestDetectorUnit;
+			float groundDistance = 0.f;
+			float airDistance = 0.f;
+			float detectorDistance = 0.f;
 			for (auto & unitPair : m_bot.GetAllyUnits())
 			{
 				const auto & unit = unitPair.second;
@@ -984,21 +1092,52 @@ void CombatCommander::updateClearExpandSquads()
 				if (!m_squadData.canAssignUnitToSquad(unit, clearExpandSquad))
 					continue;
 
-				if(Util::CanUnitAttackGround(unit.getUnitPtr(), m_bot))
+				// Check ground attacking needs
+				if(groundUnits && Util::CanUnitAttackGround(unit.getUnitPtr(), m_bot))
 				{
 					const float dist = Util::DistSq(unit, basePosition);
-					if(!closestUnit.isValid() || dist < distance)
+					if(!closestGroundAttackingUnit.isValid() || dist < groundDistance)
 					{
-						distance = dist;
-						closestUnit = unit;
+						groundDistance = dist;
+						closestGroundAttackingUnit = unit;
+					}
+				}
+
+				// Check air attacking needs
+				if (airUnits && Util::CanUnitAttackAir(unit.getUnitPtr(), m_bot))
+				{
+					const float dist = Util::DistSq(unit, basePosition);
+					if (!closestAirAttackingUnit.isValid() || dist < airDistance)
+					{
+						airDistance = dist;
+						closestAirAttackingUnit = unit;
+					}
+				}
+
+				// Check detection needs
+				if (invisUnits && unit.getType().isDetector())
+				{
+					const float dist = Util::DistSq(unit, basePosition);
+					if (!closestDetectorUnit.isValid() || dist < detectorDistance)
+					{
+						detectorDistance = dist;
+						closestDetectorUnit = unit;
 					}
 				}
 			}
 
-			if(closestUnit.isValid())
-			{
-				m_squadData.assignUnitToSquad(closestUnit.getUnitPtr(), clearExpandSquad);
-			}
+			// If we don't have every type of unit needed, don't go to not waste time of our units (ex: Reaper against burrowed Zergling)
+			if ((groundUnits && !closestGroundAttackingUnit.isValid()) || (airUnits && !closestAirAttackingUnit.isValid()) || (invisUnits && !closestDetectorUnit.isValid()))
+				continue;
+
+			if (closestGroundAttackingUnit.isValid())
+				m_squadData.assignUnitToSquad(closestGroundAttackingUnit.getUnitPtr(), clearExpandSquad);
+
+			if (closestAirAttackingUnit.isValid() && closestAirAttackingUnit.getUnitPtr() != closestGroundAttackingUnit.getUnitPtr())
+				m_squadData.assignUnitToSquad(closestAirAttackingUnit.getUnitPtr(), clearExpandSquad);
+
+			if (closestDetectorUnit.isValid())
+				m_squadData.assignUnitToSquad(closestDetectorUnit.getUnitPtr(), clearExpandSquad);
 		}
 	}
 }
@@ -1159,7 +1298,6 @@ void CombatCommander::updateAttackSquads()
 
 	for (const auto & unit : unitsToTransfer)
 	{
-		mainAttackSquad.removeUnit(unit);
 		m_squadData.assignUnitToSquad(unit, backupSquad);
 	}
 	unitsToTransfer.clear();
@@ -2100,6 +2238,9 @@ void CombatCommander::updateDefenseSquads()
 			// BREAK CONDITION : there is no more unit to be affected to the defense squads
 			if(!unit.isValid())
 			{
+				// TODO check if we can win with those units
+				// if we can, assign each unit to the squad and remove them from score maps
+				// if we cannot, remove region
 				break;
 			}
 
@@ -2130,6 +2271,30 @@ void CombatCommander::updateDefenseSquads()
 			regions.sort();
 		}
 		m_bot.StopProfiling("0.10.4.2.2.6      affectUnits");
+		if (m_bot.Strategy().wasProxyStartingStrategy())
+		{
+			m_bot.StartProfiling("0.10.4.2.2.7      cancelInsufficientDefenseOnProxy");
+			const auto proxyLocation = m_bot.Buildings().getProxyLocation();
+			for (const auto & region : regions)
+			{
+				const auto dist = Util::DistSq(region.baseLocation->getDepotTilePosition(), proxyLocation);
+				if (dist < 10 * 10)
+				{
+					// This is the proxy location, we don't want to defend it if we don't have enough unit to protect it
+					sc2::Units enemyUnits;
+					Util::CCUnitsToSc2Units(region.enemyUnits, enemyUnits);
+					float simulationResult = Util::SimulateCombat(region.affectedAllyUnits, enemyUnits, m_bot);
+					if (simulationResult <= 0)
+					{
+						auto & mainAttackSquad = m_squadData.getSquad("MainAttack");
+						for (const auto & unit : region.squad->getUnits())
+							m_squadData.assignUnitToSquad(unit, mainAttackSquad);
+					}
+					break;
+				}
+			}
+			m_bot.StopProfiling("0.10.4.2.2.7      cancelInsufficientDefenseOnProxy");
+		}
 	}
 }
 
@@ -2650,7 +2815,7 @@ void CombatCommander::ExecuteActions()
 			switch (action.microActionType)
 			{
 			case MicroActionType::AttackMove:
-				if (action.position == rangedUnit->pos)
+				if (Util::DistSq(action.position, rangedUnit->pos) < 0.1f)
 					skip = true;
 				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
 				{
@@ -2677,7 +2842,7 @@ void CombatCommander::ExecuteActions()
 					Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
 				break;
 			case MicroActionType::Move:
-				if (action.position == rangedUnit->pos)
+				if (Util::DistSq(action.position, rangedUnit->pos) < 0.1f)
 					skip = true;
 				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
 				{
@@ -2799,7 +2964,7 @@ void CombatCommander::CalcBestFlyingCycloneHelpers()
 		else if (unit.isFlying())
 		{
 			auto squad = m_squadData.getUnitSquad(unit);
-			if (squad && !Util::StringStartsWith(squad->getName(), "Harass"))
+			if (squad && squad->getSquadOrder().getType() != SquadOrderTypes::Harass && squad->getSquadOrder().getType() != SquadOrderTypes::Clear)
 			{
 				potentialFlyingCycloneHelpers.insert(unitPtr);
 			}

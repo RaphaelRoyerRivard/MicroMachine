@@ -251,14 +251,14 @@ void ProductionManager::manageBuildOrderQueue()
 			}
 			else
 			{
-				const auto barrackCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
+				const auto barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
 				const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
 				// Proxy buildings
-				if (m_bot.GetCurrentFrame() < 4032 /* 3 min */ && ((currentItem.type == MetaTypeEnum::Barracks && m_bot.Strategy().isProxyStartingStrategy() && barrackCount < 2) ||
+				if (m_bot.GetCurrentFrame() < 4032 /* 3 min */ && ((currentItem.type == MetaTypeEnum::Barracks && m_bot.Strategy().isProxyStartingStrategy() && barracksCount < 2 && (m_bot.Strategy().getStartingStrategy() != PROXY_MARAUDERS || barracksCount > 0)) ||
 					(currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().isProxyFactoryStartingStrategy() && factoryCount == 0)))
 				{
 					const auto proxyLocation = Util::GetPosition(m_bot.Buildings().getProxyLocation());
-					Unit producer = getProducer(currentItem.type, false, proxyLocation);
+					Unit producer = getProducer(currentItem.type, false, proxyLocation, true);
 					Building b(currentItem.type.getUnitType(), proxyLocation);
 					b.finalPosition = proxyLocation;
 					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
@@ -1781,7 +1781,7 @@ bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
 	return false;
 }
 
-Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, CCPosition closestTo) const
+Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, CCPosition closestTo, bool allowMovingWorker) const
 {
 	// get all the types of units that cna build this type
 	auto & producerTypes = m_bot.Data(type).whatBuilds;
@@ -1913,12 +1913,15 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 					}
 					const auto & orders = unit.getUnitPtr()->orders;
 					bool isMoving = false;
-					for (const auto & order : orders)
+					if (!allowMovingWorker)
 					{
-						if (order.ability_id == sc2::ABILITY_ID::MOVE)
+						for (const auto & order : orders)
 						{
-							isMoving = true;
-							break;
+							if (order.ability_id == sc2::ABILITY_ID::MOVE)
+							{
+								isMoving = true;
+								break;
+							}
 						}
 					}
 					if (isMoving)

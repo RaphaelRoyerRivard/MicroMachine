@@ -167,6 +167,7 @@ class CombatCommander
 	std::map<const sc2::Unit *, FlyingHelperMission> m_cycloneFlyingHelpers;
 	std::map<const sc2::Unit *, const sc2::Unit *> m_cyclonesWithHelper;
 	std::vector<sc2::AvailableAbilities> m_unitsAbilities;
+	bool m_blockedExpandByInvis = false;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
@@ -217,6 +218,7 @@ public:
     void onStart();
     void onFrame(const std::vector<Unit> & combatUnits);
 	void lowPriorityCheck();
+	CCPosition GetIdlePosition() const { return m_idlePosition; }
 	const std::vector<Unit> & GetCombatUnits() const { return m_combatUnits; }
 	std::map<Unit, std::pair<CCPosition, uint32_t>> & GetInvisibleSighting();
 	const std::vector<CCPosition> & GetEnemyScans() const { return m_enemyScans; }
@@ -236,6 +238,7 @@ public:
 	const std::map<const sc2::Unit *, const sc2::Unit *> & getCyclonesWithHelper() const { return m_cyclonesWithHelper; }
 	const std::list<CCPosition> & getAllyScans() const { return m_allyScans; }
 	void addAllyScan(CCPosition scanPos) { m_allyScans.push_back(scanPos); }
+	bool isExpandBlockedByInvis() const { return m_blockedExpandByInvis; }
 	float getTotalGroundInfluence(CCTilePosition tilePosition) const;
 	float getTotalAirInfluence(CCTilePosition tilePosition) const;
 	float getGroundCombatInfluence(CCTilePosition tilePosition) const;
