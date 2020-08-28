@@ -216,6 +216,11 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 {
     m_isPlayerOccupying[player] = occupying;
 
+	if (occupying && player == Players::Self && m_isBlocked)//If it was marked as blocked and we expanded there, clear the flag
+	{
+		clearBlocked();
+	}
+
     // if this base is a start location that's occupied by the enemy, it's that enemy's start location
     if (occupying && player == Players::Enemy && isStartLocation() && m_isPlayerStartLocation[player] == false)
     {
