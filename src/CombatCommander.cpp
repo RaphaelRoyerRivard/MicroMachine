@@ -713,7 +713,7 @@ void CombatCommander::updateIdleSquad()
         // if it hasn't been assigned to a squad yet, put it in the low priority idle squad
         if (m_squadData.canAssignUnitToSquad(unit, idleSquad))
         {
-            idleSquad.addUnit(unit);
+			m_squadData.assignUnitToSquad(unit, idleSquad);
         }
     }
 
@@ -762,7 +762,7 @@ void CombatCommander::updateWorkerFleeSquad()
 			if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
 			{
 				m_bot.Workers().setCombatWorker(worker);
-				workerFleeSquad.addUnit(worker);
+				m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 			}
 		}
 		else
@@ -808,7 +808,7 @@ void CombatCommander::updateWorkerFleeSquad()
 						if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
 						{
 							m_bot.Workers().setCombatWorker(worker);
-							workerFleeSquad.addUnit(worker);
+							m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 						}
 						continue;
 					}
@@ -1298,7 +1298,6 @@ void CombatCommander::updateAttackSquads()
 
 	for (const auto & unit : unitsToTransfer)
 	{
-		mainAttackSquad.removeUnit(unit);
 		m_squadData.assignUnitToSquad(unit, backupSquad);
 	}
 	unitsToTransfer.clear();

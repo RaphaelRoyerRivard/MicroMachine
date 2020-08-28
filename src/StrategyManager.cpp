@@ -175,7 +175,7 @@ void StrategyManager::onFrame(bool executeMacro)
 			const auto completedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
 			const auto completedSupplyDepotsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true);
 
-			if (m_bot.GetGameLoop() >= 448 && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 20s
+			if (m_bot.GetGameLoop() >= (m_startingStrategy == PROXY_MARAUDERS ? 896 : 448) && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 20s, or 40s if PROXY_MARAUDERS
 			{
 				if (isWorkerRushed())
 				{
@@ -351,7 +351,7 @@ void StrategyManager::onFrame(bool executeMacro)
 					}
 				}
 				// If we still don't want to cancel the proxy
-				if (!cancelProxy)
+				/*if (!cancelProxy)
 				{
 					// We want to cancel the proxy if one of our two proxy workers of the proxy Marauders strategy died
 					if (m_startingStrategy == PROXY_MARAUDERS && completedSupplyDepotsCount > 0)
@@ -362,7 +362,7 @@ void StrategyManager::onFrame(bool executeMacro)
 							cancelProxy = true;
 						}
 					}
-				}
+				}*/
 				if (cancelProxy)
 				{
 					m_bot.Actions()->SendChat("FINE! No cheesing. Maybe next game :)");

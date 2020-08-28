@@ -250,7 +250,7 @@ void WorkerManager::handleMineralWorkers()
 	// Send second proxy worker for proxy Marauders strategy
 	if (m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS 
 		&& !m_secondProxyWorkerSent
-		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true) == 1)
+		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true, true) == 1)
 	{
 		float minDist = 0.f;
 		const auto & workers = getWorkers();
@@ -258,7 +258,7 @@ void WorkerManager::handleMineralWorkers()
 		for (const auto & worker : workers)
 		{
 			const auto dist = Util::DistSq(worker, rampPosition);
-			if (!proxyWorker.isValid() || dist < minDist)
+			if (!proxyWorker.isValid() || dist < minDist || m_workerData.getWorkerJob(worker) != WorkerJobs::Build)
 			{
 				minDist = dist;
 				proxyWorker = worker;
@@ -284,7 +284,7 @@ void WorkerManager::handleMineralWorkers()
 	{
 		if (base->isOccupiedByPlayer(Players::Self))
 		{
-			auto mineralsVector = base->getMinerals();
+			auto & mineralsVector = base->getMinerals();
 			for (auto& t : mineralsVector)
 			{
 				minerals.push_back(t);
@@ -294,7 +294,8 @@ void WorkerManager::handleMineralWorkers()
 	}
 	m_bot.StopProfiling("0.7.2.2     selectMinerals");
 
-	if (m_bot.Strategy().isProxyStartingStrategy())
+	// Send the first worker at the proxy location if we have a proxy strategy, but not with proxy Marauders because we want to make the first Barracks at home
+	if (m_bot.Strategy().isProxyStartingStrategy() && m_bot.Strategy().getStartingStrategy() != PROXY_MARAUDERS)
 	{
 		float minDist = 0.f;
 		const auto & workers = getWorkers();

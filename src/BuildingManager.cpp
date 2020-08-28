@@ -382,7 +382,7 @@ void BuildingManager::PlaceWallBuildings(std::vector<CCTilePosition> tilesToBloc
 		//TODO: Check remove the buildingTiles and try again in a different order. To try again, pop front tilesToBlock and push back the front.
 	}
 
-	bool barrackInWall = !m_bot.Strategy().isProxyStartingStrategy();
+	bool barrackInWall = !m_bot.Strategy().isProxyStartingStrategy() || m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS;
 	
 	if (barrackInWall)
 	{

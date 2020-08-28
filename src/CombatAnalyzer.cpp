@@ -320,7 +320,7 @@ void CombatAnalyzer::DetectBurrowingUnits()
 					bool mightBePickedUp = false;
 					for (const auto transporterType : zergTransporters)
 					{
-						for (const auto transporter : m_bot.GetEnemyUnits(transporterType))
+						for (const auto & transporter : m_bot.GetEnemyUnits(transporterType))
 						{
 							const auto maxPickupRange = unit.getUnitPtr()->radius + transporter.getUnitPtr()->radius + 1.5f;
 							if (Util::DistSq(unit, transporter) < maxPickupRange * maxPickupRange)
