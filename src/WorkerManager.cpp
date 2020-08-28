@@ -19,17 +19,15 @@ void WorkerManager::onStart()
 
 void WorkerManager::onFrame(bool executeMacro)
 {
-	/*if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 336 == 0)//Every 15 seconds
+	/*if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 22 == 0)//Every 15 seconds
 	{
 		const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals;
 		const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene;
-		Util::AddStatistic("Mineral", mineralRate);
-		//Util::AddStatistic("Gas", gasRate);
+		Util::AddStatistic("GatherRate", mineralRate + gasRate);
 	}
 	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 6720 == 0)//after 5 minutes
 	{
-		Util::DisplayStatistic(m_bot, "Mineral");
-		//Util::DisplayStatistic(m_bot, "Gas");
+		Util::DisplayStatistic(m_bot, "GatherRate");
 	}
 	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 6721 == 0)
 	{
@@ -271,7 +269,7 @@ void WorkerManager::handleMineralWorkers()
 
 	//split workers on first frame
 	//TODO can be improved by preventing the worker from retargetting a very far mineral patch
-	if (!m_isFirstFrame || (int)m_bot.GetCurrentFrame() == 0)
+	if (!m_isFirstFrame || m_bot.GetCurrentFrame() == 0)
 	{
 		return;
 	}
@@ -349,21 +347,6 @@ void WorkerManager::handleMineralWorkers()
 		if (!worker.isValid())
 		{
 			continue;
-		}
-
-		int lowest = 200;
-		std::list<Unit> lowestMinerals;
-		for (auto& mineral : mineralsUsage)
-		{
-			if (mineral.second < lowest)
-			{
-				lowest = mineral.second;
-				lowestMinerals.clear();
-			}
-			if (mineral.second == lowest)
-			{
-				lowestMinerals.push_back(mineral.first);
-			}
 		}
 
 		auto closestMineral = getClosest(worker, minerals);

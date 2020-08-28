@@ -142,6 +142,7 @@ void StrategyManager::onStart()
 	{
 		setStartingStrategy(STANDARD);
 	}
+
 	m_initialStartingStrategy = m_startingStrategy;
 }
 

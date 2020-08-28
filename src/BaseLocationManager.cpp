@@ -758,15 +758,23 @@ const BaseLocation* BaseLocationManager::getBaseForDepot(const Unit depot) const
 	return nullptr;
 }
 
-void BaseLocationManager::SetLocationAsBlocked(const CCPosition position, bool isBlocked, bool isCreepBlocked, std::vector<Unit> blockingUnits)
+void BaseLocationManager::SetLocationAsBlocked(const CCPosition position, UnitType type)
 {
+	bool isBlocked = false;
+	bool isCreepBlocked = false;
 	for (auto & base : m_baseLocationData)
 	{
 		if (base.containsPosition(position))
 		{
-			base.setIsBlocked(isBlocked);
+			auto buildingPlacer = m_bot.Buildings().getBuildingPlacer();
+			bool isCreepBlocked = false;
+			if (m_bot.GetSelfRace() != CCRace::Zerg && buildingPlacer.isBuildingBlockedByCreep(position, type))
+			{
+				isCreepBlocked = true;
+			}
+			base.setIsBlocked(true);
 			base.setIsCreepBlocked(isCreepBlocked);
-			base.setBlockingUnits(blockingUnits);
+			base.setBlockingUnits(getEnemyUnitsNear(position));
 		}
 	}
 }
@@ -777,6 +785,34 @@ void BaseLocationManager::ClearBlockedLocations()
 	{
 		baseLocation.clearBlocked();
 	}
+}
+
+std::vector<Unit> BaseLocationManager::getEnemyUnitsNear(CCTilePosition center) const
+{
+	const int flagUnitsWithinRadius = 10;
+	std::vector<Unit> enemyUnits;
+	for (auto & tagUnit : m_bot.GetEnemyUnits())
+	{
+		if (tagUnit.second.getType().isBuilding())
+		{
+			continue;
+		}
+
+		auto x = tagUnit.second.getPosition().x;
+		auto y = tagUnit.second.getPosition().y;
+		auto r = tagUnit.second.getUnitPtr()->radius;
+
+		float distanceX = abs(x - center.x);
+		float distanceY = abs(y - center.y);
+
+		float distance_sq = pow(distanceX, 2) + pow(distanceY, 2);
+
+		if (distance_sq <= pow(r + flagUnitsWithinRadius, 2))
+		{
+			enemyUnits.push_back(tagUnit.second);
+		}
+	}
+	return enemyUnits;
 }
 
 const BaseLocation* BaseLocationManager::getBaseContainingPosition(const CCPosition position, int player) const
