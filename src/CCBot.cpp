@@ -1706,6 +1706,7 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(54,104), player2, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(113, 104), player2, 3);*/
 
+	//Debug()->DebugGiveAllTech();
 	//const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false));
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, enemyLocation, player1, 3);//Invisible/burrow
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, nat, player1, 1);//Creep
@@ -1713,7 +1714,7 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, nat + towardsCenter * 7, player1, 1);//Creep tumor
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, nat, player1, 3);//Combat unit
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);*/
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED, nat, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED, nat, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, m_startLocation, player2, 1);
 }

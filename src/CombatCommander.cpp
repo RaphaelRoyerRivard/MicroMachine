@@ -1032,6 +1032,20 @@ void CombatCommander::updateClearExpandSquads()
 					invisUnits = true;
 			}
 
+			// Check known burrowed units if necessary
+			if (!invisUnits)
+			{
+				for (const auto burrowedUnit : m_bot.Analyzer().getBurrowedUnits())
+				{
+					const auto dist = Util::DistSq(burrowedUnit->pos, basePosition);
+					if (dist < 4 * 4)
+					{
+						invisUnits = true;
+						break;
+					}
+				}
+			}
+
 			// If we have the vision (and detection if required) of the base location corners, we overwrite the units requirement
 			if (allCornersVisible && (!invisUnits || allCornersDetected))
 			{
