@@ -2737,7 +2737,7 @@ void Util::DisplayStatistic(CCBot & bot, const std::string & statisticName)
 	for (auto & value : values)
 	{
 		total += value;
-		bot.Actions()->SendChat(statisticName + ": " + std::to_string(value));
+		//bot.Actions()->SendChat(statisticName + ": " + std::to_string(value));
 	}
 
 	bot.Actions()->SendChat(statisticName + " total: " + std::to_string(total));

@@ -216,7 +216,7 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 {
     m_isPlayerOccupying[player] = occupying;
 
-	if (occupying && player == Players::Self && m_isBlocked)//If it was marked as blocked and we expanded there, clear the flag
+	if (occupying && player == Players::Self && m_isBlocked && m_resourceDepot.isValid() && m_resourceDepot.isAlive())//If it was marked as blocked and we expanded there, clear the flag
 	{
 		clearBlocked();
 	}

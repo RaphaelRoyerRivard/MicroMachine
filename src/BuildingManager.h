@@ -32,8 +32,9 @@ class BuildingManager
 	std::list<Unit> m_wallBuildings;
 	std::map<UnitType, std::list<CCTilePosition>> m_nextBuildingPosition;
 	std::vector<std::pair<CCTilePosition, CCTilePosition>> m_previousNextBuildingPositionByBase;
-	std::map<sc2::Tag, CCPosition> liftedBuildingPositions;
+	std::map<sc2::Tag, CCPosition> m_liftedBuildingPositions;
 	bool m_wallsBarracksPointsTowardBase = false;
+	std::map<sc2::Tag, CCPosition> m_commandCenterLandPosition;
 
     bool            m_debugMode;
 
