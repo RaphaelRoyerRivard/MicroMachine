@@ -61,7 +61,7 @@ void StrategyManager::onStart()
 				totalWins += wins;
 				totalLosses += losses;
 				auto games = wins + losses;
-				float winPercentage = games > 0 ? wins / float(games) : 1;
+				float winPercentage = games > 0 ? wins / float(games) : 0.99;
 				// We make sure the opponent has the appropriate race to pick the race specific strategy 
 				const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
 				bool raceSpecificStrategy = it != RACE_SPECIFIC_STRATEGIES.end();
