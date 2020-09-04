@@ -2673,6 +2673,7 @@ CCPosition CombatCommander::GetNextBaseLocationToScout()
 			}
 			if (baseLocation->isOccupiedByPlayer(Players::Enemy) ||
 				baseLocation->isOccupiedByPlayer(Players::Self) ||
+				m_bot.Map().getGroundDistance(baseLocation->getDepotPosition(), m_bot.GetStartLocation()) < 0 ||	// Cannot reach base by ground
 				Util::DistSq(scoutUnit, baseLocation->getPosition()) < 5.f * 5.f)
 			{
 				m_visitedBaseLocations.push_back(baseLocation);
