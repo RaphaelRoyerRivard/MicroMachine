@@ -370,13 +370,18 @@ void WorkerManager::handleMineralWorkers()
 void WorkerManager::handleMules()
 {
 	//Clear mineral patch of mule that expired
+	std::vector<CCUnitID> toRemove;
 	int frame = m_bot.GetCurrentFrame();
 	for (auto & i : mineralMuleDeathFrame)
 	{
 		if (frame >= i.second)
 		{
-			mineralMuleDeathFrame.erase(i.first);
+			toRemove.push_back(i.first);
 		}
+	}
+	for (auto & remove : toRemove)
+	{
+		mineralMuleDeathFrame.erase(remove);
 	}
 
 	for (auto & mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))
