@@ -2365,11 +2365,12 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	if (!m_squadData.canAssignUnitToSquad(worker, defenseSquad))
 		return false;
 	const auto workerHeight = m_bot.Map().terrainHeight(worker.getPosition());
+	const auto workerBaseLocation = m_bot.Bases().getBaseContainingPosition(worker.getPosition());
 	bool groundEnemyUnitOnSameHeight = false;
 	bool enemyBuildingOnSameHeight = false;
 	for (const auto & enemyUnit : enemyUnits)
 	{
-		if (!enemyUnit.isFlying() && workerHeight == m_bot.Map().terrainHeight(enemyUnit.getPosition()))
+		if (!enemyUnit.isFlying() && (workerHeight == m_bot.Map().terrainHeight(enemyUnit.getPosition()) || workerBaseLocation == m_bot.Bases().getBaseContainingPosition(enemyUnit.getPosition())))
 		{
 			groundEnemyUnitOnSameHeight = true;
 			if (enemyUnit.getType().isBuilding())

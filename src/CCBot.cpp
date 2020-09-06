@@ -832,6 +832,7 @@ void CCBot::setUnits()
 	m_knownEnemyUnits.clear();
 	m_enemyBuildingsUnderConstruction.clear();
 	m_enemyUnitsPerType.clear();
+	m_strategy.setEnemyHasWorkerHiddingInOurMain(false);
 	for(auto& enemyUnitPair : m_enemyUnits)
 	{
 		bool ignoreEnemyUnit = false;
@@ -852,7 +853,13 @@ void CCBot::setUnits()
 		//TODO when the unit is cloaked or burrowed, check if the tile is inside detection range, in that case, we should ignore the unit because it is not there anymore
 		if (GetGameLoop() != enemyUnitPtr->last_seen_game_loop && Map().isVisible(enemyUnit.getPosition()) && !isBurrowedWidowMine)
 		{
-			ignoreEnemyUnit = true;
+			// If the enemy unit that is not where we last saw it is a worker in our main base, flag it
+			if (enemyUnit.getType().isWorker() && m_bases.getPlayerStartingBaseLocation(Players::Self)->containsPosition(enemyUnit.getPosition()))
+			{
+				m_strategy.setEnemyHasWorkerHiddingInOurMain(true);
+			}
+			else
+				ignoreEnemyUnit = true;
 		}
 		// If mobile unit is not seen for too long (around 7s, or 67s for burrowed widow mines and 45s for sieged tanks), ignore it
 		else if (!enemyUnit.getType().isBuilding()

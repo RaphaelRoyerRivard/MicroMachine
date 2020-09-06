@@ -28,6 +28,7 @@ class BaseLocation
 	bool						m_isSplitGeyser;
 	bool						m_isRich;
 	std::vector<CCTilePosition> m_gasBunkerLocations;
+	std::vector<CCTilePosition> m_baseTiles;
 
 	CCTilePosition				m_centerOfMinerals;
 
@@ -89,6 +90,8 @@ public:
 
     void setPlayerOccupying(CCPlayer player, bool occupying);
 
+	const std::vector<CCTilePosition> & getBaseTiles() const { return m_baseTiles; }
+	void addBaseTile(CCTilePosition tile) { m_baseTiles.push_back(tile); }
     const std::vector<CCTilePosition> & getClosestTiles() const;
 	const bool & isGeyserSplit() const;
 	const bool & isRich() const;

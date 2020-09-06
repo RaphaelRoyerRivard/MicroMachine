@@ -125,7 +125,34 @@ void MeleeManager::executeMicro()
 							if (target.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
 								Micro::SmartAttackUnit(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
 							else
-								Micro::SmartMove(meleeUnit.getUnitPtr(), target.getPosition(), m_bot);
+							{
+								auto movePosition = target.getPosition();
+								// If there is an enemy worker hidding in our base, explore the tiles of the base
+								if (m_bot.Strategy().enemyHasWorkerHiddingInOurMain())
+								{
+									CCTilePosition closestUnexploredTile;
+									float closestDistance = -1;
+									const auto & baseTiles = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getBaseTiles();
+									for (const auto & baseTile : baseTiles)
+									{
+										if (!m_bot.Map().isExplored(baseTile))
+										{
+											auto baseTilePosition = Util::GetPosition(baseTile);
+											float distance = Util::DistSq(meleeUnit, baseTilePosition) + Util::DistSq(target, baseTilePosition);
+											if (closestDistance < 0 || distance < closestDistance)
+											{
+												closestUnexploredTile = baseTile;
+												closestDistance = distance;
+											}
+										}
+									}
+									if (closestDistance >= 0)
+									{
+										movePosition = Util::GetPosition(closestUnexploredTile);
+									}
+								}
+								Micro::SmartMove(meleeUnit.getUnitPtr(), movePosition, m_bot);
+							}
 						}
 					}
 				}
@@ -167,6 +194,7 @@ Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets) 
     float highestPriority = 0.f;
     Unit bestTarget;
 	const auto unitHeight = Util::TerrainHeight(meleeUnit.getPosition());
+	const auto unitBaseLocation = m_bot.Bases().getBaseContainingPosition(meleeUnit.getPosition());
 
     // for each target possiblity
     for (auto & targetUnit : targets)
@@ -174,7 +202,7 @@ Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets) 
         BOT_ASSERT(targetUnit.isValid(), "null target unit in getTarget");
 
     	// We don't want workers to leave base to fight
-		if (meleeUnit.getType().isWorker() && Util::TerrainHeight(targetUnit.getPosition()) != unitHeight)
+		if (meleeUnit.getType().isWorker() && Util::TerrainHeight(targetUnit.getPosition()) != unitHeight && unitBaseLocation != m_bot.Bases().getBaseContainingPosition(targetUnit.getPosition()))
 			continue;
     	
         const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), false, false);
