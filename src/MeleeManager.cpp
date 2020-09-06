@@ -121,8 +121,11 @@ void MeleeManager::executeMicro()
 						}
 						else if (!injured)
 						{
-							// attack the target
-							Micro::SmartAttackUnit(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
+							// attack the target if we can see it, otherwise move towards it
+							if (target.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
+								Micro::SmartAttackUnit(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
+							else
+								Micro::SmartMove(meleeUnit.getUnitPtr(), target.getPosition(), m_bot);
 						}
 					}
 				}

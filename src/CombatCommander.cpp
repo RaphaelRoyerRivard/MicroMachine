@@ -1490,7 +1490,7 @@ void CombatCommander::updateScoutDefenseSquad()
 			}
 		}
 
-		// if our the squad is empty, assign a worker
+		// if the squad is empty, assign a worker
 		if(scoutDefenseSquad.isEmpty())
 		{
 			// the enemy worker that is attacking us
