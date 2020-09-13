@@ -1724,6 +1724,7 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED, nat, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, m_startLocation, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_DRONE, nat, player1, 12);
 }
 
 void CCBot::IssueCheats()
@@ -2062,13 +2063,9 @@ bool CCBot::IsParasited(const sc2::Unit * unit) const
 	return Util::Contains(unit->tag, m_parasitedUnits);
 }
 
-const CCPosition CCBot::GetStartLocation() const
+CCPosition CCBot::GetStartLocation() const
 {
-#ifdef SC2API
     return m_startLocation;
-#else
-    return BWAPI::Position(BWAPI::Broodwar->self()->getStartLocation());
-#endif
 }
 
 const CCTilePosition CCBot::GetBuildingArea(MetaType buildingType)

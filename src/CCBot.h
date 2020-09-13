@@ -160,7 +160,7 @@ public:
 	uint32_t GetGameLoop() const;
     CCRace GetPlayerRace(int player) const;
 	CCRace GetSelfRace() const;
-    const CCPosition GetStartLocation() const;
+    CCPosition GetStartLocation() const;
 	const CCTilePosition GetBuildingArea(MetaType buildingType);
 
 	void IssueGameStartCheats();

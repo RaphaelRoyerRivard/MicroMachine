@@ -1847,6 +1847,7 @@ void CombatCommander::updateDefenseSquads()
 		}
 
 		const auto proxyBase = m_bot.Strategy().isProxyStartingStrategy() && myBaseLocation->containsPositionApproximative(Util::GetPosition(m_bot.Buildings().getProxyLocation()));
+		const auto startingBase = myBaseLocation->isStartLocation();
 
 		m_bot.StartProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		auto region = RegionArmyInformation(myBaseLocation, m_bot);
@@ -1871,14 +1872,14 @@ void CombatCommander::updateDefenseSquads()
 			if (!UnitType::isTargetable(unit.getAPIUnitType()))
 				continue;
 
-			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
+			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() && startingBase ? WorkerRushDefenseOrderRadius : 0))
 			{
 				if (unit.getType().isWorker())
 					++enemyWorkers;
 				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4032 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
 				{
 					// Need at least 3 workers for a worker rush
-					if (enemyWorkers > 2)
+					if (enemyWorkers >= 3)
 						workerRushed = true;
 				}
 				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 9408)	// first 7 minutes
@@ -2196,7 +2197,7 @@ void CombatCommander::updateDefenseSquads()
 				// If we have no more unit to defend we check for the workers
 				else if(support == "ground" && needsMoreSupport)
 				{
-					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit, region.enemyUnits);
+					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getDepotPosition(), region.closestEnemyUnit, region.enemyUnits);
 				}
 
 				// If no support is available
@@ -2295,6 +2296,9 @@ void CombatCommander::updateDefenseSquads()
 	}
 }
 
+/**
+	This method is not used.
+*/
 Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type)
 {
     Unit closestDefender;
@@ -2354,7 +2358,7 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
     return workerDefender;
 }
 
-bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const
+bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const
 {
 	if (!worker.isValid())
 		return false;
@@ -2385,9 +2389,11 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	// do not check distances if it is to protect against a scout
 	if (defenseSquad.getName() == "ScoutDefense")
 		return true;
-	// do not check min distance if worker rushed
+	// if worker rushed, we want to defend no mather the distance, but we don't want to defend a base other than our main nor with more than the enemy workers + 1
 	if (m_bot.Strategy().isWorkerRushed())
-		return true;
+	{
+		return pos == m_bot.GetStartLocation() && defenseSquad.getUnits().size() <= enemyUnits.size();
+	}
 	// worker can fight buildings somewhat close to the base
 	/*const auto isBuilding = closestEnemy.getType().isBuilding();
 	const auto enemyDistanceToBase = Util::DistSq(closestEnemy, pos);
