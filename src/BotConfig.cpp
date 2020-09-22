@@ -224,6 +224,8 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawPathfindingTiles", debug, DrawPathfindingTiles);
 			JSONTools::ReadBool("DrawBuildingBase", debug, DrawBuildingBase);
 			JSONTools::ReadBool("DrawCurrentStartingStrategy", debug, DrawCurrentStartingStrategy);
+			JSONTools::ReadBool("LogArmyActions", debug, LogArmyActions);
+			JSONTools::ReadBool("LogSlowFrames", debug, LogSlowFrames);
 			JSONTools::ReadBool("TimeControl", debug, TimeControl);
 		}
     }

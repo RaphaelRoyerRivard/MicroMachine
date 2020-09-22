@@ -1349,6 +1349,7 @@ void CombatCommander::updateAttackSquads()
 		return;
 
 	CCPosition orderPosition = GetClosestEnemyBaseLocation();
+	bool retreat = false;
 	
 	// A retreat must last at least 5 seconds
 	if (m_bot.GetCurrentFrame() >= m_lastRetreatFrame + 5 * 22.4)
@@ -1402,8 +1403,8 @@ void CombatCommander::updateAttackSquads()
 							continue;
 					}
 					const bool canAttack = enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY
-										|| (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot))
-										|| (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
+						|| (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot))
+						|| (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
 					if (canAttack)
 						enemyUnits.push_back(enemyUnit.getUnitPtr());
 				}
@@ -1428,11 +1429,20 @@ void CombatCommander::updateAttackSquads()
 					m_bot.Actions()->SendChat("Relaunch offensive", sc2::ChatChannel::Team);
 			}
 			if (!m_winAttackSimulation)
-				orderPosition = m_bot.Strategy().isProxyStartingStrategy() ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_idlePosition;
+				retreat = true;
 		}
 	}
+	else
+		retreat = true;
 
-	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, HarassOrderRadius, "Attack");
+	std::string orderStatus = "Attack";
+	if (retreat)
+	{
+		orderPosition = m_bot.Strategy().isProxyStartingStrategy() ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_idlePosition;
+		orderStatus = "Retreat";
+	}
+
+	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, HarassOrderRadius, orderStatus);
 	mainAttackSquad.setSquadOrder(mainAttackOrder);
 
     /*if (mainAttackSquad.needsToRetreat())
@@ -2894,6 +2904,15 @@ void CombatCommander::ExecuteActions()
 		
 		if (!skip)
 		{
+			if (m_bot.Config().LogArmyActions)
+			{
+				std::stringstream ss;
+				ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " has action " << MicroActionTypeAccronyms[action.microActionType];
+				if (action.microActionType == MicroActionType::AttackUnit)
+					ss << "(" << sc2::UnitTypeToName(action.target->unit_type) << ")";
+				ss << (action.prioritized ? "!" : "") << " with description: " << action.description;
+				Util::Log(__FUNCTION__, ss.str(), m_bot);
+			}
 			action.executed = true;
 			action.executionFrame = m_bot.GetGameLoop();
 			if (action.duration > 0)
