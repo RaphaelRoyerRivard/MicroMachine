@@ -158,6 +158,23 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		}
 	}
 
+	for (int x = 0; x < gameInfo->width - 1; x++)
+	{
+		for (int y = 0; y < gameInfo->height - 1; y++)
+		{
+			float currentHeight = m_terrainHeight[x][y];	// bottom left corner
+			float topLeftCornerHeight = m_terrainHeight[x][y+1];
+			float topRightCornerHeight = m_terrainHeight[x+1][y+1];
+			float bottomRightCornerHeight = m_terrainHeight[x+1][y];
+			if (abs(currentHeight - topLeftCornerHeight) > 0.5f && abs(currentHeight - topRightCornerHeight) > 0.5f && abs(currentHeight - bottomRightCornerHeight) > 0.5f)
+			{
+				// bottom left corner is not the same height as the other corner, so we need to adjust the height
+				float average = (topLeftCornerHeight + topRightCornerHeight + bottomRightCornerHeight) / 3.f;
+				m_terrainHeight[x][y] = average;
+			}
+		}
+	}
+
 	CreateDummyUnits(bot);
 }
 

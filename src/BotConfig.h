@@ -68,6 +68,8 @@ public:
 	bool DrawPathfindingTiles;
 	bool DrawBuildingBase;
 	bool DrawCurrentStartingStrategy;
+	bool LogArmyActions;
+	bool LogSlowFrames;
 	bool TimeControl;
 	bool PrintGreetingMessage;
 	bool RandomProxyLocation;

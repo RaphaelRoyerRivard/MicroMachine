@@ -1042,6 +1042,20 @@ void CombatCommander::updateClearExpandSquads()
 					invisUnits = true;
 			}
 
+			// Check known burrowed units if necessary
+			if (!invisUnits)
+			{
+				for (const auto burrowedUnit : m_bot.Analyzer().getBurrowedUnits())
+				{
+					const auto dist = Util::DistSq(burrowedUnit->pos, basePosition);
+					if (dist < 4 * 4)
+					{
+						invisUnits = true;
+						break;
+					}
+				}
+			}
+
 			// If we have the vision (and detection if required) of the base location corners, we overwrite the units requirement
 			if (allCornersVisible && (!invisUnits || allCornersDetected))
 			{
@@ -1345,6 +1359,7 @@ void CombatCommander::updateAttackSquads()
 		return;
 
 	CCPosition orderPosition = GetClosestEnemyBaseLocation();
+	bool retreat = false;
 	
 	// A retreat must last at least 5 seconds
 	if (m_bot.GetCurrentFrame() >= m_lastRetreatFrame + 5 * 22.4)
@@ -1398,8 +1413,8 @@ void CombatCommander::updateAttackSquads()
 							continue;
 					}
 					const bool canAttack = enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY
-										|| (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot))
-										|| (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
+						|| (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot))
+						|| (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
 					if (canAttack)
 						enemyUnits.push_back(enemyUnit.getUnitPtr());
 				}
@@ -1424,11 +1439,20 @@ void CombatCommander::updateAttackSquads()
 					m_bot.Actions()->SendChat("Relaunch offensive", sc2::ChatChannel::Team);
 			}
 			if (!m_winAttackSimulation)
-				orderPosition = m_bot.Strategy().isProxyStartingStrategy() ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_idlePosition;
+				retreat = true;
 		}
 	}
+	else
+		retreat = true;
 
-	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, HarassOrderRadius, "Attack");
+	std::string orderStatus = "Attack";
+	if (retreat)
+	{
+		orderPosition = m_bot.Strategy().isProxyStartingStrategy() ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_idlePosition;
+		orderStatus = "Retreat";
+	}
+
+	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, HarassOrderRadius, orderStatus);
 	mainAttackSquad.setSquadOrder(mainAttackOrder);
 
     /*if (mainAttackSquad.needsToRetreat())
@@ -1486,7 +1510,7 @@ void CombatCommander::updateScoutDefenseSquad()
 			}
 		}
 
-		// if our the squad is empty, assign a worker
+		// if the squad is empty, assign a worker
 		if(scoutDefenseSquad.isEmpty())
 		{
 			// the enemy worker that is attacking us
@@ -1843,6 +1867,7 @@ void CombatCommander::updateDefenseSquads()
 		}
 
 		const auto proxyBase = m_bot.Strategy().isProxyStartingStrategy() && myBaseLocation->containsPositionApproximative(Util::GetPosition(m_bot.Buildings().getProxyLocation()));
+		const auto startingBase = myBaseLocation->isStartLocation();
 
 		m_bot.StartProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		auto region = RegionArmyInformation(myBaseLocation, m_bot);
@@ -1867,14 +1892,14 @@ void CombatCommander::updateDefenseSquads()
 			if (!UnitType::isTargetable(unit.getAPIUnitType()))
 				continue;
 
-			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : 0))
+			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() && startingBase ? WorkerRushDefenseOrderRadius : 0))
 			{
 				if (unit.getType().isWorker())
 					++enemyWorkers;
 				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4032 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
 				{
 					// Need at least 3 workers for a worker rush
-					if (enemyWorkers > 2)
+					if (enemyWorkers >= 3)
 						workerRushed = true;
 				}
 				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 9408)	// first 7 minutes
@@ -1973,23 +1998,6 @@ void CombatCommander::updateDefenseSquads()
 		region.calcClosestEnemy();
 		regions.push_back(region);
 		m_bot.StopProfiling("0.10.4.2.2.4      calculateRegionInformation");
-
-		//Protect our SCVs and lift our base
-		if (Util::IsTerran(m_bot.GetSelfRace()))
-		{
-			const Unit& base = myBaseLocation->getResourceDepot();
-			if (base.isValid())
-			{
-				/*if (base.getUnitPtr()->cargo_space_taken == 0 && m_bot.Workers().getNumWorkers() > 0)
-				{
-					// Hide our last SCVs (should be 5, but is higher because some workers may end up dying on the way)
-					if (m_bot.Workers().getNumWorkers() <= 7)
-						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LOADALL, m_bot);
-				}
-				else*/ if (!base.isFlying() && base.getUnitPtr()->health < base.getUnitPtr()->health_max * 0.5f)
-					Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
-			}
-		}
 	}
 
 	if (workerRushed)
@@ -2209,7 +2217,7 @@ void CombatCommander::updateDefenseSquads()
 				// If we have no more unit to defend we check for the workers
 				else if(support == "ground" && needsMoreSupport)
 				{
-					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getPosition(), region.closestEnemyUnit, region.enemyUnits);
+					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getDepotPosition(), region.closestEnemyUnit, region.enemyUnits);
 				}
 
 				// If no support is available
@@ -2308,6 +2316,9 @@ void CombatCommander::updateDefenseSquads()
 	}
 }
 
+/**
+	This method is not used.
+*/
 Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type)
 {
     Unit closestDefender;
@@ -2367,7 +2378,7 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
     return workerDefender;
 }
 
-bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const
+bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const
 {
 	if (!worker.isValid())
 		return false;
@@ -2378,11 +2389,12 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	if (!m_squadData.canAssignUnitToSquad(worker, defenseSquad))
 		return false;
 	const auto workerHeight = m_bot.Map().terrainHeight(worker.getPosition());
+	const auto workerBaseLocation = m_bot.Bases().getBaseContainingPosition(worker.getPosition());
 	bool groundEnemyUnitOnSameHeight = false;
 	bool enemyBuildingOnSameHeight = false;
 	for (const auto & enemyUnit : enemyUnits)
 	{
-		if (!enemyUnit.isFlying() && workerHeight == m_bot.Map().terrainHeight(enemyUnit.getPosition()))
+		if (!enemyUnit.isFlying() && (workerHeight == m_bot.Map().terrainHeight(enemyUnit.getPosition()) || workerBaseLocation == m_bot.Bases().getBaseContainingPosition(enemyUnit.getPosition())))
 		{
 			groundEnemyUnitOnSameHeight = true;
 			if (enemyUnit.getType().isBuilding())
@@ -2397,9 +2409,11 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	// do not check distances if it is to protect against a scout
 	if (defenseSquad.getName() == "ScoutDefense")
 		return true;
-	// do not check min distance if worker rushed
+	// if worker rushed, we want to defend no mather the distance, but we don't want to defend a base other than our main nor with more than the enemy workers + 1
 	if (m_bot.Strategy().isWorkerRushed())
-		return true;
+	{
+		return pos == m_bot.GetStartLocation() && defenseSquad.getUnits().size() <= enemyUnits.size();
+	}
 	// worker can fight buildings somewhat close to the base
 	/*const auto isBuilding = closestEnemy.getType().isBuilding();
 	const auto enemyDistanceToBase = Util::DistSq(closestEnemy, pos);
@@ -2686,6 +2700,7 @@ CCPosition CombatCommander::GetNextBaseLocationToScout()
 			}
 			if (baseLocation->isOccupiedByPlayer(Players::Enemy) ||
 				baseLocation->isOccupiedByPlayer(Players::Self) ||
+				m_bot.Map().getGroundDistance(baseLocation->getDepotPosition(), m_bot.GetStartLocation()) < 0 ||	// Cannot reach base by ground
 				Util::DistSq(scoutUnit, baseLocation->getPosition()) < 5.f * 5.f)
 			{
 				m_visitedBaseLocations.push_back(baseLocation);
@@ -2899,6 +2914,15 @@ void CombatCommander::ExecuteActions()
 		
 		if (!skip)
 		{
+			if (m_bot.Config().LogArmyActions)
+			{
+				std::stringstream ss;
+				ss << sc2::UnitTypeToName(rangedUnit->unit_type) << " has action " << MicroActionTypeAccronyms[action.microActionType];
+				if (action.microActionType == MicroActionType::AttackUnit)
+					ss << "(" << sc2::UnitTypeToName(action.target->unit_type) << ")";
+				ss << (action.prioritized ? "!" : "") << " with description: " << action.description;
+				Util::Log(__FUNCTION__, ss.str(), m_bot);
+			}
 			action.executed = true;
 			action.executionFrame = m_bot.GetGameLoop();
 			if (action.duration > 0)

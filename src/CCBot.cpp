@@ -832,6 +832,7 @@ void CCBot::setUnits()
 	m_knownEnemyUnits.clear();
 	m_enemyBuildingsUnderConstruction.clear();
 	m_enemyUnitsPerType.clear();
+	m_strategy.setEnemyHasWorkerHiddingInOurMain(false);
 	for(auto& enemyUnitPair : m_enemyUnits)
 	{
 		bool ignoreEnemyUnit = false;
@@ -852,7 +853,13 @@ void CCBot::setUnits()
 		//TODO when the unit is cloaked or burrowed, check if the tile is inside detection range, in that case, we should ignore the unit because it is not there anymore
 		if (GetGameLoop() != enemyUnitPtr->last_seen_game_loop && Map().isVisible(enemyUnit.getPosition()) && !isBurrowedWidowMine)
 		{
-			ignoreEnemyUnit = true;
+			// If the enemy unit that is not where we last saw it is a worker in our main base, flag it
+			if (enemyUnit.getType().isWorker() && m_bases.getPlayerStartingBaseLocation(Players::Self)->containsPosition(enemyUnit.getPosition()))
+			{
+				m_strategy.setEnemyHasWorkerHiddingInOurMain(true);
+			}
+			else
+				ignoreEnemyUnit = true;
 		}
 		// If mobile unit is not seen for too long (around 7s, or 67s for burrowed widow mines and 45s for sieged tanks), ignore it
 		else if (!enemyUnit.getType().isBuilding()
@@ -1706,6 +1713,7 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(54,104), player2, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(113, 104), player2, 3);*/
 
+	//Debug()->DebugGiveAllTech();
 	//const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false));
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, enemyLocation, player1, 3);//Invisible/burrow
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, nat, player1, 1);//Creep
@@ -1713,9 +1721,10 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, nat + towardsCenter * 7, player1, 1);//Creep tumor
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, nat, player1, 3);//Combat unit
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);*/
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED, nat, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED, nat, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, m_startLocation, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_DRONE, nat, player1, 12);
 	
 	// Test Fast Macro
 	//Debug()->DebugGiveAllResources();
@@ -1723,6 +1732,12 @@ void CCBot::IssueGameStartCheats()
 
 	//TEMP Used to try to reproduce the issue with actions that happens late game
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation, player1, 1000);
+
+	// Test to reproduce bug where Marauders are hesitate to attack Cannons on top of ramp
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenterY * 15, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterY * 17, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SENTRY, enemyLocation - towardsCenterY * 15, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenterY * 30, player2, 4);*/
 }
 
 void CCBot::IssueCheats()
@@ -2098,13 +2113,9 @@ bool CCBot::IsParasited(const sc2::Unit * unit) const
 	return Util::Contains(unit->tag, m_parasitedUnits);
 }
 
-const CCPosition CCBot::GetStartLocation() const
+CCPosition CCBot::GetStartLocation() const
 {
-#ifdef SC2API
     return m_startLocation;
-#else
-    return BWAPI::Position(BWAPI::Broodwar->self()->getStartLocation());
-#endif
 }
 
 const CCTilePosition CCBot::GetBuildingArea(MetaType buildingType)
@@ -2252,7 +2263,7 @@ void CCBot::drawProfilingInfo()
 			}
 		}
 
-		if (currentStepTime >= 50000 && queue.size() > 0 && queue[0].first > 0)	// 50ms
+		if (Config().LogSlowFrames && currentStepTime >= 50000 && queue.size() > 0 && queue[0].first > 0)	// 50ms
 		{
 			Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * queue[0].first) + "ms for " + std::to_string(queue[0].second) + " calls", *this);
 		}

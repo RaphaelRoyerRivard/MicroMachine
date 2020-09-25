@@ -258,7 +258,7 @@ void ProductionManager::manageBuildOrderQueue()
 					(currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().isProxyFactoryStartingStrategy() && factoryCount == 0)))
 				{
 					const auto proxyLocation = Util::GetPosition(m_bot.Buildings().getProxyLocation());
-					Unit producer = getProducer(currentItem.type, false, proxyLocation, true);
+					Unit producer = getProducer(currentItem.type, false, proxyLocation, true, true);
 					Building b(currentItem.type.getUnitType(), proxyLocation);
 					b.finalPosition = proxyLocation;
 					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
@@ -1780,7 +1780,7 @@ bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
 	return false;
 }
 
-Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, CCPosition closestTo, bool allowMovingWorker) const
+Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, CCPosition closestTo, bool allowMovingWorker, bool useProxyWorker) const
 {
 	// get all the types of units that cna build this type
 	auto & producerTypes = m_bot.Data(type).whatBuilds;
@@ -1910,10 +1910,15 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 					{
 						continue;
 					}
-					const auto & orders = unit.getUnitPtr()->orders;
+					if (useProxyWorker)
+					{
+						if (!m_bot.Workers().getWorkerData().isProxyWorker(unit))
+							continue;
+					}
 					bool isMoving = false;
 					if (!allowMovingWorker)
 					{
+						const auto & orders = unit.getUnitPtr()->orders;
 						for (const auto & order : orders)
 						{
 							if (order.ability_id == sc2::ABILITY_ID::MOVE)
