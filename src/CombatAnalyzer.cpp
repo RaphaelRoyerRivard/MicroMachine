@@ -430,7 +430,7 @@ void CombatAnalyzer::UpdateRatio()
 		std::pair<sc2::UNIT_TYPEID, std::string>(sc2::UNIT_TYPEID::TERRAN_HELLION, "Hellion")
 	};
 
-	for (auto type : checkedTypes)
+	for (auto & type : checkedTypes)
 	{
 		if (totalDamage.find(type.first) != totalDamage.end())
 		{
@@ -820,7 +820,7 @@ void CombatAnalyzer::detectUpgrades(Unit & unit, UnitState & state)
 	
 	const sc2::Weapon::TargetType expectedWeaponType = unit.isFlying() ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
 	auto threats = Util::getThreats(unit.getUnitPtr(), m_bot.GetKnownEnemyUnits(), m_bot);
-	for (auto threat : threats)
+	for (auto & threat : threats)
 	{
 		//TODO validate unit is looking towards the unit
 

@@ -94,7 +94,7 @@ void BuildingManager::lowPriorityChecks()
 
 		auto position = building.finalPosition;
 		auto tag = (building.builderUnit.isValid() ? building.builderUnit.getTag() : 0);
-		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building.type, 0, true, false, false))
+		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building.type, true, false, false))
 		{
 			//Detect if the building was created this frame and we just don't know about it yet.
 			bool isAlreadyBuilt = false;
@@ -415,12 +415,12 @@ void BuildingManager::PlaceWallBuildings(std::vector<CCTilePosition> tilesToBloc
 		{
 			//offset the barrack in the opposite direction of the center, so we can build it
 			m_nextBuildingPosition[MetaTypeEnum::Barracks.getUnitType()].push_back(position);
-			m_buildingPlacer.reserveTiles(position.x, position.y, 3, 3);
+			m_buildingPlacer.reserveTiles(MetaTypeEnum::Barracks.getUnitType(), position);
 		}
 		else
 		{
 			m_nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()].push_back(position);
-			m_buildingPlacer.reserveTiles(position.x, position.y, 2, 2);
+			m_buildingPlacer.reserveTiles(MetaTypeEnum::SupplyDepot.getUnitType(), position);
 		}
 		m_wallBuildingPosition.push_back(position);
 
@@ -436,14 +436,14 @@ bool BuildingManager::ValidateSupplyDepotPosition(std::list<CCTilePosition> buil
 	possibleTiles.push_back(CCTilePosition(possibleTile.x, possibleTile.y + 1));
 	possibleTiles.push_back(CCTilePosition(possibleTile.x + 1, possibleTile.y + 1));
 
-	for (auto tile : buildingTiles)
+	for (auto & tile : buildingTiles)
 	{
 		std::list<CCTilePosition> tiles;
 		tiles.push_back(CCTilePosition(tile.x, tile.y));
 		tiles.push_back(CCTilePosition(tile.x + 1, tile.y));
 		tiles.push_back(CCTilePosition(tile.x, tile.y + 1));
 		tiles.push_back(CCTilePosition(tile.x + 1, tile.y + 1));
-		for (auto t : tiles)
+		for (auto & t : tiles)
 		{
 			if (std::find(possibleTiles.begin(), possibleTiles.end(), t) != possibleTiles.end())
 			{
@@ -732,23 +732,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		if (!b.underConstruction)
 		{
 			// reserve this building's space
-			m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y, b.type.tileWidth(), b.type.tileHeight());
-
-			if (m_bot.GetSelfRace() == CCRace::Terran)
-			{
-				sc2::UNIT_TYPEID type = b.type.getAPIUnitType();
-				switch (type)
-				{
-					//Reserve tiles below the building to ensure units don't get stuck and reserve tiles for addon
-					case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
-					case sc2::UNIT_TYPEID::TERRAN_FACTORY:
-					case sc2::UNIT_TYPEID::TERRAN_STARPORT:
-					{
-						m_buildingPlacer.reserveTiles((int)b.finalPosition.x, (int)b.finalPosition.y - 1, 3, 1);//Reserve below
-						m_buildingPlacer.reserveTiles((int)b.finalPosition.x + 3, (int)b.finalPosition.y, 2, 2);//Reserve addon
-					}
-				}
-			}
+			m_buildingPlacer.reserveTiles(b.type, b.finalPosition);
 		}
 
 		b.status = BuildingStatus::Assigned;
@@ -897,7 +881,7 @@ void BuildingManager::constructAssignedBuildings()
 								{
 									// The building cannot move just 2 tiles to the left, so we need to find it a suitable spot
 									const auto tempBuilding = Building(b.builderUnit.getType(), b.builderUnit.getPosition());
-									newBuildingPosition = Util::GetPosition(getBuildingPlacer().getBuildLocationNear(tempBuilding, 0, false, true, true));
+									newBuildingPosition = Util::GetPosition(getBuildingPlacer().getBuildLocationNear(tempBuilding, false, true, true));
 								}
 								else
 								{
@@ -917,12 +901,11 @@ void BuildingManager::constructAssignedBuildings()
 								m_liftedBuildingPositions[b.builderUnit.getTag()] = newBuildingPosition;
 
 								// Free the reserved tiles under the building and for the addon
-								getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y - 1, 3, 1);
-								getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x + 3, b.builderUnit.getPosition().y, 2, 2);
+								getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y - 1, 3, 1, false);
+								getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x + 3, b.builderUnit.getPosition().y, 2, 2, false);
 
-								// Reserve the files for the new location
-								getBuildingPlacer().reserveTiles(newBuildingPosition.x, newBuildingPosition.y - 1, 3, 4);
-								getBuildingPlacer().reserveTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2);
+								// Reserve the tiles for the new location
+								getBuildingPlacer().reserveTiles(b.type, b.finalPosition);
 
 								// Lift the building (the landing code is approx. 50 lines above)s
 								Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
@@ -935,8 +918,8 @@ void BuildingManager::constructAssignedBuildings()
 								if (it != m_liftedBuildingPositions.end() && !Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes))
 								{
 									m_liftedBuildingPositions.erase(it);
-									getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y, 3, 3);
-									getBuildingPlacer().freeTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2);
+									getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y, 3, 3, true);
+									getBuildingPlacer().freeTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2, true);
 								}
 
 								// Spam the build ability in case there is a unit blocking it
@@ -1056,7 +1039,7 @@ void BuildingManager::checkForStartedConstruction()
 				else
 				{
 					// free this space
-					m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight());
+					m_buildingPlacer.freeTiles((int)b.finalPosition.x + addonOffset, (int)b.finalPosition.y, type.tileWidth(), type.tileHeight(), true);
 				}
 
 				//If building is part of the wall
@@ -1360,7 +1343,7 @@ void BuildingManager::drawStartingRamp()
 		return;
 	}
 
-	for (auto tile : m_rampTiles)
+	for (auto & tile : m_rampTiles)
 	{
 		m_bot.Map().drawTile(tile.x, tile.y, CCColor(255, 255, 0));
 	}
@@ -1565,7 +1548,7 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool che
 		// get a position within our region
 		// TODO: put back in special pylon / cannon spacing
 		m_bot.StartProfiling("0.8.3.1.3 getBuildLocationNear");
-		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, m_bot.Config().BuildingSpacing, false, checkInfluenceMap, true);
+		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, false, checkInfluenceMap, true);
 		m_bot.StopProfiling("0.8.3.1.3 getBuildLocationNear");
 	}
 	return buildingLocation;
@@ -1717,7 +1700,7 @@ Building BuildingManager::CancelBuilding(Building b, bool removeFromBuildingsLis
 		auto position = b.finalPosition;
 		if (position != CCPosition())
 		{
-			m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight());
+			m_buildingPlacer.freeTiles(position.x, position.y, b.type.tileWidth(), b.type.tileHeight(), false);
 
 			//Free opposite of reserved tiles in assignWorkersToUnassignedBuildings
 			switch ((sc2::UNIT_TYPEID)b.type.getAPIUnitType())
@@ -1727,8 +1710,8 @@ Building BuildingManager::CancelBuilding(Building b, bool removeFromBuildingsLis
 				case sc2::UNIT_TYPEID::TERRAN_FACTORY:
 				case sc2::UNIT_TYPEID::TERRAN_STARPORT:
 				{
-					m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1);//Free below
-					m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2);//Free addon
+					m_buildingPlacer.freeTiles(position.x, position.y - 1, 3, 1, false);//Free below
+					m_buildingPlacer.freeTiles(position.x + 3, position.y, 2, 2, false);//Free addon
 				}
 			}
 		}
@@ -2153,7 +2136,7 @@ void BuildingManager::RunProxyLogic()
 			if (!flyingBarracks.empty())
 			{
 				m_proxyBarracksPosition = flyingBarracks[0].getPosition();
-				m_buildingPlacer.reserveTiles(m_proxyBarracksPosition.x, m_proxyBarracksPosition.y, 3, 3);
+				m_buildingPlacer.reserveTiles(MetaTypeEnum::Barracks.getUnitType(), m_proxyBarracksPosition);
 				return;
 			}
 		}
@@ -2164,7 +2147,7 @@ void BuildingManager::RunProxyLogic()
 			// Called every frame so the barracks can choose a new location if it gets blocked
 			const auto barracksFlyingType = UnitType(sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, m_bot);
 			const auto barracksBuilding = Building(barracksFlyingType, m_proxyBarracksPosition);
-			const auto landingPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(barracksBuilding, 0, false, true, true));
+			const auto landingPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(barracksBuilding, false, true, true));
 			Micro::SmartAbility(flyingBarracks[0].getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
 		}
 

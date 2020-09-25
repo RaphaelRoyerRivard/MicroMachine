@@ -1119,7 +1119,7 @@ const sc2::Unit* Util::CalcClosestUnit(const sc2::Unit* unit, const sc2::Units &
 {
 	float minDistance = 0;
 	const sc2::Unit* closestUnit = nullptr;
-	for (auto target : targets)
+	for (auto & target : targets)
 	{
 		const float distance = Dist(target->pos, unit->pos);
 		if (minDistance == 0 || distance < minDistance)
@@ -1997,7 +1997,7 @@ void Util::getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::U
 	const auto & enemyUnitsBeingRepaired = bot.GetEnemyUnitsBeingRepaired();
 
 	// for each possible threat
-	for (auto targetUnit : targets)
+	for (auto & targetUnit : targets)
 	{
 		BOT_ASSERT(targetUnit, "null target unit in getThreats");//can happen if a unit is not defined in an enum (sc2_typeenums.h)
 		if (targetUnit->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL)

@@ -630,7 +630,7 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 		auto tile = base->getDepotTilePosition();
 		
 		//Check if buildable (creep check), using CC for building size, should work for all races.
-		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, MetaTypeEnum::CommandCenter.getUnitType(), 0, true, false, true))
+		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, MetaTypeEnum::CommandCenter.getUnitType(), true, false, true))
 		{
 			continue;
 		}

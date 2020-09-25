@@ -6,6 +6,9 @@
 //#define NO_BUILDING
 //#define NO_MICRO
 
+//Debug only draw only
+//#define COMPUTE_WALKABLE_TILES
+
 #ifdef PUBLIC_RELEASE
 #undef NO_UNITS
 #undef NO_PRODUCTION
@@ -37,6 +40,12 @@ class CCBot : public sc2::Agent
 		int count;
 		std::chrono::steady_clock::time_point start;
 	};
+
+	//TEMP [deleteAllTheseTagsAtOnce] all 4 variables below are just for debug, delete them when the action bug test is deleted
+	int actionFrame = 0;
+	int actionTotal = 0;
+	CCTilePosition target;
+	CCTilePosition prevTarget;
 
 	uint32_t				m_gameLoop = 0;
 	uint32_t				m_previousGameLoop;

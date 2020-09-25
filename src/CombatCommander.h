@@ -234,6 +234,7 @@ public:
 	std::set<sc2::Tag> & getNewCyclones() { return m_newCyclones; }
 	std::set<sc2::Tag> & getToggledCyclones() { return m_toggledCyclones; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
+	void setBlockedTile(int x, int y);
 	const std::map<const sc2::Unit *, FlyingHelperMission> & getCycloneFlyingHelpers() const { return m_cycloneFlyingHelpers; }
 	const std::map<const sc2::Unit *, const sc2::Unit *> & getCyclonesWithHelper() const { return m_cyclonesWithHelper; }
 	const std::list<CCPosition> & getAllyScans() const { return m_allyScans; }
