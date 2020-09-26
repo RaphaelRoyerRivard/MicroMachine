@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.11.0",
+        "BotVersion"                : "1.11.7",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -25,7 +25,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "SimulacrumLE.SC2Map",
+        "MapFile"                   : "NightshadeLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50,
@@ -138,7 +138,7 @@
 		
         "DrawGameInfo"              : false, 
         "DrawProductionInfo"        : true,
-        "DrawBaseLocationInfo"      : false,
+        "DrawBaseLocationInfo"      : true,
         "DrawBaseTiles"             : false,
         "DrawStartingRamp"		    : false,
         "DrawWall"		   			: false,
@@ -153,7 +153,7 @@
         "DrawSquadInfo"             : true,
         "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
-        "DrawReservedBuildingTiles" : true,
+        "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
         "DrawHarassInfo"            : true,
         "DrawMemoryInfo"            : false,
@@ -168,7 +168,9 @@
         "DrawCombatInformation"     : false,
         "DrawPathfindingTiles"      : true,
         "DrawBuildingBase"          : false,
-        "DrawCurrentStartingStrategy"   : true
+        "DrawCurrentStartingStrategy"   : true,
+        "LogArmyActions"            : false,
+        "LogSlowFrames"             : false
     },
     
     "Modules" :

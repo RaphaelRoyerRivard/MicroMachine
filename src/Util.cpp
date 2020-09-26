@@ -234,7 +234,7 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 		return releventResult.m_result;
 
 	FailureReason failureReason;
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, 0, false, true, failureReason, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, 0, false, false, true, failureReason, bot);
 	const bool success = !path.empty() || failureReason == TIMEOUT;
 	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
 	if(foundIndex >= 0)
@@ -256,19 +256,26 @@ CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CC
 		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
 		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot) || target->last_seen_game_loop < bot.GetCurrentFrame();
 	}
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, considerOnlyEffects, getCloser, false, maxInfluence, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, considerOnlyEffects, getCloser, false, maxInfluence, false, false, bot);
 	return GetCommandPositionFromPath(path, unit, true, bot);
+}
+
+CCPosition Util::PathFinding::FindEngagePosition(const sc2::Unit * unit, const sc2::Unit* target, float maxRange, CCBot & bot)
+{
+	bool checkVisibility = target->last_seen_game_loop != bot.GetCurrentFrame();
+	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, CCPosition(), maxRange, false, false, false, true, 0, false, checkVisibility, bot);
+	return path.empty() ? CCPosition() : path.back();
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, bool shouldHeal, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, bot.GetStartLocation(), 0.f, false, false, shouldHeal, false, 0, true, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, bot.GetStartLocation(), 0.f, false, false, shouldHeal, false, 0, true, false, bot);
 	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, bool moveFarther, CCBot & bot)
 {
-	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, bot.GetStartLocation(), range, false, false, true, false, 0, true, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, target->pos, bot.GetStartLocation(), range, false, false, true, false, 0, true, false, bot);
 	return GetCommandPositionFromPath(path, unit, moveFarther, bot);
 }
 
@@ -279,7 +286,7 @@ CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit
  */
 float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot)
 {
-	const auto path = FindOptimalPath(unit, goal, CCPosition(), 2.f, !ignoreInfluence, false, false, ignoreInfluence, 0, false, bot);
+	const auto path = FindOptimalPath(unit, goal, CCPosition(), 3.f, !ignoreInfluence, false, false, ignoreInfluence, 0, false, false, bot);
 	if (path.empty())
 	{
 		return -1.f;
@@ -300,7 +307,7 @@ float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosit
 
 CCPosition Util::PathFinding::FindOptimalPathPosition(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot)
 {
-	auto path = FindOptimalPath(unit, goal, CCPosition(), maxRange, exitOnInfluence, considerOnlyEffects, getCloser, false, 0, false, bot);
+	auto path = FindOptimalPath(unit, goal, CCPosition(), maxRange, exitOnInfluence, considerOnlyEffects, getCloser, false, 0, false, false, bot);
 	if(path.empty())
 	{
 		return {};
@@ -311,23 +318,23 @@ CCPosition Util::PathFinding::FindOptimalPathPosition(const sc2::Unit * unit, CC
 CCPosition Util::PathFinding::FindOptimalPathToDodgeEffectAwayFromGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot)
 {
 	goal = unit->pos + (unit->pos - goal);
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), range, false, true, false, false, 0, false, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), range, false, true, false, false, 0, false, false, bot);
 	return GetCommandPositionFromPath(path, unit, true, bot);
 }
 
 std::list<CCPosition> Util::PathFinding::FindOptimalPathWithoutLimit(const sc2::Unit * unit, CCPosition goal, CCBot & bot)
 {
 	FailureReason failureReason;
-	return FindOptimalPath(unit, goal, CCPosition(), 5.f, true, false, true, true, 0, false, false, failureReason, bot);
+	return FindOptimalPath(unit, goal, CCPosition(), 5.f, true, false, true, true, 0, false, false, false, failureReason, bot);
 }
 
-std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, float maxInfluence, bool flee, CCBot & bot)
+std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, float maxInfluence, bool flee, bool checkVisibility, CCBot & bot)
 {
 	FailureReason failureReason;
-	return FindOptimalPath(unit, goal, secondaryGoal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, maxInfluence, flee, true, failureReason, bot);
+	return FindOptimalPath(unit, goal, secondaryGoal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, maxInfluence, flee, checkVisibility, true, failureReason, bot);
 }
 
-std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, float maxInfluence, bool flee, bool limitSearch, FailureReason & failureReason, CCBot & bot)
+std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, float maxInfluence, bool flee, bool checkVisibility, bool limitSearch, FailureReason & failureReason, CCBot & bot)
 {
 	std::list<CCPosition> path;
 	std::set<IMNode*> opened;
@@ -339,6 +346,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	IMNode* closestNode = nullptr;					//only used when getCloser is true
 	IMNode* exitNode = nullptr;						//only used when getCloser and maxInfluence are true
 	const auto startingInfluence = GetTotalInfluenceOnTile(GetTilePosition(unit->pos), unit->is_flying, bot);
+	const auto enemyTerrainHeight = TerrainHeight(goal);
 	const CCTilePosition startPosition = GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = GetTilePosition(goal);
 	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT ? CCTilePosition() : GetTilePosition(secondaryGoal);
@@ -389,6 +397,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				shouldTriggerExit = (ignoreInfluence ||
 					((considerOnlyEffects || !HasCombatInfluenceOnTile(currentNode, unit, bot) || (maxInfluence > 0 && currentNode->influence <= maxInfluence)) &&
 					!HasEffectInfluenceOnTile(currentNode, unit, bot))) &&
+					(!checkVisibility || TerrainHeight(currentNode->position) >= enemyTerrainHeight - 1) &&	// if we need to check for visibility, we make sure the final position is almost at the same height as the enemy (we can see up the ramp from the middle of it)
 					Dist(GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f), goal) < maxRange;
 			}
 		}

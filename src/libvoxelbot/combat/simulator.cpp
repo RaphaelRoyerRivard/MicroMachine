@@ -181,6 +181,7 @@ float CombatPredictor::targetScore(const CombatUnit& unit, bool hasGround, bool 
     else if (airDPS == 0 && groundDPS == 0)
         score *= 0.01f;
 
+	score *= 1 + 1 - (unit.health + unit.shield) / (unit.health_max + unit.shield_max);
     return score;
 }
 
@@ -294,11 +295,14 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
 
     // TODO: Might always initialize to seed 0, check this
     auto rng = std::default_random_engine{};
-    shuffle(begin(units1), end(units1), rng);
-    shuffle(begin(units2), end(units2), rng);
+    // shuffle(begin(units1), end(units1), rng);
+    // shuffle(begin(units2), end(units2), rng);
 
     // sortByValueDescending<CombatUnit*>(units1, [=] (auto u) { return targetScore(*u, true, true); });
     // sortByValueDescending<CombatUnit*>(units2, [=] (auto u) { return targetScore(*u, true, true); });
+
+	std::sort(units1.begin(), units1.end(), [=](auto u1, auto u2) { return targetScore(*u1, true, true) > targetScore(*u2, true, true); });
+	std::sort(units2.begin(), units2.end(), [=](auto u1, auto u2) { return targetScore(*u1, true, true) > targetScore(*u2, true, true); });
 
     array<float, 2> averageHealthByTime = {{ 0, 0 }};
     array<float, 2> averageHealthByTimeWeight = {{ 0, 0 }};
