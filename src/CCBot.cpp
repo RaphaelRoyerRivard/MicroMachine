@@ -1026,7 +1026,7 @@ void CCBot::clearDeadUnits()
 		}
 	}
 	// Remove dead ally units
-	for (auto tag : unitsToRemove)
+	for (auto & tag : unitsToRemove)
 	{
 		m_allyUnits.erase(tag);
 	}
@@ -1051,7 +1051,7 @@ void CCBot::clearDeadUnits()
 		}
 	}
 	// Remove dead enemy units
-	for (auto tag : unitsToRemove)
+	for (auto & tag : unitsToRemove)
 	{
 		m_enemyUnits.erase(tag);
 	}
@@ -1067,7 +1067,7 @@ void CCBot::clearDeadUnits()
 			unitsToRemove.push_back(unit.getUnitPtr()->tag);
 	}
 	// Remove dead neutral units
-	for (auto tag : unitsToRemove)
+	for (auto & tag : unitsToRemove)
 	{
 		m_neutralUnits.erase(tag);
 	}
@@ -1111,7 +1111,7 @@ void CCBot::clearDuplicateUnits()
 		}
 	}
 	// Remove duplicate enemy units
-	for (auto tag : unitsToRemove)
+	for (auto & tag : unitsToRemove)
 	{
 		m_enemyUnits.erase(tag);
 	}
@@ -1150,7 +1150,7 @@ void CCBot::clearDuplicateUnits()
 		}
 	}
 	// Remove duplicate neutral units
-	for (auto tag : unitsToRemove)
+	for (auto & tag : unitsToRemove)
 	{
 		m_neutralUnits.erase(tag);
 	}
@@ -1725,6 +1725,13 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_DRONE, nat, player1, 12);
+	
+	// Test Fast Macro
+	//Debug()->DebugGiveAllResources();
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, m_startLocation, player1, 10);
+
+	//TEMP Used to try to reproduce the issue with actions that happens late game
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation, player1, 1000);
 
 	// Test to reproduce bug where Marauders are hesitate to attack Cannons on top of ramp
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenterY * 15, player1, 1);
@@ -1735,6 +1742,43 @@ void CCBot::IssueGameStartCheats()
 
 void CCBot::IssueCheats()
 {
+	//TEMP [deleteAllTheseTagsAtOnce] Used to try to reproduce the issue with actions that happens late game
+	/*if (target.x != 0 && target.y != 0)
+	{
+		int successCount = 0;
+		int failCount = 0;
+		for (auto archon : this->GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_OBSERVER))
+		{
+			if (archon.getUnitPtr()->orders.size() > 0 && (archon.getUnitPtr()->orders[0].target_pos.x != target.x || archon.getUnitPtr()->orders[0].target_pos.y != target.y))
+			{
+				auto pos = archon.getUnitPtr()->orders[0].target_pos;
+				auto order = archon.getUnitPtr()->orders[0].ability_id;
+				if (order != sc2::ABILITY_ID::MOVE)
+				{
+					auto a = 1;
+				}
+				failCount++;
+			}
+		}
+		if (failCount > 0)
+		{
+			auto a = 1;
+		}
+	}
+
+	//between 20 and 100
+	prevTarget = target;
+	int x = 20 + (std::rand() % (100 - 20 + 1));
+	int y = 20 + (std::rand() % (100 - 20 + 1));
+	target.x = x;
+	target.y = y;
+	actionFrame++;
+	for (auto archon : this->GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_OBSERVER))
+	{
+		archon.move(target);
+		actionTotal++;
+	}*/
+
 	//Kill all selected units
 	if (keyDelete)
 	{

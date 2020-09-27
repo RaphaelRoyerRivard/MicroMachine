@@ -655,7 +655,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 
 	const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
-	const float productionScore = getProductionScore();
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
 	const auto totalBaseCount = m_bot.Bases().getBaseCount(Players::Self, false);
@@ -2052,78 +2051,6 @@ int ProductionManager::getProductionBuildingsAddonsCount() const
 		}
 	}
 	return 0;
-}
-
-float ProductionManager::getProductionScore() const
-{
-	float score = 0;
-	switch (m_bot.GetSelfRace())
-	{
-		case CCRace::Terran:
-		{
-			score += m_bot.Buildings().getBuildingCountOfType({
-				sc2::UNIT_TYPEID::TERRAN_BARRACKS }) * 0.25f;
-			score += m_bot.Buildings().getBuildingCountOfType({
-				sc2::UNIT_TYPEID::TERRAN_FACTORY }) * 0.25f;
-			score += m_bot.Buildings().getBuildingCountOfType({
-				sc2::UNIT_TYPEID::TERRAN_STARPORT }) * 0.5f;
-
-			std::vector<sc2::UNIT_TYPEID> barracksAddonTypes = {
-				sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB };
-			score += m_bot.Buildings().getBuildingCountOfType(barracksAddonTypes) * 0.25f;
-			std::vector<sc2::UNIT_TYPEID> factoryAddonTypes = {
-				sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB };
-			score += m_bot.Buildings().getBuildingCountOfType(factoryAddonTypes) * 0.25f;
-			std::vector<sc2::UNIT_TYPEID> starportAddonTypes = {
-				sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB };
-			score += m_bot.Buildings().getBuildingCountOfType(starportAddonTypes) * 0.5f;
-			break;
-		}
-		case CCRace::Protoss:
-		{
-			return 0;
-		}
-		case CCRace::Zerg:
-		{
-			return 0;
-		}
-	}
-	return score;
-}
-
-float ProductionManager::getProductionScoreInQueue()
-{
-	float score = 0;
-	
-	switch (m_bot.GetSelfRace())
-	{
-		case CCRace::Terran:
-		{
-			score += m_queue.contains(MetaTypeEnum::Barracks) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::Factory) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::Starport) ? 0.25f : 0;
-
-			score += m_queue.contains(MetaTypeEnum::BarracksReactor) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::BarracksTechLab) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::FactoryReactor) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::FactoryTechLab) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::StarportReactor) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::StarportTechLab) ? 0.25f : 0;
-			break;
-		}
-		case CCRace::Protoss:
-		{
-			return 0;
-		}
-		case CCRace::Zerg:
-		{
-			return 0;
-		}
-	}
-	return score;
 }
 
 std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)

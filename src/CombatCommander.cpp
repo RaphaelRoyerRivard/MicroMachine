@@ -189,6 +189,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	m_bot.StopProfiling("0.10.4.5    updateIdlePosition");
 
 	m_bot.StartProfiling("0.10.4.2    updateSquads");
+#ifndef NO_MICRO
     if (isSquadUpdateFrame())
     {
 		m_bot.StartProfiling("0.10.4.2.a    updateIdleSquad");
@@ -222,6 +223,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 		updateAttackSquads();
 		m_bot.StopProfiling("0.10.4.2.4    updateAttackSquads");
     }
+#endif // !NO_MICRO
 	drawCombatInformation();
 	m_bot.StopProfiling("0.10.4.2    updateSquads");
 
@@ -580,6 +582,14 @@ void CombatCommander::updateBlockedTilesWithUnit(const Unit& unit)
 			m_blockedTiles[x][y] = true;
 		}
 	}
+}
+
+//Set the tile has blocked, HOWEVER it will be recalculated later on. Setting tiles as blocked right away is useful to
+//know these tiles are blocked before the blocked tiles are recalculated.
+//For example while building, it avoid building on top or too close to a building that just started.
+void CombatCommander::setBlockedTile(int x, int y)
+{
+	m_blockedTiles[x][y] = true;
 }
 
 void CombatCommander::updateBlockedTilesWithNeutral()

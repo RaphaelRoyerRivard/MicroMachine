@@ -12,8 +12,10 @@ BuildingPlacer::BuildingPlacer(CCBot & bot)
 
 void BuildingPlacer::onStart()
 {
-    m_reserveMap = std::vector< std::vector<bool> >(m_bot.Map().totalWidth(), std::vector<bool>(m_bot.Map().totalHeight(), false));
-	//[STUCK]TODO create other map here
+    m_reserveBuildingMap = std::vector< std::vector<bool> >(m_bot.Map().totalWidth(), std::vector<bool>(m_bot.Map().totalHeight(), false));
+#ifdef COMPUTE_WALKABLE_TILES
+	m_reserveWalkableMap = std::vector< std::vector<bool> >(m_bot.Map().totalWidth(), std::vector<bool>(m_bot.Map().totalHeight(), false));
+#endif
 
 	auto bases = m_bot.Bases().getBaseLocations();
 	for (auto baseLocation : bases)
@@ -38,8 +40,7 @@ void BuildingPlacer::onStart()
 
 bool BuildingPlacer::canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const
 {
-	UnitType depot = Util::GetResourceDepotType();
-	if (canBuildHere(bx, by, depot, 0, true, false, false))//Do not need to check if interesting other buildings, since it is called at the start of the game only.
+	if (canBuildHere(bx, by, Util::GetResourceDepotType(), true, false, false))//Do not need to check if interesting other buildings, since it is called at the start of the game only.
 	{
 		// check the reserve map
 		for (int x = bx - 2; x <= bx + 2; x++)
@@ -59,7 +60,7 @@ bool BuildingPlacer::canBuildDepotHere(int bx, int by, std::vector<Unit> mineral
 
 bool BuildingPlacer::canBuildBunkerHere(int bx, int by, int depotX, int depotY, std::vector<CCPosition> geysersPos) const
 {
-	if (canBuildHere(bx, by, MetaTypeEnum::Bunker.getUnitType(), 0, true, false, false))//Do not need to check if interesting other buildings, since it is called at the start of the game only.
+	if (canBuildHere(bx, by, MetaTypeEnum::Bunker.getUnitType(), true, false, false))//Do not need to check if interesting other buildings, since it is called at the start of the game only.
 	{
 		// check intersecting depot
 		for (int x = bx - 1; x <= bx + 1; x++)
@@ -133,39 +134,50 @@ bool BuildingPlacer::canBuildBunkerHere(int bx, int by, int depotX, int depotY, 
 }
 
 //returns true if we can build this type of unit here with the specified amount of space.
-bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int buildDistAround, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
+bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
 {
 	// height and width of the building
 	int width = type.tileWidth();
 	int height = type.tileHeight();
 
-	// define the rectangle of the building spot
-	int x = bx - buildDistAround;
-	int y = by - buildDistAround;
-
-	//If its not safe. We only check one tile since its very likely to be the save result for all tiles. This avoid a little bit of lag.
+	//If its not safe. We only check one tile since its very likely to be the same result for all tiles. This avoid a little bit of lag.
 	if (checkInfluenceMap && Util::PathFinding::HasCombatInfluenceOnTile(CCTilePosition(bx, by), false, m_bot))
 	{
-		//TODO don't think this can happen, there is a check earlier
 		return false;
 	}
 
-	auto tiles = getTilesForBuildLocation(x, y, type, width + buildDistAround * 2, height + buildDistAround * 2, includeExtraTiles);//Include padding (buildDist) so we test all the tiles
-	auto buildingTerrainHeight = -1;
 	if (!type.isRefinery())
 	{
-		for (auto & tile : tiles)
+		auto buildingTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, 0);
+		auto walkableTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, 1);
+		for (auto & tile : walkableTiles)
 		{
-			//Validate reserved tiles and buildable
-			if (!buildable(type, tile.x, tile.y, ignoreReserved))
+			if (!m_bot.Map().isValidTile(tile))//prevent tiles below 0 or above the map size
 			{
 				return false;
+			}
+
+			if (std::find(buildingTiles.begin(), buildingTiles.end(), tile) != buildingTiles.end())//If its a buildingTile
+			{
+				//Validate reserved tiles and buildable
+				if (!buildable(type, tile.x, tile.y, ignoreReserved))
+				{
+					return false;
+				}
+			}
+			else if(!ignoreReserved //If its (only) a walkableTile
+				&& type.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT)//Skip the walkable tiles for supply depots, since they will be walkable tiles in the end
+			{
+				if (!buildable(type, tile.x, tile.y, false))//Check for the size is to prevent a frame 1 crash
+				{//The walkable tile is reserved to build something
+					return false;
+				}
 			}
 		}
 	}
 	else
 	{
-		if (!isGeyserAssigned(CCTilePosition(x, y)))//Validate the geyser isnt already used.
+		if (!isGeyserAssigned(CCTilePosition(bx, by)))//Validate the geyser isnt already used.
 		{
 			return false;
 		}
@@ -177,7 +189,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, int bui
 bool BuildingPlacer::isBuildingBlockedByCreep(CCTilePosition pos, UnitType type) const
 {
 	//Similar code can be found in BuildingPlacer.canBuildHere
-	auto tiles = getTilesForBuildLocation(pos.x, pos.y, type, type.tileWidth(), type.tileHeight(), false);
+	auto tiles = getTilesForBuildLocation(pos.x, pos.y, type, type.tileWidth(), type.tileHeight(), false, 0);
 	for (auto & tile : tiles)
 	{
 		//Validate if the tile has creep blocking the expand
@@ -195,10 +207,10 @@ std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(Unit buildi
 	BOT_ASSERT(building.getType().isBuilding(), "Should not call getTilesForBuildLocation on a none building unit.");
 	auto position = building.getTilePosition();
 	auto type = building.getType();
-	return getTilesForBuildLocation(position.x, position.y, type, type.tileWidth(), type.tileHeight(), true);
+	return getTilesForBuildLocation(position.x, position.y, type, type.tileWidth(), type.tileHeight(), true, 0);
 }
 
-std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int by, const UnitType & type, int width, int height, bool includeExtraTiles) const
+std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int by, const UnitType & type, int width, int height, bool includeExtraTiles, int extraBorder) const
 {
 	//width and height are not taken from the Type to allow a padding around the building of we want to.
 	int offset = getBuildingCenterOffset(bx, by, width, height);
@@ -208,9 +220,9 @@ std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int
 
 	//tiles for the actual building
 	std::vector<CCTilePosition> tiles;
-	for (int i = 0; i < width; i++)
+	for (int i = -extraBorder; i < width + extraBorder; i++)
 	{
-		for (int j = 0; j < height; j++)
+		for (int j = -extraBorder; j < height + extraBorder; j++)
 		{
 			tiles.push_back(CCTilePosition(x + i, y + j));
 		}
@@ -228,28 +240,13 @@ std::vector<CCTilePosition> BuildingPlacer::getTilesForBuildLocation(int bx, int
 				//Shouldnt validate the addon if the building is in the wall
 				if (!m_bot.Buildings().isWallPosition(bx, by))//Must not consider the offset
 				{
-					for (int i = 0; i < 2; i++)
+					for (int i = -extraBorder; i < 2 + extraBorder; i++)
 					{
-						for (int j = 0; j < 2; j++)
+						for (int j = -extraBorder; j < 2 + extraBorder; j++)
 						{
 							tiles.push_back(CCTilePosition(x + width + i, y + j));
 						}
 					}
-				}
-			}
-		}
-
-		//tiles below for the building exit
-		switch ((sc2::UNIT_TYPEID)type.getAPIUnitType())
-		{
-			case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
-			case sc2::UNIT_TYPEID::TERRAN_FACTORY:
-			case sc2::UNIT_TYPEID::PROTOSS_GATEWAY:
-			case sc2::UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
-			{
-				for (int i = 0; i < width; i++)
-				{
-					tiles.push_back(CCTilePosition(x + i, y - 1));
 				}
 			}
 		}
@@ -283,7 +280,7 @@ int BuildingPlacer::getBuildingCenterOffset(int x, int y, int width, int height)
 	}
 }
 
-CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buildDist, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
+CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
 {
 	//If the space is not walkable, look around for a walkable space. The result may not be the most optimal location.
 	const int MAX_OFFSET = 5;
@@ -367,7 +364,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, int buil
     {
         auto & pos = closestToBuilding[i];
 
-        if (canBuildHere(pos.x, pos.y, b.type, buildDist, ignoreReserved, checkInfluenceMap, includeExtraTiles))
+        if (canBuildHere(pos.x, pos.y, b.type, ignoreReserved, checkInfluenceMap, includeExtraTiles))
         {
 			return pos;
         }
@@ -458,17 +455,14 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 		}
 	}
 
-	//Prevents buildings from being built next to each other, expect for defensive buildings (turret, bunker, photo cannon, spine and spore) and lowered supply depot.
-	//This WILL prevent Terran/Protoss from being able to walls with anything else than offensive buildings, some changes will need to be made to make it possible.
-	//[STUCK]TODO Check unittype to know if we need to validate the tile further or not
-	//[STUCK]Should be ignored for all offensive buildings.
+	//TODO Might want to prevents buildings from being built next to each other, expect for defensive buildings (turret, bunker, photo cannon, spine and spore) and lowered supply depot.
 
 	//Check for supply depot in the way, they are not in the blockedTiles map
 	for (auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED))//TODO could be simplified
 	{
 		CCTilePosition position = b.getTilePosition();
-		auto tiles = getTilesForBuildLocation(position.x, position.y, b.getType(), 2, 2, false);
-		for (auto tile : tiles)
+		auto tiles = getTilesForBuildLocation(position.x, position.y, b.getType(), 2, 2, false, 0);
+		for (auto & tile : tiles)
 		{
 			if (tile.x == x && tile.y == y)
 			{
@@ -478,7 +472,7 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	}
 	
 	//check reserved tiles
-	if (!ignoreReservedTiles && m_reserveMap[x][y])
+	if (!ignoreReservedTiles && m_reserveBuildingMap[x][y])
 	{
 		return false;
 	}
@@ -506,23 +500,26 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	return true;
 }
 
-void BuildingPlacer::reserveTiles(int bx, int by, int width, int height)
+void BuildingPlacer::reserveTiles(UnitType type, CCTilePosition pos)//(int bx, int by, int width, int height)
 {
-	//[STUCK]TODO This logic has to change a bit or a new function needs to be added
-
-	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true);
-	for (auto tile : tiles)
+	auto buildingTiles = getTilesForBuildLocation(pos.x, pos.y, type, type.tileWidth(), type.tileHeight(), true, 0);
+	auto walkableTiles = getTilesForBuildLocation(pos.x, pos.y, type, type.tileWidth(), type.tileHeight(), true, 1);
+	for (auto & tile : buildingTiles)
 	{
-		m_reserveMap[tile.x][tile.y] = true;
+		m_reserveBuildingMap[tile.x][tile.y] = true;
 	}
+#ifdef COMPUTE_WALKABLE_TILES
+	for (auto & tile : walkableTiles)
+	{
+		m_reserveWalkableMap[tile.x][tile.y] = true;
+	}
+#endif
 }
 
 void BuildingPlacer::reserveTiles(CCTilePosition start, CCTilePosition end)//Used only for zones, not for buildings. Like mineral all the way to the depot for example.
 {
-	//[STUCK]TODO This logic has to change a bit or a new function needs to be added
-
-	int rwidth = (int)m_reserveMap.size();
-	int rheight = (int)m_reserveMap[0].size();
+	int rwidth = (int)m_reserveBuildingMap.size();
+	int rheight = (int)m_reserveBuildingMap[0].size();
 	int minX;
 	int maxX;
 	if (start.x > end.x)
@@ -553,7 +550,7 @@ void BuildingPlacer::reserveTiles(CCTilePosition start, CCTilePosition end)//Use
 	{
 		for (int y = minY; y <= maxY && y < rheight; y++)
 		{
-			m_reserveMap[x][y] = true;
+			m_reserveBuildingMap[x][y] = true;
 		}
 	}
 }
@@ -568,43 +565,57 @@ void BuildingPlacer::drawReservedTiles()
         return;
     }
 
-    int rwidth = (int)m_reserveMap.size();
-    int rheight = (int)m_reserveMap[0].size();
+    int rwidth = (int)m_reserveBuildingMap.size();
+    int rheight = (int)m_reserveBuildingMap[0].size();
 
+	CCColor white = CCColor(255, 255, 255);
 	CCColor yellow = CCColor(255, 255, 0);
     for (int x = 0; x < rwidth; ++x)
     { 
         for (int y = 0; y < rheight; ++y)
         {
-			if (m_reserveMap[x][y])
+			if (m_reserveBuildingMap[x][y])
 			{
 				m_bot.Map().drawTile(x, y, yellow);
 			}
+#ifdef COMPUTE_WALKABLE_TILES
+			else if (m_reserveWalkableMap[x][y])
+			{
+				m_bot.Map().drawTile(x, y, white);
+			}
+#endif
         }
     }
-
-	//[STUCK]TODO draw other reserved tile type in a different color
 }
 
-void BuildingPlacer::freeTiles(int bx, int by, int width, int height)
+void BuildingPlacer::freeTiles(int bx, int by, int width, int height, bool setBlocked)
 {
-	//[STUCK]TODO This logic has to change a bit or a new function needs to be added
-
-	auto tiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true);
-	for (auto tile : tiles)
+	auto buildingTiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true, 0);
+	auto walkableTiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true, 1);
+	for (auto & tile : buildingTiles)
 	{
-		m_reserveMap[tile.x][tile.y] = false;
+		m_reserveBuildingMap[tile.x][tile.y] = false;
+		if (setBlocked)
+		{
+			m_bot.Commander().Combat().setBlockedTile(tile.x, tile.y);
+		}
 	}
+#ifdef COMPUTE_WALKABLE_TILES
+	for (auto & tile : walkableTiles)
+	{
+		m_reserveWalkableMap[tile.x][tile.y] = false;
+	}
+#endif
 }
 
 void BuildingPlacer::freeTilesForTurrets(CCTilePosition position)
 {
-	freeTiles(position.x, position.y, 2, 2);
+	freeTiles(position.x, position.y, 2, 2, false);
 }
 
 void BuildingPlacer::freeTilesForBunker(CCTilePosition position)
 {
-	freeTiles(position.x, position.y, 3, 3);
+	freeTiles(position.x, position.y, 3, 3, false);
 }
 
 CCTilePosition BuildingPlacer::getRefineryPosition()
@@ -678,14 +689,12 @@ bool BuildingPlacer::isGeyserAssigned(CCTilePosition geyserTilePos) const
 
 bool BuildingPlacer::isReserved(int x, int y) const
 {
-	//[STUCK]TODO This logic has to change a bit or a new function needs to be added
-
-    int rwidth = (int)m_reserveMap.size();
-    int rheight = (int)m_reserveMap[0].size();
+    int rwidth = (int)m_reserveBuildingMap.size();
+    int rheight = (int)m_reserveBuildingMap[0].size();
     if (x < 0 || y < 0 || x >= rwidth || y >= rheight)
     {
         return false;
     }
 
-    return m_reserveMap[x][y];
+    return m_reserveBuildingMap[x][y];
 }
