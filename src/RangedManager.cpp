@@ -2656,7 +2656,7 @@ const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const 
 		if (it != medivacTargets.end() && it->second != medivac)
 			continue;	// If the target already has a Medivac that is healing it (other than the current Medivac)
 		const Unit allyUnit(ally, m_bot);
-		if (!allyUnit.getType().isCombatUnit() || !allyUnit.hasAttribute(sc2::Attribute::Biological))
+		if (ally->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER || !allyUnit.getType().isCombatUnit() || !allyUnit.hasAttribute(sc2::Attribute::Biological))
 			continue;
 		const float distance = Util::DistSq(medivac->pos, ally->pos);
 		const float score = ally->health + std::max(healRange + ally->radius, distance);
