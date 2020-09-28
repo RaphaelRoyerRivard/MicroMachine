@@ -1728,7 +1728,7 @@ void CCBot::IssueGameStartCheats()
 	
 	// Test Fast Macro
 	//Debug()->DebugGiveAllResources();
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, m_startLocation, player1, 10);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, m_startLocation, player1, 70);
 
 	//TEMP Used to try to reproduce the issue with actions that happens late game
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation, player1, 1000);

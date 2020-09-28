@@ -6,8 +6,11 @@
 class Building;
 class CCBot;
 
-//Using in first frame worker split to sort the map by value
-typedef std::function<bool(std::pair<Unit, int>, std::pair<Unit, int>)> Comparator;
+//Used in first frame worker split to sort the map by value
+typedef std::function<bool(std::pair<Unit, int>, std::pair<Unit, int>)> WorkerSplitComparator;
+
+//Used in worker transfer to sort the map by value
+typedef std::function<bool(std::pair<BaseLocation*, int>, std::pair<BaseLocation*, int>)> WorkerTransferComparator;
 
 class WorkerManager
 {
@@ -35,6 +38,7 @@ class WorkerManager
 	void handleIdleWorkers();
     void handleRepairWorkers();
 	void repairCombatBuildings();
+	void HandleWorkerTransfer();
 	void lowPriorityChecks();
 
 public:

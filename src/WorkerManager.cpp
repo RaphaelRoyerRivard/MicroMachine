@@ -91,140 +91,127 @@ void WorkerManager::lowPriorityChecks()
 	}
 	m_bot.StopProfiling("0.7.6.1     SalvageDepletedGeysers");
 
-	//Worker split between bases (transfer worker)
-	if (m_bot.Bases().getBaseCount(Players::Self, true) <= 1)
+	HandleWorkerTransfer();
+
+	m_bot.StartProfiling("0.7.6.4     validateRepairStationWorkers");
+	m_bot.Workers().getWorkerData().validateRepairStationWorkers();
+	m_bot.StopProfiling("0.7.6.4     validateRepairStationWorkers");
+}
+
+//Worker split between bases (transfer worker)
+void WorkerManager::HandleWorkerTransfer()
+{
+	if (m_bot.Bases().getBaseCount(Players::Self, false) <= 1)
 	{//No point trying to split workers
 		return;
 	}
 
-	m_bot.StartProfiling("0.7.6.2     FindWorkersToDispatch");
-	bool needTransfer = false;
-	auto workers = getWorkers();
-	WorkerData workerData = m_bot.Workers().getWorkerData();
+	auto & workers = getWorkers();
 	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
-	std::list<Unit> dispatchedWorkers;
+	std::list<std::pair<BaseLocation*, int>> unorderedBasesWithFewWorkers;
+	std::list<std::pair<BaseLocation*, int>> unorderedBasesWithExtraWorkers;
 	for (auto & base : bases)
 	{
+		if (base->isUnderAttack())//Do not transfer or receive workers while the base is underattack.
+		{
+			continue;
+		}
+
 		auto basePosition = base->getPosition();
-		int optimalWorkers = base->getOptimalMineralWorkerCount();
-		auto depot = getDepotAtBasePosition(basePosition);
+		auto & depot = getDepotAtBasePosition(basePosition);
 		int workerCount = m_workerData.getNumAssignedWorkers(depot);
+		int optimalWorkers = base->getOptimalMineralWorkerCount();
 		if (workerCount > optimalWorkers)
 		{
-			int extra = workerCount - optimalWorkers;
-			for (auto & worker : workers)///TODO order by closest to the target base location
-			{
-				if (m_bot.Workers().isFree(worker))
-				{
-					const auto workerDepot = m_workerData.getWorkerDepot(worker);
-					if (workerDepot.isValid() && workerDepot.getTag() == depot.getTag())
-					{
-						dispatchedWorkers.push_back(worker);
-						extra--;
-						if (extra <= 0)
-						{
-							break;
-						}
-					}
-				}
-			}
+			unorderedBasesWithExtraWorkers.push_back(std::pair<BaseLocation*, int>(base, workerCount - optimalWorkers));
 		}
-		else
+		else if(workerCount < optimalWorkers)
 		{
-			needTransfer = true;
+			unorderedBasesWithFewWorkers.push_back(std::pair<BaseLocation*, int>(base, optimalWorkers - workerCount));
 		}
 	}
-	m_bot.StopProfiling("0.7.6.2     FindWorkersToDispatch");
 
-	//Dispatch workers to bases missing some
-	if (needTransfer)
+	if (unorderedBasesWithFewWorkers.size() <= 0 || unorderedBasesWithExtraWorkers.size() <= 0)
 	{
-		m_bot.StartProfiling("0.7.6.3     DispatchWorkers");
-		std::map<BaseLocation *, std::map<const sc2::Unit *, bool>> pathfindingCache;	// <to_base, <from_worker, result>>
-		for (auto & base : bases)
+		return;
+	}
+
+	//Sorting the bases by the number of the wanted workers (highest first in the list) 
+	//Defining a lambda function to compare two pairs. It will compare two pairs using the value
+	WorkerTransferComparator compFunctor = [](std::pair<BaseLocation*, int> elem1, std::pair<BaseLocation*, int> elem2)
+	{
+		return elem1.second > elem2.second;
+	};
+
+	//Declaring a set that will store the pairs using above comparision logic
+	std::set<std::pair<BaseLocation*, int>, WorkerTransferComparator> basesWithFewWorkers(unorderedBasesWithFewWorkers.begin(), unorderedBasesWithFewWorkers.end(), compFunctor);
+	std::set<std::pair<BaseLocation*, int>, WorkerTransferComparator> basesWithExtraWorkers(unorderedBasesWithExtraWorkers.begin(), unorderedBasesWithExtraWorkers.end(), compFunctor);
+
+	int totalRequiredWorkers = 0;
+	for (auto baseWithFewWorkers : basesWithFewWorkers)
+	{
+		totalRequiredWorkers += baseWithFewWorkers.second;
+	}
+
+	for (auto & baseWithFewWorkers : basesWithFewWorkers)
+	{
+		auto & depot = baseWithFewWorkers.first->getResourceDepot();
+		int fewWorkerNeeded = baseWithFewWorkers.second;
+
+		for (auto & baseWithExtraWorkers : basesWithExtraWorkers)
 		{
-			if (base->isUnderAttack())
+			bool shouldSendWorkers = false;
+			if (depot.isBeingConstructed())
 			{
-				continue;
+				int distance = baseWithFewWorkers.first->getGroundDistance(baseWithExtraWorkers.first->getDepotTilePosition());//Util::PathFinding::FindOptimalPathDistance(baseWithExtraWorkers.getUnitPtr(), depot.getPosition(), false, m_bot);
+
+				const float speed = 2.8125f;//Always the same for workers, Util::getSpeedOfUnit(worker.getUnitPtr(), m_bot);
+
+				const float speedPerFrame = speed / 16.f;
+				auto travelFrame = distance / speedPerFrame;
+
+				const int depotBuildTime = 71 * 24;//71 seconds * 24 fps
+				float depotFinishedInXFrames = depotBuildTime * (1.f - depot.getBuildProgress());
+				if (travelFrame >= depotFinishedInXFrames)
+				{
+					//Should send workers, its the right timing
+					shouldSendWorkers = true;
+				}
+			}
+			else
+			{
+				shouldSendWorkers = true;
 			}
 
-			auto depot = getDepotAtBasePosition(base->getPosition());
-			if (!depot.isValid() || depot.isBeingConstructed())
+			if (shouldSendWorkers)
 			{
-				continue;
-			}
-
-			int workerCount = m_workerData.getNumAssignedWorkers(depot);
-			int optimalWorkers = base->getMinerals().size() * 2;
-			if (workerCount < optimalWorkers)
-			{
-				std::vector<Unit> toRemove;
-				int needed = optimalWorkers - workerCount;
-				int moved = 0;
-				auto & cachedResults = pathfindingCache[base];
-				for (const auto & dispatchedWorker : dispatchedWorkers)
-				{
-					// Check if there is a cached result near the worker
-					bool foundCloseCachedResult = false;
-					bool closeCachedResult = false;
-					for (auto & cachedResult : cachedResults)
-					{
-						// If near and at the same height
-						if (Util::DistSq(dispatchedWorker, cachedResult.first->pos) <= 8 * 8 && m_bot.Map().terrainHeight(dispatchedWorker.getPosition()) == m_bot.Map().terrainHeight(cachedResult.first->pos))
-						{
-							foundCloseCachedResult = true;
-							closeCachedResult = cachedResult.second;
-							break;
-						}
-					}
-					if (foundCloseCachedResult)
-					{
-						if (!closeCachedResult)
-							continue;	// The close cached pathfinding wasn't safe
-					}
-					else
-					{
-						// Check if path is safe
-						const bool safe = Util::PathFinding::IsPathToGoalSafe(dispatchedWorker.getUnitPtr(), base->getPosition(), true, m_bot);
-						// Cache result
-						cachedResults[dispatchedWorker.getUnitPtr()] = safe;
-						//Dont move workers if its not safe
-						if (!safe)
-						{
-							continue;
-						}
-					}
-
-					m_workerData.setWorkerJob(dispatchedWorker, WorkerJobs::Minerals, depot, true);
-					toRemove.push_back(dispatchedWorker);
-					moved++;
-					if (moved >= needed)
-					{
-						break;
-					}
+				auto closestWorler = this->getClosestMineralWorkerTo(depot.getPosition());//Could be replaced by a path from a depot, once its possible.
+				if (!Util::PathFinding::IsPathToGoalSafe(closestWorler.getUnitPtr(), Util::GetPosition(baseWithExtraWorkers.first->getCenterOfMinerals()), true, m_bot))
+				{//Path isn't safe
+					continue;
 				}
 
-				//remove already dispatched workers
-				for (auto worker : toRemove)
+				int extraWorkers = baseWithExtraWorkers.second;
+				for (auto & worker : workers)///TODO order by closest to the target base location
 				{
-					auto it = find(dispatchedWorkers.begin(), dispatchedWorkers.end(), worker);
-					if (it != dispatchedWorkers.end())
+					if (m_bot.Workers().isFree(worker) && !worker.isReturningCargo())
 					{
-						dispatchedWorkers.erase(it);
+						const auto workerDepot = m_workerData.getWorkerDepot(worker);
+						if (workerDepot.isValid() && workerDepot.getTag() == baseWithExtraWorkers.first->getResourceDepot().getTag())
+						{
+							m_workerData.setWorkerJob(worker, WorkerJobs::Minerals, depot, true);
+							extraWorkers--;
+							fewWorkerNeeded--;
+							if (extraWorkers <= 0 || fewWorkerNeeded <= 0)
+							{
+								break;
+							}
+						}
 					}
-				}
-				if (dispatchedWorkers.empty())
-				{
-					break;
 				}
 			}
 		}
-		m_bot.StopProfiling("0.7.6.3     DispatchWorkers");
 	}
-
-	m_bot.StartProfiling("0.7.6.4     validateRepairStationWorkers");
-	workerData.validateRepairStationWorkers();
-	m_bot.StopProfiling("0.7.6.4     validateRepairStationWorkers");
 }
 
 void WorkerManager::setRepairWorker(Unit worker, const Unit & unitToRepair)
@@ -337,13 +324,13 @@ void WorkerManager::handleMineralWorkers()
 
 	//Sorting the workers by furthest distance
 	//Defining a lambda function to compare two pairs. It will compare two pairs using the value
-	Comparator compFunctor = [](std::pair<Unit, int> elem1, std::pair<Unit, int> elem2)
+	WorkerSplitComparator compFunctor = [](std::pair<Unit, int> elem1, std::pair<Unit, int> elem2)
 	{
 		return elem1.second > elem2.second;
 	};
 
 	//Declaring a set that will store the pairs using above comparision logic
-	std::set<std::pair<Unit, int>, Comparator> orderedMineralWorkers(workerMineralDistance.begin(), workerMineralDistance.end(), compFunctor);
+	std::set<std::pair<Unit, int>, WorkerSplitComparator> orderedMineralWorkers(workerMineralDistance.begin(), workerMineralDistance.end(), compFunctor);
 	m_bot.StopProfiling("0.7.2.3     orderedMineralWorkers");
 
 	m_bot.StartProfiling("0.7.2.4     splitMineralWorkers");
