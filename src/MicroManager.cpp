@@ -131,6 +131,10 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	else if (target->is_burrowed && target->unit_type != sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED)
 		invisModifier = 3.f;
 
+	float hallucinationModifier = 1.f;
+	if (target->is_hallucination)
+		hallucinationModifier = 0.001f;
+
 	const Unit attackerUnit(attacker, m_bot);
 	const Unit targetUnit(target, m_bot);
 	
@@ -186,11 +190,11 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
 		//const float nydusModifier = target->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && target->build_progress < 1.f ? 100.f : 1.f;
 		const float nydusModifier = 1.f;	// It seems like attacking it does close to nothing since it has 3 armor
-		return (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier;
+		return (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * nonThreateningModifier * minionModifier * invisModifier * hallucinationModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier;
 	}
 
 	if (antiBuildingModifier > 1.f)
-		return (proximityValue * 50 - healthValue) * invisModifier * antiBuildingModifier;	// Our workers should clear buildings instead of enemy units
+		return (proximityValue * 50 - healthValue) * invisModifier * hallucinationModifier * antiBuildingModifier;	// Our workers should clear buildings instead of enemy units
 	
-	return (proximityValue * 50 - healthValue) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
+	return (proximityValue * 50 - healthValue) * invisModifier * hallucinationModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
 }

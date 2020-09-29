@@ -1309,6 +1309,9 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			float bestScore = 0.f;
 			for(const auto potentialTarget : rangedUnitTargets)
 			{
+				// Do not Lock On on hallucinations
+				if (potentialTarget->is_hallucination)
+					continue;
 				const auto unitType = UnitType(potentialTarget->unit_type, m_bot);
 				// Do not Lock On on workers
 				if (unitType.isWorker())
@@ -2584,6 +2587,8 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	for (const auto potentialTarget : targets)
 	{
 		if (potentialTarget->display_type == sc2::Unit::Hidden)
+			continue;
+		if (potentialTarget->is_hallucination)
 			continue;
 		const auto type = UnitType(potentialTarget->unit_type, m_bot);
 		if (type.isBuilding() && !type.isAttackingBuilding())

@@ -379,6 +379,9 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 				// Ignore influence of SCVs that are building
 				if (enemyUnitType.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV && Util::Contains(enemyUnit.getUnitPtr(), m_bot.GetEnemySCVBuilders()))
 					continue;
+				// Ignore influence of hallucinations
+				if (enemyUnit.getUnitPtr()->is_hallucination)
+					continue;
 				if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
 				{
 					const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
@@ -1882,8 +1885,8 @@ void CombatCommander::updateDefenseSquads()
 		for (auto & unit : m_bot.GetKnownEnemyUnits())
 		//for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
 		{
-			// if it's an overlord, don't worry about it for defense, we don't care what they see
-			if (unit.getType().isOverlord())
+			// if it's an overlord or an hallucination, don't worry about it for defense, we don't want to make our units back for them
+			if (unit.getType().isOverlord() || unit.getUnitPtr()->is_hallucination)
 			{
 				continue;
 			}
