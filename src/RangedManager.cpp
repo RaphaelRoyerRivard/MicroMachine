@@ -3068,7 +3068,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 				continue;
     	}
 
-		float priority = getAttackPriority(rangedUnit, target, harass, considerOnlyUnitsInRange);
+		float priority = getAttackPriority(rangedUnit, target, harass, considerOnlyUnitsInRange, !harass);
 		if(priority > 0.f)
 			targetPriorities.insert(std::pair<float, const sc2::Unit*>(priority, target));
     }

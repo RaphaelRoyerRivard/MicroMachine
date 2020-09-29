@@ -205,7 +205,7 @@ Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets) 
 		if (meleeUnit.getType().isWorker() && Util::TerrainHeight(targetUnit.getPosition()) != unitHeight && unitBaseLocation != m_bot.Bases().getBaseContainingPosition(targetUnit.getPosition()))
 			continue;
     	
-        const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), false, false);
+        const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), false, false, true);
 
         if (!bestTarget.isValid() || priority > highestPriority)
         {

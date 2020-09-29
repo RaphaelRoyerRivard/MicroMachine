@@ -1267,6 +1267,7 @@ void CCBot::IssueGameStartCheats()
 	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
 	const auto offset = towardsCenter * 15;
 	const auto enemyLocation = GetEnemyStartLocations()[0];
+	const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false));
 
 	//Strategy().setShouldProduceAntiAirOffense(true);
 	//Debug()->DebugGiveAllTech();
@@ -1714,7 +1715,6 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(113, 104), player2, 3);*/
 
 	//Debug()->DebugGiveAllTech();
-	//const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false));
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, enemyLocation, player1, 3);//Invisible/burrow
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, nat, player1, 1);//Creep
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_LAIR, enemyLocation, player1, 1);//Creep
@@ -1733,11 +1733,17 @@ void CCBot::IssueGameStartCheats()
 	//TEMP Used to try to reproduce the issue with actions that happens late game
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation, player1, 1000);
 
-	// Test to reproduce bug where Marauders are hesitate to attack Cannons on top of ramp
+	// Test to reproduce bug where Marauders hesitate to attack Cannons on top of ramp
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenterY * 15, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterY * 17, player1, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SENTRY, enemyLocation - towardsCenterY * 15, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenterY * 30, player2, 4);*/
+
+	// Test to reproduce bug where Marauders hesitate to attack a Cannon if there is an unpowered one next to it
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, nat + towardsCenter * 10, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, nat + towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, nat + towardsCenter * 0, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, m_startLocation, player2, 4);*/
 }
 
 void CCBot::IssueCheats()

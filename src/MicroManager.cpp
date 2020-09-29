@@ -58,7 +58,7 @@ float MicroManager::getTargetsPower(const std::vector<Unit>& units) const
 	return Util::GetUnitsPower(m_targets, units, m_bot);
 }
 
-float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, bool filterHighRangeUnits, bool considerOnlyUnitsInRange) const
+float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, bool filterHighRangeUnits, bool considerOnlyUnitsInRange, bool reducePriorityOfUnpowered) const
 {
 	BOT_ASSERT(target, "null unit in getAttackPriority");
 
@@ -140,6 +140,8 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	
 	const float antiBuildingModifier = attackerUnit.getType().isWorker() && targetUnit.getType().isBuilding() ? 10.f : 1.f;
 
+	const float unpoweredModifier = reducePriorityOfUnpowered && (targetUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || targetUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !targetUnit.getUnitPtr()->is_powered ? 0.05f : 1.f;
+
 	if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
 	{
 		const float targetDps = Util::GetDpsForTarget(target, attacker, m_bot);
@@ -190,11 +192,11 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
 		//const float nydusModifier = target->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && target->build_progress < 1.f ? 100.f : 1.f;
 		const float nydusModifier = 1.f;	// It seems like attacking it does close to nothing since it has 3 armor
-		return (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * nonThreateningModifier * minionModifier * invisModifier * hallucinationModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier;
+		return (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * nonThreateningModifier * minionModifier * invisModifier * hallucinationModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier * unpoweredModifier;
 	}
 
 	if (antiBuildingModifier > 1.f)
-		return (proximityValue * 50 - healthValue) * invisModifier * hallucinationModifier * antiBuildingModifier;	// Our workers should clear buildings instead of enemy units
+		return (proximityValue * 50 - healthValue) * invisModifier * hallucinationModifier * antiBuildingModifier * unpoweredModifier;	// Our workers should clear buildings instead of enemy units
 	
-	return (proximityValue * 50 - healthValue) * invisModifier * hallucinationModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
+	return (proximityValue * 50 - healthValue) * invisModifier * unpoweredModifier * hallucinationModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
 }
