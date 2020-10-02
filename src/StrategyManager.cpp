@@ -133,8 +133,8 @@ void StrategyManager::onStart()
 		int losses = 0;
 		JSONTools::ReadInt("wins", j["strategies"][int(m_startingStrategy)], wins);
 		JSONTools::ReadInt("losses", j["strategies"][int(m_startingStrategy)], losses);
-		j["strategies"][int(m_startingStrategy)]["wins"] = wins + 1;
-		j["strategies"][int(m_startingStrategy)]["losses"] = losses;
+		j["strategies"][int(m_startingStrategy)]["wins"] = wins;
+		j["strategies"][int(m_startingStrategy)]["losses"] = losses + 1;	// In case of a crash, we will have a loss. Otherwise we will update it at the end of the game
 		outFile << j.dump();
 		outFile.close();
 	}
@@ -536,9 +536,9 @@ const UnitPairVector StrategyManager::getZergBuildOrderGoal() const
 }
 
 
-void StrategyManager::onEnd(const bool isWinner)
+void StrategyManager::onEnd(std::string result)
 {
-	if (isWinner || !m_bot.Config().SelectStartingBuildBasedOnHistory)
+	if (result == "loss" || !m_bot.Config().SelectStartingBuildBasedOnHistory)
 		return;
 
 	std::stringstream ss;
@@ -555,8 +555,8 @@ void StrategyManager::onEnd(const bool isWinner)
 	}
 	JSONTools::ReadInt("wins", j["strategies"][int(m_initialStartingStrategy)], wins);
 	JSONTools::ReadInt("losses", j["strategies"][int(m_initialStartingStrategy)], losses);
-	j["strategies"][int(m_initialStartingStrategy)]["wins"] = wins - 1;
-	j["strategies"][int(m_initialStartingStrategy)]["losses"] = losses + 1;
+	j["strategies"][int(m_initialStartingStrategy)]["wins"] = wins + 1;
+	j["strategies"][int(m_initialStartingStrategy)]["losses"] = losses + (result == "win" ? -1 : 1);	// +1 win and + 2 losses if tie
 	std::ofstream outFile(path);
 	outFile << j.dump();
 	outFile.close();

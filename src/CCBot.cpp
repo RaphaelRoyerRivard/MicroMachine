@@ -1167,7 +1167,7 @@ void CCBot::updatePreviousFrameEnemyUnitPos()
 
 void CCBot::checkForConcede()
 {
-	if(!m_concede && GetCurrentFrame() > 2688)	// 2 min
+	/*if(!m_concede && GetCurrentFrame() > 2688)	// 2 min
 	{
 		Unit building;
 		for (const auto allyUnit : m_allyUnits)
@@ -1186,7 +1186,7 @@ void CCBot::checkForConcede()
 			Util::Log(__FUNCTION__, "Concede", *this);
 			m_strategy.onEnd(false);
 		}
-	}
+	}*/
 }
 
 uint32_t CCBot::GetGameLoop() const
@@ -2306,7 +2306,7 @@ std::mutex & CCBot::GetCommandMutex()
 	return m_command_mutex;
 }
 
-void CCBot::CheckGameResult() const
+void CCBot::CheckGameResult()
 {
 	const uint32_t selfId = Util::GetSelfPlayerId(*this);
 	if (selfId < 0)
@@ -2317,8 +2317,15 @@ void CCBot::CheckGameResult() const
 		std::stringstream ss;
 		if (playerResult.player_id == selfId)
 		{
-			// TODO save result
 			ss << "We";
+			std::string result;
+			if (playerResult.result == sc2::GameResult::Win)
+				result = "win";
+			else if (playerResult.result == sc2::GameResult::Loss)
+				result = "loss";
+			else
+				result = "tiw";
+			m_strategy.onEnd(result);
 		}
 		else
 			ss << "Opponent";

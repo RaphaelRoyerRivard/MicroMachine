@@ -124,7 +124,7 @@ public:
     bool attackConditionIsMet() const;
     void onStart();
     void onFrame(bool executeMacro);
-    void onEnd(const bool isWinner);
+    void onEnd(std::string result);
     void addStrategy(const std::string & name, const Strategy & strategy);
     const UnitPairVector getBuildOrderGoal() const;
     const MM::BuildOrder & getOpeningBookBuildOrder() const;

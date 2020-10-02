@@ -220,5 +220,5 @@ public:
 	void SetOpponentId(std::string opponentId) { m_opponentId = opponentId; }
 	bool IsPlayer1Human() const { return m_player1IsHuman; }
 	void SetPlayer1IsHuman(bool player1Human) { m_player1IsHuman = player1Human; }
-	void CheckGameResult() const;
+	void CheckGameResult();
 };
