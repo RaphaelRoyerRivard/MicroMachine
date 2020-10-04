@@ -135,14 +135,9 @@
 		"AllowKeyControl"			: true,
 		"TimeControl"				: true,
 		
-        "DrawGameInfo"              : false, 
-<<<<<<< HEAD
-        "DrawProductionInfo"        : false,
-        "DrawBaseLocationInfo"      : false,
-=======
+        "DrawGameInfo"              : false,
         "DrawProductionInfo"        : true,
         "DrawBaseLocationInfo"      : true,
->>>>>>> da666f639168c29dd7065ad0a8975b6aa5d6dafa
         "DrawBaseTiles"             : false,
         "DrawStartingRamp"		    : false,
         "DrawWall"		   			: false,
