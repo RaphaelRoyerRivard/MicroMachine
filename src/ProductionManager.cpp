@@ -2627,8 +2627,8 @@ bool ProductionManager::canMakeAtArrival(const Building & b, const Unit & worker
 	//float distance = Util::PathFinding::FindOptimalPathDistance(worker.getUnitPtr(), Util::GetPosition(b.finalPosition), false, m_bot);
 	float distance = Util::Dist(worker.getPosition(), Util::GetPosition(b.finalPosition));
 	const float speed = 2.8125f;//Always the same for workers, Util::getSpeedOfUnit(worker.getUnitPtr(), m_bot);
+	const float speedPerFrame = speed / 16.f;
 
-	auto speedPerFrame = speed / 16.f;
 	auto travelFrame = distance / speedPerFrame;
 	auto mineralGain = travelFrame * mineralRate;
 	auto gasGain = travelFrame * gasRate;
