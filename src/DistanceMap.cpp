@@ -24,11 +24,7 @@ int DistanceMap::getDistance(const CCTilePosition & pos) const
 
 int DistanceMap::getDistance(const CCPosition & pos) const
 { 
-#ifdef SC2API
     return getDistance(CCTilePosition((int)pos.x, (int)pos.y));
-#else
-    return getDistance(CCTilePosition(pos));
-#endif
 }
 
 const std::vector<CCTilePosition> & DistanceMap::getSortedTiles() const

@@ -155,7 +155,7 @@ class CombatCommander
 	std::set<sc2::Tag> m_toggledCyclones;
 	bool m_hasEnoughVikingsAgainstTempests = true;
 	bool m_winAttackSimulation = true;
-	int m_lastRetreatFrame = 0;
+	int m_lastRetreatFrame = -1000;
 	bool m_logVikingActions = false;
 	bool m_allowEarlyBuildingAttack = false;
     bool            m_initialized;
@@ -188,7 +188,7 @@ class CombatCommander
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);
     Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const;
-	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const;
+	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const;
 	bool			WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const;
 
 	CCPosition		exploreMap();
@@ -234,6 +234,7 @@ public:
 	std::set<sc2::Tag> & getNewCyclones() { return m_newCyclones; }
 	std::set<sc2::Tag> & getToggledCyclones() { return m_toggledCyclones; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
+	void setBlockedTile(int x, int y);
 	const std::map<const sc2::Unit *, FlyingHelperMission> & getCycloneFlyingHelpers() const { return m_cycloneFlyingHelpers; }
 	const std::map<const sc2::Unit *, const sc2::Unit *> & getCyclonesWithHelper() const { return m_cyclonesWithHelper; }
 	const std::list<CCPosition> & getAllyScans() const { return m_allyScans; }

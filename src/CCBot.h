@@ -6,6 +6,9 @@
 //#define NO_BUILDING
 //#define NO_MICRO
 
+//Debug only draw only
+//#define COMPUTE_WALKABLE_TILES
+
 #ifdef PUBLIC_RELEASE
 #undef NO_UNITS
 #undef NO_PRODUCTION
@@ -37,6 +40,12 @@ class CCBot : public sc2::Agent
 		int count;
 		std::chrono::steady_clock::time_point start;
 	};
+
+	//TEMP [deleteAllTheseTagsAtOnce] all 4 variables below are just for debug, delete them when the action bug test is deleted
+	int actionFrame = 0;
+	int actionTotal = 0;
+	CCTilePosition target;
+	CCTilePosition prevTarget;
 
 	uint32_t				m_gameLoop = 0;
 	uint32_t				m_previousGameLoop;
@@ -160,7 +169,7 @@ public:
 	uint32_t GetGameLoop() const;
     CCRace GetPlayerRace(int player) const;
 	CCRace GetSelfRace() const;
-    const CCPosition GetStartLocation() const;
+    CCPosition GetStartLocation() const;
 	const CCTilePosition GetBuildingArea(MetaType buildingType);
 
 	void IssueGameStartCheats();
@@ -211,5 +220,5 @@ public:
 	void SetOpponentId(std::string opponentId) { m_opponentId = opponentId; }
 	bool IsPlayer1Human() const { return m_player1IsHuman; }
 	void SetPlayer1IsHuman(bool player1Human) { m_player1IsHuman = player1Human; }
-	void CheckGameResult() const;
+	void CheckGameResult();
 };

@@ -832,6 +832,7 @@ void CCBot::setUnits()
 	m_knownEnemyUnits.clear();
 	m_enemyBuildingsUnderConstruction.clear();
 	m_enemyUnitsPerType.clear();
+	m_strategy.setEnemyHasWorkerHiddingInOurMain(false);
 	for(auto& enemyUnitPair : m_enemyUnits)
 	{
 		bool ignoreEnemyUnit = false;
@@ -852,7 +853,13 @@ void CCBot::setUnits()
 		//TODO when the unit is cloaked or burrowed, check if the tile is inside detection range, in that case, we should ignore the unit because it is not there anymore
 		if (GetGameLoop() != enemyUnitPtr->last_seen_game_loop && Map().isVisible(enemyUnit.getPosition()) && !isBurrowedWidowMine)
 		{
-			ignoreEnemyUnit = true;
+			// If the enemy unit that is not where we last saw it is a worker in our main base, flag it
+			if (enemyUnit.getType().isWorker() && m_bases.getPlayerStartingBaseLocation(Players::Self)->containsPosition(enemyUnit.getPosition()))
+			{
+				m_strategy.setEnemyHasWorkerHiddingInOurMain(true);
+			}
+			else
+				ignoreEnemyUnit = true;
 		}
 		// If mobile unit is not seen for too long (around 7s, or 67s for burrowed widow mines and 45s for sieged tanks), ignore it
 		else if (!enemyUnit.getType().isBuilding()
@@ -1019,7 +1026,7 @@ void CCBot::clearDeadUnits()
 		}
 	}
 	// Remove dead ally units
-	for (auto tag : unitsToRemove)
+	for (auto & tag : unitsToRemove)
 	{
 		m_allyUnits.erase(tag);
 	}
@@ -1044,7 +1051,7 @@ void CCBot::clearDeadUnits()
 		}
 	}
 	// Remove dead enemy units
-	for (auto tag : unitsToRemove)
+	for (auto & tag : unitsToRemove)
 	{
 		m_enemyUnits.erase(tag);
 	}
@@ -1060,7 +1067,7 @@ void CCBot::clearDeadUnits()
 			unitsToRemove.push_back(unit.getUnitPtr()->tag);
 	}
 	// Remove dead neutral units
-	for (auto tag : unitsToRemove)
+	for (auto & tag : unitsToRemove)
 	{
 		m_neutralUnits.erase(tag);
 	}
@@ -1104,7 +1111,7 @@ void CCBot::clearDuplicateUnits()
 		}
 	}
 	// Remove duplicate enemy units
-	for (auto tag : unitsToRemove)
+	for (auto & tag : unitsToRemove)
 	{
 		m_enemyUnits.erase(tag);
 	}
@@ -1143,7 +1150,7 @@ void CCBot::clearDuplicateUnits()
 		}
 	}
 	// Remove duplicate neutral units
-	for (auto tag : unitsToRemove)
+	for (auto & tag : unitsToRemove)
 	{
 		m_neutralUnits.erase(tag);
 	}
@@ -1160,7 +1167,7 @@ void CCBot::updatePreviousFrameEnemyUnitPos()
 
 void CCBot::checkForConcede()
 {
-	if(!m_concede && GetCurrentFrame() > 2688)	// 2 min
+	/*if(!m_concede && GetCurrentFrame() > 2688)	// 2 min
 	{
 		Unit building;
 		for (const auto allyUnit : m_allyUnits)
@@ -1179,7 +1186,7 @@ void CCBot::checkForConcede()
 			Util::Log(__FUNCTION__, "Concede", *this);
 			m_strategy.onEnd(false);
 		}
-	}
+	}*/
 }
 
 uint32_t CCBot::GetGameLoop() const
@@ -1260,6 +1267,7 @@ void CCBot::IssueGameStartCheats()
 	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
 	const auto offset = towardsCenter * 15;
 	const auto enemyLocation = GetEnemyStartLocations()[0];
+	const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false));
 
 	//Strategy().setShouldProduceAntiAirOffense(true);
 	//Debug()->DebugGiveAllTech();
@@ -1707,7 +1715,6 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(113, 104), player2, 3);*/
 
 	//Debug()->DebugGiveAllTech();
-	//const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false));
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, enemyLocation, player1, 3);//Invisible/burrow
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, nat, player1, 1);//Creep
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_LAIR, enemyLocation, player1, 1);//Creep
@@ -1717,10 +1724,67 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED, nat, player1, 2);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, m_startLocation, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_DRONE, nat, player1, 12);
+	
+	// Test Fast Macro
+	//Debug()->DebugGiveAllResources();
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, m_startLocation, player1, 10);
+
+	//TEMP Used to try to reproduce the issue with actions that happens late game
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation, player1, 1000);
+
+	// Test to reproduce bug where Marauders hesitate to attack Cannons on top of ramp
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenterY * 15, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterY * 17, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SENTRY, enemyLocation - towardsCenterY * 15, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenterY * 30, player2, 4);*/
+
+	// Test to reproduce bug where Marauders hesitate to attack a Cannon if there is an unpowered one next to it
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, nat + towardsCenter * 10, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, nat + towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, nat + towardsCenter * 0, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, m_startLocation, player2, 4);*/
 }
 
 void CCBot::IssueCheats()
 {
+	//TEMP [deleteAllTheseTagsAtOnce] Used to try to reproduce the issue with actions that happens late game
+	/*if (target.x != 0 && target.y != 0)
+	{
+		int successCount = 0;
+		int failCount = 0;
+		for (auto archon : this->GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_OBSERVER))
+		{
+			if (archon.getUnitPtr()->orders.size() > 0 && (archon.getUnitPtr()->orders[0].target_pos.x != target.x || archon.getUnitPtr()->orders[0].target_pos.y != target.y))
+			{
+				auto pos = archon.getUnitPtr()->orders[0].target_pos;
+				auto order = archon.getUnitPtr()->orders[0].ability_id;
+				if (order != sc2::ABILITY_ID::MOVE)
+				{
+					auto a = 1;
+				}
+				failCount++;
+			}
+		}
+		if (failCount > 0)
+		{
+			auto a = 1;
+		}
+	}
+
+	//between 20 and 100
+	prevTarget = target;
+	int x = 20 + (std::rand() % (100 - 20 + 1));
+	int y = 20 + (std::rand() % (100 - 20 + 1));
+	target.x = x;
+	target.y = y;
+	actionFrame++;
+	for (auto archon : this->GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_OBSERVER))
+	{
+		archon.move(target);
+		actionTotal++;
+	}*/
+
 	//Kill all selected units
 	if (keyDelete)
 	{
@@ -2055,13 +2119,9 @@ bool CCBot::IsParasited(const sc2::Unit * unit) const
 	return Util::Contains(unit->tag, m_parasitedUnits);
 }
 
-const CCPosition CCBot::GetStartLocation() const
+CCPosition CCBot::GetStartLocation() const
 {
-#ifdef SC2API
     return m_startLocation;
-#else
-    return BWAPI::Position(BWAPI::Broodwar->self()->getStartLocation());
-#endif
 }
 
 const CCTilePosition CCBot::GetBuildingArea(MetaType buildingType)
@@ -2209,7 +2269,7 @@ void CCBot::drawProfilingInfo()
 			}
 		}
 
-		if (currentStepTime >= 50000 && queue.size() > 0 && queue[0].first > 0)	// 50ms
+		if (Config().LogSlowFrames && currentStepTime >= 50000 && queue.size() > 0 && queue[0].first > 0)	// 50ms
 		{
 			Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * queue[0].first) + "ms for " + std::to_string(queue[0].second) + " calls", *this);
 		}
@@ -2246,7 +2306,7 @@ std::mutex & CCBot::GetCommandMutex()
 	return m_command_mutex;
 }
 
-void CCBot::CheckGameResult() const
+void CCBot::CheckGameResult()
 {
 	const uint32_t selfId = Util::GetSelfPlayerId(*this);
 	if (selfId < 0)
@@ -2257,8 +2317,15 @@ void CCBot::CheckGameResult() const
 		std::stringstream ss;
 		if (playerResult.player_id == selfId)
 		{
-			// TODO save result
 			ss << "We";
+			std::string result;
+			if (playerResult.result == sc2::GameResult::Win)
+				result = "win";
+			else if (playerResult.result == sc2::GameResult::Loss)
+				result = "loss";
+			else
+				result = "tiw";
+			m_strategy.onEnd(result);
 		}
 		else
 			ss << "Opponent";

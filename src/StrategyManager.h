@@ -93,6 +93,7 @@ class StrategyManager
 	bool m_enemyHasHiSecAutoTracking = false;
 	bool m_enemyOnlyHasFlyingBuildings = false;
 	bool m_enemyHasSeveralArmoredUnits = false;
+	bool m_enemyHasWorkerHiddingInOurMain = false;
 	bool m_focusBuildings = false;
 	std::set<sc2::UPGRADE_ID> m_completedUpgrades;
 	std::stringstream m_greetingMessage;
@@ -123,7 +124,7 @@ public:
     bool attackConditionIsMet() const;
     void onStart();
     void onFrame(bool executeMacro);
-    void onEnd(const bool isWinner);
+    void onEnd(std::string result);
     void addStrategy(const std::string & name, const Strategy & strategy);
     const UnitPairVector getBuildOrderGoal() const;
     const MM::BuildOrder & getOpeningBookBuildOrder() const;
@@ -160,6 +161,8 @@ public:
 	void setEnemyOnlyHasFlyingBuildings(bool enemyOnlyHasFlyingBuildings) { m_enemyOnlyHasFlyingBuildings = enemyOnlyHasFlyingBuildings; }
 	bool enemyHasSeveralArmoredUnits() const { return m_enemyHasSeveralArmoredUnits; }
 	void setEnemyHasSeveralArmoredUnits(bool enemyHasSeveralArmoredUnits) { m_enemyHasSeveralArmoredUnits = enemyHasSeveralArmoredUnits; }
+	bool enemyHasWorkerHiddingInOurMain() const { return m_enemyHasWorkerHiddingInOurMain; }
+	void setEnemyHasWorkerHiddingInOurMain(bool enemyHasWorkerHiddingInOurMain) { m_enemyHasWorkerHiddingInOurMain = enemyHasWorkerHiddingInOurMain; }
 	bool shouldFocusBuildings() const { return m_focusBuildings; }
 	void setFocusBuildings(bool focusBuildings) { m_focusBuildings = focusBuildings; }
 	const std::set<sc2::UPGRADE_ID> & getCompletedUpgrades() const { return m_completedUpgrades; };

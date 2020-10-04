@@ -62,7 +62,7 @@ public:
     void    drawProductionInformation();
 
 	bool	hasRequired(const MetaType& metaType, bool checkInQueue) const;
-	Unit getProducer(const MetaType & type, bool allowTraining = false, CCPosition closestTo = CCPosition(0, 0), bool allowMovingWorker = false) const;
+	Unit getProducer(const MetaType & type, bool allowTraining = false, CCPosition closestTo = CCPosition(0, 0), bool allowMovingWorker = false, bool useProxyWorker = false) const;
 	std::vector<sc2::UNIT_TYPEID> getProductionBuildingTypes(bool ignoreState = true) const;
 	int getProductionBuildingsCount() const;
 	int getProductionBuildingsAddonsCount() const;

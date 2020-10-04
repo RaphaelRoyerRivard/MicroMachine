@@ -68,6 +68,8 @@ public:
 	bool DrawPathfindingTiles;
 	bool DrawBuildingBase;
 	bool DrawCurrentStartingStrategy;
+	bool LogArmyActions;
+	bool LogSlowFrames;
 	bool TimeControl;
 	bool PrintGreetingMessage;
 	bool RandomProxyLocation;
@@ -105,7 +107,6 @@ public:
 	bool ArchonMode;
     
     int WorkersPerRefinery;
-    int BuildingSpacing;
     int PylonSpacing;
 	bool SelectStartingBuildBasedOnHistory;
  

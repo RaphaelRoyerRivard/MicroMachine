@@ -54,7 +54,7 @@ public:
 	void SetLocationAsBlocked(const CCPosition position, UnitType type);
 	void ClearBlockedLocations();
 	std::vector<Unit> getEnemyUnitsNear(CCTilePosition center) const;
-	const BaseLocation* getBaseContainingPosition(const CCPosition position, int player) const;
+	const BaseLocation* getBaseContainingPosition(const CCPosition position, int player = -1) const;
 	bool isInProximityOfResources(int x, int y) const;
 	int getAccessibleMineralFieldCount() const;
 };

@@ -255,16 +255,21 @@ void WorkerManager::handleMineralWorkers()
 		const auto rampPosition = Util::GetPosition(m_bot.Buildings().getWallPosition());
 		for (const auto & worker : workers)
 		{
+			if (isReturningCargo(worker) || !isFree(worker))
+				continue;
 			const auto dist = Util::DistSq(worker, rampPosition);
-			if (!proxyWorker.isValid() || dist < minDist || m_workerData.getWorkerJob(worker) != WorkerJobs::Build)
+			if (!proxyWorker.isValid() || dist < minDist)
 			{
 				minDist = dist;
 				proxyWorker = worker;
 			}
 		}
-		proxyWorker.move(m_bot.Buildings().getProxyLocation());
-		m_workerData.setProxyWorker(proxyWorker);
-		m_secondProxyWorkerSent = true;
+		if (proxyWorker.isValid())
+		{
+			proxyWorker.move(m_bot.Buildings().getProxyLocation());
+			m_workerData.setProxyWorker(proxyWorker);
+			m_secondProxyWorkerSent = true;
+		}
 	}
 
 	//split workers on first frame
@@ -365,13 +370,18 @@ void WorkerManager::handleMineralWorkers()
 void WorkerManager::handleMules()
 {
 	//Clear mineral patch of mule that expired
+	std::vector<CCUnitID> toRemove;
 	int frame = m_bot.GetCurrentFrame();
 	for (auto & i : mineralMuleDeathFrame)
 	{
 		if (frame >= i.second)
 		{
-			mineralMuleDeathFrame.erase(i.first);
+			toRemove.push_back(i.first);
 		}
+	}
+	for (auto & remove : toRemove)
+	{
+		mineralMuleDeathFrame.erase(remove);
 	}
 
 	for (auto & mule : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MULE))

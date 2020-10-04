@@ -123,14 +123,15 @@ namespace Util
 		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
 		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool considerOnlyEffects, float maxInfluence, CCBot & bot);
+		CCPosition FindEngagePosition(const sc2::Unit * unit, const sc2::Unit* target, float maxRange, CCBot & bot);
 		CCPosition FindOptimalPathToSafety(const sc2::Unit * unit, CCPosition goal, bool shouldHeal, CCBot & bot);
 		CCPosition FindOptimalPathToSaferRange(const sc2::Unit * unit, const sc2::Unit * target, float range, bool moveFarther, CCBot & bot);
 		float FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot);
 		CCPosition FindOptimalPathPosition(const sc2::Unit * unit, CCPosition goal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, CCBot & bot);
 		CCPosition FindOptimalPathToDodgeEffectAwayFromGoal(const sc2::Unit * unit, CCPosition goal, float range, CCBot & bot);
 		std::list<CCPosition> FindOptimalPathWithoutLimit(const sc2::Unit * unit, CCPosition goal, CCBot & bot);
-		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, float maxInfluence, bool flee, CCBot & bot);
-		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, float maxInfluence, bool flee, bool limitSearch, FailureReason & failureReason, CCBot & bot);
+		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, float maxInfluence, bool flee, bool checkVisibility, CCBot & bot);
+		std::list<CCPosition> FindOptimalPath(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, float maxRange, bool exitOnInfluence, bool considerOnlyEffects, bool getCloser, bool ignoreInfluence, float maxInfluence, bool flee, bool checkVisibility, bool limitSearch, FailureReason & failureReason, CCBot & bot);
 		CCTilePosition GetNeighborNodePosition(int x, int y, IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);
 		CCPosition GetCommandPositionFromPath(std::list<CCPosition> & path, const sc2::Unit * rangedUnit, bool moveFarther, CCBot & bot);
 		std::list<CCPosition> GetPositionListFromPath(IMNode* currentNode, const sc2::Unit * rangedUnit, CCBot & bot);

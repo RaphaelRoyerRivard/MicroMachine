@@ -66,7 +66,6 @@ BotConfig::BotConfig()
     ColorUnitNotNearEnemy = CCColor(0, 255, 0);
 
     WorkersPerRefinery = 3;
-    BuildingSpacing = 1;
     PylonSpacing = 3;
 	SelectStartingBuildBasedOnHistory = false;
 
@@ -172,7 +171,6 @@ void BotConfig::readConfigFile()
     if (j.count("Macro") && j["Macro"].is_object())
     {
         const json & macro = j["Macro"];
-        JSONTools::ReadInt("BuildingSpacing", macro, BuildingSpacing);
         JSONTools::ReadInt("PylongSpacing", macro, PylonSpacing);
         JSONTools::ReadInt("WorkersPerRefinery", macro, WorkersPerRefinery);
 		JSONTools::ReadBool("SelectStartingBuildBasedOnHistory", macro, SelectStartingBuildBasedOnHistory);
@@ -224,6 +222,8 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawPathfindingTiles", debug, DrawPathfindingTiles);
 			JSONTools::ReadBool("DrawBuildingBase", debug, DrawBuildingBase);
 			JSONTools::ReadBool("DrawCurrentStartingStrategy", debug, DrawCurrentStartingStrategy);
+			JSONTools::ReadBool("LogArmyActions", debug, LogArmyActions);
+			JSONTools::ReadBool("LogSlowFrames", debug, LogSlowFrames);
 			JSONTools::ReadBool("TimeControl", debug, TimeControl);
 		}
     }

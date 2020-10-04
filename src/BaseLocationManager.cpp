@@ -191,10 +191,58 @@ void BaseLocationManager::onStart()
 				{
 					minDistance = groundDistanceSq;//to be able to use DistSq above
 					m_tileBaseLocations[x][y] = &base;
+					base.addBaseTile(CCTilePosition(x, y));
 				}
 			}
         }
     }
+
+	// extend the base tiles 1 tile further because some tiles at the edges of bases are not identified
+	std::vector<std::pair<std::pair<int, int>, BaseLocation*>> newBaseLocationTiles;
+	for (int x = mapMin.x; x < mapMax.x; ++x)
+	{
+		for (int y = mapMin.y; y < mapMax.y; ++y)
+		{
+			if (m_tileBaseLocations[x][y] == nullptr)
+			{
+				std::map<BaseLocation*, int> neighborsBaseLocation;
+				for (int xOffset = -1; xOffset <= 1; ++xOffset)
+				{
+					for (int yOffset = -1; yOffset <= 1; ++yOffset)
+					{
+						BaseLocation* bl = m_tileBaseLocations[x + xOffset][y + yOffset];
+						if (bl)
+						{
+							++neighborsBaseLocation[bl];
+						}
+					}
+				}
+				if (!neighborsBaseLocation.empty())
+				{
+					BaseLocation* popularBaseLocation = nullptr;
+					int count = 0;
+					for (const auto & pair : neighborsBaseLocation)
+					{
+						// The most common base location amongst neighbors is selected, but if 2 are equals, the highest one is selected
+						if (count == 0 || pair.second > count || (pair.second == count && Util::TerrainHeight(pair.first->getDepotPosition()) > Util::TerrainHeight(popularBaseLocation->getDepotPosition())))
+						{
+							popularBaseLocation = pair.first;
+							count = pair.second;
+						}
+					}
+					const auto pair = std::make_pair(std::make_pair(x, y), popularBaseLocation);
+					newBaseLocationTiles.push_back(pair);
+				}
+			}
+		}
+	}
+	for (const auto & pair : newBaseLocationTiles)
+	{
+		auto tile = CCTilePosition(pair.first.first, pair.first.second);
+		auto baseLocation = pair.second;
+		m_tileBaseLocations[tile.x][tile.y] = baseLocation;
+		baseLocation->addBaseTile(tile);
+	}
 
     // construct the sets of occupied base locations
     m_occupiedBaseLocations[Players::Self] = std::set<BaseLocation *>();
@@ -436,6 +484,10 @@ void BaseLocationManager::drawTileBaseLocationAssociations() const
 		return;
 	}
 
+	std::map<BaseLocation*, std::string> baseIds;
+	for (int i = 0; i < m_baseLocationPtrs.size(); ++i)
+		baseIds[m_baseLocationPtrs[i]] = std::to_string(i);
+
 	for (size_t x = 0; x < m_tileBaseLocations.size(); ++x)
 	{
 		const auto & xRow = m_tileBaseLocations.at(x);
@@ -445,6 +497,7 @@ void BaseLocationManager::drawTileBaseLocationAssociations() const
 			if (baseLocation)
 			{
 				m_bot.Map().drawTile(x, y, CCColor(255, 255, 255));
+				m_bot.Map().drawText(CCPosition(x, y), baseIds[baseLocation]);
 				
 				//Display all the tiles individually
 				//m_bot.Map().drawLine(CCPosition(x, y), Util::GetPosition(baseLocation->getDepotTilePosition()), sc2::Colors::White);
@@ -630,7 +683,7 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 		auto tile = base->getDepotTilePosition();
 		
 		//Check if buildable (creep check), using CC for building size, should work for all races.
-		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, MetaTypeEnum::CommandCenter.getUnitType(), 0, true, false, true))
+		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, MetaTypeEnum::CommandCenter.getUnitType(), true, false, true))
 		{
 			continue;
 		}
@@ -819,7 +872,7 @@ const BaseLocation* BaseLocationManager::getBaseContainingPosition(const CCPosit
 {
 	for (auto & base : m_baseLocationData)
 	{
-		if (!base.isOccupiedByPlayer(player))
+		if (player >= 0 && !base.isOccupiedByPlayer(player))
 			continue;
 
 		if (base.containsPosition(position))

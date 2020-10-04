@@ -495,7 +495,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		m_bot.StopProfiling("0.10.4.1.5.1.f          OpportunisticAttack");
 	}
 
-	if (!unitShouldHeal && distSqToTarget < m_order.getRadius() * m_order.getRadius() && (target || !threats.empty()))
+	if (!unitShouldHeal && distSqToTarget < m_order.getRadius() * m_order.getRadius() && (target || (!threats.empty() && m_order.getStatus() != "Retreat")))
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
@@ -1309,6 +1309,9 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			float bestScore = 0.f;
 			for(const auto potentialTarget : rangedUnitTargets)
 			{
+				// Do not Lock On on hallucinations
+				if (potentialTarget->is_hallucination)
+					continue;
 				const auto unitType = UnitType(potentialTarget->unit_type, m_bot);
 				// Do not Lock On on workers
 				if (unitType.isWorker())
@@ -1624,14 +1627,20 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	m_bot.StartProfiling("0.10.4.1.5.1.5.2          CalcThreats");
 	// Calculate all the threats of all the ally units participating in the fight
 	std::set<const sc2::Unit *> allThreatsSet;
+	std::map<sc2::UnitTypeID, sc2::Units> allyGroundUnitsByType;
 	for (const auto allyUnit : closeUnits)
 	{
 		const auto & allyUnitThreats = getThreats(allyUnit, rangedUnitTargets);
 		for (const auto threat : allyUnitThreats)
 			allThreatsSet.insert(threat);
+		if (!allyUnit->is_flying)
+		{
+			auto & allyUnitsOfType = allyGroundUnitsByType[allyUnit->unit_type];
+			allyUnitsOfType.push_back(allyUnit);
+		}
 	}
 	// Add enemies that are close to the threats
-	for (const auto enemy : rangedUnitTargets)
+	/*for (const auto enemy : rangedUnitTargets)
 	{
 		if (Util::Contains(enemy, allThreatsSet))
 			continue;
@@ -1662,12 +1671,84 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			continue;
 		const auto threatRange = Util::getThreatRange(enemyTarget, enemy, m_bot) + 3.f;
 		if (Util::DistSq(enemy->pos, enemyTarget->pos) <= threatRange * threatRange)
+		{
 			allThreatsSet.insert(enemy);
-	}
+		}
+	}*/
 	sc2::Units allThreats;
 	for (const auto threat : allThreatsSet)
 	{
 		allThreats.push_back(threat);
+	}
+	// We do a pathfinding with the closest unit of every type we have towards its target to check if we want to add more enemy units
+	for (const auto & allyUnitsByTypePair : allyGroundUnitsByType)
+	{
+		const sc2::Unit * closestUnit = nullptr;
+		const sc2::Unit * closestUnitTarget = nullptr;
+		float minDistance = 0;
+		for (const auto unit : allyUnitsByTypePair.second)
+		{
+			const auto unitTarget = getTarget(unit, allThreats, false);
+			if (unitTarget)
+			{
+				float dist = Util::DistSq(unit->pos, unitTarget->pos);
+				if (!closestUnit || dist < minDistance)
+				{
+					closestUnit = unit;
+					closestUnitTarget = unitTarget;
+					minDistance = dist;
+				}
+			}
+		}
+		if (closestUnit)
+		{
+			std::string pathfindingTypeForEngagePosition = "FindEngagePosition";
+			if (AllowUnitToPathFind(closestUnit, false, pathfindingTypeForEngagePosition))
+			{
+				float attackRange = Util::GetAttackRangeForTarget(closestUnit, closestUnitTarget, m_bot);
+				// The pathfinding checks if we'll have vision of the target by considering the terrain height (we can see 1 unit of height above our current)
+				// The pathfinding also ignores influence because we'll move towards the enemy and the game will choose how to move our unit
+				CCPosition engagePosition = Util::PathFinding::FindEngagePosition(closestUnit, closestUnitTarget, attackRange, m_bot);
+				if (engagePosition != CCPosition())
+				{
+					// We then add every enemy unit that would be a threat to our unit at that engage position
+					for (const auto enemy : rangedUnitTargets)
+					{
+						if (Util::Contains(enemy, allThreatsSet))
+							continue;
+						if (!Util::CanUnitAttackGround(enemy, m_bot))
+							continue;
+						const auto threatRange = Util::getThreatRange(closestUnit, enemy, m_bot);
+						if (Util::DistSq(enemy->pos, engagePosition) <= threatRange * threatRange)
+						{
+							allThreatsSet.insert(enemy);
+							allThreats.push_back(enemy);
+						}
+					}
+				}
+				else
+				{
+					PreventUnitToPathFind(closestUnit, pathfindingTypeForEngagePosition, false);
+				}
+			}
+		}
+	}
+	// Then we add Shield Batteries
+	for (const auto enemy : rangedUnitTargets)
+	{
+		if (Util::Contains(enemy, allThreatsSet))
+			continue;
+		if (enemy->unit_type != sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY || !enemy->is_powered || enemy->build_progress < 1.f)
+			continue;
+		for (const auto threat : allThreatsSet)
+		{
+			if (threat->unit_type != sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY && Util::Dist(threat->pos, enemy->pos) <= Util::GetAttackRangeForTarget(enemy, threat, m_bot))
+			{
+				allThreatsSet.insert(enemy);
+				allThreats.push_back(enemy);
+				break;
+			}
+		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.5.2          CalcThreats");
 
@@ -1692,7 +1773,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		if (!threatTarget)
 			continue;
 		const float threatRange = Util::GetAttackRangeForTarget(threat, threatTarget, m_bot);
-		const float threatDistance = threatTarget ? Util::Dist(threat->pos, threatTarget->pos) : 0.f;
+		/*const float threatDistance = threatTarget ? Util::Dist(threat->pos, threatTarget->pos) : 0.f;
 		// If the building threat is too far from its target to attack it (with a very small buffer)
 		if (Unit(threat, m_bot).getType().isBuilding() && threatTarget && threatDistance > threatRange + 0.01f)
 		{
@@ -1717,7 +1798,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			}
 			if (!unitWillGetCloseEnough)
 				continue;
-		}
+		}*/
 		if (threatRange > maxThreatRange)
 			maxThreatRange = threatRange;
 		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
@@ -1985,7 +2066,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			}
 			if(movePosition == CCPosition() && shouldChase)
 			{
-				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, m_bot);
+				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, false, m_bot);
 				movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, true, m_bot);
 				if (movePosition == CCPosition())
 					PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
@@ -2507,6 +2588,8 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	{
 		if (potentialTarget->display_type == sc2::Unit::Hidden)
 			continue;
+		if (potentialTarget->is_hallucination)
+			continue;
 		const auto type = UnitType(potentialTarget->unit_type, m_bot);
 		if (type.isBuilding() && !type.isAttackingBuilding())
 			continue;
@@ -2578,7 +2661,7 @@ const sc2::Unit * RangedManager::GetHealTarget(const sc2::Unit * medivac, const 
 		if (it != medivacTargets.end() && it->second != medivac)
 			continue;	// If the target already has a Medivac that is healing it (other than the current Medivac)
 		const Unit allyUnit(ally, m_bot);
-		if (!allyUnit.getType().isCombatUnit() || !allyUnit.hasAttribute(sc2::Attribute::Biological))
+		if (ally->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER || !allyUnit.getType().isCombatUnit() || !allyUnit.hasAttribute(sc2::Attribute::Biological))
 			continue;
 		const float distance = Util::DistSq(medivac->pos, ally->pos);
 		const float score = ally->health + std::max(healRange + ally->radius, distance);
@@ -2743,7 +2826,7 @@ bool RangedManager::ExecuteAutoTurretLogic(const sc2::Unit * raven, const sc2::U
 	}
 
 	const auto turretBuilding = Building(UnitType(sc2::UNIT_TYPEID::TERRAN_AUTOTURRET, m_bot), Util::GetTilePosition(raven->pos));
-	const CCPosition turretPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(turretBuilding, 0, true, false, false));
+	const CCPosition turretPosition = Util::GetPosition(m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(turretBuilding, true, false, false));
 
 	if(Util::DistSq(turretPosition, raven->pos) < 2.75f * 2.75)
 	{
@@ -2985,7 +3068,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 				continue;
     	}
 
-		float priority = getAttackPriority(rangedUnit, target, harass, considerOnlyUnitsInRange);
+		float priority = getAttackPriority(rangedUnit, target, harass, considerOnlyUnitsInRange, !harass);
 		if(priority > 0.f)
 			targetPriorities.insert(std::pair<float, const sc2::Unit*>(priority, target));
     }

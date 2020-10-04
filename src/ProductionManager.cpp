@@ -258,7 +258,7 @@ void ProductionManager::manageBuildOrderQueue()
 					(currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().isProxyFactoryStartingStrategy() && factoryCount == 0)))
 				{
 					const auto proxyLocation = Util::GetPosition(m_bot.Buildings().getProxyLocation());
-					Unit producer = getProducer(currentItem.type, false, proxyLocation, true);
+					Unit producer = getProducer(currentItem.type, false, proxyLocation, true, true);
 					Building b(currentItem.type.getUnitType(), proxyLocation);
 					b.finalPosition = proxyLocation;
 					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
@@ -655,7 +655,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 
 	const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
-	const float productionScore = getProductionScore();
 	const auto productionBuildingCount = getProductionBuildingsCount();
 	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
 	const auto totalBaseCount = m_bot.Bases().getBaseCount(Players::Self, false);
@@ -1781,7 +1780,7 @@ bool ProductionManager::hasProducer(const MetaType& metaType, bool checkInQueue)
 	return false;
 }
 
-Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, CCPosition closestTo, bool allowMovingWorker) const
+Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, CCPosition closestTo, bool allowMovingWorker, bool useProxyWorker) const
 {
 	// get all the types of units that cna build this type
 	auto & producerTypes = m_bot.Data(type).whatBuilds;
@@ -1911,10 +1910,15 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 					{
 						continue;
 					}
-					const auto & orders = unit.getUnitPtr()->orders;
+					if (useProxyWorker)
+					{
+						if (!m_bot.Workers().getWorkerData().isProxyWorker(unit))
+							continue;
+					}
 					bool isMoving = false;
 					if (!allowMovingWorker)
 					{
+						const auto & orders = unit.getUnitPtr()->orders;
 						for (const auto & order : orders)
 						{
 							if (order.ability_id == sc2::ABILITY_ID::MOVE)
@@ -2047,78 +2051,6 @@ int ProductionManager::getProductionBuildingsAddonsCount() const
 		}
 	}
 	return 0;
-}
-
-float ProductionManager::getProductionScore() const
-{
-	float score = 0;
-	switch (m_bot.GetSelfRace())
-	{
-		case CCRace::Terran:
-		{
-			score += m_bot.Buildings().getBuildingCountOfType({
-				sc2::UNIT_TYPEID::TERRAN_BARRACKS }) * 0.25f;
-			score += m_bot.Buildings().getBuildingCountOfType({
-				sc2::UNIT_TYPEID::TERRAN_FACTORY }) * 0.25f;
-			score += m_bot.Buildings().getBuildingCountOfType({
-				sc2::UNIT_TYPEID::TERRAN_STARPORT }) * 0.5f;
-
-			std::vector<sc2::UNIT_TYPEID> barracksAddonTypes = {
-				sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_BARRACKSTECHLAB };
-			score += m_bot.Buildings().getBuildingCountOfType(barracksAddonTypes) * 0.25f;
-			std::vector<sc2::UNIT_TYPEID> factoryAddonTypes = {
-				sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_FACTORYTECHLAB };
-			score += m_bot.Buildings().getBuildingCountOfType(factoryAddonTypes) * 0.25f;
-			std::vector<sc2::UNIT_TYPEID> starportAddonTypes = {
-				sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR,
-				sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB };
-			score += m_bot.Buildings().getBuildingCountOfType(starportAddonTypes) * 0.5f;
-			break;
-		}
-		case CCRace::Protoss:
-		{
-			return 0;
-		}
-		case CCRace::Zerg:
-		{
-			return 0;
-		}
-	}
-	return score;
-}
-
-float ProductionManager::getProductionScoreInQueue()
-{
-	float score = 0;
-	
-	switch (m_bot.GetSelfRace())
-	{
-		case CCRace::Terran:
-		{
-			score += m_queue.contains(MetaTypeEnum::Barracks) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::Factory) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::Starport) ? 0.25f : 0;
-
-			score += m_queue.contains(MetaTypeEnum::BarracksReactor) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::BarracksTechLab) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::FactoryReactor) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::FactoryTechLab) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::StarportReactor) ? 0.25f : 0;
-			score += m_queue.contains(MetaTypeEnum::StarportTechLab) ? 0.25f : 0;
-			break;
-		}
-		case CCRace::Protoss:
-		{
-			return 0;
-		}
-		case CCRace::Zerg:
-		{
-			return 0;
-		}
-	}
-	return score;
 }
 
 std::vector<Unit> ProductionManager::getUnitTrainingBuildings(CCRace race)
