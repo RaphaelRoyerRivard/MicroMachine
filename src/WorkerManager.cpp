@@ -156,6 +156,8 @@ void WorkerManager::HandleWorkerTransfer()
 	for (auto & baseWithFewWorkers : basesWithFewWorkers)
 	{
 		auto & depot = baseWithFewWorkers.first->getResourceDepot();
+		if (!depot.isValid())
+			continue;
 		int fewWorkerNeeded = baseWithFewWorkers.second;
 
 		for (auto & baseWithExtraWorkers : basesWithExtraWorkers)
@@ -170,7 +172,7 @@ void WorkerManager::HandleWorkerTransfer()
 				const float speedPerFrame = speed / 16.f;
 				auto travelFrame = distance / speedPerFrame;
 
-				const int depotBuildTime = 71 * 24;//71 seconds * 24 fps
+				const float depotBuildTime = 71 * 22.4f;//71 seconds * 22.4 fps
 				float depotFinishedInXFrames = depotBuildTime * (1.f - depot.getBuildProgress());
 				if (travelFrame >= depotFinishedInXFrames)
 				{
