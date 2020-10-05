@@ -118,7 +118,7 @@ void WorkerManager::HandleWorkerTransfer()
 		}
 
 		auto basePosition = base->getPosition();
-		auto & depot = getDepotAtBasePosition(basePosition);
+		auto depot = getDepotAtBasePosition(basePosition);
 		int workerCount = m_workerData.getNumAssignedWorkers(depot);
 		int optimalWorkers = base->getOptimalMineralWorkerCount();
 		if (workerCount > optimalWorkers)
@@ -1677,7 +1677,7 @@ int WorkerManager::getNumWorkers()
     return count;
 }
 
-std::set<Unit> WorkerManager::getWorkers() const
+const std::set<Unit> & WorkerManager::getWorkers() const
 {
 	return m_workerData.getWorkers();
 }
