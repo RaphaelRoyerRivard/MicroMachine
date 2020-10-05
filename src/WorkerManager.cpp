@@ -172,7 +172,7 @@ void WorkerManager::HandleWorkerTransfer()
 				const float speedPerFrame = speed / 16.f;
 				auto travelFrame = distance / speedPerFrame;
 
-				const float depotBuildTime = 71 * 22.4f;//71 seconds * 22.4 fps
+				const float depotBuildTime = 71 * 22.4f * 1.07f;//71 seconds * 22.4 fps * small buffer
 				float depotFinishedInXFrames = depotBuildTime * (1.f - depot.getBuildProgress());
 				if (travelFrame >= depotFinishedInXFrames)
 				{
