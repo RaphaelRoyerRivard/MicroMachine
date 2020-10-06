@@ -88,6 +88,7 @@ class CCBot : public sc2::Agent
 	std::set<const sc2::Unit *> m_enemyRepairingSCVs;
 	std::set<const sc2::Unit *> m_enemySCVBuilders;
 	std::set<const sc2::Unit *> m_enemyWorkersGoingInRefinery;
+	std::list<sc2::Units> m_stackedEnemyWorkers;
 	CCRace selfRace;
 	CCRace enemyRace = sc2::Random;
 	std::map<std::string, Profiler> m_profilingTimes;
@@ -123,6 +124,7 @@ class CCBot : public sc2::Agent
 	void identifyEnemyRepairingSCVs();
 	void identifyEnemySCVBuilders();
 	void identifyEnemyWorkersGoingIntoRefinery();
+	void identifyStackedEnemyWorkers();
 	void clearDeadUnits();
 	void clearDuplicateUnits();
 	void updatePreviousFrameEnemyUnitPos();
@@ -203,6 +205,7 @@ public:
 	const std::set<const sc2::Unit *> & GetEnemyRepairingSCVs() const { return m_enemyRepairingSCVs; }
 	const std::set<const sc2::Unit *> & GetEnemySCVBuilders() const { return m_enemySCVBuilders; }
 	const std::set<const sc2::Unit *> & GetEnemyWorkersGoingInRefinery() const { return m_enemyWorkersGoingInRefinery; }
+	const std::list<sc2::Units> & GetStackedEnemyWorkers() const { return m_stackedEnemyWorkers; }
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
 	const std::vector<Unit> & GetEnemyUnits(sc2::UnitTypeID type);
 	const std::vector<Unit> & GetEnemyBuildingsUnderConstruction() const { return m_enemyBuildingsUnderConstruction; }

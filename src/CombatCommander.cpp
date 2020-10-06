@@ -513,6 +513,12 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 			}
 		}
 	}
+
+	// Generate effect influence around stacked enemy workers
+	for (const auto & stackedEnemyWorkers : m_bot.GetStackedEnemyWorkers())
+	{
+		updateInfluenceMap(stackedEnemyWorkers.size() * 5, 1.5f, 1.f, stackedEnemyWorkers[0]->pos, true, true, true, false);
+	}
 }
 
 void CombatCommander::updateGroundInfluenceMapForUnit(const Unit& enemyUnit)
@@ -2415,7 +2421,16 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	// if worker rushed, we want to defend no mather the distance, but we don't want to defend a base other than our main nor with more than the enemy workers + 1
 	if (m_bot.Strategy().isWorkerRushed())
 	{
-		return pos == m_bot.GetStartLocation() && defenseSquad.getUnits().size() <= enemyUnits.size();
+		int stackedWorkersCount = 0;
+		for (const auto enemyWorkerStack : m_bot.GetStackedEnemyWorkers())
+		{
+			float dist = Util::DistSq(enemyWorkerStack[0]->pos, pos);
+			if (dist < 25 * 25)
+			{
+				stackedWorkersCount += enemyWorkerStack.size();
+			}
+		}
+		return pos == m_bot.GetStartLocation() && defenseSquad.getUnits().size() <= enemyUnits.size() - stackedWorkersCount;
 	}
 	// worker can fight buildings somewhat close to the base
 	/*const auto isBuilding = closestEnemy.getType().isBuilding();
