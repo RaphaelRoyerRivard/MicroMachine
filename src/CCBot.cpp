@@ -887,6 +887,10 @@ void CCBot::setUnits()
 	identifyEnemyWorkersGoingIntoRefinery();
 	StopProfiling("0.2.3   identifyEnemyWorkersGoingIntoRefinery");
 
+	StartProfiling("0.2.4   identifyStackedEnemyWorkers");
+	identifyStackedEnemyWorkers();
+	StopProfiling("0.2.4   identifyStackedEnemyWorkers");
+
 	/*if (!m_strategy.shouldProduceAntiAirDefense())
 		m_strategy.setShouldProduceAntiAirDefense(m_enemyUnitsPerType[sc2::UNIT_TYPEID::PROTOSS_PHOENIX].size() >= 3);*/	// Commented because it uses too much resources and is not very effective
 	m_strategy.setEnemyHasMassZerglings(m_enemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
@@ -999,6 +1003,66 @@ void CCBot::identifyEnemyWorkersGoingIntoRefinery()
 					break;
 				}
 			}
+		}
+	}
+}
+
+void CCBot::identifyStackedEnemyWorkers()
+{
+	// Select the right enemy worker type
+	sc2::UnitTypeID enemyWorkerType;
+	const auto enemyRace = GetPlayerRace(Players::Enemy);
+	switch (enemyRace)
+	{
+	case sc2::Race::Protoss:
+		enemyWorkerType = sc2::UNIT_TYPEID::PROTOSS_PROBE;
+		break;
+	case sc2::Race::Terran:
+		enemyWorkerType = sc2::UNIT_TYPEID::TERRAN_SCV;
+		break;
+	case sc2::Race::Zerg:
+		enemyWorkerType = sc2::UNIT_TYPEID::ZERG_DRONE;
+		break;
+	default:
+		enemyWorkerType = sc2::UNIT_TYPEID::INVALID;
+		break;
+	}
+
+	// Create vectors of stacked enemy workers
+	m_stackedEnemyWorkers.clear();
+	for (auto & enemyWorker : m_enemyUnitsPerType[enemyWorkerType])
+	{
+		if (enemyWorker.getUnitPtr()->last_seen_game_loop != m_gameLoop)
+			continue;
+		float workerRadius = enemyWorker.getUnitPtr()->radius;
+		bool partOfStack = false;
+		for (sc2::Units & stack : m_stackedEnemyWorkers)
+		{
+			float dist = Util::DistSq(enemyWorker, stack[0]->pos);
+			if (dist < workerRadius * workerRadius * 0.5f)
+			{
+				stack.push_back(enemyWorker.getUnitPtr());
+				partOfStack = true;
+				break;
+			}
+		}
+		if (!partOfStack)
+		{
+			m_stackedEnemyWorkers.push_back({ enemyWorker.getUnitPtr() });
+		}
+	}
+	
+	// Remove the stacks of 3 workers or less
+	auto it = m_stackedEnemyWorkers.begin();
+	while (it != m_stackedEnemyWorkers.end())
+	{
+		if (it->size() <= 3)
+		{
+			it = m_stackedEnemyWorkers.erase(it);
+		}
+		else
+		{
+			++it;
 		}
 	}
 }
