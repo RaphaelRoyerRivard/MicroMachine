@@ -1808,6 +1808,18 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, nat + towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, nat + towardsCenter * 0, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, m_startLocation, player2, 4);*/
+
+	// Test to see if Banshee backs to defend while we already have Cyclones ready
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter - towardsCenter * 20, player2, 1);*/
+
+	// Test to reproduce bug where our Reaper dies to Cannons outside our main (could not reproduce)
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, nat + towardsCenterY * 2 - towardsCenterX * 2, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenterY * 20 + towardsCenterX * 12, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, m_startLocation + towardsCenterY * 20 + towardsCenterX * 15, player2, 1);*/
 }
 
 void CCBot::IssueCheats()
@@ -2333,7 +2345,7 @@ void CCBot::drawProfilingInfo()
 			}
 		}
 
-		if (Config().LogSlowFrames && currentStepTime >= 50000 && queue.size() > 0 && queue[0].first > 0)	// 50ms
+		if (currentStepTime >= Config().LogFrameDurationThreshold * 1000 && queue.size() > 0 && queue[0].first > 0)
 		{
 			Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * queue[0].first) + "ms for " + std::to_string(queue[0].second) + " calls", *this);
 		}

@@ -2066,7 +2066,7 @@ void CombatCommander::updateDefenseSquads()
 				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
 				bool weakUnitAgainstOnlyBuildings = unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER;
 				bool proxyMarauderAgainstOnlyBuildings = m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS && unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MARAUDER;
-				bool immune = true;
+				//bool immune = true;
 				bool detectionUseful = false;
 				float maxGroundDps = 0.f;
 				float maxAirDps = 0.f;
@@ -2094,7 +2094,7 @@ void CombatCommander::updateDefenseSquads()
 							proxyMarauderAgainstOnlyBuildings = false;
 					}
 					// We check if our unit is immune to the enemy unit (as soon as one enemy unit can attack our unit, we stop checking)
-					if (immune)
+					/*if (immune)
 					{
 						if (unit.isFlying())
 						{
@@ -2104,7 +2104,7 @@ void CombatCommander::updateDefenseSquads()
 						{
 							immune = !Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot);
 						}
-					}
+					}*/
 					if (!detectionUseful && unit.getType().isDetector() && (enemyUnit.isCloaked() || enemyUnit.isBurrowed()))
 						detectionUseful = true;
 					// We check the max ground and air dps that our unit would do in that region
@@ -2130,13 +2130,15 @@ void CombatCommander::updateDefenseSquads()
 				// If our unit would have a valid ground target, we calculate the score (usefulness in that region) and add it to the list
 				if (maxGroundDps > 0.f)
 				{
-					float regionScore = immune * 50 + maxGroundDps - distance;
+					//float regionScore = immune * 50 + maxGroundDps - distance;
+					float regionScore = maxGroundDps - distance;
 					region.unitGroundScores[unit.getUnitPtr()] = regionScore;
 				}
 				// If our unit would have a valid air target, we calculate the score (usefulness in that region) and add it to the list
 				if (maxAirDps > 0.f)
 				{
-					float regionScore = immune * 50 + maxAirDps - distance;
+					//float regionScore = immune * 50 + maxAirDps - distance;
+					float regionScore = maxAirDps - distance;
 					region.unitAirScores[unit.getUnitPtr()] = regionScore;
 				}
 				if (detectionUseful)
@@ -2204,7 +2206,7 @@ void CombatCommander::updateDefenseSquads()
 							if (squadOrder.getType() == SquadOrderTypes::Attack || squadOrder.getType() == SquadOrderTypes::Harass)
 							{
 								// If the unit is closer to its squad order objective than the base to defend, we won't send back that unit to defend
-								if (Util::DistSq(scoredUnit, squadOrder.getPosition()) < Util::DistSq(scoredUnit, region.squad->getSquadOrder().getPosition()))
+								// if (Util::DistSq(scoredUnit, squadOrder.getPosition()) < Util::DistSq(scoredUnit, region.squad->getSquadOrder().getPosition()))
 								{
 									continue;
 								}
