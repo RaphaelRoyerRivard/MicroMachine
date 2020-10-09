@@ -30,6 +30,7 @@ class ProductionManager
 	MetaType supplyProviderType;
 	UnitType workerType;
 	MetaType workerMetatype;
+	int m_lastProductionLogFrame = 0;
 
 	void	validateUpgradesProgress();
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;

@@ -176,6 +176,8 @@ void BotConfig::readConfigFile()
 		JSONTools::ReadBool("SelectStartingBuildBasedOnHistory", macro, SelectStartingBuildBasedOnHistory);
 		JSONTools::ReadBool("PrintGreetingMessage", macro, PrintGreetingMessage);
 		JSONTools::ReadBool("RandomProxyLocation", macro, RandomProxyLocation);
+		JSONTools::ReadInt("ProductionPrintFrequency", macro, ProductionPrintFrequency);
+		JSONTools::ReadInt("LogFrameDurationThreshold", macro, LogFrameDurationThreshold);
     }
 
     // Parse the Debug Options
@@ -223,7 +225,6 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawBuildingBase", debug, DrawBuildingBase);
 			JSONTools::ReadBool("DrawCurrentStartingStrategy", debug, DrawCurrentStartingStrategy);
 			JSONTools::ReadBool("LogArmyActions", debug, LogArmyActions);
-			JSONTools::ReadBool("LogSlowFrames", debug, LogSlowFrames);
 			JSONTools::ReadBool("TimeControl", debug, TimeControl);
 		}
     }

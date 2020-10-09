@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.11.7",
+        "BotVersion"                : "1.12.3",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,8 +24,8 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 1,
-        "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "StasisLE.SC2Map",
+        "EnemyRace"                 : "Terran",
+        "MapFile"                   : "GoldenWallLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50,
@@ -126,7 +126,9 @@
         "PylonSpacing"              : 3,
         "SelectStartingBuildBasedOnHistory" : true,
         "PrintGreetingMessage"      : false,
-        "RandomProxyLocation"       : false
+        "RandomProxyLocation"       : false,
+        "ProductionPrintFrequency"  : 30,
+        "LogFrameDurationThreshold" : 100
     },
 
     "Debug" :
@@ -150,7 +152,7 @@
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
         "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : false,
+        "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
@@ -158,7 +160,7 @@
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : false,
-        "DrawInfluenceMaps"         : false,
+        "DrawInfluenceMaps"         : true,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
 		"DrawDamageHealthRatio"		: false,
@@ -168,8 +170,7 @@
         "DrawPathfindingTiles"      : false,
         "DrawBuildingBase"          : false,
         "DrawCurrentStartingStrategy"   : true,
-        "LogArmyActions"            : false,
-        "LogSlowFrames"             : false
+        "LogArmyActions"            : false
     },
     
     "Modules" :

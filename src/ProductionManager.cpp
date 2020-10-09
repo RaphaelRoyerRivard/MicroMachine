@@ -2695,16 +2695,24 @@ void ProductionManager::drawProductionInformation()
 #ifdef PUBLIC_RELEASE
 	return;
 #endif
-    if (!m_bot.Config().DrawProductionInfo)
+	const bool draw = m_bot.Config().DrawProductionInfo;
+	const bool log = m_bot.GetCurrentFrame() >= m_lastProductionLogFrame + m_bot.Config().ProductionPrintFrequency * 22.4f;
+    if (!draw && !log)
     {
         return;
     }
+
+	if (log)
+		m_lastProductionLogFrame = m_bot.GetCurrentFrame();
 
     std::stringstream ss;
     ss << "Production Information\n\n";
 
     ss << m_queue.getQueueInformation() << "\n\n";
-	m_bot.Map().drawTextScreen(0.01f, 0.01f, ss.str(), CCColor(255, 255, 0));
+	if (draw)
+		m_bot.Map().drawTextScreen(0.01f, 0.01f, ss.str(), CCColor(255, 255, 0));
+	if (log)
+		Util::Log(__FUNCTION__, ss.str(), m_bot);
 
 	ss.str(std::string());
 	ss << "Free Mineral:     " << m_bot.GetFreeMinerals() << "\n";
@@ -2712,7 +2720,10 @@ void ProductionManager::drawProductionInformation()
 	ss << "Gas Worker Target:" << m_bot.Workers().getGasWorkersTarget() << "\n";
 	ss << "Mineral income:   " << m_bot.Observation()->GetScore().score_details.collection_rate_minerals << "\n";
 	ss << "Gas income:       " << m_bot.Observation()->GetScore().score_details.collection_rate_vespene << "\n";
-	m_bot.Map().drawTextScreen(0.75f, 0.05f, ss.str(), CCColor(255, 255, 0));
+	if (draw)
+		m_bot.Map().drawTextScreen(0.75f, 0.05f, ss.str(), CCColor(255, 255, 0));
+	if (log)
+		Util::Log(__FUNCTION__, ss.str(), m_bot);
 
 	ss.str(std::string());
 	ss << "Being built:      \n";
@@ -2724,5 +2735,8 @@ void ProductionManager::drawProductionInformation()
 	{
 		ss << incompleteUpgrade.first.getName() << "\n";
 	}
-	m_bot.Map().drawTextScreen(0.01f, 0.4f, ss.str(), CCColor(255, 255, 0));	
+	if (draw)
+		m_bot.Map().drawTextScreen(0.01f, 0.4f, ss.str(), CCColor(255, 255, 0));
+	if (log)
+		Util::Log(__FUNCTION__, ss.str(), m_bot);
 }

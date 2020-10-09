@@ -69,10 +69,11 @@ public:
 	bool DrawBuildingBase;
 	bool DrawCurrentStartingStrategy;
 	bool LogArmyActions;
-	bool LogSlowFrames;
 	bool TimeControl;
 	bool PrintGreetingMessage;
 	bool RandomProxyLocation;
+	int ProductionPrintFrequency;
+	int LogFrameDurationThreshold;
     
     CCColor ColorLineTarget;
     CCColor ColorLineMineral;
