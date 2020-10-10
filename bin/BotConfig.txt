@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.12.4",
+        "BotVersion"                : "1.12.5",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,7 +24,7 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Protoss",
+        "EnemyRace"                 : "Terran",
         "MapFile"                   : "GoldenWallLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
@@ -151,7 +151,7 @@
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
-        "DrawSquadInfo"             : false,
+        "DrawSquadInfo"             : true,
         "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
