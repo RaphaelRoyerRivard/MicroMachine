@@ -117,13 +117,19 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	{
 		if (considerOnlyUnitsInRange)
 			return 0.f;
-		if (Util::getSpeedOfUnit(attacker, m_bot) == 0.f)
+		float attackerSpeed = Util::getSpeedOfUnit(attacker, m_bot);
+		if (attackerSpeed == 0.f)
 			proximityValue = 0.001f;
 		else
+		{
 			proximityValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
+			float targetSpeed = Util::getSpeedOfUnit(target, m_bot);
+			if (attacker->weapon_cooldown == 0 && targetSpeed > attackerSpeed)	// if the unit can attack and is slower than its target, we reduce the priority
+				proximityValue *= 0.25f;
+		}
 	}
 	if (target->last_seen_game_loop < m_bot.GetGameLoop())
-		proximityValue *= 0.5f;
+		proximityValue *= 0.25f;
 
 	float invisModifier = 1.f;
 	if (target->cloak == sc2::Unit::CloakedDetected)
