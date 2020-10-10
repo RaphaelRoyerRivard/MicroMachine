@@ -840,7 +840,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
 				}
-				else if (m_bot.Strategy().enemyHasMassZerglings() && factoryCount * 2 < finishedBaseCount)
+				else if (factoryCount * (m_bot.Strategy().enemyHasMassZerglings() ? 2 : 3) < finishedBaseCount)
 				{
 					toBuild = MetaTypeEnum::Factory;
 					hasPicked = true;
@@ -855,21 +855,33 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (hasPicked && !m_queue.contains(toBuild) && (forceProductionBuilding || !m_queue.contains(MetaTypeEnum::CommandCenter) || m_bot.GetFreeMinerals() > 400 || m_bot.Bases().getFreeBaseLocationCount() == 0))
 				{
 					bool idleProductionBuilding = false;
-					const auto & productionBuildings = m_bot.GetAllyUnits(toBuild.getUnitType().getAPIUnitType());
-					const int totalProductionBuildings = m_bot.UnitInfo().getUnitTypeCount(Players::Self, toBuild.getUnitType(), false, true);
-					if (productionBuildings.size() == totalProductionBuildings)
+					if (!forceProductionBuilding)	// No need to check for idle production buildings if we want to force its creation
 					{
-						for (const auto & productionBuilding : productionBuildings)
+						std::vector<sc2::UNIT_TYPEID> importantProductionBuildingTypes = { sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_STARPORT };
+						for (auto importantProductionBuildingType : importantProductionBuildingTypes)
 						{
-							if (productionBuilding.isProductionBuildingIdle())
+							const auto & productionBuildings = m_bot.GetAllyUnits(toBuild.getUnitType().getAPIUnitType());
+							const int totalProductionBuildings = m_bot.UnitInfo().getUnitTypeCount(Players::Self, toBuild.getUnitType(), false, true); // Also considers the ones that are to be constructed but not started
+							if (productionBuildings.size() != totalProductionBuildings)
 							{
 								idleProductionBuilding = true;
 								break;
 							}
+							else
+							{
+								for (const auto & productionBuilding : productionBuildings)
+								{
+									if (productionBuilding.isProductionBuildingIdle())
+									{
+										idleProductionBuilding = true;
+										break;
+									}
+								}
+							}
 						}
-						if (forceProductionBuilding || !idleProductionBuilding)
-							m_queue.queueAsLowestPriority(toBuild, false);
 					}
+					if (forceProductionBuilding || !idleProductionBuilding)
+						m_queue.queueAsLowestPriority(toBuild, false);
 				}
 
 #ifndef NO_UNITS
@@ -1070,22 +1082,23 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (m_bot.Strategy().shouldProduceAntiAirOffense())
 				{
 #ifndef NO_UNITS
+					int lowVikingsSupply = vikingCount * UnitType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_bot).supplyRequired() < m_bot.Analyzer().opponentAirSupply * 1.5f;
 					bool makeVikings = false;
 					if (m_bot.Strategy().enemyHasProtossHighTechAir())
 					{
-						makeVikings = true;
+						makeVikings = vikingCount < 5 || lowVikingsSupply;
 					}
 					else if (!stopBanshees)
 					{
-						makeVikings = vikingCount < bansheeCount || (m_bot.GetFreeMinerals() >= 300 && m_bot.GetFreeGas() >= 225);
+						makeVikings = vikingCount < bansheeCount || lowVikingsSupply; // && m_bot.GetFreeMinerals() >= 300 && m_bot.GetFreeGas() >= 225);
 					}
 					else if (makeBattlecruisers && hasFusionCore)
 					{
-						makeVikings = vikingCount < battlecruiserCount * 3 || (m_bot.GetFreeMinerals() >= 550 && m_bot.GetFreeGas() >= 375);
+						makeVikings = vikingCount < battlecruiserCount || lowVikingsSupply; // && m_bot.GetFreeMinerals() >= 550 && m_bot.GetFreeGas() >= 375);
 					}
 					else
 					{
-						makeVikings = !hasFusionCore && stopBanshees;
+						makeVikings = !hasFusionCore && stopBanshees && lowVikingsSupply;
 					}
 					if (makeVikings)
 					{

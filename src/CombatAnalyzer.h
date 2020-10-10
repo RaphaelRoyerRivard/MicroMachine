@@ -102,6 +102,8 @@ public:
 	int opponentZergAirArmor = 0;
 	int opponentZergAirWeapon = 0;
 
+	int opponentAirSupply = 0;
+
 	CombatAnalyzer(CCBot & bot);
 	void onStart();
 	void onFrame();

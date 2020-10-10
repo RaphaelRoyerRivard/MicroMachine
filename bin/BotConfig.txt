@@ -16,15 +16,15 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.12.3",
+        "BotVersion"                : "1.12.4",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
         "PlayAsHuman"               : false,
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 1,
-        "EnemyRace"                 : "Terran",
+        "EnemyDifficulty"           : 10,
+        "EnemyRace"                 : "Protoss",
         "MapFile"                   : "GoldenWallLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,

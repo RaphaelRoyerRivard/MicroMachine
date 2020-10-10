@@ -413,7 +413,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
-	if (shouldAttack && ExecuteThreatFightingLogic(rangedUnit, unitShouldHeal, rangedUnits, rangedUnitTargets, otherSquadsUnits))
+	if (shouldAttack && ExecuteThreatFightingLogic(rangedUnit, unitShouldHeal, rangedUnits, threats, rangedUnitTargets, otherSquadsUnits))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 		return;
@@ -1417,9 +1417,12 @@ bool RangedManager::CycloneHasTarget(const sc2::Unit * cyclone) const
 	return lockOnTargets.find(cyclone) != lockOnTargets.end();
 }
 
-bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & rangedUnitTargets, sc2::Units & otherSquadsUnits)
+bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & threats, sc2::Units & rangedUnitTargets, sc2::Units & otherSquadsUnits)
 {
 	if (rangedUnitTargets.empty())
+		return false;
+
+	if (threats.empty())
 		return false;
 
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
@@ -1700,7 +1703,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				}
 			}
 		}
-		if (closestUnit)
+		if (closestUnit && minDistance < 20 * 20)
 		{
 			std::string pathfindingTypeForEngagePosition = "FindEngagePosition";
 			if (AllowUnitToPathFind(closestUnit, false, pathfindingTypeForEngagePosition))
