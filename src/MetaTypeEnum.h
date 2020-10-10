@@ -44,6 +44,7 @@ class MetaTypeEnum
 		static MetaType Cyclone;
 		static MetaType Battlecruiser;
 		static MetaType Thor;
+		static MetaType SiegeTank;
 				//Upgrades
 		static MetaType TerranInfantryWeaponsLevel1;
 		static MetaType TerranInfantryWeaponsLevel2;

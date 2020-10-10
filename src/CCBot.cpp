@@ -894,7 +894,7 @@ void CCBot::setUnits()
 	/*if (!m_strategy.shouldProduceAntiAirDefense())
 		m_strategy.setShouldProduceAntiAirDefense(m_enemyUnitsPerType[sc2::UNIT_TYPEID::PROTOSS_PHOENIX].size() >= 3);*/	// Commented because it uses too much resources and is not very effective
 	m_strategy.setEnemyHasMassZerglings(m_enemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
-	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= 5);
+	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= (enemyRace == sc2::Race::Terran ? 3 : 5));
 }
 
 void CCBot::identifyEnemyRepairingSCVs()

@@ -660,6 +660,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	const auto totalBaseCount = m_bot.Bases().getBaseCount(Players::Self, false);
 	const auto finishedBaseCount = m_bot.Bases().getBaseCount(Players::Self, true);
 	const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
+	const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 	const auto starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
 	const auto barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
 	const auto completedSupplyProviders = m_bot.UnitInfo().getUnitTypeCount(Players::Self, supplyProvider, true, true);
@@ -794,6 +795,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					const auto barracksTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true);
 					const auto barracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
 					const auto barracksAddonCount = barracksTechLabCount + barracksReactorCount;
+					const auto factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
+					const auto factoryReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryReactor.getUnitType(), false, true);
+					const auto factoryAddonCount = factoryTechLabCount + factoryReactorCount;
 					const auto starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
 					const auto starportReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportReactor.getUnitType(), false, true);
 					const auto starportAddonCount = starportTechLabCount + starportReactorCount;
@@ -815,6 +819,18 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						{
 							m_queue.queueItem(MM::BuildOrderItem(toBuild, 1, false));
 							hasPicked = false;
+						}
+					}
+
+					if (factoryCount > factoryAddonCount)
+					{
+						if (m_queue.contains(MetaTypeEnum::Cyclone) || m_queue.contains(MetaTypeEnum::SiegeTank) || m_queue.contains(MetaTypeEnum::Thor))
+						{
+							toBuild = MetaTypeEnum::FactoryTechLab;
+							if (!m_queue.contains(toBuild))
+							{
+								m_queue.queueItem(MM::BuildOrderItem(toBuild, 1, false));
+							}
 						}
 					}
 
