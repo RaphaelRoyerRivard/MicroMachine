@@ -2026,9 +2026,9 @@ void CombatCommander::updateDefenseSquads()
 	{
 		if (enemyBaseLocation)
 		{
+			float minDist = 0.f;
 			for (auto & reaper : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REAPER))
 			{
-				float minDist = 0.f;
 				const auto dist = Util::DistSq(reaper, enemyBaseLocation->getPosition());
 				if (!offensiveReaper || dist < minDist)
 				{
