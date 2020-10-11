@@ -16,16 +16,16 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.12.5",
+        "BotVersion"                : "1.12.6",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
-        "PlayAsHuman"               : false,
+        "PlayAsHuman"               : true,
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Terran",
-        "MapFile"                   : "GoldenWallLE.SC2Map",
+        "MapFile"                   : "PillarsofGoldLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50,
