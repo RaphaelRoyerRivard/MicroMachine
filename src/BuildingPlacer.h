@@ -29,7 +29,7 @@ public:
 	bool buildable(const UnitType type, int x, int y, bool ignoreReservedTiles = false) const;
 	bool canBuildDepotHere(int bx, int by, std::vector<Unit> minerals, std::vector<Unit> geysers) const;
 	bool canBuildBunkerHere(int bx, int by, int depotX, int depotY, std::vector<CCPosition> geysersPos) const;
-    bool canBuildHere(int bx, int by, const UnitType & type, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const;
+    bool canBuildHere(int bx, int by, const UnitType & type, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles, bool ignoreExtraBorder = false) const;
 	bool isBuildingBlockedByCreep(CCTilePosition pos, UnitType type) const;
 	std::vector<CCTilePosition> getTilesForBuildLocation(Unit building) const;
 	std::vector<CCTilePosition> getTilesForBuildLocation(int bx, int by, const UnitType & type, int width, int height, bool includeExtraTiles, int extraBorder) const;
@@ -37,7 +37,7 @@ public:
 	int getBuildingCenterOffset(int x, int y, int width, int height) const;
 
     // returns a build location near a building's desired location
-    CCTilePosition getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const;
+    CCTilePosition getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles, bool ignoreExtraBorder = false) const;
 	CCTilePosition getBunkerBuildLocationNear(const Building & b, int depotX, int depotY, std::vector<CCPosition> geysersPos) const;
 
     void drawReservedTiles();

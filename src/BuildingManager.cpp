@@ -607,7 +607,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 	}
 }
 
-bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filterMovingWorker)
+bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filterMovingWorker, bool includeAddonTiles, bool ignoreExtraBorder)
 {
     BOT_ASSERT(!b.builderUnit.isValid(), "Error: Tried to assign a builder to a building that already had one ");
 
@@ -650,7 +650,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		CCTilePosition testLocation;
 		if (b.canBeBuiltElseWhere)
 		{
-			testLocation = getNextBuildingLocation(b, !isRushed, true);//Only check m_nextBuildLocation if we are not being rushed
+			testLocation = getNextBuildingLocation(b, !isRushed, true, includeAddonTiles, ignoreExtraBorder);//Only check m_nextBuildLocation if we are not being rushed
 		}
 		else
 		{
@@ -682,7 +682,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 			//TODO checks twice if the path is safe for no reason if we get the same build location, should change location or change builder
 
 			//Not safe, pick another location
-			testLocation = getNextBuildingLocation(b, false, true);
+			testLocation = getNextBuildingLocation(b, false, true, ignoreExtraBorder);
 			if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
 			{
 				return false;
@@ -1226,7 +1226,7 @@ void BuildingManager::checkForCompletedBuildings()
 
 // add a new building to be constructed
 // Used for Premove
-bool BuildingManager::addBuildingTask(Building & b, bool filterMovingWorker)
+bool BuildingManager::addBuildingTask(Building & b, bool filterMovingWorker, bool includeAddonTiles, bool ignoreExtraBorder)
 {
 	b.status = BuildingStatus::Unassigned;
 
@@ -1239,7 +1239,7 @@ bool BuildingManager::addBuildingTask(Building & b, bool filterMovingWorker)
 			return false;
 		}
 	}
-	else if (!assignWorkerToUnassignedBuilding(b, filterMovingWorker))//Includes a check to see if path is safe
+	else if (!assignWorkerToUnassignedBuilding(b, filterMovingWorker, includeAddonTiles, ignoreExtraBorder))//Includes a check to see if path is safe
 	{
 		return false;
 	}
@@ -1498,9 +1498,11 @@ CCTilePosition BuildingManager::getProxyLocation()
 					++it;
 			}
 			const auto closestBase = it->second;
-			m_proxyLocation = closestBase->getDepotTilePosition();
+			//m_proxyLocation = closestBase->getDepotTilePosition();
 			const auto depotPos = Util::GetPosition(closestBase->getDepotTilePosition());
 			const auto centerOfMinerals = Util::GetPosition(closestBase->getCenterOfMinerals());
+			const auto behindMineralLine = depotPos + Util::Normalized(centerOfMinerals - depotPos) * 10;
+			m_proxyLocation = Util::GetTilePosition(behindMineralLine);
 			m_proxyLocation2 = depotPos + Util::Normalized(depotPos - centerOfMinerals) * 8;
 			return m_proxyLocation;
 		}
@@ -1528,7 +1530,7 @@ std::vector<UnitType> BuildingManager::buildingsQueued() const
     return buildingsQueued;
 }
 
-CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool checkInfluenceMap)
+CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool checkInfluenceMap, bool includeAddonTiles, bool ignoreExtraBorder)
 {
     //size_t numPylons = m_bot.UnitInfo().getUnitTypeCount(Players::Self, Util::GetSupplyProvider(m_bot.GetSelfRace(), m_bot), true);
 
@@ -1553,13 +1555,13 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool che
 		// get a position within our region
 		// TODO: put back in special pylon / cannon spacing
 		m_bot.StartProfiling("0.8.3.1.3 getBuildLocationNear");
-		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, false, checkInfluenceMap, true);
+		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, false, checkInfluenceMap, includeAddonTiles, ignoreExtraBorder);
 		m_bot.StopProfiling("0.8.3.1.3 getBuildLocationNear");
 	}
 	return buildingLocation;
 }
 
-CCTilePosition BuildingManager::getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap)
+CCTilePosition BuildingManager::getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap, bool includeAddonTiles, bool ignoreExtraBorder)
 {
 	if (checkNextBuildingPosition)
 	{
@@ -1585,7 +1587,7 @@ CCTilePosition BuildingManager::getNextBuildingLocation(Building & b, bool check
 		}
 	}
 	*/
-	position = getBuildingLocation(b, checkInfluenceMap);
+	position = getBuildingLocation(b, checkInfluenceMap, includeAddonTiles, ignoreExtraBorder);
 	/*if (position.x != 0)//No need to check Y
 	{
 		//Update the last built (or tried to) location.
