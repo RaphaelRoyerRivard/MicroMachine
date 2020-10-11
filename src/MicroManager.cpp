@@ -192,7 +192,8 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 			nonThreateningModifier = targetDps == 0.f ? 1.f : 0.5f;		//for buildings, we prefer targetting them with units that will not get attacked back
 		}
 		const float flyingDetectorModifier = target->is_flying && UnitType::isDetector(target->unit_type) ? 2.f : 1.f;
-		const float minionModifier = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR ? 0.1f : 1.f;	//units that can be respawned should be less prioritized
+		std::vector<sc2::UNIT_TYPEID> minionTypes = { sc2::UNIT_TYPEID::TERRAN_AUTOTURRET, sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR, sc2::UNIT_TYPEID::ZERG_LOCUSTMP, sc2::UNIT_TYPEID::ZERG_LOCUSTMPFLYING, sc2::UNIT_TYPEID::ZERG_BROODLING };
+		const float minionModifier = Util::Contains(target->unit_type, minionTypes) ? 0.1f : 1.f;	//units that are temporary or can be cheaply respawned should be less prioritized
 		const auto & yamatoTargets = m_bot.Commander().Combat().getYamatoTargets();
 		const float yamatoTargetModifier = yamatoTargets.find(target->tag) != yamatoTargets.end() ? 0.1f : 1.f;
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;

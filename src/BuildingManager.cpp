@@ -791,6 +791,7 @@ void BuildingManager::constructAssignedBuildings()
             }
             else
             {
+				bool setCommandGiven = true;
 				// if it's a refinery, the build command has to be on the geyser unit tag
 				if (b.type.isRefinery())
 				{
@@ -929,10 +930,10 @@ void BuildingManager::constructAssignedBuildings()
 					}
 					else
 					{
-						b.builderUnit.build(b.type, b.finalPosition);
-						if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
+						if (m_bot.GetMinerals() > b.type.mineralPrice())
 						{
-							if (m_bot.GetMinerals() > b.type.mineralPrice())
+							b.builderUnit.build(b.type, b.finalPosition);
+							if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
 							{
 								// We want the worker to be close so it doesn't flag the base as blocked by error
 								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
@@ -946,11 +947,15 @@ void BuildingManager::constructAssignedBuildings()
 								continue;
 							}
 						}
+						else
+						{
+							setCommandGiven = false;
+						}
 					}
 				}
 
 				// set the flag to true
-				b.buildCommandGiven = true;
+				b.buildCommandGiven = setCommandGiven;
 			}
 		}
 	}
