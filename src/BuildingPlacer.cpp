@@ -134,7 +134,7 @@ bool BuildingPlacer::canBuildBunkerHere(int bx, int by, int depotX, int depotY, 
 }
 
 //returns true if we can build this type of unit here with the specified amount of space.
-bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
+bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles, bool ignoreExtraBorder) const
 {
 	// height and width of the building
 	int width = type.tileWidth();
@@ -149,7 +149,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ig
 	if (!type.isRefinery())
 	{
 		auto buildingTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, 0);
-		auto walkableTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, 1);
+		auto walkableTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, ignoreExtraBorder ? 0 : 1);
 		for (auto & tile : walkableTiles)
 		{
 			if (!m_bot.Map().isValidTile(tile))//prevent tiles below 0 or above the map size
@@ -280,7 +280,7 @@ int BuildingPlacer::getBuildingCenterOffset(int x, int y, int width, int height)
 	}
 }
 
-CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
+CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles, bool ignoreExtraBorder) const
 {
 	//If the space is not walkable, look around for a walkable space. The result may not be the most optimal location.
 	const int MAX_OFFSET = 5;
@@ -364,7 +364,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ign
     {
         auto & pos = closestToBuilding[i];
 
-        if (canBuildHere(pos.x, pos.y, b.type, ignoreReserved, checkInfluenceMap, includeExtraTiles))
+        if (canBuildHere(pos.x, pos.y, b.type, ignoreReserved, checkInfluenceMap, includeExtraTiles, ignoreExtraBorder))
         {
 			return pos;
         }

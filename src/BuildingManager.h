@@ -48,7 +48,7 @@ class BuildingManager
 
     void            validateWorkersAndBuildings();		    // STEP 1
     void            assignWorkersToUnassignedBuildings();	// STEP 2
-	bool            assignWorkerToUnassignedBuilding(Building & b, bool filterMovingWorker = true);
+	bool            assignWorkerToUnassignedBuilding(Building & b, bool filterMovingWorker = true, bool includeAddonTiles = true, bool ignoreExraBorder = false);
     void            constructAssignedBuildings();			// STEP 3
     void            checkForStartedConstruction();			// STEP 4
     void            checkForDeadTerranBuilders();			// STEP 5
@@ -71,7 +71,7 @@ public:
 	void				PlaceWallBuildings(std::vector<CCTilePosition> tilesToBlock);
 	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
 	void FindOpponentMainRamp();
-	bool				addBuildingTask(Building & b, bool filterMovingWorker = true);
+	bool				addBuildingTask(Building & b, bool filterMovingWorker = true, bool includeAddonTiles = true, bool ignoreExtraBorder = false);
 	bool				isConstructingType(const UnitType & type);
     void                drawBuildingInformation();
 	void				drawStartingRamp();
@@ -86,8 +86,8 @@ public:
 	CCPosition			getEnemyMainRamp() const { return m_enemyMainRamp; }
 	CCTilePosition		getProxyLocation();
 	CCPosition			getProxyLocation2();
-    CCTilePosition      getBuildingLocation(const Building & b, bool checkInfluenceMap);
-	CCTilePosition		getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap);
+    CCTilePosition      getBuildingLocation(const Building & b, bool checkInfluenceMap, bool includeAddonTiles = true, bool ignoreExtraBorder = false);
+	CCTilePosition		getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap, bool includeAddonTiles = true, bool ignoreExtraBorder = false);
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);

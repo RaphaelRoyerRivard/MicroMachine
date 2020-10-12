@@ -40,7 +40,7 @@ void SquadData::removeSquad(const std::string & squadName)
     m_squads.erase(squadName);
 }
 
-const std::map<std::string, Squad> & SquadData::getSquads() const
+std::map<std::string, Squad> & SquadData::getSquads()
 {
     return m_squads;
 }
@@ -78,10 +78,10 @@ void SquadData::drawSquadInformation()
 
     for (auto & kv : m_squads)
     {
-        const Squad & squad = kv.second;
+        Squad & squad = kv.second;
 
         auto & units = squad.getUnits();
-        const SquadOrder & order = squad.getSquadOrder();
+        SquadOrder & order = squad.getSquadOrder();
 
 		if(units.size() > 0)
 			ss << squad.getName() << ": [units: " << units.size() << ", status: " << order.getStatus() << "]\n";

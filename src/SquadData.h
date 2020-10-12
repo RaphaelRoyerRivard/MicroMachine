@@ -34,5 +34,5 @@ public:
     Squad *         getUnitSquad(const Unit & unit);
 
     Squad &         getSquad(const std::string & squadName);
-    const std::map<std::string, Squad> & getSquads() const;
+    std::map<std::string, Squad> & getSquads();
 };

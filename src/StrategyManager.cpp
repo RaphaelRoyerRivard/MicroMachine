@@ -310,22 +310,28 @@ void StrategyManager::onFrame(bool executeMacro)
 					{
 						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
 						{
-							if (Util::DistSq(building.builderUnit, Util::GetPosition(building.finalPosition)) <= 3 * 3)
+							auto buildingPos = Util::GetPosition(building.finalPosition);
+							// If the Barracks is proxied (we don't want to cancel the one in our base with the proxy Marauders strat)
+							if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
 							{
-								for (const auto & enemy : m_bot.GetKnownEnemyUnits())
+								// If the worker is close to the building site
+								if (Util::DistSq(building.builderUnit, buildingPos) <= 3 * 3)
 								{
-									const auto dist = Util::DistSq(building.builderUnit, enemy);
-									const auto builderTerrainHeight = m_bot.Map().terrainHeight(building.builderUnit.getPosition());
-									const auto enemyTerrainHeight = m_bot.Map().terrainHeight(enemy.getPosition());
-									if (dist <= 8 * 8 && builderTerrainHeight <= enemyTerrainHeight)
+									for (const auto & enemy : m_bot.GetKnownEnemyUnits())
 									{
-										// We want to cancel both the proxy Marauders strategy and the Barracks in the Building Manager
-										cancelProxy = true;
-										break;
+										const auto dist = Util::DistSq(building.builderUnit, enemy);
+										const auto builderTerrainHeight = m_bot.Map().terrainHeight(building.builderUnit.getPosition());
+										const auto enemyTerrainHeight = m_bot.Map().terrainHeight(enemy.getPosition());
+										if (dist <= 8 * 8 && builderTerrainHeight <= enemyTerrainHeight)
+										{
+											// We want to cancel both the proxy Marauders strategy and the Barracks in the Building Manager
+											cancelProxy = true;
+											break;
+										}
 									}
+									if (cancelProxy)
+										break;
 								}
-								if (cancelProxy)
-									break;
 							}
 						}
 					}
@@ -338,14 +344,19 @@ void StrategyManager::onFrame(bool executeMacro)
 					{
 						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
 						{
-							const auto & buildingUnit = building.buildingUnit;
-							if (buildingUnit.isValid())
+							auto buildingPos = Util::GetPosition(building.finalPosition);
+							// If the Barracks is proxied (we don't want to cancel the one in our base with the proxy Marauders strat)
+							if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
 							{
-								// Will also return false if the proxy worker died
-								if (!shouldProxyBuilderFinishSafely(building, true))
+								const auto & buildingUnit = building.buildingUnit;
+								if (buildingUnit.isValid())
 								{
-									cancelProxy = true;
-									break;
+									// Will also return false if the proxy worker died
+									if (!shouldProxyBuilderFinishSafely(building, true))
+									{
+										cancelProxy = true;
+										break;
+									}
 								}
 							}
 						}

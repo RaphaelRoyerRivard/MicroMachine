@@ -254,8 +254,9 @@ void ProductionManager::manageBuildOrderQueue()
 				const auto barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
 				const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
 				// Proxy buildings
-				if (m_bot.GetCurrentFrame() < 4032 /* 3 min */ && ((currentItem.type == MetaTypeEnum::Barracks && m_bot.Strategy().isProxyStartingStrategy() && barracksCount < 2 && (m_bot.Strategy().getStartingStrategy() != PROXY_MARAUDERS || barracksCount > 0)) ||
-					(currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().isProxyFactoryStartingStrategy() && factoryCount == 0)))
+				const bool proxyBarracks = currentItem.type == MetaTypeEnum::Barracks && m_bot.Strategy().isProxyStartingStrategy() && barracksCount < 2 && (m_bot.Strategy().getStartingStrategy() != PROXY_MARAUDERS || barracksCount > 0);
+				const bool proxyFactory = currentItem.type == MetaTypeEnum::Factory && m_bot.Strategy().isProxyFactoryStartingStrategy() && factoryCount == 0;
+				if (m_bot.GetCurrentFrame() < 4032 /* 3 min */ && (proxyBarracks || proxyFactory))
 				{
 					const auto proxyLocation = Util::GetPosition(m_bot.Buildings().getProxyLocation());
 					Unit producer = getProducer(currentItem.type, false, proxyLocation, true, true);
@@ -263,7 +264,8 @@ void ProductionManager::manageBuildOrderQueue()
 					b.finalPosition = proxyLocation;
 					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
 					{
-						if (create(producer, currentItem, proxyLocation, false, false, true))
+						const bool includeAddonTiles = proxyBarracks;
+						if (create(producer, currentItem, proxyLocation, false, false, true, includeAddonTiles, true))
 						{
 							m_queue.removeCurrentHighestPriorityItem();
 							break;
@@ -275,25 +277,9 @@ void ProductionManager::manageBuildOrderQueue()
 					//Check if we already have an idle production building of that type
 					bool idleProductionBuilding = false;
 #ifndef NO_UNITS
-					if (currentItem.type.isBuilding())
+					if (currentItem.type.isBuilding() && Util::Contains(currentItem.type.getUnitType().getAPIUnitType(), getProductionBuildingTypes()))
 					{
-						auto productionBuildingTypes = getProductionBuildingTypes();
-						const sc2::UnitTypeID itemType = currentItem.type.getUnitType().getAPIUnitType();
-
-						//If its a production building
-						if (std::find(productionBuildingTypes.begin(), productionBuildingTypes.end(), itemType) != productionBuildingTypes.end())
-						{
-							auto & productionBuildings = m_bot.GetAllyUnits(itemType);
-							for (auto & productionBuilding : productionBuildings)
-							{
-								//Check if this building is idle
-								if (productionBuilding.isProductionBuildingIdle() && !productionBuilding.isBeingConstructed())
-								{
-									idleProductionBuilding = true;
-									break;
-								}
-							}
-						}
+						idleProductionBuilding = isImportantProductionBuildingIdle();
 					}
 #endif
 
@@ -870,38 +856,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const bool forceProductionBuilding = proxyMaraudersStrategy && toBuild == MetaTypeEnum::Barracks;
 				if (hasPicked && !m_queue.contains(toBuild) && (forceProductionBuilding || !m_queue.contains(MetaTypeEnum::CommandCenter) || m_bot.GetFreeMinerals() > 400 || m_bot.Bases().getFreeBaseLocationCount() == 0))
 				{
-					bool idleProductionBuilding = false;
-					if (!forceProductionBuilding)	// No need to check for idle production buildings if we want to force its creation
-					{
-						std::vector<sc2::UNIT_TYPEID> importantProductionBuildingTypes = { sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_STARPORT };
-						for (auto importantProductionBuildingType : importantProductionBuildingTypes)
-						{
-							const auto & productionBuildings = m_bot.GetAllyUnits(toBuild.getUnitType().getAPIUnitType());
-							const int totalProductionBuildings = m_bot.UnitInfo().getUnitTypeCount(Players::Self, toBuild.getUnitType(), false, true); // Also considers the ones that are to be constructed but not started
-							if (productionBuildings.size() != totalProductionBuildings)
-							{
-								idleProductionBuilding = true;
-								break;
-							}
-							else
-							{
-								for (const auto & productionBuilding : productionBuildings)
-								{
-									if (productionBuilding.isProductionBuildingIdle())
-									{
-										idleProductionBuilding = true;
-										break;
-									}
-								}
-							}
-						}
-					}
-					if (forceProductionBuilding || !idleProductionBuilding)
+					// No need to check for idle production buildings if we want to force its creation
+					if (forceProductionBuilding || !isImportantProductionBuildingIdle())
 						m_queue.queueAsLowestPriority(toBuild, false);
 				}
 
 #ifndef NO_UNITS
-				if (!produceMarauders && (reaperCount == 0 || (proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted && producedReaperCount < 2) || (factoryCount == 0 && !m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)))
+				if (!produceMarauders && (reaperCount == 0 || (((proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted) || enemyRace == sc2::Race::Terran) && producedReaperCount < 2)))
 				{
 					if (!m_queue.contains(MetaTypeEnum::Reaper))
 					{
@@ -1374,6 +1335,34 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 	}
+}
+
+bool ProductionManager::isImportantProductionBuildingIdle()
+{
+	bool idleProductionBuilding = false;
+	std::vector<sc2::UNIT_TYPEID> importantProductionBuildingTypes = { sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_STARPORT };
+	for (auto importantProductionBuildingType : importantProductionBuildingTypes)
+	{
+		const auto & productionBuildings = m_bot.GetAllyUnits(importantProductionBuildingType);
+		const int totalProductionBuildings = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(importantProductionBuildingType, m_bot), false, true); // Also considers the ones that are to be constructed but not started
+		if (productionBuildings.size() != totalProductionBuildings)
+		{
+			idleProductionBuilding = true;
+			break;
+		}
+		else
+		{
+			for (const auto & productionBuilding : productionBuildings)
+			{
+				if (productionBuilding.isProductionBuildingIdle())
+				{
+					idleProductionBuilding = true;
+					break;
+				}
+			}
+		}
+	}
+	return idleProductionBuilding;
 }
 
 void ProductionManager::QueueDeadBuildings()
@@ -2292,7 +2281,7 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used to create unit/tech/buildings (when we have the ressources)
-bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker, bool canBePlacedElsewhere)
+bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker, bool canBePlacedElsewhere, bool includeAddonTiles, bool ignoreExtraBorder)
 {
 	if (!producer.isValid())
 	{
@@ -2328,7 +2317,7 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 			{
 				b.reserveResources = reserveResources;
 				b.canBeBuiltElseWhere = canBePlacedElsewhere;
-				result = m_bot.Buildings().addBuildingTask(b, filterMovingWorker);
+				result = m_bot.Buildings().addBuildingTask(b, filterMovingWorker, includeAddonTiles, ignoreExtraBorder);
 			}
 		}
 	}
