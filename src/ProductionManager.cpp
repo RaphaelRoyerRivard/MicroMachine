@@ -862,7 +862,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if (!produceMarauders && (reaperCount == 0 || (proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted && producedReaperCount < 2) || (factoryCount == 0 && !m_bot.Strategy().enemyHasMassZerglings() && m_bot.Analyzer().GetRatio(sc2::UNIT_TYPEID::TERRAN_REAPER) > 1.5f)))
+				if (!produceMarauders && (reaperCount == 0 || (((proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted) || enemyRace == sc2::Race::Terran) && producedReaperCount < 2)))
 				{
 					if (!m_queue.contains(MetaTypeEnum::Reaper))
 					{
