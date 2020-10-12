@@ -171,255 +171,7 @@ void StrategyManager::onFrame(bool executeMacro)
 	}
 	if (executeMacro)
 	{
-		if (isProxyStartingStrategy())
-		{
-			const auto completedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
-			const auto completedSupplyDepotsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true);
-
-			if (m_bot.GetGameLoop() >= (m_startingStrategy == PROXY_MARAUDERS ? 896 : 448) && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 20s, or 40s if PROXY_MARAUDERS
-			{
-				if (isWorkerRushed())
-				{
-					m_bot.Workers().getWorkerData().clearProxyWorkers();
-					setStartingStrategy(STANDARD);
-					return;
-				}
-				
-				const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
-				if (completedBarracksCount == 0)
-				{
-					setStartingStrategy(STANDARD);
-					m_bot.Commander().Production().clearQueue();
-					m_bot.Commander().Production().queueAsHighestPriority(MetaTypeEnum::Barracks, false);
-				}
-				else if (completedBarracksCount == 1)
-				{
-					const auto & buildings = m_bot.Buildings().getBuildings();
-					for (const auto & building : buildings)
-					{
-						if (Util::DistSq(m_bot.Buildings().getProxyLocation(), Util::GetPosition(building.finalPosition)) <= 15 * 15)
-						{
-							m_bot.Buildings().CancelBuilding(building);
-						}
-					}
-					setStartingStrategy(STANDARD);
-					m_bot.Commander().Production().clearQueue();
-				}
-				else if (!hasFactory && m_startingStrategy == PROXY_CYCLONES)
-				{
-					setStartingStrategy(STANDARD);
-					m_bot.Commander().Production().clearQueue();
-				}
-
-				// If our Marauders are getting overwhelmed, check if we should cancel our PROXY_MARAUDERS strategy
-				if (m_startingStrategy == PROXY_MARAUDERS && !m_bot.Commander().Combat().winAttackSimulation())
-				{
-					bool cancelProxy = false;
-					// Cancel PROXY_MARAUDERS if the opponent has too much static defenses
-					int activeStaticDefenseUnits = 0;
-					const auto staticDefenseTypes = { sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY };
-					for (const auto staticDefenseType : staticDefenseTypes)
-					{
-						const auto & staticDefenseUnits = m_bot.GetEnemyUnits(staticDefenseType);
-						for (const auto & staticDefenseUnit : staticDefenseUnits)
-						{
-							if (staticDefenseUnit.isPowered() && staticDefenseUnit.isCompleted())
-								++activeStaticDefenseUnits;
-						}
-					}
-
-					bool enemyHasFlyingUnits = false;
-					if (activeStaticDefenseUnits >= 2)
-					{
-						cancelProxy = true;
-					}
-					else
-					{
-						bool enemySentryUsedEnergy = false;
-						for (const auto & enemySentry : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_SENTRY))
-						{
-							if (enemySentry.getEnergy() < 50)
-							{
-								enemySentryUsedEnergy = true;
-								break;
-							}
-						}
-						if (!enemySentryUsedEnergy)
-						{
-							// Cancel PROXY_MARAUDERS if the opponent has an immortal or attacking flying units
-							for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
-							{
-								if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
-								{
-									cancelProxy = true;
-								}
-								else if (enemyUnit.isFlying() && Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) > 0)
-								{
-									cancelProxy = true;
-									enemyHasFlyingUnits = true;
-									break;
-								}
-							}
-						}
-					}
-					if (cancelProxy)
-					{
-						setStartingStrategy(enemyHasFlyingUnits ? EARLY_EXPAND : FAST_PF);
-						m_bot.Commander().Production().clearQueue();
-					}
-				}
-			}
-			else if (m_startingStrategy == PROXY_MARAUDERS && completedBarracksCount == 1)
-			{
-				// Remove proxy worker that just finished its Barracks
-				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
-				Unit proxyWorkerToRemove;
-				for (auto & proxyWorker : proxyWorkers)
-				{
-					if (!proxyWorker.isConstructing(MetaTypeEnum::Barracks.getUnitType()))
-					{
-						proxyWorkerToRemove = proxyWorker;
-						break;
-					}
-				}
-				if (proxyWorkerToRemove.isValid())
-				{
-					m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorkerToRemove);
-					proxyWorkerToRemove.move(m_bot.GetStartLocation());
-				}
-			}
-			else if (completedBarracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
-			{
-				// Remove last proxy worker that finished its Barracks
-				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
-				for (const auto & proxyWorker : proxyWorkers)
-				{
-					proxyWorker.move(m_bot.GetStartLocation());
-				}
-				m_bot.Workers().getWorkerData().clearProxyWorkers();
-			}
-			else if (completedBarracksCount == 0)
-			{
-				bool cancelProxy = false;
-				const auto barracksUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
-				// We want to cancel our proxy strategy if the opponent has vision of our proxy location
-				if (barracksUnderConstructionCount == 0)
-				{
-					const auto & buildings = m_bot.Buildings().getBuildings();
-					for (const auto & building : buildings)
-					{
-						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
-						{
-							auto buildingPos = Util::GetPosition(building.finalPosition);
-							// If the Barracks is proxied (we don't want to cancel the one in our base with the proxy Marauders strat)
-							if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
-							{
-								// If the worker is close to the building site
-								if (Util::DistSq(building.builderUnit, buildingPos) <= 3 * 3)
-								{
-									for (const auto & enemy : m_bot.GetKnownEnemyUnits())
-									{
-										const auto dist = Util::DistSq(building.builderUnit, enemy);
-										const auto builderTerrainHeight = m_bot.Map().terrainHeight(building.builderUnit.getPosition());
-										const auto enemyTerrainHeight = m_bot.Map().terrainHeight(enemy.getPosition());
-										if (dist <= 8 * 8 && builderTerrainHeight <= enemyTerrainHeight)
-										{
-											// We want to cancel both the proxy Marauders strategy and the Barracks in the Building Manager
-											cancelProxy = true;
-											break;
-										}
-									}
-									if (cancelProxy)
-										break;
-								}
-							}
-						}
-					}
-				}
-				else if (barracksUnderConstructionCount == 1)
-				{
-					// We want to cancel the proxy if the enemy can kill our proxy worker before it finishes its building
-					const auto & buildings = m_bot.Buildings().getBuildings();
-					for (const auto & building : buildings)
-					{
-						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
-						{
-							auto buildingPos = Util::GetPosition(building.finalPosition);
-							// If the Barracks is proxied (we don't want to cancel the one in our base with the proxy Marauders strat)
-							if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
-							{
-								const auto & buildingUnit = building.buildingUnit;
-								if (buildingUnit.isValid())
-								{
-									// Will also return false if the proxy worker died
-									if (!shouldProxyBuilderFinishSafely(building, true))
-									{
-										cancelProxy = true;
-										break;
-									}
-								}
-							}
-						}
-					}
-				}
-				// If we still don't want to cancel the proxy
-				/*if (!cancelProxy)
-				{
-					// We want to cancel the proxy if one of our two proxy workers of the proxy Marauders strategy died
-					if (m_startingStrategy == PROXY_MARAUDERS && completedSupplyDepotsCount > 0)
-					{
-						const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
-						if (proxyWorkers.size() < 2)
-						{
-							cancelProxy = true;
-						}
-					}
-				}*/
-				if (cancelProxy)
-				{
-					m_bot.Actions()->SendChat("FINE! No cheesing. Maybe next game :)");
-					const auto & buildings = m_bot.Buildings().getBuildings();
-					for (const auto & building : buildings)
-					{
-						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
-						{
-							bool cancel = true;
-							if (building.buildingUnit.isValid())
-							{
-								cancel = !shouldProxyBuilderFinishSafely(building);
-							}
-							if (cancel)
-							{
-								m_bot.Buildings().CancelBuilding(building);
-							}
-						}
-					}
-					m_bot.Workers().getWorkerData().clearProxyWorkers();
-					setStartingStrategy(EARLY_EXPAND);
-					m_bot.Commander().Production().clearQueue();
-				}
-			}
-		}
-		else if (m_startingStrategy == WORKER_RUSH)
-		{
-			const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
-			if (!enemyUnits.empty())
-			{
-				bool groundUnit = false;
-				for (const auto & enemyUnit : enemyUnits)
-				{
-					if (!enemyUnit.isFlying())
-					{
-						groundUnit = true;
-						break;
-					}
-				}
-				if (!groundUnit)
-				{
-					setStartingStrategy(STANDARD);
-				}
-			}
-		}
+		checkForStrategyChange();
 	}
 
 	if (m_bot.Config().DrawCurrentStartingStrategy)
@@ -430,11 +182,295 @@ void StrategyManager::onFrame(bool executeMacro)
 	}
 }
 
+void StrategyManager::checkForStrategyChange()
+{
+	if (isProxyStartingStrategy())
+	{
+		const auto completedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true);
+		const auto completedSupplyDepotsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true);
+
+		if (m_bot.GetGameLoop() >= (m_startingStrategy == PROXY_MARAUDERS ? 896 : 448) && m_bot.Workers().getWorkerData().getProxyWorkers().empty())	// after 20s, or 40s if PROXY_MARAUDERS
+		{
+			if (isWorkerRushed())
+			{
+				m_bot.Workers().getWorkerData().clearProxyWorkers();
+				setStartingStrategy(STANDARD);
+				return;
+			}
+
+			const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
+			if (completedBarracksCount == 0)
+			{
+				setStartingStrategy(STANDARD);
+				m_bot.Commander().Production().clearQueue();
+				m_bot.Commander().Production().queueAsHighestPriority(MetaTypeEnum::Barracks, false);
+			}
+			else if (completedBarracksCount == 1)
+			{
+				const auto & buildings = m_bot.Buildings().getBuildings();
+				std::vector<Building> toRemove;
+				for (const auto & building : buildings)
+				{
+					if (Util::DistSq(m_bot.Buildings().getProxyLocation(), Util::GetPosition(building.finalPosition)) <= 15 * 15)
+					{
+						toRemove.push_back(m_bot.Buildings().CancelBuilding(building, false));
+					}
+				}
+				m_bot.Buildings().removeBuildings(toRemove);
+				setStartingStrategy(STANDARD);
+				m_bot.Commander().Production().clearQueue();
+			}
+			else if (!hasFactory && m_startingStrategy == PROXY_CYCLONES)
+			{
+				setStartingStrategy(STANDARD);
+				m_bot.Commander().Production().clearQueue();
+			}
+
+			// If our Marauders are getting overwhelmed, check if we should cancel our PROXY_MARAUDERS strategy
+			if (m_startingStrategy == PROXY_MARAUDERS && !m_bot.Commander().Combat().winAttackSimulation())
+			{
+				bool cancelProxy = false;
+				// Cancel PROXY_MARAUDERS if the opponent has too much static defenses
+				int activeStaticDefenseUnits = 0;
+				const auto staticDefenseTypes = { sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY };
+				for (const auto staticDefenseType : staticDefenseTypes)
+				{
+					const auto & staticDefenseUnits = m_bot.GetEnemyUnits(staticDefenseType);
+					for (const auto & staticDefenseUnit : staticDefenseUnits)
+					{
+						if (staticDefenseUnit.isPowered() && staticDefenseUnit.isCompleted())
+							++activeStaticDefenseUnits;
+					}
+				}
+
+				bool enemyHasFlyingUnits = false;
+				if (activeStaticDefenseUnits >= 2)
+				{
+					cancelProxy = true;
+				}
+				else
+				{
+					bool enemySentryUsedEnergy = false;
+					for (const auto & enemySentry : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_SENTRY))
+					{
+						if (enemySentry.getEnergy() < 50)
+						{
+							enemySentryUsedEnergy = true;
+							break;
+						}
+					}
+					if (!enemySentryUsedEnergy)
+					{
+						// Cancel PROXY_MARAUDERS if the opponent has an immortal or attacking flying units
+						for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+						{
+							if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
+							{
+								cancelProxy = true;
+							}
+							else if (enemyUnit.isFlying() && Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) > 0)
+							{
+								cancelProxy = true;
+								enemyHasFlyingUnits = true;
+								break;
+							}
+						}
+					}
+				}
+				if (cancelProxy)
+				{
+					setStartingStrategy(enemyHasFlyingUnits ? EARLY_EXPAND : FAST_PF);
+					m_bot.Commander().Production().clearQueue();
+				}
+			}
+		}
+		else if (m_startingStrategy == PROXY_MARAUDERS && completedBarracksCount == 1)
+		{
+			// Remove proxy worker that just finished its Barracks
+			const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+			Unit proxyWorkerToRemove;
+			for (auto & proxyWorker : proxyWorkers)
+			{
+				if (!proxyWorker.isConstructing(MetaTypeEnum::Barracks.getUnitType()))
+				{
+					proxyWorkerToRemove = proxyWorker;
+					break;
+				}
+			}
+			if (proxyWorkerToRemove.isValid())
+			{
+				m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorkerToRemove);
+				proxyWorkerToRemove.move(m_bot.GetStartLocation());
+			}
+		}
+		else if (completedBarracksCount >= 2 && m_startingStrategy != PROXY_CYCLONES)
+		{
+			// Remove last proxy worker that finished its Barracks
+			const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+			for (const auto & proxyWorker : proxyWorkers)
+			{
+				proxyWorker.move(m_bot.GetStartLocation());
+			}
+			m_bot.Workers().getWorkerData().clearProxyWorkers();
+		}
+		else if (completedBarracksCount == 0)
+		{
+			bool cancelProxy = false;
+			const auto barracksUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
+			// We want to cancel our proxy strategy if the opponent has vision of our proxy location
+			if (barracksUnderConstructionCount == 0)
+			{
+				const auto & buildings = m_bot.Buildings().getBuildings();
+				for (const auto & building : buildings)
+				{
+					if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+					{
+						auto buildingPos = Util::GetPosition(building.finalPosition);
+						// If the Barracks is proxied (we don't want to cancel the one in our base with the proxy Marauders strat)
+						if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
+						{
+							// If the worker is close to the building site
+							if (Util::DistSq(building.builderUnit, buildingPos) <= 3 * 3)
+							{
+								for (const auto & enemy : m_bot.GetKnownEnemyUnits())
+								{
+									const auto dist = Util::DistSq(building.builderUnit, enemy);
+									const auto builderTerrainHeight = m_bot.Map().terrainHeight(building.builderUnit.getPosition());
+									const auto enemyTerrainHeight = m_bot.Map().terrainHeight(enemy.getPosition());
+									if (dist <= 8 * 8 && builderTerrainHeight <= enemyTerrainHeight)
+									{
+										// We want to cancel both the proxy Marauders strategy and the Barracks in the Building Manager
+										cancelProxy = true;
+										break;
+									}
+								}
+								if (cancelProxy)
+									break;
+							}
+						}
+					}
+				}
+			}
+			else if (barracksUnderConstructionCount == 1)
+			{
+				// We want to cancel the proxy if the enemy can kill our proxy worker before it finishes its building
+				const auto & buildings = m_bot.Buildings().getBuildings();
+				for (const auto & building : buildings)
+				{
+					if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+					{
+						auto buildingPos = Util::GetPosition(building.finalPosition);
+						// If the Barracks is proxied (we don't want to cancel the one in our base with the proxy Marauders strat)
+						if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
+						{
+							const auto & buildingUnit = building.buildingUnit;
+							if (buildingUnit.isValid())
+							{
+								// Will also return false if the proxy worker died
+								if (!shouldProxyBuilderFinishSafely(building, true))
+								{
+									cancelProxy = true;
+									break;
+								}
+							}
+						}
+					}
+				}
+			}
+			// If we still don't want to cancel the proxy
+			/*if (!cancelProxy)
+			{
+				// We want to cancel the proxy if one of our two proxy workers of the proxy Marauders strategy died
+				if (m_startingStrategy == PROXY_MARAUDERS && completedSupplyDepotsCount > 0)
+				{
+					const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+					if (proxyWorkers.size() < 2)
+					{
+						cancelProxy = true;
+					}
+				}
+			}*/
+			if (cancelProxy)
+			{
+				m_bot.Actions()->SendChat("FINE! No cheesing. Maybe next game :)");
+				const auto & buildings = m_bot.Buildings().getBuildings();
+				std::vector<Building> toRemove;
+				for (const auto & building : buildings)
+				{
+					if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+					{
+						bool cancel = true;
+						if (building.buildingUnit.isValid())
+						{
+							cancel = !shouldProxyBuilderFinishSafely(building);
+						}
+						if (cancel)
+						{
+							toRemove.push_back(m_bot.Buildings().CancelBuilding(building, false));
+						}
+					}
+				}
+				m_bot.Buildings().removeBuildings(toRemove);
+				m_bot.Workers().getWorkerData().clearProxyWorkers();
+				setStartingStrategy(EARLY_EXPAND);
+				m_bot.Commander().Production().clearQueue();
+			}
+		}
+	}
+	else if (m_startingStrategy == WORKER_RUSH)
+	{
+		const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
+		if (!enemyUnits.empty())
+		{
+			bool groundUnit = false;
+			for (const auto & enemyUnit : enemyUnits)
+			{
+				if (!enemyUnit.isFlying())
+				{
+					groundUnit = true;
+					break;
+				}
+			}
+			if (!groundUnit)
+			{
+				setStartingStrategy(STANDARD);
+			}
+		}
+	}
+
+	// Change to STANDARD strategy against proxy Hatchery
+	if (m_startingStrategy != STANDARD && m_bot.GetCurrentFrame() < 3 * 60 * 22.4f)
+	{
+		for (const auto & enemyHatchery : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_HATCHERY))
+		{
+			if (Util::DistSq(enemyHatchery, m_bot.GetStartLocation()) < 30 * 30)
+			{
+				setStartingStrategy(STANDARD);
+				for (const auto & building : m_bot.Buildings().getBuildings())
+				{
+					if (building.type.isResourceDepot())
+					{
+						if (!building.buildingUnit.isValid() || building.buildingUnit.getBuildProgress() < enemyHatchery.getBuildProgress())
+						{
+							m_bot.Buildings().CancelBuilding(building);
+							break;
+						}
+					}
+				}
+				break;
+			}
+		}
+	}
+}
+
 void StrategyManager::setStartingStrategy(StartingStrategy startingStrategy)
 {
-	std::stringstream ss;
-	ss << STRATEGY_NAMES[m_startingStrategy] << " -> " << STRATEGY_NAMES[startingStrategy];
-	Util::Log(__FUNCTION__, ss.str(), m_bot);
+	if (m_bot.GetCurrentFrame() > 22.4f)
+	{
+		std::stringstream ss;
+		ss << STRATEGY_NAMES[m_startingStrategy] << " -> " << STRATEGY_NAMES[startingStrategy];
+		Util::Log(__FUNCTION__, ss.str(), m_bot);
+	}
 	m_startingStrategy = startingStrategy;
 	const bool quickExpand = (startingStrategy == FAST_PF || startingStrategy == EARLY_EXPAND) && m_bot.Bases().getBaseCount(Players::Self, false) < 2;
 	m_bot.Commander().Production().SetWantToQuickExpand(quickExpand);

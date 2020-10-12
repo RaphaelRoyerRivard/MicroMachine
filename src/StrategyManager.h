@@ -114,6 +114,7 @@ public:
     const Strategy & getCurrentStrategy() const;
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
 	void setStartingStrategy(StartingStrategy startingStrategy);
+	void checkForStrategyChange();
 	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
 	bool shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers = false) const;
 	bool isProxyStartingStrategy() const;
