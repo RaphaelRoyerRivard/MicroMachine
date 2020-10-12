@@ -25,7 +25,7 @@ const float MainAttackRegroupCooldown = 200;	//Min number of frames required to 
 const float MainAttackMinRetreatDuration = 50;	//Max number of frames allowed for a regroup order
 
 const size_t BLOCKED_TILES_UPDATE_FREQUENCY = 24;
-const uint32_t WORKER_RUSH_DETECTION_COOLDOWN = 30 * 24;
+const float WORKER_RUSH_DETECTION_COOLDOWN = 5 * 22.4;
 const size_t MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE = 15;
 const int ACTION_REEXECUTION_FREQUENCY = 50;
 
@@ -1487,54 +1487,86 @@ void CombatCommander::updateScoutDefenseSquad()
     // if the current squad has units in it then we can ignore this
     Squad & scoutDefenseSquad = m_squadData.getSquad("ScoutDefense");
 
-    // get the region that our base is located in
-    const BaseLocation * myBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-    if (!myBaseLocation)
-        return;
-
-    // get all of the enemy units in this region
-    std::vector<Unit> enemyUnitsInRegion;
-	for (auto & unit : m_bot.GetKnownEnemyUnits())
+	// filter our bases to keep only those that has a resource depot
+	std::vector<BaseLocation *> allyBases;
+	const auto bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+	for (auto base : bases)
 	{
-		if (myBaseLocation->containsPosition(unit.getPosition()) && unit.getType().isWorker())
+		if (base->getResourceDepot().isValid())
+			allyBases.push_back(base);
+	}
+
+	bool squadUnitSet = false;
+	// if we have 1 or 2 bases
+	if (!allyBases.empty() && allyBases.size() <= 2)
+	{
+		for (auto base : allyBases)
 		{
-			enemyUnitsInRegion.push_back(unit);
+			// get all of the enemy units in this region
+			std::vector<Unit> enemyUnitsInRegion;
+			for (auto & unit : m_bot.GetKnownEnemyUnits())
+			{
+				if (base->containsPosition(unit.getPosition()) && unit.getType().isWorker())
+				{
+					enemyUnitsInRegion.push_back(unit);
+				}
+			}
+
+			// if there is at least one enemy worker in our region, but it is still not a worker rush
+			if (!enemyUnitsInRegion.empty() && !m_bot.Strategy().isWorkerRushed())
+			{
+				// and there is an injured worker in the squad, remove it
+				if (!scoutDefenseSquad.isEmpty())
+				{
+					auto & units = scoutDefenseSquad.getUnits();
+					for (auto & unit : units)
+					{
+						if (unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT)
+						{
+							m_bot.Workers().finishedWithWorker(unit);
+							scoutDefenseSquad.removeUnit(unit);
+						}
+					}
+				}
+
+				// for each enemy worker that is attacking us
+				for (auto & enemyWorkerUnit : enemyUnitsInRegion)
+				{
+					// if our squad has less units than the amount of enemies, assign a worker
+					if (scoutDefenseSquad.getUnits().size() < enemyUnitsInRegion.size())
+					{
+						const Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit, enemyUnitsInRegion, true);
+						if (workerDefender.isValid())
+						{
+							m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
+						}
+						else
+							break;
+					}
+					else
+						break;
+				}
+
+				// find the radius we need for our units to be microed
+				float maxDistance = 0;
+				for (auto & enemyWorkerUnit : enemyUnitsInRegion)
+				{
+					for (auto & scoutDefenseUnit : scoutDefenseSquad.getUnits())
+					{
+						maxDistance = std::max(maxDistance, Util::Dist(scoutDefenseUnit, enemyWorkerUnit));
+					}
+				}
+
+				scoutDefenseSquad.getSquadOrder().setRadius(maxDistance + 1);
+				squadUnitSet = true;
+				break;	// we make only 1 squad
+			}
 		}
 	}
 
-    // if there is at least one enemy worker in our region, but it is still not a worker rush
-    if (!enemyUnitsInRegion.empty() && !m_bot.Strategy().isWorkerRushed())
-    {
-		// and there is an injured worker in the squad, remove it
-		if (!scoutDefenseSquad.isEmpty())
-		{
-			auto & units = scoutDefenseSquad.getUnits();
-			for (auto & unit : units)
-			{
-				if (unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT)
-				{
-					m_bot.Workers().finishedWithWorker(unit);
-					scoutDefenseSquad.removeUnit(unit);
-				}
-			}
-		}
 
-		// if the squad is empty, assign a worker
-		if(scoutDefenseSquad.isEmpty())
-		{
-			// the enemy worker that is attacking us
-			Unit enemyWorkerUnit = *enemyUnitsInRegion.begin();
-			BOT_ASSERT(enemyWorkerUnit.isValid(), "null enemy worker unit");
-
-			const Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit, enemyUnitsInRegion);
-			if (workerDefender.isValid())
-			{
-				m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
-			}
-		}
-    }
     // if our squad is not empty and we shouldn't have a worker chasing then take him out of the squad
-    else if (!scoutDefenseSquad.isEmpty())
+    if (!squadUnitSet && !scoutDefenseSquad.isEmpty())
     {
         for (auto & unit : scoutDefenseSquad.getUnits())
         {
@@ -1841,10 +1873,10 @@ void CombatCommander::updateDefenseSquads()
 {
 	m_bot.StartProfiling("0.10.4.2.2.0      prepare");
 	// reset defense squads
-	for (const auto & kv : m_squadData.getSquads())
+	for (auto & kv : m_squadData.getSquads())
 	{
-		const Squad & squad = kv.second;
-		const SquadOrder & order = squad.getSquadOrder();
+		Squad & squad = kv.second;
+		SquadOrder & order = squad.getSquadOrder();
 
 		if (order.getType() != SquadOrderTypes::Defend || squad.getName() == "ScoutDefense")
 		{
@@ -1935,7 +1967,7 @@ void CombatCommander::updateDefenseSquads()
 		}
 
 		// We can ignore a single enemy worker in our region since we assume it is a scout (handled by scout defense)
-		if (region.enemyUnits.size() == 1 && enemyWorkers == 1)
+		if (region.enemyUnits.size() == 1 && enemyWorkers == 1 && startingBase)
 			region.enemyUnits.clear();
 
 		std::stringstream squadName;
@@ -2373,12 +2405,12 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     return closestDefender;
 }
 
-Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const
+Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight) const
 {
     // get our worker unit that is mining that is closest to it
     Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
 
-	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy, enemyUnits))
+	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy, enemyUnits, allowDifferentHeight))
 	{
         m_bot.Workers().setCombatWorker(workerDefender);
     }
@@ -2389,7 +2421,7 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
     return workerDefender;
 }
 
-bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const
+bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight) const
 {
 	if (!worker.isValid())
 		return false;
@@ -2415,7 +2447,7 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 			}
 		}
 	}
-	if (!groundEnemyUnitOnSameHeight)
+	if (!allowDifferentHeight && !groundEnemyUnitOnSameHeight)
 		return false;
 	// do not check distances if it is to protect against a scout
 	if (defenseSquad.getName() == "ScoutDefense")

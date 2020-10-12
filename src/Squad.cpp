@@ -544,7 +544,7 @@ std::vector<Unit> Squad::getUnitsOfType(sc2::UNIT_TYPEID unitType) const
 	return units;
 }
 
-const SquadOrder & Squad::getSquadOrder()	const
+SquadOrder & Squad::getSquadOrder()
 {
     return m_order;
 }

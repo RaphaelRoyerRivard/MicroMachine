@@ -187,8 +187,8 @@ class CombatCommander
     bool            isSquadUpdateFrame();
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);
-    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const;
-	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits) const;
+    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight = false) const;
+	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight = false) const;
 	bool			WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const;
 
 	CCPosition		exploreMap();
