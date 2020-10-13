@@ -382,6 +382,24 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 				// Ignore influence of hallucinations
 				if (enemyUnit.getUnitPtr()->is_hallucination)
 					continue;
+				// Ignore influence of Cyclones using their Lock-On (doesn't work because the facing vector represents the threads orientation and not the cannon's one)
+				/*if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+				{
+					bool maybeUsingLockOn = false;
+					for (const auto & allyUnit : m_bot.GetAllyUnits())
+					{
+						if (Util::isUnitLockedOn(allyUnit.second.getUnitPtr()))
+						{
+							if (Util::isUnitFacingAnother(enemyUnit.getUnitPtr(), allyUnit.second.getUnitPtr()))
+							{
+								maybeUsingLockOn = true;
+								break;
+							}
+						}
+					}
+					if (maybeUsingLockOn)
+						continue;
+				}*/
 				if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
 				{
 					const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
