@@ -397,6 +397,27 @@ std::vector<Unit> WorkerData::getAssignedWorkersRefinery(const Unit & unit)
 	return std::vector<Unit>();
 }
 
+int WorkerData::getExtraMineralWorkersNumber()
+{
+	int totalExtra = 0;
+	for (auto & base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+	{
+		auto & depot = base->getResourceDepot();
+		if (!depot.isValid())
+			continue;
+
+		auto it = m_depotWorkerCount.find(depot);
+
+		// if there is an entry, return it
+		if (it != m_depotWorkerCount.end())
+		{
+			totalExtra += it->second - base->getOptimalMineralWorkerCount();
+		}
+	}
+
+	return totalExtra;
+}
+
 const char * WorkerData::getJobCode(const Unit & unit)
 {
     const int j = getWorkerJob(unit);
