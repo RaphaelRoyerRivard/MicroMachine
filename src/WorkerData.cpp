@@ -156,6 +156,12 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit, bool m
 			mineralToMine = getMineralToMine(jobUnit);
 		}
 
+		if (!mineralToMine.isValid())
+		{
+			//No minerals to mine on the map, A-move the enemy base
+			worker.attackMove(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getPosition());
+			return;
+		}
         worker.rightClick(mineralToMine);
     }
     else if (job == WorkerJobs::Gas)
