@@ -47,6 +47,7 @@ public:
     int     getWorkerJobCount(int job) const;
     int     getNumAssignedWorkers(const Unit & unit);
 	std::vector<Unit> getAssignedWorkersRefinery(const Unit & unit);
+	int		getExtraMineralWorkersNumber();
     int     getWorkerJob(const Unit & unit) const;
 	bool	isReturningCargo(const Unit & unit) const;
 	int		getCountWorkerAtDepot(const Unit & depot) const;

@@ -156,6 +156,12 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit, bool m
 			mineralToMine = getMineralToMine(jobUnit);
 		}
 
+		if (!mineralToMine.isValid())
+		{
+			//No minerals to mine on the map, A-move the enemy base
+			worker.attackMove(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getPosition());
+			return;
+		}
         worker.rightClick(mineralToMine);
     }
     else if (job == WorkerJobs::Gas)
@@ -395,6 +401,27 @@ std::vector<Unit> WorkerData::getAssignedWorkersRefinery(const Unit & unit)
 
 	// when all else fails, return 0
 	return std::vector<Unit>();
+}
+
+int WorkerData::getExtraMineralWorkersNumber()
+{
+	int totalExtra = 0;
+	for (auto & base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+	{
+		auto & depot = base->getResourceDepot();
+		if (!depot.isValid())
+			continue;
+
+		auto it = m_depotWorkerCount.find(depot);
+
+		// if there is an entry, return it
+		if (it != m_depotWorkerCount.end())
+		{
+			totalExtra += it->second - base->getOptimalMineralWorkerCount();
+		}
+	}
+
+	return totalExtra;
 }
 
 const char * WorkerData::getJobCode(const Unit & unit)

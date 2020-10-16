@@ -478,7 +478,6 @@ void WorkerManager::handleGasWorkers()
 		gasWorkersTarget = 3;
 	}
 
-    // for each unit we have
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
     {
         // if that unit is a refinery
