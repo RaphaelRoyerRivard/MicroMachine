@@ -808,46 +808,49 @@ void CombatCommander::updateWorkerFleeSquad()
 			if (isProxyWorker && groundThreat)
 			{
 				auto building = m_bot.Buildings().getBuildingOfBuilder(worker);
-				if (building.status != BuildingStatus::UnderConstruction)
+				if (building.finalPosition != CCTilePosition() && Util::DistSq(Util::GetPosition(building.finalPosition), m_bot.Buildings().getProxyLocation()) < Util::DistSq(Util::GetPosition(building.finalPosition), m_bot.GetStartLocation()))
 				{
-					int closeEnemyWorkers = 0;
-					const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
-					for (const auto & enemyUnit : enemyUnits)
+					if (building.status != BuildingStatus::UnderConstruction)
 					{
-						if (enemyUnit.getType().isWorker() && Util::DistSq(enemyUnit, worker) < 10 * 10)
+						int closeEnemyWorkers = 0;
+						const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
+						for (const auto & enemyUnit : enemyUnits)
 						{
-							++closeEnemyWorkers;
-							if (closeEnemyWorkers > 1)
-								break;
-						}
-					}
-					if (closeEnemyWorkers > 1)
-					{
-						if (building.status == BuildingStatus::Assigned)
-						{
-							std::vector<Unit> proxyWorkersToRemove;
-							for (const auto & proxyWorker : m_bot.Workers().getWorkerData().getProxyWorkers())
+							if (enemyUnit.getType().isWorker() && Util::DistSq(enemyUnit, worker) < 10 * 10)
 							{
-								if (proxyWorker.getUnitPtr() != worker.getUnitPtr())
+								++closeEnemyWorkers;
+								if (closeEnemyWorkers > 1)
+									break;
+							}
+						}
+						if (closeEnemyWorkers > 1)
+						{
+							if (building.status == BuildingStatus::Assigned)
+							{
+								std::vector<Unit> proxyWorkersToRemove;
+								for (const auto & proxyWorker : m_bot.Workers().getWorkerData().getProxyWorkers())
 								{
-									proxyWorkersToRemove.push_back(proxyWorker);
+									if (proxyWorker.getUnitPtr() != worker.getUnitPtr())
+									{
+										proxyWorkersToRemove.push_back(proxyWorker);
+									}
 								}
+								for (const auto & proxyWorker : proxyWorkersToRemove)
+								{
+									m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorker);
+								}
+								m_bot.Buildings().CancelBuilding(building);
+								m_bot.Strategy().setStartingStrategy(STANDARD);
+								m_bot.Commander().Production().clearQueue();
 							}
-							for (const auto & proxyWorker : proxyWorkersToRemove)
+							// Put it in the squad if it is not defending or already in the squad
+							if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
 							{
-								m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorker);
+								m_bot.Workers().setCombatWorker(worker);
+								m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 							}
-							m_bot.Buildings().CancelBuilding(building);
-							m_bot.Strategy().setStartingStrategy(STANDARD);
-							m_bot.Commander().Production().clearQueue();
+							continue;
 						}
-						// Put it in the squad if it is not defending or already in the squad
-						if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
-						{
-							m_bot.Workers().setCombatWorker(worker);
-							m_squadData.assignUnitToSquad(worker, workerFleeSquad);
-						}
-						continue;
 					}
 				}
 			}

@@ -555,7 +555,7 @@ void BuildingManager::validateWorkersAndBuildings()
 				{
 					auto remove = CancelBuilding(b, false);
 					toRemove.push_back(remove);
-					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
+					Util::Log("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
 				}
 				break;
 			}
@@ -572,21 +572,17 @@ void BuildingManager::validateWorkersAndBuildings()
 				if (!b.buildingUnit.isValid() || !b.buildingUnit.isAlive())
 				{
 					toRemove.push_back(b);
-					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from under construction buildings.", m_bot);
+					Util::Log("Remove " + b.buildingUnit.getType().getName() + " from under construction buildings.", m_bot);
 				}
 				else if (m_bot.Strategy().wasProxyStartingStrategy() && !b.builderUnit.isAlive() && Util::DistSq(b.buildingUnit.getPosition(), m_proxyLocation) <= 15 * 15)
 				{
 					CancelBuilding(b, false);
 					toRemove.push_back(b);
-					Util::DebugLog("Cancelling proxy " + b.buildingUnit.getType().getName() + " and removing it from under construction buildings.", m_bot);
+					Util::Log("Cancelling proxy " + b.buildingUnit.getType().getName() + " and removing it from under construction buildings.", m_bot);
 				}
 				break;
 			}
 		}
-        if (b.status != BuildingStatus::UnderConstruction)
-        {
-            continue;
-        }   
     }
 
     removeBuildings(toRemove);
