@@ -462,15 +462,19 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	//TODO Might want to prevents buildings from being built next to each other, expect for defensive buildings (turret, bunker, photo cannon, spine and spore) and lowered supply depot.
 
 	//Check for supply depot in the way, they are not in the blockedTiles map
-	for (auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED))//TODO could be simplified
+	std::vector<sc2::UNIT_TYPEID> supplyDepotTypes = { sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED, sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT };
+	for (auto supplyDepotType : supplyDepotTypes)
 	{
-		CCTilePosition position = b.getTilePosition();
-		auto tiles = getTilesForBuildLocation(position.x, position.y, b.getType(), 2, 2, false, 0);
-		for (auto & tile : tiles)
+		for (auto & b : m_bot.GetAllyUnits(supplyDepotType))
 		{
-			if (tile.x == x && tile.y == y)
+			CCTilePosition position = b.getTilePosition();
+			auto tiles = getTilesForBuildLocation(position.x, position.y, b.getType(), 2, 2, false, 0);
+			for (auto & tile : tiles)
 			{
-				return false;
+				if (tile.x == x && tile.y == y)
+				{
+					return false;
+				}
 			}
 		}
 	}
