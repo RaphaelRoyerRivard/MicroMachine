@@ -37,7 +37,7 @@ public:
 	int getBuildingCenterOffset(int x, int y, int width, int height) const;
 
     // returns a build location near a building's desired location
-    CCTilePosition getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles, bool ignoreExtraBorder = false) const;
+    CCTilePosition getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles, bool ignoreExtraBorder = false, bool forceSameHeight = false) const;
 	CCTilePosition getBunkerBuildLocationNear(const Building & b, int depotX, int depotY, std::vector<CCPosition> geysersPos) const;
 
     void drawReservedTiles();

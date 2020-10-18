@@ -265,7 +265,7 @@ void ProductionManager::manageBuildOrderQueue()
 					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
 					{
 						const bool includeAddonTiles = proxyBarracks;
-						if (create(producer, currentItem, proxyLocation, false, false, true, includeAddonTiles, true))
+						if (create(producer, currentItem, proxyLocation, false, false, true, includeAddonTiles, true, true))
 						{
 							m_queue.removeCurrentHighestPriorityItem();
 							break;
@@ -2302,7 +2302,7 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used to create unit/tech/buildings (when we have the ressources)
-bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker, bool canBePlacedElsewhere, bool includeAddonTiles, bool ignoreExtraBorder)
+bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker, bool canBePlacedElsewhere, bool includeAddonTiles, bool ignoreExtraBorder, bool forceSameHeight)
 {
 	if (!producer.isValid())
 	{
@@ -2338,7 +2338,7 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 			{
 				b.reserveResources = reserveResources;
 				b.canBeBuiltElseWhere = canBePlacedElsewhere;
-				result = m_bot.Buildings().addBuildingTask(b, filterMovingWorker, includeAddonTiles, ignoreExtraBorder);
+				result = m_bot.Buildings().addBuildingTask(b, filterMovingWorker, includeAddonTiles, ignoreExtraBorder, forceSameHeight);
 			}
 		}
 	}

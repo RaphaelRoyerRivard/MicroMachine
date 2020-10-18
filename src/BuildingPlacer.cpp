@@ -280,7 +280,7 @@ int BuildingPlacer::getBuildingCenterOffset(int x, int y, int width, int height)
 	}
 }
 
-CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles, bool ignoreExtraBorder) const
+CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles, bool ignoreExtraBorder, bool forceSameHeight) const
 {
 	//If the space is not walkable, look around for a walkable space. The result may not be the most optimal location.
 	const int MAX_OFFSET = 5;
@@ -358,11 +358,15 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ign
 
     // get the precomputed vector of tile positions which are sorted closes to this location
     auto & closestToBuilding = m_bot.Map().getClosestTilesTo(buildLocation);
+	auto desiredHeight = Util::TerrainHeight(buildLocation);
 
     // iterate through the list until we've found a suitable location
     for (size_t i(0); i < closestToBuilding.size(); ++i)
     {
         auto & pos = closestToBuilding[i];
+		auto posHeight = Util::TerrainHeight(pos);
+		if (forceSameHeight && posHeight != desiredHeight)
+			continue;
 
         if (canBuildHere(pos.x, pos.y, b.type, ignoreReserved, checkInfluenceMap, includeExtraTiles, ignoreExtraBorder))
         {
