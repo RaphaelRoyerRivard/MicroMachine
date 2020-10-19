@@ -106,7 +106,7 @@ public:
 	void				updatePreviousBuildings();
 	void				updatePreviousBaseBuildings();
 	
-	Building			CancelBuilding(Building b, bool removeFromBuildingsList = true, bool destroy = true);
+	Building			CancelBuilding(Building b, std::string reason, bool removeFromBuildingsList = true, bool destroy = true);
 	Building			getBuildingOfBuilder(const Unit & builder) const;
 
 	BuildingPlacer& getBuildingPlacer();

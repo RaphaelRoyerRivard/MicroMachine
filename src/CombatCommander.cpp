@@ -839,7 +839,7 @@ void CombatCommander::updateWorkerFleeSquad()
 								{
 									m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorker);
 								}
-								m_bot.Buildings().CancelBuilding(building);
+								m_bot.Buildings().CancelBuilding(building, "proxy worker is near enemy workers");
 								m_bot.Strategy().setStartingStrategy(STANDARD);
 								m_bot.Commander().Production().clearQueue();
 							}

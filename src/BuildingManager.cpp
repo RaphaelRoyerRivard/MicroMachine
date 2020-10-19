@@ -118,7 +118,7 @@ void BuildingManager::lowPriorityChecks()
 				else
 				{
 					//We are trying to build in an invalid or now blocked location, remove it so we build it elsewhere.
-					auto remove = CancelBuilding(building, false);
+					auto remove = CancelBuilding(building, "invalid or blocked location", false);
 					if (remove.finalPosition != CCTilePosition(0, 0))
 					{
 						toRemove.push_back(remove);
@@ -553,7 +553,7 @@ void BuildingManager::validateWorkersAndBuildings()
 				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
 					|| (m_bot.Strategy().isWorkerRushed() && isEnemyUnitNear(b.finalPosition, 5)))
 				{
-					auto remove = CancelBuilding(b, false);
+					auto remove = CancelBuilding(b, "builder died on the way or we don't have the requirements or an enemy worker is near the build location during a worker rush", false);
 					toRemove.push_back(remove);
 					Util::Log("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
 				}
@@ -576,7 +576,7 @@ void BuildingManager::validateWorkersAndBuildings()
 				}
 				else if (m_bot.Strategy().wasProxyStartingStrategy() && !b.builderUnit.isAlive() && Util::DistSq(b.buildingUnit.getPosition(), m_proxyLocation) <= 15 * 15)
 				{
-					CancelBuilding(b, false);
+					CancelBuilding(b, "proxy worker died (building)", false);
 					toRemove.push_back(b);
 					Util::Log("Cancelling proxy " + b.buildingUnit.getType().getName() + " and removing it from under construction buildings.", m_bot);
 				}
@@ -1704,7 +1704,7 @@ void BuildingManager::removeNonStartedBuildingsOfType(sc2::UNIT_TYPEID type)
 	removeBuildings(toRemove);
 }
 
-Building BuildingManager::CancelBuilding(Building b, bool removeFromBuildingsList, bool destroy)
+Building BuildingManager::CancelBuilding(Building b, std::string reason, bool removeFromBuildingsList, bool destroy)
 {
 	auto it = find(m_buildings.begin(), m_buildings.end(), b);
 	if (it != m_buildings.end())
@@ -1746,6 +1746,9 @@ Building BuildingManager::CancelBuilding(Building b, bool removeFromBuildingsLis
 		{
 			Micro::SmartAbility(b.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::CANCEL, m_bot);
 		}
+
+		std::string buildingName = sc2::UnitTypeToName(b.type.getAPIUnitType());
+		Util::Log(__FUNCTION__, "Cancel building " + buildingName + " : " + reason, m_bot);
 
 		if (removeFromBuildingsList)
 		{
