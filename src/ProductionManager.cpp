@@ -2768,7 +2768,33 @@ void ProductionManager::drawProductionInformation()
 	ss << "Being built:      \n";
 	for (auto & underConstruction : m_bot.Buildings().getBuildings())
 	{
-		ss << underConstruction.type.getName() << "\n";
+		ss << underConstruction.type.getName() << " ";
+		switch (underConstruction.status)
+		{
+		case BuildingStatus::Unassigned:
+			ss << "Unassigned";
+			break;
+		case BuildingStatus::Assigned:
+			ss << "Assigned";
+			break;
+		case BuildingStatus::UnderConstruction:
+			ss << "UnderConstruction";
+			break;
+		default:
+			ss << "Error";
+		}
+		if (log && !draw)
+		{
+			if (underConstruction.builderUnit.isValid())
+			{
+				ss << ", Builder: " << sc2::UnitTypeToName(underConstruction.builderUnit.getAPIUnitType()) << " (" << underConstruction.builderUnit.getPosition().x << ", " << underConstruction.builderUnit.getPosition().y << ")";
+			}
+			if (underConstruction.buildingUnit.isValid())
+			{
+				ss << ", Building: " << sc2::UnitTypeToName(underConstruction.buildingUnit.getAPIUnitType()) << " (" << underConstruction.buildingUnit.getPosition().x << ", " << underConstruction.buildingUnit.getPosition().y << ")";
+			}
+		}
+		ss << "\n";
 	}
 	for (auto & incompleteUpgrade : incompleteUpgrades)
 	{
