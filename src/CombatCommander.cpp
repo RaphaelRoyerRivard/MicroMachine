@@ -382,6 +382,24 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 				// Ignore influence of hallucinations
 				if (enemyUnit.getUnitPtr()->is_hallucination)
 					continue;
+				// Ignore influence of Cyclones using their Lock-On (doesn't work because the facing vector represents the threads orientation and not the cannon's one)
+				/*if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+				{
+					bool maybeUsingLockOn = false;
+					for (const auto & allyUnit : m_bot.GetAllyUnits())
+					{
+						if (Util::isUnitLockedOn(allyUnit.second.getUnitPtr()))
+						{
+							if (Util::isUnitFacingAnother(enemyUnit.getUnitPtr(), allyUnit.second.getUnitPtr()))
+							{
+								maybeUsingLockOn = true;
+								break;
+							}
+						}
+					}
+					if (maybeUsingLockOn)
+						continue;
+				}*/
 				if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE || enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
 				{
 					const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
@@ -790,46 +808,49 @@ void CombatCommander::updateWorkerFleeSquad()
 			if (isProxyWorker && groundThreat)
 			{
 				auto building = m_bot.Buildings().getBuildingOfBuilder(worker);
-				if (building.status != BuildingStatus::UnderConstruction)
+				if (building.finalPosition != CCTilePosition() && Util::DistSq(Util::GetPosition(building.finalPosition), m_bot.Buildings().getProxyLocation()) < Util::DistSq(Util::GetPosition(building.finalPosition), m_bot.GetStartLocation()))
 				{
-					int closeEnemyWorkers = 0;
-					const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
-					for (const auto & enemyUnit : enemyUnits)
+					if (building.status != BuildingStatus::UnderConstruction)
 					{
-						if (enemyUnit.getType().isWorker() && Util::DistSq(enemyUnit, worker) < 10 * 10)
+						int closeEnemyWorkers = 0;
+						const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
+						for (const auto & enemyUnit : enemyUnits)
 						{
-							++closeEnemyWorkers;
-							if (closeEnemyWorkers > 1)
-								break;
-						}
-					}
-					if (closeEnemyWorkers > 1)
-					{
-						if (building.status == BuildingStatus::Assigned)
-						{
-							std::vector<Unit> proxyWorkersToRemove;
-							for (const auto & proxyWorker : m_bot.Workers().getWorkerData().getProxyWorkers())
+							if (enemyUnit.getType().isWorker() && Util::DistSq(enemyUnit, worker) < 10 * 10)
 							{
-								if (proxyWorker.getUnitPtr() != worker.getUnitPtr())
+								++closeEnemyWorkers;
+								if (closeEnemyWorkers > 1)
+									break;
+							}
+						}
+						if (closeEnemyWorkers > 1)
+						{
+							if (building.status == BuildingStatus::Assigned)
+							{
+								std::vector<Unit> proxyWorkersToRemove;
+								for (const auto & proxyWorker : m_bot.Workers().getWorkerData().getProxyWorkers())
 								{
-									proxyWorkersToRemove.push_back(proxyWorker);
+									if (proxyWorker.getUnitPtr() != worker.getUnitPtr())
+									{
+										proxyWorkersToRemove.push_back(proxyWorker);
+									}
 								}
+								for (const auto & proxyWorker : proxyWorkersToRemove)
+								{
+									m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorker);
+								}
+								m_bot.Buildings().CancelBuilding(building, "proxy worker is near enemy workers");
+								m_bot.Strategy().setStartingStrategy(STANDARD);
+								m_bot.Commander().Production().clearQueue();
 							}
-							for (const auto & proxyWorker : proxyWorkersToRemove)
+							// Put it in the squad if it is not defending or already in the squad
+							if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
 							{
-								m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorker);
+								m_bot.Workers().setCombatWorker(worker);
+								m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 							}
-							m_bot.Buildings().CancelBuilding(building);
-							m_bot.Strategy().setStartingStrategy(STANDARD);
-							m_bot.Commander().Production().clearQueue();
+							continue;
 						}
-						// Put it in the squad if it is not defending or already in the squad
-						if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
-						{
-							m_bot.Workers().setCombatWorker(worker);
-							m_squadData.assignUnitToSquad(worker, workerFleeSquad);
-						}
-						continue;
 					}
 				}
 			}
@@ -1768,7 +1789,8 @@ struct RegionArmyInformation
 		for (auto& unit : enemyUnits)
 		{
 			auto power = Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
-			if (power == 0.f)
+			// if the unit has 0 power or if it is a building that can't attack
+			if (power == 0.f || (unit.getType().isBuilding() && (unit.getBuildProgress() < 1 || !unit.getType().isAttackingBuilding() || (bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss && !unit.isPowered()))))
 				power = Util::GetSpecialCasePower(unit);
 			if (unit.isFlying())
 				airEnemyPower += power;
@@ -2435,6 +2457,7 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	const auto workerBaseLocation = m_bot.Bases().getBaseContainingPosition(worker.getPosition());
 	bool groundEnemyUnitOnSameHeight = false;
 	bool enemyBuildingOnSameHeight = false;
+	bool finishedCombatBuilding = false;
 	for (const auto & enemyUnit : enemyUnits)
 	{
 		if (!enemyUnit.isFlying() && (workerHeight == m_bot.Map().terrainHeight(enemyUnit.getPosition()) || workerBaseLocation == m_bot.Bases().getBaseContainingPosition(enemyUnit.getPosition())))
@@ -2443,11 +2466,16 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 			if (enemyUnit.getType().isBuilding())
 			{
 				enemyBuildingOnSameHeight = true;
-				break;
 			}
+		}
+		if (!finishedCombatBuilding && enemyUnit.getType().isAttackingBuilding() && enemyUnit.getBuildProgress() == 1.f && (enemyUnit.getHitPoints() + enemyUnit.getShields()) / (enemyUnit.getUnitPtr()->health_max + enemyUnit.getUnitPtr()->shield_max) > 0.2f)
+		{
+			finishedCombatBuilding = true;
 		}
 	}
 	if (!allowDifferentHeight && !groundEnemyUnitOnSameHeight)
+		return false;
+	if (finishedCombatBuilding)
 		return false;
 	// do not check distances if it is to protect against a scout
 	if (defenseSquad.getName() == "ScoutDefense")

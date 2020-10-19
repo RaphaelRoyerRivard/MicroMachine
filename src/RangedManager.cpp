@@ -46,7 +46,9 @@ const std::vector<std::string> THREAT_FIGHTING_ACTION_DESCRIPTIONS = {
 	ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK,
 	ACTION_DESCRIPTION_THREAT_FIGHT_MOVE,
 	ACTION_DESCRIPTION_THREAT_FIGHT_DODGE_EFFECT,
-	ACTION_DESCRIPTION_THREAT_FIGHT_MORPH
+	ACTION_DESCRIPTION_THREAT_FIGHT_MORPH,
+	ACTION_DESCRIPTION_THREAT_FIGHT_MOVE_CLOSER_BEFORE_MORPH,
+	ACTION_DESCRIPTION_THREAT_FIGHT_MOVE_FARTHER_BEFORE_MORPH
 };
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
@@ -1065,7 +1067,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 	sc2::AbilityID morphAbility = 0;
 	const auto airInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(viking->pos), true, m_bot);
 	const auto groundInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot);
-	if(unitShouldHeal && airInfluence <= groundInfluence)
+	if(unitShouldHeal && airInfluence * 2.f < groundInfluence)
 	{
 		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 		{
@@ -1115,7 +1117,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 		{
 			const auto vikingFighter = GetSimulatedUnit(viking);
 			const auto flyingTarget = getTarget(vikingFighter, targets, true);
-			if (flyingTarget || (!target && airInfluence <= groundInfluence))
+			if (flyingTarget || (!target && airInfluence * 2.f < groundInfluence))
 			{
 				morphAbility = sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE;
 				morph = true;
@@ -2168,6 +2170,7 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
  */
 void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & allyCombatUnits, sc2::Units & rangedUnitTargets, bool ignoreCyclones, std::set<const sc2::Unit *> & closeUnitsSet, bool & morphFlyingVikings, bool & morphLandedVikings, std::map<const sc2::Unit *, const sc2::Unit *> & simulatedStimedUnits, float & stimedUnitsPowerDifference, std::map<const sc2::Unit*, const sc2::Unit*> & closeUnitsTarget, float & unitsPower, float & minUnitRange)
 {
+	std::vector<const sc2::Unit *> morphingVikings;
 	bool checkedForFlyingTarget = false;
 	sc2::Units farAllyUnits;
 	// Calculate ally power
@@ -2244,6 +2247,7 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 				{
 					unitToSave = vikingAssault;
 					morphFlyingVikings = true;
+					morphingVikings.push_back(vikingAssault);
 				}
 			}
 			else if(unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
@@ -2258,6 +2262,7 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 						unitToSave = vikingFighter;
 						unitTarget = flyingUnitTarget;
 						morphLandedVikings = true;
+						morphingVikings.push_back(vikingFighter);
 					}
 				}
 			}
@@ -2279,6 +2284,22 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 				if (minUnitRange < 0 || unitRange < minUnitRange)
 					minUnitRange = unitRange;
 			}
+		}
+	}
+
+	// Simulate damage taken while morphing
+	for (auto morphingViking : morphingVikings)
+	{
+		float groundInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(morphingViking->pos), false, m_bot);
+		float airInfluence = 2.f * Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(morphingViking->pos), true, m_bot);
+		float damageTaken = (groundInfluence + airInfluence) / morphingVikings.size();
+		if (morphingViking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+		{
+			m_dummyAssaultVikings[morphingViking->tag].health -= damageTaken;
+		}
+		else
+		{
+			m_dummyFighterVikings[morphingViking->tag].health -= damageTaken;
 		}
 	}
 }

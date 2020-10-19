@@ -143,7 +143,7 @@ void StrategyManager::onStart()
 		setStartingStrategy(STANDARD);
 	}
 
-	m_initialStartingStrategy = m_startingStrategy;
+	m_initialStartingStrategy = PROXY_MARAUDERS;// m_startingStrategy;
 }
 
 void StrategyManager::onFrame(bool executeMacro)
@@ -213,7 +213,7 @@ void StrategyManager::checkForStrategyChange()
 				{
 					if (Util::DistSq(m_bot.Buildings().getProxyLocation(), Util::GetPosition(building.finalPosition)) <= 15 * 15)
 					{
-						toRemove.push_back(m_bot.Buildings().CancelBuilding(building, false));
+						toRemove.push_back(m_bot.Buildings().CancelBuilding(building, "proxy worker died (strategy)", false));
 					}
 				}
 				m_bot.Buildings().removeBuildings(toRemove);
@@ -315,6 +315,7 @@ void StrategyManager::checkForStrategyChange()
 		}
 		else if (completedBarracksCount == 0)
 		{
+			std::string cancelReason;
 			bool cancelProxy = false;
 			const auto barracksUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
 			// We want to cancel our proxy strategy if the opponent has vision of our proxy location
@@ -341,6 +342,7 @@ void StrategyManager::checkForStrategyChange()
 									{
 										// We want to cancel both the proxy Marauders strategy and the Barracks in the Building Manager
 										cancelProxy = true;
+										cancelReason = "proxy location scouted too early";
 										break;
 									}
 								}
@@ -370,6 +372,7 @@ void StrategyManager::checkForStrategyChange()
 								if (!shouldProxyBuilderFinishSafely(building, true))
 								{
 									cancelProxy = true;
+									cancelReason = "proxy worker died or will die before finishing building";
 									break;
 								}
 							}
@@ -406,7 +409,7 @@ void StrategyManager::checkForStrategyChange()
 						}
 						if (cancel)
 						{
-							toRemove.push_back(m_bot.Buildings().CancelBuilding(building, false));
+							toRemove.push_back(m_bot.Buildings().CancelBuilding(building, cancelReason, false));
 						}
 					}
 				}
@@ -452,7 +455,7 @@ void StrategyManager::checkForStrategyChange()
 					{
 						if (!building.buildingUnit.isValid() || building.buildingUnit.getBuildProgress() < enemyHatchery.getBuildProgress())
 						{
-							m_bot.Buildings().CancelBuilding(building);
+							m_bot.Buildings().CancelBuilding(building, "proxy hatch");
 							break;
 						}
 					}

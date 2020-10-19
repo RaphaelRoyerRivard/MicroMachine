@@ -265,7 +265,7 @@ void ProductionManager::manageBuildOrderQueue()
 					if (canMakeAtArrival(b, producer, additionalReservedMineral, additionalReservedGas))
 					{
 						const bool includeAddonTiles = proxyBarracks;
-						if (create(producer, currentItem, proxyLocation, false, false, true, includeAddonTiles, true))
+						if (create(producer, currentItem, proxyLocation, false, false, true, includeAddonTiles, true, true))
 						{
 							m_queue.removeCurrentHighestPriorityItem();
 							break;
@@ -666,7 +666,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	if (m_bot.GetSelfRace() == sc2::Race::Terran)
 	{
-		// Logic for building Orbital Commands and Refineries
+		// Logic for building Orbital Commands
 		UnitType depot = Util::GetResourceDepotType();
 		const size_t boughtDepotCount = m_bot.Buildings().countBoughtButNotBeingBuilt(depot.getAPIUnitType());
 		const size_t incompletedDepotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, depot, false, true, true);
@@ -1396,7 +1396,18 @@ void ProductionManager::QueueDeadBuildings()
 	}
 	for (int i = 0; i < deadBuildings.size(); i++)
 	{
-		MetaType type = MetaType(deadBuildings.at(i).getType(), m_bot);
+		UnitType unittype = deadBuildings.at(i).getType();
+		switch ((sc2::UNIT_TYPEID)unittype.getAPIUnitType())
+		{
+			case sc2::UNIT_TYPEID::TERRAN_ENGINEERINGBAY:
+			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT:
+			case sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED:
+			case sc2::UNIT_TYPEID::PROTOSS_PYLON:
+			case sc2::UNIT_TYPEID::PROTOSS_FORGE:
+				continue;//Do not queue these buildings if they are killed, we don't necessarily want them back.
+		}
+
+		MetaType type = MetaType(unittype, m_bot);
 		if (!m_queue.contains(type))
 		{
 			m_queue.queueItem(MM::BuildOrderItem(type, 0, false));
@@ -1443,10 +1454,10 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
     // build a refinery if we don't have one and the thing costs gas
 	if (typeData.gasCost > 0)
     {
-		auto refinery = Util::GetRefineryType();
+		auto & refinery = Util::GetRefineryType();
 		if (!m_queue.contains(MetaType(refinery, m_bot)))
 		{
-			auto richRefinery = Util::GetRichRefineryType();
+			auto & richRefinery = Util::GetRichRefineryType();
 			auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true);
 			auto richRefineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, richRefinery, false, true);
 			if (refineryCount + richRefineryCount == 0)
@@ -1465,23 +1476,33 @@ void ProductionManager::lowPriorityChecks()
 	}
 	m_lastLowPriorityCheckFrame = m_bot.GetGameLoop();
 
-	// build a refinery if we are missing one
+	//build a refinery if we are missing one
 	//TODO doesn't handle extra hatcheries
-	auto refineryType = Util::GetRefineryType();
+	auto & refineryType = Util::GetRefineryType();
 	if (m_bot.Workers().canHandleMoreRefinery() && !m_queue.contains(MetaType(refineryType, m_bot)))
 	{
 		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
 		{
-			auto& refineries = m_bot.GetAllyGeyserUnits();
-			const auto & bases = m_bot.Bases().getBaseLocations();
+			auto & refineries = m_bot.GetAllyGeyserUnits();
+			const auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 			for (auto & base : bases)
 			{
-				if (base == nullptr || !base->isOccupiedByPlayer(Players::Self) || base->isUnderAttack())
+				if (base == nullptr || base->isUnderAttack())
 					continue;
 				
 				const Unit& resourceDepot = base->getResourceDepot();
 				if (!resourceDepot.isValid())
 					continue;
+			
+				int refineryBeingBuilt = m_bot.Buildings().countBeingBuilt(Util::GetRefineryType(), false);
+				int extraWorkers = m_bot.Workers().getWorkerData().getExtraMineralWorkersNumber();
+				int mineralWorkers = m_bot.Workers().getWorkerData().getNumAssignedWorkers(resourceDepot);
+				if (mineralWorkers < 3 && extraWorkers - (refineryBeingBuilt * 3) < 3)
+				{
+					//Do not build a refinery in a base that doesn't have enough workers to handle it
+					//AND we don't have enough extra workers to handle it (and all other refineries being built elsewhere)
+					continue;
+				}
 
 				auto& geysers = base->getGeysers();
 				for (auto & geyser : geysers)
@@ -1490,13 +1511,12 @@ void ProductionManager::lowPriorityChecks()
 					if (geyser.getUnitPtr()->vespene_contents <= 0)
 						continue;
 
-					auto position = geyser.getTilePosition();
 					bool refineryFound = false;
-					for (auto refinery : refineries)
+					for (auto & refinery : refineries)
 					{
 						if (!refinery.isValid())
 							continue;
-						if (refinery.getTilePosition() == position)
+						if (refinery.getTilePosition() == geyser.getTilePosition())
 						{
 							refineryFound = true;
 							break;
@@ -1506,6 +1526,7 @@ void ProductionManager::lowPriorityChecks()
 					if (!refineryFound)
 					{
 						m_queue.queueAsLowestPriority(MetaType(refineryType, m_bot), false);
+						break;//Prevent building two refineries at the same base at once
 					}
 				}
 			}
@@ -2281,7 +2302,7 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
 
 // this function will check to see if all preconditions are met and then create a unit
 // Used to create unit/tech/buildings (when we have the ressources)
-bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker, bool canBePlacedElsewhere, bool includeAddonTiles, bool ignoreExtraBorder)
+bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker, bool canBePlacedElsewhere, bool includeAddonTiles, bool ignoreExtraBorder, bool forceSameHeight)
 {
 	if (!producer.isValid())
 	{
@@ -2317,7 +2338,7 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 			{
 				b.reserveResources = reserveResources;
 				b.canBeBuiltElseWhere = canBePlacedElsewhere;
-				result = m_bot.Buildings().addBuildingTask(b, filterMovingWorker, includeAddonTiles, ignoreExtraBorder);
+				result = m_bot.Buildings().addBuildingTask(b, filterMovingWorker, includeAddonTiles, ignoreExtraBorder, forceSameHeight);
 			}
 		}
 	}
@@ -2747,7 +2768,33 @@ void ProductionManager::drawProductionInformation()
 	ss << "Being built:      \n";
 	for (auto & underConstruction : m_bot.Buildings().getBuildings())
 	{
-		ss << underConstruction.type.getName() << "\n";
+		ss << underConstruction.type.getName() << " ";
+		switch (underConstruction.status)
+		{
+		case BuildingStatus::Unassigned:
+			ss << "Unassigned";
+			break;
+		case BuildingStatus::Assigned:
+			ss << "Assigned";
+			break;
+		case BuildingStatus::UnderConstruction:
+			ss << "UnderConstruction";
+			break;
+		default:
+			ss << "Error";
+		}
+		if (log && !draw)
+		{
+			if (underConstruction.builderUnit.isValid())
+			{
+				ss << ", Builder: " << sc2::UnitTypeToName(underConstruction.builderUnit.getAPIUnitType()) << " (" << underConstruction.builderUnit.getPosition().x << ", " << underConstruction.builderUnit.getPosition().y << ")";
+			}
+			if (underConstruction.buildingUnit.isValid())
+			{
+				ss << ", Building: " << sc2::UnitTypeToName(underConstruction.buildingUnit.getAPIUnitType()) << " (" << underConstruction.buildingUnit.getPosition().x << ", " << underConstruction.buildingUnit.getPosition().y << ")";
+			}
+		}
+		ss << "\n";
 	}
 	for (auto & incompleteUpgrade : incompleteUpgrades)
 	{
