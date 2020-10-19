@@ -1454,10 +1454,10 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
     // build a refinery if we don't have one and the thing costs gas
 	if (typeData.gasCost > 0)
     {
-		auto & refinery = Util::GetRefineryType();
+		auto refinery = Util::GetRefineryType();
 		if (!m_queue.contains(MetaType(refinery, m_bot)))
 		{
-			auto & richRefinery = Util::GetRichRefineryType();
+			auto richRefinery = Util::GetRichRefineryType();
 			auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, refinery, false, true);
 			auto richRefineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, richRefinery, false, true);
 			if (refineryCount + richRefineryCount == 0)
@@ -1478,7 +1478,7 @@ void ProductionManager::lowPriorityChecks()
 
 	//build a refinery if we are missing one
 	//TODO doesn't handle extra hatcheries
-	auto & refineryType = Util::GetRefineryType();
+	auto refineryType = Util::GetRefineryType();
 	if (m_bot.Workers().canHandleMoreRefinery() && !m_queue.contains(MetaType(refineryType, m_bot)))
 	{
 		if (m_initialBuildOrderFinished && !m_bot.Strategy().isWorkerRushed())
