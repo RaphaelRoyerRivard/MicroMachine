@@ -1789,7 +1789,8 @@ struct RegionArmyInformation
 		for (auto& unit : enemyUnits)
 		{
 			auto power = Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
-			if (power == 0.f)
+			// if the unit has 0 power or if it is a building that can't attack
+			if (power == 0.f || (unit.getType().isBuilding() && (unit.getBuildProgress() < 1 || !unit.getType().isAttackingBuilding() || (bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss && !unit.isPowered()))))
 				power = Util::GetSpecialCasePower(unit);
 			if (unit.isFlying())
 				airEnemyPower += power;
@@ -2456,6 +2457,7 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	const auto workerBaseLocation = m_bot.Bases().getBaseContainingPosition(worker.getPosition());
 	bool groundEnemyUnitOnSameHeight = false;
 	bool enemyBuildingOnSameHeight = false;
+	bool finishedCombatBuilding = false;
 	for (const auto & enemyUnit : enemyUnits)
 	{
 		if (!enemyUnit.isFlying() && (workerHeight == m_bot.Map().terrainHeight(enemyUnit.getPosition()) || workerBaseLocation == m_bot.Bases().getBaseContainingPosition(enemyUnit.getPosition())))
@@ -2464,11 +2466,16 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 			if (enemyUnit.getType().isBuilding())
 			{
 				enemyBuildingOnSameHeight = true;
-				break;
 			}
+		}
+		if (!finishedCombatBuilding && enemyUnit.getType().isAttackingBuilding() && enemyUnit.getBuildProgress() == 1.f && (enemyUnit.getHitPoints() + enemyUnit.getShields()) / (enemyUnit.getUnitPtr()->health_max + enemyUnit.getUnitPtr()->shield_max) > 0.2f)
+		{
+			finishedCombatBuilding = true;
 		}
 	}
 	if (!allowDifferentHeight && !groundEnemyUnitOnSameHeight)
+		return false;
+	if (finishedCombatBuilding)
 		return false;
 	// do not check distances if it is to protect against a scout
 	if (defenseSquad.getName() == "ScoutDefense")
