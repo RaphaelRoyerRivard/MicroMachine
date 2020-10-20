@@ -146,7 +146,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	
 	const float antiBuildingModifier = attackerUnit.getType().isWorker() && targetUnit.getType().isBuilding() ? 10.f : 1.f;
 
-	const float unpoweredModifier = reducePriorityOfUnpowered && (targetUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || targetUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !targetUnit.getUnitPtr()->is_powered ? 0.05f : 1.f;
+	const float unpoweredModifier = reducePriorityOfUnpowered && (targetUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || targetUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !targetUnit.getUnitPtr()->is_powered && targetUnit.getUnitPtr()->build_progress == 1.f ? 0.05f : 1.f;		// is_powered is always false when the building is not finished
 
 	if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
 	{
