@@ -1710,7 +1710,7 @@ void CombatCommander::handleWall()
 						break;
 					}
 				}
-				if (shouldRaise)
+				if (shouldRaise && building.getUnitPtr()->orders.empty())
 				{
 					Micro::SmartAbility(building.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_RAISE, m_bot);
 				}
@@ -1722,7 +1722,7 @@ void CombatCommander::handleWall()
 	{
 		for (auto & building : m_bot.Buildings().getWallBuildings())
 		{
-			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT && building.isCompleted())
+			if (building.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT && building.isCompleted() && building.getUnitPtr()->orders.empty())
 			{
 				Micro::SmartAbility(building.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER, m_bot);
 			}
@@ -1734,7 +1734,7 @@ void CombatCommander::lowerSupplyDepots()
 {
 	for(auto & supplyDepot : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT))
 	{
-		if(supplyDepot.isCompleted() && !Util::Contains(supplyDepot, m_bot.Buildings().getWallBuildings()))
+		if(supplyDepot.isCompleted() && !Util::Contains(supplyDepot, m_bot.Buildings().getWallBuildings()) && supplyDepot.getUnitPtr()->orders.empty())
 		{
 			Micro::SmartAbility(supplyDepot.getUnitPtr(), sc2::ABILITY_ID::MORPH_SUPPLYDEPOT_LOWER, m_bot);
 		}
