@@ -842,7 +842,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
 				}
-				else if (factoryCount * (m_bot.Strategy().enemyHasMassZerglings() ? 2 : 3) < finishedBaseCount)
+				else if (factoryCount * 2 < finishedBaseCount)
 				{
 					toBuild = MetaTypeEnum::Factory;
 					hasPicked = true;

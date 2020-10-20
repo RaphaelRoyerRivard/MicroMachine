@@ -143,7 +143,7 @@ void StrategyManager::onStart()
 		setStartingStrategy(STANDARD);
 	}
 
-	m_initialStartingStrategy = PROXY_MARAUDERS;// m_startingStrategy;
+	m_initialStartingStrategy = m_startingStrategy;
 }
 
 void StrategyManager::onFrame(bool executeMacro)
