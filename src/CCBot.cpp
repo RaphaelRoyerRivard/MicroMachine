@@ -511,6 +511,7 @@ void CCBot::setUnits()
 	m_unitCount.clear();
 	m_unitCompletedCount.clear();
 	m_strategy.setEnemyCurrentlyHasInvisible(m_gameCommander.Combat().isExpandBlockedByInvis());
+	m_strategy.setEnemyHasProxyHatchery(false);
 	bool firstPhoenix = true;
 	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
 	StartProfiling("0.2.1 loopAllUnits");
@@ -600,22 +601,32 @@ void CCBot::setUnits()
 			}
 			m_enemyUnits[unitptr->tag] = unit;
 			// If the enemy zergling was seen last frame
-			if (zergEnemy && !m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
-				&& unitptr->last_seen_game_loop == GetGameLoop())
+			if (zergEnemy)
 			{
-				auto& lastSeenPair = m_lastSeenPosUnits[unitptr->tag];
-				if (lastSeenPair.first != CCPosition(0, 0) && lastSeenPair.second == GetGameLoop() - 1)
+				if (unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_HATCHERY)
 				{
-					const float dist = Util::Dist(unitptr->pos, lastSeenPair.first);
-					const float speed = Util::getSpeedOfUnit(unitptr, *this);
-					const float realSpeed = dist * 16.f;	// Magic number calculated from real values
-					const bool creep = Observation()->HasCreep(unitptr->pos) == Observation()->HasCreep(lastSeenPair.first);
-					if (creep && realSpeed > speed + 1.f)
+					if (Util::DistSq(unitptr->pos, m_startLocation) < 40 * 40)
 					{
-						// This is a Speedling!!!
-						m_strategy.setEnemyHasMetabolicBoost(true);
-						Actions()->SendChat("Speedlings won't save you my friend");
-						Util::DebugLog(__FUNCTION__, "Metabolic Boost detected", *this);
+						m_strategy.setEnemyHasProxyHatchery(true);
+					}
+				}
+				else if (!m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
+					&& unitptr->last_seen_game_loop == GetGameLoop())
+				{
+					auto& lastSeenPair = m_lastSeenPosUnits[unitptr->tag];
+					if (lastSeenPair.first != CCPosition(0, 0) && lastSeenPair.second == GetGameLoop() - 1)
+					{
+						const float dist = Util::Dist(unitptr->pos, lastSeenPair.first);
+						const float speed = Util::getSpeedOfUnit(unitptr, *this);
+						const float realSpeed = dist * 16.f;	// Magic number calculated from real values
+						const bool creep = Observation()->HasCreep(unitptr->pos) == Observation()->HasCreep(lastSeenPair.first);
+						if (creep && realSpeed > speed + 1.f)
+						{
+							// This is a Speedling!!!
+							m_strategy.setEnemyHasMetabolicBoost(true);
+							Actions()->SendChat("Speedlings won't save you my friend");
+							Util::DebugLog(__FUNCTION__, "Metabolic Boost detected", *this);
+						}
 					}
 				}
 			}
@@ -1838,6 +1849,9 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, mapCenter, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, mapCenter, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 30, player1, 1);*/
+
+	// Test to see if our bot react properly against a proxy Hatchery
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_HATCHERY, nat, player2, 1);
 }
 
 void CCBot::IssueCheats()

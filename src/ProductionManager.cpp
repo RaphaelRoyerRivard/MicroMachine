@@ -427,7 +427,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	}
 	else if (currentItem.type.getUnitType().isResourceDepot() && !currentItem.type.getUnitType().isMorphedBuilding())
 	{
-		shouldSkip = m_bot.Strategy().isEarlyRushed() && m_bot.GetMinerals() < 800;
+		shouldSkip = (m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasProxyHatchery()) && m_bot.GetMinerals() < 800;
 	}
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
 	{
@@ -1010,7 +1010,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want at least 1 Hellion for every 2 enemy Zealot or 4 enemy Zergling. Against Zerg, we want to make at least 1 asap to defend against potential zergling rushes (unless the opponent already has Roaches)
-				else if (!shouldProduceFirstCyclone && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ (hellionCount + 1) * 4 < enemyZerglingCount || (enemyRace == sc2::Race::Zerg && hellionCount + deadHellionCount == 0 && enemyRoachAndRavagerCount == 0)))
+				else if (!shouldProduceFirstCyclone && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ (hellionCount + 1) * 4 < enemyZerglingCount || (enemyRace == sc2::Race::Zerg && !m_bot.Strategy().enemyHasProxyHatchery() && hellionCount + deadHellionCount == 0 && enemyRoachAndRavagerCount == 0)))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 					m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);

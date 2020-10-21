@@ -442,17 +442,19 @@ void StrategyManager::checkForStrategyChange()
 	}
 
 	// Change to STANDARD strategy against proxy Hatchery
-	if (m_startingStrategy != STANDARD && m_bot.GetCurrentFrame() < 3 * 60 * 22.4f)
+	if (m_startingStrategy != STANDARD && m_bot.GetCurrentFrame() < 3 * 60 * 22.4f && m_enemyHasProxyHatchery)
 	{
+		// Find which hatchery is proxied
 		for (const auto & enemyHatchery : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_HATCHERY))
 		{
-			if (Util::DistSq(enemyHatchery, m_bot.GetStartLocation()) < 30 * 30)
+			if (Util::DistSq(enemyHatchery, m_bot.GetStartLocation()) < 40 * 40)
 			{
 				setStartingStrategy(STANDARD);
 				for (const auto & building : m_bot.Buildings().getBuildings())
 				{
 					if (building.type.isResourceDepot())
 					{
+						// Cancel our next expansion
 						if (!building.buildingUnit.isValid() || building.buildingUnit.getBuildProgress() < enemyHatchery.getBuildProgress())
 						{
 							m_bot.Buildings().CancelBuilding(building, "proxy hatch");
