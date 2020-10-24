@@ -19,17 +19,18 @@ void WorkerManager::onStart()
 
 void WorkerManager::onFrame(bool executeMacro)
 {
-	/*if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 22 == 0)//Every 15 seconds
+	/*//22.4 frames per second
+	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 24 == 0 && m_bot.GetCurrentFrame() >= (int)(22.5 * 8 * 60))//Every seconds starting at 5 minutes
 	{
 		const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals;
 		const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene;
-		Util::AddStatistic("GatherRate", mineralRate + gasRate);
+		Util::AddStatistic("Gas GatherRate", gasRate);
 	}
-	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 6720 == 0)//after 5 minutes
+	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % (int)(22.4 * 10 * 60) == 0)//after 5 minutes
 	{
-		Util::DisplayStatistic(m_bot, "GatherRate");
+		Util::DisplayStatistic(m_bot, "Gas GatherRate");
 	}
-	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 6721 == 0)
+	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % (int)(22.4 * 10 * 60 + 1) == 0)
 	{
 		Util::ClearChat(m_bot);
 	}*/
@@ -381,7 +382,8 @@ void WorkerManager::handleMules()
 		auto id = mule.getTag();
 		if (muleHarvests.find(id) == muleHarvests.end())
 		{
-			muleHarvests[id] = std::pair<bool, int>();
+			muleHarvests[id] = mule_info();
+			muleHarvests[id].deathFrame = m_bot.GetCurrentFrame() + 1344;
 		}
 		else
 		{
@@ -399,20 +401,24 @@ void WorkerManager::handleMules()
 
 		if (isReturningCargo(mule))
 		{
-
-			muleHarvests[id].first = true;
+			muleHarvests[id].isReturningCargo = true;
 		}
 		else
 		{
-			if (muleHarvests[id].first)//Cargo was returned
+			if (muleHarvests[id].isReturningCargo)//Cargo was returned
 			{
-				muleHarvests[id].first = false;
-				muleHarvests[id].second++;
-				if (muleHarvests[id].second == 9)//Maximum of 9 harvest per mule, the mules can't finish the 10th.
+				muleHarvests[id].isReturningCargo = false;
+				muleHarvests[id].finishedHarvestCount++;
+
+				if (muleHarvests[id].harvestFramesRequired != 0 && m_bot.GetCurrentFrame() + muleHarvests[id].harvestFramesRequired > muleHarvests[id].deathFrame)//Maximum of 9 harvest per mule, the mules can't finish the 10th.
 				{
-					auto position = m_bot.Map().center();
-					mule.move(position);
+					mule.move(m_bot.Map().center());
 					muleHarvests.erase(id);
+				}
+				else
+				{
+					muleHarvests[id].harvestFramesRequired = (muleHarvests[id].lastCargoReturnFrame == 0 ? 0 : m_bot.GetCurrentFrame() - muleHarvests[id].lastCargoReturnFrame);
+					muleHarvests[id].lastCargoReturnFrame = m_bot.GetCurrentFrame();
 				}
 			}
 		}
@@ -557,9 +563,10 @@ void WorkerManager::handleGasWorkers()
 								}
 
 								gasWorker.stop();
-							}
+								getWorkerData().setWorkerJob(gasWorker, WorkerJobs::Idle);
 
-							mineralWorkerRoom--;
+								mineralWorkerRoom--;
+							}
 						}
 					}
 				}
@@ -571,14 +578,14 @@ void WorkerManager::handleGasWorkers()
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
 	{
 		auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
-		auto depot = base->getResourceDepot();
+		auto & depot = base->getResourceDepot();
 		bool hasUsableDepot = true;
 		if (!depot.isValid() || depot.getUnitPtr()->build_progress < 1)//Do not using the gas bunker with an unfinished or inexistant depot.
 		{
 			hasUsableDepot = false;
 		}
 
-		auto workers = m_bot.Workers().m_workerData.getAssignedWorkersRefinery(geyser);
+		auto & workers = m_bot.Workers().m_workerData.getAssignedWorkersRefinery(geyser);
 		for (auto & bunker : base->getGasBunkers())
 		{
 			if (!bunker.isCompleted())
@@ -604,16 +611,24 @@ void WorkerManager::handleGasWorkers()
 							if (worker.isReturningCargo())//drop on CC side
 							{
 								bunker.rightClick(base->getDepotPosition());
-								m_bot.Commander().AddDelayedSmartAbility(worker, 0, base->getDepotPosition());
+								//m_bot.Commander().AddDelayedSmartAbility(worker, 0, base->getDepotPosition()); Replaced by the worker.rightCLick a few lines below, keeping just in case
 							}
 							else//drop on refinery side
 							{
-								bunker.rightClick(geyser.getPosition());
-								m_bot.Commander().AddDelayedSmartAbility(worker, 0, geyser.getPosition());
+								bunker.rightClick(base->getGasBunkerUnloadTarget(geyser.getPosition()));//geyser.getPosition());
+								//m_bot.Commander().AddDelayedSmartAbility(worker, 0, geyser.getPosition());
 							}
 							Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
 							hasUnload = true;
 						}
+					}
+					else if (worker.isReturningCargo())
+					{
+						worker.rightClick(base->getDepotPosition());
+					}
+					else
+					{
+						worker.rightClick(geyser.getPosition());
 					}
 				}
 				if (workers.size() == 0)//Empty bunkers if they they units inside that shouldn't be inside
@@ -1584,26 +1599,40 @@ void WorkerManager::drawWorkerInformation()
     for (auto & worker : m_workerData.getWorkers())
     {
 		std::ostringstream oss;
-		auto code = m_workerData.getJobCode(worker);
-		oss << code;
-
-		if (strcmp(code, "B") == 0)
+		if (worker.getType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MULE)
 		{
-			std::string buildingType = "UNKNOWN";
-			for (auto b : m_bot.Buildings().getBuildings())
+			if (muleHarvests.find(worker.getTag()) != muleHarvests.end())
 			{
-				if (b.builderUnit.getTag() == worker.getTag())
-				{
-					buildingType = b.type.getName();
-					break;
-				}
+				oss << muleHarvests[worker.getTag()].finishedHarvestCount;
 			}
-
-			oss << " (" << buildingType << ")";
+			else
+			{
+				oss << 0;
+			}
 		}
-		if (m_workerData.isProxyWorker(worker))
+		else
 		{
-			oss << " [Proxy]";
+			auto code = m_workerData.getJobCode(worker);
+			oss << code;
+
+			if (strcmp(code, "B") == 0)
+			{
+				std::string buildingType = "UNKNOWN";
+				for (auto b : m_bot.Buildings().getBuildings())
+				{
+					if (b.builderUnit.getTag() == worker.getTag())
+					{
+						buildingType = b.type.getName();
+						break;
+					}
+				}
+
+				oss << " (" << buildingType << ")";
+			}
+			if (m_workerData.isProxyWorker(worker))
+			{
+				oss << " [Proxy]";
+			}
 		}
 		m_bot.Map().drawText(worker.getPosition(), oss.str());
     }

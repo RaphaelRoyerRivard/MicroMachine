@@ -21,6 +21,7 @@ class BaseLocation
     std::vector<Unit>           m_minerals;
 	Unit						m_resourceDepot;
 	std::vector<Unit>			m_gasBunkers;
+	std::vector<std::pair<CCPosition, CCPosition>> m_gasBunkersGeyserDrop;//<Geyser position, target location the bunker will drop SCVs towards>
 	bool						m_isUnderAttack;
 	bool						m_isBlocked;
 	bool						m_isCreepBlocked;
@@ -60,6 +61,7 @@ public:
     bool containsPosition(const CCPosition & pos) const;
 	const CCTilePosition & getTurretPosition() const;
 	const std::vector<CCTilePosition> & getGasBunkerLocations() const;
+	const CCPosition & getGasBunkerUnloadTarget(CCPosition geyserPos) const;
 	const CCPosition & getDepotPosition() const;
     const CCTilePosition & getDepotTilePosition() const;
 	int getOptimalMineralWorkerCount() const;
