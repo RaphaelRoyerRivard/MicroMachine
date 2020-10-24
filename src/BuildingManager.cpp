@@ -1442,24 +1442,37 @@ CCTilePosition BuildingManager::getProxyLocation()
 		if (mainPath.empty())
 			return Util::GetTilePosition(m_bot.Map().center());
 		const auto startingBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-		const auto enemyBasePosition = Util::GetPosition(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getDepotTilePosition());
-		const auto enemyNext = m_bot.Bases().getNextExpansion(Players::Enemy, false, false);
+		const auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+		const auto enemyBasePosition = Util::GetPosition(enemyBase->getDepotTilePosition());
+		const auto enemyNextExpansion = m_bot.Bases().getNextExpansion(Players::Enemy, false, false);
+		const auto enemyNext = m_bot.Bases().getBaseLocations()[1];
+		auto startBaseLocation = m_bot.GetStartLocation();
 		const auto & baseLocations = m_bot.Bases().getBaseLocations();	// Sorted by closest to enemy base
 		std::map<float, const BaseLocation*> sortedBases;
-		for(auto i=1; i<baseLocations.size(); ++i)
+		for(auto i=0; i<baseLocations.size(); ++i)
 		{
-			const auto baseLocation = baseLocations[i];
-			if (baseLocation == enemyNext || baseLocation == startingBaseLocation)
+			auto baseLocation = baseLocations[i];
+			if (baseLocation == enemyBase || baseLocation == enemyNext || baseLocation == startingBaseLocation)
+				continue;
+			const auto startBaseDistance = baseLocation->getGroundDistance(startBaseLocation);
+			const auto enemyBaseDistance = baseLocation->getGroundDistance(enemyBasePosition);
+			if (startBaseDistance < enemyBaseDistance)
 				continue;
 			const auto dist = baseLocation->getGroundDistance(m_enemyMainRamp);
 			const auto startingBaseDist = startingBaseLocation->getGroundDistance(baseLocation->getDepotTilePosition());
 			const auto totalDist = dist * 2 + startingBaseDist;
 			const auto baseHeight = m_bot.Map().terrainHeight(baseLocation->getDepotTilePosition());
 			const auto basePosition = Util::GetPosition(baseLocation->getDepotTilePosition());
+			const auto behindMineralLine = basePosition + Util::Normalized(Util::GetPosition(baseLocation->getCenterOfMinerals()) - basePosition) * 8;
+			// build behind mineral line only if it is not much closer to the enemy base
+			const bool buildBehindMineralLine = Util::Dist(enemyBasePosition, basePosition) < Util::Dist(enemyBasePosition, behindMineralLine) + 3;
+			const auto positionToUse = buildBehindMineralLine ? behindMineralLine : basePosition;
+			const auto viewDistance = buildBehindMineralLine ? 12.f : 15.f;
 			const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
 			if (enemyRace == sc2::Zerg || enemyRace == sc2::Random)
 			{
-				if (Util::DistBetweenLineAndPoint(Util::GetPosition(startingBaseLocation->getDepotTilePosition()), enemyBasePosition, basePosition) < 15.f)
+				const auto dist = Util::DistBetweenLineAndPoint(startBaseLocation, enemyBasePosition, positionToUse);
+				if (dist < viewDistance)
 				{
 					continue;
 				}
@@ -1469,7 +1482,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 			{
 				if (m_bot.Map().terrainHeight(pathPosition) + 0.5f < baseHeight)
 					continue;
-				if (Util::DistSq(pathPosition, basePosition) <= 15.f * 15.f)
+				if (Util::DistSq(pathPosition, positionToUse) <= viewDistance * viewDistance)
 				{
 					tooCloseToMainPath = true;
 					break;
@@ -1494,7 +1507,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 					++it;
 			}
 			const auto closestBase = it->second;
-			//m_proxyLocation = closestBase->getDepotTilePosition();
+			m_proxyLocation = closestBase->getDepotTilePosition();
 			const auto depotPos = Util::GetPosition(closestBase->getDepotTilePosition());
 			const auto centerOfMinerals = Util::GetPosition(closestBase->getCenterOfMinerals());
 			const auto depotHeight = Util::TerrainHeight(depotPos);
@@ -1506,8 +1519,10 @@ CCTilePosition BuildingManager::getProxyLocation()
 				if (posHeight != depotHeight)
 					break;
 			}
-			CCPosition behindMineralLine = depotPos + Util::Normalized(centerOfMinerals - depotPos) * (i - 3);
-			m_proxyLocation = Util::GetTilePosition(behindMineralLine);
+			const CCPosition behindMineralLine = depotPos + Util::Normalized(centerOfMinerals - depotPos) * (i - 3);
+			// build behind mineral line only if it is not much closer to the enemy base
+			if (Util::Dist(depotPos, enemyBasePosition) < Util::Dist(behindMineralLine, enemyBasePosition) + 3)
+				m_proxyLocation = Util::GetTilePosition(behindMineralLine);
 			m_proxyLocation2 = depotPos + Util::Normalized(depotPos - centerOfMinerals) * 8;
 			return m_proxyLocation;
 		}

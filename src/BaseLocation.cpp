@@ -389,6 +389,7 @@ void BaseLocation::draw()
     ss << "Start Loc:       " << (isStartLocation() ? "true" : "false") << "\n";
     ss << "Minerals:        " << m_mineralPositions.size() << "\n";
     ss << "Geysers:         " << m_geyserPositions.size() << "\n";
+    ss << "Position:        (" << m_depotPosition.x << ", " << m_depotPosition.y << ")\n";
 	ss << "Under attack:    " << (m_isUnderAttack ? "true" : "false") << "\n";
 	ss << "Blocked:         " << (m_isBlocked ? "true" : "false") << "\n";
 	ss << "Blocking units #:" << m_blockingUnits.size() << "\n";
