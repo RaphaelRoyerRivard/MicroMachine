@@ -277,7 +277,8 @@ void ProductionManager::manageBuildOrderQueue()
 					//Check if we already have an idle production building of that type
 					bool idleProductionBuilding = false;
 #ifndef NO_UNITS
-					if (currentItem.type.isBuilding() && Util::Contains(currentItem.type.getUnitType().getAPIUnitType(), getProductionBuildingTypes()))
+					auto unitTypeID = currentItem.type.getUnitType().getAPIUnitType();
+					if (currentItem.type.isBuilding() && (unitTypeID == sc2::UNIT_TYPEID::TERRAN_ARMORY || Util::Contains(unitTypeID, getProductionBuildingTypes())))
 					{
 						idleProductionBuilding = isImportantProductionBuildingIdle();
 					}
