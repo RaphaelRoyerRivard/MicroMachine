@@ -1893,12 +1893,31 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 				sc2::UNIT_TYPEID unitType = unit.getAPIUnitType();
 
 				//If the commandcenter should morph instead, don't queue workers on it
-				if (unitType == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && !type.getUnitType().isMorphedBuilding())
+				if (unitType == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER)
 				{
-					if (m_initialBuildOrderFinished && (m_queue.contains(MetaTypeEnum::OrbitalCommand) || m_queue.contains(MetaTypeEnum::PlanetaryFortress))
-						&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0)
+					if (!type.getUnitType().isMorphedBuilding())
 					{
-						continue;
+						if (m_initialBuildOrderFinished && (m_queue.contains(MetaTypeEnum::OrbitalCommand) || m_queue.contains(MetaTypeEnum::PlanetaryFortress))
+							&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0)
+						{
+							continue;
+						}
+					}
+					else
+					{
+						// Prevent the creation of an Orbital Command in our natural with the FAST_PF strategy because we want a PF there
+						if (m_bot.Strategy().getStartingStrategy() == FAST_PF)
+						{
+							// If we haven't made a PF yet
+							if (m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS).size() + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS) == 0)
+							{
+								if (type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND)
+								{
+									if (Util::DistSq(m_bot.GetStartLocation(), unit.getPosition()) > 5.f * 5.f)
+										continue;
+								}
+							}
+						}
 					}
 				}
 				else
