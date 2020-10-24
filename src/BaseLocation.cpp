@@ -136,14 +136,19 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 		else
 		{
 			m_isSplitGeyser = false;
+			CCPosition geyserCenter = CCPosition(0, 0);
 			CCTilePosition geyserDepotCenter = m_depotTilePosition;
 			for (auto & geyserPos : m_geyserPositions)
 			{
+				geyserCenter += geyserPos;
+
 				geyserDepotCenter.x += geyserPos.x;
 				geyserDepotCenter.y += geyserPos.y;
 			}
 			if (m_geyserPositions.size() > 0)
 			{
+				geyserCenter /= 2;
+
 				geyserDepotCenter.x /= (m_geyserPositions.size() + 1);
 				geyserDepotCenter.y /= (m_geyserPositions.size() + 1);
 			}
@@ -151,6 +156,13 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 			geyserDepotCenter = m_bot.Buildings().getBuildingPlacer().getBunkerBuildLocationNear(Building(MetaTypeEnum::Bunker.getUnitType(), geyserDepotCenter), m_depotTilePosition.x, m_depotTilePosition.y, m_geyserPositions);
 
 			m_gasBunkerLocations.push_back(geyserDepotCenter);
+
+			//Compute bunker unload target foreach geyser
+			for (auto & targetGeyser : m_geyserPositions)
+			{
+				auto diff = targetGeyser - geyserCenter;
+				m_gasBunkersGeyserDrop.push_back(std::pair<CCPosition, CCPosition>(targetGeyser, targetGeyser + diff));
+			}
 		}
 	}
 	else
@@ -172,6 +184,19 @@ const CCTilePosition & BaseLocation::getTurretPosition() const
 const std::vector<CCTilePosition> & BaseLocation::getGasBunkerLocations() const
 {
 	return m_gasBunkerLocations;
+}
+
+const CCPosition & BaseLocation::getGasBunkerUnloadTarget(CCPosition geyserPos) const
+{
+	for (auto p : m_gasBunkersGeyserDrop)
+	{
+		if (p.first == geyserPos)
+		{
+			return p.second;
+		}
+	}
+
+	return geyserPos;
 }
 
 const CCPosition & BaseLocation::getDepotPosition() const
@@ -389,6 +414,7 @@ void BaseLocation::draw()
     ss << "Start Loc:       " << (isStartLocation() ? "true" : "false") << "\n";
     ss << "Minerals:        " << m_mineralPositions.size() << "\n";
     ss << "Geysers:         " << m_geyserPositions.size() << "\n";
+    ss << "Position:        (" << m_depotPosition.x << ", " << m_depotPosition.y << ")\n";
 	ss << "Under attack:    " << (m_isUnderAttack ? "true" : "false") << "\n";
 	ss << "Blocked:         " << (m_isBlocked ? "true" : "false") << "\n";
 	ss << "Blocking units #:" << m_blockingUnits.size() << "\n";

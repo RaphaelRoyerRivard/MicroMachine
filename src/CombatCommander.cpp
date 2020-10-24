@@ -458,10 +458,12 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 			case 4:	// Temporal Field (doesn't exist anymore)
 				continue;
 			case 5:	// Thermal Lance (Colossus beams)
-				radius = effectData.radius;
+				// Not worth trying to dodge, we won't succeed and lose dps
+				/*radius = effectData.radius;
 				dps = 18.7f;
 				targetType = sc2::Weapon::TargetType::Ground;
-				break;
+				break;*/
+				continue;
 			case 6:	// Scanner Sweep
 				for (const auto & pos : effect.positions)
 				{

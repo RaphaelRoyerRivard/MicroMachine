@@ -22,8 +22,15 @@ class WorkerManager
 	std::list<Unit> depletedGeyser;
 	bool m_secondProxyWorkerSent = false;
 
-	//<MuleId, <isReturningCargo, harvest count>>, we are not removing killed mules from this map, but it doesn't really matter
-	std::map<CCUnitID, std::pair<bool, int>> muleHarvests;
+	struct mule_info {
+		bool isReturningCargo;
+		int finishedHarvestCount;
+		int deathFrame;
+		int lastCargoReturnFrame;
+		int harvestFramesRequired;
+	};
+	//we are not removing killed mules from this map, but it doesn't really matter
+	std::map<CCUnitID, mule_info> muleHarvests;
 	//Mineral ID, frame number of when the mineral field will no longer have a mule on it
 	std::map<CCUnitID, int> mineralMuleDeathFrame;
 
