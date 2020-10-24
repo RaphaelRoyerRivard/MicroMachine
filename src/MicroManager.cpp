@@ -58,7 +58,7 @@ float MicroManager::getTargetsPower(const std::vector<Unit>& units) const
 	return Util::GetUnitsPower(m_targets, units, m_bot);
 }
 
-float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, bool filterHighRangeUnits, bool considerOnlyUnitsInRange) const
+float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, bool filterHighRangeUnits, bool considerOnlyUnitsInRange, bool reducePriorityOfUnpowered) const
 {
 	BOT_ASSERT(target, "null unit in getAttackPriority");
 
@@ -117,13 +117,19 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	{
 		if (considerOnlyUnitsInRange)
 			return 0.f;
-		if (Util::getSpeedOfUnit(attacker, m_bot) == 0.f)
+		float attackerSpeed = Util::getSpeedOfUnit(attacker, m_bot);
+		if (attackerSpeed == 0.f)
 			proximityValue = 0.001f;
 		else
+		{
 			proximityValue = std::pow(0.9f, distance - attackerRange);	//the more far a unit is, the less it is prioritized
+			float targetSpeed = Util::getSpeedOfUnit(target, m_bot);
+			if (attacker->weapon_cooldown == 0 && targetSpeed > attackerSpeed)	// if the unit can attack and is slower than its target, we reduce the priority
+				proximityValue *= 0.25f;
+		}
 	}
 	if (target->last_seen_game_loop < m_bot.GetGameLoop())
-		proximityValue *= 0.5f;
+		proximityValue *= 0.25f;
 
 	float invisModifier = 1.f;
 	if (target->cloak == sc2::Unit::CloakedDetected)
@@ -131,10 +137,16 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	else if (target->is_burrowed && target->unit_type != sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED)
 		invisModifier = 3.f;
 
+	float hallucinationModifier = 1.f;
+	if (target->is_hallucination)
+		hallucinationModifier = 0.001f;
+
 	const Unit attackerUnit(attacker, m_bot);
 	const Unit targetUnit(target, m_bot);
 	
 	const float antiBuildingModifier = attackerUnit.getType().isWorker() && targetUnit.getType().isBuilding() ? 10.f : 1.f;
+
+	const float unpoweredModifier = reducePriorityOfUnpowered && (targetUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || targetUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY) && !targetUnit.getUnitPtr()->is_powered && targetUnit.getUnitPtr()->build_progress == 1.f ? 0.05f : 1.f;		// is_powered is always false when the building is not finished
 
 	if (targetUnit.getType().isCombatUnit() || targetUnit.getType().isWorker())
 	{
@@ -180,17 +192,18 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 			nonThreateningModifier = targetDps == 0.f ? 1.f : 0.5f;		//for buildings, we prefer targetting them with units that will not get attacked back
 		}
 		const float flyingDetectorModifier = target->is_flying && UnitType::isDetector(target->unit_type) ? 2.f : 1.f;
-		const float minionModifier = target->unit_type == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR ? 0.1f : 1.f;	//units that can be respawned should be less prioritized
+		std::vector<sc2::UNIT_TYPEID> minionTypes = { sc2::UNIT_TYPEID::TERRAN_AUTOTURRET, sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR, sc2::UNIT_TYPEID::ZERG_LOCUSTMP, sc2::UNIT_TYPEID::ZERG_LOCUSTMPFLYING, sc2::UNIT_TYPEID::ZERG_BROODLING };
+		const float minionModifier = Util::Contains(target->unit_type, minionTypes) ? 0.1f : 1.f;	//units that are temporary or can be cheaply respawned should be less prioritized
 		const auto & yamatoTargets = m_bot.Commander().Combat().getYamatoTargets();
 		const float yamatoTargetModifier = yamatoTargets.find(target->tag) != yamatoTargets.end() ? 0.1f : 1.f;
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
 		//const float nydusModifier = target->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && target->build_progress < 1.f ? 100.f : 1.f;
 		const float nydusModifier = 1.f;	// It seems like attacking it does close to nothing since it has 3 armor
-		return (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * nonThreateningModifier * minionModifier * invisModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier;
+		return std::max(0.1f, (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * nonThreateningModifier * minionModifier * invisModifier * hallucinationModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier * unpoweredModifier);
 	}
 
 	if (antiBuildingModifier > 1.f)
-		return (proximityValue * 50 - healthValue) * invisModifier * antiBuildingModifier;	// Our workers should clear buildings instead of enemy units
+		return std::max(0.1f, (proximityValue * 50 - healthValue) * invisModifier * hallucinationModifier * antiBuildingModifier * unpoweredModifier);	// Our workers should clear buildings instead of enemy units
 	
-	return (proximityValue * 50 - healthValue) * invisModifier / 100.f;		//we do not want non combat buildings to have a higher priority than other units
+	return std::max(0.1f, (proximityValue * 50 - healthValue) * invisModifier * unpoweredModifier * hallucinationModifier / 100.f);		//we do not want non combat buildings to have a higher priority than other units
 }

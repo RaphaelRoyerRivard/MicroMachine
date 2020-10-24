@@ -2031,6 +2031,8 @@ void Util::getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::U
 			outThreats.push_back(targetUnit);
 			continue;
 		}
+		if (targetUnit->is_hallucination)
+			continue;
 		if (Util::GetDpsForTarget(targetUnit, unit, bot) == 0.f)
 			continue;
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
@@ -2864,6 +2866,8 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		const sc2::Units & playerUnits = i == 0 ? simulatedUnits : enemyUnits;
 		for (const auto unit : playerUnits)
 		{
+			if (unit->is_hallucination)
+				continue;
 			// Since bunkers deal no damage in the simulation, we swap them for 4 Marines with extra health
 			if(unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
 			{

@@ -82,5 +82,5 @@ public:
     const std::vector<Unit> & getUnits() const;
 	size_t getUnitCountOfType(sc2::UNIT_TYPEID unitType) const;
 	std::vector<Unit> getUnitsOfType(sc2::UNIT_TYPEID unitType) const;
-    const SquadOrder & getSquadOrder() const;
+    SquadOrder & getSquadOrder();
 };

@@ -46,7 +46,9 @@ const std::vector<std::string> THREAT_FIGHTING_ACTION_DESCRIPTIONS = {
 	ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK,
 	ACTION_DESCRIPTION_THREAT_FIGHT_MOVE,
 	ACTION_DESCRIPTION_THREAT_FIGHT_DODGE_EFFECT,
-	ACTION_DESCRIPTION_THREAT_FIGHT_MORPH
+	ACTION_DESCRIPTION_THREAT_FIGHT_MORPH,
+	ACTION_DESCRIPTION_THREAT_FIGHT_MOVE_CLOSER_BEFORE_MORPH,
+	ACTION_DESCRIPTION_THREAT_FIGHT_MOVE_FARTHER_BEFORE_MORPH
 };
 
 RangedManager::RangedManager(CCBot & bot) : MicroManager(bot)
@@ -413,7 +415,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 	m_bot.StartProfiling("0.10.4.1.5.1.5          ThreatFighting");
 	// Check if our units are powerful enough to exchange fire with the enemies
-	if (shouldAttack && ExecuteThreatFightingLogic(rangedUnit, unitShouldHeal, rangedUnits, rangedUnitTargets, otherSquadsUnits))
+	if (shouldAttack && ExecuteThreatFightingLogic(rangedUnit, unitShouldHeal, rangedUnits, threats, rangedUnitTargets, otherSquadsUnits))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.5          ThreatFighting");
 		return;
@@ -1065,7 +1067,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 	sc2::AbilityID morphAbility = 0;
 	const auto airInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(viking->pos), true, m_bot);
 	const auto groundInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(viking->pos), false, m_bot);
-	if(unitShouldHeal && airInfluence <= groundInfluence)
+	if(unitShouldHeal && airInfluence * 2.f < groundInfluence)
 	{
 		if (viking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 		{
@@ -1115,7 +1117,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 		{
 			const auto vikingFighter = GetSimulatedUnit(viking);
 			const auto flyingTarget = getTarget(vikingFighter, targets, true);
-			if (flyingTarget || (!target && airInfluence <= groundInfluence))
+			if (flyingTarget || (!target && airInfluence * 2.f < groundInfluence))
 			{
 				morphAbility = sc2::ABILITY_ID::MORPH_VIKINGFIGHTERMODE;
 				morph = true;
@@ -1309,6 +1311,9 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			float bestScore = 0.f;
 			for(const auto potentialTarget : rangedUnitTargets)
 			{
+				// Do not Lock On on hallucinations
+				if (potentialTarget->is_hallucination)
+					continue;
 				const auto unitType = UnitType(potentialTarget->unit_type, m_bot);
 				// Do not Lock On on workers
 				if (unitType.isWorker())
@@ -1414,9 +1419,12 @@ bool RangedManager::CycloneHasTarget(const sc2::Unit * cyclone) const
 	return lockOnTargets.find(cyclone) != lockOnTargets.end();
 }
 
-bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & rangedUnitTargets, sc2::Units & otherSquadsUnits)
+bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & threats, sc2::Units & rangedUnitTargets, sc2::Units & otherSquadsUnits)
 {
 	if (rangedUnitTargets.empty())
+		return false;
+
+	if (threats.empty())
 		return false;
 
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
@@ -1697,7 +1705,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				}
 			}
 		}
-		if (closestUnit)
+		if (closestUnit && minDistance < 20 * 20)
 		{
 			std::string pathfindingTypeForEngagePosition = "FindEngagePosition";
 			if (AllowUnitToPathFind(closestUnit, false, pathfindingTypeForEngagePosition))
@@ -2162,6 +2170,7 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
  */
 void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & allyCombatUnits, sc2::Units & rangedUnitTargets, bool ignoreCyclones, std::set<const sc2::Unit *> & closeUnitsSet, bool & morphFlyingVikings, bool & morphLandedVikings, std::map<const sc2::Unit *, const sc2::Unit *> & simulatedStimedUnits, float & stimedUnitsPowerDifference, std::map<const sc2::Unit*, const sc2::Unit*> & closeUnitsTarget, float & unitsPower, float & minUnitRange)
 {
+	std::vector<const sc2::Unit *> morphingVikings;
 	bool checkedForFlyingTarget = false;
 	sc2::Units farAllyUnits;
 	// Calculate ally power
@@ -2238,6 +2247,7 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 				{
 					unitToSave = vikingAssault;
 					morphFlyingVikings = true;
+					morphingVikings.push_back(vikingAssault);
 				}
 			}
 			else if(unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
@@ -2252,6 +2262,7 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 						unitToSave = vikingFighter;
 						unitTarget = flyingUnitTarget;
 						morphLandedVikings = true;
+						morphingVikings.push_back(vikingFighter);
 					}
 				}
 			}
@@ -2273,6 +2284,22 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 				if (minUnitRange < 0 || unitRange < minUnitRange)
 					minUnitRange = unitRange;
 			}
+		}
+	}
+
+	// Simulate damage taken while morphing
+	for (auto morphingViking : morphingVikings)
+	{
+		float groundInfluence = Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(morphingViking->pos), false, m_bot);
+		float airInfluence = 2.f * Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(morphingViking->pos), true, m_bot);
+		float damageTaken = (groundInfluence + airInfluence) / morphingVikings.size();
+		if (morphingViking->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
+		{
+			m_dummyAssaultVikings[morphingViking->tag].health -= damageTaken;
+		}
+		else
+		{
+			m_dummyFighterVikings[morphingViking->tag].health -= damageTaken;
 		}
 	}
 }
@@ -2584,6 +2611,8 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 	for (const auto potentialTarget : targets)
 	{
 		if (potentialTarget->display_type == sc2::Unit::Hidden)
+			continue;
+		if (potentialTarget->is_hallucination)
 			continue;
 		const auto type = UnitType(potentialTarget->unit_type, m_bot);
 		if (type.isBuilding() && !type.isAttackingBuilding())
@@ -3058,12 +3087,12 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     	// We don't want Reapers to lose their time attacking buildings unless they are defending
     	if (filterPassiveBuildings || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && m_order.getType() != SquadOrderTypes::Defend))
     	{
-			auto targetUnit = Unit(target, m_bot);
-			if (targetUnit.getType().isBuilding() && !targetUnit.getType().isCombatUnit())
+			auto targetUnitType = UnitType(target->unit_type, m_bot);
+			if (targetUnitType.isBuilding() && !targetUnitType.isCombatUnit())
 				continue;
     	}
 
-		float priority = getAttackPriority(rangedUnit, target, harass, considerOnlyUnitsInRange);
+		float priority = getAttackPriority(rangedUnit, target, harass, considerOnlyUnitsInRange, !harass);
 		if(priority > 0.f)
 			targetPriorities.insert(std::pair<float, const sc2::Unit*>(priority, target));
     }

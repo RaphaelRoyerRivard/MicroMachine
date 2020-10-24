@@ -119,7 +119,7 @@ void WorkerManager::HandleWorkerTransfer()
 		}
 
 		auto basePosition = base->getPosition();
-		auto & depot = getDepotAtBasePosition(basePosition);
+		auto depot = getDepotAtBasePosition(basePosition);
 		int workerCount = m_workerData.getNumAssignedWorkers(depot);
 		int optimalWorkers = base->getOptimalMineralWorkerCount();
 		if (workerCount > optimalWorkers)
@@ -157,6 +157,8 @@ void WorkerManager::HandleWorkerTransfer()
 	for (auto & baseWithFewWorkers : basesWithFewWorkers)
 	{
 		auto & depot = baseWithFewWorkers.first->getResourceDepot();
+		if (!depot.isValid())
+			continue;
 		int fewWorkerNeeded = baseWithFewWorkers.second;
 
 		for (auto & baseWithExtraWorkers : basesWithExtraWorkers)
@@ -171,7 +173,7 @@ void WorkerManager::HandleWorkerTransfer()
 				const float speedPerFrame = speed / 16.f;
 				auto travelFrame = distance / speedPerFrame;
 
-				const int depotBuildTime = 71 * 24;//71 seconds * 24 fps
+				const float depotBuildTime = 71 * 22.4f * 1.07f;//71 seconds * 22.4 fps * small buffer
 				float depotFinishedInXFrames = depotBuildTime * (1.f - depot.getBuildProgress());
 				if (travelFrame >= depotFinishedInXFrames)
 				{
@@ -1705,7 +1707,7 @@ int WorkerManager::getNumWorkers()
     return count;
 }
 
-std::set<Unit> WorkerManager::getWorkers() const
+const std::set<Unit> & WorkerManager::getWorkers() const
 {
 	return m_workerData.getWorkers();
 }

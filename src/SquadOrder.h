@@ -24,4 +24,5 @@ public:
     const CCPosition & getPosition() const;
     const float & getRadius() const;
     const size_t & getType() const;
+	void setRadius(float radius) { m_radius = radius; }
 };

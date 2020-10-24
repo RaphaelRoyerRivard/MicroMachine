@@ -16,16 +16,16 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.11.7",
+        "BotVersion"                : "1.12.10",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
-        "PlayAsHuman"               : false,
+        "PlayAsHuman"               : true,
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
-        "EnemyDifficulty"           : 1,
+        "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "StasisLE.SC2Map",
+        "MapFile"                   : "EternalEmpireLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50,
@@ -126,7 +126,9 @@
         "PylonSpacing"              : 3,
         "SelectStartingBuildBasedOnHistory" : true,
         "PrintGreetingMessage"      : false,
-        "RandomProxyLocation"       : false
+        "RandomProxyLocation"       : false,
+        "ProductionPrintFrequency"  : 30,
+        "LogFrameDurationThreshold" : 100
     },
 
     "Debug" :
@@ -135,14 +137,9 @@
 		"AllowKeyControl"			: true,
 		"TimeControl"				: true,
 		
-        "DrawGameInfo"              : false, 
-<<<<<<< HEAD
-        "DrawProductionInfo"        : false,
-        "DrawBaseLocationInfo"      : false,
-=======
+        "DrawGameInfo"              : false,
         "DrawProductionInfo"        : true,
         "DrawBaseLocationInfo"      : true,
->>>>>>> da666f639168c29dd7065ad0a8975b6aa5d6dafa
         "DrawBaseTiles"             : false,
         "DrawStartingRamp"		    : false,
         "DrawWall"		   			: false,
@@ -154,8 +151,8 @@
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
-        "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : false,
+        "DrawSquadInfo"             : true,
+        "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
@@ -163,7 +160,7 @@
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : false,
-        "DrawInfluenceMaps"         : false,
+        "DrawInfluenceMaps"         : true,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
 		"DrawDamageHealthRatio"		: false,
@@ -173,8 +170,7 @@
         "DrawPathfindingTiles"      : false,
         "DrawBuildingBase"          : false,
         "DrawCurrentStartingStrategy"   : true,
-        "LogArmyActions"            : false,
-        "LogSlowFrames"             : false
+        "LogArmyActions"            : false
     },
     
     "Modules" :

@@ -118,7 +118,7 @@ void BuildingManager::lowPriorityChecks()
 				else
 				{
 					//We are trying to build in an invalid or now blocked location, remove it so we build it elsewhere.
-					auto remove = CancelBuilding(building, false);
+					auto remove = CancelBuilding(building, "invalid or blocked location", false);
 					if (remove.finalPosition != CCTilePosition(0, 0))
 					{
 						toRemove.push_back(remove);
@@ -553,9 +553,9 @@ void BuildingManager::validateWorkersAndBuildings()
 				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
 					|| (m_bot.Strategy().isWorkerRushed() && isEnemyUnitNear(b.finalPosition, 5)))
 				{
-					auto remove = CancelBuilding(b, false);
+					auto remove = CancelBuilding(b, "builder died on the way or we don't have the requirements or an enemy worker is near the build location during a worker rush", false);
 					toRemove.push_back(remove);
-					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
+					Util::Log("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
 				}
 				break;
 			}
@@ -572,21 +572,17 @@ void BuildingManager::validateWorkersAndBuildings()
 				if (!b.buildingUnit.isValid() || !b.buildingUnit.isAlive())
 				{
 					toRemove.push_back(b);
-					Util::DebugLog("Remove " + b.buildingUnit.getType().getName() + " from under construction buildings.", m_bot);
+					Util::Log("Remove " + b.buildingUnit.getType().getName() + " from under construction buildings.", m_bot);
 				}
 				else if (m_bot.Strategy().wasProxyStartingStrategy() && !b.builderUnit.isAlive() && Util::DistSq(b.buildingUnit.getPosition(), m_proxyLocation) <= 15 * 15)
 				{
-					CancelBuilding(b, false);
+					CancelBuilding(b, "proxy worker died (building)", false);
 					toRemove.push_back(b);
-					Util::DebugLog("Cancelling proxy " + b.buildingUnit.getType().getName() + " and removing it from under construction buildings.", m_bot);
+					Util::Log("Cancelling proxy " + b.buildingUnit.getType().getName() + " and removing it from under construction buildings.", m_bot);
 				}
 				break;
 			}
 		}
-        if (b.status != BuildingStatus::UnderConstruction)
-        {
-            continue;
-        }   
     }
 
     removeBuildings(toRemove);
@@ -607,7 +603,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
 	}
 }
 
-bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filterMovingWorker)
+bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filterMovingWorker, bool includeAddonTiles, bool ignoreExtraBorder, bool forceSameHeight)
 {
     BOT_ASSERT(!b.builderUnit.isValid(), "Error: Tried to assign a builder to a building that already had one ");
 
@@ -650,7 +646,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		CCTilePosition testLocation;
 		if (b.canBeBuiltElseWhere)
 		{
-			testLocation = getNextBuildingLocation(b, !isRushed, true);//Only check m_nextBuildLocation if we are not being rushed
+			testLocation = getNextBuildingLocation(b, !isRushed, true, includeAddonTiles, ignoreExtraBorder, forceSameHeight);//Only check m_nextBuildLocation if we are not being rushed
 		}
 		else
 		{
@@ -682,7 +678,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 			//TODO checks twice if the path is safe for no reason if we get the same build location, should change location or change builder
 
 			//Not safe, pick another location
-			testLocation = getNextBuildingLocation(b, false, true);
+			testLocation = getNextBuildingLocation(b, false, true, ignoreExtraBorder, forceSameHeight);
 			if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
 			{
 				return false;
@@ -791,6 +787,7 @@ void BuildingManager::constructAssignedBuildings()
             }
             else
             {
+				bool setCommandGiven = true;
 				// if it's a refinery, the build command has to be on the geyser unit tag
 				if (b.type.isRefinery())
 				{
@@ -929,10 +926,10 @@ void BuildingManager::constructAssignedBuildings()
 					}
 					else
 					{
-						b.builderUnit.build(b.type, b.finalPosition);
-						if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
+						if (m_bot.GetMinerals() > b.type.mineralPrice())
 						{
-							if (m_bot.GetMinerals() > b.type.mineralPrice())
+							b.builderUnit.build(b.type, b.finalPosition);
+							if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
 							{
 								// We want the worker to be close so it doesn't flag the base as blocked by error
 								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
@@ -946,11 +943,15 @@ void BuildingManager::constructAssignedBuildings()
 								continue;
 							}
 						}
+						else
+						{
+							setCommandGiven = false;
+						}
 					}
 				}
 
 				// set the flag to true
-				b.buildCommandGiven = true;
+				b.buildCommandGiven = setCommandGiven;
 			}
 		}
 	}
@@ -1221,7 +1222,7 @@ void BuildingManager::checkForCompletedBuildings()
 
 // add a new building to be constructed
 // Used for Premove
-bool BuildingManager::addBuildingTask(Building & b, bool filterMovingWorker)
+bool BuildingManager::addBuildingTask(Building & b, bool filterMovingWorker, bool includeAddonTiles, bool ignoreExtraBorder, bool forceSameHeight)
 {
 	b.status = BuildingStatus::Unassigned;
 
@@ -1234,7 +1235,7 @@ bool BuildingManager::addBuildingTask(Building & b, bool filterMovingWorker)
 			return false;
 		}
 	}
-	else if (!assignWorkerToUnassignedBuilding(b, filterMovingWorker))//Includes a check to see if path is safe
+	else if (!assignWorkerToUnassignedBuilding(b, filterMovingWorker, includeAddonTiles, ignoreExtraBorder, forceSameHeight))//Includes a check to see if path is safe
 	{
 		return false;
 	}
@@ -1493,9 +1494,20 @@ CCTilePosition BuildingManager::getProxyLocation()
 					++it;
 			}
 			const auto closestBase = it->second;
-			m_proxyLocation = closestBase->getDepotTilePosition();
+			//m_proxyLocation = closestBase->getDepotTilePosition();
 			const auto depotPos = Util::GetPosition(closestBase->getDepotTilePosition());
 			const auto centerOfMinerals = Util::GetPosition(closestBase->getCenterOfMinerals());
+			const auto depotHeight = Util::TerrainHeight(depotPos);
+			int i;
+			for (i = 5; i < 15; ++i)
+			{
+				auto pos = depotPos + Util::Normalized(centerOfMinerals - depotPos) * i;
+				auto posHeight = Util::TerrainHeight(pos);
+				if (posHeight != depotHeight)
+					break;
+			}
+			CCPosition behindMineralLine = depotPos + Util::Normalized(centerOfMinerals - depotPos) * (i - 3);
+			m_proxyLocation = Util::GetTilePosition(behindMineralLine);
 			m_proxyLocation2 = depotPos + Util::Normalized(depotPos - centerOfMinerals) * 8;
 			return m_proxyLocation;
 		}
@@ -1523,7 +1535,7 @@ std::vector<UnitType> BuildingManager::buildingsQueued() const
     return buildingsQueued;
 }
 
-CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool checkInfluenceMap)
+CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool checkInfluenceMap, bool includeAddonTiles, bool ignoreExtraBorder, bool forceSameHeight)
 {
     //size_t numPylons = m_bot.UnitInfo().getUnitTypeCount(Players::Self, Util::GetSupplyProvider(m_bot.GetSelfRace(), m_bot), true);
 
@@ -1548,13 +1560,13 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool che
 		// get a position within our region
 		// TODO: put back in special pylon / cannon spacing
 		m_bot.StartProfiling("0.8.3.1.3 getBuildLocationNear");
-		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, false, checkInfluenceMap, true);
+		buildingLocation = m_buildingPlacer.getBuildLocationNear(b, false, checkInfluenceMap, includeAddonTiles, ignoreExtraBorder, forceSameHeight);
 		m_bot.StopProfiling("0.8.3.1.3 getBuildLocationNear");
 	}
 	return buildingLocation;
 }
 
-CCTilePosition BuildingManager::getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap)
+CCTilePosition BuildingManager::getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap, bool includeAddonTiles, bool ignoreExtraBorder, bool forceSameHeight)
 {
 	if (checkNextBuildingPosition)
 	{
@@ -1580,7 +1592,7 @@ CCTilePosition BuildingManager::getNextBuildingLocation(Building & b, bool check
 		}
 	}
 	*/
-	position = getBuildingLocation(b, checkInfluenceMap);
+	position = getBuildingLocation(b, checkInfluenceMap, includeAddonTiles, ignoreExtraBorder, forceSameHeight);
 	/*if (position.x != 0)//No need to check Y
 	{
 		//Update the last built (or tried to) location.
@@ -1692,7 +1704,7 @@ void BuildingManager::removeNonStartedBuildingsOfType(sc2::UNIT_TYPEID type)
 	removeBuildings(toRemove);
 }
 
-Building BuildingManager::CancelBuilding(Building b, bool removeFromBuildingsList, bool destroy)
+Building BuildingManager::CancelBuilding(Building b, std::string reason, bool removeFromBuildingsList, bool destroy)
 {
 	auto it = find(m_buildings.begin(), m_buildings.end(), b);
 	if (it != m_buildings.end())
@@ -1734,6 +1746,9 @@ Building BuildingManager::CancelBuilding(Building b, bool removeFromBuildingsLis
 		{
 			Micro::SmartAbility(b.buildingUnit.getUnitPtr(), sc2::ABILITY_ID::CANCEL, m_bot);
 		}
+
+		std::string buildingName = sc2::UnitTypeToName(b.type.getAPIUnitType());
+		Util::Log(__FUNCTION__, "Cancel building " + buildingName + " : " + reason, m_bot);
 
 		if (removeFromBuildingsList)
 		{

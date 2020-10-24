@@ -68,7 +68,7 @@ public:
     int  getNumMineralWorkers();
     int  getNumGasWorkers();
     int  getNumWorkers();
-	std::set<Unit> getWorkers() const;
+	const std::set<Unit> & getWorkers() const;
 	WorkerData & getWorkerData() const;
 	
 	void setMineralMuleDeathFrame(sc2::Tag mineral);

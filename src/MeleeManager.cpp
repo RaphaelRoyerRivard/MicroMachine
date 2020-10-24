@@ -211,10 +211,10 @@ Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets) 
         BOT_ASSERT(targetUnit.isValid(), "null target unit in getTarget");
 
     	// We don't want workers to leave base to fight
-		if (meleeUnit.getType().isWorker() && Util::TerrainHeight(targetUnit.getPosition()) != unitHeight && unitBaseLocation != m_bot.Bases().getBaseContainingPosition(targetUnit.getPosition()))
+		if (meleeUnit.getType().isWorker() && m_squad->getName() != "ScoutDefense" && Util::TerrainHeight(targetUnit.getPosition()) != unitHeight && unitBaseLocation != m_bot.Bases().getBaseContainingPosition(targetUnit.getPosition()))
 			continue;
     	
-        const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), false, false);
+        const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), false, false, true);
 
         if (!bestTarget.isValid() || priority > highestPriority)
         {

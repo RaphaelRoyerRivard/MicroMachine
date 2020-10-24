@@ -134,7 +134,7 @@ bool BuildingPlacer::canBuildBunkerHere(int bx, int by, int depotX, int depotY, 
 }
 
 //returns true if we can build this type of unit here with the specified amount of space.
-bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
+bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles, bool ignoreExtraBorder) const
 {
 	// height and width of the building
 	int width = type.tileWidth();
@@ -149,7 +149,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ig
 	if (!type.isRefinery())
 	{
 		auto buildingTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, 0);
-		auto walkableTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, 1);
+		auto walkableTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, ignoreExtraBorder ? 0 : 1);
 		for (auto & tile : walkableTiles)
 		{
 			if (!m_bot.Map().isValidTile(tile))//prevent tiles below 0 or above the map size
@@ -280,7 +280,7 @@ int BuildingPlacer::getBuildingCenterOffset(int x, int y, int width, int height)
 	}
 }
 
-CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles) const
+CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ignoreReserved, bool checkInfluenceMap, bool includeExtraTiles, bool ignoreExtraBorder, bool forceSameHeight) const
 {
 	//If the space is not walkable, look around for a walkable space. The result may not be the most optimal location.
 	const int MAX_OFFSET = 5;
@@ -358,13 +358,17 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ign
 
     // get the precomputed vector of tile positions which are sorted closes to this location
     auto & closestToBuilding = m_bot.Map().getClosestTilesTo(buildLocation);
+	auto desiredHeight = Util::TerrainHeight(buildLocation);
 
     // iterate through the list until we've found a suitable location
     for (size_t i(0); i < closestToBuilding.size(); ++i)
     {
         auto & pos = closestToBuilding[i];
+		auto posHeight = Util::TerrainHeight(pos);
+		if (forceSameHeight && posHeight != desiredHeight)
+			continue;
 
-        if (canBuildHere(pos.x, pos.y, b.type, ignoreReserved, checkInfluenceMap, includeExtraTiles))
+        if (canBuildHere(pos.x, pos.y, b.type, ignoreReserved, checkInfluenceMap, includeExtraTiles, ignoreExtraBorder))
         {
 			return pos;
         }
@@ -458,15 +462,19 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	//TODO Might want to prevents buildings from being built next to each other, expect for defensive buildings (turret, bunker, photo cannon, spine and spore) and lowered supply depot.
 
 	//Check for supply depot in the way, they are not in the blockedTiles map
-	for (auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED))//TODO could be simplified
+	std::vector<sc2::UNIT_TYPEID> supplyDepotTypes = { sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOTLOWERED, sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT };
+	for (auto supplyDepotType : supplyDepotTypes)
 	{
-		CCTilePosition position = b.getTilePosition();
-		auto tiles = getTilesForBuildLocation(position.x, position.y, b.getType(), 2, 2, false, 0);
-		for (auto & tile : tiles)
+		for (auto & b : m_bot.GetAllyUnits(supplyDepotType))
 		{
-			if (tile.x == x && tile.y == y)
+			CCTilePosition position = b.getTilePosition();
+			auto tiles = getTilesForBuildLocation(position.x, position.y, b.getType(), 2, 2, false, 0);
+			for (auto & tile : tiles)
 			{
-				return false;
+				if (tile.x == x && tile.y == y)
+				{
+					return false;
+				}
 			}
 		}
 	}

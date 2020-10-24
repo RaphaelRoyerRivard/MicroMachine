@@ -683,7 +683,7 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 		auto tile = base->getDepotTilePosition();
 		
 		//Check if buildable (creep check), using CC for building size, should work for all races.
-		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, MetaTypeEnum::CommandCenter.getUnitType(), true, false, true))
+		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, MetaTypeEnum::CommandCenter.getUnitType(), 0, true, false, true))
 		{
 			continue;
 		}
@@ -742,18 +742,18 @@ BaseLocation* BaseLocationManager::getClosestBase(const CCPosition position, boo
 {
 	BaseLocation* closestBase;
 	float minDistance = 0.f;
-	for (auto base : m_baseLocationData)
+	for (auto base : m_baseLocationPtrs)
 	{
-		if (checkContains && !base.containsPosition(position))
+		if (checkContains && !base->containsPosition(position))
 		{
 			continue;
 		}
 
-		const float dist = base.getGroundDistance(position);
+		const float dist = base->getGroundDistance(position);
 		if (minDistance == 0.f || dist < minDistance)
 		{
 			minDistance = dist;
-			closestBase = &base;
+			closestBase = base;
 		}
 	}
 	return closestBase;

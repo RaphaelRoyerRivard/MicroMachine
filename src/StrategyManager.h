@@ -88,6 +88,7 @@ class StrategyManager
 	bool m_enemyCurrentlyHasInvisible = false;
 	bool m_enemyCurrentlyHasCombatInvisible = false;
 	bool m_enemyHasMetabolicBoost = false;
+	bool m_enemyHasProxyHatchery = false;
 	bool m_enemyHasBurrowingUpgrade = false;
 	bool m_enemyHasMassZerglings = false;
 	bool m_enemyHasHiSecAutoTracking = false;
@@ -114,6 +115,7 @@ public:
     const Strategy & getCurrentStrategy() const;
 	StartingStrategy getStartingStrategy() const { return m_startingStrategy; }
 	void setStartingStrategy(StartingStrategy startingStrategy);
+	void checkForStrategyChange();
 	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
 	bool shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers = false) const;
 	bool isProxyStartingStrategy() const;
@@ -124,7 +126,7 @@ public:
     bool attackConditionIsMet() const;
     void onStart();
     void onFrame(bool executeMacro);
-    void onEnd(const bool isWinner);
+    void onEnd(std::string result);
     void addStrategy(const std::string & name, const Strategy & strategy);
     const UnitPairVector getBuildOrderGoal() const;
     const MM::BuildOrder & getOpeningBookBuildOrder() const;
@@ -151,6 +153,8 @@ public:
 	void setEnemyCurrentlyHasCombatInvisible(bool enemyCurrentlyHasCombatInvisible) { m_enemyCurrentlyHasCombatInvisible = enemyCurrentlyHasCombatInvisible; }
 	bool enemyHasMetabolicBoost() const { return m_enemyHasMetabolicBoost; }
 	void setEnemyHasMetabolicBoost(bool enemyHasMetabolicBoost) { m_enemyHasMetabolicBoost = enemyHasMetabolicBoost; }
+	bool enemyHasProxyHatchery() const { return m_enemyHasProxyHatchery; }
+	void setEnemyHasProxyHatchery(bool enemyHasProxyHatchery) { m_enemyHasProxyHatchery = enemyHasProxyHatchery; }
 	bool enemyHasBurrowingUpgrade() const { return m_enemyHasBurrowingUpgrade; }
 	void setEnemyHasBurrowingUpgrade(bool enemyHasBurrowingUpgrade) { m_enemyHasBurrowingUpgrade = enemyHasBurrowingUpgrade; }
 	bool enemyHasMassZerglings() const { return m_enemyHasMassZerglings; }

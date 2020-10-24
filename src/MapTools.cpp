@@ -484,11 +484,7 @@ bool MapTools::isBuildable(const CCTilePosition & tile) const
 
 bool MapTools::canBuildTypeAtPosition(int tileX, int tileY, const UnitType & type) const
 {
-#ifdef SC2API
     return m_bot.Query()->Placement(m_bot.Data(type).buildAbility, CCPosition((float)tileX, (float)tileY));
-#else
-    return BWAPI::Broodwar->canBuildHere(BWAPI::TilePosition(tileX, tileY), type.getAPIUnitType());
-#endif
 }
 
 void MapTools::printMap()

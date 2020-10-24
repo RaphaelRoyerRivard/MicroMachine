@@ -511,6 +511,7 @@ void CCBot::setUnits()
 	m_unitCount.clear();
 	m_unitCompletedCount.clear();
 	m_strategy.setEnemyCurrentlyHasInvisible(m_gameCommander.Combat().isExpandBlockedByInvis());
+	m_strategy.setEnemyHasProxyHatchery(false);
 	bool firstPhoenix = true;
 	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
 	StartProfiling("0.2.1 loopAllUnits");
@@ -600,22 +601,32 @@ void CCBot::setUnits()
 			}
 			m_enemyUnits[unitptr->tag] = unit;
 			// If the enemy zergling was seen last frame
-			if (zergEnemy && !m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
-				&& unitptr->last_seen_game_loop == GetGameLoop())
+			if (zergEnemy)
 			{
-				auto& lastSeenPair = m_lastSeenPosUnits[unitptr->tag];
-				if (lastSeenPair.first != CCPosition(0, 0) && lastSeenPair.second == GetGameLoop() - 1)
+				if (unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_HATCHERY)
 				{
-					const float dist = Util::Dist(unitptr->pos, lastSeenPair.first);
-					const float speed = Util::getSpeedOfUnit(unitptr, *this);
-					const float realSpeed = dist * 16.f;	// Magic number calculated from real values
-					const bool creep = Observation()->HasCreep(unitptr->pos) == Observation()->HasCreep(lastSeenPair.first);
-					if (creep && realSpeed > speed + 1.f)
+					if (Util::DistSq(unitptr->pos, m_startLocation) < 40 * 40)
 					{
-						// This is a Speedling!!!
-						m_strategy.setEnemyHasMetabolicBoost(true);
-						Actions()->SendChat("Speedlings won't save you my friend");
-						Util::DebugLog(__FUNCTION__, "Metabolic Boost detected", *this);
+						m_strategy.setEnemyHasProxyHatchery(true);
+					}
+				}
+				else if (!m_strategy.enemyHasMetabolicBoost() && unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_ZERGLING
+					&& unitptr->last_seen_game_loop == GetGameLoop())
+				{
+					auto& lastSeenPair = m_lastSeenPosUnits[unitptr->tag];
+					if (lastSeenPair.first != CCPosition(0, 0) && lastSeenPair.second == GetGameLoop() - 1)
+					{
+						const float dist = Util::Dist(unitptr->pos, lastSeenPair.first);
+						const float speed = Util::getSpeedOfUnit(unitptr, *this);
+						const float realSpeed = dist * 16.f;	// Magic number calculated from real values
+						const bool creep = Observation()->HasCreep(unitptr->pos) == Observation()->HasCreep(lastSeenPair.first);
+						if (creep && realSpeed > speed + 1.f)
+						{
+							// This is a Speedling!!!
+							m_strategy.setEnemyHasMetabolicBoost(true);
+							Actions()->SendChat("Speedlings won't save you my friend");
+							Util::DebugLog(__FUNCTION__, "Metabolic Boost detected", *this);
+						}
 					}
 				}
 			}
@@ -887,10 +898,14 @@ void CCBot::setUnits()
 	identifyEnemyWorkersGoingIntoRefinery();
 	StopProfiling("0.2.3   identifyEnemyWorkersGoingIntoRefinery");
 
+	StartProfiling("0.2.4   identifyStackedEnemyWorkers");
+	identifyStackedEnemyWorkers();
+	StopProfiling("0.2.4   identifyStackedEnemyWorkers");
+
 	/*if (!m_strategy.shouldProduceAntiAirDefense())
 		m_strategy.setShouldProduceAntiAirDefense(m_enemyUnitsPerType[sc2::UNIT_TYPEID::PROTOSS_PHOENIX].size() >= 3);*/	// Commented because it uses too much resources and is not very effective
 	m_strategy.setEnemyHasMassZerglings(m_enemyUnitsPerType[sc2::UNIT_TYPEID::ZERG_ZERGLING].size() >= 10);
-	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= 5);
+	m_strategy.setEnemyHasSeveralArmoredUnits(armoredEnemies >= (enemyRace == sc2::Race::Terran ? 3 : 5));
 }
 
 void CCBot::identifyEnemyRepairingSCVs()
@@ -999,6 +1014,66 @@ void CCBot::identifyEnemyWorkersGoingIntoRefinery()
 					break;
 				}
 			}
+		}
+	}
+}
+
+void CCBot::identifyStackedEnemyWorkers()
+{
+	// Select the right enemy worker type
+	sc2::UnitTypeID enemyWorkerType;
+	const auto enemyRace = GetPlayerRace(Players::Enemy);
+	switch (enemyRace)
+	{
+	case sc2::Race::Protoss:
+		enemyWorkerType = sc2::UNIT_TYPEID::PROTOSS_PROBE;
+		break;
+	case sc2::Race::Terran:
+		enemyWorkerType = sc2::UNIT_TYPEID::TERRAN_SCV;
+		break;
+	case sc2::Race::Zerg:
+		enemyWorkerType = sc2::UNIT_TYPEID::ZERG_DRONE;
+		break;
+	default:
+		enemyWorkerType = sc2::UNIT_TYPEID::INVALID;
+		break;
+	}
+
+	// Create vectors of stacked enemy workers
+	m_stackedEnemyWorkers.clear();
+	for (auto & enemyWorker : m_enemyUnitsPerType[enemyWorkerType])
+	{
+		if (enemyWorker.getUnitPtr()->last_seen_game_loop != m_gameLoop)
+			continue;
+		float workerRadius = enemyWorker.getUnitPtr()->radius;
+		bool partOfStack = false;
+		for (sc2::Units & stack : m_stackedEnemyWorkers)
+		{
+			float dist = Util::DistSq(enemyWorker, stack[0]->pos);
+			if (dist < workerRadius * workerRadius * 0.5f)
+			{
+				stack.push_back(enemyWorker.getUnitPtr());
+				partOfStack = true;
+				break;
+			}
+		}
+		if (!partOfStack)
+		{
+			m_stackedEnemyWorkers.push_back({ enemyWorker.getUnitPtr() });
+		}
+	}
+	
+	// Remove the stacks of 3 workers or less
+	auto it = m_stackedEnemyWorkers.begin();
+	while (it != m_stackedEnemyWorkers.end())
+	{
+		if (it->size() <= 3)
+		{
+			it = m_stackedEnemyWorkers.erase(it);
+		}
+		else
+		{
+			++it;
 		}
 	}
 }
@@ -1167,7 +1242,7 @@ void CCBot::updatePreviousFrameEnemyUnitPos()
 
 void CCBot::checkForConcede()
 {
-	if(!m_concede && GetCurrentFrame() > 2688)	// 2 min
+	/*if(!m_concede && GetCurrentFrame() > 2688)	// 2 min
 	{
 		Unit building;
 		for (const auto allyUnit : m_allyUnits)
@@ -1186,7 +1261,7 @@ void CCBot::checkForConcede()
 			Util::Log(__FUNCTION__, "Concede", *this);
 			m_strategy.onEnd(false);
 		}
-	}
+	}*/
 }
 
 uint32_t CCBot::GetGameLoop() const
@@ -1267,6 +1342,7 @@ void CCBot::IssueGameStartCheats()
 	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
 	const auto offset = towardsCenter * 15;
 	const auto enemyLocation = GetEnemyStartLocations()[0];
+	const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false));
 
 	//Strategy().setShouldProduceAntiAirOffense(true);
 	//Debug()->DebugGiveAllTech();
@@ -1714,7 +1790,6 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(113, 104), player2, 3);*/
 
 	//Debug()->DebugGiveAllTech();
-	//const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false));
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, enemyLocation, player1, 3);//Invisible/burrow
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, nat, player1, 1);//Creep
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_LAIR, enemyLocation, player1, 1);//Creep
@@ -1733,11 +1808,50 @@ void CCBot::IssueGameStartCheats()
 	//TEMP Used to try to reproduce the issue with actions that happens late game
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation, player1, 1000);
 
-	// Test to reproduce bug where Marauders are hesitate to attack Cannons on top of ramp
+	// Test to reproduce bug where Marauders hesitate to attack Cannons on top of ramp
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenterY * 15, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterY * 17, player1, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SENTRY, enemyLocation - towardsCenterY * 15, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenterY * 30, player2, 4);*/
+
+	// Test to reproduce bug where Marauders hesitate to attack a Cannon if there is an unpowered one next to it
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, nat + towardsCenter * 10, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, nat + towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, nat + towardsCenter * 0, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, m_startLocation, player2, 4);*/
+
+	// Test to see if Banshee backs to defend while we already have Cyclones ready
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter - towardsCenter * 20, player2, 1);*/
+
+	// Test to reproduce bug where our Reaper dies to Cannons outside our main (could not reproduce)
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, nat + towardsCenterY * 2 - towardsCenterX * 2, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenterY * 20 + towardsCenterX * 12, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, m_startLocation + towardsCenterY * 20 + towardsCenterX * 15, player2, 1);*/
+
+	// Test to reproduce bug where Vikings are jumping
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 5, player1, 11);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_IMMORTAL, mapCenter + towardsCenter * 5, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SENTRY, mapCenter + towardsCenter * 5, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT, mapCenter - towardsCenter * 5, player2, 16);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 5, player2, 20);*/
+
+	// Test to see if we can detect which enemy Cyclones are using their Lock-On
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter - towardsCenter * 5, player2, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter + towardsCenter * 5, player1, 2);*/
+
+	// Test to reproduce bug where not enough workers are sent to defend against a Cannon rush
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 15, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 30, player1, 1);*/
+
+	// Test to see if our bot react properly against a proxy Hatchery
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_HATCHERY, nat, player2, 1);
 }
 
 void CCBot::IssueCheats()
@@ -2263,7 +2377,7 @@ void CCBot::drawProfilingInfo()
 			}
 		}
 
-		if (Config().LogSlowFrames && currentStepTime >= 50000 && queue.size() > 0 && queue[0].first > 0)	// 50ms
+		if (currentStepTime >= Config().LogFrameDurationThreshold * 1000 && queue.size() > 0 && queue[0].first > 0)
 		{
 			Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * queue[0].first) + "ms for " + std::to_string(queue[0].second) + " calls", *this);
 		}
@@ -2300,7 +2414,7 @@ std::mutex & CCBot::GetCommandMutex()
 	return m_command_mutex;
 }
 
-void CCBot::CheckGameResult() const
+void CCBot::CheckGameResult()
 {
 	const uint32_t selfId = Util::GetSelfPlayerId(*this);
 	if (selfId < 0)
@@ -2311,8 +2425,15 @@ void CCBot::CheckGameResult() const
 		std::stringstream ss;
 		if (playerResult.player_id == selfId)
 		{
-			// TODO save result
 			ss << "We";
+			std::string result;
+			if (playerResult.result == sc2::GameResult::Win)
+				result = "win";
+			else if (playerResult.result == sc2::GameResult::Loss)
+				result = "loss";
+			else
+				result = "tiw";
+			m_strategy.onEnd(result);
 		}
 		else
 			ss << "Opponent";

@@ -74,7 +74,7 @@ private:
 	const sc2::Unit * ExecuteLockOnLogic(const sc2::Unit * cyclone, bool shouldHeal, bool & shouldAttack, bool & shouldUseLockOn, bool & lockOnAvailable, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Units & rangedUnitTargets, const sc2::Unit * target, sc2::AvailableAbilities & abilities);
 	void LockOnTarget(const sc2::Unit * cyclone, const sc2::Unit * target);
 	bool CycloneHasTarget(const sc2::Unit * cyclone) const;
-	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & rangedUnitTargets, sc2::Units & otherSquadsUnits);
+	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & threats, sc2::Units & rangedUnitTargets, sc2::Units & otherSquadsUnits);
 	const sc2::Unit* GetSimulatedUnit(const sc2::Unit * rangedUnit);
 	std::map<sc2::Tag, sc2::Unit> & GetDummyMap(sc2::UNIT_TYPEID type);
 	void CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & allyCombatUnits, sc2::Units & rangedUnitTargets, bool ignoreCyclones, std::set<const sc2::Unit *> & closeUnitsSet, bool & morphFlyingVikings, bool & morphLandedVikings, std::map<const sc2::Unit *, const sc2::Unit *> & simulatedStimedUnits, float & stimedUnitsPowerDifference, std::map<const sc2::Unit*, const sc2::Unit*> & closeUnitsTarget, float & unitsPower, float & minUnitRange);
