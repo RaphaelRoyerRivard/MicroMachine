@@ -94,30 +94,7 @@ void WorkerData::updateWorker(const Unit & unit)
     {
         m_workers.insert(unit);
         m_workerJobMap[unit] = WorkerJobs::None;
-		m_workerReturningCargoMap[unit] = false;
     }
-	else
-	{
-		auto orders = unit.getUnitPtr()->orders;
-
-		if (!orders.empty())
-		{
-			if (m_workerReturningCargoMap[unit])
-			{
-				if (orders.at(0).ability_id == sc2::ABILITY_ID::HARVEST_GATHER)
-				{
-					m_workerReturningCargoMap[unit] = false;
-				}
-			}
-			else
-			{
-				if (orders.at(0).ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
-				{
-					m_workerReturningCargoMap[unit] = true;
-				}
-			}
-		}
-	}
 }
 
 void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit, bool mineralWorkerTargetJobUnit)
@@ -162,6 +139,7 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit, bool m
 			worker.attackMove(m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy)->getPosition());
 			return;
 		}
+
         worker.rightClick(mineralToMine);
     }
     else if (job == WorkerJobs::Gas)
@@ -279,13 +257,7 @@ int WorkerData::getWorkerJob(const Unit & unit) const
 
 bool WorkerData::isReturningCargo(const Unit & unit) const
 {
-	auto it = m_workerReturningCargoMap.find(unit);
-
-	if (it != m_workerReturningCargoMap.end())
-	{
-		return it->second;
-	}
-	return false;
+	return sc2::IsCarryingMinerals(*unit.getUnitPtr()) || sc2::IsCarryingVespene(*unit.getUnitPtr());
 }
 
 Unit WorkerData::getMineralToMine(const Unit & unit) const

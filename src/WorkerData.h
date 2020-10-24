@@ -20,7 +20,6 @@ class WorkerData
     std::set<Unit>          m_depots;
     std::map<int, int>      m_workerJobCount;
     std::map<Unit, int>     m_workerJobMap;
-	std::map<Unit, bool>	m_workerReturningCargoMap;
     std::map<Unit, int>     m_refineryWorkerCount;
     std::map<Unit, int>     m_depotWorkerCount;
     std::map<Unit, Unit>    m_workerRefineryMap;

@@ -2761,11 +2761,16 @@ void Util::AddStatistic(const std::string & statisticName, int value)
 void Util::DisplayStatistic(CCBot & bot, const std::string & statisticName)
 {
 	auto & values = statistics[statisticName];
+	if (values.size() == 0)
+	{
+		bot.Actions()->SendChat("No statistics were computed for " + statisticName + ".");
+		return;
+	}
+
 	int total = 0;
 	for (auto & value : values)
 	{
 		total += value;
-		//bot.Actions()->SendChat(statisticName + ": " + std::to_string(value));
 	}
 
 	bot.Actions()->SendChat(statisticName + " total: " + std::to_string(total));
