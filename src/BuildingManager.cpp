@@ -907,8 +907,25 @@ void BuildingManager::constructAssignedBuildings()
 								// Lift the building (the landing code is approx. 50 lines above)s
 								Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 							}
-							else // The addon position is not blocked
+							else // The addon position is not blocked by a building or non buildable tile
 							{
+								// We need to check if there is an enemy unit blocking it, if so, we just want to wait until it is not there
+								for (auto & unit : m_bot.GetUnits())
+								{
+									if (unit.isFlying() || unit.getType().isBuilding() || unit.getUnitPtr()->alliance == sc2::Unit::Alliance::Neutral)
+										continue;
+									const float dist = Util::Dist(b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f), unit.getPosition());
+									const auto addonRadius = 1.f;
+									if (dist <= addonRadius + unit.getUnitPtr()->radius)
+									{
+										// Enemy unit is blocking addon
+										blocked = true;
+										break;
+									}
+								}
+								if (blocked)
+									continue;
+
 								// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
 								const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
 								const auto it = m_liftedBuildingPositions.find(b.builderUnit.getTag());
