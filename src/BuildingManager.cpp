@@ -550,10 +550,13 @@ void BuildingManager::validateWorkersAndBuildings()
 			case BuildingStatus::Assigned:
 			{
 				//If the worker died on the way to start the building construction or if the requirements are not met anymore
-				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
-					|| (m_bot.Strategy().isWorkerRushed() && isEnemyUnitNear(b.finalPosition, 5)))
+				bool diedOnTheWay = !b.builderUnit.isValid() || !b.builderUnit.isAlive();
+				bool hasRequired = m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true);
+				bool isWorkerRushed = m_bot.Strategy().isWorkerRushed();
+				if ((diedOnTheWay && !isWorkerRushed) || !hasRequired)
 				{
-					auto remove = CancelBuilding(b, "builder died on the way or we don't have the requirements or an enemy worker is near the build location during a worker rush", false);
+					std::string message = diedOnTheWay && !isWorkerRushed ? "builder died on the way" : "we don't have the requirements";
+					auto remove = CancelBuilding(b, message, false);
 					toRemove.push_back(remove);
 					Util::Log("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
 				}
