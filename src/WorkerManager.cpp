@@ -587,7 +587,7 @@ void WorkerManager::handleGasWorkers()
 			hasUsableDepot = false;
 		}
 
-		auto & workers = m_bot.Workers().m_workerData.getAssignedWorkersRefinery(geyser);
+		auto workers = m_bot.Workers().m_workerData.getAssignedWorkersRefinery(geyser);
 		for (auto & bunker : base->getGasBunkers())
 		{
 			if (!bunker.isCompleted())

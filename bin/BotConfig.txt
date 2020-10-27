@@ -16,16 +16,16 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.12.10",
+        "BotVersion"                : "1.12.11",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
-        "PlayAsHuman"               : true,
+        "PlayAsHuman"               : false,
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Protoss",
-        "MapFile"                   : "EternalEmpireLE.SC2Map",
+        "MapFile"                   : "OxideLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50,
@@ -126,7 +126,7 @@
         "PylonSpacing"              : 3,
         "SelectStartingBuildBasedOnHistory" : true,
         "PrintGreetingMessage"      : false,
-        "RandomProxyLocation"       : false,
+        "RandomProxyLocation"       : true,
         "ProductionPrintFrequency"  : 30,
         "LogFrameDurationThreshold" : 100
     },

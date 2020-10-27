@@ -277,9 +277,16 @@ void ProductionManager::manageBuildOrderQueue()
 					//Check if we already have an idle production building of that type
 					bool idleProductionBuilding = false;
 #ifndef NO_UNITS
-					if (currentItem.type.isBuilding() && Util::Contains(currentItem.type.getUnitType().getAPIUnitType(), getProductionBuildingTypes()))
+					auto unitTypeID = currentItem.type.getUnitType().getAPIUnitType();
+					if (currentItem.type.isBuilding() && (unitTypeID == sc2::UNIT_TYPEID::TERRAN_ARMORY || Util::Contains(unitTypeID, getProductionBuildingTypes())))
 					{
-						idleProductionBuilding = isImportantProductionBuildingIdle();
+						auto idleTypes = getIdleImportantProductionBuildingTypes();
+						if (!idleTypes.empty())
+						{
+							bool isNonRequiredArmory = unitTypeID == sc2::UNIT_TYPEID::TERRAN_ARMORY && !m_queue.contains(MetaTypeEnum::Thor);
+							if (isNonRequiredArmory || idleTypes.size() > 1 || idleTypes[0] != sc2::UNIT_TYPEID::TERRAN_FACTORY)
+								idleProductionBuilding = true;
+						}
 					}
 #endif
 
@@ -1339,7 +1346,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 bool ProductionManager::isImportantProductionBuildingIdle()
 {
-	bool idleProductionBuilding = false;
+	return getIdleImportantProductionBuildingTypes().size() > 0;
+}
+
+std::vector<sc2::UNIT_TYPEID> ProductionManager::getIdleImportantProductionBuildingTypes()
+{
+	std::vector<sc2::UNIT_TYPEID> idleImportantProductionBuildingTypes;
 	std::vector<sc2::UNIT_TYPEID> importantProductionBuildingTypes = { sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_STARPORT };
 	for (auto importantProductionBuildingType : importantProductionBuildingTypes)
 	{
@@ -1347,8 +1359,7 @@ bool ProductionManager::isImportantProductionBuildingIdle()
 		const int totalProductionBuildings = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(importantProductionBuildingType, m_bot), false, true); // Also considers the ones that are to be constructed but not started
 		if (productionBuildings.size() != totalProductionBuildings)
 		{
-			idleProductionBuilding = true;
-			break;
+			idleImportantProductionBuildingTypes.push_back(importantProductionBuildingType);
 		}
 		else
 		{
@@ -1356,13 +1367,13 @@ bool ProductionManager::isImportantProductionBuildingIdle()
 			{
 				if (productionBuilding.isProductionBuildingIdle())
 				{
-					idleProductionBuilding = true;
+					idleImportantProductionBuildingTypes.push_back(importantProductionBuildingType);
 					break;
 				}
 			}
 		}
 	}
-	return idleProductionBuilding;
+	return idleImportantProductionBuildingTypes;
 }
 
 void ProductionManager::QueueDeadBuildings()
@@ -1892,12 +1903,31 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 				sc2::UNIT_TYPEID unitType = unit.getAPIUnitType();
 
 				//If the commandcenter should morph instead, don't queue workers on it
-				if (unitType == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && !type.getUnitType().isMorphedBuilding())
+				if (unitType == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER)
 				{
-					if (m_initialBuildOrderFinished && (m_queue.contains(MetaTypeEnum::OrbitalCommand) || m_queue.contains(MetaTypeEnum::PlanetaryFortress))
-						&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0)
+					if (!type.getUnitType().isMorphedBuilding())
 					{
-						continue;
+						if (m_initialBuildOrderFinished && (m_queue.contains(MetaTypeEnum::OrbitalCommand) || m_queue.contains(MetaTypeEnum::PlanetaryFortress))
+							&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0)
+						{
+							continue;
+						}
+					}
+					else
+					{
+						// Prevent the creation of an Orbital Command in our natural with the FAST_PF strategy because we want a PF there
+						if (m_bot.Strategy().getStartingStrategy() == FAST_PF)
+						{
+							// If we haven't made a PF yet
+							if (m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS).size() + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS) == 0)
+							{
+								if (type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND)
+								{
+									if (Util::DistSq(m_bot.GetStartLocation(), unit.getPosition()) > 5.f * 5.f)
+										continue;
+								}
+							}
+						}
 					}
 				}
 				else
