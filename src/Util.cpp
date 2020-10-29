@@ -1272,6 +1272,8 @@ float Util::GetSpecialCasePower(const Unit &unit)
 {
 	if (!unit.getType().isBuilding())
 		return 0.f;
+	if (unit.getType().isRefinery())
+		return 0.f;	// We don't want to pull workers against gas steal
 	const auto unitPtr = unit.getUnitPtr();
 	return (unitPtr->health_max + unitPtr->shield_max) / 8;	// will pull 4 workers for a Pylon
 }

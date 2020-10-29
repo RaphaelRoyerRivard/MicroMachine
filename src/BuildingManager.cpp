@@ -550,10 +550,13 @@ void BuildingManager::validateWorkersAndBuildings()
 			case BuildingStatus::Assigned:
 			{
 				//If the worker died on the way to start the building construction or if the requirements are not met anymore
-				if (!b.builderUnit.isValid() || !b.builderUnit.isAlive() || !m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true)
-					|| (m_bot.Strategy().isWorkerRushed() && isEnemyUnitNear(b.finalPosition, 5)))
+				bool diedOnTheWay = !b.builderUnit.isValid() || !b.builderUnit.isAlive();
+				bool hasRequired = m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true);
+				bool isWorkerRushed = m_bot.Strategy().isWorkerRushed();
+				if ((diedOnTheWay && !isWorkerRushed) || !hasRequired)
 				{
-					auto remove = CancelBuilding(b, "builder died on the way or we don't have the requirements or an enemy worker is near the build location during a worker rush", false);
+					std::string message = diedOnTheWay && !isWorkerRushed ? "builder died on the way" : "we don't have the requirements";
+					auto remove = CancelBuilding(b, message, false);
 					toRemove.push_back(remove);
 					Util::Log("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
 				}
@@ -907,8 +910,25 @@ void BuildingManager::constructAssignedBuildings()
 								// Lift the building (the landing code is approx. 50 lines above)s
 								Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LIFT, m_bot);
 							}
-							else // The addon position is not blocked
+							else // The addon position is not blocked by a building or non buildable tile
 							{
+								// We need to check if there is an enemy unit blocking it, if so, we just want to wait until it is not there
+								for (auto & unit : m_bot.GetUnits())
+								{
+									if (unit.isFlying() || unit.getType().isBuilding() || unit.getUnitPtr()->alliance == sc2::Unit::Alliance::Neutral)
+										continue;
+									const float dist = Util::Dist(b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f), unit.getPosition());
+									const auto addonRadius = 1.f;
+									if (dist <= addonRadius + unit.getUnitPtr()->radius)
+									{
+										// Enemy unit is blocking addon
+										blocked = true;
+										break;
+									}
+								}
+								if (blocked)
+									continue;
+
 								// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
 								const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
 								const auto it = m_liftedBuildingPositions.find(b.builderUnit.getTag());
