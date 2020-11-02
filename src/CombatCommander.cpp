@@ -897,6 +897,8 @@ void CombatCommander::updateBackupSquads()
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THOR
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THORAP
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_SIEGETANK
+			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED
 			|| (unitTypeId == sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING && m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_REAPER) >= 2))
             && m_squadData.canAssignUnitToSquad(unit, backupSquad))
         {

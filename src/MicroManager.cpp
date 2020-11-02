@@ -111,6 +111,11 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	if (unitDps == 0.f)	//Do not attack targets on which we would do no damage
 		return 0.f;
 
+	if (UnitType::hasSplashingAttack(attacker->unit_type, target->is_flying))
+	{
+		return getPriorityOfTargetConsideringSplash();
+	}
+
 	const float healthValue = pow(target->health + target->shield, 0.5f);		//the more health a unit has, the less it is prioritized
 	float proximityValue = 1.f;
 	if (distance > attackerRange)
@@ -206,4 +211,9 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		return std::max(0.1f, (proximityValue * 50 - healthValue) * invisModifier * hallucinationModifier * antiBuildingModifier * unpoweredModifier);	// Our workers should clear buildings instead of enemy units
 	
 	return std::max(0.1f, (proximityValue * 50 - healthValue) * invisModifier * unpoweredModifier * hallucinationModifier / 100.f);		//we do not want non combat buildings to have a higher priority than other units
+}
+
+float MicroManager::getPriorityOfTargetConsideringSplash() const
+{
+	return 1.f;
 }

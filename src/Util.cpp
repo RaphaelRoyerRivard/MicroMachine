@@ -1343,6 +1343,7 @@ void Util::CreateDummyUnits(CCBot & bot)
 	CreateDummyVikingFighter(bot);
 	CreateDummyStimedMarine(bot);
 	CreateDummyStimedMarauder(bot);
+	CreateDummySiegeTankSieged(bot);
 }
 
 void Util::CreateDummyVikingAssault(CCBot & bot)
@@ -1385,6 +1386,16 @@ void Util::CreateDummyStimedMarauder(CCBot & bot)
 	m_dummyStimedMarauder->radius = 0.5625;
 	SetBaseUnitValues(m_dummyStimedMarauder, bot);
 	m_dummyStimedMarauder->buffs.push_back(sc2::BUFF_ID::STIMPACKMARAUDER);
+}
+
+void Util::CreateDummySiegeTankSieged(CCBot & bot)
+{
+	m_dummySiegeTankSieged = new sc2::Unit;
+	m_dummySiegeTankSieged->unit_type = sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED;
+	m_dummySiegeTankSieged->is_flying = false;
+	m_dummySiegeTankSieged->health_max = 175;
+	m_dummySiegeTankSieged->radius = 0.875;
+	SetBaseUnitValues(m_dummySiegeTankSieged, bot);
 }
 
 void Util::SetBaseUnitValues(sc2::Unit * unit, CCBot & bot)
@@ -1439,6 +1450,8 @@ sc2::Unit Util::CreateDummyFromUnit(const sc2::Unit * unit)
 		return CreateDummyStimedMarineFromUnit(unit);
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARAUDER)
 		return CreateDummyStimedMarauderFromUnit(unit);
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
+		return CreateDummySiegeTankSiegedFromUnit(unit);
 	return sc2::Unit();
 }
 
@@ -1464,6 +1477,12 @@ sc2::Unit Util::CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit)
 	sc2::Unit dummyStimedMarauder = CreateDummyFromUnit(m_dummyStimedMarauder, unit);
 	dummyStimedMarauder.health -= 20;
 	return dummyStimedMarauder;
+}
+
+sc2::Unit Util::CreateDummySiegeTankSiegedFromUnit(const sc2::Unit * unit)
+{
+	sc2::Unit dummySiegeTankSieged = CreateDummyFromUnit(m_dummySiegeTankSieged, unit);
+	return dummySiegeTankSieged;
 }
 
 bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)

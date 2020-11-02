@@ -66,6 +66,7 @@ private:
 	bool TeleportBattlecruiser(const sc2::Unit * battlecruiser, CCPosition location);
 	CCPosition GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const;
 	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, bool unitShouldHeal, bool isCycloneHelper);
+	bool ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, sc2::Units & rangedUnits, bool unitShouldHeal);
 	bool ExecuteThorMorphLogic(const sc2::Unit * thor);
 	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition goal, std::string goalDescription, bool unitShouldHeal, bool force);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;
@@ -80,7 +81,7 @@ private:
 	void CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & allyCombatUnits, sc2::Units & rangedUnitTargets, bool ignoreCyclones, std::set<const sc2::Unit *> & closeUnitsSet, bool & morphFlyingVikings, bool & morphLandedVikings, std::map<const sc2::Unit *, const sc2::Unit *> & simulatedStimedUnits, float & stimedUnitsPowerDifference, std::map<const sc2::Unit*, const sc2::Unit*> & closeUnitsTarget, float & unitsPower, float & minUnitRange);
 	bool ChangeBehaviorFromBuffs(const sc2::Unit * rangedUnit, bool isUnitDisabled, sc2::Units & allCombatAllies, CCPosition & goal, std::string & goalDescription, bool & unitShouldHeal);
 	void ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDisabled, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Units & rangedUnitTargets, const sc2::Unit * & target, CCPosition & goal, std::string & goalDescription, sc2::AvailableAbilities & abilities);
-	bool ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper);
+	bool ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, sc2::Units & allyUnits, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper);
 	bool ExecuteUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, sc2::Units & allyUnits, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper, sc2::AvailableAbilities & abilities);
 	bool ExecuteOffensiveTeleportLogic(const sc2::Unit * battlecruiser, const sc2::Units & threats, CCPosition goal);
 	bool ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, const sc2::Units & targets);

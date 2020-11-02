@@ -33,6 +33,8 @@ const int REAPER_KD8_CHARGE_FRAME_COUNT = 3;
 const int REAPER_KD8_CHARGE_COOLDOWN = 314 + REAPER_KD8_CHARGE_FRAME_COUNT + 7;
 const int REAPER_MOVE_FRAME_COUNT = 3;
 const int VIKING_MORPH_FRAME_COUNT = 40;
+const int TANK_SIEGE_FRAME_COUNT = 65;
+const int TANK_UNSIEGE_FRAME_COUNT = 57;
 const int THOR_GROUND_ATTACK_FRAME_COUNT = 21;
 const int THOR_MORPH_FRAME_COUNT = 40;
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK = "ThreatFightAttack";
@@ -374,7 +376,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 
 	m_bot.StartProfiling("0.10.4.1.5.1.c          ExecutePrioritizedUnitAbilitiesLogic");
-	if (!isUnitDisabled && ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, threats, rangedUnitTargets, goal, unitShouldHeal, isCycloneHelper))
+	if (!isUnitDisabled && ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, allCombatAllies, goal, unitShouldHeal, isCycloneHelper))
 	{
 		m_bot.StopProfiling("0.10.4.1.5.1.c          ExecutePrioritizedUnitAbilitiesLogic");
 		return;
@@ -1128,6 +1130,57 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 	{
 		const auto action = RangedUnitAction(MicroActionType::Ability, morphAbility, true, VIKING_MORPH_FRAME_COUNT, "Morph");
 		morph = m_bot.Commander().Combat().PlanAction(viking, action);
+	}
+	return morph;
+}
+
+bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, sc2::Units & rangedUnits, bool unitShouldHeal)
+{
+	// If the tank already has a target close enough, no need to morph
+	if (target)
+	{
+		float dist = Util::DistSq(tank->pos, target->pos);
+		float range = Util::GetAttackRangeForTarget(tank, target, m_bot);
+		if (dist <= range * range)
+		{
+			return false;
+		}
+	}
+
+	bool morph = false;
+	sc2::AbilityID morphAbility = 0;
+	int frameCount = 0;
+	// Siege logic
+	if (tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
+	{
+		auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
+		auto newTarget = getTarget(&dummySiegeTankSieged, targets, true);
+		if (newTarget)
+		{
+			float dist = Util::DistSq(tank->pos, newTarget->pos);
+			if (dist <= 17 * 17)
+			{
+				morphAbility = sc2::ABILITY_ID::MORPH_SIEGEMODE;
+				frameCount = TANK_SIEGE_FRAME_COUNT;
+				morph = true;
+			}
+		}
+	}
+	// Unsiege logic
+	else
+	{
+		auto newTarget = getTarget(tank, targets, true);
+		if (!newTarget)
+		{
+			morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
+			frameCount = TANK_UNSIEGE_FRAME_COUNT;
+			morph = true;
+		}
+	}
+	if (morph)
+	{
+		const auto action = RangedUnitAction(MicroActionType::Ability, morphAbility, true, frameCount, "Morph");
+		morph = m_bot.Commander().Combat().PlanAction(tank, action);
 	}
 	return morph;
 }
@@ -2502,7 +2555,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 	m_bot.StopProfiling("0.10.4.1.5.1.b.3            DefineGoal");
 }
 
-bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, sc2::Units & threats, sc2::Units & targets, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
+bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, sc2::Units & allyUnits, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper)
 {
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
 	{
@@ -2534,6 +2587,12 @@ bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * range
 		const bool thorMorphed = ExecuteThorMorphLogic(rangedUnit);
 		m_bot.StopProfiling("0.10.4.1.5.1.c.4           ExecuteThorMorphLogic");
 		if (thorMorphed)
+			return true;
+	}
+
+	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED)
+	{
+		if (ExecuteTankMorphLogic(rangedUnit, goal, target, threats, targets, allyUnits, unitShouldHeal))
 			return true;
 	}
 
@@ -3054,6 +3113,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		return nullptr;
 	}
 
+	// Load target from cache if possible
 	std::set<const sc2::Unit *> currentTargets;
 	if (!harass)
 	{

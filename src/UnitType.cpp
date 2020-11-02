@@ -125,9 +125,38 @@ bool UnitType::isRefinery(sc2::UnitTypeID type)
 	}
 }
 
+bool UnitType::hasSplashingAttack(sc2::UnitTypeID unitTypeId, bool air)
+{
+	switch (unitTypeId.ToType())
+	{
+	// ground and air
+	case sc2::UNIT_TYPEID::TERRAN_GHOST:
+	case sc2::UNIT_TYPEID::TERRAN_RAVEN:
+	case sc2::UNIT_TYPEID::TERRAN_WIDOWMINE:
+		return true;
+	// only ground
+	case sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED:
+	case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
+		return !air;
+	// only air
+	case sc2::UNIT_TYPEID::TERRAN_LIBERATOR:
+	case sc2::UNIT_TYPEID::TERRAN_THOR:
+	case sc2::UNIT_TYPEID::TERRAN_HELLION:
+	case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
+		return air;
+	default:
+		return false;
+	}
+}
+
 bool UnitType::isRefinery() const
 {
 	return isRefinery(m_type);
+}
+
+bool UnitType::hasSplashingAttack(bool air) const
+{
+	return hasSplashingAttack(m_type, air);
 }
 
 sc2::UNIT_TYPEID UnitType::getEnemyRefineryType(sc2::Race enemyRace)
@@ -178,7 +207,6 @@ bool UnitType::isDetector() const
 
 bool UnitType::isGeyser() const
 {
-#ifdef SC2API
 	sc2::UnitTypeData unitTypeData(m_bot->Observation()->GetUnitTypeData()[m_type]);
 	if (unitTypeData.has_vespene)
 		return true;
@@ -194,9 +222,6 @@ bool UnitType::isGeyser() const
 			return true;
         default: return false;
     }
-#else
-    return m_type == BWAPI::UnitTypes::Resource_Vespene_Geyser;
-#endif
 }
 
 bool UnitType::isMineral() const
