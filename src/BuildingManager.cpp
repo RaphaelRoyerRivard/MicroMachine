@@ -1108,7 +1108,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 			continue;
 		}
 
-		auto & progress = b.buildingUnit.getUnitPtr()->build_progress;
+		auto progress = b.buildingUnit.getUnitPtr()->build_progress;
 		auto tag = b.buildingUnit.getTag();
 		if (progress <= m_buildingsProgress[tag])
 		{
@@ -1139,7 +1139,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 					}
 				}
 				// grab the worker unit from WorkerManager which is closest to this final position
-				Unit & newBuilderUnit = m_bot.Workers().getBuilder(b, false);
+				Unit newBuilderUnit = m_bot.Workers().getBuilder(b, false);
 				if (!newBuilderUnit.isValid())
 				{
 					Util::DebugLog(__FUNCTION__, "Worker is invalid for building " + b.type.getName(), m_bot);
