@@ -1112,8 +1112,8 @@ void BuildingManager::checkForDeadTerranBuilders()
 		auto tag = b.buildingUnit.getTag();
 		if (progress <= m_buildingsProgress[tag])
 		{
-			auto & newWorkerPointer = m_buildingsNewWorker.find(tag);
-			if (newWorkerPointer == m_buildingsNewWorker.end() || !m_buildingsNewWorker[tag].isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(m_buildingsNewWorker[tag]) != WorkerJobs::Build)
+			auto newWorkerPointer = m_buildingsNewWorker.find(tag);
+			if (newWorkerPointer == m_buildingsNewWorker.end() || !newWorkerPointer->second.isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(newWorkerPointer->second) != WorkerJobs::Build)
 			{
 				if(b.builderUnit.isValid() && b.builderUnit.isAlive())
 				{
