@@ -43,7 +43,6 @@ class BuildingManager
 	void			RunProxyLogic();
 	void			LiftOrLandDamagedBuildings();
 	bool			isEnemyUnitNear(CCTilePosition center, int radius = 10) const;
-	std::vector<Unit> getEnemyUnitsNear(CCTilePosition center) const;
 	void			updateBaseBuildings();
 
     void            validateWorkersAndBuildings();		    // STEP 1

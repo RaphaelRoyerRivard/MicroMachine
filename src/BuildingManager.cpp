@@ -780,7 +780,7 @@ void BuildingManager::constructAssignedBuildings()
             }
             // if this is not the first time we've sent this guy to build this
             // it must be the case that something was in the way of building
-            else if (b.buildCommandGiven && b.underConstruction && b.buildingUnit.isBeingConstructed())
+            else if (b.buildCommandGiven && b.underConstruction && b.buildingUnit.isBeingConstructed())//[Replace builder]
             {
                 // TODO: in here is where we would check to see if the builder died on the way
                 //       or if things are taking too long, or the build location is no longer valid
@@ -1108,11 +1108,12 @@ void BuildingManager::checkForDeadTerranBuilders()
 			continue;
 		}
 
-		auto progress = b.buildingUnit.getUnitPtr()->build_progress;
+		auto & progress = b.buildingUnit.getUnitPtr()->build_progress;
 		auto tag = b.buildingUnit.getTag();
 		if (progress <= m_buildingsProgress[tag])
 		{
-			if (m_buildingsNewWorker.find(tag) == m_buildingsNewWorker.end() || !m_buildingsNewWorker[tag].isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(m_buildingsNewWorker[tag]) != WorkerJobs::Build)
+			auto & newWorkerPointer = m_buildingsNewWorker.find(tag);
+			if (newWorkerPointer == m_buildingsNewWorker.end() || !m_buildingsNewWorker[tag].isAlive() || m_bot.Workers().getWorkerData().getWorkerJob(m_buildingsNewWorker[tag]) != WorkerJobs::Build)
 			{
 				if(b.builderUnit.isValid() && b.builderUnit.isAlive())
 				{
@@ -1138,13 +1139,13 @@ void BuildingManager::checkForDeadTerranBuilders()
 					}
 				}
 				// grab the worker unit from WorkerManager which is closest to this final position
-				Unit newBuilderUnit = m_bot.Workers().getBuilder(b, false);
+				Unit & newBuilderUnit = m_bot.Workers().getBuilder(b, false);
 				if (!newBuilderUnit.isValid())
 				{
 					Util::DebugLog(__FUNCTION__, "Worker is invalid for building " + b.type.getName(), m_bot);
 					continue;
 				}
-				if (!Util::PathFinding::IsPathToGoalSafe(newBuilderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), true, m_bot))
+				if (!m_bot.Strategy().isWorkerRushed() && !Util::PathFinding::IsPathToGoalSafe(newBuilderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), true, m_bot))
 				{
 					continue;
 				}
@@ -1152,6 +1153,22 @@ void BuildingManager::checkForDeadTerranBuilders()
 				b.builderUnit = newBuilderUnit;
 				b.status = BuildingStatus::Assigned;
 				m_buildingsNewWorker[tag] = newBuilderUnit;
+			}
+			else if (b.buildCommandGiven && b.status == BuildingStatus::UnderConstruction && newWorkerPointer != m_buildingsNewWorker.end())
+			{
+				//Send the build order again incase it wasn't taken into account for some reason.
+				//Also this order is the best sent to replace the worker, then its in constructAssignedBuildings on the same frame.
+				auto & worker = (*newWorkerPointer).second;
+				auto & orders = worker.getUnitPtr()->orders;
+				if (orders.size() == 0 || orders[0].target_unit_tag != b.buildingUnit.getTag())
+				{
+
+					if (!m_bot.Strategy().isWorkerRushed() && !Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), Util::GetPosition(b.finalPosition), true, m_bot))
+					{
+						continue;
+					}
+					worker.rightClick(b.buildingUnit);
+				}
 			}
 		}
 		else
