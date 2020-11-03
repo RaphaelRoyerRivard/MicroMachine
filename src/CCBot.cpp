@@ -1852,6 +1852,7 @@ void CCBot::IssueGameStartCheats()
 
 	// Test to see if our bot react properly against a proxy Hatchery
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_HATCHERY, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, nat, player1, 2);
 }
 
 void CCBot::IssueCheats()
