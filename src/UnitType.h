@@ -21,6 +21,7 @@ public:
 	static sc2::UNIT_TYPEID getEnemyRefineryType(sc2::Race enemyRace);
 	static bool isTargetable(sc2::UnitTypeID unitTypeId);
 	static bool isDetector(sc2::UnitTypeID unitTypeId);
+	static bool isSpawnedUnit(sc2::UnitTypeID unitTypeId);
 	static bool isRefinery(sc2::UnitTypeID unitTypeId);
 	static bool hasSplashingAttack(sc2::UnitTypeID unitTypeId, bool air);
 
@@ -43,6 +44,7 @@ public:
     bool isValid() const;
     bool isBuilding() const;
     bool isCombatUnit() const;
+	bool isSpawnedUnit() const;
     bool isSupplyProvider() const;
     bool isResourceDepot() const;
 	bool isRefinery() const;

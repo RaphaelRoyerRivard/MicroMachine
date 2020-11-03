@@ -1856,6 +1856,10 @@ void CCBot::IssueGameStartCheats()
 	// Tank test
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter - towardsCenter * 10, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 10, player1, 2);
+
+	// Creep targetting test
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMOR, enemyLocation - towardsCenter * 10, player1, 2);
 }
 
 void CCBot::IssueCheats()

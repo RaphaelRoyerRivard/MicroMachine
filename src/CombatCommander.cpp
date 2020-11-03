@@ -1433,6 +1433,9 @@ void CombatCommander::updateAttackSquads()
 				// We want to consider only combat enemy units but not buildings unless we have a proxy strategy
 				if (enemyUnit.getType().isCombatUnit() && (!enemyUnit.getType().isBuilding() || m_bot.Strategy().isProxyStartingStrategy()))
 				{
+					// Ignore temporary units
+					if (enemyUnit.getType().isSpawnedUnit())
+						continue;
 					if (enemyUnit.getType().isBuilding())
 					{
 						// Ignore buildings in construction

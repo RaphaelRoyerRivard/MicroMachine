@@ -69,6 +69,12 @@ bool UnitType::isCombatUnit() const
     return true;
 }
 
+bool UnitType::isSpawnedUnit() const
+{
+	std::vector<sc2::UNIT_TYPEID> minionTypes = { sc2::UNIT_TYPEID::TERRAN_AUTOTURRET, sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR, sc2::UNIT_TYPEID::ZERG_LOCUSTMP, sc2::UNIT_TYPEID::ZERG_LOCUSTMPFLYING, sc2::UNIT_TYPEID::ZERG_BROODLING };
+	return Util::Contains(m_type.ToType(), minionTypes);
+}
+
 bool UnitType::isSupplyProvider() const
 {
 	bool isProvider = supplyProvided() < 0 && !isResourceDepot();
@@ -194,6 +200,21 @@ bool UnitType::isDetector(sc2::UnitTypeID unitTypeId)
 		case sc2::UNIT_TYPEID::ZERG_SPORECRAWLER:
 		case sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON:
 		case sc2::UNIT_TYPEID::TERRAN_RAVEN:
+			return true;
+		default:
+			return false;
+	}
+}
+
+bool UnitType::isSpawnedUnit(sc2::UnitTypeID unitTypeId)
+{
+	switch (unitTypeId.ToType())
+	{
+	case sc2::UNIT_TYPEID::TERRAN_AUTOTURRET:
+	case sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR:
+	case sc2::UNIT_TYPEID::ZERG_LOCUSTMP:
+	case sc2::UNIT_TYPEID::ZERG_LOCUSTMPFLYING:
+	case sc2::UNIT_TYPEID::ZERG_BROODLING:
 			return true;
 		default:
 			return false;
