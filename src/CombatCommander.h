@@ -9,9 +9,9 @@
 class CCBot;
 struct RegionArmyInformation;
 
-struct RangedUnitAction
+struct UnitAction
 {
-	RangedUnitAction()
+	UnitAction()
 		: microActionType()
 		, target(nullptr)
 		, position(CCPosition())
@@ -23,7 +23,7 @@ struct RangedUnitAction
 		, executionFrame(0)
 		, description("")
 	{}
-	RangedUnitAction(MicroActionType microActionType, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(CCPosition())
@@ -35,7 +35,7 @@ struct RangedUnitAction
 		, executionFrame(0)
 		, description(description)
 	{}
-	RangedUnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(target)
 		, position(CCPosition())
@@ -47,7 +47,7 @@ struct RangedUnitAction
 		, executionFrame(0)
 		, description(description)
 	{}
-	RangedUnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(position)
@@ -59,7 +59,7 @@ struct RangedUnitAction
 		, executionFrame(0)
 		, description(description)
 	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(CCPosition())
@@ -71,7 +71,7 @@ struct RangedUnitAction
 		, executionFrame(0)
 		, description(description)
 	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(position)
@@ -83,7 +83,7 @@ struct RangedUnitAction
 		, executionFrame(0)
 		, description(description)
 	{}
-	RangedUnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration, std::string description)
 		: microActionType(microActionType)
 		, target(target)
 		, position(CCPosition())
@@ -95,7 +95,7 @@ struct RangedUnitAction
 		, executionFrame(0)
 		, description(description)
 	{}
-	RangedUnitAction(const RangedUnitAction& rangedUnitAction) = default;
+	UnitAction(const UnitAction& unitAction) = default;
 	MicroActionType microActionType;
 	const sc2::Unit* target;
 	CCPosition position;
@@ -107,11 +107,11 @@ struct RangedUnitAction
 	uint32_t executionFrame;
 	std::string description;
 
-	RangedUnitAction& operator=(const RangedUnitAction&) = default;
+	UnitAction& operator=(const UnitAction&) = default;
 
-	bool operator==(const RangedUnitAction& rangedUnitAction)
+	bool operator==(const UnitAction& unitAction)
 	{
-		return microActionType == rangedUnitAction.microActionType && target == rangedUnitAction.target && position == rangedUnitAction.position && abilityID == rangedUnitAction.abilityID;
+		return microActionType == unitAction.microActionType && target == unitAction.target && position == unitAction.position && abilityID == unitAction.abilityID;
 	}
 };
 
@@ -129,7 +129,7 @@ class CombatCommander
 	CCPosition m_idlePosition;
     SquadData       m_squadData;
     std::vector<Unit>  m_combatUnits;
-	std::map<const sc2::Unit *, RangedUnitAction> unitActions;
+	std::map<const sc2::Unit *, UnitAction> unitActions;
 	std::map<const sc2::Unit *, uint32_t> nextCommandFrameForUnit;
 	std::map<Unit, std::pair<CCPosition, uint32_t>> m_invisibleSighting;
 	std::vector<std::vector<float>> m_groundFromGroundCombatInfluenceMap;
@@ -259,10 +259,10 @@ public:
 	void updateBlockedTilesWithNeutral();
 	void SetLogVikingActions(bool log);
 	bool ShouldSkipFrame(const sc2::Unit * combatUnit) const;
-	bool PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action);
+	bool PlanAction(const sc2::Unit* rangedUnit, UnitAction action);
 	void CleanActions(const std::vector<Unit> &rangedUnits);
 	void ExecuteActions();
-	RangedUnitAction& GetRangedUnitAction(const sc2::Unit * combatUnit);
+	UnitAction& GetUnitAction(const sc2::Unit * combatUnit);
 	void CleanLockOnTargets();
 	void CalcBestFlyingCycloneHelpers();
 	bool ShouldUnitHeal(const sc2::Unit * unit) const;

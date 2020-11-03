@@ -61,7 +61,7 @@ public:
     bool containsPosition(const CCPosition & pos) const;
 	const CCTilePosition & getTurretPosition() const;
 	const std::vector<CCTilePosition> & getGasBunkerLocations() const;
-	const CCPosition & getGasBunkerUnloadTarget(CCPosition geyserPos) const;
+	CCPosition getGasBunkerUnloadTarget(CCPosition geyserPos) const;
 	const CCPosition & getDepotPosition() const;
     const CCTilePosition & getDepotTilePosition() const;
 	int getOptimalMineralWorkerCount() const;

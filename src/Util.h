@@ -35,6 +35,7 @@ namespace Util
 	static sc2::Unit * m_dummyVikingFighter;
 	static sc2::Unit * m_dummyStimedMarine;
 	static sc2::Unit * m_dummyStimedMarauder;
+	static sc2::Unit * m_dummySiegeTankSieged;
 	static std::map<const sc2::Unit *, std::pair<std::set<const sc2::Unit *>, std::set<const sc2::Unit *>>> m_seenEnemies;	// <enemy, <allies_with_vision, allies_without_vision>
 
 	static bool allowDebug;
@@ -182,6 +183,7 @@ namespace Util
 	void CreateDummyVikingFighter(CCBot & bot);
 	void CreateDummyStimedMarine(CCBot & bot);
 	void CreateDummyStimedMarauder(CCBot & bot);
+	void CreateDummySiegeTankSieged(CCBot & bot);
 	void SetBaseUnitValues(sc2::Unit * unit, CCBot & bot);
 	sc2::Unit CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit);
 	sc2::Unit CreateDummyFromUnit(const sc2::Unit * unit);
@@ -189,6 +191,7 @@ namespace Util
 	sc2::Unit CreateDummyVikingFighterFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummyStimedMarineFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit);
+	sc2::Unit CreateDummySiegeTankSiegedFromUnit(const sc2::Unit * unit);
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
 	bool CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot);
     float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells = false);

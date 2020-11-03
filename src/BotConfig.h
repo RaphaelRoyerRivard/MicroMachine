@@ -62,7 +62,7 @@ public:
 	bool DrawBlockedTiles;
 	bool DrawRepairStation;
 	bool DrawDamageHealthRatio;
-	bool DrawRangedUnitActions;
+	bool DrawUnitActions;
 	bool DrawResourcesProximity;
 	bool DrawCombatInformation;
 	bool DrawPathfindingTiles;

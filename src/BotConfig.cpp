@@ -50,7 +50,7 @@ BotConfig::BotConfig()
 	DrawBlockedTiles = false;
 	DrawRepairStation = false;
 	DrawDamageHealthRatio = false;
-	DrawRangedUnitActions = false;
+	DrawUnitActions = false;
 	DrawResourcesProximity = false;
 	DrawCombatInformation = false;
 	TimeControl = false;
@@ -218,7 +218,7 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawBlockedTiles", debug, DrawBlockedTiles);
 			JSONTools::ReadBool("DrawRepairStation", debug, DrawRepairStation);
 			JSONTools::ReadBool("DrawDamageHealthRatio", debug, DrawDamageHealthRatio);
-			JSONTools::ReadBool("DrawRangedUnitActions", debug, DrawRangedUnitActions);
+			JSONTools::ReadBool("DrawUnitActions", debug, DrawUnitActions);
 			JSONTools::ReadBool("DrawResourcesProximity", debug, DrawResourcesProximity);
 			JSONTools::ReadBool("DrawCombatInformation", debug, DrawCombatInformation);
 			JSONTools::ReadBool("DrawPathfindingTiles", debug, DrawPathfindingTiles);
