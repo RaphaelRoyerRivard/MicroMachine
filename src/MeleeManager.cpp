@@ -77,11 +77,8 @@ void MeleeManager::executeMicro()
 						auto & mineral = base->getMinerals();
 						if (mineral.size() > 0)
 						{
-							Micro::SmartRightClick(meleeUnit.getUnitPtr(), mineral[0].getUnitPtr(), m_bot);
-						}
-						else
-						{
-							Micro::SmartMove(meleeUnit.getUnitPtr(), Util::GetPosition(base->getCenterOfMinerals()), m_bot);
+							const auto action = UnitAction(MicroActionType::RightClick, mineral[0].getUnitPtr(), false, 0, "mineral walk");
+							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 						}
 					}
 					else
@@ -126,13 +123,17 @@ void MeleeManager::executeMicro()
 						{
 							if (!repairTarget)
 								repairTarget = closestRepairTarget;
-							Micro::SmartRepair(meleeUnit.getUnitPtr(), repairTarget, m_bot);
+							const auto action = UnitAction(MicroActionType::RightClick, repairTarget, false, 0, "repair");
+							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 						}
 						else if (!injured)
 						{
 							// attack the target if we can see it, otherwise move towards it
 							if (target.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
-								Micro::SmartAttackUnit(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
+							{
+								const auto action = UnitAction(MicroActionType::AttackUnit, target.getUnitPtr(), false, 0, "attack target");
+								m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+							}
 							else
 							{
 								auto movePosition = target.getPosition();
@@ -160,7 +161,8 @@ void MeleeManager::executeMicro()
 										movePosition = Util::GetPosition(closestUnexploredTile);
 									}
 								}
-								Micro::SmartMove(meleeUnit.getUnitPtr(), movePosition, m_bot);
+								const auto action = UnitAction(MicroActionType::Move, m_order.getPosition(), false, 0, "move towards target");
+								m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 							}
 						}
 					}
@@ -178,13 +180,15 @@ void MeleeManager::executeMicro()
 				CCPosition fleePosition = Util::PathFinding::FindOptimalPathToSafety(meleeUnit.getUnitPtr(), goal, true, m_bot);
 				if (fleePosition != CCPosition())
 				{
-					Micro::SmartMove(meleeUnit.getUnitPtr(), fleePosition, m_bot);
+					const auto action = UnitAction(MicroActionType::Move, fleePosition, false, 0, "flee");
+					m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 					flee = false;
 				}
 			}
 			if (flee)
 			{
-				Micro::SmartMove(meleeUnit.getUnitPtr(), m_order.getPosition(), m_bot);
+				const auto action = UnitAction(MicroActionType::Move, m_order.getPosition(), false, 0, "flee");
+				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 			}
 		}
 

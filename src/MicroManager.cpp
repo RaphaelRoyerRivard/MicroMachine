@@ -73,12 +73,12 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 
 	// Ignoring invisible creep tumors
 	const uint32_t lastGameLoop = m_bot.GetGameLoop() - 1;
-	if ((target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMOR
-		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED
-		|| target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN)
-		&& target->last_seen_game_loop < lastGameLoop)
+	if (target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMOR ||
+		target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED||
+		target->unit_type == sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN)
 	{
-		return 0.f;
+		if (target->last_seen_game_loop < lastGameLoop)
+			return 0.f;
 	}
 	
 	// Check for close melee unit bonus
@@ -110,6 +110,13 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	const float unitDps = Util::GetDpsForTarget(attacker, target, m_bot);
 	if (unitDps == 0.f)	//Do not attack targets on which we would do no damage
 		return 0.f;
+
+	if (UnitType::hasSplashingAttack(attacker->unit_type, target->is_flying))
+	{
+		float splashPriority =  getPriorityOfTargetConsideringSplash(attacker, target);
+		if (splashPriority > 0.f)
+			return splashPriority;
+	}
 
 	const float healthValue = pow(target->health + target->shield, 0.5f);		//the more health a unit has, the less it is prioritized
 	float proximityValue = 1.f;
@@ -192,8 +199,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 			nonThreateningModifier = targetDps == 0.f ? 1.f : 0.5f;		//for buildings, we prefer targetting them with units that will not get attacked back
 		}
 		const float flyingDetectorModifier = target->is_flying && UnitType::isDetector(target->unit_type) ? 2.f : 1.f;
-		std::vector<sc2::UNIT_TYPEID> minionTypes = { sc2::UNIT_TYPEID::TERRAN_AUTOTURRET, sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR, sc2::UNIT_TYPEID::ZERG_LOCUSTMP, sc2::UNIT_TYPEID::ZERG_LOCUSTMPFLYING, sc2::UNIT_TYPEID::ZERG_BROODLING };
-		const float minionModifier = Util::Contains(target->unit_type, minionTypes) ? 0.1f : 1.f;	//units that are temporary or can be cheaply respawned should be less prioritized
+		const float minionModifier = UnitType::isSpawnedUnit(target->unit_type) ? 0.1f : 1.f;	//units that are temporary or can be cheaply respawned should be less prioritized
 		const auto & yamatoTargets = m_bot.Commander().Combat().getYamatoTargets();
 		const float yamatoTargetModifier = yamatoTargets.find(target->tag) != yamatoTargets.end() ? 0.1f : 1.f;
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
@@ -206,4 +212,9 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		return std::max(0.1f, (proximityValue * 50 - healthValue) * invisModifier * hallucinationModifier * antiBuildingModifier * unpoweredModifier);	// Our workers should clear buildings instead of enemy units
 	
 	return std::max(0.1f, (proximityValue * 50 - healthValue) * invisModifier * unpoweredModifier * hallucinationModifier / 100.f);		//we do not want non combat buildings to have a higher priority than other units
+}
+
+float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attacker, const sc2::Unit * target) const
+{
+	return 0.f;
 }
