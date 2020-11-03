@@ -113,7 +113,9 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 
 	if (UnitType::hasSplashingAttack(attacker->unit_type, target->is_flying))
 	{
-		return getPriorityOfTargetConsideringSplash(attacker, target);
+		float splashPriority =  getPriorityOfTargetConsideringSplash(attacker, target);
+		if (splashPriority > 0.f)
+			return splashPriority;
 	}
 
 	const float healthValue = pow(target->health + target->shield, 0.5f);		//the more health a unit has, the less it is prioritized
@@ -215,5 +217,5 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 
 float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attacker, const sc2::Unit * target) const
 {
-	return 1.f;
+	return 0.f;
 }
