@@ -765,7 +765,7 @@ void CombatCommander::updateIdleSquad()
 	{
 		if (Util::DistSq(combatUnit, m_idlePosition) > 5.f * 5.f && Util::getSpeedOfUnit(combatUnit.getUnitPtr(), m_bot) > 0)
 		{
-			const auto action = RangedUnitAction(MicroActionType::Move, m_idlePosition, false, 0, "IdleMove");
+			const auto action = UnitAction(MicroActionType::Move, m_idlePosition, false, 0, "IdleMove");
 			PlanAction(combatUnit.getUnitPtr(), action);
 		}
 	}
@@ -774,7 +774,7 @@ void CombatCommander::updateIdleSquad()
 void CombatCommander::updateWorkerFleeSquad()
 {
 	Squad & workerFleeSquad = m_squadData.getSquad("WorkerFlee");
-	const bool earlyRushed = m_bot.Strategy().isEarlyRushed();
+	const bool earlyRushed = false;// m_bot.Strategy().isEarlyRushed();
 	for (auto & worker : m_bot.Workers().getWorkers())
 	{
 		const CCTilePosition tile = Util::GetTilePosition(worker.getPosition());
@@ -2819,7 +2819,7 @@ bool CombatCommander::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
 	return m_bot.GetGameLoop() < availableFrame;
 }
 
-bool CombatCommander::PlanAction(const sc2::Unit* rangedUnit, RangedUnitAction action)
+bool CombatCommander::PlanAction(const sc2::Unit* rangedUnit, UnitAction action)
 {
 	auto & currentAction = unitActions[rangedUnit];
 	// If the unit is already performing the same action, we do nothing
@@ -2904,7 +2904,7 @@ void CombatCommander::ExecuteActions()
 		}*/
 
 #ifndef PUBLIC_RELEASE
-		if (m_bot.Config().DrawRangedUnitActions)
+		if (m_bot.Config().DrawUnitActions)
 		{
 			const std::string actionString = MicroActionTypeAccronyms[action.microActionType] + (action.prioritized ? "!" : "");
 			m_bot.Map().drawText(rangedUnit->pos, actionString, sc2::Colors::Teal);
@@ -3020,7 +3020,7 @@ void CombatCommander::ExecuteActions()
 	}
 }
 
-RangedUnitAction& CombatCommander::GetRangedUnitAction(const sc2::Unit * combatUnit)
+UnitAction& CombatCommander::GetUnitAction(const sc2::Unit * combatUnit)
 {
 	return unitActions[combatUnit];
 }

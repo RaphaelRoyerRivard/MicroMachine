@@ -1,7 +1,7 @@
 # MicroMachine: AI Bot for StarCraft II
 
 This Terran bot is built on top of CommandCenter, a popular C++ bot that is great for beginners. A lot of work has been put in this project and has now diverged a lot from CommandCenter.
-The biggest strength of MicroMachine is its intense micromanagement of units, notably for Reapers, Cyclones and Banshees.
+MicroMachine is considered to be the strongest bot amongst community made bots in the SC2AI community. Check out its [bio on the AI Arena website](https://aiarena.net/bots/49/).
 
 # CommandCenter: AI Bot for Broodwar and Starcraft II
 
