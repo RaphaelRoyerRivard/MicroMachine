@@ -885,7 +885,7 @@ void WorkerManager::handleRepairWorkers()
 	*/
 	int currentMaxRepairWorker = std::min(MAX_REPAIR_WORKER, (int)floor(MAX_REPAIR_WORKER * (mineral / (float)FULL_REPAIR_MINERAL)));
 
-	auto bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 	for (auto & base : bases)
 	{
 		std::vector<Unit> unitsToRepair;
@@ -935,13 +935,12 @@ void WorkerManager::handleRepairWorkers()
 					const float distanceSquare = Util::DistSq(worker, base->getPosition());
 					if (distanceSquare < REPAIR_STATION_WORKER_ZONE_SIZE * REPAIR_STATION_WORKER_ZONE_SIZE)
 					{
-						setRepairWorker(worker, *it);
-
 						//Add worker to the list of repair station worker for this base
 						auto & baseRepairWorkers = workerData.getRepairStationWorkers()[base];
 						if ((std::find(baseRepairWorkers.begin(), baseRepairWorkers.end(), worker) == baseRepairWorkers.end()))
 						{
 							baseRepairWorkers.push_back(worker);
+							setRepairWorker(worker, *it);
 						}
 						 
 						repairWorkers++;
