@@ -999,6 +999,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 
 				const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
+				const int tankCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SiegeTank.getUnitType(), false, true);
 				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), false, true);
 				const int thorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Thor.getUnitType(), false, true);
 				const int deadHellionCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_HELLION);
@@ -1006,10 +1007,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const auto finishedArmory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Armory.getUnitType(), true, true) > 0;
 				const int enemyZealotCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_ZEALOT).size();
 				const int enemyZerglingCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLING).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED).size();
+				const float cycloneTankRatio = 0;// float(cycloneCount) / float(tankCount);
+				const float enemySupplyAirGroundRatio = m_bot.Analyzer().opponentGroundSupply == 0 ? 100 : float(m_bot.Analyzer().opponentAirSupply) / float(m_bot.Analyzer().opponentGroundSupply);
 				// We want to build Thors against Protoss, but only after we have an Armory or 2 bases and we don't want more Thors than Cyclones
 				if (startingStrategy != PROXY_CYCLONES && enemyRace == sc2::Protoss && (finishedArmory || finishedBaseCount >= 2) && thorCount + 1 < cycloneCount)
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
+					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
 					m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
 					if (!m_queue.contains(MetaTypeEnum::Thor))
 					{
@@ -1020,6 +1024,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				else if (!shouldProduceFirstCyclone && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ (hellionCount + 1) * 4 < enemyZerglingCount || (enemyRace == sc2::Race::Zerg && !m_bot.Strategy().enemyHasProxyHatchery() && hellionCount + deadHellionCount == 0 && enemyRoachAndRavagerCount == 0)))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
+					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
 					m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
 #ifndef NO_UNITS
 					if (!m_queue.contains(MetaTypeEnum::Hellion))
@@ -1033,11 +1038,26 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						queueTech(MetaTypeEnum::InfernalPreIgniter);
 					}
 				}
+				// We want to have tanks to keep a balance between ground and air force, depending on what the enemy unit is producing
+				else if (enemySupplyAirGroundRatio < cycloneTankRatio && cycloneCount > 0)
+				{
+					m_queue.removeAllOfType(MetaTypeEnum::Thor);
+					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
+					m_queue.removeAllOfType(MetaTypeEnum::InfernalPreIgniter);
+					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
+#ifndef NO_UNITS
+					if (!m_queue.contains(MetaTypeEnum::SiegeTank))
+					{
+						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::SiegeTank, 0, false));
+					}
+#endif
+				}
 				else
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Thor);
 					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
 					m_queue.removeAllOfType(MetaTypeEnum::InfernalPreIgniter);
+					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
 #ifndef NO_UNITS
 					if (!m_queue.contains(MetaTypeEnum::Cyclone))
 					{
