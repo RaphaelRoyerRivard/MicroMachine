@@ -2056,6 +2056,8 @@ void Util::getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::U
 			continue;
 		if (Util::GetDpsForTarget(targetUnit, unit, bot) == 0.f)
 			continue;
+		if (targetUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_SCV && Contains(targetUnit, bot.GetEnemySCVBuilders()))
+			continue;
 		//We consider a unit as a threat if the sum of its range and speed is bigger than the distance to our unit
 		//But this is not working so well for melee units, we keep every units in a radius of min threat range
 		const float threatRange = getThreatRange(unit, targetUnit, bot);
