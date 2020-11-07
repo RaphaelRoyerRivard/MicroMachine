@@ -1136,12 +1136,13 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 
 bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, sc2::Units & rangedUnits, bool unitShouldHeal)
 {
-	// If the tank already has a target close enough, no need to morph
+	// If the tank already has a target close enough, no need to morph, unless they are too close
 	if (target)
 	{
-		float dist = Util::DistSq(tank->pos, target->pos);
-		float range = Util::GetAttackRangeForTarget(tank, target, m_bot);
-		if (dist <= range * range)
+		float dist = Util::Dist(tank->pos, target->pos);
+		float maxRange = Util::GetAttackRangeForTarget(tank, target, m_bot);
+		float minRange = tank->radius + target->radius + 2.f;
+		if (dist <= maxRange && dist >= minRange)
 		{
 			return false;
 		}
