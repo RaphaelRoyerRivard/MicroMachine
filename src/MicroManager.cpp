@@ -113,6 +113,8 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 
 	if (UnitType::hasSplashingAttack(attacker->unit_type, target->is_flying))
 	{
+		if (attacker->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED && Util::Dist(attacker->pos, target->pos) < attacker->radius + target->radius + 2)
+			return 0.f;	// Sieged up tanks cannot attack units that are too close
 		float splashPriority =  getPriorityOfTargetConsideringSplash(attacker, target);
 		if (splashPriority > 0.f)
 			return splashPriority;
