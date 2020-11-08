@@ -1039,7 +1039,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want to have tanks to keep a balance between ground and air force, depending on what the enemy unit is producing
-				else if (enemySupplyAirGroundRatio < cycloneTankRatio && cycloneCount > 0)
+				else if (!proxyCyclonesStrategy && enemySupplyAirGroundRatio < cycloneTankRatio && cycloneTankRatio > 0.3f && cycloneCount > 0)
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Thor);
 					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
