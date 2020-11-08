@@ -86,8 +86,8 @@ void MeleeManager::executeMicro()
 						const sc2::Unit* repairTarget = nullptr;
 						const sc2::Unit* closestRepairTarget = nullptr;
 						float distanceToClosestRepairTarget = 0;
-						// If the melee unit is a worker
-						if (meleeUnit.getType().isWorker() && m_bot.GetMinerals() > (hasBarracks ? 55 : 0) && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
+						// If the melee unit is a slightly injured worker
+						if (meleeUnit.getType().isWorker() && meleeUnit.getHitPointsPercentage() <= 50 && m_bot.GetMinerals() > (hasBarracks ? 55 : 0) && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
 						{
 							const float range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
 							const float distSq = Util::DistSq(meleeUnit, target);
