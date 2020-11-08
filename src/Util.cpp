@@ -2899,6 +2899,15 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 				for(int j=0; j < marineCount; ++j)
 					state.units.push_back(CombatUnit(owner, sc2::UNIT_TYPEID::TERRAN_MARINE, 200, false));
 			}
+			// Always consider tanks as sieged unless it's an enemy one in vision
+			else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
+			{
+				const int owner = i == 0 ? playerId : 3 - playerId;
+				if (owner == playerId || unit->last_seen_game_loop < bot.GetCurrentFrame())
+					state.units.push_back(CombatUnit(CreateDummyFromUnit(unit)));
+				else
+					state.units.push_back(CombatUnit(*unit));
+			}
 			else
 				state.units.push_back(CombatUnit(*unit));
 		}
@@ -2973,4 +2982,14 @@ int Util::GetSelfPlayerId(const CCBot & bot)
 	if (playerInfo.empty())
 		return -1;
 	return playerInfo[0].player_id == bot.Observation()->GetPlayerID() ? 1 : 2;
+}
+
+int Util::GetSupplyOfUnits(const sc2::Units & units, CCBot & bot)
+{
+	int supply = 0;
+	for (auto unit : units)
+	{
+		supply += UnitType(unit->unit_type, bot).supplyRequired();
+	}
+	return supply;
 }

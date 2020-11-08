@@ -325,4 +325,6 @@ namespace Util
 	float SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
 	float SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, CCBot & bot);
 	int GetSelfPlayerId(const CCBot & bot);
+
+	int GetSupplyOfUnits(const sc2::Units & units, CCBot & bot);
 };
