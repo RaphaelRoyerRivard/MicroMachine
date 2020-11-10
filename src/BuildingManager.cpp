@@ -1489,11 +1489,13 @@ CCTilePosition BuildingManager::getProxyLocation()
 		for(auto i=0; i<baseLocations.size(); ++i)
 		{
 			auto baseLocation = baseLocations[i];
+			// Proxy shouldn't be the enemy base, its nat or our starting base
 			if (baseLocation == enemyBase || baseLocation == enemyNext || baseLocation == startingBaseLocation)
 				continue;
 			const auto startBaseDistance = baseLocation->getGroundDistance(startBaseLocation);
 			const auto enemyBaseDistance = baseLocation->getGroundDistance(enemyBasePosition);
-			if (startBaseDistance < enemyBaseDistance)
+			// Proxy should be accessible and closer to enemy base than our base
+			if (startBaseDistance <= 0 || startBaseDistance < enemyBaseDistance)
 				continue;
 			const auto dist = baseLocation->getGroundDistance(m_enemyMainRamp);
 			const auto startingBaseDist = startingBaseLocation->getGroundDistance(baseLocation->getDepotTilePosition());
@@ -1514,6 +1516,10 @@ CCTilePosition BuildingManager::getProxyLocation()
 			}
 			const CCPosition behindMineralLine = depotPos + Util::Normalized(centerOfMinerals - depotPos) * (j - 3);
 			if (Util::Dist(depotPos, enemyBasePosition) >= Util::Dist(behindMineralLine, enemyBasePosition) + 3)
+				continue;
+
+			// Do not use base location if we cannot reach behind the mineral line
+			if (baseLocation->getGroundDistance(behindMineralLine) <= 0)
 				continue;
 
 			// Do not use base location if too close from the sight of an Overlord
