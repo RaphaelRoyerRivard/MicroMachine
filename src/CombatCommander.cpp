@@ -626,6 +626,9 @@ void CombatCommander::updateBlockedTilesWithNeutral()
 	for (auto& neutralUnitPair : m_bot.GetNeutralUnits())
 	{
 		auto& neutralUnit = neutralUnitPair.second;
+		// This is to allow the BaseLocationManager to associate the geyser positions to their respective base
+		if (m_bot.GetCurrentFrame() < 5 && neutralUnit.getType().isGeyser())
+			continue;
 		updateBlockedTilesWithUnit(neutralUnit);
 	}
 }
