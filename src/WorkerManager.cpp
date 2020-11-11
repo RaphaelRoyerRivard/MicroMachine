@@ -92,11 +92,13 @@ void WorkerManager::lowPriorityChecks()
 	}
 	m_bot.StopProfiling("0.7.6.1     SalvageDepletedGeysers");
 
+	m_bot.StartProfiling("0.7.6.2     HandleWorkerTransfer");
 	HandleWorkerTransfer();
+	m_bot.StopProfiling("0.7.6.2     HandleWorkerTransfer");
 
-	m_bot.StartProfiling("0.7.6.4     validateRepairStationWorkers");
+	m_bot.StartProfiling("0.7.6.3     validateRepairStationWorkers");
 	m_bot.Workers().getWorkerData().validateRepairStationWorkers();
-	m_bot.StopProfiling("0.7.6.4     validateRepairStationWorkers");
+	m_bot.StopProfiling("0.7.6.3     validateRepairStationWorkers");
 }
 
 //Worker split between bases (transfer worker)

@@ -176,6 +176,7 @@ public:
 
 	void IssueGameStartCheats();
 	void IssueCheats();
+	void DebugMenu();
     uint32_t GetCurrentFrame() const;
     int GetMinerals() const;
     int GetCurrentSupply() const;

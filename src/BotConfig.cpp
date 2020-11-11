@@ -189,6 +189,8 @@ void BotConfig::readConfigFile()
 		if (AllowDebug)
 		{
 			JSONTools::ReadBool("AllowKeyControl", debug, AllowKeyControl);
+			JSONTools::ReadBool("TimeControl", debug, TimeControl);
+			JSONTools::ReadBool("DebugMenu", debug, DebugMenu);
 
 			JSONTools::ReadBool("PlayAsHuman", info, IsRealTime);
 			JSONTools::ReadBool("DrawTileInfo", debug, DrawTileInfo);
@@ -225,7 +227,6 @@ void BotConfig::readConfigFile()
 			JSONTools::ReadBool("DrawBuildingBase", debug, DrawBuildingBase);
 			JSONTools::ReadBool("DrawCurrentStartingStrategy", debug, DrawCurrentStartingStrategy);
 			JSONTools::ReadBool("LogArmyActions", debug, LogArmyActions);
-			JSONTools::ReadBool("TimeControl", debug, TimeControl);
 		}
     }
 
