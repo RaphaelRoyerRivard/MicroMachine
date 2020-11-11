@@ -153,6 +153,7 @@ class CombatCommander
 	std::map<const sc2::Unit *, const sc2::Unit *> m_medivacTargets;	// <target, medivac>
 	std::set<sc2::Tag> m_newCyclones;
 	std::set<sc2::Tag> m_toggledCyclones;
+	std::vector<sc2::UNIT_TYPEID> m_frontLineTypes = { sc2::UNIT_TYPEID::TERRAN_MARINE, sc2::UNIT_TYPEID::TERRAN_MARAUDER, sc2::UNIT_TYPEID::TERRAN_HELLION, sc2::UNIT_TYPEID::TERRAN_HELLIONTANK, sc2::UNIT_TYPEID::TERRAN_CYCLONE, sc2::UNIT_TYPEID::TERRAN_THOR, sc2::UNIT_TYPEID::TERRAN_THORAP };
 	bool m_hasEnoughVikingsAgainstTempests = true;
 	bool m_winAttackSimulation = true;
 	int m_lastRetreatFrame = -1000;
@@ -233,6 +234,7 @@ public:
 	std::map<const sc2::Unit *, const sc2::Unit *> & getMedivacTargets() { return m_medivacTargets; }
 	std::set<sc2::Tag> & getNewCyclones() { return m_newCyclones; }
 	std::set<sc2::Tag> & getToggledCyclones() { return m_toggledCyclones; }
+	const std::vector<sc2::UNIT_TYPEID> & getFrontLineTypes() const { return m_frontLineTypes; }
 	const std::vector<std::vector<bool>> & getBlockedTiles() const { return m_blockedTiles; }
 	void setBlockedTile(int x, int y);
 	const std::map<const sc2::Unit *, FlyingHelperMission> & getCycloneFlyingHelpers() const { return m_cycloneFlyingHelpers; }

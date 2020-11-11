@@ -349,7 +349,23 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 		else if (isTank)
 		{
-			if (m_order.getStatus() == "Retreat")
+			bool hasFrontLineUnits = m_order.getType() != SquadOrderTypes::Attack;
+			if (!hasFrontLineUnits)
+			{
+				goal = m_bot.Commander().Combat().GetIdlePosition();
+				const auto & frontLineTypes = m_bot.Commander().Combat().getFrontLineTypes();
+				for (auto frontLineType : frontLineTypes)
+				{
+					if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(frontLineType, m_bot), true, true) > 0)
+					{
+						if (frontLineType == sc2::UNIT_TYPEID::TERRAN_CYCLONE && cycloneFlyingHelpers.size() == 0)
+							continue;
+						hasFrontLineUnits = true;
+						break;
+					}
+				}
+			}
+			if (m_order.getStatus() == "Retreat" || !hasFrontLineUnits)
 			{
 				auto base = m_bot.Bases().getBaseContainingPosition(goal);
 				if (base && base->getResourceDepot().isValid())
