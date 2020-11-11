@@ -28,7 +28,7 @@ public:
     void executeMicro() override;
 	bool isTargetRanged(const sc2::Unit * target);
 	void CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & allyCombatUnits, sc2::Units & rangedUnitTargets, std::set<const sc2::Unit *> & closeUnitsSet);
-	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool harass = true, bool filterHigherUnits = false, bool considerOnlyUnitsInRange = false, bool filterPassiveBuildings = true);
+	const sc2::Unit * getTarget(const sc2::Unit * rangedUnit, const std::vector<const sc2::Unit *> & targets, bool harass = true, bool filterHigherUnits = false, bool considerOnlyUnitsInRange = false, bool filterPassiveBuildings = true, bool considerOnlyVisibleUnits = false);
 
 private:
 	std::vector<sc2::UNIT_TYPEID> supportTypes = {
@@ -46,6 +46,8 @@ private:
 	std::map<sc2::Tag, sc2::Unit> m_dummyStimedUnits;
 	std::map<const sc2::Unit *, sc2::Units> m_threatsForUnit;
 	std::map<const sc2::Unit *, std::map<std::set<const sc2::Unit *>, const sc2::Unit *>> m_threatTargetForUnit;	//<unit, <potential targets, target>>
+	std::map<const sc2::Unit *, long> m_siegedTanksLastValidTargetFrame;
+	std::map<const sc2::Unit *, long> m_tanksLastFrameFarFromRetreatGoal;
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
 	bool m_marauderAttackInitiated = false;
 

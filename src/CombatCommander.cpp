@@ -736,7 +736,7 @@ void CombatCommander::updateIdlePosition()
 		{
 			// Don't go on the base location, but a bit in front to not block it
 			const auto vectorAwayFromBase = Util::Normalized(baseLocation->getDepotPosition() - Util::GetPosition(baseLocation->getCenterOfMinerals()));
-			idlePosition = baseLocation->getDepotPosition() + vectorAwayFromBase * 5.f;
+			idlePosition = baseLocation->getDepotPosition() + vectorAwayFromBase * 7.f;
 		}
 		m_idlePosition = idlePosition;
 	}
@@ -1346,11 +1346,12 @@ void CombatCommander::updateAttackSquads()
 	std::vector<Unit> unitsToTransfer;
 	Squad & backupSquad = m_squadData.getSquad("Backup");
 
+	// Check to see if we want to move units from the main attack squad to the backup squad
 	for (auto & unit : mainAttackSquad.getUnits())
 	{
 		const auto dist = Util::DistSq(unit, squadCenter);
 		const auto radius = mainAttackSquad.getSquadOrder().getRadius();
-		if (dist > radius * radius)
+		if (dist > radius * radius && ShouldUnitHeal(unit.getUnitPtr()))
 			unitsToTransfer.push_back(unit);
 	}
 
@@ -1360,6 +1361,7 @@ void CombatCommander::updateAttackSquads()
 	}
 	unitsToTransfer.clear();
 	
+	// Check to see if we want to move units from the backup squad to the main attack squad
 	for (auto & backupUnit : backupSquad.getUnits())
 	{
 		bool closeEnough = mainAttackSquad.getUnits().empty();
@@ -1462,18 +1464,28 @@ void CombatCommander::updateAttackSquads()
 			m_bot.StopProfiling("0.10.4.2.3.1     simulateCombat");
 			if (m_winAttackSimulation)
 			{
-				m_winAttackSimulation = simulationResult > 0.f;
+				m_winAttackSimulation = simulationResult > 0.f || m_bot.GetCurrentSupply() >= 195;
 				if (!m_winAttackSimulation)
 				{
-					m_bot.Actions()->SendChat("Cancel offensive", sc2::ChatChannel::Team);
+					std::stringstream ss;
+					ss << std::fixed << std::setprecision(2);	// floats will show only 2 decimals
+					ss << "Cancel offensive (" << simulationResult * 100 << "%, " << Util::GetSupplyOfUnits(allyUnits, m_bot) << " ally supply vs " << Util::GetSupplyOfUnits(enemyUnits, m_bot) << " enemy supply)";
+					m_bot.Actions()->SendChat(ss.str(), sc2::ChatChannel::Team);
+					Util::Log(__FUNCTION__, ss.str(), m_bot);
 					m_lastRetreatFrame = m_bot.GetCurrentFrame();
 				}
 			}
 			else
 			{
-				m_winAttackSimulation = simulationResult > 0.5f;
+				m_winAttackSimulation = simulationResult > 0.5f || m_bot.GetCurrentSupply() >= 195;
 				if (m_winAttackSimulation)
-					m_bot.Actions()->SendChat("Relaunch offensive", sc2::ChatChannel::Team);
+				{
+					std::stringstream ss;
+					ss << std::fixed << std::setprecision(2);	// floats will show only 2 decimals
+					ss << "Relaunch offensive (" << simulationResult * 100 << "%, " << Util::GetSupplyOfUnits(allyUnits, m_bot) << " ally supply vs " << Util::GetSupplyOfUnits(enemyUnits, m_bot) << " enemy supply)";
+					m_bot.Actions()->SendChat(ss.str(), sc2::ChatChannel::Team);
+					Util::Log(__FUNCTION__, ss.str(), m_bot);
+				}
 			}
 			if (!m_winAttackSimulation)
 				retreat = true;
@@ -3240,6 +3252,7 @@ bool CombatCommander::ShouldUnitHeal(const sc2::Unit * unit) const
 	auto & unitsBeingRepaired = m_bot.Commander().Combat().getUnitsBeingRepaired();
 	const UnitType unitType(unit->unit_type, m_bot);
 	const bool hasBaseOrMinerals = m_bot.Bases().getBaseCount(Players::Self, false) > 0 || m_bot.GetFreeMinerals() >= 450;
+	bool speed = Util::getSpeedOfUnit(unit, m_bot);
 	if (unitType.isRepairable() && !unitType.isBuilding() && hasBaseOrMinerals)
 	{
 		const auto it = unitsBeingRepaired.find(unit);

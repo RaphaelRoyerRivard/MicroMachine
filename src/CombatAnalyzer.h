@@ -102,6 +102,7 @@ public:
 	int opponentZergAirArmor = 0;
 	int opponentZergAirWeapon = 0;
 
+	int opponentGroundSupply = 0;
 	int opponentAirSupply = 0;
 
 	CombatAnalyzer(CCBot & bot);

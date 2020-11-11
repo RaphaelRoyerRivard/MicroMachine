@@ -70,6 +70,7 @@ void CombatAnalyzer::lowPriorityChecks()
 	totalAirPsiCount = 0;
 	totalGroundMassiveCount = 0;
 	totalAirMassiveCount = 0;
+	opponentGroundSupply = 0;
 	opponentAirSupply = 0;
 
 	for (const auto & enemy : m_bot.GetEnemyUnits())
@@ -86,7 +87,7 @@ void CombatAnalyzer::lowPriorityChecks()
 		}
 		aliveEnemiesCountByType[unit.getUnitPtr()->unit_type]++;
 
-		if (unit.getType().isBuilding())
+		if (unit.getType().isBuilding() && !unit.getType().isCombatUnit())
 		{
 			continue;
 		}
@@ -116,6 +117,10 @@ void CombatAnalyzer::lowPriorityChecks()
 			continue;
 		}
 
+		// Ground and air supply. Consider it only if we've seen it in the last 2 minutes, otherwise it is too probable that the unit died outside of our vision
+		if (unit.getUnitPtr()->last_seen_game_loop > m_bot.GetCurrentFrame() - 120 * 22.4f)
+			(unit.isFlying() ? opponentAirSupply : opponentGroundSupply) += unit.getType().supplyRequired();
+
 		if (unit.isFlying())
 		{
 			totalAirUnitsCount++;
@@ -129,7 +134,9 @@ void CombatAnalyzer::lowPriorityChecks()
 			}
 		}
 		else
+		{
 			totalGroundUnitsCount++;
+		}
 
 
 		if (unit.isLight())
@@ -190,14 +197,6 @@ void CombatAnalyzer::lowPriorityChecks()
 				totalAirMassiveCount++;
 			else
 				totalGroundMassiveCount++;
-		}
-
-		// Check air supply
-		if (unit.isFlying())
-		{
-			// Consider it only if we've seen it in the last 2 minutes, otherwise it is too probable that the unit died outside of our vision
-			if (unit.getUnitPtr()->last_seen_game_loop > m_bot.GetCurrentFrame() - 120 * 22.4f)
-				opponentAirSupply += unit.getType().supplyRequired();
 		}
 
 		// Clean picked up Zerg units
