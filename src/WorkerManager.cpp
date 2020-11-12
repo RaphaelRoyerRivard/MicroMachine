@@ -838,8 +838,17 @@ void WorkerManager::handleRepairWorkers()
 				{
 					stopRepairing(worker);
 				}
-				else if (worker.isIdle())
+				else if (worker.isIdle() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::EFFECT_REPAIR)
 				{
+					// Do not spam repair action if the unit is a teleporting BC
+					if (repairedUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+					{
+						auto & unitAction = m_bot.Commander().Combat().GetUnitAction(repairedUnit.getUnitPtr());
+						if (unitAction.abilityID == sc2::ABILITY_ID::EFFECT_TACTICALJUMP && !unitAction.finished)
+						{
+							continue;
+						}
+					}
 					// Get back to repairing...
 					worker.repair(repairedUnit);
 				}
