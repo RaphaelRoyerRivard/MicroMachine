@@ -1647,14 +1647,14 @@ void ProductionManager::lowPriorityChecks()
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
 	const bool shouldProduceAntiAirDefense = m_bot.Strategy().shouldProduceAntiAirDefense();
-	const bool shouldProduceAntiInvis = m_bot.Strategy().enemyHasCombatInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
-	if (shouldProduceAntiAirDefense || shouldProduceAntiInvis)
+	const bool shouldProduceStaticAntiInvis = m_bot.Strategy().enemyHasMovingInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
+	if (shouldProduceAntiAirDefense || shouldProduceStaticAntiInvis)
 	{
 		const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
 		if (engineeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
 		{
 			const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-			if (!shouldProduceAntiInvis && starportCount > 0)
+			if (!shouldProduceStaticAntiInvis && starportCount > 0)
 			{
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 				if (vikingCount > 0)
