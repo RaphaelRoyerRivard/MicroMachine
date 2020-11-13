@@ -1007,7 +1007,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const auto finishedArmory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Armory.getUnitType(), true, true) > 0;
 				const int enemyZealotCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_ZEALOT).size();
 				const int enemyZerglingCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLING).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED).size();
-				const float cycloneTankRatio = 0;//float(cycloneCount) / float(tankCount);
+				const float cycloneTankRatio = float(cycloneCount) / float(tankCount);
 				const float enemySupplyAirGroundRatio = m_bot.Analyzer().opponentGroundSupply == 0 ? 100 : float(m_bot.Analyzer().opponentAirSupply) / float(m_bot.Analyzer().opponentGroundSupply);
 				// We want to build Thors against Protoss, but only after we have an Armory or 2 bases and we don't want more Thors than Cyclones
 				if (startingStrategy != PROXY_CYCLONES && enemyRace == sc2::Protoss && (finishedArmory || finishedBaseCount >= 2) && thorCount + 1 < cycloneCount)
@@ -1647,14 +1647,14 @@ void ProductionManager::lowPriorityChecks()
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
 	const bool shouldProduceAntiAirDefense = m_bot.Strategy().shouldProduceAntiAirDefense();
-	const bool shouldProduceAntiInvis = m_bot.Strategy().enemyHasCombatInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
-	if (shouldProduceAntiAirDefense || shouldProduceAntiInvis)
+	const bool shouldProduceStaticAntiInvis = m_bot.Strategy().enemyHasMovingInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
+	if (shouldProduceAntiAirDefense || shouldProduceStaticAntiInvis)
 	{
 		const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
 		if (engineeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
 		{
 			const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-			if (!shouldProduceAntiInvis && starportCount > 0)
+			if (!shouldProduceStaticAntiInvis && starportCount > 0)
 			{
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 				if (vikingCount > 0)

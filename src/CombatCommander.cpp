@@ -918,6 +918,7 @@ void CombatCommander::updateBackupSquads()
         }
     }
     
+	// HELLIONS
 	if (idleHellions.size() >= Util::HELLION_SQUAD_COUNT)
 	{
 		for (auto hellion : idleHellions)
@@ -925,6 +926,8 @@ void CombatCommander::updateBackupSquads()
 			m_squadData.assignUnitToSquad(*hellion, backupSquad);
 		}
 	}
+
+	// MARINES
 	const auto battlecruisers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
 	if (idleMarines.size() >= 10 && battlecruisers > 0)
 	{
@@ -933,6 +936,8 @@ void CombatCommander::updateBackupSquads()
 			m_squadData.assignUnitToSquad(*marine, backupSquad);
 		}
 	}
+
+	// VIKINGS
 	const auto tempestCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
 	const auto VIKING_TEMPEST_RATIO = 2.5f;
 	const auto vikingsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true);
@@ -959,6 +964,8 @@ void CombatCommander::updateBackupSquads()
 			}
 		}
 	}
+
+	// CYCLONES
 	if (!idleCyclones.empty())
 	{
 		bool addCyclones = false;

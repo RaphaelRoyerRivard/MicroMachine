@@ -18,7 +18,7 @@ const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
-const int BATTLECRUISER_TELEPORT_FRAME_COUNT = 90;
+const int BATTLECRUISER_TELEPORT_FRAME_COUNT = 126;
 const int BATTLECRUISER_TELEPORT_COOLDOWN_FRAME_COUNT = 1591 + BATTLECRUISER_TELEPORT_FRAME_COUNT;
 const int BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT = 68;
 const int BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT = 1591;
@@ -349,7 +349,23 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 		else if (isTank)
 		{
-			if (m_order.getStatus() == "Retreat")
+			bool hasFrontLineUnits = m_order.getType() != SquadOrderTypes::Attack;
+			if (!hasFrontLineUnits)
+			{
+				goal = m_bot.Commander().Combat().GetIdlePosition();
+				const auto & frontLineTypes = m_bot.Commander().Combat().getFrontLineTypes();
+				for (auto frontLineType : frontLineTypes)
+				{
+					if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(frontLineType, m_bot), true, true) > 0)
+					{
+						if (frontLineType == sc2::UNIT_TYPEID::TERRAN_CYCLONE && cycloneFlyingHelpers.size() == 0)
+							continue;
+						hasFrontLineUnits = true;
+						break;
+					}
+				}
+			}
+			if (m_order.getStatus() == "Retreat" || !hasFrontLineUnits)
 			{
 				auto base = m_bot.Bases().getBaseContainingPosition(goal);
 				if (base && base->getResourceDepot().isValid())
