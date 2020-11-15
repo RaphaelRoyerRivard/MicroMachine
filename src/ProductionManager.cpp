@@ -1339,13 +1339,21 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, false);
 				if (barracksCount > 0)
 				{
-					if (m_bot.GetFreeGas() >= 50 || m_bot.Workers().getNumGasWorkers() > 0)
+					const int refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false);
+					if (refineryCount > 0)
 					{
-						m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
+						if (m_bot.GetFreeGas() >= 50 || m_bot.Workers().getNumGasWorkers() > 0)
+						{
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
+						}
+						else
+						{
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+						}
 					}
 					else
 					{
-						m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+						m_queue.queueAsHighestPriority(MetaTypeEnum::Refinery, false);
 					}
 				}
 				else

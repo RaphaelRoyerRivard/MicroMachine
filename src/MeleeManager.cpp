@@ -27,6 +27,7 @@ void MeleeManager::executeMicro()
 {
     const std::vector<Unit> & meleeUnits = getUnits();
 	const bool hasBarracks = !m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS).empty();
+	const bool hasRefinery = !m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERY).empty();
 
     // for each meleeUnit
     for (auto & meleeUnit : meleeUnits)
@@ -87,7 +88,7 @@ void MeleeManager::executeMicro()
 						const sc2::Unit* closestRepairTarget = nullptr;
 						float distanceToClosestRepairTarget = 0;
 						// If the melee unit is a slightly injured worker
-						if (meleeUnit.getType().isWorker() && meleeUnit.getHitPointsPercentage() <= 50 && m_bot.GetMinerals() > (hasBarracks ? 55 : 0) && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
+						if (meleeUnit.getType().isWorker() && meleeUnit.getHitPointsPercentage() <= 50 && m_bot.GetMinerals() > (!hasRefinery ? 80 : hasBarracks ? 55 : 0) && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
 						{
 							const float range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
 							const float distSq = Util::DistSq(meleeUnit, target);
