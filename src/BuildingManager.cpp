@@ -553,9 +553,9 @@ void BuildingManager::validateWorkersAndBuildings()
 				bool diedOnTheWay = !b.builderUnit.isValid() || !b.builderUnit.isAlive();
 				bool hasRequired = m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true);
 				bool isWorkerRushed = m_bot.Strategy().isWorkerRushed();
-				if ((diedOnTheWay && !isWorkerRushed) || !hasRequired)
+				if ((diedOnTheWay && (!isWorkerRushed || !b.buildingUnit.isValid())) || !hasRequired)
 				{
-					std::string message = diedOnTheWay && !isWorkerRushed ? "builder died on the way" : "we don't have the requirements";
+					std::string message = diedOnTheWay && (!isWorkerRushed || !b.buildingUnit.isValid()) ? "builder died on the way" : "we don't have the requirements";
 					auto remove = CancelBuilding(b, message, false);
 					toRemove.push_back(remove);
 					Util::Log("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
@@ -839,7 +839,7 @@ void BuildingManager::constructAssignedBuildings()
 							}
 						}
 						// If the building is flying, it's because it is in the transition to land somewhere it will have enough space for its addon
-						if (b.builderUnit.isFlying())
+						if (b.buildingUnit.isFlying())
 						{
 							const auto landingPosition = m_liftedBuildingPositions[b.builderUnit.getTag()];
 							Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
@@ -944,28 +944,36 @@ void BuildingManager::constructAssignedBuildings()
 							}
 						}
 					}
-					else
+					else // not an addon
 					{
-						if (m_bot.GetMinerals() > b.type.mineralPrice())
+						if (b.buildingUnit.isValid())
 						{
-							b.builderUnit.build(b.type, b.finalPosition);
-							if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
-							{
-								// We want the worker to be close so it doesn't flag the base as blocked by error
-								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
-								// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
-								if (closeEnough)
-								{
-									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), b.type);
-									b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
-									b.buildCommandGiven = false;
-								}
-								continue;
-							}
+							if (!b.builderUnit.isConstructing(b.buildingUnit.getType()))
+								b.builderUnit.rightClick(b.buildingUnit);
 						}
 						else
 						{
-							setCommandGiven = false;
+							if (m_bot.GetMinerals() >= b.type.mineralPrice())
+							{
+								b.builderUnit.build(b.type, b.finalPosition);
+								if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
+								{
+									// We want the worker to be close so it doesn't flag the base as blocked by error
+									const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
+									// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
+									if (closeEnough)
+									{
+										m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), b.type);
+										b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
+										b.buildCommandGiven = false;
+									}
+									continue;
+								}
+							}
+							else
+							{
+								setCommandGiven = false;
+							}
 						}
 					}
 				}
