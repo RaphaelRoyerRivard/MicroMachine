@@ -541,7 +541,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if ((!isCyclone || cycloneShouldUseLockOn || shouldAttack) && AllowUnitToPathFind(rangedUnit, checkInfluence, "Offensive"))
 		{
 			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
-			const bool ignoreCombatInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget || (target && target->last_seen_game_loop < m_bot.GetCurrentFrame());
+			const bool ignoreCombatInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget || (target && !rangedUnit->is_flying && target->last_seen_game_loop < m_bot.GetCurrentFrame() && Util::IsEnemyHiddenOnHighGround(rangedUnit, target, m_bot));	// third condition is to allow Marauders to go back on top of a ramp after being pushed down by melee units
 			const auto targetRange = target ? Util::GetAttackRangeForTarget(target, rangedUnit, m_bot) : 0.f;
 			const bool tolerateInfluenceToAttackTarget = targetRange > 0.f && unitAttackRange - targetRange >= 2 && ShouldAttackTarget(rangedUnit, target, threats);
 			const auto maxInfluence = (cycloneShouldUseLockOn && target) ? CYCLONE_MAX_INFLUENCE_FOR_LOCKON : tolerateInfluenceToAttackTarget ? MAX_INFLUENCE_FOR_OFFENSIVE_KITING : 0.f;

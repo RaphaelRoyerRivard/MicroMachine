@@ -1858,6 +1858,13 @@ void CCBot::IssueGameStartCheats()
 	// Creep targetting test
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMOR, enemyLocation - towardsCenter * 10, player1, 2);
+
+	// Test to reproduce bug where Banshee was ignoring influence to attack its target
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, nat - towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, nat + towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, nat + towardsCenter * 8, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 10, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
