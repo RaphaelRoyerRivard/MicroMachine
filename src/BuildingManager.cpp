@@ -1127,7 +1127,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 				{
 					// Builder is alright, probably just saving his ass
 					const auto workerJob = m_bot.Workers().getWorkerData().getWorkerJob(b.builderUnit);
-					if (workerJob == WorkerJobs::Combat)
+					if (workerJob == WorkerJobs::Combat && !m_bot.Strategy().isWorkerRushed())
 						continue;
 					if (workerJob == WorkerJobs::Build)
 					{

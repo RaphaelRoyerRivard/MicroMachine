@@ -777,7 +777,7 @@ void CombatCommander::updateIdleSquad()
 void CombatCommander::updateWorkerFleeSquad()
 {
 	Squad & workerFleeSquad = m_squadData.getSquad("WorkerFlee");
-	const bool earlyRushed = false;// m_bot.Strategy().isEarlyRushed();
+	const bool earlyRushed = m_bot.Strategy().isEarlyRushed();
 	for (auto & worker : m_bot.Workers().getWorkers())
 	{
 		const CCTilePosition tile = Util::GetTilePosition(worker.getPosition());
@@ -834,13 +834,6 @@ void CombatCommander::updateWorkerFleeSquad()
 							{
 								std::vector<Unit> proxyWorkersToRemove;
 								for (const auto & proxyWorker : m_bot.Workers().getWorkerData().getProxyWorkers())
-								{
-									if (proxyWorker.getUnitPtr() != worker.getUnitPtr())
-									{
-										proxyWorkersToRemove.push_back(proxyWorker);
-									}
-								}
-								for (const auto & proxyWorker : proxyWorkersToRemove)
 								{
 									m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorker);
 								}
