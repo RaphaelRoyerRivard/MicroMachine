@@ -1206,7 +1206,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 			if (newTarget)
 			{
 				float dist = Util::Dist(tank->pos, newTarget->pos);
-				float range = Util::GetAttackRangeForTarget(tank, newTarget, m_bot);
+				float range = Util::GetAttackRangeForTarget(&dummySiegeTankSieged, newTarget, m_bot);
 				float speed = Util::getSpeedOfUnit(newTarget, m_bot);
 				if (dist <= range + speed)
 				{
