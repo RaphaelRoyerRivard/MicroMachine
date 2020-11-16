@@ -2087,6 +2087,10 @@ void CombatCommander::updateDefenseSquads()
 
 	if (workerRushed)
 	{
+		if (!m_bot.Strategy().isWorkerRushed())
+		{
+			Util::Log(__FUNCTION__, "Worker rush detected", m_bot);
+		}
 		m_lastWorkerRushDetectionFrame = m_bot.GetCurrentFrame();
 		m_bot.Strategy().setIsWorkerRushed(true);
 	}

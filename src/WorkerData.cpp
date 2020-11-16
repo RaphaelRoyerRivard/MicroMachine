@@ -172,7 +172,8 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit, bool m
     }
     else if (job == WorkerJobs::Build)
     {
-
+		if (jobUnit.isValid() && jobUnit.getBuildProgress() < 1.f)
+			worker.rightClick(jobUnit);	// We want to send the SCV to continue the building
     }
 	else if (job == WorkerJobs::Idle)
 	{//Must not call stop().

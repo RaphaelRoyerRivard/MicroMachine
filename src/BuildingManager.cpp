@@ -725,7 +725,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 			}
 		}
 
-		m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
+		m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.buildingUnit);//Set as builder
 		b.builderUnit = builderUnit;
 
 		if (!b.underConstruction)
@@ -838,8 +838,8 @@ void BuildingManager::constructAssignedBuildings()
 								break;
 							}
 						}
-						// If the building is flying, it's because it is in the transition to land somewhere it will have enough space for its addon
-						if (b.buildingUnit.isFlying())
+						// If the builder (which is a building that made an addon) is flying, it's because it is in the transition to land somewhere it will have enough space for its addon
+						if (b.builderUnit.isFlying())
 						{
 							const auto landingPosition = m_liftedBuildingPositions[b.builderUnit.getTag()];
 							Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
@@ -997,7 +997,7 @@ void BuildingManager::checkForStartedConstruction()
 		}
 		if (b.buildingUnit.isValid())
 		{
-			std::cout << "Replaced dead worker or Building mis-match somehow\n";
+			Util::Log(__FUNCTION__, "Replaced dead worker or Building mis-match somehow", m_bot);
 			b.status = BuildingStatus::UnderConstruction;
 			continue;
 		}
@@ -1090,6 +1090,8 @@ void BuildingManager::checkForDeadTerranBuilders()
 	if (!Util::IsTerran(m_bot.GetSelfRace()))
 		return;
 
+	std::vector<Building> buildingsToRemove;
+
 	// for each of our buildings under construction
 	for (auto & b : m_buildings)
 	{
@@ -1114,6 +1116,27 @@ void BuildingManager::checkForDeadTerranBuilders()
 		{
 			Util::DebugLog(__FUNCTION__, "BuilderUnit is invalid", m_bot);
 			continue;
+		}
+
+		// cancel second refinery against worker rush
+		if (m_bot.Strategy().isWorkerRushed() && b.type.isRefinery())
+		{
+			for (auto & building : m_buildings)
+			{
+				if (building.type.isRefinery())
+				{
+					if (!building.buildingUnit.isValid()) 
+					{
+						// cancel the other unstarted refinery
+						buildingsToRemove.push_back(CancelBuilding(building, "second refinery against worker rush", false));
+					}
+					else if (b.buildingUnit.getBuildProgress() < building.buildingUnit.getBuildProgress())
+					{
+						// cancel this refinery which build progress is inferior
+						buildingsToRemove.push_back(CancelBuilding(b, "second refinery against worker rush", false));
+					}
+				}
+			}
 		}
 
 		auto progress = b.buildingUnit.getUnitPtr()->build_progress;
@@ -1157,7 +1180,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 				{
 					continue;
 				}
-				m_bot.Workers().getWorkerData().setWorkerJob(newBuilderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
+				m_bot.Workers().getWorkerData().setWorkerJob(newBuilderUnit, WorkerJobs::Build, b.buildingUnit);//Set as builder
 				b.builderUnit = newBuilderUnit;
 				b.status = BuildingStatus::Assigned;
 				m_buildingsNewWorker[tag] = newBuilderUnit;
@@ -1184,6 +1207,8 @@ void BuildingManager::checkForDeadTerranBuilders()
 			m_buildingsProgress[tag] = progress;
 		}
     }
+
+	removeBuildings(buildingsToRemove);
 }
 
 // STEP 6: CHECK FOR COMPLETED BUILDINGS
