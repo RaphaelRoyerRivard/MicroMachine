@@ -835,7 +835,11 @@ void CombatCommander::updateWorkerFleeSquad()
 								std::vector<Unit> proxyWorkersToRemove;
 								for (const auto & proxyWorker : m_bot.Workers().getWorkerData().getProxyWorkers())
 								{
-									m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorker);
+									proxyWorkersToRemove.push_back(proxyWorker);
+								}
+								for (const auto & proxyWorkerToRemove : proxyWorkersToRemove)
+								{
+									m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorkerToRemove);
 								}
 								m_bot.Buildings().CancelBuilding(building, "proxy worker is near enemy workers");
 								m_bot.Strategy().setStartingStrategy(STANDARD);
