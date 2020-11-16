@@ -405,7 +405,9 @@ void Squad::clear()
 
         if (unit.getType().isWorker())
         {
-            m_bot.Workers().finishedWithWorker(unit);
+			int workerJob = m_bot.Workers().getWorkerData().getWorkerJob(unit);
+			if (workerJob == WorkerJobs::Combat || (m_order.getType() == SquadOrderTypes::Scout && workerJob == WorkerJobs::Scout))
+				m_bot.Workers().finishedWithWorker(unit);
         }
     }
 

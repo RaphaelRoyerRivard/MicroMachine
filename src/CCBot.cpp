@@ -1865,6 +1865,9 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, nat + towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, nat + towardsCenter * 8, player1, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 10, player1, 1);*/
+
+	// Test to reproduce bugs related to Probe rush
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 30, player1, 15);
 }
 
 void CCBot::IssueCheats()

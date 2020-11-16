@@ -783,10 +783,6 @@ void WorkerManager::handleIdleWorkers()
 					if(building.builderUnit == worker)
 					{
 						m_workerData.setWorkerJob(worker, WorkerJobs::Build, building.buildingUnit);
-						if(building.buildingUnit.isValid() && building.buildingUnit.getBuildProgress() < 1.f)
-						{
-							Micro::SmartRightClick(worker.getUnitPtr(), building.buildingUnit.getUnitPtr(), m_bot);
-						}
 						isBuilder = true;
 						break;
 					}
@@ -1173,7 +1169,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID w
 	return getClosestMineralWorkerTo(pos, workersToIgnore, minHpPercentage, filterMoving);
 }
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving, bool allowCombatWorkers) const
 {
 	Unit closestMineralWorker;
 	auto closestDist = 0.f;
@@ -1198,11 +1194,11 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 			continue;
 
 		// if it is a mineral worker, Idle or None
-		if (!isFree(worker))
+		if (!isFree(worker) && (!allowCombatWorkers || m_workerData.getWorkerJob(worker) != WorkerJobs::Combat))
 			continue;
 		if (isReturningCargo(worker))
 			continue;
-		if (filterMoving && worker.isMoving())
+		if (filterMoving && worker.isMoving() && (!allowCombatWorkers || m_workerData.getWorkerJob(worker) != WorkerJobs::Combat))
 			continue;
 		
 		auto dist = Util::DistSq(worker.getPosition(), pos);
@@ -1504,9 +1500,14 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMo
 	{
 		isValid = true;
 		builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0, filterMoving);
-		if (!builderWorker.isValid())//If no worker left to check
+		if (!builderWorker.isValid())	// If we can't find a free worker
 		{
-			break;
+			// Check for a combat worker
+			builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0, filterMoving, true);
+			if (!builderWorker.isValid())	//If no worker left to check
+			{
+				break;
+			}
 		}
 
 		//Check if worker is already building something else
@@ -1525,7 +1526,7 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMo
     // if the worker exists (one may not have been found in rare cases)
     if (builderWorker.isValid() && setJobAsBuilder && m_workerData.getWorkerJob(builderWorker) != WorkerJobs::Build)
     {
-		m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.builderUnit);
+		m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.buildingUnit);
     }
 
     return builderWorker;

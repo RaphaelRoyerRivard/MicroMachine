@@ -1472,7 +1472,9 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
 		{
 			if (!hasRequiredUnit(required, true) && !m_queue.contains(MetaType(required, m_bot)))
 			{
-				std::cout << item.type.getName() << " needs a requirement: " << required.getName() << "\n";
+				std::stringstream ss;
+				ss << item.type.getName() << " needs a requirement: " << required.getName();
+				Util::Log(__FUNCTION__, ss.str(), m_bot);
 				MM::BuildOrderItem requiredItem = m_queue.queueItem(MM::BuildOrderItem(MetaType(required, m_bot), 0, item.blocking));
 				fixBuildOrderDeadlock(requiredItem);
 				break;
