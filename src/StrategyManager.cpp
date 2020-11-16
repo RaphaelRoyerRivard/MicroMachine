@@ -422,6 +422,11 @@ void StrategyManager::checkForStrategyChange()
 					}
 				}
 				m_bot.Buildings().removeBuildings(toRemove);
+				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+				for (const auto & proxyWorker : proxyWorkers)
+				{
+					proxyWorker.move(m_bot.GetStartLocation());
+				}
 				m_bot.Workers().getWorkerData().clearProxyWorkers();
 				setStartingStrategy(EARLY_EXPAND);
 				m_bot.Commander().Production().clearQueue();
