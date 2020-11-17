@@ -352,7 +352,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			bool hasFrontLineUnits = m_order.getType() != SquadOrderTypes::Attack;
 			if (!hasFrontLineUnits)
 			{
-				goal = m_bot.Commander().Combat().GetIdlePosition();
 				const auto & frontLineTypes = m_bot.Commander().Combat().getFrontLineTypes();
 				for (auto frontLineType : frontLineTypes)
 				{
@@ -377,7 +376,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 	// To allow tanks to siege up the closest they can to their goal, we need to know for how long they've been close to it
-	if (isTank && Util::DistSq(rangedUnit->pos, goal) > 10 * 10)
+	if (isTank && Util::DistSq(rangedUnit->pos, goal) > 6 * 6)
 	{
 		m_tanksLastFrameFarFromRetreatGoal[rangedUnit] = m_bot.GetCurrentFrame();
 	}
@@ -1202,13 +1201,14 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 		{
 			// Also siege if there is an enemy not too far away
 			auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
-			auto newTarget = getTarget(&dummySiegeTankSieged, targets, true, true, false, false, true);
+			auto newTarget = getTarget(&dummySiegeTankSieged, targets, false, true, true, false, true);	// TODO remove the "considerOnlyUnitsInRange" flag
 			if (newTarget)
 			{
 				float dist = Util::Dist(tank->pos, newTarget->pos);
 				float range = Util::GetAttackRangeForTarget(&dummySiegeTankSieged, newTarget, m_bot);
 				float speed = Util::getSpeedOfUnit(newTarget, m_bot);
-				if (dist <= range + speed)
+				// TODO consider movement of enemy units
+				if (dist <= range)// + speed)
 				{
 					siege = true;
 				}
@@ -1224,9 +1224,9 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 	// Unsiege logic
 	else
 	{
-		auto newTarget = getTarget(tank, targets, false, true, false, false, true);
-		// Unsiege only if there is no target or if it is not currently visible or if it is too far
-		if (!newTarget || Util::Dist(tank->pos, newTarget->pos) > Util::GetAttackRangeForTarget(tank, newTarget, m_bot) + Util::getSpeedOfUnit(newTarget, m_bot))
+		auto newTarget = getTarget(tank, targets, false, true, true, false, true);	// TODO remove the "considerOnlyUnitsInRange" flag
+		// Unsiege only if there is no target
+		if (!newTarget)// || Util::Dist(tank->pos, newTarget->pos) > Util::GetAttackRangeForTarget(tank, newTarget, m_bot) + Util::getSpeedOfUnit(newTarget, m_bot))
 		{
 			// And only after 2.5s passed since the last valid target
 			if (m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f)
