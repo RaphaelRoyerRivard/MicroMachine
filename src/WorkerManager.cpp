@@ -710,6 +710,7 @@ void WorkerManager::handleIdleWorkers()
             (workerJob != WorkerJobs::Move) &&
             (workerJob != WorkerJobs::Repair) &&
 			(workerJob != WorkerJobs::Scout) &&
+			(workerJob != WorkerJobs::Combat) &&
 			(workerJob != WorkerJobs::Build))//Prevent premoved builder from going Idle if they lack the ressources, also prevents refinery builder from going Idle
 		{
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
