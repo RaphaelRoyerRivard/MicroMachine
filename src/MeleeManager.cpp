@@ -162,7 +162,7 @@ void MeleeManager::executeMicro()
 										movePosition = Util::GetPosition(closestUnexploredTile);
 									}
 								}
-								const auto action = UnitAction(MicroActionType::Move, m_order.getPosition(), false, 0, "move towards target");
+								const auto action = UnitAction(MicroActionType::Move, movePosition, false, 0, "move towards target");
 								m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 							}
 						}

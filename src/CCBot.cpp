@@ -1869,6 +1869,10 @@ void CCBot::IssueGameStartCheats()
 
 	// Test to reproduce bugs related to Probe rush
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 30, player1, 15);
+
+	// Test to reproduce bug where CC is not lifted against worker rush
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, player1, 20);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, enemyLocation, player2, 1);*/
 }
 
 void CCBot::IssueCheats()

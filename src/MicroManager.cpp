@@ -137,6 +137,8 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 				proximityValue *= 0.25f;
 		}
 	}
+	if (considerOnlyUnitsInRange && target->display_type == sc2::Unit::Snapshot)	// Sometimes we see enemy units attacking our units but we don't have vision so we can't attack it
+		return 0.f;
 	if (target->last_seen_game_loop < m_bot.GetGameLoop())
 		proximityValue *= 0.25f;
 
