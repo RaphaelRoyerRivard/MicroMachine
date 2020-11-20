@@ -112,7 +112,7 @@ void BuildingManager::lowPriorityChecks()
 				if (building.type == Util::GetResourceDepotType())//Special code for expands, we want to flag them as blocked and build elsewhere.
 				{
 					m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(building.finalPosition), building.type);
-					building.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
+					building.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
 					building.buildCommandGiven = false;
 				}
 				else
@@ -689,23 +689,41 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 
 			b.finalPosition = testLocation;
 
-			const auto previousBuilder = builderUnit.getUnitPtr();
 			// grab the worker unit from WorkerManager which is closest to this final position
-			builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker);
+			builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker, std::vector<CCUnitID>{builderUnit.getUnitPtr()->tag});//TODO Should be able to pick amongst all workers, not just the closest
 			//Test if worker path is safe
 			if(!builderUnit.isValid())
 			{
 				Util::DebugLog(__FUNCTION__, "Couldn't find a builder for " + b.type.getName(), m_bot);
 				return false;
 			}
-			if (builderUnit.getUnitPtr() == previousBuilder)
-			{
-				return false;
-			}
 			if (!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
 			{
-				Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe", m_bot);
-				return false;
+				if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER)
+				{
+					auto location = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, false, true, false, false, false);
+					auto base = m_bot.Bases().getBaseContainingPosition(Util::GetPosition(location));
+					if (base->isUnderAttack())
+					{
+						Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe. Can't get a location to build the CommandCenter, base underattack.", m_bot);
+						return false;
+					}
+
+					auto temporayFinalPosition = b.finalPosition;//Used to reset the final position in case of failure
+					b.finalPosition = location;
+					builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker, std::vector<CCUnitID>{builderUnit.getUnitPtr()->tag});
+					if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
+					{
+						b.finalPosition = temporayFinalPosition;
+						Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe. Can't get a worker with a safe path to build at the location.", m_bot);
+						return false;
+					}
+				}
+				else
+				{
+					Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe", m_bot);
+					return false;
+				}
 			}
 		}
 		else if(!isRushed)//Do not remove postion from m_nextBuildLocation if we are being rushed, since we didn't use it.
@@ -957,7 +975,7 @@ void BuildingManager::constructAssignedBuildings()
 								if (closeEnough)
 								{
 									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), b.type);
-									b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
+									b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
 									b.buildCommandGiven = false;
 								}
 								continue;
@@ -1207,6 +1225,16 @@ void BuildingManager::checkForCompletedBuildings()
 				}
 				else
 				{
+					if (b.type.isResourceDepot())
+					{
+						//check if the command center is an expand or a command center to lift up
+						auto base = m_bot.Bases().getBaseForDepotPosition(b.finalPosition);
+						if (base == nullptr || base->getResourceDepot().getTag() != b.buildingUnit.getTag())
+						{
+							b.buildingUnit.useAbility(sc2::ABILITY_ID::LIFT);
+						}
+					}
+
 					m_bot.Workers().finishedWithWorker(b.builderUnit);
 					if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
 					{
@@ -1481,7 +1509,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 		const auto startingBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
 		const auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
 		const auto enemyBasePosition = Util::GetPosition(enemyBase->getDepotTilePosition());
-		const auto enemyNextExpansion = m_bot.Bases().getNextExpansion(Players::Enemy, false, false);
+		const auto enemyNextExpansion = m_bot.Bases().getNextExpansion(Players::Enemy, false, false, false);
 		const auto enemyNext = m_bot.Bases().getBaseLocations()[1];
 		auto startBaseLocation = m_bot.GetStartLocation();
 		const auto & baseLocations = m_bot.Bases().getBaseLocations();	// Sorted by closest to enemy base
@@ -1625,7 +1653,7 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool che
 	else if (b.type.isResourceDepot())
     {
 		m_bot.StartProfiling("0.8.3.1.2 getNextExpansionPosition");
-		buildingLocation = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false);
+		buildingLocation = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
 		m_bot.StopProfiling("0.8.3.1.2 getNextExpansionPosition");
     }
 	else
@@ -2351,7 +2379,7 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 				(unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING || 
 				unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING))
 			{
-				landingPosition = Util::GetPosition(m_bot.Bases().getNextExpansionPosition(Players::Self, true, true));
+				landingPosition = Util::GetPosition(m_bot.Bases().getNextExpansionPosition(Players::Self, false, false, true));
 				if (unit.getUnitPtr()->orders.size() == 0 && 
 					m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end() && m_commandCenterLandPosition[unit.getTag()] == landingPosition)
 				{//The land order likely was cancelled, the expand is most likely blocked.

@@ -1487,10 +1487,10 @@ int WorkerManager::getWorkerCountAtBasePosition(CCPosition basePosition) const
 // gets a builder for BuildingManager to use
 // if setJobAsBuilder is true (default), it will be flagged as a builder unit
 // set 'setJobAsBuilder' to false if we just want to see which worker will build a building
-Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMoving) const
+Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMoving, const std::vector<CCUnitID> unusableWorkers) const
 {
 	bool isValid;
-	std::vector<CCUnitID> invalidWorkers;
+	std::vector<CCUnitID> invalidWorkers = unusableWorkers;
 	Unit builderWorker;
 	
 	do

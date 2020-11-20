@@ -44,8 +44,8 @@ public:
 	void FixNullPlayerStartingBaseLocation();
 	int getBaseCount(int player, bool isCompleted = false) const;
 
-	BaseLocation* getNextExpansion(int player, bool checkBlocked, bool checkBuildable) const;
-	CCTilePosition getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable) const;
+	BaseLocation* getNextExpansion(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles) const;
+	CCTilePosition getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles) const;
 	CCTilePosition getBasePosition(int player, int index) const;
 	BaseLocation* getClosestBase(const CCPosition position, bool checkContains) const;
 	CCTilePosition getClosestBasePosition(const sc2::Unit* unit, int player = Players::Self, bool shiftTowardsResourceDepot = false, bool checkContainsMinerals = false, bool checkUnderAttack = false) const;

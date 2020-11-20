@@ -1934,7 +1934,7 @@ void CombatCommander::updateDefenseSquads()
 	// for each of our occupied regions
 	const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
 	const auto & ourBases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
-	auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false);
+	auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false, false);
 	std::set<BaseLocation*> bases;
 	bases.insert(ourBases.begin(), ourBases.end());
 	if (nextExpansion)
