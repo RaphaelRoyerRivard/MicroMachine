@@ -18,7 +18,7 @@ const float HARASS_THREAT_MAX_REPULSION_INTENSITY = 1.5f;
 const float HARASS_THREAT_RANGE_BUFFER = 1.f;
 const float HARASS_THREAT_SPEED_MULTIPLIER_FOR_KD8CHARGE = 2.25f;
 const int HARASS_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
-const int BATTLECRUISER_TELEPORT_FRAME_COUNT = 90;
+const int BATTLECRUISER_TELEPORT_FRAME_COUNT = 126;
 const int BATTLECRUISER_TELEPORT_COOLDOWN_FRAME_COUNT = 1591 + BATTLECRUISER_TELEPORT_FRAME_COUNT;
 const int BATTLECRUISER_YAMATO_CANNON_FRAME_COUNT = 68;
 const int BATTLECRUISER_YAMATO_CANNON_COOLDOWN_FRAME_COUNT = 1591;
@@ -349,7 +349,22 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 		else if (isTank)
 		{
-			if (m_order.getStatus() == "Retreat")
+			bool hasFrontLineUnits = m_order.getType() != SquadOrderTypes::Attack;
+			if (!hasFrontLineUnits)
+			{
+				const auto & frontLineTypes = m_bot.Commander().Combat().getFrontLineTypes();
+				for (auto frontLineType : frontLineTypes)
+				{
+					if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(frontLineType, m_bot), true, true) > 0)
+					{
+						if (frontLineType == sc2::UNIT_TYPEID::TERRAN_CYCLONE && cycloneFlyingHelpers.size() == 0)
+							continue;
+						hasFrontLineUnits = true;
+						break;
+					}
+				}
+			}
+			if (m_order.getStatus() == "Retreat" || !hasFrontLineUnits)
 			{
 				auto base = m_bot.Bases().getBaseContainingPosition(goal);
 				if (base && base->getResourceDepot().isValid())
@@ -361,7 +376,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 	// To allow tanks to siege up the closest they can to their goal, we need to know for how long they've been close to it
-	if (isTank && Util::DistSq(rangedUnit->pos, goal) > 10 * 10)
+	if (isTank && Util::DistSq(rangedUnit->pos, goal) > 6 * 6)
 	{
 		m_tanksLastFrameFarFromRetreatGoal[rangedUnit] = m_bot.GetCurrentFrame();
 	}
@@ -525,7 +540,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if ((!isCyclone || cycloneShouldUseLockOn || shouldAttack) && AllowUnitToPathFind(rangedUnit, checkInfluence, "Offensive"))
 		{
 			const CCPosition pathFindEndPos = target && !unitShouldHeal && !isCycloneHelper ? target->pos : goal;
-			const bool ignoreCombatInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget || (target && target->last_seen_game_loop < m_bot.GetCurrentFrame());
+			const bool ignoreCombatInfluence = (cycloneShouldUseLockOn && target) || cycloneShouldStayCloseToTarget || (target && !rangedUnit->is_flying && target->last_seen_game_loop < m_bot.GetCurrentFrame() && Util::IsEnemyHiddenOnHighGround(rangedUnit, target, m_bot));	// third condition is to allow Marauders to go back on top of a ramp after being pushed down by melee units
 			const auto targetRange = target ? Util::GetAttackRangeForTarget(target, rangedUnit, m_bot) : 0.f;
 			const bool tolerateInfluenceToAttackTarget = targetRange > 0.f && unitAttackRange - targetRange >= 2 && ShouldAttackTarget(rangedUnit, target, threats);
 			const auto maxInfluence = (cycloneShouldUseLockOn && target) ? CYCLONE_MAX_INFLUENCE_FOR_LOCKON : tolerateInfluenceToAttackTarget ? MAX_INFLUENCE_FOR_OFFENSIVE_KITING : 0.f;
@@ -1186,13 +1201,14 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 		{
 			// Also siege if there is an enemy not too far away
 			auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
-			auto newTarget = getTarget(&dummySiegeTankSieged, targets, true, true, false, false, true);
+			auto newTarget = getTarget(&dummySiegeTankSieged, targets, false, true, true, false, true);	// TODO remove the "considerOnlyUnitsInRange" flag
 			if (newTarget)
 			{
 				float dist = Util::Dist(tank->pos, newTarget->pos);
-				float range = Util::GetAttackRangeForTarget(tank, newTarget, m_bot);
+				float range = Util::GetAttackRangeForTarget(&dummySiegeTankSieged, newTarget, m_bot);
 				float speed = Util::getSpeedOfUnit(newTarget, m_bot);
-				if (dist <= range + speed)
+				// TODO consider movement of enemy units
+				if (dist <= range)// + speed)
 				{
 					siege = true;
 				}
@@ -1208,9 +1224,9 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 	// Unsiege logic
 	else
 	{
-		auto newTarget = getTarget(tank, targets, false, true, false, false, true);
-		// Unsiege only if there is no target or if it is not currently visible or if it is too far
-		if (!newTarget || Util::Dist(tank->pos, newTarget->pos) > Util::GetAttackRangeForTarget(tank, newTarget, m_bot) + Util::getSpeedOfUnit(newTarget, m_bot))
+		auto newTarget = getTarget(tank, targets, false, true, true, false, true);	// TODO remove the "considerOnlyUnitsInRange" flag
+		// Unsiege only if there is no target
+		if (!newTarget)// || Util::Dist(tank->pos, newTarget->pos) > Util::GetAttackRangeForTarget(tank, newTarget, m_bot) + Util::getSpeedOfUnit(newTarget, m_bot))
 		{
 			// And only after 2.5s passed since the last valid target
 			if (m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f)

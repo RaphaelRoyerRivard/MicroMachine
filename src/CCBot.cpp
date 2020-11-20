@@ -736,28 +736,24 @@ void CCBot::setUnits()
 				if (!m_strategy.enemyHasInvisible())
 				{
 					m_strategy.setEnemyHasInvisible(true);
+				}
+				if (!m_strategy.enemyHasMovingInvisible())
+				{
 					switch (unitptr->unit_type.ToType())
 					{
-						case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
-						case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
+						case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
+						case sc2::UNIT_TYPEID::TERRAN_GHOST:
+						case sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR:
+						case sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIP:
+							m_strategy.setEnemyHasMovingInvisible(true);
+							Actions()->SendChat("I see you are also attracted to the dark arts of invisibility.");
+							Util::DebugLog(__FUNCTION__, "Invisible unit detected: " + unit.getType().getName(), *this);
 							break;
-						default:
-							m_strategy.setEnemyHasCombatInvisible(true);
 					}
-					Actions()->SendChat("I see you are also attracted to the dark arts of invisibility.");
-					Util::DebugLog(__FUNCTION__, "Invisible unit detected: " + unit.getType().getName(), *this);
 				}
 				///TODO if we see at least 1 burrowed roach, we might want to consider all roaches as potentially invisible
 				///TODO Should handle unit that CAN get invisible (banshee) and the Mothership (can turn others invisible).
 				m_strategy.setEnemyCurrentlyHasInvisible(true);
-				switch (unitptr->unit_type.ToType())
-				{
-					case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
-					case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
-						break;
-					default:
-						m_strategy.setEnemyCurrentlyHasCombatInvisible(true);
-				}
 			}
 			else
 			{
@@ -774,7 +770,6 @@ void CCBot::setUnits()
 							Util::DebugLog(__FUNCTION__, "Potential invisible unit detected: " + unit.getType().getName(), *this);
 						}
 						m_strategy.setEnemyCurrentlyHasInvisible(true);
-						m_strategy.setEnemyCurrentlyHasCombatInvisible(true);
 						break;
 					default:
 						break;
@@ -790,7 +785,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::PROTOSS_DARKSHRINE:
 					case sc2::UNIT_TYPEID::TERRAN_GHOSTACADEMY:
 						m_strategy.setEnemyHasInvisible(true);
-						m_strategy.setEnemyHasCombatInvisible(true);
+						m_strategy.setEnemyHasMovingInvisible(true);
 						Actions()->SendChat("Planning on striking me with cloaked units?");
 						Util::DebugLog(__FUNCTION__, "Invis production building detected: " + unit.getType().getName(), *this);
 					default:
@@ -1873,14 +1868,39 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_HATCHERY, nat, player2, 1);
 
 	// Tank test
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, mapCenter, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, m_startLocation + towardsCenterX * 25, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, m_startLocation + towardsCenter * 10, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, mapCenter + towardsCenterX * 5, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, mapCenter + towardsCenterX * 10, player2, 1);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 5, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation, player1, 2);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, nat, player2, 1);
 
 	// Creep targetting test
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMOR, enemyLocation - towardsCenter * 10, player1, 2);
+
+	// Test to reproduce bug where Banshee was ignoring influence to attack its target
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, nat - towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, nat + towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, nat + towardsCenter * 8, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 10, player1, 1);*/
+
+	// Test to reproduce bugs related to Probe rush
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 30, player1, 15);
+
+	// Test to reproduce bug where CC is not lifted against worker rush
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, player1, 20);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, enemyLocation, player2, 1);*/
+
+	// Test to reproduce bugs related to Cannon rush
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 25, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, m_startLocation + towardsCenter * 25, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 25, player1, 1);*/
+
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, m_startLocation - towardsCenterX * 10 - towardsCenterY * 15, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, m_startLocation - towardsCenterX * 10 - towardsCenterY * 10, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation, player2, 1);
 }
 
 void CCBot::IssueCheats()

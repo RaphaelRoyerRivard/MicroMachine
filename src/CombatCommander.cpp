@@ -626,6 +626,9 @@ void CombatCommander::updateBlockedTilesWithNeutral()
 	for (auto& neutralUnitPair : m_bot.GetNeutralUnits())
 	{
 		auto& neutralUnit = neutralUnitPair.second;
+		// This is to allow the BaseLocationManager to associate the geyser positions to their respective base
+		if (m_bot.GetCurrentFrame() < 5 && neutralUnit.getType().isGeyser())
+			continue;
 		updateBlockedTilesWithUnit(neutralUnit);
 	}
 }
@@ -774,7 +777,7 @@ void CombatCommander::updateIdleSquad()
 void CombatCommander::updateWorkerFleeSquad()
 {
 	Squad & workerFleeSquad = m_squadData.getSquad("WorkerFlee");
-	const bool earlyRushed = false;// m_bot.Strategy().isEarlyRushed();
+	const bool earlyRushed = m_bot.Strategy().isEarlyRushed();
 	for (auto & worker : m_bot.Workers().getWorkers())
 	{
 		const CCTilePosition tile = Util::GetTilePosition(worker.getPosition());
@@ -832,14 +835,11 @@ void CombatCommander::updateWorkerFleeSquad()
 								std::vector<Unit> proxyWorkersToRemove;
 								for (const auto & proxyWorker : m_bot.Workers().getWorkerData().getProxyWorkers())
 								{
-									if (proxyWorker.getUnitPtr() != worker.getUnitPtr())
-									{
-										proxyWorkersToRemove.push_back(proxyWorker);
-									}
+									proxyWorkersToRemove.push_back(proxyWorker);
 								}
-								for (const auto & proxyWorker : proxyWorkersToRemove)
+								for (const auto & proxyWorkerToRemove : proxyWorkersToRemove)
 								{
-									m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorker);
+									m_bot.Workers().getWorkerData().removeProxyWorker(proxyWorkerToRemove);
 								}
 								m_bot.Buildings().CancelBuilding(building, "proxy worker is near enemy workers");
 								m_bot.Strategy().setStartingStrategy(STANDARD);
@@ -915,6 +915,7 @@ void CombatCommander::updateBackupSquads()
         }
     }
     
+	// HELLIONS
 	if (idleHellions.size() >= Util::HELLION_SQUAD_COUNT)
 	{
 		for (auto hellion : idleHellions)
@@ -922,6 +923,8 @@ void CombatCommander::updateBackupSquads()
 			m_squadData.assignUnitToSquad(*hellion, backupSquad);
 		}
 	}
+
+	// MARINES
 	const auto battlecruisers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
 	if (idleMarines.size() >= 10 && battlecruisers > 0)
 	{
@@ -930,6 +933,8 @@ void CombatCommander::updateBackupSquads()
 			m_squadData.assignUnitToSquad(*marine, backupSquad);
 		}
 	}
+
+	// VIKINGS
 	const auto tempestCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
 	const auto VIKING_TEMPEST_RATIO = 2.5f;
 	const auto vikingsCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true);
@@ -956,6 +961,8 @@ void CombatCommander::updateBackupSquads()
 			}
 		}
 	}
+
+	// CYCLONES
 	if (!idleCyclones.empty())
 	{
 		bool addCyclones = false;
@@ -2084,6 +2091,10 @@ void CombatCommander::updateDefenseSquads()
 
 	if (workerRushed)
 	{
+		if (!m_bot.Strategy().isWorkerRushed())
+		{
+			Util::Log(__FUNCTION__, "Worker rush detected", m_bot);
+		}
 		m_lastWorkerRushDetectionFrame = m_bot.GetCurrentFrame();
 		m_bot.Strategy().setIsWorkerRushed(true);
 	}

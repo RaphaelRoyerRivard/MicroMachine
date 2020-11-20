@@ -553,9 +553,9 @@ void BuildingManager::validateWorkersAndBuildings()
 				bool diedOnTheWay = !b.builderUnit.isValid() || !b.builderUnit.isAlive();
 				bool hasRequired = m_bot.Commander().Production().hasRequired(MetaType(b.type, m_bot), true);
 				bool isWorkerRushed = m_bot.Strategy().isWorkerRushed();
-				if ((diedOnTheWay && !isWorkerRushed) || !hasRequired)
+				if ((diedOnTheWay && (!isWorkerRushed || !b.buildingUnit.isValid())) || !hasRequired)
 				{
-					std::string message = diedOnTheWay && !isWorkerRushed ? "builder died on the way" : "we don't have the requirements";
+					std::string message = diedOnTheWay && (!isWorkerRushed || !b.buildingUnit.isValid()) ? "builder died on the way" : "we don't have the requirements";
 					auto remove = CancelBuilding(b, message, false);
 					toRemove.push_back(remove);
 					Util::Log("Remove " + b.buildingUnit.getType().getName() + " from buildings under construction.", m_bot);
@@ -743,7 +743,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 			}
 		}
 
-		m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
+		m_bot.Workers().getWorkerData().setWorkerJob(builderUnit, WorkerJobs::Build, b.buildingUnit);//Set as builder
 		b.builderUnit = builderUnit;
 
 		if (!b.underConstruction)
@@ -856,7 +856,7 @@ void BuildingManager::constructAssignedBuildings()
 								break;
 							}
 						}
-						// If the building is flying, it's because it is in the transition to land somewhere it will have enough space for its addon
+						// If the builder (which is a building that made an addon) is flying, it's because it is in the transition to land somewhere it will have enough space for its addon
 						if (b.builderUnit.isFlying())
 						{
 							const auto landingPosition = m_liftedBuildingPositions[b.builderUnit.getTag()];
@@ -962,28 +962,36 @@ void BuildingManager::constructAssignedBuildings()
 							}
 						}
 					}
-					else
+					else // not an addon
 					{
-						if (m_bot.GetMinerals() > b.type.mineralPrice())
+						if (b.buildingUnit.isValid())
 						{
-							b.builderUnit.build(b.type, b.finalPosition);
-							if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
-							{
-								// We want the worker to be close so it doesn't flag the base as blocked by error
-								const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
-								// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
-								if (closeEnough)
-								{
-									m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), b.type);
-									b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
-									b.buildCommandGiven = false;
-								}
-								continue;
-							}
+							if (!b.builderUnit.isConstructing(b.buildingUnit.getType()))
+								b.builderUnit.rightClick(b.buildingUnit);
 						}
 						else
 						{
-							setCommandGiven = false;
+							if (m_bot.GetMinerals() >= b.type.mineralPrice())
+							{
+								b.builderUnit.build(b.type, b.finalPosition);
+								if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
+								{
+									// We want the worker to be close so it doesn't flag the base as blocked by error
+									const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
+									// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
+									if (closeEnough)
+									{
+										m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(b.finalPosition), b.type);
+										b.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
+										b.buildCommandGiven = false;
+									}
+									continue;
+								}
+							}
+							else
+							{
+								setCommandGiven = false;
+							}
 						}
 					}
 				}
@@ -1007,7 +1015,7 @@ void BuildingManager::checkForStartedConstruction()
 		}
 		if (b.buildingUnit.isValid())
 		{
-			std::cout << "Replaced dead worker or Building mis-match somehow\n";
+			Util::Log(__FUNCTION__, "Replaced dead worker or Building mis-match somehow", m_bot);
 			b.status = BuildingStatus::UnderConstruction;
 			continue;
 		}
@@ -1100,6 +1108,8 @@ void BuildingManager::checkForDeadTerranBuilders()
 	if (!Util::IsTerran(m_bot.GetSelfRace()))
 		return;
 
+	std::vector<Building> buildingsToRemove;
+
 	// for each of our buildings under construction
 	for (auto & b : m_buildings)
 	{
@@ -1126,6 +1136,27 @@ void BuildingManager::checkForDeadTerranBuilders()
 			continue;
 		}
 
+		// cancel second refinery against worker rush
+		if (m_bot.Strategy().isWorkerRushed() && b.type.isRefinery())
+		{
+			for (auto & building : m_buildings)
+			{
+				if (building.type.isRefinery())
+				{
+					if (!building.buildingUnit.isValid()) 
+					{
+						// cancel the other unstarted refinery
+						buildingsToRemove.push_back(CancelBuilding(building, "second refinery against worker rush", false));
+					}
+					else if (b.buildingUnit.getBuildProgress() < building.buildingUnit.getBuildProgress())
+					{
+						// cancel this refinery which build progress is inferior
+						buildingsToRemove.push_back(CancelBuilding(b, "second refinery against worker rush", false));
+					}
+				}
+			}
+		}
+
 		auto progress = b.buildingUnit.getUnitPtr()->build_progress;
 		auto tag = b.buildingUnit.getTag();
 		if (progress <= m_buildingsProgress[tag])
@@ -1137,7 +1168,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 				{
 					// Builder is alright, probably just saving his ass
 					const auto workerJob = m_bot.Workers().getWorkerData().getWorkerJob(b.builderUnit);
-					if (workerJob == WorkerJobs::Combat)
+					if (workerJob == WorkerJobs::Combat && !m_bot.Strategy().isWorkerRushed())
 						continue;
 					if (workerJob == WorkerJobs::Build)
 					{
@@ -1167,7 +1198,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 				{
 					continue;
 				}
-				m_bot.Workers().getWorkerData().setWorkerJob(newBuilderUnit, WorkerJobs::Build, b.builderUnit);//Set as builder
+				m_bot.Workers().getWorkerData().setWorkerJob(newBuilderUnit, WorkerJobs::Build, b.buildingUnit);//Set as builder
 				b.builderUnit = newBuilderUnit;
 				b.status = BuildingStatus::Assigned;
 				m_buildingsNewWorker[tag] = newBuilderUnit;
@@ -1194,6 +1225,8 @@ void BuildingManager::checkForDeadTerranBuilders()
 			m_buildingsProgress[tag] = progress;
 		}
     }
+
+	removeBuildings(buildingsToRemove);
 }
 
 // STEP 6: CHECK FOR COMPLETED BUILDINGS
@@ -1510,7 +1543,6 @@ CCTilePosition BuildingManager::getProxyLocation()
 		const auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
 		const auto enemyBasePosition = Util::GetPosition(enemyBase->getDepotTilePosition());
 		const auto enemyNextExpansion = m_bot.Bases().getNextExpansion(Players::Enemy, false, false, false);
-		const auto enemyNext = m_bot.Bases().getBaseLocations()[1];
 		auto startBaseLocation = m_bot.GetStartLocation();
 		const auto & baseLocations = m_bot.Bases().getBaseLocations();	// Sorted by closest to enemy base
 		std::map<float, const BaseLocation*> sortedBases;
@@ -1518,7 +1550,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 		{
 			auto baseLocation = baseLocations[i];
 			// Proxy shouldn't be the enemy base, its nat or our starting base
-			if (baseLocation == enemyBase || baseLocation == enemyNext || baseLocation == startingBaseLocation)
+			if (baseLocation == enemyBase || baseLocation == enemyNextExpansion || baseLocation == startingBaseLocation)
 				continue;
 			const auto startBaseDistance = baseLocation->getGroundDistance(startBaseLocation);
 			const auto enemyBaseDistance = baseLocation->getGroundDistance(enemyBasePosition);
@@ -1543,7 +1575,10 @@ CCTilePosition BuildingManager::getProxyLocation()
 					break;
 			}
 			const CCPosition behindMineralLine = depotPos + Util::Normalized(centerOfMinerals - depotPos) * (j - 3);
-			if (Util::Dist(depotPos, enemyBasePosition) >= Util::Dist(behindMineralLine, enemyBasePosition) + 3)
+			const CCPosition towardsMineralLine = Util::Normalized(behindMineralLine - depotPos);
+			const CCPosition towardsEnemyBase = Util::Normalized(enemyBasePosition - depotPos);
+			// if the base is close to the enemy base and the direction towards the mineral line is roughly in the same direction as the enemy base
+			if (Util::DistSq(behindMineralLine, enemyBasePosition) < 40 && Util::GetDotProduct(towardsMineralLine, towardsEnemyBase) > 0.5)
 				continue;
 
 			// Do not use base location if we cannot reach behind the mineral line
@@ -1606,8 +1641,10 @@ CCTilePosition BuildingManager::getProxyLocation()
 					break;
 			}
 			const CCPosition behindMineralLine = depotPos + Util::Normalized(centerOfMinerals - depotPos) * (i - 3);
-			// build behind mineral line only if it is not much closer to the enemy base
-			if (Util::Dist(depotPos, enemyBasePosition) < Util::Dist(behindMineralLine, enemyBasePosition) + 3)
+			const CCPosition towardsMineralLine = Util::Normalized(behindMineralLine - depotPos);
+			const CCPosition towardsEnemyBase = Util::Normalized(enemyBasePosition - depotPos);
+			// build behind mineral line only if if the base is far from to the enemy base or the direction towards the mineral line is not roughly in the same direction as the enemy base
+			if (Util::DistSq(behindMineralLine, enemyBasePosition) >= 40 || Util::GetDotProduct(towardsMineralLine, towardsEnemyBase) <= 0.5)
 				m_proxyLocation = Util::GetTilePosition(behindMineralLine);
 			m_proxyLocation2 = depotPos + Util::Normalized(depotPos - centerOfMinerals) * 8;
 			return m_proxyLocation;
@@ -2350,7 +2387,7 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 				// The recent damage taken is too high.
 				// Need to validate recentDamageTaken >= 10 because of the fire (The exact recentDamageTaken is 4), otherwise we lift/land repeatedly until we burn or are repaired.
 				const auto recentDamageTaken = m_bot.Analyzer().getUnitState(unit.getUnitPtr()).GetRecentDamageTaken();
-				const bool takenTooMuchDamage = recentDamageTaken >= 50.f || (unit.getHitPointsPercentage() <= 25.f && recentDamageTaken >= 10.f);
+				const bool takenTooMuchDamage = recentDamageTaken >= 50.f || (unit.getHitPointsPercentage() <= 50.f && recentDamageTaken >= 10.f);
 				// And there is danger on the ground but not in the air
 				const float airInfluence = Util::PathFinding::GetTotalInfluenceOnTiles(unit.getPosition(), true, unit.getUnitPtr()->radius, m_bot);
 				if (takenTooMuchDamage && airInfluence <= 0.f)

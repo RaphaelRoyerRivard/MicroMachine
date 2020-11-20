@@ -61,7 +61,7 @@ void StrategyManager::onStart()
 				totalWins += wins;
 				totalLosses += losses;
 				auto games = wins + losses;
-				float winPercentage = games > 0 ? wins / float(games) : 0.99;
+				float winPercentage = games > 0 ? wins / float(games) : 0.9999;
 				// We make sure the opponent has the appropriate race to pick the race specific strategy 
 				const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
 				bool raceSpecificStrategy = it != RACE_SPECIFIC_STRATEGIES.end();
@@ -317,63 +317,71 @@ void StrategyManager::checkForStrategyChange()
 		{
 			std::string cancelReason;
 			bool cancelProxy = false;
-			const auto barracksUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
-			// We want to cancel our proxy strategy if the opponent has vision of our proxy location
-			if (barracksUnderConstructionCount == 0)
+			if (isWorkerRushed())
 			{
-				const auto & buildings = m_bot.Buildings().getBuildings();
-				for (const auto & building : buildings)
+				cancelProxy = true;
+				cancelReason = "worker rushed";
+			}
+			else
+			{
+				const auto barracksUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
+				// We want to cancel our proxy strategy if the opponent has vision of our proxy location
+				if (barracksUnderConstructionCount == 0)
 				{
-					if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+					const auto & buildings = m_bot.Buildings().getBuildings();
+					for (const auto & building : buildings)
 					{
-						auto buildingPos = Util::GetPosition(building.finalPosition);
-						// If the Barracks is proxied (we don't want to cancel the one in our base with the proxy Marauders strat)
-						if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
+						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
 						{
-							// If the worker is close to the building site
-							if (Util::DistSq(building.builderUnit, buildingPos) <= 3 * 3)
+							auto buildingPos = Util::GetPosition(building.finalPosition);
+							// If the Barracks is proxied (we don't want to cancel the one in our base with the proxy Marauders strat)
+							if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
 							{
-								for (const auto & enemy : m_bot.GetKnownEnemyUnits())
+								// If the worker is close to the building site
+								if (Util::DistSq(building.builderUnit, buildingPos) <= 3 * 3)
 								{
-									const auto dist = Util::DistSq(building.builderUnit, enemy);
-									const auto builderTerrainHeight = m_bot.Map().terrainHeight(building.builderUnit.getPosition());
-									const auto enemyTerrainHeight = m_bot.Map().terrainHeight(enemy.getPosition());
-									if (dist <= 8 * 8 && builderTerrainHeight <= enemyTerrainHeight)
+									for (const auto & enemy : m_bot.GetKnownEnemyUnits())
 									{
-										// We want to cancel both the proxy Marauders strategy and the Barracks in the Building Manager
-										cancelProxy = true;
-										cancelReason = "proxy location scouted too early";
-										break;
+										const auto dist = Util::DistSq(building.builderUnit, enemy);
+										const auto builderTerrainHeight = m_bot.Map().terrainHeight(building.builderUnit.getPosition());
+										const auto enemyTerrainHeight = m_bot.Map().terrainHeight(enemy.getPosition());
+										if (dist <= 8 * 8 && builderTerrainHeight <= enemyTerrainHeight)
+										{
+											// We want to cancel both the proxy Marauders strategy and the Barracks in the Building Manager
+											cancelProxy = true;
+											cancelReason = "proxy location scouted too early";
+											break;
+										}
 									}
+									if (cancelProxy)
+										break;
 								}
-								if (cancelProxy)
-									break;
 							}
 						}
 					}
 				}
-			}
-			else if (barracksUnderConstructionCount == 1)
-			{
-				// We want to cancel the proxy if the enemy can kill our proxy worker before it finishes its building
-				const auto & buildings = m_bot.Buildings().getBuildings();
-				for (const auto & building : buildings)
+				else if (barracksUnderConstructionCount == 1)
 				{
-					if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+					// We want to cancel the proxy if the enemy can kill our proxy worker before it finishes its building
+					const auto & buildings = m_bot.Buildings().getBuildings();
+					for (const auto & building : buildings)
 					{
-						auto buildingPos = Util::GetPosition(building.finalPosition);
-						// If the Barracks is proxied (we don't want to cancel the one in our base with the proxy Marauders strat)
-						if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
+						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
 						{
-							const auto & buildingUnit = building.buildingUnit;
-							if (buildingUnit.isValid())
+							auto buildingPos = Util::GetPosition(building.finalPosition);
+							// If the Barracks is proxied (we don't want to cancel the one in our base with the proxy Marauders strat)
+							if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
 							{
-								// Will also return false if the proxy worker died
-								if (!shouldProxyBuilderFinishSafely(building, true))
+								const auto & buildingUnit = building.buildingUnit;
+								if (buildingUnit.isValid())
 								{
-									cancelProxy = true;
-									cancelReason = "proxy worker died or will die before finishing building";
-									break;
+									// Will also return false if the proxy worker died
+									if (!shouldProxyBuilderFinishSafely(building, true))
+									{
+										cancelProxy = true;
+										cancelReason = "proxy worker died or will die before finishing building";
+										break;
+									}
 								}
 							}
 						}
@@ -400,7 +408,7 @@ void StrategyManager::checkForStrategyChange()
 				std::vector<Building> toRemove;
 				for (const auto & building : buildings)
 				{
-					if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+					if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS && Util::DistSq(building.finalPosition, m_bot.Buildings().getProxyLocation()) <  20 * 20)
 					{
 						bool cancel = true;
 						if (building.buildingUnit.isValid())
@@ -414,6 +422,11 @@ void StrategyManager::checkForStrategyChange()
 					}
 				}
 				m_bot.Buildings().removeBuildings(toRemove);
+				const auto & proxyWorkers = m_bot.Workers().getWorkerData().getProxyWorkers();
+				for (const auto & proxyWorker : proxyWorkers)
+				{
+					proxyWorker.move(m_bot.GetStartLocation());
+				}
 				m_bot.Workers().getWorkerData().clearProxyWorkers();
 				setStartingStrategy(EARLY_EXPAND);
 				m_bot.Commander().Production().clearQueue();

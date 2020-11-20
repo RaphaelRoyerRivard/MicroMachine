@@ -1339,13 +1339,21 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, false);
 				if (barracksCount > 0)
 				{
-					if (m_bot.GetFreeGas() >= 50 || m_bot.Workers().getNumGasWorkers() > 0)
+					const int refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false);
+					if (refineryCount > 0)
 					{
-						m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
+						if (m_bot.GetFreeGas() >= 50 || m_bot.Workers().getNumGasWorkers() > 0)
+						{
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
+						}
+						else
+						{
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+						}
 					}
 					else
 					{
-						m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+						m_queue.queueAsHighestPriority(MetaTypeEnum::Refinery, false);
 					}
 				}
 				else
@@ -1464,7 +1472,9 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
 		{
 			if (!hasRequiredUnit(required, true) && !m_queue.contains(MetaType(required, m_bot)))
 			{
-				std::cout << item.type.getName() << " needs a requirement: " << required.getName() << "\n";
+				std::stringstream ss;
+				ss << item.type.getName() << " needs a requirement: " << required.getName();
+				Util::Log(__FUNCTION__, ss.str(), m_bot);
 				MM::BuildOrderItem requiredItem = m_queue.queueItem(MM::BuildOrderItem(MetaType(required, m_bot), 0, item.blocking));
 				fixBuildOrderDeadlock(requiredItem);
 				break;
@@ -1647,14 +1657,14 @@ void ProductionManager::lowPriorityChecks()
 	//build turrets in mineral field
 	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
 	const bool shouldProduceAntiAirDefense = m_bot.Strategy().shouldProduceAntiAirDefense();
-	const bool shouldProduceAntiInvis = m_bot.Strategy().enemyHasCombatInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
-	if (shouldProduceAntiAirDefense || shouldProduceAntiInvis)
+	const bool shouldProduceStaticAntiInvis = m_bot.Strategy().enemyHasMovingInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
+	if (shouldProduceAntiAirDefense || shouldProduceStaticAntiInvis)
 	{
 		const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
 		if (engineeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
 		{
 			const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-			if (!shouldProduceAntiInvis && starportCount > 0)
+			if (!shouldProduceStaticAntiInvis && starportCount > 0)
 			{
 				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
 				if (vikingCount > 0)

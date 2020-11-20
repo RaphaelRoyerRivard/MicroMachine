@@ -712,6 +712,7 @@ void WorkerManager::handleIdleWorkers()
             (workerJob != WorkerJobs::Move) &&
             (workerJob != WorkerJobs::Repair) &&
 			(workerJob != WorkerJobs::Scout) &&
+			(workerJob != WorkerJobs::Combat) &&
 			(workerJob != WorkerJobs::Build))//Prevent premoved builder from going Idle if they lack the ressources, also prevents refinery builder from going Idle
 		{
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
@@ -785,10 +786,6 @@ void WorkerManager::handleIdleWorkers()
 					if(building.builderUnit == worker)
 					{
 						m_workerData.setWorkerJob(worker, WorkerJobs::Build, building.buildingUnit);
-						if(building.buildingUnit.isValid() && building.buildingUnit.getBuildProgress() < 1.f)
-						{
-							Micro::SmartRightClick(worker.getUnitPtr(), building.buildingUnit.getUnitPtr(), m_bot);
-						}
 						isBuilder = true;
 						break;
 					}
@@ -840,8 +837,17 @@ void WorkerManager::handleRepairWorkers()
 				{
 					stopRepairing(worker);
 				}
-				else if (worker.isIdle())
+				else if (worker.isIdle() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::EFFECT_REPAIR)
 				{
+					// Do not spam repair action if the unit is a teleporting BC
+					if (repairedUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER)
+					{
+						auto & unitAction = m_bot.Commander().Combat().GetUnitAction(repairedUnit.getUnitPtr());
+						if (unitAction.abilityID == sc2::ABILITY_ID::EFFECT_TACTICALJUMP && !unitAction.finished)
+						{
+							continue;
+						}
+					}
 					// Get back to repairing...
 					worker.repair(repairedUnit);
 				}
@@ -1166,7 +1172,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID w
 	return getClosestMineralWorkerTo(pos, workersToIgnore, minHpPercentage, filterMoving);
 }
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving, bool allowCombatWorkers) const
 {
 	Unit closestMineralWorker;
 	auto closestDist = 0.f;
@@ -1191,11 +1197,11 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 			continue;
 
 		// if it is a mineral worker, Idle or None
-		if (!isFree(worker))
+		if (!isFree(worker) && (!allowCombatWorkers || m_workerData.getWorkerJob(worker) != WorkerJobs::Combat))
 			continue;
 		if (isReturningCargo(worker))
 			continue;
-		if (filterMoving && worker.isMoving())
+		if (filterMoving && worker.isMoving() && (!allowCombatWorkers || m_workerData.getWorkerJob(worker) != WorkerJobs::Combat))
 			continue;
 		
 		auto dist = Util::DistSq(worker.getPosition(), pos);
@@ -1497,9 +1503,14 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMo
 	{
 		isValid = true;
 		builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0, filterMoving);
-		if (!builderWorker.isValid())//If no worker left to check
+		if (!builderWorker.isValid())	// If we can't find a free worker
 		{
-			break;
+			// Check for a combat worker
+			builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0, filterMoving, true);
+			if (!builderWorker.isValid())	//If no worker left to check
+			{
+				break;
+			}
 		}
 
 		//Check if worker is already building something else
@@ -1518,7 +1529,7 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMo
     // if the worker exists (one may not have been found in rare cases)
     if (builderWorker.isValid() && setJobAsBuilder && m_workerData.getWorkerJob(builderWorker) != WorkerJobs::Build)
     {
-		m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.builderUnit);
+		m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.buildingUnit);
     }
 
     return builderWorker;
