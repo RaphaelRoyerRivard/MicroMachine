@@ -1871,8 +1871,8 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 30, player1, 15);
 
 	// Test to reproduce bug where CC is not lifted against worker rush
-	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, player1, 20);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, enemyLocation, player2, 1);*/
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 30, player1, 20);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, enemyLocation, player2, 1);
 
 	// Test to reproduce bugs related to Cannon rush
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 25, player1, 1);
