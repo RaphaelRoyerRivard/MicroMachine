@@ -12,6 +12,7 @@ BuildingPlacer::BuildingPlacer(CCBot & bot)
 
 void BuildingPlacer::onStart()
 {
+	m_resourceBlockedTiles = std::vector< std::vector<bool> >(m_bot.Map().totalWidth(), std::vector<bool>(m_bot.Map().totalHeight(), false));
     m_reserveBuildingMap = std::vector< std::vector<bool> >(m_bot.Map().totalWidth(), std::vector<bool>(m_bot.Map().totalHeight(), false));
 #ifdef COMPUTE_WALKABLE_TILES
 	m_reserveWalkableMap = std::vector< std::vector<bool> >(m_bot.Map().totalWidth(), std::vector<bool>(m_bot.Map().totalHeight(), false));
@@ -28,12 +29,34 @@ void BuildingPlacer::onStart()
 		for (auto mineral : minerals)
 		{
 			reserveTiles(basePosition, mineral.getTilePosition());
+			
+			//m_resourceBlockedTiles used to expand in main, minerals are not 100% accurate, but close enough
+			for (int x = -4; x <= 3; x++)
+			{
+				for (int y = -3; y <= 3; y++)
+				{
+					if (abs(x) == abs(y))
+						continue;
+					m_resourceBlockedTiles[mineral.getTilePosition().x + x][mineral.getTilePosition().y + y] = true;
+				}
+			}
 		}
 
 		auto geysers = baseLocation->getGeysers();
 		for (auto geyser : geysers)
 		{
 			reserveTiles(basePosition, geyser.getTilePosition());
+
+			//m_resourceBlockedTiles used to expand in main
+			for (int x = -4; x <= 4; x++)
+			{
+				for (int y = -4; y <= 4; y++)
+				{
+					if (abs(x) == abs(y))
+						continue;
+					m_resourceBlockedTiles[geyser.getTilePosition().x + x][geyser.getTilePosition().y + y] = true;
+				}
+			}
 		}
 	}
 }
@@ -487,6 +510,11 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	
 	//check if buildable
 	if (!m_bot.Map().isBuildable(x, y) && !type.isGeyser())
+	{
+		return false;
+	}
+
+	if (type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && !m_resourceBlockedTiles.empty() && m_resourceBlockedTiles[x][y])//Used specifically to prevent CC expands built in the main from being in an invalid location
 	{
 		return false;
 	}

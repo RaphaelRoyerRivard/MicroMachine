@@ -35,6 +35,7 @@ public:
 	bool AllowDebug;
 	bool AllowKeyControl;
 	bool IsRealTime;
+	bool DebugMenu;
     bool DrawTileInfo;
     bool DrawBaseLocationInfo;
 	bool DrawBaseTiles;
