@@ -366,7 +366,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			}
 			if (m_order.getStatus() == "Retreat" || !hasFrontLineUnits)
 			{
-				auto base = m_bot.Bases().getBaseContainingPosition(goal);
+				auto base = m_bot.Bases().getBaseContainingPosition(m_bot.Commander().Combat().GetIdlePosition());
 				if (base && base->getResourceDepot().isValid())
 				{
 					goal = base->getDepotPosition() + Util::Normalized(base->getDepotPosition() - base->getPosition()) * 2;
