@@ -41,74 +41,7 @@ void StrategyManager::onStart()
 		std::string path = ss.str();
 		json j;
 		std::ifstream file(path);
-		if (file.good())
-		{
-			file >> j;
-			file.close();
-			auto jStrats = j["strategies"];
-			int totalWins = 0;
-			int totalLosses = 0;
-			float bestScore = 0;
-			int bestScoreGames = 0;
-			int bestStrat = -1;
-			for (auto stratIndex = 0; stratIndex < StartingStrategy::COUNT; ++stratIndex)
-			{
-				std::string strategyName = STRATEGY_NAMES[stratIndex];
-				int wins = 0;
-				int losses = 0;
-				JSONTools::ReadInt("wins", jStrats[stratIndex], wins);
-				JSONTools::ReadInt("losses", jStrats[stratIndex], losses);
-				totalWins += wins;
-				totalLosses += losses;
-				auto games = wins + losses;
-				float winPercentage = games > 0 ? wins / float(games) : 0.9999;
-				// We make sure the opponent has the appropriate race to pick the race specific strategy 
-				const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
-				bool raceSpecificStrategy = it != RACE_SPECIFIC_STRATEGIES.end();
-				bool validRaceSpecificStrategy = raceSpecificStrategy && enemyPlayerRace == it->second;
-				if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && games >= bestScoreGames))
-				{
-					if ((!raceSpecificStrategy || validRaceSpecificStrategy) && Util::Contains(strategyName, STRATEGY_ORDER))
-					{
-						bool currentStratHasPriority = true;
-						if (bestStrat >= 0 && winPercentage == bestScore)
-						{
-							std::string bestStrategyName = STRATEGY_NAMES[bestStrat];
-							auto currentStratOrderIndex = std::distance(STRATEGY_ORDER.begin(), std::find(STRATEGY_ORDER.begin(), STRATEGY_ORDER.end(), strategyName));
-							auto bestStratOrderIndex = std::distance(STRATEGY_ORDER.begin(), std::find(STRATEGY_ORDER.begin(), STRATEGY_ORDER.end(), bestStrategyName));
-							if (currentStratOrderIndex > bestStratOrderIndex)
-								currentStratHasPriority = false;
-						}
-						if (currentStratHasPriority)
-						{
-							bestScore = winPercentage;
-							bestStrat = stratIndex;
-							bestScoreGames = games;
-						}
-					}
-				}
-				m_opponentHistory << strategyName << " (" << wins << "-" << losses << ")";
-				if (stratIndex < StartingStrategy::COUNT - 1)
-					m_opponentHistory << ", ";
-			}
-			setStartingStrategy(StartingStrategy(bestStrat));
-			if (m_bot.Config().PrintGreetingMessage)
-			{
-				const auto winPercentage = totalWins + totalLosses > 0 ? round(totalWins * 100 / (totalWins + totalLosses)) : 100;
-				m_greetingMessage << "Greetings " << opponentId << ", my rudimentary database is telling me that I've won " << winPercentage << "% of our encounters. ";
-				if (winPercentage >= 95)
-					m_greetingMessage << "Prepare to get crushed.";
-				else if (winPercentage >= 50)
-					m_greetingMessage << "Do your best, as I won't spare you!";
-				else if (winPercentage >= 10)
-					m_greetingMessage << "Let's see if I can be lucky this time around!";
-				else
-					m_greetingMessage << "Ouch...";
-			}
-			Util::Log(__FUNCTION__, m_opponentHistory.str(), m_bot);
-			std::cout << m_opponentHistory.str() << std::endl;
-		}
-		else
+		if (!file.good())
 		{
 			std::ofstream outFile(path);
 			for (int i = 0; i < StartingStrategy::COUNT; ++i)
@@ -118,13 +51,78 @@ void StrategyManager::onStart()
 			}
 			outFile << j.dump();
 			outFile.close();
-			setStartingStrategy(m_bot.GetPlayerRace(Players::Enemy) == sc2::Protoss ? PROXY_MARAUDERS : FAST_PF);
-			
+			file = std::ifstream(path);
+
 			if (m_bot.Config().PrintGreetingMessage)
 			{
 				m_greetingMessage << "Greetings stranger. I shall call you " << opponentId << " from now on. GLHF!";
 			}
 		}
+		file >> j;
+		file.close();
+		auto jStrats = j["strategies"];
+		int totalWins = 0;
+		int totalLosses = 0;
+		float bestScore = 0;
+		int bestScoreGames = 0;
+		int bestStrat = -1;
+		for (auto stratIndex = 0; stratIndex < StartingStrategy::COUNT; ++stratIndex)
+		{
+			std::string strategyName = STRATEGY_NAMES[stratIndex];
+			int wins = 0;
+			int losses = 0;
+			JSONTools::ReadInt("wins", jStrats[stratIndex], wins);
+			JSONTools::ReadInt("losses", jStrats[stratIndex], losses);
+			totalWins += wins;
+			totalLosses += losses;
+			auto games = wins + losses;
+			float winPercentage = games > 0 ? wins / float(games) : 0.9999;
+			// We make sure the opponent has the appropriate race to pick the race specific strategy 
+			const auto it = RACE_SPECIFIC_STRATEGIES.find(StartingStrategy(stratIndex));
+			bool raceSpecificStrategy = it != RACE_SPECIFIC_STRATEGIES.end();
+			bool validRaceSpecificStrategy = raceSpecificStrategy && enemyPlayerRace == it->second;
+			if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && games >= bestScoreGames))
+			{
+				if ((!raceSpecificStrategy || validRaceSpecificStrategy) && Util::Contains(strategyName, STRATEGY_ORDER))
+				{
+					bool currentStratHasPriority = true;
+					if (bestStrat >= 0 && winPercentage == bestScore)
+					{
+						std::string bestStrategyName = STRATEGY_NAMES[bestStrat];
+						auto currentStratOrderIndex = std::distance(STRATEGY_ORDER.begin(), std::find(STRATEGY_ORDER.begin(), STRATEGY_ORDER.end(), strategyName));
+						auto bestStratOrderIndex = std::distance(STRATEGY_ORDER.begin(), std::find(STRATEGY_ORDER.begin(), STRATEGY_ORDER.end(), bestStrategyName));
+						if (currentStratOrderIndex > bestStratOrderIndex)
+							currentStratHasPriority = false;
+					}
+					if (currentStratHasPriority)
+					{
+						bestScore = winPercentage;
+						bestStrat = stratIndex;
+						bestScoreGames = games;
+					}
+				}
+			}
+			m_opponentHistory << strategyName << " (" << wins << "-" << losses << ")";
+			if (stratIndex < StartingStrategy::COUNT - 1)
+				m_opponentHistory << ", ";
+		}
+		setStartingStrategy(StartingStrategy(bestStrat));
+		if (m_bot.Config().PrintGreetingMessage && m_greetingMessage.str().size() == 0)
+		{
+			const auto winPercentage = totalWins + totalLosses > 0 ? round(totalWins * 100 / (totalWins + totalLosses)) : 100;
+			m_greetingMessage << "Greetings " << opponentId << ", my rudimentary database is telling me that I've won " << winPercentage << "% of our encounters. ";
+			if (winPercentage >= 95)
+				m_greetingMessage << "Prepare to get crushed.";
+			else if (winPercentage >= 50)
+				m_greetingMessage << "Do your best, as I won't spare you!";
+			else if (winPercentage >= 10)
+				m_greetingMessage << "Let's see if I can be lucky this time around!";
+			else
+				m_greetingMessage << "Ouch...";
+		}
+		Util::Log(__FUNCTION__, m_opponentHistory.str(), m_bot);
+		std::cout << m_opponentHistory.str() << std::endl;
+
 		m_strategyMessage << "Chosen strategy: " << STRATEGY_NAMES[m_startingStrategy];
 		Util::Log(__FUNCTION__, m_strategyMessage.str(), m_bot);
 		std::cout << m_strategyMessage.str() << std::endl;
