@@ -222,11 +222,19 @@ int main(int argc, char* argv[])
 
         JSONTools::ReadString("MapFile", info, mapString);
 		//Random map
-		if (mapString.compare("Random") == 0)
+		if (mapString.find("Random") != std::string::npos)
 		{
-			if (j.count("RandomMaps") && j["RandomMaps"].is_array())
+			nlohmann::json::value_type maps = nullptr;
+			if (mapString.compare("RandomMaps") == 0 && j.count("RandomMaps") && j["RandomMaps"].is_array())
 			{
-				auto maps = j["RandomMaps"];
+				maps = j["RandomMaps"];
+			}
+			else if (mapString.compare("AllRandomMaps") == 0 && j.count("AllRandomMaps") && j["AllRandomMaps"].is_array())
+			{
+				maps = j["AllRandomMaps"];
+			}
+			if (maps != nullptr)
+			{
 				srand(time(NULL));//Set random seed, otherwise the result is always the same
 				int mapNumber = rand() % maps.size();
 				auto map = maps.at(mapNumber);

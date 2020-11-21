@@ -220,5 +220,33 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 
 float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attacker, const sc2::Unit * target) const
 {
+	//consider unit distance (bool as parameter to activate) to give a minor buff to unit closer
+	//consider building splash, should be a very minor buff, as to avoid splash on buildings instead of units
+
+	//foreach weapon
+		//check unit weapon to know if its splash or not
+		//if not splash
+			//foreach enemy in range of the weapons
+				//calculate target priority :
+					//if unit will die
+						//priority += total unit health
+					//priority += damage dealt
+		//if splash
+			//foreach enemy in range + 50% of splash range (if its circle splash)
+				//calculate target priority :
+					//if unit will die
+						//priority += total unit health
+					//priority += damage dealt
+					//foreach splash zone
+						//foreach unit hit by splash, except main target
+							//if hurt unit is part of the 'attackers' team
+								//if unit will die
+									//priority -= total unit health
+								//priority -= damage dealt
+							//else
+								//if unit will die
+									//priority += total unit health
+								//priority += damage dealt
+						
 	return 0.f;
 }

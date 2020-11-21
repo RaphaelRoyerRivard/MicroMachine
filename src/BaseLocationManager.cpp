@@ -471,7 +471,7 @@ void BaseLocationManager::drawBaseLocations()
     }
 
     // draw a purple sphere at the next expansion location
-    CCTilePosition nextExpansionPosition = getNextExpansionPosition(Players::Self, false, false);
+    CCTilePosition nextExpansionPosition = getNextExpansionPosition(Players::Self, false, false, false);
 
     m_bot.Map().drawCircle(Util::GetPosition(nextExpansionPosition), 1, CCColor(255, 0, 255));
     m_bot.Map().drawText(Util::GetPosition(nextExpansionPosition), "Next Expansion Location", CCColor(255, 0, 255));
@@ -636,7 +636,7 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 	return m_bot.Buildings().getBuildingCountOfType(baseTypes, isCompleted);
 }
 
-BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocked, bool checkBuildable) const
+BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles) const
 {
 	//[expand]
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
@@ -683,7 +683,7 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 		auto tile = base->getDepotTilePosition();
 		
 		//Check if buildable (creep check), using CC for building size, should work for all races.
-		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, MetaTypeEnum::CommandCenter.getUnitType(), 0, true, false, true))
+		if (checkBuildable && !m_bot.Buildings().getBuildingPlacer().canBuildHere(tile.x, tile.y, MetaTypeEnum::CommandCenter.getUnitType(), ignoreReservedTiles, true, false, true))
 		{
 			continue;
 		}
@@ -719,9 +719,9 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 	return closestBase;
 }
 
-CCTilePosition BaseLocationManager::getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable) const
+CCTilePosition BaseLocationManager::getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles) const
 {
-	auto closestBase = getNextExpansion(player, checkBlocked, checkBuildable);
+	auto closestBase = getNextExpansion(player, checkBlocked, checkBuildable, ignoreReservedTiles);
 	return closestBase ? closestBase->getDepotTilePosition() : CCTilePosition(0, 0);
 }
 

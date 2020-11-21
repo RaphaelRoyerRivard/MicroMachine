@@ -1551,44 +1551,65 @@ void CombatCommander::updateScoutDefenseSquad()
 		{
 			// get all of the enemy units in this region
 			std::vector<Unit> enemyUnitsInRegion;
+			int enemyWorkerCount = 0;
+			Unit closestEnemyWorker;
+			float minEnemyWorkerDistance;
 			for (auto & unit : m_bot.GetKnownEnemyUnits())
 			{
-				if (base->containsPosition(unit.getPosition()) && unit.getType().isWorker())
+				if (base->containsPosition(unit.getPosition()))
 				{
+					if (unit.getType().isWorker())
+					{
+						++enemyWorkerCount;
+						float distSq = Util::DistSq(unit, base->getDepotPosition());
+						if (!closestEnemyWorker.isValid() || distSq < minEnemyWorkerDistance)
+						{
+							closestEnemyWorker = unit;
+							minEnemyWorkerDistance = distSq;
+						}
+					}
 					enemyUnitsInRegion.push_back(unit);
 				}
 			}
 
 			// if there is at least one enemy worker in our region, but it is still not a worker rush
-			if (!enemyUnitsInRegion.empty() && !m_bot.Strategy().isWorkerRushed())
+			if (enemyWorkerCount > 0 && !m_bot.Strategy().isWorkerRushed())
 			{
-				// and there is an injured worker in the squad, remove it
+				// remove some workers of the squad if necessary
 				if (!scoutDefenseSquad.isEmpty())
 				{
+					std::vector<Unit> workersToRemove;
 					auto & units = scoutDefenseSquad.getUnits();
 					for (auto & unit : units)
 					{
+						// if there is an injured worker in the squad, remove it
 						if (unit.getUnitPtr()->health < unit.getUnitPtr()->health_max * m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT)
 						{
-							m_bot.Workers().finishedWithWorker(unit);
-							scoutDefenseSquad.removeUnit(unit);
+							workersToRemove.push_back(unit);
 						}
+					}
+					for (auto & unit : workersToRemove)
+					{
+						m_bot.Workers().finishedWithWorker(unit);
+						scoutDefenseSquad.removeUnit(unit);
+					}
+
+					// remove workers if we have too many
+					while (units.size() > enemyWorkerCount)
+					{
+						auto& lastUnit = units[units.size() - 1];
+						m_bot.Workers().finishedWithWorker(lastUnit);
+						scoutDefenseSquad.removeUnit(lastUnit);
 					}
 				}
 
-				// for each enemy worker that is attacking us
-				for (auto & enemyWorkerUnit : enemyUnitsInRegion)
+				// if our squad has less units than the amount of enemies workers, assign a worker until we have the same amount
+				while (scoutDefenseSquad.getUnits().size() < enemyWorkerCount)
 				{
-					// if our squad has less units than the amount of enemies, assign a worker
-					if (scoutDefenseSquad.getUnits().size() < enemyUnitsInRegion.size())
+					const Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, closestEnemyWorker.getPosition(), closestEnemyWorker, enemyUnitsInRegion, true);
+					if (workerDefender.isValid())
 					{
-						const Unit workerDefender = findWorkerToAssignToSquad(scoutDefenseSquad, enemyWorkerUnit.getPosition(), enemyWorkerUnit, enemyUnitsInRegion, true);
-						if (workerDefender.isValid())
-						{
-							m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
-						}
-						else
-							break;
+						m_squadData.assignUnitToSquad(workerDefender, scoutDefenseSquad);
 					}
 					else
 						break;
@@ -1596,11 +1617,11 @@ void CombatCommander::updateScoutDefenseSquad()
 
 				// find the radius we need for our units to be microed
 				float maxDistance = 0;
-				for (auto & enemyWorkerUnit : enemyUnitsInRegion)
+				for (auto & enemyUnit : enemyUnitsInRegion)
 				{
 					for (auto & scoutDefenseUnit : scoutDefenseSquad.getUnits())
 					{
-						maxDistance = std::max(maxDistance, Util::Dist(scoutDefenseUnit, enemyWorkerUnit));
+						maxDistance = std::max(maxDistance, Util::Dist(scoutDefenseUnit, enemyUnit));
 					}
 				}
 
@@ -1611,20 +1632,9 @@ void CombatCommander::updateScoutDefenseSquad()
 		}
 	}
 
-
-    // if our squad is not empty and we shouldn't have a worker chasing then take him out of the squad
+    // clear the squad if we don't need it anymore
     if (!squadUnitSet && !scoutDefenseSquad.isEmpty())
     {
-        for (auto & unit : scoutDefenseSquad.getUnits())
-        {
-            BOT_ASSERT(unit.isValid(), "null unit in scoutDefenseSquad");
-
-            if (unit.getType().isWorker())
-            {
-                m_bot.Workers().finishedWithWorker(unit);
-            }
-        }
-
         scoutDefenseSquad.clear();
     }
 }
@@ -1782,6 +1792,7 @@ struct RegionArmyInformation
 	float antiAirAllyPower;
 	float antiGroundAllyPower;
 	bool antiInvis;
+	bool onlyEnemyWorkers;
 	Squad* squad;
 	Unit closestEnemyUnit;
 
@@ -1794,6 +1805,7 @@ struct RegionArmyInformation
 		, antiAirAllyPower(0)
 		, antiGroundAllyPower(0)
 		, antiInvis(false)
+		, onlyEnemyWorkers(false)
 		, squad(nullptr)
 		, closestEnemyUnit({})
 	{}
@@ -1941,7 +1953,7 @@ void CombatCommander::updateDefenseSquads()
 	// for each of our occupied regions
 	const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
 	const auto & ourBases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
-	auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false);
+	auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false, false);
 	std::set<BaseLocation*> bases;
 	bases.insert(ourBases.begin(), ourBases.end());
 	if (nextExpansion)
@@ -2013,10 +2025,11 @@ void CombatCommander::updateDefenseSquads()
 				region.enemyUnits.push_back(unit);
 			}
 		}
+		region.onlyEnemyWorkers = !unitOtherThanWorker;
 
 		// We can ignore a single enemy worker in our region since we assume it is a scout (handled by scout defense)
-		if (region.enemyUnits.size() == 1 && enemyWorkers == 1 && startingBase)
-			region.enemyUnits.clear();
+		/*if (region.enemyUnits.size() == 1 && enemyWorkers == 1 && startingBase)
+			region.enemyUnits.clear();*/
 
 		std::stringstream squadName;
 		squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
@@ -2312,7 +2325,9 @@ void CombatCommander::updateDefenseSquads()
 				// If we have no more unit to defend we check for the workers
 				else if(support == "ground" && needsMoreSupport)
 				{
-					unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getDepotPosition(), region.closestEnemyUnit, region.enemyUnits);
+					// if there are only workers and we aren't worker rushed and are on 2 bases or less, the scout defense squad is going to take care of it
+					if (!region.onlyEnemyWorkers || m_bot.Strategy().isWorkerRushed() || m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() > 2)
+						unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getDepotPosition(), region.closestEnemyUnit, region.enemyUnits);
 				}
 
 				// If no support is available
@@ -2498,7 +2513,7 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 				enemyBuildingOnSameHeight = true;
 			}
 		}
-		if (!finishedCombatBuilding && enemyUnit.getType().isAttackingBuilding() && enemyUnit.getBuildProgress() == 1.f && (enemyUnit.getHitPoints() + enemyUnit.getShields()) / (enemyUnit.getUnitPtr()->health_max + enemyUnit.getUnitPtr()->shield_max) > 0.2f)
+		if (!finishedCombatBuilding && enemyUnit.getType().isAttackingBuilding() && Util::GetAttackRangeForTarget(enemyUnit.getUnitPtr(), worker.getUnitPtr(), m_bot) > 0 && enemyUnit.getBuildProgress() == 1.f && (enemyUnit.getHitPoints() + enemyUnit.getShields()) / (enemyUnit.getUnitPtr()->health_max + enemyUnit.getUnitPtr()->shield_max) > 0.2f)
 		{
 			finishedCombatBuilding = true;
 		}

@@ -10,6 +10,7 @@ class BuildingPlacer
 {
     CCBot & m_bot;
 
+	std::vector< std::vector<bool> > m_resourceBlockedTiles;//Used to place command centers when building an expand in the main
     std::vector< std::vector<bool> > m_reserveBuildingMap;
 	std::vector< std::vector<bool> > m_reserveWalkableMap;//Only used with #define COMPUTE_WALKABLE_TILES
 

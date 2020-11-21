@@ -274,6 +274,11 @@ void CCBot::OnStep()
 	{
 		checkKeyState();
 		IssueCheats();
+
+		if (Config().DebugMenu)
+		{
+			DebugMenu();
+		}
 	}
 	StopProfiling("0.1 checkKeyState");
 
@@ -459,16 +464,18 @@ void CCBot::checkKeyState()
 	else if (key6)
 	{
 		key6 = false;
-	}
+	}*/
 
 	if (GetAsyncKeyState('7'))
 	{
 		key7 = true;
+		m_config.DebugMenu = !m_config.DebugMenu;
 	}
 	else if (key7)
 	{
 		key7 = false;
-	}*/
+		m_config.DebugMenu = !m_config.DebugMenu;
+	}
 
 	if (GetAsyncKeyState('8'))
 	{
@@ -1337,7 +1344,19 @@ void CCBot::IssueGameStartCheats()
 	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
 	const auto offset = towardsCenter * 15;
 	const auto enemyLocation = GetEnemyStartLocations()[0];
-	const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false));
+	const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false, false));
+
+	if (Config().DebugMenu)
+	{
+		if (GetPlayerRace(Players::Self) == CCRace::Terran || this->GetPlayerRace(Players::Self) == CCRace::Zerg)
+		{
+			auto & obs = GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_OBSERVER);
+			if (obs.size() == 0)
+			{
+				Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation, player1, 1);
+			}
+		}
+	}
 
 	//Strategy().setShouldProduceAntiAirOffense(true);
 	//Debug()->DebugGiveAllTech();
@@ -1871,8 +1890,28 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 30, player1, 15);
 
 	// Test to reproduce bug where CC is not lifted against worker rush
-	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, player1, 20);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, enemyLocation, player2, 1);*/
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 30, player1, 20);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, enemyLocation, player2, 1);
+
+	// Test to reproduce bugs related to Cannon rush
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 25, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, m_startLocation + towardsCenter * 25, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 25, player1, 1);*/
+
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, m_startLocation - towardsCenterX * 10 - towardsCenterY * 15, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, m_startLocation - towardsCenterX * 10 - towardsCenterY * 10, player2, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation, player2, 1);
+
+	// Test to reproduce bug where workers are suiciding vs a Bunker and SCVs on IceAndChromeLE
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, m_startLocation + towardsCenter * 30, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, nat + towardsCenter * 7, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, nat + towardsCenter * 9, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, nat + towardsCenter * 9, player1, 5);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 15, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 9 - towardsCenterX * 1 + towardsCenterY * 4, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
@@ -1948,6 +1987,28 @@ void CCBot::IssueCheats()
 			}
 		}
 		Util::ClearChat(*this);
+	}
+}
+
+void CCBot::DebugMenu()
+{
+	if (GetPlayerRace(Players::Self) == CCRace::Terran || this->GetPlayerRace(Players::Self) == CCRace::Zerg)
+	{
+		auto & obs = GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_OBSERVER);
+		if (obs.size() == 0)
+		{
+			return;
+		}
+
+		for (auto & ob : obs)
+		{
+			if (ob.getHitPoints() < 40 || ob.getShields() < 20)
+			{
+				Debug()->DebugSetLife(40, ob.getUnitPtr());
+				Debug()->DebugSetShields(20, ob.getUnitPtr());
+				Util::ClearChat(*this);
+			}
+		}
 	}
 }
 
