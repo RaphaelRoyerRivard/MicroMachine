@@ -35,7 +35,7 @@ void BuildingPlacer::onStart()
 			{
 				for (int y = -3; y <= 3; y++)
 				{
-					if (abs(x) == abs(y))
+					if ((x == -4 || x == 3) && (y == 3 || y == -3))
 						continue;
 					m_resourceBlockedTiles[mineral.getTilePosition().x + x][mineral.getTilePosition().y + y] = true;
 				}
