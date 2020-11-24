@@ -310,92 +310,106 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ign
 	int offset = 1;
 	int direction = 0;
 	auto buildLocation = b.desiredPosition;
+	int offsetJumpMultiplier = 1;//Used to find a build location that is far, if there is no valid build location close-by
+	std::vector<CCTilePosition> unusableBuildLocation;//Used with offsetJumpMultiplier, skips the build location we already tested (required to not pick the same location).
 
-	while(!m_bot.Map().isWalkable(buildLocation) ||
-		m_bot.Map().getClosestTilesTo(buildLocation).size() < 10 ||
-		(checkInfluenceMap && Util::PathFinding::HasCombatInfluenceOnTile(buildLocation, false, m_bot)))
+	while (offsetJumpMultiplier <= 5)
 	{
-		switch (direction)
+		while (!m_bot.Map().isWalkable(buildLocation) ||
+			m_bot.Map().getClosestTilesTo(buildLocation).size() < 10 ||
+			(checkInfluenceMap && Util::PathFinding::HasCombatInfluenceOnTile(buildLocation, false, m_bot)) ||
+			std::find(unusableBuildLocation.begin(), unusableBuildLocation.end(), buildLocation) != unusableBuildLocation.end())
 		{
-			case 0://right
-				buildLocation.x = b.desiredPosition.x + offset;
-				buildLocation.y = b.desiredPosition.y;
-				break;
-			case 1://left
-				buildLocation.x = b.desiredPosition.x - offset;
-				buildLocation.y = b.desiredPosition.y;
-				break;
-			case 2://up
-				buildLocation.x = b.desiredPosition.x;
-				buildLocation.y = b.desiredPosition.y + offset;
-				break;
-			case 3://down
-				buildLocation.x = b.desiredPosition.x;
-				buildLocation.y = b.desiredPosition.y - offset;
-				break;
-			case 4://diag up-right
-				buildLocation.x = b.desiredPosition.x + offset;
-				buildLocation.y = b.desiredPosition.y + offset;
-				break;
-			case 5://diag up-left
-				buildLocation.x = b.desiredPosition.x - offset;
-				buildLocation.y = b.desiredPosition.y + offset;
-				break;
-			case 6://diag down-right
-				buildLocation.x = b.desiredPosition.x + offset;
-				buildLocation.y = b.desiredPosition.y - offset;
-				break;
-			case 7://diag down-left
-				buildLocation.x = b.desiredPosition.x - offset;
-				buildLocation.y = b.desiredPosition.y - offset;
-				direction = -1;//will be 0 after the ++
-				offset++;
-				break;
-			default:
-				Util::DisplayError("Should never happen [BuildingPlacer::getBuildLocationNear]", "0x00000008", m_bot, false);
-				break;
-		}
-		if (buildLocation.x < 0)
-		{
-			buildLocation.x = 0;
-		}
-		if (buildLocation.y < 0)
-		{
-			buildLocation.y = 0;
-		}
-		if (buildLocation.x >= m_bot.Map().mapMax().x)
-		{
-			buildLocation.x = m_bot.Map().mapMax().x - 1;
-		}
-		if (buildLocation.y >= m_bot.Map().mapMax().y)
-		{
-			buildLocation.y = m_bot.Map().mapMax().y - 1;
+			auto actualOffset = offset * offsetJumpMultiplier;
+			switch (direction)
+			{
+				case 0://right
+					buildLocation.x = b.desiredPosition.x + actualOffset;
+					buildLocation.y = b.desiredPosition.y;
+					break;
+				case 1://left
+					buildLocation.x = b.desiredPosition.x - actualOffset;
+					buildLocation.y = b.desiredPosition.y;
+					break;
+				case 2://up
+					buildLocation.x = b.desiredPosition.x;
+					buildLocation.y = b.desiredPosition.y + actualOffset;
+					break;
+				case 3://down
+					buildLocation.x = b.desiredPosition.x;
+					buildLocation.y = b.desiredPosition.y - actualOffset;
+					break;
+				case 4://diag up-right
+					buildLocation.x = b.desiredPosition.x + actualOffset;
+					buildLocation.y = b.desiredPosition.y + actualOffset;
+					break;
+				case 5://diag up-left
+					buildLocation.x = b.desiredPosition.x - actualOffset;
+					buildLocation.y = b.desiredPosition.y + actualOffset;
+					break;
+				case 6://diag down-right
+					buildLocation.x = b.desiredPosition.x + actualOffset;
+					buildLocation.y = b.desiredPosition.y - actualOffset;
+					break;
+				case 7://diag down-left
+					buildLocation.x = b.desiredPosition.x - actualOffset;
+					buildLocation.y = b.desiredPosition.y - actualOffset;
+					direction = -1;//will be 0 after the ++
+					offset++;
+					break;
+				default:
+					Util::DisplayError("Should never happen [BuildingPlacer::getBuildLocationNear]", "0x00000008", m_bot, false);
+					break;
+			}
+			if (buildLocation.x < 0)
+			{
+				buildLocation.x = 0;
+			}
+			if (buildLocation.y < 0)
+			{
+				buildLocation.y = 0;
+			}
+			if (buildLocation.x >= m_bot.Map().mapMax().x)
+			{
+				buildLocation.x = m_bot.Map().mapMax().x - 1;
+			}
+			if (buildLocation.y >= m_bot.Map().mapMax().y)
+			{
+				buildLocation.y = m_bot.Map().mapMax().y - 1;
+			}
+
+			if (offset == MAX_OFFSET)//Did not find any walkable space within 25 tiles in all directions
+			{
+				buildLocation = b.desiredPosition;//Avoids crashing, but this won't work well.
+			}
+			direction++;
 		}
 
-		if (offset == MAX_OFFSET)//Did not find any walkable space within 25 tiles in all directions
+		// get the precomputed vector of tile positions which are sorted closes to this location
+		auto & closestToBuilding = m_bot.Map().getClosestTilesTo(buildLocation);
+		auto desiredHeight = Util::TerrainHeight(buildLocation);
+
+		// iterate through the list until we've found a suitable location
+		for (size_t i(0); i < closestToBuilding.size(); ++i)
 		{
-			buildLocation = b.desiredPosition;//Avoids crashing, but this won't work well.
+			auto & pos = closestToBuilding[i];
+			if (forceSameHeight)
+			{
+				auto posHeight = Util::TerrainHeight(pos);
+				if(posHeight != desiredHeight)
+					continue;				
+			}
+
+			if (canBuildHere(pos.x, pos.y, b.type, ignoreReserved, checkInfluenceMap, includeExtraTiles, ignoreExtraBorder))
+			{
+				return pos;
+			}
 		}
-		direction++;
+
+		//Didn't find anywhere to place, going to jump a few tiles, hoping to find a build location further.
+		offsetJumpMultiplier++;
+		unusableBuildLocation.push_back(buildLocation);
 	}
-
-    // get the precomputed vector of tile positions which are sorted closes to this location
-    auto & closestToBuilding = m_bot.Map().getClosestTilesTo(buildLocation);
-	auto desiredHeight = Util::TerrainHeight(buildLocation);
-
-    // iterate through the list until we've found a suitable location
-    for (size_t i(0); i < closestToBuilding.size(); ++i)
-    {
-        auto & pos = closestToBuilding[i];
-		auto posHeight = Util::TerrainHeight(pos);
-		if (forceSameHeight && posHeight != desiredHeight)
-			continue;
-
-        if (canBuildHere(pos.x, pos.y, b.type, ignoreReserved, checkInfluenceMap, includeExtraTiles, ignoreExtraBorder))
-        {
-			return pos;
-        }
-    }
 
     //printf("Building Placer Failure: %s - Took %lf ms\n", b.type.getName().c_str(), ms);
 	printf("Building Placer Failure, couldn't find anywhere valide to place it");
