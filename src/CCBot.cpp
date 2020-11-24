@@ -1912,6 +1912,17 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, nat + towardsCenter * 9, player1, 5);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 15, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 9 - towardsCenterX * 1 + towardsCenterY * 4, player1, 1);*/
+
+	// Test to try to reproduce a bug where workers would suicide against Stalkers and Immortals on GoldenWallLE
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, nat + towardsCenter * 15 + towardsCenterY * 3, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, nat + towardsCenter * 17 + towardsCenterY * 5, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_IMMORTAL, nat + towardsCenter * 15 + towardsCenterY * 5, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, nat + towardsCenter * 15 - towardsCenterY * 1, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, nat - towardsCenter * 3, player2, 10);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, m_startLocation + towardsCenter * 6, player2, 6);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, m_startLocation + towardsCenter * 6, player2, 3);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_startLocation + towardsCenter * 6, player2, 1);*/
 }
 
 void CCBot::IssueCheats()
