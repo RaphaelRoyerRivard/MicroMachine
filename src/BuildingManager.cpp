@@ -703,7 +703,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 				{
 					auto location = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, false, true, false, false, false);
 					auto base = m_bot.Bases().getBaseContainingPosition(Util::GetPosition(location));
-					if (base->isUnderAttack())
+					if (base && base->isUnderAttack())
 					{
 						Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe. Can't get a location to build the CommandCenter, base underattack.", m_bot);
 						return false;
