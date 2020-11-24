@@ -1432,7 +1432,7 @@ void CombatCommander::updateAttackSquads()
 				if (hasGround && hasAir)
 					break;
 				hasGround = hasGround || !ally->is_flying;
-				hasAir = hasGround || !ally->is_flying;
+				hasAir = hasAir || ally->is_flying;
 			}
 			m_bot.StartProfiling("0.10.4.2.3.0     calcEnemies");
 			sc2::Units enemyUnits;
