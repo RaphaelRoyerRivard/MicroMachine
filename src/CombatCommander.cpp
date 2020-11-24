@@ -1474,9 +1474,11 @@ void CombatCommander::updateAttackSquads()
 				m_winAttackSimulation = simulationResult > 0.f || m_bot.GetCurrentSupply() >= 195;
 				if (!m_winAttackSimulation)
 				{
+					auto allySupply = Util::GetSupplyOfUnits(allyUnits, m_bot);
+					auto enemySupply = Util::GetSupplyOfUnits(enemyUnits, m_bot);
 					std::stringstream ss;
 					ss << std::fixed << std::setprecision(2);	// floats will show only 2 decimals
-					ss << "Cancel offensive (" << simulationResult * 100 << "%, " << Util::GetSupplyOfUnits(allyUnits, m_bot) << " ally supply vs " << Util::GetSupplyOfUnits(enemyUnits, m_bot) << " enemy supply)";
+					ss << "Cancel offensive (" << simulationResult * 100 << "%, " << allySupply << " ally supply vs " << enemySupply << " enemy supply)";
 					m_bot.Actions()->SendChat(ss.str(), sc2::ChatChannel::Team);
 					Util::Log(__FUNCTION__, ss.str(), m_bot);
 					m_lastRetreatFrame = m_bot.GetCurrentFrame();
@@ -1487,9 +1489,11 @@ void CombatCommander::updateAttackSquads()
 				m_winAttackSimulation = simulationResult > 0.5f || m_bot.GetCurrentSupply() >= 195;
 				if (m_winAttackSimulation)
 				{
+					auto allySupply = Util::GetSupplyOfUnits(allyUnits, m_bot);
+					auto enemySupply = Util::GetSupplyOfUnits(enemyUnits, m_bot);
 					std::stringstream ss;
 					ss << std::fixed << std::setprecision(2);	// floats will show only 2 decimals
-					ss << "Relaunch offensive (" << simulationResult * 100 << "%, " << Util::GetSupplyOfUnits(allyUnits, m_bot) << " ally supply vs " << Util::GetSupplyOfUnits(enemyUnits, m_bot) << " enemy supply)";
+					ss << "Relaunch offensive (" << simulationResult * 100 << "%, " << allySupply << " ally supply vs " << enemySupply << " enemy supply)";
 					m_bot.Actions()->SendChat(ss.str(), sc2::ChatChannel::Team);
 					Util::Log(__FUNCTION__, ss.str(), m_bot);
 				}
