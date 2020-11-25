@@ -1127,7 +1127,7 @@ void WorkerManager::repairCombatBuildings()//Ignores if the path or the area aro
 			for (int i = 0; i < reparator - alreadyRepairing; i++)
 			{
 				Unit worker;
-				if (onlyBaseWorker)
+				/*if (onlyBaseWorker)
 				{
 					auto base = m_bot.Bases().getBaseContainingPosition(building.getPosition(), Players::Self);
 					if (base != nullptr)
@@ -1151,9 +1151,9 @@ void WorkerManager::repairCombatBuildings()//Ignores if the path or the area aro
 						}
 					}
 				}
-				else
+				else*/
 				{
-					worker = getClosestMineralWorkerTo(building.getPosition());
+					worker = getClosestMineralWorkerTo(building.getPosition(), 0.f, true, true);
 				}
 
 				if (worker.isValid())
@@ -1165,14 +1165,14 @@ void WorkerManager::repairCombatBuildings()//Ignores if the path or the area aro
 	}
 }
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage, bool filterMoving) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage, bool filterMoving, bool filterDifferentHeight) const
 {
 	auto workersToIgnore = std::vector<CCUnitID>();
 	workersToIgnore.push_back(workerToIgnore);
-	return getClosestMineralWorkerTo(pos, workersToIgnore, minHpPercentage, filterMoving);
+	return getClosestMineralWorkerTo(pos, workersToIgnore, minHpPercentage, filterMoving, false, filterDifferentHeight);
 }
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving, bool allowCombatWorkers) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving, bool allowCombatWorkers, bool filterDifferentHeight) const
 {
 	Unit closestMineralWorker;
 	auto closestDist = 0.f;
@@ -1203,6 +1203,8 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 			continue;
 		if (filterMoving && worker.isMoving() && (!allowCombatWorkers || m_workerData.getWorkerJob(worker) != WorkerJobs::Combat))
 			continue;
+		if (filterDifferentHeight && Util::TerrainHeight(pos) != Util::TerrainHeight(worker.getPosition()))
+			continue;
 		
 		auto dist = Util::DistSq(worker.getPosition(), pos);
 		if (base != nullptr && dist > 20 * 20)
@@ -1220,9 +1222,9 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 }
 
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage, bool filterMoving) const
+Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage, bool filterMoving, bool filterDifferentHeight) const
 {
-    return getClosestMineralWorkerTo(pos, CCUnitID{}, minHpPercentage, filterMoving);
+    return getClosestMineralWorkerTo(pos, CCUnitID{}, minHpPercentage, filterMoving, filterDifferentHeight);
 }
 
 Unit WorkerManager::getClosestGasWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage) const
