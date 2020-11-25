@@ -2013,7 +2013,7 @@ void CombatCommander::updateDefenseSquads()
 						earlyRushed = true;
 				}
 
-				if (!unit.getType().isWorker())
+				if (!unit.getType().isWorker() && !unit.getType().isRefinery())	// we also don't want workers to defend against a Refinery
 				{
 					unitOtherThanWorker = true;
 					workerRushed = false;
