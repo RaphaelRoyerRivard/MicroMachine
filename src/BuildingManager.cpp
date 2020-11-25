@@ -92,8 +92,17 @@ void BuildingManager::lowPriorityChecks()
 			continue;
 		}
 
+		//Trying to build an addon on a building that already has an addon.
+		if (building.buildingUnit.isValid() && building.buildingUnit.getType().isAddon() && building.builderUnit.isValid() && building.builderUnit.getAddonTag() != 0)
+		{
+			auto remove = CancelBuilding(building, "trying to build an addon on a build with an addon", false);
+			if (remove.finalPosition != CCTilePosition(0, 0))
+			{
+				toRemove.push_back(remove);
+			}
+		}
+
 		auto position = building.finalPosition;
-		auto tag = (building.builderUnit.isValid() ? building.builderUnit.getTag() : 0);
 		if (!m_buildingPlacer.canBuildHere(position.x, position.y, building.type, true, false, false))
 		{
 			//Detect if the building was created this frame and we just don't know about it yet.
