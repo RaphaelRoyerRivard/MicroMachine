@@ -1796,7 +1796,7 @@ struct RegionArmyInformation
 	float antiAirAllyPower;
 	float antiGroundAllyPower;
 	bool antiInvis;
-	bool onlyEnemyWorkers;
+	bool offensiveEnemyUnit;
 	Squad* squad;
 	Unit closestEnemyUnit;
 
@@ -1809,7 +1809,7 @@ struct RegionArmyInformation
 		, antiAirAllyPower(0)
 		, antiGroundAllyPower(0)
 		, antiInvis(false)
-		, onlyEnemyWorkers(false)
+		, offensiveEnemyUnit(false)
 		, squad(nullptr)
 		, closestEnemyUnit({})
 	{}
@@ -1952,6 +1952,7 @@ void CombatCommander::updateDefenseSquads()
 
 	bool workerRushed = false;
 	bool earlyRushed = false;
+	std::vector<sc2::UNIT_TYPEID> inofensiveUnitTypes = { sc2::UNIT_TYPEID::ZERG_OVERLORD, sc2::UNIT_TYPEID::ZERG_OVERSEER, sc2::UNIT_TYPEID::PROTOSS_OBSERVER, sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE };
 	// TODO instead of separing by bases, we should separate by clusters
 	std::list<RegionArmyInformation> regions;
 	// for each of our occupied regions
@@ -1981,14 +1982,14 @@ void CombatCommander::updateDefenseSquads()
 
 		// calculate how many units are flying / ground units
 		bool unitOtherThanWorker = false;
+		bool offensiveUnit = false;
 		float minEnemyDistance = 0;
 		Unit closestEnemy;
 		int enemyWorkers = 0;
 		for (auto & unit : m_bot.GetKnownEnemyUnits())
-		//for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
 		{
-			// if it's an overlord or an hallucination, don't worry about it for defense, we don't want to make our units back for them
-			if (unit.getType().isOverlord() || unit.getUnitPtr()->is_hallucination)
+			// if it's an hallucination, don't worry about it for defense, we don't want to make our units back for them
+			if (unit.getUnitPtr()->is_hallucination)
 			{
 				continue;
 			}
@@ -2013,10 +2014,16 @@ void CombatCommander::updateDefenseSquads()
 						earlyRushed = true;
 				}
 
-				if (!unit.getType().isWorker() && !unit.getType().isRefinery())	// we also don't want workers to defend against a Refinery
+				if (!unit.getType().isWorker())
 				{
 					unitOtherThanWorker = true;
 					workerRushed = false;
+
+					// in this squad we don't want to defend with workers against refineries, inoffensive units and workers (unless we are worker rushed)
+					if (!Util::Contains(unit.getAPIUnitType(), inofensiveUnitTypes) && !unit.getType().isRefinery())
+					{
+						offensiveUnit = true;
+					}
 				}
 
 				const float enemyDistance = Util::DistSq(unit.getPosition(), basePosition);
@@ -2029,16 +2036,12 @@ void CombatCommander::updateDefenseSquads()
 				region.enemyUnits.push_back(unit);
 			}
 		}
-		region.onlyEnemyWorkers = !unitOtherThanWorker;
-
-		// We can ignore a single enemy worker in our region since we assume it is a scout (handled by scout defense)
-		/*if (region.enemyUnits.size() == 1 && enemyWorkers == 1 && startingBase)
-			region.enemyUnits.clear();*/
+		region.offensiveEnemyUnit = offensiveUnit;
 
 		std::stringstream squadName;
 		squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
 
-		myBaseLocation->setIsUnderAttack(!region.enemyUnits.empty());
+		myBaseLocation->setIsUnderAttack(offensiveUnit);
 		m_bot.StopProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		if (region.enemyUnits.empty())
 		{
@@ -2330,7 +2333,7 @@ void CombatCommander::updateDefenseSquads()
 				else if(support == "ground" && needsMoreSupport)
 				{
 					// if there are only workers and we aren't worker rushed and are on 2 bases or less, the scout defense squad is going to take care of it
-					if (!region.onlyEnemyWorkers || m_bot.Strategy().isWorkerRushed() || m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() > 2)
+					if (region.offensiveEnemyUnit || m_bot.Strategy().isWorkerRushed() || m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() > 2)
 						unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getDepotPosition(), region.closestEnemyUnit, region.enemyUnits);
 				}
 
