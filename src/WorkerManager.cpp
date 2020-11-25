@@ -1126,36 +1126,7 @@ void WorkerManager::repairCombatBuildings()//Ignores if the path or the area aro
 
 			for (int i = 0; i < reparator - alreadyRepairing; i++)
 			{
-				Unit worker;
-				/*if (onlyBaseWorker)
-				{
-					auto base = m_bot.Bases().getBaseContainingPosition(building.getPosition(), Players::Self);
-					if (base != nullptr)
-					{
-						auto depot = base->getResourceDepot();
-						if (depot.isValid())
-						{
-							for (auto & baseWorker : workers)///TODO order by closest to the target base location, allow gas workers
-							{
-								if (!isFree(baseWorker))
-								{
-									continue;
-								}
-								const auto workerDepot = m_workerData.getWorkerDepot(baseWorker);
-								if (workerDepot.isValid() && workerDepot.getTag() == depot.getTag())
-								{
-									worker = baseWorker;
-									break;
-								}
-							}
-						}
-					}
-				}
-				else*/
-				{
-					worker = getClosestMineralWorkerTo(building.getPosition(), 0.f, true, true);
-				}
-
+				Unit worker = getClosestMineralWorkerTo(building.getPosition(), 0.f, true, true);
 				if (worker.isValid())
 					setRepairWorker(worker, building);
 				else
