@@ -59,22 +59,22 @@ public:
 
     BuildingManager(CCBot & bot);
 
-	bool IsProxySwapDone() const { return m_proxySwapDone; }
-    void                onStart();
-	void				onFirstFrame();
-    void                onFrame(bool executeMacro);
-	void				lowPriorityChecks();
-	void				FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile);
-	void				FindMainRamp(std::list<CCTilePosition> &rampTiles);
+	bool						IsProxySwapDone() const { return m_proxySwapDone; }
+    void						onStart();
+	void						onFirstFrame();
+    void						onFrame(bool executeMacro);
+	void						lowPriorityChecks();
+	void						FindRampTiles(std::list<CCTilePosition> &rampTiles, std::list<CCTilePosition> &checkedTiles, CCTilePosition currentTile);
+	void						FindMainRamp(std::list<CCTilePosition> &rampTiles);
 	std::vector<CCTilePosition> FindRampTilesToPlaceBuilding(std::list<CCTilePosition> &rampTiles);
-	void				PlaceWallBuildings(std::vector<CCTilePosition> tilesToBlock);
-	bool				ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
-	void FindOpponentMainRamp();
-	bool				addBuildingTask(Building & b, bool filterMovingWorker = true, bool includeAddonTiles = true, bool ignoreExtraBorder = false, bool forceSameHeight = false);
-	bool				isConstructingType(const UnitType & type);
-    void                drawBuildingInformation();
-	void				drawStartingRamp();
-	void				drawWall();
+	void						PlaceWallBuildings(std::vector<CCTilePosition> tilesToBlock);
+	bool						ValidateSupplyDepotPosition(std::list<CCTilePosition> buildingTiles, CCTilePosition possibleTile);
+	void						FindOpponentMainRamp();
+	bool						addBuildingTask(Building & b, bool filterMovingWorker = true, bool includeAddonTiles = true, bool ignoreExtraBorder = false, bool forceSameHeight = false);
+	bool						isConstructingType(const UnitType & type);
+    void						drawBuildingInformation();
+	void						drawStartingRamp();
+	void						drawWall();
 	std::vector<Building> & getBuildings();
 	std::vector<Building> getPreviousBuildings();//Cannot be passed by reference
 	std::vector<Unit>	getBaseBuildings();

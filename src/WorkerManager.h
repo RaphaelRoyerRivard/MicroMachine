@@ -88,9 +88,9 @@ public:
 	Unit getDepotAtBasePosition(CCPosition basePosition) const;
 	int  getWorkerCountAtBasePosition(CCPosition basePosition) const;
     Unit getClosestDepot(Unit worker) const;
-	Unit getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f, bool filterMoving = true) const;
-	Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f, bool filterMoving = true) const;
-	Unit getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving = true, bool allowCombatWorkers = false) const;
+	Unit getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f, bool filterMoving = true, bool filterDifferentHeight = false) const;
+	Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f, bool filterMoving = true, bool filterDiffenrentHeight = false) const;
+	Unit getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving = true, bool allowCombatWorkers = false, bool filterDifferentHeight = false) const;
 	Unit getClosestGasWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f) const;
 	Unit getClosestGasWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f) const;
 	Unit getClosest(const Unit unit, const std::list<Unit> units) const;
