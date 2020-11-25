@@ -172,7 +172,7 @@ bool BuildingPlacer::canBuildHere(int bx, int by, const UnitType & type, bool ig
 	if (!type.isRefinery())
 	{
 		auto buildingTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, 0);
-		auto walkableTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, ignoreExtraBorder ? 0 : 1);
+		auto walkableTiles = getTilesForBuildLocation(bx, by, type, width, height, includeExtraTiles, ignoreExtraBorder ? 0 : buildingPadding);
 		for (auto & tile : walkableTiles)
 		{
 			if (!m_bot.Map().isValidTile(tile))//prevent tiles below 0 or above the map size
@@ -553,7 +553,7 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 void BuildingPlacer::reserveTiles(UnitType type, CCTilePosition pos)//(int bx, int by, int width, int height)
 {
 	auto buildingTiles = getTilesForBuildLocation(pos.x, pos.y, type, type.tileWidth(), type.tileHeight(), true, 0);
-	auto walkableTiles = getTilesForBuildLocation(pos.x, pos.y, type, type.tileWidth(), type.tileHeight(), true, 1);
+	auto walkableTiles = getTilesForBuildLocation(pos.x, pos.y, type, type.tileWidth(), type.tileHeight(), true, buildingPadding);
 	for (auto & tile : buildingTiles)
 	{
 		m_reserveBuildingMap[tile.x][tile.y] = true;
@@ -641,7 +641,7 @@ void BuildingPlacer::drawReservedTiles()
 void BuildingPlacer::freeTiles(int bx, int by, int width, int height, bool setBlocked)
 {
 	auto buildingTiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true, 0);
-	auto walkableTiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true, 1);
+	auto walkableTiles = getTilesForBuildLocation(bx, by, UnitType(), width, height, true, buildingPadding);
 	for (auto & tile : buildingTiles)
 	{
 		m_reserveBuildingMap[tile.x][tile.y] = false;

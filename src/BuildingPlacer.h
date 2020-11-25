@@ -10,15 +10,18 @@ class BuildingPlacer
 {
     CCBot & m_bot;
 
+	const int buildingPadding = 2;
+
 	std::vector< std::vector<bool> > m_resourceBlockedTiles;//Used to place command centers when building an expand in the main
     std::vector< std::vector<bool> > m_reserveBuildingMap;
+#ifdef COMPUTE_WALKABLE_TILES
 	std::vector< std::vector<bool> > m_reserveWalkableMap;//Only used with #define COMPUTE_WALKABLE_TILES
+#endif
 
     // queries for various BuildingPlacer data
 	bool isGeyserAssigned(CCTilePosition geyserTilePos) const;
     bool isReserved(int x, int y) const;
     bool tileOverlapsBaseLocation(int x, int y, UnitType type) const;
-
 
 public:
 

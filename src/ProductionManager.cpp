@@ -323,8 +323,6 @@ void ProductionManager::manageBuildOrderQueue()
 							m_bot.StopProfiling("0.10.2.2.2.2.1.1      canMakeNow");
 							if (needsCancellation || canProducerMakeItem)
 							{
-								if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ENGINEERINGBAY)
-									int a = 0;
 								// create it and remove it from the _queue
 								m_bot.StartProfiling("0.10.2.2.2.2.1.2      create");
 								const auto producerCreatedItem = create(producer, currentItem, m_bot.GetBuildingArea(currentItem.type));
@@ -1493,7 +1491,7 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
     }
 
     // build a refinery if we don't have one and the thing costs gas
-	if (typeData.gasCost > 0)
+	if (typeData.gasCost > 0 && m_bot.Observation()->GetScore().score_details.collection_rate_vespene <= 0)
     {
 		auto refinery = Util::GetRefineryType();
 		if (!m_queue.contains(MetaType(refinery, m_bot)))
@@ -1574,7 +1572,7 @@ void ProductionManager::lowPriorityChecks()
 		}
 	}
 	
-	//build bunkers in mineral/gas field [optimize economy]
+	//build bunkers between close geyesrs [optimize economy]
 	if (m_bot.GetPlayerRace(Players::Self) == CCRace::Terran && m_bot.Workers().getGasWorkersTarget() > 0)
 	{
 		auto & refineries = m_bot.GetAllyGeyserUnits();
@@ -1710,6 +1708,9 @@ void ProductionManager::lowPriorityChecks()
 			}
 		}
 	}
+
+	//Validate producer trying to build something impossible
+
 }
 
 bool ProductionManager::currentlyHasRequirement(MetaType currentItem) const
@@ -1971,13 +1972,13 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 						auto addon = m_bot.GetUnit(addonTag);
 						switch ((sc2::UNIT_TYPEID)addon.getAPIUnitType())
 						{
-						case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
-						case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
-						case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
-						{
-							addonIsReactor = true;
-							break;
-						}
+							case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+							case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+							{
+								addonIsReactor = true;
+								break;
+							}
 						}
 
 						if (unit.isTraining() && !addonIsReactor)
@@ -2492,12 +2493,6 @@ bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
 	}
 	
 	return false;
-}
-
-bool ProductionManager::detectBuildOrderDeadlock()
-{
-    // TODO: detect build order deadlocks here
-    return false;
 }
 
 int ProductionManager::getExtraMinerals()
