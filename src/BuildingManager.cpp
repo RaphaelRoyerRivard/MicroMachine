@@ -1296,7 +1296,8 @@ void BuildingManager::checkForCompletedBuildings()
 							//Set rally in the middle of the minerals
 							auto position = b.buildingUnit.getPosition();
 							auto base = m_bot.Bases().getBaseContainingPosition(position, Players::Self);
-							b.buildingUnit.rightClick(Util::GetPosition(base->getCenterOfMinerals()));
+							if (base)
+								b.buildingUnit.rightClick(Util::GetPosition(base->getCenterOfMinerals()));
 							break;
 						}
 						case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
