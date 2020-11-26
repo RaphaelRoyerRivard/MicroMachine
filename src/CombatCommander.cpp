@@ -16,6 +16,7 @@ const size_t DropPriority = 5;
 
 const float DefaultOrderRadius = 25;			//Order radius is the threat awareness range of units in the squad
 const float WorkerRushDefenseOrderRadius = 250;
+const float BaseDefenseOrderRadius = 50;
 const float MainAttackOrderRadius = 15;
 const float HarassOrderRadius = 25;
 const float ScoutOrderRadius = 15;				//Small number to prevent the scout from targeting far units instead of going to the next base location (cannot be too small otherwise the unit will ignore threats)
@@ -1998,7 +1999,7 @@ void CombatCommander::updateDefenseSquads()
 			if (!UnitType::isTargetable(unit.getAPIUnitType()))
 				continue;
 
-			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() && startingBase ? WorkerRushDefenseOrderRadius : 0))
+			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() && startingBase ? WorkerRushDefenseOrderRadius : BaseDefenseOrderRadius))
 			{
 				if (unit.getType().isWorker())
 					++enemyWorkers;
@@ -2036,6 +2037,35 @@ void CombatCommander::updateDefenseSquads()
 				region.enemyUnits.push_back(unit);
 			}
 		}
+
+		// check enemy units a second time, but check only combat buildings (like a cannon or a spine at the bottom of a cliff)
+		std::vector<Unit> unitsToAdd;
+		for (auto & unit : m_bot.GetKnownEnemyUnits())
+		{
+			if (!unit.getType().isAttackingBuilding())
+				continue;
+			if (!unit.isCompleted())
+				continue;
+			if (!unit.isPowered() && (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY))
+				continue;
+			if (Util::Contains(unit, region.enemyUnits))
+				continue;
+			// Check if the building has enough range to attack near an enemy unit of the region
+			float attackRange = Util::GetGroundAttackRange(unit.getUnitPtr(), m_bot);
+			bool closeToRegionUnit = false;
+			for (auto & regionUnit : region.enemyUnits)
+			{
+				float distSq = Util::DistSq(unit, regionUnit);
+				if (distSq <= attackRange * attackRange)
+				{
+					closeToRegionUnit = true;
+					break;
+				}
+			}
+			unitsToAdd.push_back(unit);
+		}
+		for (auto & unit : unitsToAdd)
+			region.enemyUnits.push_back(unit);
 		region.offensiveEnemyUnit = offensiveUnit;
 
 		std::stringstream squadName;
