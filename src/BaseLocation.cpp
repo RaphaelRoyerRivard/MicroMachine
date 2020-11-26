@@ -316,7 +316,7 @@ bool BaseLocation::isPlayerStartLocation(CCPlayer player) const
     return m_isPlayerStartLocation.at(player);
 }
 
-bool BaseLocation::containsPositionApproximative(const CCPosition & pos, int maxDistance) const
+bool BaseLocation::containsPositionApproximative(const CCPosition & pos, int maxDistance, bool sameHeightApprox) const
 {
 	if (!m_bot.Map().isValidPosition(pos) || (pos.x == 0 && pos.y == 0))
 	{
@@ -324,7 +324,20 @@ bool BaseLocation::containsPositionApproximative(const CCPosition & pos, int max
 	}
 
 	const int groundDistance = getGroundDistance(pos);
-	return groundDistance > 0 && groundDistance < (maxDistance > 0 ? maxDistance : ApproximativeBaseLocationTileDistance);
+	if (groundDistance <= 0)
+		return false;
+
+	bool closeEnough = groundDistance < (maxDistance > 0 ? maxDistance : ApproximativeBaseLocationTileDistance);
+
+	if (sameHeightApprox)
+	{
+		float posHeight = Util::TerrainHeight(pos);
+		float baseHeight = Util::TerrainHeight(m_depotPosition);
+		bool almostSameHeight = abs(posHeight - baseHeight) < 2;
+		return almostSameHeight && closeEnough;
+	}
+
+	return closeEnough;
 }
 
 bool BaseLocation::containsUnitApproximative(const Unit & unit, int maxDistance) const
@@ -340,7 +353,7 @@ bool BaseLocation::containsUnitApproximative(const Unit & unit, int maxDistance)
 		return Util::DistSq(unit, Util::GetPosition(m_depotTilePosition)) < maxDistance * maxDistance;
 	}
 
-	return containsPositionApproximative(unit.getPosition(), maxDistance);
+	return containsPositionApproximative(unit.getPosition(), maxDistance, true);
 }
 
 bool BaseLocation::containsPosition(const CCPosition & pos) const
