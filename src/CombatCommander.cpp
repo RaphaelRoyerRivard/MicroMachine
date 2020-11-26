@@ -2038,34 +2038,51 @@ void CombatCommander::updateDefenseSquads()
 			}
 		}
 
-		// check enemy units a second time, but check only combat buildings (like a cannon or a spine at the bottom of a cliff)
-		std::vector<Unit> unitsToAdd;
-		for (auto & unit : m_bot.GetKnownEnemyUnits())
+		if (!region.enemyUnits.empty())
 		{
-			if (!unit.getType().isAttackingBuilding())
-				continue;
-			if (!unit.isCompleted())
-				continue;
-			if (!unit.isPowered() && (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY))
-				continue;
-			if (Util::Contains(unit, region.enemyUnits))
-				continue;
-			// Check if the building has enough range to attack near an enemy unit of the region
-			float attackRange = Util::GetGroundAttackRange(unit.getUnitPtr(), m_bot);
-			bool closeToRegionUnit = false;
-			for (auto & regionUnit : region.enemyUnits)
+			// check enemy units a second time, but check only combat buildings (like a cannon or a spine at the bottom of a cliff)
+			std::vector<Unit> unitsToAdd;
+			for (auto & unit : m_bot.GetKnownEnemyUnits())
 			{
-				float distSq = Util::DistSq(unit, regionUnit);
-				if (distSq <= attackRange * attackRange)
+				if (!unit.getType().isAttackingBuilding())
+					continue;
+				if (!unit.isCompleted())
+					continue;
+				if (!unit.isPowered() && (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY))
+					continue;
+				if (Util::Contains(unit, region.enemyUnits))
+					continue;
+				// Check if the building has enough range to attack near an enemy unit of the region
+				float attackRange = Util::GetGroundAttackRange(unit.getUnitPtr(), m_bot);
+				bool closeToRegionUnit = false;
+				for (auto & regionUnit : region.enemyUnits)
 				{
-					closeToRegionUnit = true;
-					break;
+					float distSq = Util::DistSq(unit, regionUnit);
+					if (distSq <= attackRange * attackRange)
+					{
+						closeToRegionUnit = true;
+						break;
+					}
+				}
+				if (closeToRegionUnit)
+				{
+					unitsToAdd.push_back(unit);
+					if (!unit.getType().isWorker())
+					{
+						unitOtherThanWorker = true;
+						workerRushed = false;
+
+						// in this squad we don't want to defend with workers against refineries, inoffensive units and workers (unless we are worker rushed)
+						if (!Util::Contains(unit.getAPIUnitType(), inofensiveUnitTypes) && !unit.getType().isRefinery())
+						{
+							offensiveUnit = true;
+						}
+					}
 				}
 			}
-			unitsToAdd.push_back(unit);
+			for (auto & unit : unitsToAdd)
+				region.enemyUnits.push_back(unit);
 		}
-		for (auto & unit : unitsToAdd)
-			region.enemyUnits.push_back(unit);
 		region.offensiveEnemyUnit = offensiveUnit;
 
 		std::stringstream squadName;
@@ -2112,7 +2129,7 @@ void CombatCommander::updateDefenseSquads()
 		}
 
 		m_bot.StartProfiling("0.10.4.2.2.3      createSquad");
-		const SquadOrder defendRegion(SquadOrderTypes::Defend, closestEnemy.getPosition(), m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : DefaultOrderRadius, "Defend Region!");
+		const SquadOrder defendRegion(SquadOrderTypes::Defend, closestEnemy.getPosition(), m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : BaseDefenseOrderRadius, "Defend Region!");
 		// if we don't have a squad assigned to this region already, create one
 		if (!m_squadData.squadExists(squadName.str()))
 		{
