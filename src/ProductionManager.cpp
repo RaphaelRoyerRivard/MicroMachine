@@ -779,7 +779,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const bool enemyEarlyRoachWarren = m_bot.GetCurrentFrame() < 4032 && !m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACHWARREN).empty();	// 3 minutes
 				const bool pumpOutMarauders = proxyMaraudersStrategy || enemyUnitsWeakAgainstMarauders >= 5;
 				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount < enemyUnitsWeakAgainstMarauders || (enemyRace == sc2::Protoss && reaperCount > 0 && !enemyHasStargate));
-				
+				const auto factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
+
 				if (productionBuildingAddonCount < productionBuildingCount)
 				{//Addon
 					bool hasPicked = false;
@@ -787,7 +788,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					const auto barracksTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksTechLab.getUnitType(), false, true);
 					const auto barracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), false, true);
 					const auto barracksAddonCount = barracksTechLabCount + barracksReactorCount;
-					const auto factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
 					const auto factoryReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryReactor.getUnitType(), false, true);
 					const auto factoryAddonCount = factoryTechLabCount + factoryReactorCount;
 					const auto starportTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::StarportTechLab.getUnitType(), false, true);
@@ -1008,6 +1008,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyZerglingCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLING).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED).size();
 				const float cycloneTankRatio = float(cycloneCount) / float(tankCount);
 				const float enemySupplyAirGroundRatio = m_bot.Analyzer().opponentGroundSupply == 0 ? 100 : float(m_bot.Analyzer().opponentAirSupply) / float(m_bot.Analyzer().opponentGroundSupply);
+				const bool shouldProduceHellionsAgainstEarlyLightUnitsRush = factoryTechLabCount == 0 && earlyRushed && m_bot.Analyzer().getEnemyLightGroundUnitCount() > hellionCount;
 				// We want to build Thors against Protoss, but only after we have an Armory or 2 bases and we don't want more Thors than Cyclones
 				if (startingStrategy != PROXY_CYCLONES && enemyRace == sc2::Protoss && (finishedArmory || finishedBaseCount >= 2) && thorCount + 1 < cycloneCount)
 				{
@@ -1020,11 +1021,13 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want at least 1 Hellion for every 2 enemy Zealot or 4 enemy Zergling. Against Zerg, we want to make at least 1 asap to defend against potential zergling rushes (unless the opponent already has Roaches)
-				else if (!shouldProduceFirstCyclone && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ (hellionCount + 1) * 4 < enemyZerglingCount || (enemyRace == sc2::Race::Zerg && !m_bot.Strategy().enemyHasProxyHatchery() && hellionCount + deadHellionCount == 0 && enemyRoachAndRavagerCount == 0)))
+				else if (!shouldProduceFirstCyclone && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ shouldProduceHellionsAgainstEarlyLightUnitsRush || (hellionCount + 1) * 4 < enemyZerglingCount || (enemyRace == sc2::Race::Zerg && !m_bot.Strategy().enemyHasProxyHatchery() && hellionCount + deadHellionCount == 0 && enemyRoachAndRavagerCount == 0)))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
 					m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
+					if (shouldProduceHellionsAgainstEarlyLightUnitsRush)
+						m_queue.removeAllOfType(MetaTypeEnum::FactoryTechLab);
 #ifndef NO_UNITS
 					if (!m_queue.contains(MetaTypeEnum::Hellion))
 					{

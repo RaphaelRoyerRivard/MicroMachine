@@ -1446,6 +1446,9 @@ void CombatCommander::updateAttackSquads()
 					// Ignore temporary units
 					if (enemyUnit.getType().isSpawnedUnit())
 						continue;
+					// Ignore units that can't be targetted
+					if (!UnitType::isTargetable(enemyUnit.getAPIUnitType()))
+						continue;
 					if (enemyUnit.getType().isBuilding())
 					{
 						// Ignore buildings in construction
