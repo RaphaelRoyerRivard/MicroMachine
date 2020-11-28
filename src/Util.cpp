@@ -2882,6 +2882,16 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		return 0.f;
 	if (enemyUnits.empty())
 		return 1.f;
+	// Check if it's a 1v1 mirror and if so, we want to trade
+	if (units.size() == 1 && enemyUnits.size() == 1)
+	{
+		auto unit = units[0];
+		auto enemyUnit = enemyUnits[0];
+		if (unit->unit_type == enemyUnit->unit_type && unit->health >= enemyUnit->health && unit->shield >= enemyUnit->shield)
+		{
+			return 0.001f;
+		}
+	}
 	bot.StartProfiling("s.0 PrepareForCombatSimulation");
 	const int playerId = GetSelfPlayerId(bot);
 	CombatState state;
