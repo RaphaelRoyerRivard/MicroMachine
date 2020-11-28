@@ -1053,7 +1053,7 @@ void WorkerManager::repairCombatBuildings()//Ignores if the path or the area aro
 					{
 						++maxReparator;
 						repairPerSecond += baseRepairPerSecond / maxReparator;
-					} while (repairPerSecond < recentDamageTaken);
+					} while (repairPerSecond < recentDamageTaken && maxReparator < 20);
 					++maxReparator;	// add a buffer of 1 SCV
 				}
 				break;
