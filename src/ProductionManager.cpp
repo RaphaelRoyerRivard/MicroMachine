@@ -658,6 +658,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 	const auto currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 	const auto startingStrategy = m_bot.Strategy().getStartingStrategy();
+	const auto earlyRushed = m_bot.Strategy().isEarlyRushed();
 
 	// build supply if we need some
 	const auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
@@ -867,7 +868,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if (!produceMarauders && (reaperCount == 0 || (((proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted) || enemyRace == sc2::Race::Terran) && producedReaperCount < 2)))
+				if (!produceMarauders && (reaperCount == 0 || (((proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted) || enemyRace == sc2::Race::Terran) && producedReaperCount < earlyRushed ? 4 : 2)))
 				{
 					if (!m_queue.contains(MetaTypeEnum::Reaper))
 					{
