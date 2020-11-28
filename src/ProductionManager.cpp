@@ -434,9 +434,9 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	{
 		shouldSkip = (m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasProxyHatchery()) && m_bot.GetMinerals() < 800;
 	}
-	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE || currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
 	{
-		// We don't want to produce a Cyclone if we have no Banshee and an idle Starport with a Techlab
+		// We don't want to produce a Cyclone or Tank if we have no Banshee and an idle Starport with a Techlab
 		if (m_queue.contains(MetaTypeEnum::Banshee) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true) == 0)
 		{
 			const auto & starports = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_STARPORT);
