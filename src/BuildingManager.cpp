@@ -2090,7 +2090,7 @@ void BuildingManager::castBuildingsAbilities()
 					auto range = Util::GetAttackRangeForTarget(combatUnit.getUnitPtr(), burrowedUnit, m_bot);
 					if (range <= 0.f)
 						continue;	// The combat unit cannot attack the burrowed unit
-					range += 5.f;	// We add a buffer of 5 tiles
+					range += Util::getSpeedOfUnit(combatUnit.getUnitPtr(), m_bot);	// We add a small buffer
 					const auto dist = Util::DistSq(combatUnit, burrowedUnit->pos);
 					if (dist <= range * range)
 					{

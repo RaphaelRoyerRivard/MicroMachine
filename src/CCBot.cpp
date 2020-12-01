@@ -329,6 +329,9 @@ void CCBot::OnStep()
 	StopProfiling("0.0 OnStep");	//Do not remove
 
 	drawProfilingInfo();
+
+	m_previousGameLoop = m_gameLoop;	// needs to stay after call to drawProfilingInfo()
+
 	if (Config().AllowDebug)
 	{
 		Debug()->SendDebug();
@@ -2430,7 +2433,6 @@ void CCBot::drawProfilingInfo()
 		m_skippedFrames += skipped;
 		profilingInfo += "\nTotal skipped " + std::to_string(m_skippedFrames) + " frames.";
 		profilingInfo += "\nSkipped " + std::to_string(skipped) + " frames since last loop.";
-		m_previousGameLoop = m_gameLoop;
 	}
 	for (auto & mapPair : m_profilingTimes)
 	{
