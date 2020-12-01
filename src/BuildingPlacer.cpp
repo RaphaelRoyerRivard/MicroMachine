@@ -550,8 +550,13 @@ bool BuildingPlacer::buildable(const UnitType type, int x, int y, bool ignoreRes
 	return true;
 }
 
-void BuildingPlacer::reserveTiles(UnitType type, CCTilePosition pos)//(int bx, int by, int width, int height)
+void BuildingPlacer::reserveTiles(UnitType type, CCTilePosition pos)
 {
+	if (pos == CCTilePosition())//if the position isn't valid
+	{
+		return;
+	}
+
 	auto buildingTiles = getTilesForBuildLocation(pos.x, pos.y, type, type.tileWidth(), type.tileHeight(), true, 0);
 	auto walkableTiles = getTilesForBuildLocation(pos.x, pos.y, type, type.tileWidth(), type.tileHeight(), true, buildingPadding);
 	for (auto & tile : buildingTiles)
@@ -568,6 +573,11 @@ void BuildingPlacer::reserveTiles(UnitType type, CCTilePosition pos)//(int bx, i
 
 void BuildingPlacer::reserveTiles(CCTilePosition start, CCTilePosition end)//Used only for zones, not for buildings. Like mineral all the way to the depot for example.
 {
+	if (start == CCTilePosition() || end == CCTilePosition())//if either position isn't valid
+	{
+		return;
+	}
+
 	int rwidth = (int)m_reserveBuildingMap.size();
 	int rheight = (int)m_reserveBuildingMap[0].size();
 	int minX;
