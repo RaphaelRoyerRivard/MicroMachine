@@ -178,6 +178,7 @@ public:
 	void IssueCheats();
 	void DebugMenu();
     uint32_t GetCurrentFrame() const;
+	uint32_t getPreviousFrame() const { return m_previousGameLoop; };
     int GetMinerals() const;
     int GetCurrentSupply() const;
     int GetMaxSupply() const;

@@ -300,8 +300,10 @@ void CombatAnalyzer::DetectBurrowingUnits()
 		if (!unit.isFlying() && !unit.getType().isBuilding() && !unit.getType().isEgg() && !unit.getType().isLarva() && !unit.getType().isCocoon() && !unit.getType().isWorker())
 		{
 			// We want to only consider units that we just saw disappear
+			// get last frame (otherwise it might not work for realtime)
+			float elapsedFrames = m_bot.GetCurrentFrame() - m_bot.getPreviousFrame();
 			const auto missingFrames = m_bot.GetCurrentFrame() - unit.getUnitPtr()->last_seen_game_loop;
-			if (missingFrames == 0 || missingFrames > 24)
+			if (missingFrames == 0 || missingFrames > elapsedFrames)
 				continue;
 			// If we already flagged that unit as burrowed, no need to check again if it burrowed
 			if (burrowedUnits.find(unit.getUnitPtr()) != burrowedUnits.end())
