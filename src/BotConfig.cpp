@@ -25,7 +25,7 @@ BotConfig::BotConfig()
     BatchReplayMode = false;
     NbBatchReplay = 1;
 
-    DrawProductionInfo = true;
+    DrawProductionInfo = false;
     DrawTileInfo = false;
     DrawWalkableSectors = false;
 	DrawBuildableSectors = false;
