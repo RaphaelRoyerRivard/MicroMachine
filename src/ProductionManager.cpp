@@ -308,7 +308,7 @@ void ProductionManager::manageBuildOrderQueue()
 						}
 						if (producer.isValid())//If we found a producer, lets create it.
 						{
-							m_bot.StartProfiling("2.2.3     Build without premovement");
+							m_bot.StartProfiling("0.10.2.2.2.2.1      Build without premovement");
 							// build supply if we need some (SupplyBlock)
 							if (m_bot.Data(currentItem.type.getUnitType()).supplyCost > m_bot.GetMaxSupply() - m_bot.GetCurrentSupply())
 							{
