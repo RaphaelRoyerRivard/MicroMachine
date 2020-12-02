@@ -711,6 +711,10 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 				if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER)
 				{
 					auto location = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, false, true, false, false, false);
+					if (location == CCPosition())//If no build location is found
+					{
+						return false;
+					}
 					auto base = m_bot.Bases().getBaseContainingPosition(Util::GetPosition(location));
 					if (base && base->isUnderAttack())
 					{
