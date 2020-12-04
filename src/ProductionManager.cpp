@@ -969,9 +969,21 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				bool enoughMedivacs = true;
 				if (produceMarauders)
 				{
-					if (!m_queue.contains(MetaTypeEnum::Marauder))
+					int finishedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, false, false);
+					if (finishedBarracksCount > 0)
 					{
-						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marauder, 0, false));
+						int refineryCount = m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_REFINERY, true, false);
+						if (finishedBarracksCount > refineryCount)
+						{
+							if (!m_queue.contains(MetaTypeEnum::Marine))
+							{
+								m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+							}
+						}
+						if (!m_queue.contains(MetaTypeEnum::Marauder))
+						{
+							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marauder, 0, false));
+						}
 					}
 
 					if (maraudersCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES) && !isTechQueuedOrStarted(MetaTypeEnum::ConcussiveShells))

@@ -1354,6 +1354,7 @@ void CCBot::IssueGameStartCheats()
 			if (obs.size() == 0)
 			{
 				Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation, player1, 1);
+				//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, player1, 1);
 			}
 		}
 	}
@@ -2264,7 +2265,7 @@ const std::vector<Unit> CCBot::GetAllyGeyserUnits()
 		case CCRace::Terran:
 		{
 			auto refinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERY);//cannot be by reference, because its modified
-			auto& richRefinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERYRICH);
+			auto& richRefinery = GetAllyUnits(Util::GetRichRefineryId());
 			refinery.insert(refinery.end(), richRefinery.begin(), richRefinery.end());
 			return refinery;
 		}

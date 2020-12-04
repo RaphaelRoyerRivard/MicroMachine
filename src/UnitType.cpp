@@ -117,17 +117,16 @@ bool UnitType::isResourceDepot() const
 
 bool UnitType::isRefinery(sc2::UnitTypeID type)
 {
-	if (type.ToType() == Util::GetRichAssimilatorId() || type.ToType() == Util::GetRichExtractorId())
+	if (type.ToType() == Util::GetRichRefineryId() || type.ToType() == Util::GetRichAssimilatorId() || type.ToType() == Util::GetRichExtractorId())
 		return true;
 	switch (type.ToType())
 	{
-	case sc2::UNIT_TYPEID::TERRAN_REFINERY:
-	case sc2::UNIT_TYPEID::TERRAN_REFINERYRICH:
-	case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR:
-	case sc2::UNIT_TYPEID::ZERG_EXTRACTOR:
-		return true;
-	default:
-		return false;
+		case sc2::UNIT_TYPEID::TERRAN_REFINERY:
+		case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR:
+		case sc2::UNIT_TYPEID::ZERG_EXTRACTOR:
+			return true;
+		default:
+			return false;
 	}
 }
 

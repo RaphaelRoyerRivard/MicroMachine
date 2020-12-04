@@ -91,6 +91,7 @@ struct Util::PathFinding::IMNode
 
 void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 {
+	richRefineryId = bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1943) : sc2::UNIT_TYPEID::TERRAN_REFINERYRICH;
 	richAssimilatorId = bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1980) : sc2::UNIT_TYPEID::PROTOSS_ASSIMILATORRICH;
 	richExtractorId = bot.Config().StarCraft2Version > "4.10.4" ? sc2::UNIT_TYPEID(1981) : sc2::UNIT_TYPEID::ZERG_EXTRACTORRICH;
 	switch (race)
@@ -99,7 +100,7 @@ void Util::Initialize(CCBot & bot, CCRace race, const sc2::GameInfo & _gameInfo)
 		{
 			Util::depotType = UnitType(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, bot);
 			Util::refineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_REFINERY, bot);
-			Util::richRefineryType = UnitType(sc2::UNIT_TYPEID::TERRAN_REFINERYRICH, bot);
+			Util::richRefineryType = UnitType(richRefineryId, bot);//sc2::UNIT_TYPEID::TERRAN_REFINERYRICH
 			Util::workerType = UnitType(sc2::UNIT_TYPEID::TERRAN_SCV, bot);
 			Util::supplyType = UnitType(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, bot);
 			break;
@@ -941,6 +942,11 @@ sc2::UNIT_TYPEID Util::GetRichAssimilatorId()
 sc2::UNIT_TYPEID Util::GetRichExtractorId()
 {
 	return richExtractorId;
+}
+
+sc2::UNIT_TYPEID Util::GetRichRefineryId()
+{
+	return richRefineryId;
 }
 
 UnitType Util::GetResourceDepotType()
