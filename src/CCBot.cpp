@@ -329,6 +329,9 @@ void CCBot::OnStep()
 	StopProfiling("0.0 OnStep");	//Do not remove
 
 	drawProfilingInfo();
+
+	m_previousGameLoop = m_gameLoop;	// needs to stay after call to drawProfilingInfo()
+
 	if (Config().AllowDebug)
 	{
 		Debug()->SendDebug();
@@ -1772,9 +1775,9 @@ void CCBot::IssueGameStartCheats()
 
 	// Test to see if the right amount of workers is selected to repair the PF
 	/*Debug()->DebugGiveAllResources();
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS, mapCenter, player2, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, mapCenter - towardsCenter * 3, player2, 10);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, mapCenter + towardsCenter * 6, player1, 2);*/
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, nat - towardsCenter * 3, player2, 10);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, nat + towardsCenter * 6, player1, 8);*/
 
 	// Test to reproduce bug where Marauders would not get up the cliff to attack workers
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenter * 5 + towardsCenterY * 20, player2, 1);
@@ -1895,9 +1898,9 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, enemyLocation, player2, 1);
 
 	// Test to reproduce bugs related to Cannon rush
-	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 25, player1, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, m_startLocation + towardsCenter * 25, player1, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 25, player1, 1);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation + towardsCenter * 30, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_FORGE, m_startLocation + towardsCenter * 30, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, m_startLocation + towardsCenter * 30, player1, 1);*/
 
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSCANAL, m_startLocation - towardsCenterX * 10 - towardsCenterY * 15, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, m_startLocation - towardsCenterX * 10 - towardsCenterY * 10, player2, 1);
@@ -1913,6 +1916,17 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, nat + towardsCenter * 9, player1, 5);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 15, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 9 - towardsCenterX * 1 + towardsCenterY * 4, player1, 1);*/
+
+	// Test to try to reproduce a bug where workers would suicide against Stalkers and Immortals on GoldenWallLE
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, nat + towardsCenter * 15 + towardsCenterY * 3, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, nat + towardsCenter * 17 + towardsCenterY * 5, player1, 1);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_IMMORTAL, nat + towardsCenter * 15 + towardsCenterY * 5, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, nat + towardsCenter * 15 - towardsCenterY * 1, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, nat - towardsCenter * 3, player2, 10);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, m_startLocation + towardsCenter * 6, player2, 6);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, m_startLocation + towardsCenter * 6, player2, 3);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_startLocation + towardsCenter * 6, player2, 1);*/
 }
 
 void CCBot::IssueCheats()
@@ -2420,7 +2434,6 @@ void CCBot::drawProfilingInfo()
 		m_skippedFrames += skipped;
 		profilingInfo += "\nTotal skipped " + std::to_string(m_skippedFrames) + " frames.";
 		profilingInfo += "\nSkipped " + std::to_string(skipped) + " frames since last loop.";
-		m_previousGameLoop = m_gameLoop;
 	}
 	for (auto & mapPair : m_profilingTimes)
 	{

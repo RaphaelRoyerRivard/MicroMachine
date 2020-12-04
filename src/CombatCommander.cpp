@@ -16,6 +16,7 @@ const size_t DropPriority = 5;
 
 const float DefaultOrderRadius = 25;			//Order radius is the threat awareness range of units in the squad
 const float WorkerRushDefenseOrderRadius = 250;
+const float BaseDefenseOrderRadius = 50;
 const float MainAttackOrderRadius = 15;
 const float HarassOrderRadius = 25;
 const float ScoutOrderRadius = 15;				//Small number to prevent the scout from targeting far units instead of going to the next base location (cannot be too small otherwise the unit will ignore threats)
@@ -1432,7 +1433,7 @@ void CombatCommander::updateAttackSquads()
 				if (hasGround && hasAir)
 					break;
 				hasGround = hasGround || !ally->is_flying;
-				hasAir = hasGround || !ally->is_flying;
+				hasAir = hasAir || ally->is_flying;
 			}
 			m_bot.StartProfiling("0.10.4.2.3.0     calcEnemies");
 			sc2::Units enemyUnits;
@@ -1444,6 +1445,9 @@ void CombatCommander::updateAttackSquads()
 				{
 					// Ignore temporary units
 					if (enemyUnit.getType().isSpawnedUnit())
+						continue;
+					// Ignore units that can't be targetted
+					if (!UnitType::isTargetable(enemyUnit.getAPIUnitType()))
 						continue;
 					if (enemyUnit.getType().isBuilding())
 					{
@@ -1474,9 +1478,11 @@ void CombatCommander::updateAttackSquads()
 				m_winAttackSimulation = simulationResult > 0.f || m_bot.GetCurrentSupply() >= 195;
 				if (!m_winAttackSimulation)
 				{
+					auto allySupply = Util::GetSupplyOfUnits(allyUnits, m_bot);
+					auto enemySupply = Util::GetSupplyOfUnits(enemyUnits, m_bot);
 					std::stringstream ss;
 					ss << std::fixed << std::setprecision(2);	// floats will show only 2 decimals
-					ss << "Cancel offensive (" << simulationResult * 100 << "%, " << Util::GetSupplyOfUnits(allyUnits, m_bot) << " ally supply vs " << Util::GetSupplyOfUnits(enemyUnits, m_bot) << " enemy supply)";
+					ss << "Cancel offensive (" << simulationResult * 100 << "%, " << allySupply << " ally supply vs " << enemySupply << " enemy supply)";
 					m_bot.Actions()->SendChat(ss.str(), sc2::ChatChannel::Team);
 					Util::Log(__FUNCTION__, ss.str(), m_bot);
 					m_lastRetreatFrame = m_bot.GetCurrentFrame();
@@ -1487,9 +1493,11 @@ void CombatCommander::updateAttackSquads()
 				m_winAttackSimulation = simulationResult > 0.5f || m_bot.GetCurrentSupply() >= 195;
 				if (m_winAttackSimulation)
 				{
+					auto allySupply = Util::GetSupplyOfUnits(allyUnits, m_bot);
+					auto enemySupply = Util::GetSupplyOfUnits(enemyUnits, m_bot);
 					std::stringstream ss;
 					ss << std::fixed << std::setprecision(2);	// floats will show only 2 decimals
-					ss << "Relaunch offensive (" << simulationResult * 100 << "%, " << Util::GetSupplyOfUnits(allyUnits, m_bot) << " ally supply vs " << Util::GetSupplyOfUnits(enemyUnits, m_bot) << " enemy supply)";
+					ss << "Relaunch offensive (" << simulationResult * 100 << "%, " << allySupply << " ally supply vs " << enemySupply << " enemy supply)";
 					m_bot.Actions()->SendChat(ss.str(), sc2::ChatChannel::Team);
 					Util::Log(__FUNCTION__, ss.str(), m_bot);
 				}
@@ -1792,7 +1800,7 @@ struct RegionArmyInformation
 	float antiAirAllyPower;
 	float antiGroundAllyPower;
 	bool antiInvis;
-	bool onlyEnemyWorkers;
+	bool offensiveEnemyUnit;
 	Squad* squad;
 	Unit closestEnemyUnit;
 
@@ -1805,7 +1813,7 @@ struct RegionArmyInformation
 		, antiAirAllyPower(0)
 		, antiGroundAllyPower(0)
 		, antiInvis(false)
-		, onlyEnemyWorkers(false)
+		, offensiveEnemyUnit(false)
 		, squad(nullptr)
 		, closestEnemyUnit({})
 	{}
@@ -1948,6 +1956,7 @@ void CombatCommander::updateDefenseSquads()
 
 	bool workerRushed = false;
 	bool earlyRushed = false;
+	std::vector<sc2::UNIT_TYPEID> inofensiveUnitTypes = { sc2::UNIT_TYPEID::ZERG_OVERLORD, sc2::UNIT_TYPEID::ZERG_OVERSEER, sc2::UNIT_TYPEID::PROTOSS_OBSERVER, sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE };
 	// TODO instead of separing by bases, we should separate by clusters
 	std::list<RegionArmyInformation> regions;
 	// for each of our occupied regions
@@ -1977,14 +1986,14 @@ void CombatCommander::updateDefenseSquads()
 
 		// calculate how many units are flying / ground units
 		bool unitOtherThanWorker = false;
+		bool offensiveUnit = false;
 		float minEnemyDistance = 0;
 		Unit closestEnemy;
 		int enemyWorkers = 0;
 		for (auto & unit : m_bot.GetKnownEnemyUnits())
-		//for (auto & unit : m_bot.UnitInfo().getUnits(Players::Enemy))
 		{
-			// if it's an overlord or an hallucination, don't worry about it for defense, we don't want to make our units back for them
-			if (unit.getType().isOverlord() || unit.getUnitPtr()->is_hallucination)
+			// if it's an hallucination, don't worry about it for defense, we don't want to make our units back for them
+			if (unit.getUnitPtr()->is_hallucination)
 			{
 				continue;
 			}
@@ -1993,7 +2002,7 @@ void CombatCommander::updateDefenseSquads()
 			if (!UnitType::isTargetable(unit.getAPIUnitType()))
 				continue;
 
-			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() && startingBase ? WorkerRushDefenseOrderRadius : 0))
+			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() && startingBase ? WorkerRushDefenseOrderRadius : BaseDefenseOrderRadius))
 			{
 				if (unit.getType().isWorker())
 					++enemyWorkers;
@@ -2013,6 +2022,12 @@ void CombatCommander::updateDefenseSquads()
 				{
 					unitOtherThanWorker = true;
 					workerRushed = false;
+
+					// in this squad we don't want to defend with workers against refineries, inoffensive units and workers (unless we are worker rushed)
+					if (!Util::Contains(unit.getAPIUnitType(), inofensiveUnitTypes) && !unit.getType().isRefinery())
+					{
+						offensiveUnit = true;
+					}
 				}
 
 				const float enemyDistance = Util::DistSq(unit.getPosition(), basePosition);
@@ -2025,16 +2040,58 @@ void CombatCommander::updateDefenseSquads()
 				region.enemyUnits.push_back(unit);
 			}
 		}
-		region.onlyEnemyWorkers = !unitOtherThanWorker;
 
-		// We can ignore a single enemy worker in our region since we assume it is a scout (handled by scout defense)
-		/*if (region.enemyUnits.size() == 1 && enemyWorkers == 1 && startingBase)
-			region.enemyUnits.clear();*/
+		if (!region.enemyUnits.empty())
+		{
+			// check enemy units a second time, but check only combat buildings (like a cannon or a spine at the bottom of a cliff)
+			std::vector<Unit> unitsToAdd;
+			for (auto & unit : m_bot.GetKnownEnemyUnits())
+			{
+				if (!unit.getType().isAttackingBuilding())
+					continue;
+				if (!unit.isCompleted())
+					continue;
+				if (!unit.isPowered() && (unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit.getType().getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY))
+					continue;
+				if (Util::Contains(unit, region.enemyUnits))
+					continue;
+				// Check if the building has enough range to attack near an enemy unit of the region
+				float attackRange = Util::GetGroundAttackRange(unit.getUnitPtr(), m_bot);
+				bool closeToRegionUnit = false;
+				for (auto & regionUnit : region.enemyUnits)
+				{
+					float distSq = Util::DistSq(unit, regionUnit);
+					if (distSq <= attackRange * attackRange)
+					{
+						closeToRegionUnit = true;
+						break;
+					}
+				}
+				if (closeToRegionUnit)
+				{
+					unitsToAdd.push_back(unit);
+					if (!unit.getType().isWorker())
+					{
+						unitOtherThanWorker = true;
+						workerRushed = false;
+
+						// in this squad we don't want to defend with workers against refineries, inoffensive units and workers (unless we are worker rushed)
+						if (!Util::Contains(unit.getAPIUnitType(), inofensiveUnitTypes) && !unit.getType().isRefinery())
+						{
+							offensiveUnit = true;
+						}
+					}
+				}
+			}
+			for (auto & unit : unitsToAdd)
+				region.enemyUnits.push_back(unit);
+		}
+		region.offensiveEnemyUnit = offensiveUnit;
 
 		std::stringstream squadName;
 		squadName << "Base Defense " << basePosition.x << " " << basePosition.y;
 
-		myBaseLocation->setIsUnderAttack(!region.enemyUnits.empty());
+		myBaseLocation->setIsUnderAttack(offensiveUnit);
 		m_bot.StopProfiling("0.10.4.2.2.1      detectEnemiesInRegions");
 		if (region.enemyUnits.empty())
 		{
@@ -2075,7 +2132,7 @@ void CombatCommander::updateDefenseSquads()
 		}
 
 		m_bot.StartProfiling("0.10.4.2.2.3      createSquad");
-		const SquadOrder defendRegion(SquadOrderTypes::Defend, closestEnemy.getPosition(), m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : DefaultOrderRadius, "Defend Region!");
+		const SquadOrder defendRegion(SquadOrderTypes::Defend, closestEnemy.getPosition(), m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : BaseDefenseOrderRadius, "Defend Region!");
 		// if we don't have a squad assigned to this region already, create one
 		if (!m_squadData.squadExists(squadName.str()))
 		{
@@ -2326,7 +2383,7 @@ void CombatCommander::updateDefenseSquads()
 				else if(support == "ground" && needsMoreSupport)
 				{
 					// if there are only workers and we aren't worker rushed and are on 2 bases or less, the scout defense squad is going to take care of it
-					if (!region.onlyEnemyWorkers || m_bot.Strategy().isWorkerRushed() || m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() > 2)
+					if (region.offensiveEnemyUnit || m_bot.Strategy().isWorkerRushed() || m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() > 2)
 						unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getDepotPosition(), region.closestEnemyUnit, region.enemyUnits);
 				}
 

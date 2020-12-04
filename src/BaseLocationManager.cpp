@@ -440,8 +440,11 @@ void BaseLocationManager::onFrame()
 		sortBaseLocationPtrs();
 	}
 
-    // draw the debug information for each base location
-    
+	// save the natural expansions
+	if (!m_nat)
+		m_nat = getNextExpansion(Players::Self, false, false, true);
+	if (!m_enemyNat)
+		m_enemyNat = getNextExpansion(Players::Enemy, false, false, true);
 }
 
 BaseLocation * BaseLocationManager::getBaseLocation(const CCPosition & pos) const
@@ -717,6 +720,13 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 	}
 
 	return closestBase;
+}
+
+BaseLocation* BaseLocationManager::getPlayerNat(int player)
+{
+	if (player == Players::Self)
+		return m_nat;
+	return m_enemyNat;
 }
 
 CCTilePosition BaseLocationManager::getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles) const

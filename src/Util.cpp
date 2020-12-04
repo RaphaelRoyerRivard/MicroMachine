@@ -1211,7 +1211,7 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 	else
 		unitRange = GetMaxAttackRange(unit.getUnitPtr(), bot);
 	///////// HEALTH
-	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.5f);
+	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.65f);	// just enough so that a Hellion has more power than a Reaper (one against the other)
 	///////// DPS
 	if (target.isValid())
 		unitPower *= isMedivac ? 12.6f : std::max(1.f, GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot));
@@ -2888,6 +2888,16 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		return 0.f;
 	if (enemyUnits.empty())
 		return 1.f;
+	// Check if it's a 1v1 mirror and if so, we want to trade
+	if (units.size() == 1 && enemyUnits.size() == 1)
+	{
+		auto unit = units[0];
+		auto enemyUnit = enemyUnits[0];
+		if (unit->unit_type == enemyUnit->unit_type && unit->health >= enemyUnit->health && unit->shield >= enemyUnit->shield)
+		{
+			return 0.001f;
+		}
+	}
 	bot.StartProfiling("s.0 PrepareForCombatSimulation");
 	const int playerId = GetSelfPlayerId(bot);
 	CombatState state;

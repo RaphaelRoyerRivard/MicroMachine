@@ -325,7 +325,9 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 		else if (isMarauder && m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS && !m_marauderAttackInitiated)
 		{
-			goal = m_bot.Bases().getBaseLocations()[1]->getPosition();
+			auto enemyNat = m_bot.Bases().getPlayerNat(Players::Enemy);
+			if (enemyNat)
+				goal = enemyNat->getDepotPosition();
 			goalDescription = "EnemyNat";
 			int groupedSupply = 0;
 			const auto & marauders = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_MARAUDER);

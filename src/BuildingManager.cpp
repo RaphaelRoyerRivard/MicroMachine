@@ -716,7 +716,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 						return false;
 					}
 					auto base = m_bot.Bases().getBaseContainingPosition(Util::GetPosition(location));
-					if (base->isUnderAttack())
+					if (base && base->isUnderAttack())
 					{
 						Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe. Can't get a location to build the CommandCenter, base underattack.", m_bot);
 						return false;
@@ -1300,7 +1300,8 @@ void BuildingManager::checkForCompletedBuildings()
 							//Set rally in the middle of the minerals
 							auto position = b.buildingUnit.getPosition();
 							auto base = m_bot.Bases().getBaseContainingPosition(position, Players::Self);
-							b.buildingUnit.rightClick(Util::GetPosition(base->getCenterOfMinerals()));
+							if (base)
+								b.buildingUnit.rightClick(Util::GetPosition(base->getCenterOfMinerals()));
 							break;
 						}
 						case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
@@ -2093,7 +2094,7 @@ void BuildingManager::castBuildingsAbilities()
 					auto range = Util::GetAttackRangeForTarget(combatUnit.getUnitPtr(), burrowedUnit, m_bot);
 					if (range <= 0.f)
 						continue;	// The combat unit cannot attack the burrowed unit
-					range += 5.f;	// We add a buffer of 5 tiles
+					range += Util::getSpeedOfUnit(combatUnit.getUnitPtr(), m_bot);	// We add a small buffer
 					const auto dist = Util::DistSq(combatUnit, burrowedUnit->pos);
 					if (dist <= range * range)
 					{

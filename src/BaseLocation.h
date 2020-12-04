@@ -56,7 +56,7 @@ public:
     bool isStartLocation() const;
     bool isPlayerStartLocation(CCPlayer player) const;
     bool isMineralOnly() const;
-	bool containsPositionApproximative(const CCPosition & pos, int maxDistance = 0) const;
+	bool containsPositionApproximative(const CCPosition & pos, int maxDistance = 0, bool sameHeightApprox = false) const;
 	bool containsUnitApproximative(const Unit & unit, int maxDistance = 0) const;
     bool containsPosition(const CCPosition & pos) const;
 	const CCTilePosition & getTurretPosition() const;
