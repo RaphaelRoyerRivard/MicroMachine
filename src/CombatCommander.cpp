@@ -2157,8 +2157,8 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.StopProfiling("0.10.4.2.2.3      createSquad");
 
 		m_bot.StartProfiling("0.10.4.2.2.4      calculateRegionInformation");
-		region.calcEnemyPower(workerRushed);
-		region.calcClosestEnemy(workerRushed);
+		region.calcEnemyPower(m_bot.Strategy().isWorkerRushed());
+		region.calcClosestEnemy(m_bot.Strategy().isWorkerRushed());
 		regions.push_back(region);
 		m_bot.StopProfiling("0.10.4.2.2.4      calculateRegionInformation");
 	}
