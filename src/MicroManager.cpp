@@ -154,6 +154,9 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 
 	const Unit attackerUnit(attacker, m_bot);
 	const Unit targetUnit(target, m_bot);
+
+	if (attackerUnit.getType().isWorker() && targetUnit.getType().isWorker() && !m_bot.Strategy().isWorkerRushed() && m_squad->getName() != "ScoutDefense")
+		return 0.f;
 	
 	const float antiBuildingModifier = attackerUnit.getType().isWorker() && targetUnit.getType().isBuilding() ? 10.f : 1.f;
 

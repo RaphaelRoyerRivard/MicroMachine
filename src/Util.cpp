@@ -1275,7 +1275,7 @@ float Util::GetSpecialCasePower(const Unit &unit)
 	if (unit.getType().isRefinery())
 		return 0.f;	// We don't want to pull workers against gas steal
 	const auto unitPtr = unit.getUnitPtr();
-	float divider = unit.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL ? 4 : 8;
+	float divider = unit.getAPIUnitType() == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL ? 2 : 4;
 	return (unitPtr->health_max + unitPtr->shield_max) / divider;	// will pull 4 workers for a Pylon
 }
 

@@ -1827,13 +1827,15 @@ struct RegionArmyInformation
 		return unitAirScores;
 	}
 
-	void calcEnemyPower()
+	void calcEnemyPower(bool considerWorkers)
 	{
 		airEnemyPower = 0;
 		groundEnemyPower = 0;
 		invisEnemies = false;
 		for (auto& unit : enemyUnits)
 		{
+			if (!considerWorkers && unit.getType().isWorker())
+				continue;
 			auto power = Util::GetUnitPower(unit.getUnitPtr(), nullptr, bot);
 			// if the unit has 0 power or if it is a building that can't attack
 			if (power == 0.f || (unit.getType().isBuilding() && (unit.getBuildProgress() < 1 || !unit.getType().isAttackingBuilding() || (bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss && !unit.isPowered()))))
@@ -1847,11 +1849,13 @@ struct RegionArmyInformation
 		}
 	}
 
-	void calcClosestEnemy()
+	void calcClosestEnemy(bool considerWorkers)
 	{
 		float minDist = 0.f;
 		for(auto & enemyUnit : enemyUnits)
 		{
+			if (!considerWorkers && enemyUnit.getType().isWorker())
+				continue;
 			const float dist = Util::DistSq(enemyUnit, baseLocation->getPosition());
 			if(!closestEnemyUnit.isValid() || dist < minDist)
 			{
@@ -2021,7 +2025,7 @@ void CombatCommander::updateDefenseSquads()
 				if (!unit.getType().isWorker())
 				{
 					unitOtherThanWorker = true;
-					workerRushed = false;
+					workerRushed = false;	// TODO if the enemy places an Assimilator or a Pylon, it might still be a worker rush
 
 					// in this squad we don't want to defend with workers against refineries, inoffensive units and workers (unless we are worker rushed)
 					if (!Util::Contains(unit.getAPIUnitType(), inofensiveUnitTypes) && !unit.getType().isRefinery())
@@ -2153,8 +2157,8 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.StopProfiling("0.10.4.2.2.3      createSquad");
 
 		m_bot.StartProfiling("0.10.4.2.2.4      calculateRegionInformation");
-		region.calcEnemyPower();
-		region.calcClosestEnemy();
+		region.calcEnemyPower(workerRushed);
+		region.calcClosestEnemy(workerRushed);
 		regions.push_back(region);
 		m_bot.StopProfiling("0.10.4.2.2.4      calculateRegionInformation");
 	}
@@ -2532,7 +2536,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
 Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight) const
 {
     // get our worker unit that is mining that is closest to it
-    Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
+    Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, allowDifferentHeight);
 
 	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy, enemyUnits, allowDifferentHeight))
 	{

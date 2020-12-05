@@ -1152,7 +1152,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 	const auto & baseLocations = m_bot.Bases().getBaseLocations();
 	for (const auto baseLocation : baseLocations)
 	{
-		if (Util::DistSq(pos, Util::GetPosition(baseLocation->getDepotTilePosition())) < 10 * 10)
+		if (Util::DistSq(pos, Util::GetPosition(baseLocation->getDepotTilePosition())) < 10 * 10 && Util::TerrainHeight(pos) == Util::TerrainHeight(baseLocation->getDepotPosition()))
 		{
 			base = baseLocation;
 			break;
@@ -1168,11 +1168,15 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 			continue;
 
 		// if it is a mineral worker, Idle or None
-		if (!isFree(worker) && (!allowCombatWorkers || m_workerData.getWorkerJob(worker) != WorkerJobs::Combat))
+		int workerJob = m_workerData.getWorkerJob(worker);
+		auto workerSquad = m_bot.Commander().Combat().getSquadData().getUnitSquad(worker);
+		if (!isFree(worker) && (!allowCombatWorkers || workerJob != WorkerJobs::Combat))
 			continue;
 		if (isReturningCargo(worker))
 			continue;
-		if (filterMoving && worker.isMoving() && (!allowCombatWorkers || m_workerData.getWorkerJob(worker) != WorkerJobs::Combat))
+		if (m_workerData.isProxyWorker(worker))
+			continue;
+		if (filterMoving && worker.isMoving() && (!allowCombatWorkers || workerJob != WorkerJobs::Combat))
 			continue;
 		if (filterDifferentHeight && Util::TerrainHeight(pos) != Util::TerrainHeight(worker.getPosition()))
 			continue;
