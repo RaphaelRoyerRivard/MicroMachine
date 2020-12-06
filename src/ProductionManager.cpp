@@ -1520,6 +1520,28 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
 				m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), item.blocking);
 			}
 		}
+		else
+		{
+			auto pos = m_bot.Buildings().getBuildingPlacer().getRefineryPosition();
+			if (pos == CCPosition())//No valid location to build a geyser
+			{
+				if (m_bot.Bases().getBaseCount(Players::Self, true) > 0)//If we have at least a base
+				{
+					switch (m_bot.GetPlayerRace(Players::Self))
+					{
+						case CCRace::Protoss:
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Zealot, false);
+							break;
+						case CCRace::Zerg:
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Zergling, false);
+							break;
+						case CCRace::Terran:
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+							break;
+					}
+				}
+			}
+		}
     }
 }
 

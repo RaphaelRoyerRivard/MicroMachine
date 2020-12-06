@@ -715,7 +715,6 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 					closestGeyser = geyserPos;
 				}
 			}
-			break;
 		}
 	}
 	m_bot.StopProfiling("getRefineryPosition");

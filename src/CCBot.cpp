@@ -846,6 +846,7 @@ void CCBot::setUnits()
 
 	int armoredEnemies = 0;
 	m_knownEnemyUnits.clear();
+	m_enemyBuildings.clear();
 	m_enemyBuildingsUnderConstruction.clear();
 	m_enemyUnitsPerType.clear();
 	m_strategy.setEnemyHasWorkerHiddingInOurMain(false);
@@ -859,8 +860,12 @@ void CCBot::setUnits()
 
 		m_enemyUnitsPerType[enemyUnitPtr->unit_type].push_back(enemyUnit);
 
-		if (enemyUnit.getType().isBuilding() && enemyUnit.getBuildProgress() < 1)
-			m_enemyBuildingsUnderConstruction.push_back(enemyUnit);
+		if (enemyUnit.getType().isBuilding())
+		{
+			m_enemyBuildings.push_back(enemyUnit);
+			if(enemyUnit.getBuildProgress() < 1)
+				m_enemyBuildingsUnderConstruction.push_back(enemyUnit);
+		}
 
 		if (enemyUnit.isArmored() && !enemyUnit.getType().isOverlord() && !enemyUnit.getType().isBuilding())
 			++armoredEnemies;
@@ -1357,7 +1362,6 @@ void CCBot::IssueGameStartCheats()
 			if (obs.size() == 0)
 			{
 				Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation, player1, 1);
-				//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PROBE, m_startLocation, player1, 1);
 			}
 		}
 	}
