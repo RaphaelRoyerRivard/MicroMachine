@@ -20,6 +20,7 @@ namespace Util
 	static CombatPredictor* m_simulator;
 
 	//used for optimisation
+	static sc2::UNIT_TYPEID richRefineryId;
 	static sc2::UNIT_TYPEID richAssimilatorId;
 	static sc2::UNIT_TYPEID richExtractorId;
 	static UnitType refineryType;
@@ -296,6 +297,7 @@ namespace Util
 	UnitType		GetRichRefineryType();
 	UnitType        GetSupplyProvider();
 	UnitType        GetWorkerType();
+	sc2::UNIT_TYPEID GetRichRefineryId();
 	sc2::UNIT_TYPEID GetRichAssimilatorId();
 	sc2::UNIT_TYPEID GetRichExtractorId();
     bool            IsZerg(const CCRace & race);

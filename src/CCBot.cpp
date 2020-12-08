@@ -846,6 +846,7 @@ void CCBot::setUnits()
 
 	int armoredEnemies = 0;
 	m_knownEnemyUnits.clear();
+	m_enemyBuildings.clear();
 	m_enemyBuildingsUnderConstruction.clear();
 	m_enemyUnitsPerType.clear();
 	m_strategy.setEnemyHasWorkerHiddingInOurMain(false);
@@ -859,8 +860,12 @@ void CCBot::setUnits()
 
 		m_enemyUnitsPerType[enemyUnitPtr->unit_type].push_back(enemyUnit);
 
-		if (enemyUnit.getType().isBuilding() && enemyUnit.getBuildProgress() < 1)
-			m_enemyBuildingsUnderConstruction.push_back(enemyUnit);
+		if (enemyUnit.getType().isBuilding())
+		{
+			m_enemyBuildings.push_back(enemyUnit);
+			if(enemyUnit.getBuildProgress() < 1)
+				m_enemyBuildingsUnderConstruction.push_back(enemyUnit);
+		}
 
 		if (enemyUnit.isArmored() && !enemyUnit.getType().isOverlord() && !enemyUnit.getType().isBuilding())
 			++armoredEnemies;
@@ -2278,7 +2283,7 @@ const std::vector<Unit> CCBot::GetAllyGeyserUnits()
 		case CCRace::Terran:
 		{
 			auto refinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERY);//cannot be by reference, because its modified
-			auto& richRefinery = GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERYRICH);
+			auto& richRefinery = GetAllyUnits(Util::GetRichRefineryId());
 			refinery.insert(refinery.end(), richRefinery.begin(), richRefinery.end());
 			return refinery;
 		}

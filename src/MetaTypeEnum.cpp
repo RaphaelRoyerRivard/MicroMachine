@@ -68,6 +68,7 @@ MetaType MetaTypeEnum::ConcussiveShells;
 	//Buildings
 	//Units
 MetaType MetaTypeEnum::Adept;
+MetaType MetaTypeEnum::Zealot;
 	//Upgrades
 MetaType MetaTypeEnum::ProtossGroundWeaponsLevel1;
 MetaType MetaTypeEnum::ProtossGroundWeaponsLevel2;
@@ -88,6 +89,7 @@ MetaType MetaTypeEnum::ProtossShieldsLevel3;
 //ZERG
 	//Buildings
 	//Units
+MetaType MetaTypeEnum::Zergling;
 	//Upgrades
 MetaType MetaTypeEnum::ZergMeleeWeaponsLevel1;
 MetaType MetaTypeEnum::ZergMeleeWeaponsLevel2;
@@ -174,6 +176,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 		//Buildings
 		//Units
 	MetaTypeEnum::Adept = MetaType("Adept", m_bot);
+	MetaTypeEnum::Zealot = MetaType("Zealot", m_bot);
 		//Upgrades
 	MetaTypeEnum::ProtossGroundWeaponsLevel1 = MetaType("ProtossGroundWeaponsLevel1", m_bot);
 	MetaTypeEnum::ProtossGroundWeaponsLevel2 = MetaType("ProtossGroundWeaponsLevel2", m_bot);
@@ -194,6 +197,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	//ZERG
 		//Buildings
 		//Units
+	MetaTypeEnum::Zergling = MetaType("Zergling", m_bot);
 		//Upgrades
 	MetaTypeEnum::ZergMeleeWeaponsLevel1 = MetaType("ZergMeleeWeaponsLevel1", m_bot);
 	MetaTypeEnum::ZergMeleeWeaponsLevel2 = MetaType("ZergMeleeWeaponsLevel2", m_bot);

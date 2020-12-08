@@ -269,5 +269,6 @@ public:
 	void CalcBestFlyingCycloneHelpers();
 	bool ShouldUnitHeal(const sc2::Unit * unit) const;
 	bool GetUnitAbilities(const sc2::Unit * unit, sc2::AvailableAbilities & outUnitAbilities) const;
+	const SquadData & getSquadData() const { return m_squadData; }
 };
 

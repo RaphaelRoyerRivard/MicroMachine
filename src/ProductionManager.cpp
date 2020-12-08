@@ -970,9 +970,21 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				bool enoughMedivacs = true;
 				if (produceMarauders)
 				{
-					if (!m_queue.contains(MetaTypeEnum::Marauder))
+					int finishedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, false, false);
+					if (finishedBarracksCount > 0)
 					{
-						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marauder, 0, false));
+						int refineryCount = m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_REFINERY, true, false);
+						if (finishedBarracksCount > refineryCount)
+						{
+							if (!m_queue.contains(MetaTypeEnum::Marine))
+							{
+								m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+							}
+						}
+						if (!m_queue.contains(MetaTypeEnum::Marauder))
+						{
+							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marauder, 0, false));
+						}
 					}
 
 					if (maraudersCount > 0 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES) && !isTechQueuedOrStarted(MetaTypeEnum::ConcussiveShells))
@@ -1506,6 +1518,28 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
 			if (refineryCount + richRefineryCount == 0)
 			{
 				m_queue.queueAsHighestPriority(MetaType(refinery, m_bot), item.blocking);
+			}
+		}
+		else
+		{
+			auto pos = m_bot.Buildings().getBuildingPlacer().getRefineryPosition();
+			if (pos == CCPosition())//No valid location to build a geyser
+			{
+				if (m_bot.Bases().getBaseCount(Players::Self, true) > 0)//If we have at least a base
+				{
+					switch (m_bot.GetPlayerRace(Players::Self))
+					{
+						case CCRace::Protoss:
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Zealot, false);
+							break;
+						case CCRace::Zerg:
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Zergling, false);
+							break;
+						case CCRace::Terran:
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+							break;
+					}
+				}
 			}
 		}
     }

@@ -80,6 +80,7 @@ class CCBot : public sc2::Agent
 	std::map<sc2::Tag, uint32_t> m_KD8ChargesSpawnFrame;
 	std::vector<Unit>       m_allUnits;
 	std::vector<Unit>       m_knownEnemyUnits;
+	std::vector<Unit>		m_enemyBuildings;
 	std::vector<Unit>		m_enemyBuildingsUnderConstruction;
     std::vector<CCPosition> m_enemyBaseLocations;
 	std::map<sc2::UNIT_TYPEID, std::vector<Unit>> m_enemyUnitsPerType;
@@ -210,6 +211,7 @@ public:
 	const std::list<sc2::Units> & GetStackedEnemyWorkers() const { return m_stackedEnemyWorkers; }
 	const std::vector<Unit> & GetKnownEnemyUnits() const;
 	const std::vector<Unit> & GetEnemyUnits(sc2::UnitTypeID type);
+	const std::vector<Unit> & GetEnemyBuildings() const { return m_enemyBuildings; }
 	const std::vector<Unit> & GetEnemyBuildingsUnderConstruction() const { return m_enemyBuildingsUnderConstruction; }
 	std::map<sc2::Tag, Unit> & GetNeutralUnits();
 	bool IsParasited(const sc2::Unit * unit) const;
