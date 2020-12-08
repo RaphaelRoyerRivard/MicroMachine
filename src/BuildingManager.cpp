@@ -93,13 +93,9 @@ void BuildingManager::lowPriorityChecks()
 		}
 
 		//Trying to build an addon on a building that already has an addon.
-		if (building.buildingUnit.isValid() && building.buildingUnit.getType().isAddon() && building.builderUnit.isValid() && building.builderUnit.getAddonTag() != 0)
+		if (!building.buildingUnit.isValid() && building.type.isAddon() && building.builderUnit.isValid() && building.builderUnit.getAddonTag() != 0)
 		{
-			auto remove = CancelBuilding(building, "trying to build an addon on a build with an addon", false);
-			if (remove.finalPosition != CCTilePosition(0, 0))
-			{
-				toRemove.push_back(remove);
-			}
+			toRemove.push_back(CancelBuilding(building, "trying to build an addon on a building with an addon", false));
 		}
 
 		auto position = building.finalPosition;
