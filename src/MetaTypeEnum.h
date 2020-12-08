@@ -74,6 +74,7 @@ class MetaTypeEnum
 			//Buildings
 			//Units
 		static MetaType Adept;
+		static MetaType Zealot;
 			//Upgrades
 		static MetaType ProtossGroundWeaponsLevel1;
 		static MetaType ProtossGroundWeaponsLevel2;
@@ -94,6 +95,7 @@ class MetaTypeEnum
 		//ZERG
 			//Buildings
 			//Units
+		static MetaType Zergling;
 			//Upgrades
 		static MetaType ZergMeleeWeaponsLevel1;
 		static MetaType ZergMeleeWeaponsLevel2;

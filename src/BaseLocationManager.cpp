@@ -652,7 +652,7 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 	int minDistance = std::numeric_limits<int>::max();
 
 	CCPosition homeTile = homeBase->getPosition();
-	CCPosition enemyHomeTile = enemyHomeBase == nullptr? homeTile : enemyHomeBase->getPosition();
+	CCPosition enemyHomeTile = enemyHomeBase == nullptr ? homeTile : enemyHomeBase->getPosition();
 
 	for (auto & base : getBaseLocations())
 	{
