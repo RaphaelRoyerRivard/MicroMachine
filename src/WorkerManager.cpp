@@ -584,7 +584,7 @@ void WorkerManager::handleGasWorkers()
 		auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
 		auto & depot = base->getResourceDepot();
 		bool hasUsableDepot = true;
-		if (!depot.isValid() || depot.getUnitPtr()->build_progress < 1)//Do not using the gas bunker with an unfinished or inexistant depot.
+		if (!depot.isValid() || (depot.isValid() && depot.getUnitPtr()->build_progress < 1))//Do not using the gas bunker with an unfinished or inexistant depot.
 		{
 			hasUsableDepot = false;
 		}

@@ -1038,24 +1038,20 @@ void BuildingManager::checkForStartedConstruction()
 		int addonOffset = (type.isAddon() ? 3 : 0);
 
 		std::vector<Unit> buildingsOfType;
-		switch ((sc2::UNIT_TYPEID)type.getAPIUnitType())
+		if (type.isGeyser())
 		{
-			//Special case for geysers because of rich geysers having a different ID
-			case sc2::UNIT_TYPEID::PROTOSS_ASSIMILATOR:
-			case sc2::UNIT_TYPEID::ZERG_EXTRACTOR:
-			case sc2::UNIT_TYPEID::TERRAN_REFINERY:
-				buildingsOfType = m_bot.GetAllyGeyserUnits();
-				break;
-			default:
-				buildingsOfType = m_bot.GetAllyUnits(type.getAPIUnitType());
-				break;
+			buildingsOfType = m_bot.GetAllyGeyserUnits();
+		}
+		else
+		{
+			buildingsOfType = m_bot.GetAllyUnits(type.getAPIUnitType());
 		}
 
 		// for each building unit which is being constructed
 		for (auto building : buildingsOfType)
 		{
 			// filter out units which aren't buildings under construction
-			if (!building.getType().isBuilding() || !building.isBeingConstructed())
+			if (!building.isBeingConstructed())
 			{
 				continue;
 			}

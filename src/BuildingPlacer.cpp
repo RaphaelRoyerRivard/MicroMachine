@@ -729,7 +729,7 @@ CCTilePosition BuildingPlacer::getRefineryPosition()
 bool BuildingPlacer::isGeyserAssigned(CCTilePosition geyserTilePos) const
 {
 	//Check if refinery is already assigned to a building task (m_building)
-	for (auto & refinery : m_bot.GetAllyUnits(Util::GetRefineryType().getAPIUnitType()))
+	for (auto & refinery : m_bot.GetAllyGeyserUnits())
 	{
 		if (geyserTilePos == refinery.getTilePosition())
 		{
