@@ -5,6 +5,7 @@
 //#define NO_PRODUCTION
 //#define NO_BUILDING
 //#define NO_MICRO
+//#define NO_OPPONENT
 
 //Debug only draw only
 //#define COMPUTE_WALKABLE_TILES

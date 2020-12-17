@@ -1368,6 +1368,7 @@ void CCBot::IssueGameStartCheats()
 
 	//Strategy().setShouldProduceAntiAirOffense(true);
 	//Debug()->DebugGiveAllTech();
+	//Debug()->DebugGiveAllResources();
 	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS);
 	//Strategy().setUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK);
 
@@ -1985,17 +1986,17 @@ void CCBot::IssueCheats()
 	}
 
 	//Kill all aggressive enemy units, runs every frame to kill every visible enemy units
-	if (false)//Comment to activate
+#ifdef NO_OPPONENT
+	for (auto unit : GetEnemyUnits())
 	{
-		for (auto unit : GetEnemyUnits())
+		if (!unit.second.getType().isBuilding() && unit.second.isValid() && unit.second.isAlive() && unit.second.getUnitPtr()->display_type != sc2::Unit::Snapshot && unit.second.getUnitPtr()->display_type != sc2::Unit::Hidden
+			&& unit.second.getUnitPtr()->last_seen_game_loop == GetCurrentFrame())
 		{
-			if (!unit.second.getType().isBuilding() && unit.second.isValid() && unit.second.isAlive() && unit.second.getUnitPtr()->display_type != sc2::Unit::Snapshot && unit.second.getUnitPtr()->display_type != sc2::Unit::Hidden)
-			{
-				Debug()->DebugKillUnit(unit.second.getUnitPtr());
-				Util::ClearChat(*this);
-			}
+			Debug()->DebugKillUnit(unit.second.getUnitPtr());
+			Util::ClearChat(*this);
 		}
 	}
+#endif
 
 	if (keyEnd)
 	{
