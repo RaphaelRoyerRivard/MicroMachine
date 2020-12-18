@@ -584,7 +584,7 @@ void WorkerManager::handleGasWorkers()
 		auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
 		auto & depot = base->getResourceDepot();
 		bool hasUsableDepot = true;
-		if (!depot.isValid() || depot.getUnitPtr()->build_progress < 1)//Do not using the gas bunker with an unfinished or inexistant depot.
+		if (!depot.isValid() || (depot.isValid() && depot.getUnitPtr()->build_progress < 1))//Do not using the gas bunker with an unfinished or inexistant depot.
 		{
 			hasUsableDepot = false;
 		}
@@ -1174,7 +1174,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 			continue;
 		if (isReturningCargo(worker))
 			continue;
-		if (m_workerData.isProxyWorker(worker))
+		if (m_workerData.isProxyWorker(worker) && Util::DistSq(pos, m_bot.Buildings().getProxyLocation()) > 10 * 10)
 			continue;
 		if (filterMoving && worker.isMoving() && (!allowCombatWorkers || workerJob != WorkerJobs::Combat))
 			continue;

@@ -387,7 +387,8 @@ void ProductionManager::manageBuildOrderQueue()
 							}
 							else
 							{
-								if (currentItem.type.getUnitType().getAPIUnitType() != Util::GetRefineryType().getAPIUnitType())//Supresses the refinery related errors
+								if (currentItem.type.getUnitType().getAPIUnitType() != Util::GetRefineryType().getAPIUnitType() ||
+									currentItem.type.getUnitType().getAPIUnitType() != Util::GetRichRefineryType().getAPIUnitType())//Supresses the refinery related errors
 								{
 									Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);
 								}
@@ -462,6 +463,15 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 					break;
 				}
 			}
+		}
+	}
+	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_STARPORT)
+	{
+		int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(sc2::UNIT_TYPEID::TERRAN_STARPORT, m_bot), false, true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_STARPORT);
+		if (starportCount == 0)
+		{
+			if (!hasProducedAtLeastOneFactoryUnit())
+				shouldSkip = true;
 		}
 	}
 	else if (currentItem.type.isUpgrade())
@@ -1527,6 +1537,7 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
 			{
 				if (m_bot.Bases().getBaseCount(Players::Self, true) > 0)//If we have at least a base
 				{
+#ifndef NO_UNIT
 					switch (m_bot.GetPlayerRace(Players::Self))
 					{
 						case CCRace::Protoss:
@@ -1539,6 +1550,7 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
 							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
 							break;
 					}
+#endif
 				}
 			}
 		}
@@ -1571,7 +1583,7 @@ void ProductionManager::lowPriorityChecks()
 				if (!resourceDepot.isValid())
 					continue;
 			
-				int refineryBeingBuilt = m_bot.Buildings().countBeingBuilt(Util::GetRefineryType(), false);
+				int refineryBeingBuilt = m_bot.Buildings().countBeingBuilt(Util::GetRefineryType(), false) + m_bot.Buildings().countBeingBuilt(Util::GetRichRefineryType(), false);
 				int extraWorkers = m_bot.Workers().getWorkerData().getExtraMineralWorkersNumber();
 				int mineralWorkers = m_bot.Workers().getWorkerData().getNumAssignedWorkers(resourceDepot);
 				if (mineralWorkers < 3 && extraWorkers - (refineryBeingBuilt * 3) < 3)
@@ -2820,6 +2832,18 @@ bool ProductionManager::ValidateBuildingTiming(Building & b) const
 void ProductionManager::SetWantToQuickExpand(bool value)
 {
 	wantToQuickExpand = value;
+}
+
+bool ProductionManager::hasProducedAtLeastOneFactoryUnit() const
+{
+	std::vector<sc2::UNIT_TYPEID> factoryUnitTypes = { sc2::UNIT_TYPEID::TERRAN_HELLION, sc2::UNIT_TYPEID::TERRAN_HELLIONTANK, sc2::UNIT_TYPEID::TERRAN_WIDOWMINE, sc2::UNIT_TYPEID::TERRAN_SIEGETANK, sc2::UNIT_TYPEID::TERRAN_CYCLONE, sc2::UNIT_TYPEID::TERRAN_THOR };
+	for (auto factoryUnitType : factoryUnitTypes)
+	{
+		const auto unitCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(factoryUnitType, m_bot), false, true) + m_bot.GetDeadAllyUnitsCount(factoryUnitType);
+		if (unitCount > 0)
+			return true;
+	}
+	return false;
 }
 
 void ProductionManager::drawProductionInformation()
