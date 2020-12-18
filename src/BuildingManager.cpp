@@ -1584,7 +1584,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 			const CCPosition towardsMineralLine = Util::Normalized(behindMineralLine - depotPos);
 			const CCPosition towardsEnemyBase = Util::Normalized(enemyBasePosition - depotPos);
 			// if the base is close to the enemy base and the direction towards the mineral line is roughly in the same direction as the enemy base
-			if (Util::DistSq(behindMineralLine, enemyBasePosition) < 40 && Util::GetDotProduct(towardsMineralLine, towardsEnemyBase) > 0.5)
+			if (Util::DistSq(behindMineralLine, enemyBasePosition) < 40 * 40 && Util::GetDotProduct(towardsMineralLine, towardsEnemyBase) > 0.5)
 				continue;
 
 			// Do not use base location if we cannot reach behind the mineral line
@@ -1650,7 +1650,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 			const CCPosition towardsMineralLine = Util::Normalized(behindMineralLine - depotPos);
 			const CCPosition towardsEnemyBase = Util::Normalized(enemyBasePosition - depotPos);
 			// build behind mineral line only if if the base is far from to the enemy base or the direction towards the mineral line is not roughly in the same direction as the enemy base
-			if (Util::DistSq(behindMineralLine, enemyBasePosition) >= 40 || Util::GetDotProduct(towardsMineralLine, towardsEnemyBase) <= 0.5)
+			if (Util::DistSq(behindMineralLine, enemyBasePosition) >= 40 * 40 || Util::GetDotProduct(towardsMineralLine, towardsEnemyBase) <= 0.5)
 				m_proxyLocation = Util::GetTilePosition(behindMineralLine);
 			m_proxyLocation2 = depotPos + Util::Normalized(depotPos - centerOfMinerals) * 8;
 			return m_proxyLocation;

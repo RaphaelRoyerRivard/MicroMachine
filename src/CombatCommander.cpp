@@ -795,11 +795,12 @@ void CombatCommander::updateWorkerFleeSquad()
 		const bool injured = worker.getHitPointsPercentage() < m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT * 100;
 		const auto job = m_bot.Workers().getWorkerData().getWorkerJob(worker);
 		const auto isProxyWorker = m_bot.Workers().getWorkerData().isProxyWorker(worker);
+		const bool isWorkerRushed = m_bot.Strategy().isWorkerRushed();
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
 		if (Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
 			|| (!earlyRushed &&
 				((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
-				|| (groundThreat && (injured || isProxyWorker) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))))
+				|| (groundThreat && (injured || (isProxyWorker && isWorkerRushed)) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))))
 		{
 			// Put it in the squad if it is not defending or already in the squad
 			if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))

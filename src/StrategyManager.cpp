@@ -401,7 +401,8 @@ void StrategyManager::checkForStrategyChange()
 			}*/
 			if (cancelProxy)
 			{
-				m_bot.Actions()->SendChat("FINE! No cheesing. Maybe next game :)");
+				if (cancelReason != "worker rushed")
+					m_bot.Actions()->SendChat("FINE! No cheesing. Maybe next game :)");
 				const auto & buildings = m_bot.Buildings().getBuildings();
 				std::vector<Building> toRemove;
 				for (const auto & building : buildings)
