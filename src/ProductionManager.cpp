@@ -465,6 +465,15 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 			}
 		}
 	}
+	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_STARPORT)
+	{
+		int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(sc2::UNIT_TYPEID::TERRAN_STARPORT, m_bot), false, true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_STARPORT);
+		if (starportCount == 0)
+		{
+			if (!hasProducedAtLeastOneFactoryUnit())
+				shouldSkip = true;
+		}
+	}
 	else if (currentItem.type.isUpgrade())
 	{
 		// We don't want to skip the Banshee Cloak or Concussive Shell upgrade as they are very important
@@ -2823,6 +2832,18 @@ bool ProductionManager::ValidateBuildingTiming(Building & b) const
 void ProductionManager::SetWantToQuickExpand(bool value)
 {
 	wantToQuickExpand = value;
+}
+
+bool ProductionManager::hasProducedAtLeastOneFactoryUnit() const
+{
+	std::vector<sc2::UNIT_TYPEID> factoryUnitTypes = { sc2::UNIT_TYPEID::TERRAN_HELLION, sc2::UNIT_TYPEID::TERRAN_HELLIONTANK, sc2::UNIT_TYPEID::TERRAN_WIDOWMINE, sc2::UNIT_TYPEID::TERRAN_SIEGETANK, sc2::UNIT_TYPEID::TERRAN_CYCLONE, sc2::UNIT_TYPEID::TERRAN_THOR };
+	for (auto factoryUnitType : factoryUnitTypes)
+	{
+		const auto unitCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(factoryUnitType, m_bot), false, true) + m_bot.GetDeadAllyUnitsCount(factoryUnitType);
+		if (unitCount > 0)
+			return true;
+	}
+	return false;
 }
 
 void ProductionManager::drawProductionInformation()
