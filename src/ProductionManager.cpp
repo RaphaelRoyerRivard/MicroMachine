@@ -984,7 +984,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					if (finishedBarracksCount > 0)
 					{
 						int refineryCount = m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_REFINERY, true, false);
-						if (finishedBarracksCount > refineryCount)
+						// If we get gas stolen, we might need to make Marines
+						if (finishedBarracksCount > refineryCount && (!proxyMaraudersStrategy || refineryCount == 0))
 						{
 							if (!m_queue.contains(MetaTypeEnum::Marine))
 							{
