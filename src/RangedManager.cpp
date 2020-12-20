@@ -368,12 +368,26 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			}
 			if (m_order.getStatus() == "Retreat" || !hasFrontLineUnits)
 			{
+				bool stayOnMainBaseHighGround = false;
 				auto base = m_bot.Bases().getBaseContainingPosition(m_bot.Commander().Combat().GetIdlePosition());
 				if (base && base->getResourceDepot().isValid())
 				{
-					goal = base->getDepotPosition() + Util::Normalized(base->getDepotPosition() - base->getPosition()) * 2;
-					goalDescription = "CloseToResourceDepot";
+					/*if (m_bot.Bases().getPlayerNat(Players::Self) == base || base->isPlayerStartLocation(Players::Self))
+					{
+						stayOnMainBaseHighGround = true;
+					}
+					else*/
+					{
+						goal = base->getDepotPosition() + Util::Normalized(base->getDepotPosition() - base->getPosition()) * 2;
+						goalDescription = "CloseToResourceDepot";
+					}
 				}
+				/*if (stayOnMainBaseHighGround)
+				{
+					// TODO find the spots best spots on high ground
+					goal = base->getDepotPosition() + Util::Normalized(base->getDepotPosition() - base->getPosition()) * 2;
+					goalDescription = "StayOnMainBaseHighGround";
+				}*/
 			}
 		}
 	}

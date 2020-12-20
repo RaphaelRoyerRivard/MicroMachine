@@ -2212,9 +2212,6 @@ void CombatCommander::updateDefenseSquads()
 			if (unit.getType().isWorker() || unit.getType().isBuilding())
 				continue;	// We don't want to consider our workers and defensive buildings (they will automatically defend their region)
 
-			if (unit.getUnitPtr() == offensiveReaper)
-				continue;	// We want to keep at least one Reaper in the Harass squad (defined only when early rushed)
-
 			const auto unitSquad = m_squadData.getUnitSquad(unit);
 			const bool harassUnit = unitSquad && unitSquad->getSquadOrder().getType() == SquadOrderTypes::Harass;
 			const auto orderPositionDist = unitSquad ? Util::Dist(unit, unitSquad->getSquadOrder().getPosition()) : 0;
@@ -2234,6 +2231,20 @@ void CombatCommander::updateDefenseSquads()
 					continue;	// We do not want to send a combat unit against an enemy scout
 				if (harassUnit && orderPositionDist < distance)
 					continue;	// We do not want to make our harass units come back to defend if they are close to their harass target base
+				if (unit.getUnitPtr() == offensiveReaper)
+				{
+					bool regionHasEnemyBuilding = false;
+					for (auto & enemyUnit : region.enemyUnits)
+					{
+						if (enemyUnit.getType().isBuilding())
+						{
+							regionHasEnemyBuilding = true;
+							break;
+						}
+					}
+					if (regionHasEnemyBuilding)
+						continue;	// We want to keep at least one Reaper in the Harass squad (defined only when early rushed)
+				}
 				for (auto & enemyUnit : region.enemyUnits)
 				{
 					// As soon as there is a non building unit that the weak unit can attack, we consider that the weak unit can be useful

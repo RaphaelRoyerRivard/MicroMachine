@@ -310,9 +310,10 @@ void CombatAnalyzer::DetectBurrowingUnits()
 				continue;
 			
 			bool canSeeSurroundingTiles = true;
-			for (int x = -1; x <= 1; ++x)
+			int numberOfTilesAround = 2;
+			for (int x = -numberOfTilesAround; x <= numberOfTilesAround; ++x)
 			{
-				for (int y = -1; y <= 1; ++y)
+				for (int y = -numberOfTilesAround; y <= numberOfTilesAround; ++y)
 				{
 					if (!m_bot.Map().isVisible(unit.getPosition() + CCPosition(x, y)))
 					{
