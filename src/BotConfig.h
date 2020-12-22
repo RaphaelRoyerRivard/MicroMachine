@@ -69,6 +69,7 @@ public:
 	bool DrawPathfindingTiles;
 	bool DrawBuildingBase;
 	bool DrawCurrentStartingStrategy;
+	bool DrawMainBaseSiegePositions;
 	bool LogArmyActions;
 	bool TimeControl;
 	bool PrintGreetingMessage;

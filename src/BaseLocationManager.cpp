@@ -639,13 +639,28 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 	return m_bot.Buildings().getBuildingCountOfType(baseTypes, isCompleted);
 }
 
-BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles) const
+BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles, std::vector<BaseLocation*> basesToIgnore) const
 {
 	//[expand]
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
 
 	auto otherPlayer = player == Players::Self ? Players::Enemy : Players::Self;
 	const BaseLocation * enemyHomeBase = getPlayerStartingBaseLocation(otherPlayer);
+	if (!enemyHomeBase)
+	{
+		const auto & startingBases = getStartingBaseLocations();
+		if (startingBases.size() == 2)
+		{
+			for (const auto startingBase : startingBases)
+			{
+				if (startingBase != homeBase)
+				{
+					enemyHomeBase = startingBase;
+					break;
+				}
+			}
+		}
+	}
 	BOT_ASSERT(homeBase, "No home base detected");
 
 	BaseLocation * closestBase = nullptr;
@@ -678,6 +693,11 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 		}
 
 		if (checkBlocked && base->isBlocked())
+		{
+			continue;
+		}
+
+		if (Util::Contains(base, basesToIgnore))
 		{
 			continue;
 		}

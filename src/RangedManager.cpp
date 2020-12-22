@@ -368,29 +368,59 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 			}
 			if (m_order.getStatus() == "Retreat" || !hasFrontLineUnits)
 			{
-				bool stayOnMainBaseHighGround = false;
-				auto base = m_bot.Bases().getBaseContainingPosition(m_bot.Commander().Combat().GetIdlePosition());
-				if (base && base->getResourceDepot().isValid())
+				const auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+				int basesWithResourceDepot = 0;
+				for (const auto base : bases)
 				{
-					/*if (m_bot.Bases().getPlayerNat(Players::Self) == base || base->isPlayerStartLocation(Players::Self))
+					if (base->getResourceDepot().isValid())
+						++basesWithResourceDepot;
+				}
+
+				if (basesWithResourceDepot <= 5)
+				{
+					// Use the good siege positions in the main base if available
+					auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();
+					const auto & siegePositions = m_bot.Commander().Combat().getMainBaseSiegePositions();
+					for (int i = 0; i < siegePositions.size(); ++i)
 					{
-						stayOnMainBaseHighGround = true;
+						if (siegeTanks[i] == nullptr || siegeTanks[i] == rangedUnit)
+						{
+							siegeTanks[i] = rangedUnit;
+							goal = Util::GetPosition(siegePositions[i]);
+							goalDescription = "MainBaseSiegePosition";
+							break;
+						}
 					}
-					else*/
+				}
+				
+				// Go to idle position if not using a good siege position in our main base
+				if (goalDescription != "MainBaseSiegePosition")
+				{
+					auto base = m_bot.Bases().getBaseContainingPosition(m_bot.Commander().Combat().GetIdlePosition());
+					if (base && base->getResourceDepot().isValid())
 					{
 						goal = base->getDepotPosition() + Util::Normalized(base->getDepotPosition() - base->getPosition()) * 2;
 						goalDescription = "CloseToResourceDepot";
 					}
 				}
-				/*if (stayOnMainBaseHighGround)
-				{
-					// TODO find the spots best spots on high ground
-					goal = base->getDepotPosition() + Util::Normalized(base->getDepotPosition() - base->getPosition()) * 2;
-					goalDescription = "StayOnMainBaseHighGround";
-				}*/
 			}
 		}
 	}
+
+	// Remove Tank from main base siege tanks
+	if (isTank && goalDescription != "MainBaseSiegePosition")
+	{
+		auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();
+		for (int i = 0; i < siegeTanks.size(); ++i)
+		{
+			if (siegeTanks[i] == rangedUnit)
+			{
+				siegeTanks[i] = nullptr;
+				break;
+			}
+		}
+	}
+
 	// To allow tanks to siege up the closest they can to their goal, we need to know for how long they've been close to it
 	if (isTank && Util::DistSq(rangedUnit->pos, goal) > 6 * 6)
 	{

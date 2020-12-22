@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.12.13",
+        "BotVersion"                : "1.13.26",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -25,7 +25,7 @@
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
         "EnemyRace"                 : "Zerg",
-        "MapFile"                   : "DiscoBloodbathLE.SC2Map",
+        "MapFile"                   : "SubmarineLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50,
@@ -34,13 +34,12 @@
     
     "RandomMaps":
     [
-        "WorldofSleepersLE.SC2Map",
-        "TritonLE.SC2Map",
-        "EphemeronLE.SC2Map",
+        "PillarsofGoldLE.SC2Map",
+        "GoldenWallLE.SC2Map",
+        "DeathAuraLE.SC2Map",
         "EternalEmpireLE.SC2Map",
-        "NightshadeLE.SC2Map",
-        "SimulacrumLE.SC2Map",
-        "ZenLE.SC2Map"
+        "SubmarineLE.SC2Map",
+        "IceandChromeLE.SC2Map"
     ],
 	
 	"AllRandomMaps":
@@ -125,7 +124,7 @@
         "WorkersPerRefinery"        : 3,
         "PylonSpacing"              : 3,
         "SelectStartingBuildBasedOnHistory" : true,
-        "PrintGreetingMessage"      : false,
+        "PrintGreetingMessage"      : true,
         "RandomProxyLocation"       : true,
         "ProductionPrintFrequency"  : 30,
         "LogFrameDurationThreshold" : 100
@@ -170,6 +169,7 @@
         "DrawPathfindingTiles"      : false,
         "DrawBuildingBase"          : false,
         "DrawCurrentStartingStrategy"   : true,
+        "DrawMainBaseSiegePositions": false,
         "LogArmyActions"            : false
     },
     
