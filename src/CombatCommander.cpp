@@ -2651,12 +2651,15 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	bool finishedCombatBuilding = false;
 	for (const auto & enemyUnit : enemyUnits)
 	{
-		if (!enemyUnit.isFlying() && (workerHeight == m_bot.Map().terrainHeight(enemyUnit.getPosition()) || workerBaseLocation == m_bot.Bases().getBaseContainingPosition(enemyUnit.getPosition())))
+		if (!enemyUnit.isFlying() && workerBaseLocation == m_bot.Bases().getBaseContainingPosition(enemyUnit.getPosition()))
 		{
-			groundEnemyUnitOnSameHeight = true;
-			if (enemyUnit.getType().isBuilding())
+			if (workerHeight == m_bot.Map().terrainHeight(enemyUnit.getPosition()))
 			{
-				enemyBuildingOnSameHeight = true;
+				groundEnemyUnitOnSameHeight = true;
+				if (enemyUnit.getType().isBuilding())
+				{
+					enemyBuildingOnSameHeight = true;
+				}
 			}
 		}
 		if (!finishedCombatBuilding && enemyUnit.getType().isAttackingBuilding() && Util::GetAttackRangeForTarget(enemyUnit.getUnitPtr(), worker.getUnitPtr(), m_bot) > 0 && enemyUnit.getBuildProgress() == 1.f && (enemyUnit.getHitPoints() + enemyUnit.getShields()) / (enemyUnit.getUnitPtr()->health_max + enemyUnit.getUnitPtr()->shield_max) > 0.2f)
