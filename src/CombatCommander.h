@@ -169,6 +169,8 @@ class CombatCommander
 	std::map<const sc2::Unit *, const sc2::Unit *> m_cyclonesWithHelper;
 	std::vector<sc2::AvailableAbilities> m_unitsAbilities;
 	bool m_blockedExpandByInvis = false;
+	std::vector<CCTilePosition> m_mainBaseSiegePositions;
+	sc2::Units m_mainBaseSiegeTanks;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
@@ -207,6 +209,8 @@ class CombatCommander
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
 	void			updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect, bool cloaked);
 	void			updateBlockedTilesWithUnit(const Unit& unit);
+	void			findMainBaseSiegePositions();
+	void			drawMainBaseSiegePositions();
 	void			drawCombatInformation();
 	void			drawInfluenceMaps();
 	void			drawBlockedTiles();
@@ -270,5 +274,7 @@ public:
 	bool ShouldUnitHeal(const sc2::Unit * unit) const;
 	bool GetUnitAbilities(const sc2::Unit * unit, sc2::AvailableAbilities & outUnitAbilities) const;
 	const SquadData & getSquadData() const { return m_squadData; }
+	const std::vector<CCTilePosition> & getMainBaseSiegePositions() const { return m_mainBaseSiegePositions; }
+	sc2::Units & getMainBaseSiegeTanks() { return m_mainBaseSiegeTanks; }
 };
 

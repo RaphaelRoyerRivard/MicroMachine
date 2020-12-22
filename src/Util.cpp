@@ -1444,6 +1444,8 @@ sc2::Unit Util::CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * 
 	dummy.health_max = unit->health_max;	// Useful for Marines with combat shield upgrade
 	dummy.tag = unit->tag;
 	dummy.last_seen_game_loop = unit->last_seen_game_loop;
+	dummy.owner = unit->owner;
+	dummy.alliance = unit->alliance;
 	return dummy;
 }
 

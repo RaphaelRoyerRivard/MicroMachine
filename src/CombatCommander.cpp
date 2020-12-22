@@ -154,6 +154,9 @@ void CombatCommander::clearAllyScans()
 
 void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 {
+	if (m_mainBaseSiegePositions.empty())
+		findMainBaseSiegePositions();
+
     if (!m_attackStarted)
     {
         m_attackStarted = shouldWeStartAttacking();
@@ -239,6 +242,8 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	m_bot.StartProfiling("0.10.4.4    lowPriorityCheck");
 	lowPriorityCheck();
 	m_bot.StopProfiling("0.10.4.4    lowPriorityCheck");
+
+	drawMainBaseSiegePositions();
 }
 
 void CombatCommander::lowPriorityCheck()
@@ -631,6 +636,74 @@ void CombatCommander::updateBlockedTilesWithNeutral()
 		if (m_bot.GetCurrentFrame() < 5 && neutralUnit.getType().isGeyser())
 			continue;
 		updateBlockedTilesWithUnit(neutralUnit);
+	}
+}
+
+void CombatCommander::findMainBaseSiegePositions()
+{
+	const auto mainBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+	const auto naturalBaseLocation = m_bot.Bases().getNextExpansion(Players::Self, false, false, true);
+	const auto thirdBaseLocation = m_bot.Bases().getNextExpansion(Players::Self, false, false, true, { naturalBaseLocation });
+	if (mainBaseLocation && naturalBaseLocation && thirdBaseLocation)
+	{
+		float mainBaseHeight = Util::TerrainHeight(mainBaseLocation->getDepotPosition());
+		float normalizedDotProduct = Util::GetDotProduct(Util::Normalized(naturalBaseLocation->getDepotPosition() - mainBaseLocation->getDepotPosition()), Util::Normalized(thirdBaseLocation->getDepotPosition() - mainBaseLocation->getDepotPosition()));
+		bool ignoreThird = normalizedDotProduct >= 0.85f;	// Ignore the third base if the nat and third are aligned
+		CCTilePosition naturalBaseTilePosition = naturalBaseLocation->getDepotPosition() + Util::Normalized(naturalBaseLocation->getDepotPosition() - Util::GetPosition(naturalBaseLocation->getCenterOfMinerals())) * 15;
+		CCTilePosition thirdBaseTilePosition = thirdBaseLocation->getDepotPosition() + Util::Normalized(thirdBaseLocation->getDepotPosition() - Util::GetPosition(thirdBaseLocation->getCenterOfMinerals())) * 15;
+		CCTilePosition closestToNat, closestToThird;
+		float closestDistToNat, closestDistToThird;
+		const auto & mainBaseTiles = mainBaseLocation->getBaseTiles();
+		for (auto tile : mainBaseTiles)
+		{
+			float tileHeight = Util::TerrainHeight(tile);
+			if (tileHeight != mainBaseHeight)
+				continue;
+			if (!Util::Pathable(Util::GetPosition(tile)))
+				continue;
+			float distToWall = Util::DistSq(tile, m_bot.Buildings().getWallPosition());
+			if (distToWall < 5 * 5)
+				continue;
+			float distToNat = Util::DistSq(tile, naturalBaseTilePosition);
+			if (closestToNat == CCTilePosition() || distToNat < closestDistToNat)
+			{
+				closestToNat = tile;
+				closestDistToNat = distToNat;
+			}
+			if (!ignoreThird)
+			{
+				float distToThird = Util::DistSq(tile, thirdBaseTilePosition);
+				if (closestToThird == CCTilePosition() || distToThird < closestDistToThird)
+				{
+					closestToThird = tile;
+					closestDistToThird = distToThird;
+				}
+			}
+		}
+		if (closestToNat != CCTilePosition())
+			m_mainBaseSiegePositions.push_back(closestToNat);
+		if (closestToThird != CCTilePosition() && closestToThird != closestToNat)
+			m_mainBaseSiegePositions.push_back(closestToThird);
+	}
+	for (int i = 0; i < m_mainBaseSiegePositions.size(); ++i)
+	{
+		m_mainBaseSiegeTanks.push_back(nullptr);
+	}
+}
+
+void CombatCommander::drawMainBaseSiegePositions()
+{
+#ifdef PUBLIC_RELEASE
+	return;
+#endif
+	if (m_bot.Config().DrawMainBaseSiegePositions)
+	{
+		for (int i = 0; i < m_mainBaseSiegePositions.size(); ++i)
+		{
+			auto position = m_mainBaseSiegePositions[i];
+			m_bot.Map().drawTile(position, sc2::Colors::Green);
+			m_bot.Map().drawText(Util::GetPosition(position), std::to_string(i), sc2::Colors::Green);
+		}
 	}
 }
 
