@@ -1352,7 +1352,10 @@ void CCBot::IssueGameStartCheats()
 	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
 	const auto offset = towardsCenter * 15;
 	const auto enemyLocation = GetEnemyStartLocations()[0];
-	const auto nat = Util::GetPosition(m_bases.getNextExpansionPosition(Players::Self, false, false, false));
+	const auto naturalExpansion = m_bases.getNextExpansion(Players::Self, false, false, false);
+	const auto thirdExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion });
+	const auto nat = Util::GetPosition(naturalExpansion->getDepotPosition());
+	const auto third = Util::GetPosition(thirdExpansion->getDepotPosition());
 
 	if (Config().DebugMenu)
 	{
