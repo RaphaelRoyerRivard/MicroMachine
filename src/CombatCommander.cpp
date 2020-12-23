@@ -1588,6 +1588,7 @@ void CombatCommander::updateAttackSquads()
 	{
 		orderPosition = m_bot.Strategy().isProxyStartingStrategy() ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_idlePosition;
 		orderStatus = "Retreat";
+		backupSquad.setSquadOrder(SquadOrder(SquadOrderTypes::Retreat, orderPosition, 25, orderStatus));
 	}
 
 	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, HarassOrderRadius, orderStatus);
