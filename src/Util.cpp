@@ -2064,6 +2064,21 @@ float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapo
 	return damage;
 }
 
+float Util::GetWeaponCooldown(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
+{
+	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
+	const sc2::UnitTypeData & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+	const sc2::UnitTypeData & targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
+	for (auto & weapon : unitTypeData.weapons)
+	{
+		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
+		{
+			return weapon.speed / 1.4f * 22.4f;
+		}
+	}
+	return 0.f;
+}
+
 // get threats to our harass unit
 void Util::getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::Units & outThreats, CCBot & bot)
 {

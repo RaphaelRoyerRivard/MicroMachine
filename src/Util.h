@@ -218,6 +218,7 @@ namespace Util
     float GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	float GetDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
 	float GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
+	float GetWeaponCooldown(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
 	void getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::Units & outThreats, CCBot & bot);
 	sc2::Units getThreats(const sc2::Unit * unit, const sc2::Units & targets, CCBot & bot);
 	sc2::Units getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot);

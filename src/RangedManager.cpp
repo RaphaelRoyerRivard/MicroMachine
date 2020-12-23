@@ -2226,28 +2226,40 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const auto enemyRange = Util::GetAttackRangeForTarget(unitTarget, unit, m_bot);
 		const auto unitSpeed = Util::getSpeedOfUnit(unit, m_bot);
 		const auto enemySpeed = Util::getSpeedOfUnit(unitTarget, m_bot);
-		const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > enemyRange && unitSpeed > enemySpeed);
-		const bool shouldChase = unitRange < enemyRange && enemySpeed > 0;	//unitSpeed >= enemySpeed;
-		if (!canAttackNow && AllowUnitToPathFind(unit, false, "ThreatFighting"))
+		if (movePosition == CCPosition() && closeUnits.size() == 1 && threatsToKeep.size() == 1 && unitSpeed <= enemySpeed)
 		{
-			if (shouldKite || (injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)))
+			float cooldown = Util::GetWeaponCooldown(unit, unitTarget, m_bot);
+			if (unit->weapon_cooldown > 5 && unit->weapon_cooldown < cooldown * 0.8f)
 			{
-				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, true, m_bot);
-				if (movePosition == CCPosition())
-					PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
-			}
-			if(movePosition == CCPosition() && shouldChase)
-			{
-				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, false, m_bot);
-				movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, true, m_bot);
-				if (movePosition == CCPosition())
-					PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
+				// In a 1v1 with a slower (or equally fast) unit, we want to stay close to kill the enemy unit if it tries to flee (mostly thinking about Reapers)
+				movePosition = unitTarget->pos;
 			}
 		}
-		if (movePosition == CCPosition() && unitTarget->last_seen_game_loop < m_bot.GetCurrentFrame())
+		else
 		{
-			// The target is not visible, so we should move towards until it is visible so we can attack it
-			movePosition = unitTarget->pos;
+			const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > enemyRange && unitSpeed > enemySpeed);
+			const bool shouldChase = unitRange < enemyRange && enemySpeed > 0;	//unitSpeed >= enemySpeed;
+			if (!canAttackNow && AllowUnitToPathFind(unit, false, "ThreatFighting"))
+			{
+				if (shouldKite || (injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)))
+				{
+					movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, true, m_bot);
+					if (movePosition == CCPosition())
+						PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
+				}
+				if (movePosition == CCPosition() && shouldChase)
+				{
+					auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, false, m_bot);
+					movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, true, m_bot);
+					if (movePosition == CCPosition())
+						PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
+				}
+			}
+			if (movePosition == CCPosition() && unitTarget->last_seen_game_loop < m_bot.GetCurrentFrame())
+			{
+				// The target is not visible, so we should move towards until it is visible so we can attack it
+				movePosition = unitTarget->pos;
+			}
 		}
 		m_bot.StopProfiling("0.10.4.1.5.1.5.5.10            CalcMovePosition");
 		if (movePosition != CCPosition())
