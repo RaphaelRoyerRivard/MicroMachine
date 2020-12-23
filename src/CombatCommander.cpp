@@ -1545,7 +1545,8 @@ void CombatCommander::updateAttackSquads()
 			}
 			m_bot.StopProfiling("0.10.4.2.3.0     calcEnemies");
 			m_bot.StartProfiling("0.10.4.2.3.1     simulateCombat");
-			const float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, true, m_bot);
+			bool considerOurSiegeTanksUnsieged = !m_winAttackSimulation;
+			const float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, considerOurSiegeTanksUnsieged, m_bot);
 			m_bot.StopProfiling("0.10.4.2.3.1     simulateCombat");
 			if (m_winAttackSimulation)
 			{
