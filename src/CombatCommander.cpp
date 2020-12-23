@@ -1545,7 +1545,7 @@ void CombatCommander::updateAttackSquads()
 			}
 			m_bot.StopProfiling("0.10.4.2.3.0     calcEnemies");
 			m_bot.StartProfiling("0.10.4.2.3.1     simulateCombat");
-			const float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, m_bot);
+			const float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, true, m_bot);
 			m_bot.StopProfiling("0.10.4.2.3.1     simulateCombat");
 			if (m_winAttackSimulation)
 			{
@@ -2558,7 +2558,7 @@ void CombatCommander::updateDefenseSquads()
 					// This is the proxy location, we don't want to defend it if we don't have enough unit to protect it
 					sc2::Units enemyUnits;
 					Util::CCUnitsToSc2Units(region.enemyUnits, enemyUnits);
-					float simulationResult = Util::SimulateCombat(region.affectedAllyUnits, enemyUnits, m_bot);
+					float simulationResult = Util::SimulateCombat(region.affectedAllyUnits, enemyUnits, true, m_bot);
 					if (simulationResult <= 0)
 					{
 						auto & mainAttackSquad = m_squadData.getSquad("MainAttack");

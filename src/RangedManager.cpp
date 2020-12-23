@@ -2012,7 +2012,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
-	float simulationResult = Util::SimulateCombat(closeUnits, threatsToKeep, m_bot);
+	float simulationResult = Util::SimulateCombat(closeUnits, threatsToKeep, false, m_bot);
 	float minDesiredOutcome = 0.f;
 	if (m_order.getType() == SquadOrderTypes::Harass)
 	{
@@ -2041,7 +2041,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			else
 				units.push_back(closeUnit);
 		}
-		const float stimedSimulationResult = Util::SimulateCombat(closeUnits, units, threatsToKeep, m_bot);
+		const float stimedSimulationResult = Util::SimulateCombat(closeUnits, units, threatsToKeep, false, m_bot);
 		if (stimedSimulationResult > simulationResult && (enemyHasLongRangeUnits || unitsPower + stimedUnitsPowerDifference >= targetsPower))
 		{
 			winSimulation = true;
@@ -2058,7 +2058,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			const auto otherEnemies = threatsToKeep.size() - tempests.size();
 			if (otherEnemies > 0)
 			{
-				winSimulation = Util::SimulateCombat(vikings, tempests, m_bot) > 0.f;
+				winSimulation = Util::SimulateCombat(vikings, tempests, false, m_bot) > 0.f;
 			}
 			shouldFight = winSimulation;
 			/*std::stringstream ss;
