@@ -36,6 +36,7 @@ namespace Util
 	static sc2::Unit * m_dummyVikingFighter;
 	static sc2::Unit * m_dummyStimedMarine;
 	static sc2::Unit * m_dummyStimedMarauder;
+	static sc2::Unit * m_dummySiegeTank;
 	static sc2::Unit * m_dummySiegeTankSieged;
 	static std::map<const sc2::Unit *, std::pair<std::set<const sc2::Unit *>, std::set<const sc2::Unit *>>> m_seenEnemies;	// <enemy, <allies_with_vision, allies_without_vision>
 
@@ -184,6 +185,7 @@ namespace Util
 	void CreateDummyVikingFighter(CCBot & bot);
 	void CreateDummyStimedMarine(CCBot & bot);
 	void CreateDummyStimedMarauder(CCBot & bot);
+	void CreateDummySiegeTank(CCBot & bot);
 	void CreateDummySiegeTankSieged(CCBot & bot);
 	void SetBaseUnitValues(sc2::Unit * unit, CCBot & bot);
 	sc2::Unit CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit);
@@ -192,6 +194,7 @@ namespace Util
 	sc2::Unit CreateDummyVikingFighterFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummyStimedMarineFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit);
+	sc2::Unit CreateDummySiegeTankFromUnit(const sc2::Unit * unit);
 	sc2::Unit CreateDummySiegeTankSiegedFromUnit(const sc2::Unit * unit);
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
 	bool CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot);
@@ -215,6 +218,7 @@ namespace Util
     float GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
 	float GetDamageForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
 	float GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::TargetType where = sc2::Weapon::TargetType::Any);
+	float GetWeaponCooldown(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot);
 	void getThreats(const sc2::Unit * unit, const sc2::Units & targets, sc2::Units & outThreats, CCBot & bot);
 	sc2::Units getThreats(const sc2::Unit * unit, const sc2::Units & targets, CCBot & bot);
 	sc2::Units getThreats(const sc2::Unit * unit, const std::vector<Unit> & targets, CCBot & bot);
@@ -324,8 +328,8 @@ namespace Util
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
 	float DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point);
 
-	float SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot);
-	float SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, CCBot & bot);
+	float SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot);
+	float SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot);
 	int GetSelfPlayerId(const CCBot & bot);
 
 	int GetSupplyOfUnits(const sc2::Units & units, CCBot & bot);

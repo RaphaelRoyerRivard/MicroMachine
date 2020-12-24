@@ -1350,6 +1350,7 @@ void Util::CreateDummyUnits(CCBot & bot)
 	CreateDummyVikingFighter(bot);
 	CreateDummyStimedMarine(bot);
 	CreateDummyStimedMarauder(bot);
+	CreateDummySiegeTank(bot);
 	CreateDummySiegeTankSieged(bot);
 }
 
@@ -1393,6 +1394,16 @@ void Util::CreateDummyStimedMarauder(CCBot & bot)
 	m_dummyStimedMarauder->radius = 0.5625;
 	SetBaseUnitValues(m_dummyStimedMarauder, bot);
 	m_dummyStimedMarauder->buffs.push_back(sc2::BUFF_ID::STIMPACKMARAUDER);
+}
+
+void Util::CreateDummySiegeTank(CCBot & bot)
+{
+	m_dummySiegeTank = new sc2::Unit;
+	m_dummySiegeTank->unit_type = sc2::UNIT_TYPEID::TERRAN_SIEGETANK;
+	m_dummySiegeTank->is_flying = false;
+	m_dummySiegeTank->health_max = 175;
+	m_dummySiegeTank->radius = 0.875;
+	SetBaseUnitValues(m_dummySiegeTank, bot);
 }
 
 void Util::CreateDummySiegeTankSieged(CCBot & bot)
@@ -1461,6 +1472,8 @@ sc2::Unit Util::CreateDummyFromUnit(const sc2::Unit * unit)
 		return CreateDummyStimedMarauderFromUnit(unit);
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
 		return CreateDummySiegeTankSiegedFromUnit(unit);
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED)
+		return CreateDummySiegeTankFromUnit(unit);
 	return sc2::Unit();
 }
 
@@ -1486,6 +1499,12 @@ sc2::Unit Util::CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit)
 	sc2::Unit dummyStimedMarauder = CreateDummyFromUnit(m_dummyStimedMarauder, unit);
 	dummyStimedMarauder.health -= 20;
 	return dummyStimedMarauder;
+}
+
+sc2::Unit Util::CreateDummySiegeTankFromUnit(const sc2::Unit * unit)
+{
+	sc2::Unit dummySiegeTank = CreateDummyFromUnit(m_dummySiegeTank, unit);
+	return dummySiegeTank;
 }
 
 sc2::Unit Util::CreateDummySiegeTankSiegedFromUnit(const sc2::Unit * unit)
@@ -2043,6 +2062,21 @@ float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapo
 	}
 
 	return damage;
+}
+
+float Util::GetWeaponCooldown(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
+{
+	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
+	const sc2::UnitTypeData & unitTypeData = GetUnitTypeDataFromUnitTypeId(unit->unit_type, bot);
+	const sc2::UnitTypeData & targetTypeData = GetUnitTypeDataFromUnitTypeId(target->unit_type, bot);
+	for (auto & weapon : unitTypeData.weapons)
+	{
+		if (weapon.type == sc2::Weapon::TargetType::Any || weapon.type == expectedWeaponType || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
+		{
+			return weapon.speed / 1.4f * 22.4f;
+		}
+	}
+	return 0.f;
 }
 
 // get threats to our harass unit
@@ -2875,16 +2909,16 @@ void Util::TimeControlDecreaseSpeed()
 	}
 }
 
-float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, CCBot & bot)
+float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot)
 {
-	return SimulateCombat(units, units, enemyUnits, bot);
+	return SimulateCombat(units, units, enemyUnits, considerOurTanksUnsieged, bot);
 }
 
 /**
  * Uses the combat simulator of libvoxel that simulates units attacking each other, but without considering the positions of units.
  * Returns a value between 1 and 0, representing the army supply remaining after the fight.
  */
-float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, CCBot & bot)
+float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot)
 {
 	if (units.empty() || simulatedUnits.empty())
 		return 0.f;
@@ -2918,11 +2952,16 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 				for(int j=0; j < marineCount; ++j)
 					state.units.push_back(CombatUnit(owner, sc2::UNIT_TYPEID::TERRAN_MARINE, 200, false));
 			}
-			// Always consider tanks as sieged unless it's an enemy one in vision
-			else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
+			// Consider enemy siege tanks as sieged when in fog of war
+			else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK && unit->last_seen_game_loop < bot.GetCurrentFrame())
+			{
+				state.units.push_back(CombatUnit(CreateDummyFromUnit(unit)));
+			}
+			// Consider our sieged siege tanks as unsieged if we need to (helps delay our main attack when we have many tanks)
+			else if (considerOurTanksUnsieged && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED)
 			{
 				const int owner = i == 0 ? playerId : 3 - playerId;
-				if (owner == playerId || unit->last_seen_game_loop < bot.GetCurrentFrame())
+				if (owner == playerId)
 					state.units.push_back(CombatUnit(CreateDummyFromUnit(unit)));
 				else
 					state.units.push_back(CombatUnit(*unit));

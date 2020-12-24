@@ -1545,7 +1545,8 @@ void CombatCommander::updateAttackSquads()
 			}
 			m_bot.StopProfiling("0.10.4.2.3.0     calcEnemies");
 			m_bot.StartProfiling("0.10.4.2.3.1     simulateCombat");
-			const float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, m_bot);
+			bool considerOurSiegeTanksUnsieged = !m_winAttackSimulation;
+			const float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, considerOurSiegeTanksUnsieged, m_bot);
 			m_bot.StopProfiling("0.10.4.2.3.1     simulateCombat");
 			if (m_winAttackSimulation)
 			{
@@ -1588,6 +1589,7 @@ void CombatCommander::updateAttackSquads()
 	{
 		orderPosition = m_bot.Strategy().isProxyStartingStrategy() ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_idlePosition;
 		orderStatus = "Retreat";
+		backupSquad.setSquadOrder(SquadOrder(SquadOrderTypes::Retreat, orderPosition, 25, orderStatus));
 	}
 
 	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, HarassOrderRadius, orderStatus);
@@ -2557,7 +2559,7 @@ void CombatCommander::updateDefenseSquads()
 					// This is the proxy location, we don't want to defend it if we don't have enough unit to protect it
 					sc2::Units enemyUnits;
 					Util::CCUnitsToSc2Units(region.enemyUnits, enemyUnits);
-					float simulationResult = Util::SimulateCombat(region.affectedAllyUnits, enemyUnits, m_bot);
+					float simulationResult = Util::SimulateCombat(region.affectedAllyUnits, enemyUnits, true, m_bot);
 					if (simulationResult <= 0)
 					{
 						auto & mainAttackSquad = m_squadData.getSquad("MainAttack");
