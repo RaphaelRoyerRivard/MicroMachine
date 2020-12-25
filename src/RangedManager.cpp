@@ -1243,7 +1243,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 			for (int y = -1; y < 1; ++y)
 			{
 				auto tile = CCTilePosition(tank->pos.x + x, tank->pos.y + y);
-				if (Util::PathFinding::GetEffectInfluenceOnTile(tile, false, m_bot))
+				if (Util::PathFinding::GetEffectInfluenceOnTile(tile, false, m_bot) > 0.f)
 				{
 					hasEffectInfluence = true;
 					break;
