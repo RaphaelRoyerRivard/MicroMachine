@@ -966,9 +966,15 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 				}
 #ifndef NO_UNITS
-				if (m_bot.Strategy().enemyCurrentlyHasInvisible() && !m_queue.contains(MetaTypeEnum::Raven) && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true) < 1)
+				int ravenCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true);
+				if (m_bot.Strategy().enemyCurrentlyHasInvisible() && ravenCount < 1)
 				{
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Raven, false);
+					m_queue.removeAllOfType(MetaTypeEnum::Banshee);
+					m_queue.removeAllOfType(MetaTypeEnum::Battlecruiser);
+					if (!m_queue.contains(MetaTypeEnum::Raven))
+					{
+						m_queue.queueAsHighestPriority(MetaTypeEnum::Raven, false);
+					}
 				}
 
 				/*const auto completedBarracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), true, true);

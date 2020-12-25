@@ -2601,7 +2601,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 	const bool hasFlyingHelper = cycloneWithHelperIt != cyclonesWithHelper.end();
 
 	m_bot.StartProfiling("0.10.4.1.5.1.b.3            DefineGoal");
-	if (!unitShouldHeal && !cycloneShouldStayCloseToTarget && m_order.getType() != SquadOrderTypes::Defend)
+	if (!unitShouldHeal && !cycloneShouldStayCloseToTarget && m_order.getType() != SquadOrderTypes::Defend && m_order.getType() != SquadOrderTypes::Clear)
 	{
 		// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
 		if (cycloneShouldUseLockOn && hasFlyingHelper)
