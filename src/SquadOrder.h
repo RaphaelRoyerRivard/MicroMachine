@@ -24,5 +24,7 @@ public:
     const CCPosition & getPosition() const;
     const float & getRadius() const;
     const size_t & getType() const;
+	void setType(int type) { m_type = type; }
 	void setRadius(float radius) { m_radius = radius; }
+	void setStatus(std::string status) { m_status = status; }
 };

@@ -376,7 +376,7 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 			}
 			else
 			{
-				if (Dist(GetPosition(currentNode->position), goal) > maxRange)
+				if (currentNode->position != startPosition && Dist(GetPosition(currentNode->position), goal) > maxRange)
 					continue;	// We don't want to keep looking in that direction since it's too far from the goal
 				//shouldTriggerExit = !HasInfluenceOnTile(currentNode->position, unit->is_flying, bot);
 				const auto influenceOnTile = GetTotalInfluenceOnTile(currentNode->position, unit->is_flying, bot);

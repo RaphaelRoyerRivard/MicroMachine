@@ -1267,7 +1267,12 @@ void CombatCommander::updateClearExpandSquads()
 			}
 
 			// If we don't have every type of unit needed, don't go to not waste time of our units (ex: Reaper against burrowed Zergling)
-			if ((groundUnits && !closestGroundAttackingUnit.isValid()) || (airUnits && !closestAirAttackingUnit.isValid()) || (invisUnits && !closestDetectorUnit.isValid()))
+			bool noGroundAttackingUnits = groundUnits && !closestGroundAttackingUnit.isValid();
+			bool noAirAttackingUnits = airUnits && !closestAirAttackingUnit.isValid();
+			bool noDetector = invisUnits && !closestDetectorUnit.isValid();
+			if (noAirAttackingUnits)
+				m_bot.Strategy().setShouldProduceAntiAirOffense(true);	// We need air attacking units to kill the Overlord
+			if (noGroundAttackingUnits || noAirAttackingUnits || noDetector)
 				continue;
 
 			if (closestGroundAttackingUnit.isValid())
@@ -1589,7 +1594,8 @@ void CombatCommander::updateAttackSquads()
 	{
 		orderPosition = m_bot.Strategy().isProxyStartingStrategy() ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_idlePosition;
 		orderStatus = "Retreat";
-		backupSquad.setSquadOrder(SquadOrder(SquadOrderTypes::Retreat, orderPosition, 25, orderStatus));
+		backupSquad.getSquadOrder().setType(SquadOrderTypes::Retreat);
+		backupSquad.getSquadOrder().setStatus(orderStatus);
 	}
 
 	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, HarassOrderRadius, orderStatus);

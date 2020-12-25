@@ -116,9 +116,12 @@ void BuildingManager::lowPriorityChecks()
 			{
 				if (building.type == Util::GetResourceDepotType())//Special code for expands, we want to flag them as blocked and build elsewhere.
 				{
-					m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(building.finalPosition), building.type);
-					building.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
-					building.buildCommandGiven = false;
+					if (Util::DistSq(building.builderUnit, Util::GetPosition(building.finalPosition)) < 3 * 3)
+					{
+						m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(building.finalPosition), building.type);
+						building.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
+						building.buildCommandGiven = false;
+					}
 				}
 				else
 				{
