@@ -1237,34 +1237,50 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 	// Siege logic
 	if (tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
 	{
-		bool siege = false;
-		// Siege if it has been close to the retreat location for several seconds
-		if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 5)
+		bool hasEffectInfluence = false;
+		for (int x = -1; x < 1; ++x)
 		{
-			siege = true;
-		}
-		else
-		{
-			// Also siege if there is an enemy not too far away
-			auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
-			auto newTarget = getTarget(&dummySiegeTankSieged, targets, false, true, true, false, true);	// TODO remove the "considerOnlyUnitsInRange" flag
-			if (newTarget)
+			for (int y = -1; y < 1; ++y)
 			{
-				float dist = Util::Dist(tank->pos, newTarget->pos);
-				float range = Util::GetAttackRangeForTarget(&dummySiegeTankSieged, newTarget, m_bot);
-				float speed = Util::getSpeedOfUnit(newTarget, m_bot);
-				// TODO consider movement of enemy units
-				if (dist <= range)// + speed)
+				auto tile = CCTilePosition(tank->pos.x + x, tank->pos.y + y);
+				if (Util::PathFinding::GetEffectInfluenceOnTile(tile, false, m_bot) > 0.f)
 				{
-					siege = true;
+					hasEffectInfluence = true;
+					break;
 				}
 			}
 		}
-		if (siege)
+		if (!hasEffectInfluence)
 		{
-			morphAbility = sc2::ABILITY_ID::MORPH_SIEGEMODE;
-			frameCount = TANK_SIEGE_FRAME_COUNT;
-			morph = true;
+			bool siege = false;
+			// Siege if it has been close to the retreat location for several seconds
+			if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 5)
+			{
+				siege = true;
+			}
+			else
+			{
+				// Also siege if there is an enemy not too far away
+				auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
+				auto newTarget = getTarget(&dummySiegeTankSieged, targets, false, true, true, false, true);	// TODO remove the "considerOnlyUnitsInRange" flag
+				if (newTarget)
+				{
+					float dist = Util::Dist(tank->pos, newTarget->pos);
+					float range = Util::GetAttackRangeForTarget(&dummySiegeTankSieged, newTarget, m_bot);
+					float speed = Util::getSpeedOfUnit(newTarget, m_bot);
+					// TODO consider movement of enemy units
+					if (dist <= range)// + speed)
+					{
+						siege = true;
+					}
+				}
+			}
+			if (siege)
+			{
+				morphAbility = sc2::ABILITY_ID::MORPH_SIEGEMODE;
+				frameCount = TANK_SIEGE_FRAME_COUNT;
+				morph = true;
+			}
 		}
 	}
 	// Unsiege logic
@@ -3274,7 +3290,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     	if (filterPassiveBuildings || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && m_order.getType() != SquadOrderTypes::Defend))
     	{
 			auto targetUnitType = UnitType(target->unit_type, m_bot);
-			if (targetUnitType.isBuilding() && !targetUnitType.isCombatUnit())
+			if (targetUnitType.isBuilding() && !targetUnitType.isCombatUnit() && !(targetUnitType.isCreepTumor() && target->last_seen_game_loop == m_bot.GetCurrentFrame()))
 				continue;
     	}
 

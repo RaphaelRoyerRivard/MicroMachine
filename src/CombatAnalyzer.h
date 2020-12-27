@@ -126,5 +126,6 @@ public:
 	void detectUpgrades(Unit & unit, UnitState & state);
 	void detectTechs(Unit & unit, UnitState & state);
 	const std::set<const sc2::Unit *> & getBurrowedUnits() const { return burrowedUnits; }
+	void addBurrowedUnits(const sc2::Unit * burrowedUnit) { burrowedUnits.insert(burrowedUnit); }
 	int getEnemyLightGroundUnitCount() const { return totalGroundLightCount; }
 };

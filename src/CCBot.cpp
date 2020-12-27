@@ -1807,13 +1807,15 @@ void CCBot::IssueGameStartCheats()
 
 	// Test to see how the bot reacts to blocked expansions
 	/*Debug()->DebugGiveAllTech();
+	Debug()->DebugGiveAllResources();
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);//Combat unit
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_DARKTEMPLAR, enemyLocation, player1, 3);//Invisible/burrow
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, mapCenter, player1, 3);//Creep
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, nat, player1, 3);//Creep
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_LAIR, enemyLocation, player1, 1);//Creep
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_QUEEN, enemyLocation, player1, 3);//Creep tumor
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_SPORECRAWLER, enemyLocation, player1, 3);//Protect against Banshees
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, mapCenter, player1, 3);//Combat unit
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(54,104), player2, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_ZERGLING, nat, player1, 3);//Combat unit
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, nat, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED, CCPosition(113, 104), player2, 3);*/
 
 	//Debug()->DebugGiveAllTech();

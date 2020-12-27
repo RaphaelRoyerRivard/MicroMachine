@@ -38,6 +38,7 @@ namespace Util
 	static sc2::Unit * m_dummyStimedMarauder;
 	static sc2::Unit * m_dummySiegeTank;
 	static sc2::Unit * m_dummySiegeTankSieged;
+	static std::list<const sc2::Unit *> m_dummyBurrowedZerglings;
 	static std::map<const sc2::Unit *, std::pair<std::set<const sc2::Unit *>, std::set<const sc2::Unit *>>> m_seenEnemies;	// <enemy, <allies_with_vision, allies_without_vision>
 
 	static bool allowDebug;
@@ -187,6 +188,8 @@ namespace Util
 	void CreateDummyStimedMarauder(CCBot & bot);
 	void CreateDummySiegeTank(CCBot & bot);
 	void CreateDummySiegeTankSieged(CCBot & bot);
+	sc2::Unit * CreateDummyBurrowedZergling(CCPosition pos, CCBot & bot);
+	void ReleaseDummyBurrowedZergling(const sc2::Unit * burrowedZergling);
 	void SetBaseUnitValues(sc2::Unit * unit, CCBot & bot);
 	sc2::Unit CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit);
 	sc2::Unit CreateDummyFromUnit(const sc2::Unit * unit);

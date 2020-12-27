@@ -278,6 +278,11 @@ void CombatAnalyzer::DetectBurrowingUnits()
 	for (const auto unit : unitsToRemove)
 	{
 		burrowedUnits.erase(unit);
+		if (unit->tag == 0)
+		{
+			// This was a dummy unit
+			Util::ReleaseDummyBurrowedZergling(unit);
+		}
 	}
 
 	unitsToRemove.clear();

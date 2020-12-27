@@ -127,28 +127,43 @@ void CombatCommander::clearYamatoTargets()
 void CombatCommander::clearAllyScans()
 {
 	bool scansVisible = false;
+	std::vector<std::pair<CCPosition, long>> toRemove;
 	for (auto & effect : m_bot.Observation()->GetEffects())
 	{
 		if (effect.effect_id == 6) // Scan
 		{
 			scansVisible = true;
-			std::vector<CCPosition> toRemove;
-			for (auto & pos : m_allyScans)
+			for (auto & scan : m_allyScans)
 			{
-				if (!Util::Contains(pos, effect.positions))
+				if (!Util::Contains(scan.first, effect.positions))
 				{
-					toRemove.push_back(pos);
+					toRemove.push_back(scan);
 				}
-			}
-			for (auto & scan : toRemove)
-			{
-				m_allyScans.remove(scan);
 			}
 		}
 	}
 	if (!scansVisible)
 	{
-		m_allyScans.clear();
+		for (auto & scan : m_allyScans)
+		{
+			// We want to keep a buffer to not clear our scans before they are actually casted
+			if (m_bot.GetCurrentFrame() - scan.second > 10)
+			{
+				toRemove.push_back(scan);
+			}
+		}
+	}
+	for (const auto & scan : toRemove)
+	{
+		m_allyScans.remove(scan);
+		/*for (auto it = m_allyScans.begin(); it != m_allyScans.end();)
+		{
+			if (it->first == scan.first && it->second == scan.second)
+			{
+				m_allyScans.erase(it);
+				break;
+			}
+		}*/
 	}
 }
 
@@ -473,7 +488,16 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 			case 6:	// Scanner Sweep
 				for (const auto & pos : effect.positions)
 				{
-					if (!Util::Contains(pos, m_allyScans))
+					bool allyScan = false;
+					for (const auto & scan : m_allyScans)
+					{
+						if (pos == scan.first)
+						{
+							allyScan = true;
+							break;
+						}
+					}
+					if (!allyScan)
 						m_enemyScans.push_back(pos);
 				}
 				continue;
@@ -1106,7 +1130,7 @@ void CombatCommander::updateClearExpandSquads()
 	{
 		if(baseLocation->isBlocked())
 		{
-			const auto basePosition = baseLocation->getPosition();
+			const auto basePosition = baseLocation->getDepotPosition();
 			std::stringstream squadName;
 			squadName << "Clear Expand " << basePosition.x << " " << basePosition.y;
 
@@ -1159,15 +1183,30 @@ void CombatCommander::updateClearExpandSquads()
 			}
 
 			// Check known burrowed units if necessary
-			if (!invisUnits)
+			if (!airUnits)
 			{
+				bool closeBurrowedUnit = false;
 				for (const auto burrowedUnit : m_bot.Analyzer().getBurrowedUnits())
 				{
 					const auto dist = Util::DistSq(burrowedUnit->pos, basePosition);
 					if (dist < 4 * 4)
 					{
-						invisUnits = true;
+						closeBurrowedUnit = true;
 						break;
+					}
+				}
+				// Create a burrowed unit if there is none we know of, to allow the use of a scan
+				if (!closeBurrowedUnit && !allCornersDetected && allCornersVisible)
+				{
+					invisUnits = true;
+					if (creepCleared)
+					{
+						m_bot.Analyzer().addBurrowedUnits(Util::CreateDummyBurrowedZergling(basePosition, m_bot));
+					}
+					else if (!creepCleared && !airUnits)
+					{
+						// TODO should be a Creep tumor, but it doesn't really matter
+						m_bot.Analyzer().addBurrowedUnits(Util::CreateDummyBurrowedZergling(basePosition, m_bot));
 					}
 				}
 			}
@@ -1195,7 +1234,7 @@ void CombatCommander::updateClearExpandSquads()
 				if (!groundUnits && !airUnits && !invisUnits)
 				{
 					// If there is creep and we see no units, there might be a Creep Tumor nearby
-					if (!creepCleared)
+					if (!creepCleared && !allCornersDetected)
 					{
 						groundUnits = true;
 						invisUnits = true;
@@ -1269,7 +1308,7 @@ void CombatCommander::updateClearExpandSquads()
 			// If we don't have every type of unit needed, don't go to not waste time of our units (ex: Reaper against burrowed Zergling)
 			bool noGroundAttackingUnits = groundUnits && !closestGroundAttackingUnit.isValid();
 			bool noAirAttackingUnits = airUnits && !closestAirAttackingUnit.isValid();
-			bool noDetector = invisUnits && !closestDetectorUnit.isValid();
+			bool noDetector = invisUnits && !closestDetectorUnit.isValid() && !m_bot.Buildings().hasEnergyForScan();
 			if (noAirAttackingUnits)
 				m_bot.Strategy().setShouldProduceAntiAirOffense(true);	// We need air attacking units to kill the Overlord
 			if (noGroundAttackingUnits || noAirAttackingUnits || noDetector)
@@ -2084,6 +2123,10 @@ void CombatCommander::updateDefenseSquads()
 				continue;
 			}
 
+			// we don't want to try to defend against a creep tumor
+			if (unit.isBurrowed() && unit.getUnitPtr()->last_seen_game_loop != m_bot.GetCurrentFrame())
+				continue;
+
 			// if the unit is not targetable, we do not need to defend against it (shade, kd8 charge, disruptor's ball, etc.)
 			if (!UnitType::isTargetable(unit.getAPIUnitType()))
 				continue;
@@ -2100,7 +2143,7 @@ void CombatCommander::updateDefenseSquads()
 				}
 				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 9408)	// first 7 minutes
 				{
-					if (!unit.getType().isWorker() || enemyWorkers > 2)
+					if (!unit.getType().isCombatUnit() || enemyWorkers > 2)
 						earlyRushed = true;
 				}
 
@@ -2734,6 +2777,11 @@ bool CombatCommander::WorkerHasFastEnemyThreat(const sc2::Unit * worker, const s
 std::map<Unit, std::pair<CCPosition, uint32_t>> & CombatCommander::GetInvisibleSighting()
 {
 	return m_invisibleSighting;
+}
+
+void CombatCommander::addAllyScan(CCPosition scanPos)
+{
+	m_allyScans.push_back(std::make_pair(scanPos, m_bot.GetCurrentFrame()));
 }
 
 float CombatCommander::getTotalGroundInfluence(CCTilePosition tilePosition) const
