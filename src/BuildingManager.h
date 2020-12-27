@@ -113,4 +113,5 @@ public:
     std::vector<UnitType> buildingsQueued() const;
 
 	bool				isProxyCyclonesStrategyCompleted() const { return m_barracksSentToEnemyBase; }
+	bool				hasEnergyForScan() const;
 };

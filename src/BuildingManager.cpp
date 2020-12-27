@@ -989,7 +989,7 @@ void BuildingManager::constructAssignedBuildings()
 								if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
 								{
 									// We want the worker to be close so it doesn't flag the base as blocked by error
-									const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
+									const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 3.f * 3.f;
 									// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
 									if (closeEnough)
 									{
@@ -2176,12 +2176,15 @@ void BuildingManager::castBuildingsAbilities()
 					// Check if we already have a scan near that point (might happen because we receive the observations 1 frame later)
 					bool closeScan = false;
 					const auto & scans = m_bot.Commander().Combat().getAllyScans();
-					for (const auto scanPosition : scans)
+					for (const auto scan : scans)
 					{
-						if (Util::DistSq(middlePoint, scanPosition) < 5.f * 5.f)
+						if (m_bot.GetCurrentFrame() > scan.second + 1)
 						{
-							closeScan = true;
-							break;
+							if (Util::DistSq(middlePoint, scan.first) < 5.f * 5.f)
+							{
+								closeScan = true;
+								break;
+							}
 						}
 					}
 
@@ -2469,6 +2472,16 @@ bool BuildingManager::isEnemyUnitNear(CCTilePosition center, int radius) const
 		float distance_sq = pow(distanceX, 2) + pow(distanceY, 2);
 
 		return distance_sq <= pow(r + radius, 2);
+	}
+	return false;
+}
+
+bool BuildingManager::hasEnergyForScan() const
+{
+	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
+	{
+		if (b.getEnergy() >= 50 && !b.isFlying())
+			return true;
 	}
 	return false;
 }

@@ -1416,11 +1416,34 @@ void Util::CreateDummySiegeTankSieged(CCBot & bot)
 	SetBaseUnitValues(m_dummySiegeTankSieged, bot);
 }
 
+sc2::Unit * Util::CreateDummyBurrowedZergling(CCPosition pos, CCBot & bot)
+{
+	auto dummyBurrowedZergling = new sc2::Unit;
+	SetBaseUnitValues(dummyBurrowedZergling, bot);
+	dummyBurrowedZergling->unit_type = sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED;
+	dummyBurrowedZergling->is_flying = false;
+	dummyBurrowedZergling->health_max = 35;
+	dummyBurrowedZergling->radius = 0.375;
+	dummyBurrowedZergling->alliance = sc2::Unit::Alliance::Enemy;
+	dummyBurrowedZergling->owner = 3 - GetSelfPlayerId(bot);	// 1 or 2
+	dummyBurrowedZergling->is_burrowed = true;
+	dummyBurrowedZergling->pos = sc2::Point3D(pos.x, pos.y, TerrainHeight(pos));
+	m_dummyBurrowedZerglings.push_back(dummyBurrowedZergling);
+	return dummyBurrowedZergling;
+}
+
+void Util::ReleaseDummyBurrowedZergling(const sc2::Unit * burrowedZergling)
+{
+	m_dummyBurrowedZerglings.remove(burrowedZergling);
+	delete burrowedZergling;
+}
+
 void Util::SetBaseUnitValues(sc2::Unit * unit, CCBot & bot)
 {
+	unit->tag = 0;
 	unit->energy_max = 0;
 	unit->energy = 0;
-	unit->alliance = sc2::Unit::Self;
+	unit->alliance = sc2::Unit::Alliance::Self;
 	unit->owner = GetSelfPlayerId(bot);
 	unit->is_alive = true;
 	unit->shield_max = 0;

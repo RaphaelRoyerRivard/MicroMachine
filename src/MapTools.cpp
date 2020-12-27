@@ -254,12 +254,15 @@ bool MapTools::isDetected(CCPosition pos) const
 
 	// Check scans
 	const auto scanRadius = 13;
-	for (const auto scanPos : m_bot.Commander().Combat().getAllyScans())
+	for (const auto scan : m_bot.Commander().Combat().getAllyScans())
 	{
-		const auto dist = Util::DistSq(pos, scanPos);
-		if (dist <= scanRadius * scanRadius)
+		if (m_bot.GetCurrentFrame() > scan.second + 1)
 		{
-			return true;
+			const auto dist = Util::DistSq(pos, scan.first);
+			if (dist <= scanRadius * scanRadius)
+			{
+				return true;
+			}
 		}
 	}
 

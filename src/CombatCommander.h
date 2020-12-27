@@ -141,7 +141,7 @@ class CombatCommander
 	std::vector<std::vector<float>> m_groundFromGroundCloakedCombatInfluenceMap;
 	std::vector<std::vector<bool>> m_blockedTiles;
 	std::vector<CCPosition> m_enemyScans;
-	std::list<CCPosition> m_allyScans;
+	std::list<std::pair<CCPosition, long>> m_allyScans;	// <position, casted_frame>
 	std::map<sc2::ABILITY_ID, std::map<const sc2::Unit *, uint32_t>> m_nextAvailableAbility;
 	std::map<sc2::ABILITY_ID, float> m_abilityCastingRanges;
 	std::set<const sc2::Unit *> m_unitsBeingRepaired;
@@ -243,8 +243,8 @@ public:
 	void setBlockedTile(int x, int y);
 	const std::map<const sc2::Unit *, FlyingHelperMission> & getCycloneFlyingHelpers() const { return m_cycloneFlyingHelpers; }
 	const std::map<const sc2::Unit *, const sc2::Unit *> & getCyclonesWithHelper() const { return m_cyclonesWithHelper; }
-	const std::list<CCPosition> & getAllyScans() const { return m_allyScans; }
-	void addAllyScan(CCPosition scanPos) { m_allyScans.push_back(scanPos); }
+	const std::list<std::pair<CCPosition, long>> & getAllyScans() const { return m_allyScans; }
+	void addAllyScan(CCPosition scanPos);
 	bool isExpandBlockedByInvis() const { return m_blockedExpandByInvis; }
 	float getTotalGroundInfluence(CCTilePosition tilePosition) const;
 	float getTotalAirInfluence(CCTilePosition tilePosition) const;
