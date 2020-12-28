@@ -2428,13 +2428,36 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 				(unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING || 
 				unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING))
 			{
-				landingPosition = Util::GetPosition(m_bot.Bases().getNextExpansionPosition(Players::Self, false, false, true));
-				if (unit.getUnitPtr()->orders.size() == 0 && 
-					m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end() && m_commandCenterLandPosition[unit.getTag()] == landingPosition)
-				{//The land order likely was cancelled, the expand is most likely blocked.
-					m_bot.Bases().SetLocationAsBlocked(landingPosition, unit.getType());
+				auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false, true);
+				if (nextExpansion)
+				{
+					landingPosition = nextExpansion->getDepotPosition();
+					if (unit.getHitPointsPercentage() > 50 && unit.getUnitPtr()->orders.size() == 0 &&
+						m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end() && m_commandCenterLandPosition[unit.getTag()] == landingPosition)
+					{
+						bool isBlocked = !nextExpansion->isUnderAttack();
+						if (!isBlocked)
+						{
+							for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+							{
+								if (enemyUnit.getType().isBuilding())
+								{
+									float dist = Util::Dist(enemyUnit, landingPosition);
+									if (dist < 3.5f + enemyUnit.getUnitPtr()->radius)
+									{
+										isBlocked = true;
+										break;
+									}
+								}
+							}
+						}
+						if (isBlocked)
+						{//The land order likely was cancelled, the expand is most likely blocked.
+							m_bot.Bases().SetLocationAsBlocked(landingPosition, unit.getType());
+						}
+					}
+					m_commandCenterLandPosition[unit.getTag()] = landingPosition;
 				}
-				m_commandCenterLandPosition[unit.getTag()] = landingPosition;
 			}
 			else
 			{

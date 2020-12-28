@@ -366,7 +366,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 					}
 				}
 			}
-			if (m_order.getStatus() == "Retreat" || !hasFrontLineUnits)
+			if (m_order.getStatus() == "Retreat" || m_order.getType() == SquadOrderTypes::Defend || !hasFrontLineUnits)
 			{
 				const auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 				int basesWithResourceDepot = 0;
@@ -385,10 +385,23 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 					{
 						if (siegeTanks[i] == nullptr || siegeTanks[i] == rangedUnit)
 						{
-							siegeTanks[i] = rangedUnit;
-							goal = Util::GetPosition(siegePositions[i]);
-							goalDescription = "MainBaseSiegePosition";
-							break;
+							bool shouldSiegeInMainBase = m_order.getType() != SquadOrderTypes::Defend;
+							if (!shouldSiegeInMainBase)
+							{
+								auto baseToDefend = m_bot.Bases().getBaseContainingPosition(m_order.getPosition());
+								if (baseToDefend)
+								{
+									float dist = Util::DistSq(siegePositions[i], baseToDefend->getDepotPosition());
+									shouldSiegeInMainBase = dist < 20 * 20;
+								}
+							}
+							if (shouldSiegeInMainBase)
+							{
+								siegeTanks[i] = rangedUnit;
+								goal = Util::GetPosition(siegePositions[i]);
+								goalDescription = "MainBaseSiegePosition";
+								break;
+							}
 						}
 					}
 				}
