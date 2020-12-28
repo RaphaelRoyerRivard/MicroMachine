@@ -853,10 +853,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				bool hasPicked = false;
 				MetaType toBuild;
 				const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-				if (barracksCount < 1 || (pumpOutMarauders && completedSupplyProviders == 1 && barracksCount < 2) || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount))
+				const int enemyGatewayCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_GATEWAY).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_WARPGATE).size();
+				const bool buildMoreBarracksAgainstMultiGateways = produceMarauders && completedSupplyProviders >= 1 && barracksCount < std::max(2, enemyGatewayCount - 1);
+				if (barracksCount < 1 || buildMoreBarracksAgainstMultiGateways || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount))
 				{
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
+					if (buildMoreBarracksAgainstMultiGateways)
+					{
+						m_queue.removeAllOfType(MetaTypeEnum::CommandCenter);
+					}
 				}
 				else if (factoryCount * 2 < finishedBaseCount)
 				{
