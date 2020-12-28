@@ -2428,13 +2428,17 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 				(unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING || 
 				unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING))
 			{
-				landingPosition = Util::GetPosition(m_bot.Bases().getNextExpansionPosition(Players::Self, false, false, true));
-				if (unit.getUnitPtr()->orders.size() == 0 && 
-					m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end() && m_commandCenterLandPosition[unit.getTag()] == landingPosition)
-				{//The land order likely was cancelled, the expand is most likely blocked.
-					m_bot.Bases().SetLocationAsBlocked(landingPosition, unit.getType());
+				auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false, true);
+				if (nextExpansion)
+				{
+					landingPosition = nextExpansion->getDepotPosition();
+					if (unit.getHitPointsPercentage() > 50 && !nextExpansion->isUnderAttack() && unit.getUnitPtr()->orders.size() == 0 &&
+						m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end() && m_commandCenterLandPosition[unit.getTag()] == landingPosition)
+					{//The land order likely was cancelled, the expand is most likely blocked.
+						m_bot.Bases().SetLocationAsBlocked(landingPosition, unit.getType());
+					}
+					m_commandCenterLandPosition[unit.getTag()] = landingPosition;
 				}
-				m_commandCenterLandPosition[unit.getTag()] = landingPosition;
 			}
 			else
 			{

@@ -2143,7 +2143,7 @@ void CombatCommander::updateDefenseSquads()
 				}
 				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 9408)	// first 7 minutes
 				{
-					if (!unit.getType().isCombatUnit() || enemyWorkers > 2)
+					if (unit.getType().isCombatUnit() || enemyWorkers > 2)
 						earlyRushed = true;
 				}
 
@@ -2357,16 +2357,16 @@ void CombatCommander::updateDefenseSquads()
 					continue;	// We do not want to make our harass units come back to defend if they are close to their harass target base
 				if (unit.getUnitPtr() == offensiveReaper)
 				{
-					bool regionHasEnemyBuilding = false;
+					bool regionHasEnemyBuildingOrArmoredUnit = false;
 					for (auto & enemyUnit : region.enemyUnits)
 					{
-						if (enemyUnit.getType().isBuilding())
+						if (enemyUnit.getType().isBuilding() || Util::GetArmor(enemyUnit.getUnitPtr(), m_bot) > 0)
 						{
-							regionHasEnemyBuilding = true;
+							regionHasEnemyBuildingOrArmoredUnit = true;
 							break;
 						}
 					}
-					if (regionHasEnemyBuilding)
+					if (regionHasEnemyBuildingOrArmoredUnit)
 						continue;	// We want to keep at least one Reaper in the Harass squad (defined only when early rushed)
 				}
 				for (auto & enemyUnit : region.enemyUnits)
