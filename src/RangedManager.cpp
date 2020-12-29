@@ -342,7 +342,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				if (Util::DistSq(marine, goal) <= 3 * 3)
 					++groupedSupply;
 			}
-			if (groupedSupply >= 6)
+			if (groupedSupply >= 4)
 				m_marauderAttackInitiated = true;
 		}
 		else if (isBanshee && m_order.getType() == SquadOrderTypes::Harass)
