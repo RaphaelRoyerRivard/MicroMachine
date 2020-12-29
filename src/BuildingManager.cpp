@@ -943,16 +943,20 @@ void BuildingManager::constructAssignedBuildings()
 							else // The addon position is not blocked by a building or non buildable tile
 							{
 								// We need to check if there is an enemy unit blocking it, if so, we just want to wait until it is not there
+								CCPosition addonPos = b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f);
 								for (auto & unit : m_bot.GetUnits())
 								{
 									if (unit.isFlying() || unit.getType().isBuilding() || unit.getUnitPtr()->alliance == sc2::Unit::Alliance::Neutral)
 										continue;
-									const float dist = Util::Dist(b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f), unit.getPosition());
+									const float dist = Util::Dist(addonPos, unit.getPosition());
 									const auto addonRadius = 1.f;
 									if (dist <= addonRadius + unit.getUnitPtr()->radius)
 									{
-										// Enemy unit is blocking addon
+										// Unit is blocking addon
 										blocked = true;
+										std::stringstream ss;
+										ss << "Cannot build " << sc2::UnitTypeToName(b.type.getAPIUnitType()) << " at (" << addonPos.x << ", " << addonPos.y << ") because " << sc2::UnitTypeToName(unit.getAPIUnitType()) << " at (" << unit.getPosition().x << ", " << unit.getPosition().y << ") is blocking it.";
+										Util::Log(__FUNCTION__, ss.str(), m_bot);
 										break;
 									}
 								}
