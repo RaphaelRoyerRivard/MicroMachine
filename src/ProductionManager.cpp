@@ -417,6 +417,7 @@ void ProductionManager::manageBuildOrderQueue()
 bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentItem)
 {
 	bool shouldSkip = false;
+	const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 	const auto completedFactoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
 	const auto ccs = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), false, true);
 	const auto orbitals = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::OrbitalCommand.getUnitType(), false, true);
@@ -426,9 +427,12 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	const auto earlyExpand = m_bot.Strategy().getStartingStrategy() == EARLY_EXPAND && m_bot.GetCurrentFrame() < 3360 && m_bot.GetFreeMinerals() < 700 && !hasStartedFirstExpand;	// 2:30 min
 	const auto fastPF = m_bot.Strategy().getStartingStrategy() == FAST_PF && m_bot.GetFreeMinerals() < 700;
 	const auto proxyMaraudersStrategy = m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS;
+	const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
+	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(sc2::UNIT_TYPEID::TERRAN_STARPORT, m_bot), false, true);
+	const int deadStarportCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_STARPORT);
 	if (currentItem.type.getUnitType().isRefinery())
 	{
-		const bool hasBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true) > 0;
+		const bool hasBarracks = barracksCount > 0;
 		shouldSkip = !hasBarracks;
 	}
 	else if (currentItem.type.getUnitType().isResourceDepot() && !currentItem.type.getUnitType().isMorphedBuilding())
@@ -465,10 +469,16 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 			}
 		}
 	}
+	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS || currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_FACTORY)
+	{
+		if (!hasStartedFirstExpand && barracksCount + factoryCount + starportCount >= 3)
+			shouldSkip = true;
+	}
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_STARPORT)
 	{
-		int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(sc2::UNIT_TYPEID::TERRAN_STARPORT, m_bot), false, true) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_STARPORT);
-		if (starportCount == 0)
+		if (!hasStartedFirstExpand && barracksCount + factoryCount + starportCount >= 3)
+			shouldSkip = true;
+		if (starportCount + deadStarportCount == 0)
 		{
 			if (!hasProducedAtLeastOneFactoryUnit())
 				shouldSkip = true;
@@ -656,22 +666,22 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 
 	const auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
-	const auto productionBuildingCount = getProductionBuildingsCount();
-	const auto productionBuildingAddonCount = getProductionBuildingsAddonsCount();
-	const auto totalBaseCount = m_bot.Bases().getBaseCount(Players::Self, false);
-	const auto finishedBaseCount = m_bot.Bases().getBaseCount(Players::Self, true);
+	const int productionBuildingCount = getProductionBuildingsCount();
+	const int productionBuildingAddonCount = getProductionBuildingsAddonsCount();
+	const int totalBaseCount = m_bot.Bases().getBaseCount(Players::Self, false);
+	const int finishedBaseCount = m_bot.Bases().getBaseCount(Players::Self, true);
 	const int bansheeCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), false, true);
-	const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
-	const auto starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-	const auto barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
-	const auto completedSupplyProviders = m_bot.UnitInfo().getUnitTypeCount(Players::Self, supplyProvider, true, true);
+	const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
+	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
+	const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true);
+	const int completedSupplyProviders = m_bot.UnitInfo().getUnitTypeCount(Players::Self, supplyProvider, true, true);
 
 	const auto currentStrategy = m_bot.Strategy().getCurrentStrategyPostBuildOrder();
 	const auto startingStrategy = m_bot.Strategy().getStartingStrategy();
 	const auto earlyRushed = m_bot.Strategy().isEarlyRushed();
 
 	// build supply if we need some
-	const auto supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
+	const int supplyWithAdditionalSupplyDepot = m_bot.GetMaxSupply() + m_bot.Buildings().countBeingBuilt(supplyProvider) * 8;
 	if(m_bot.GetCurrentSupply() + getSupplyNeedsFromProductionBuildings() + finishedBaseCount > supplyWithAdditionalSupplyDepot
 		&& !m_queue.contains(supplyProviderType)
 		&& supplyWithAdditionalSupplyDepot < 200
@@ -756,7 +766,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			{
 				optimalWorkers += base->getOptimalMineralWorkerCount() + base->getOptimalGasWorkerCount();
 			}
-			const int maxWorkersForNextExpansion = 18;	// 16 minerals + 6 gas
+			const int maxWorkersForNextExpansion = totalBaseCount > bases.size() ? 22 : 11;	// 16 minerals + 6 gas
 			const int maxWorkers = 80;
 			const int workerCount = m_bot.Workers().getNumWorkers();
 			if (optimalWorkers + maxWorkersForNextExpansion > workerCount && workerCount < maxWorkers)
@@ -854,14 +864,16 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				MetaType toBuild;
 				const int factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 				const int enemyGatewayCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_GATEWAY).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_WARPGATE).size();
-				const bool buildMoreBarracksAgainstMultiGateways = produceMarauders && completedSupplyProviders >= 1 && barracksCount < std::max(2, enemyGatewayCount - 1);
-				if (barracksCount < 1 || buildMoreBarracksAgainstMultiGateways || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount))
+				const bool startPumpingOutMarauders = pumpOutMarauders && completedSupplyProviders >= 1 && barracksCount < 2;
+				const bool buildMoreBarracksAgainstMultiGateways = produceMarauders && completedSupplyProviders >= 1 && barracksCount < (enemyGatewayCount - 1);
+				if (barracksCount < 1 || startPumpingOutMarauders || buildMoreBarracksAgainstMultiGateways || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount))
 				{
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
 					if (buildMoreBarracksAgainstMultiGateways)
 					{
 						m_queue.removeAllOfType(MetaTypeEnum::CommandCenter);
+						m_queue.removeAllOfType(MetaTypeEnum::Starport);
 					}
 				}
 				else if (factoryCount * 2 < finishedBaseCount)
