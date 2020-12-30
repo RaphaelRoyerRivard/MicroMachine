@@ -973,8 +973,14 @@ void BuildingManager::constructAssignedBuildings()
 									getBuildingPlacer().freeTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2, true);
 								}
 
-								// Spam the build ability in case there is a unit blocking it
-								Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
+								if (!b.builderUnit.isFlying())
+								{
+									// Spam the build ability in case there is a unit blocking it
+									Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
+									std::stringstream ss;
+									ss << sc2::UnitTypeToName(b.builderUnit.getAPIUnitType()) << " at (" << b.builderUnit.getPosition().x << ", " << b.builderUnit.getPosition().y << ") was given the command " << sc2::AbilityTypeToName(m_bot.Data(b.type).buildAbility);
+									Util::Log(__FUNCTION__, ss.str(), m_bot);
+								}
 							}
 						}
 					}
