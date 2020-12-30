@@ -965,15 +965,16 @@ void BuildingManager::constructAssignedBuildings()
 
 								// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
 								const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
+								bool isFlyingType = Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes);
 								const auto it = m_liftedBuildingPositions.find(b.builderUnit.getTag());
-								if (it != m_liftedBuildingPositions.end() && !Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes))
+								if (it != m_liftedBuildingPositions.end())
 								{
 									m_liftedBuildingPositions.erase(it);
 									getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y, 3, 3, true);
 									getBuildingPlacer().freeTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2, true);
 								}
 
-								if (!b.builderUnit.isFlying())
+								if (!b.builderUnit.isFlying() && !isFlyingType)
 								{
 									// Spam the build ability in case there is a unit blocking it
 									Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
