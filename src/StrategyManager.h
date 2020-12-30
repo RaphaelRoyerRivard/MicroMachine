@@ -61,9 +61,9 @@ class StrategyManager
 
 	// Only strategies in this list and in the race specific list can be chosen
 	std::vector<std::string> STRATEGY_ORDER = {
-		"PROXY_MARAUDERS",
 		"EARLY_EXPAND",
 		"STANDARD",
+		"PROXY_MARAUDERS",
 		"FAST_PF",
 		"PROXY_CYCLONES"
 	};
