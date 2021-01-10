@@ -1174,7 +1174,7 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 			continue;
 		if (isReturningCargo(worker))
 			continue;
-		if (m_workerData.isProxyWorker(worker) && Util::DistSq(pos, m_bot.Buildings().getProxyLocation()) > 10 * 10)
+		if (m_workerData.isProxyWorker(worker) && Util::DistSq(pos, m_bot.Buildings().getProxyLocation()) > 20 * 20)
 			continue;
 		if (filterMoving && worker.isMoving() && (!allowCombatWorkers || workerJob != WorkerJobs::Combat))
 			continue;
