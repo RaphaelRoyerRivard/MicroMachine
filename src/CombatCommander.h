@@ -190,8 +190,8 @@ class CombatCommander
     bool            isSquadUpdateFrame();
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);
-    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight = false) const;
-	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight = false) const;
+    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight = false) const;
+	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight = true) const;
 	bool			WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const;
 
 	CCPosition		exploreMap();
@@ -273,7 +273,7 @@ public:
 	void CalcBestFlyingCycloneHelpers();
 	bool ShouldUnitHeal(const sc2::Unit * unit) const;
 	bool GetUnitAbilities(const sc2::Unit * unit, sc2::AvailableAbilities & outUnitAbilities) const;
-	const SquadData & getSquadData() const { return m_squadData; }
+	SquadData & getSquadData() { return m_squadData; }
 	const std::vector<CCTilePosition> & getMainBaseSiegePositions() const { return m_mainBaseSiegePositions; }
 	sc2::Units & getMainBaseSiegeTanks() { return m_mainBaseSiegeTanks; }
 };
