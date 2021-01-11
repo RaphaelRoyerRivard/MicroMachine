@@ -2669,12 +2669,12 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     return closestDefender;
 }
 
-Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight) const
+Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight) const
 {
     // get our worker unit that is mining that is closest to it
-    Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, allowDifferentHeight);
+    Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, filterDifferentHeight);
 
-	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy, enemyUnits, allowDifferentHeight))
+	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy, enemyUnits, filterDifferentHeight))
 	{
         m_bot.Workers().setCombatWorker(workerDefender);
     }
@@ -2685,7 +2685,7 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
     return workerDefender;
 }
 
-bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight) const
+bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight) const
 {
 	if (!worker.isValid())
 		return false;
@@ -2718,7 +2718,7 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 			finishedCombatBuilding = true;
 		}
 	}
-	if (!allowDifferentHeight && !groundEnemyUnitOnSameHeight)
+	if (filterDifferentHeight && !groundEnemyUnitOnSameHeight)
 		return false;
 	if (finishedCombatBuilding)
 		return false;
