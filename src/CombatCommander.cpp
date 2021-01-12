@@ -2081,7 +2081,8 @@ void CombatCommander::updateDefenseSquads()
 
 	bool workerRushed = false;
 	bool earlyRushed = false;
-	std::vector<sc2::UNIT_TYPEID> inofensiveUnitTypes = { sc2::UNIT_TYPEID::ZERG_OVERLORD, sc2::UNIT_TYPEID::ZERG_OVERSEER, sc2::UNIT_TYPEID::PROTOSS_OBSERVER, sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE };
+	bool proxyCombatBuildings = false;
+	std::vector<sc2::UNIT_TYPEID> inoffensiveUnitTypes = { sc2::UNIT_TYPEID::ZERG_OVERLORD, sc2::UNIT_TYPEID::ZERG_OVERSEER, sc2::UNIT_TYPEID::PROTOSS_OBSERVER, sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE };
 	// TODO instead of separing by bases, we should separate by clusters
 	std::list<RegionArmyInformation> regions;
 	// for each of our occupied regions
@@ -2153,7 +2154,7 @@ void CombatCommander::updateDefenseSquads()
 					workerRushed = false;	// TODO if the enemy places an Assimilator or a Pylon, it might still be a worker rush
 
 					// in this squad we don't want to defend with workers against refineries, inoffensive units and workers (unless we are worker rushed)
-					if (!Util::Contains(unit.getAPIUnitType(), inofensiveUnitTypes) && !unit.getType().isRefinery())
+					if (!Util::Contains(unit.getAPIUnitType(), inoffensiveUnitTypes) && !unit.getType().isRefinery())
 					{
 						offensiveUnit = true;
 					}
@@ -2205,7 +2206,7 @@ void CombatCommander::updateDefenseSquads()
 						workerRushed = false;
 
 						// in this squad we don't want to defend with workers against refineries, inoffensive units and workers (unless we are worker rushed)
-						if (!Util::Contains(unit.getAPIUnitType(), inofensiveUnitTypes) && !unit.getType().isRefinery())
+						if (!Util::Contains(unit.getAPIUnitType(), inoffensiveUnitTypes) && !unit.getType().isRefinery())
 						{
 							offensiveUnit = true;
 						}
@@ -2260,6 +2261,18 @@ void CombatCommander::updateDefenseSquads()
 			continue;
 		}
 
+		if (!proxyCombatBuildings)
+		{
+			for (const auto & enemyUnit : region.enemyUnits)
+			{
+				if (enemyUnit.getType().isAttackingBuilding())
+				{
+					proxyCombatBuildings = true;
+					break;
+				}
+			}
+		}
+
 		m_bot.StartProfiling("0.10.4.2.2.3      createSquad");
 		const SquadOrder defendRegion(SquadOrderTypes::Defend, closestEnemy.getPosition(), m_bot.Strategy().isWorkerRushed() ? WorkerRushDefenseOrderRadius : BaseDefenseOrderRadius, "Defend Region!");
 		// if we don't have a squad assigned to this region already, create one
@@ -2302,6 +2315,7 @@ void CombatCommander::updateDefenseSquads()
 		m_bot.Strategy().setIsWorkerRushed(false);
 	}
 	m_bot.Strategy().setIsEarlyRushed(earlyRushed);
+	m_bot.Strategy().setEnemyHasProxyCombatBuildings(proxyCombatBuildings);
 
 	// Find our Reaper that is the closest to the enemy base
 	const sc2::Unit * offensiveReaper = nullptr;
