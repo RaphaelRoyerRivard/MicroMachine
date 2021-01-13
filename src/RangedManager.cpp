@@ -1395,16 +1395,12 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 					break;
 				}
 			}
-			// And only after 2.5s passed since the last valid target, unless there are ground threats
-			if (groundThreats || m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f)
+			// And there are ground threats or 2.5s passed since the last valid target while not being close to its retreat location
+			if (groundThreats || (m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f && m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] == 0))
 			{
-				// And only if the tank is not close to its retreat location
-				if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] == 0)
-				{
-					morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
-					frameCount = TANK_UNSIEGE_FRAME_COUNT;
-					morph = true;
-				}
+				morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
+				frameCount = TANK_UNSIEGE_FRAME_COUNT;
+				morph = true;
 			}
 		}
 		else
