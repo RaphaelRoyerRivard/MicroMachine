@@ -378,29 +378,43 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 
 				if (basesWithResourceDepot <= 5)
 				{
-					// Use the good siege positions in the main base if available
-					auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();
-					const auto & siegePositions = m_bot.Commander().Combat().getMainBaseSiegePositions();
-					for (int i = 0; i < siegePositions.size(); ++i)
+					if (basesWithResourceDepot <= 1)
 					{
-						if (siegeTanks[i] == nullptr || siegeTanks[i] == rangedUnit)
+						auto naturalBase = m_bot.Bases().getPlayerNat(Players::Self);
+						if (naturalBase)
 						{
-							bool shouldSiegeInMainBase = m_order.getType() != SquadOrderTypes::Defend;
-							if (!shouldSiegeInMainBase)
+							auto wallPosition = Util::GetPosition(m_bot.Buildings().getWallPosition());
+							auto towardsMainBase = Util::Normalized(wallPosition - naturalBase->getDepotPosition());
+							goal = wallPosition + towardsMainBase * 6;
+							goalDescription = "MainBaseSiegePosition";
+						}
+					}
+					else
+					{
+						// Use the good siege positions in the main base if available
+						auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();
+						const auto & siegePositions = m_bot.Commander().Combat().getMainBaseSiegePositions();
+						for (int i = 0; i < siegePositions.size(); ++i)
+						{
+							if (siegeTanks[i] == nullptr || siegeTanks[i] == rangedUnit)
 							{
-								auto baseToDefend = m_bot.Bases().getBaseContainingPosition(m_order.getPosition());
-								if (baseToDefend)
+								bool shouldSiegeInMainBase = m_order.getType() != SquadOrderTypes::Defend;
+								if (!shouldSiegeInMainBase)
 								{
-									float dist = Util::DistSq(siegePositions[i], baseToDefend->getDepotPosition());
-									shouldSiegeInMainBase = dist < 20 * 20;
+									auto baseToDefend = m_bot.Bases().getBaseContainingPosition(m_order.getPosition());
+									if (baseToDefend)
+									{
+										float dist = Util::DistSq(siegePositions[i], baseToDefend->getDepotPosition());
+										shouldSiegeInMainBase = dist < 20 * 20;
+									}
 								}
-							}
-							if (shouldSiegeInMainBase)
-							{
-								siegeTanks[i] = rangedUnit;
-								goal = Util::GetPosition(siegePositions[i]);
-								goalDescription = "MainBaseSiegePosition";
-								break;
+								if (shouldSiegeInMainBase)
+								{
+									siegeTanks[i] = rangedUnit;
+									goal = Util::GetPosition(siegePositions[i]);
+									goalDescription = "MainBaseSiegePosition";
+									break;
+								}
 							}
 						}
 					}
@@ -1395,16 +1409,12 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 					break;
 				}
 			}
-			// And only after 2.5s passed since the last valid target, unless there are ground threats
-			if (groundThreats || m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f)
+			// And there are ground threats or 2.5s passed since the last valid target while not being close to its retreat location
+			if (groundThreats || (m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f && m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] == 0))
 			{
-				// And only if the tank is not close to its retreat location
-				if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] == 0)
-				{
-					morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
-					frameCount = TANK_UNSIEGE_FRAME_COUNT;
-					morph = true;
-				}
+				morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
+				frameCount = TANK_UNSIEGE_FRAME_COUNT;
+				morph = true;
 			}
 		}
 		else

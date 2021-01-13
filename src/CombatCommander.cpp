@@ -986,7 +986,7 @@ void CombatCommander::updateBackupSquads()
 		if ((unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARAUDER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_MEDIVAC
-			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_REAPER
+			//|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_REAPER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
@@ -1377,13 +1377,16 @@ void CombatCommander::updateScoutSquad()
 
 void CombatCommander::updateHarassSquads()
 {
-	std::vector<Unit> harassUnits;
+	std::map<sc2::UNIT_TYPEID, std::vector<Unit>> harassUnits;
 	int i = 1;
 	while (m_squadData.squadExists("Harass" + std::to_string(i)))
 	{
 		Squad & squad = m_squadData.getSquad("Harass" + std::to_string(i));
 		const auto & squadUnits = squad.getUnits();
-		harassUnits.insert(harassUnits.end(), squadUnits.begin(), squadUnits.end());
+		for (const auto & squadUnit : squadUnits)
+		{
+			harassUnits[squadUnit.getAPIUnitType()].push_back(squadUnit);
+		}
 		squad.clear();
 		++i;
 	}
@@ -1419,27 +1422,30 @@ void CombatCommander::updateHarassSquads()
 	Squad & idleSquad = m_squadData.getSquad("Idle");
 	for (auto & idleUnit : idleSquad.getUnits())
 	{
-		if (idleUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE)
+		if (idleUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE || idleUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
 		{
-			harassUnits.push_back(idleUnit);
+			harassUnits[idleUnit.getAPIUnitType()].push_back(idleUnit);
 		}
 	}
 
 	if (harassUnits.empty())
 		return;
 
-	i = 0;
-	for (auto & harassUnit : harassUnits)
+	for (auto & harassUnitType : harassUnits)
 	{
-		++i;
-		std::string squadName = "Harass" + std::to_string(i);
-		if (!m_squadData.squadExists(squadName))
+		i = 0;
+		for (auto & harassUnit : harassUnitType.second)
 		{
-			i = 1;
-			squadName = "Harass" + std::to_string(i);
+			++i;
+			std::string squadName = "Harass" + std::to_string(i);
+			if (!m_squadData.squadExists(squadName))
+			{
+				i = 1;
+				squadName = "Harass" + std::to_string(i);
+			}
+			auto & harassSquad = m_squadData.getSquad(squadName);
+			m_squadData.assignUnitToSquad(harassUnit, harassSquad);
 		}
-		auto & harassSquad = m_squadData.getSquad(squadName);
-		m_squadData.assignUnitToSquad(harassUnit, harassSquad);
 	}
 }
 
@@ -1523,8 +1529,18 @@ void CombatCommander::updateAttackSquads()
 	CCPosition orderPosition = GetClosestEnemyBaseLocation();
 	bool retreat = false;
 	
+	// Do not attack before 5 minutes unless we have a proxy strategy or the enemy has more bases than us
+	if (!m_bot.Strategy().isProxyStartingStrategy() && m_bot.GetCurrentFrame() < 22.4f * 60 * 5)
+	{
+		int allyBases = m_bot.Bases().getBaseCount(Players::Self);
+		int enemyBases = m_bot.Bases().getBaseCount(Players::Enemy);
+		if (allyBases >= enemyBases)
+		{
+			retreat = true;
+		}
+	}
 	// A retreat must last at least 5 seconds
-	if (m_bot.GetCurrentFrame() >= m_lastRetreatFrame + 5 * 22.4)
+	if (!retreat && m_bot.GetCurrentFrame() >= m_lastRetreatFrame + 5 * 22.4)
 	{
 		bool earlyCycloneRush = false;
 		if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
