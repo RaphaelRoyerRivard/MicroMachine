@@ -3378,6 +3378,12 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		return nullptr;
 	}
 
+	// Computes a binary value of the 4 boolean parameters as an int
+	int params = int(filterHigherUnits);
+	params = (params << 1) + int(considerOnlyUnitsInRange);
+	params = (params << 1) + int(filterPassiveBuildings);
+	params = (params << 1) + int(considerOnlyVisibleUnits);
+
 	// Load target from cache if possible
 	std::set<const sc2::Unit *> currentTargets;
 	if (!harass)
@@ -3387,7 +3393,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		if (it != m_threatTargetForUnit.end())
 		{
 			const auto & savedTargets = it->second;
-			const auto it2 = savedTargets.find(currentTargets);
+			const auto it2 = savedTargets.find(std::make_pair(params, currentTargets));
 			if (it2 != savedTargets.end())
 			{
 				return it2->second;
@@ -3454,7 +3460,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 
 	const sc2::Unit * target = targetPriorities.empty() ? nullptr : (*targetPriorities.rbegin()).second;	//last target because it's the one with the highest priority
 	if (!harass)
-		m_threatTargetForUnit[rangedUnit][currentTargets] = target;
+		m_threatTargetForUnit[rangedUnit][std::make_pair(params, currentTargets)] = target;
 	return target;		
 }
 
