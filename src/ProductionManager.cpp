@@ -655,6 +655,14 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 		{
 			shouldSkip = true;
 		}
+		else if (m_bot.Strategy().getStartingStrategy() == STANDARD)
+		{
+			if (currentItem.type.getUnitType().isResourceDepot() && !currentItem.type.getUnitType().isMorphedBuilding())
+			{
+				const auto hasStarport = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true) > 0;
+				shouldSkip = !hasStarport && m_bot.GetMinerals() < 600;
+			}
+		}
 	}
 	return shouldSkip;
 }

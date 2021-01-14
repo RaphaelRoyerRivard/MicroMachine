@@ -45,7 +45,7 @@ private:
 	std::map<sc2::Tag, sc2::Unit> m_dummyFighterVikings;
 	std::map<sc2::Tag, sc2::Unit> m_dummyStimedUnits;
 	std::map<const sc2::Unit *, sc2::Units> m_threatsForUnit;
-	std::map<const sc2::Unit *, std::map<std::set<const sc2::Unit *>, const sc2::Unit *>> m_threatTargetForUnit;	//<unit, <potential targets, target>>
+	std::map<const sc2::Unit *, std::map<std::pair<int, std::set<const sc2::Unit *>>, const sc2::Unit *>> m_threatTargetForUnit;	//<unit, <<parameters, potential targets>, target>>
 	std::map<const sc2::Unit *, long> m_siegedTanksLastValidTargetFrame;
 	std::map<const sc2::Unit *, long> m_tanksLastFrameFarFromRetreatGoal;
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
