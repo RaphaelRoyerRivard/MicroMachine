@@ -1064,8 +1064,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const float cycloneTankRatio = float(cycloneCount) / std::max(1.f, float(tankCount));
 				const float enemySupplyAirGroundRatio = float(m_bot.Analyzer().opponentAirSupply) / std::max(1.f, float(m_bot.Analyzer().opponentGroundSupply));
 				const bool shouldProduceHellionsAgainstEarlyLightUnitsRush = factoryTechLabCount == 0 && earlyRushed && m_bot.Analyzer().getEnemyLightGroundUnitCount() > hellionCount;
-				// We want to build Thors against Protoss, but only after we have an Armory or 2 bases and we don't want more Thors than Cyclones
-				if (startingStrategy != PROXY_CYCLONES && enemyRace == sc2::Protoss && (finishedArmory || finishedBaseCount >= 2) && thorCount + 1 < cycloneCount)
+				// We want to build Thors against Protoss, but only after we have an Armory and we don't want more Thors than Cyclones
+				if (startingStrategy != PROXY_CYCLONES && enemyRace == sc2::Protoss && finishedArmory && thorCount + 1 < cycloneCount)
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
