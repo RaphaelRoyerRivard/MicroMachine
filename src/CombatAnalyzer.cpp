@@ -32,6 +32,9 @@ void CombatAnalyzer::onFrame()
 	// Detect burrowed Zerg units
 	DetectBurrowingUnits();
 
+	// Detect all invisible enemy units
+	DetectInvisibleUnits();
+
 	lowPriorityChecks();
 //drawAreasUnderDetection();
 }
@@ -359,6 +362,23 @@ void CombatAnalyzer::DetectBurrowingUnits()
 						}
 					}
 				}
+			}
+		}
+	}
+}
+
+void CombatAnalyzer::DetectInvisibleUnits()
+{
+	invisUnits.clear();
+
+	for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
+	{
+		const auto & enemyUnit = enemyUnitPair.second;
+		if (enemyUnit.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
+		{
+			if ((enemyUnit.isCloaked() || enemyUnit.isBurrowed()) && enemyUnit.getUnitPtr()->health_max == 0)
+			{
+				invisUnits.insert(enemyUnit.getUnitPtr());
 			}
 		}
 	}
@@ -916,4 +936,12 @@ void CombatAnalyzer::detectTechs(Unit & unit, UnitState & state)
 		}
 	}
 	m_bot.StopProfiling("0.10.4.4.2.3.1      checkForRangeUpgrade");
+}
+
+std::set<const sc2::Unit *> CombatAnalyzer::getBurrowedAndInvisUnits() const
+{
+	std::set<const sc2::Unit *> burrowedAndInvisUnits;
+	burrowedAndInvisUnits.insert(burrowedUnits.begin(), burrowedUnits.end());
+	burrowedAndInvisUnits.insert(invisUnits.begin(), invisUnits.end());
+	return burrowedAndInvisUnits;
 }

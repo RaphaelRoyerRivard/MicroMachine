@@ -2081,37 +2081,37 @@ void BuildingManager::castBuildingsAbilities()
 		}*/
 
 		const auto SCAN_RADIUS = 13;
-		const auto & burrowedUnits = m_bot.Analyzer().getBurrowedUnits();
-		if (!burrowedUnits.empty())
+		const auto burrowedAndInvisUnits = m_bot.Analyzer().getBurrowedAndInvisUnits();
+		if (!burrowedAndInvisUnits.empty())
 		{
 			keepEnergy = true;
-			m_bot.StartProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedUnits");
+			m_bot.StartProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedOrInvisUnits");
 			const auto & combatUnits = m_bot.Commander().Combat().GetCombatUnits();
-			sc2::Units closeBurrowedUnits;
+			sc2::Units closeBurrowedOrInvisUnits;
 			std::set<const sc2::Unit *> closeCombatUnits;
-			for (const auto burrowedUnit : burrowedUnits)
+			for (const auto burrowedOrInvisUnit : burrowedAndInvisUnits)
 			{
-				if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
+				if (burrowedOrInvisUnit->last_seen_game_loop == m_bot.GetCurrentFrame() && burrowedOrInvisUnit->health_max > 0)
 					continue;	// Already visible
 
-				// Check if we have a combat unit near the burrowed unit
+				// Check if we have a combat unit near the burrowed or invis unit
 				for (const auto & combatUnit : combatUnits)
 				{
-					auto range = Util::GetAttackRangeForTarget(combatUnit.getUnitPtr(), burrowedUnit, m_bot);
+					auto range = Util::GetAttackRangeForTarget(combatUnit.getUnitPtr(), burrowedOrInvisUnit, m_bot);
 					if (range <= 0.f)
-						continue;	// The combat unit cannot attack the burrowed unit
+						continue;	// The combat unit cannot attack the burrowed or invis unit
 					range += Util::getSpeedOfUnit(combatUnit.getUnitPtr(), m_bot);	// We add a small buffer
-					const auto dist = Util::DistSq(combatUnit, burrowedUnit->pos);
+					const auto dist = Util::DistSq(combatUnit, burrowedOrInvisUnit->pos);
 					if (dist <= range * range)
 					{
-						closeBurrowedUnits.push_back(burrowedUnit);
+						closeBurrowedOrInvisUnits.push_back(burrowedOrInvisUnit);
 						closeCombatUnits.insert(combatUnit.getUnitPtr());
 						break;
 					}
 				}
 			}
-			m_bot.StopProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedUnits");
-			if (!closeBurrowedUnits.empty())
+			m_bot.StopProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedOrInvisUnits");
+			if (!closeBurrowedOrInvisUnits.empty())
 			{
 				m_bot.StartProfiling("0.8.8.3.2   FindOtherTargets");
 				// Check if there are no other ground targets nearby
@@ -2123,8 +2123,7 @@ void BuildingManager::castBuildingsAbilities()
 						const auto & enemyUnit = enemyUnitPair.second;
 						if (enemyUnit.isFlying() || 
 							(enemyUnit.getType().isBuilding() && !enemyUnit.getType().isCombatUnit()) || 
-							enemyUnit.isBurrowed() || 
-							enemyUnit.isCloaked() ||
+							((enemyUnit.isBurrowed() || enemyUnit.isCloaked()) && enemyUnit.getUnitPtr()->health_max == 0) ||
 							enemyUnit.getUnitPtr()->last_seen_game_loop != m_bot.GetCurrentFrame())
 							continue;
 						if (Util::DistSq(enemyUnit, combatUnit->pos) < 10 * 10)
@@ -2143,16 +2142,16 @@ void BuildingManager::castBuildingsAbilities()
 					m_bot.StartProfiling("0.8.8.3.3   CalcScanPosition");
 					// Calculate the middle point of all close burrowed unit
 					CCPosition middlePoint;
-					for (const auto closeBurrowedUnit : closeBurrowedUnits)
+					for (const auto closeBurrowedOrInvisUnit : closeBurrowedOrInvisUnits)
 					{
-						middlePoint += closeBurrowedUnit->pos;
+						middlePoint += closeBurrowedOrInvisUnit->pos;
 					}
-					middlePoint /= closeBurrowedUnits.size();
-					// Check to see if a scan on the middle point would cover all of the burrowed units
+					middlePoint /= closeBurrowedOrInvisUnits.size();
+					// Check to see if a scan on the middle point would cover all of the burrowed or invis units
 					bool middleCoversAllPoints = true;
-					for (const auto closeBurrowedUnit : closeBurrowedUnits)
+					for (const auto closeBurrowedOrInvisUnit : closeBurrowedOrInvisUnits)
 					{
-						const auto dist = Util::DistSq(middlePoint, closeBurrowedUnit->pos);
+						const auto dist = Util::DistSq(middlePoint, closeBurrowedOrInvisUnit->pos);
 						if (dist > SCAN_RADIUS * SCAN_RADIUS)
 						{
 							middleCoversAllPoints = false;
@@ -2164,19 +2163,19 @@ void BuildingManager::castBuildingsAbilities()
 						// Find the burrowed unit that is the most close to the others
 						const sc2::Unit * mostCenteredUnit = nullptr;
 						int maxNumberOfCoveredUnits = -1;
-						for (const auto closeBurrowedUnit : closeBurrowedUnits)
+						for (const auto closeBurrowedOrInvisUnit : closeBurrowedOrInvisUnits)
 						{
 							int numberOfCoveredUnits = 0;
-							for (const auto otherCloseBurrowedUnit : closeBurrowedUnits)
+							for (const auto otherCloseBurrowedOrInvisUnit : closeBurrowedOrInvisUnits)
 							{
-								if (Util::DistSq(closeBurrowedUnit->pos, otherCloseBurrowedUnit->pos) <= SCAN_RADIUS * SCAN_RADIUS)
+								if (Util::DistSq(closeBurrowedOrInvisUnit->pos, otherCloseBurrowedOrInvisUnit->pos) <= SCAN_RADIUS * SCAN_RADIUS)
 								{
 									++numberOfCoveredUnits;
 								}
 							}
 							if (numberOfCoveredUnits > maxNumberOfCoveredUnits)
 							{
-								mostCenteredUnit = closeBurrowedUnit;
+								mostCenteredUnit = closeBurrowedOrInvisUnit;
 								maxNumberOfCoveredUnits = numberOfCoveredUnits;
 							}
 						}
