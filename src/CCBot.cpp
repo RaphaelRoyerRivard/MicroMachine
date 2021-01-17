@@ -1354,8 +1354,10 @@ void CCBot::IssueGameStartCheats()
 	const auto enemyLocation = GetEnemyStartLocations()[0];
 	const auto naturalExpansion = m_bases.getNextExpansion(Players::Self, false, false, false);
 	const auto thirdExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion });
+	const auto fourthExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion, thirdExpansion });
 	const auto nat = Util::GetPosition(naturalExpansion->getDepotPosition());
 	const auto third = Util::GetPosition(thirdExpansion->getDepotPosition());
+	const auto fourth = Util::GetPosition(fourthExpansion->getDepotPosition());
 
 	if (Config().DebugMenu)
 	{
@@ -1948,6 +1950,13 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugGiveAllResources();
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_startLocation + towardsCenter * 5, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, m_startLocation + towardsCenter * 25, player1, 4);*/
+
+	// Test to see if our Tanks are unsieging to defend when they are far
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, third, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, fourth, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, fourth + towardsCenter * 5, player2, 5);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter, player1, 30);*/
 }
 
 void CCBot::IssueCheats()
