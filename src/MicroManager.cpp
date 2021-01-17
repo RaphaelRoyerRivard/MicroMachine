@@ -68,8 +68,13 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	if (m_bot.IsParasited(target))
 		return 0.f;
 
+	float notYetRevealedModifier = 1.f;
 	if (target->display_type == sc2::Unit::Hidden)
-		return 0.f;
+	{
+		if (!m_bot.Buildings().hasEnergyForScan())
+			return 0.f;
+		notYetRevealedModifier = 0.001f;
+	}
 
 	// Ignoring invisible creep tumors
 	const uint32_t lastGameLoop = m_bot.GetGameLoop() - 1;
@@ -212,7 +217,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
 		//const float nydusModifier = target->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && target->build_progress < 1.f ? 100.f : 1.f;
 		const float nydusModifier = 1.f;	// It seems like attacking it does close to nothing since it has 3 armor
-		return std::max(0.1f, (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * nonThreateningModifier * minionModifier * invisModifier * hallucinationModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier * unpoweredModifier);
+		return std::max(0.1f, (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * nonThreateningModifier * minionModifier * invisModifier * hallucinationModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier * unpoweredModifier * notYetRevealedModifier);
 	}
 
 	if (antiBuildingModifier > 1.f)

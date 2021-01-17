@@ -2158,7 +2158,7 @@ void CombatCommander::updateDefenseSquads()
 					if (enemyWorkers >= 3)
 						workerRushed = true;
 				}
-				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 9408)	// first 7 minutes
+				else if (!earlyRushed && !proxyBase && m_bot.GetGameLoop() < 22.4 * 7 * 60)	// first 7 minutes
 				{
 					if (unit.getType().isCombatUnit() || enemyWorkers > 2)
 						earlyRushed = true;
@@ -2399,8 +2399,11 @@ void CombatCommander::updateDefenseSquads()
 					if (regionHasEnemyBuildingOrArmoredUnit)
 						continue;	// We want to keep at least one Reaper in the Harass squad (defined only when early rushed)
 				}
+				bool onlyBurrowedWidowMines = true;
 				for (auto & enemyUnit : region.enemyUnits)
 				{
+					if (enemyUnit.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED)
+						onlyBurrowedWidowMines = false;
 					// As soon as there is a non building unit that the weak unit can attack, we consider that the weak unit can be useful
 					if (weakUnitAgainstOnlyBuildings)
 					{
@@ -2447,6 +2450,14 @@ void CombatCommander::updateDefenseSquads()
 							maxGroundDps = dps;
 						}
 					}
+				}
+				if (onlyBurrowedWidowMines)
+				{
+					// Do not try to defend with units that don't have more range than Widow Mines
+					auto widowMineRange = Util::GetAttackRangeForTarget(region.enemyUnits[0].getUnitPtr(), unit.getUnitPtr(), m_bot);
+					auto unitRange = Util::GetAttackRangeForTarget(unit.getUnitPtr(), region.enemyUnits[0].getUnitPtr(), m_bot);
+					if (unitRange <= widowMineRange)
+						continue;
 				}
 				// The weak unit would not be useful against buildings, it should harass instead of defend
 				if (weakUnitAgainstOnlyBuildings)

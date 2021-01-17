@@ -2100,6 +2100,12 @@ void BuildingManager::castBuildingsAbilities()
 					auto range = Util::GetAttackRangeForTarget(combatUnit.getUnitPtr(), burrowedOrInvisUnit, m_bot);
 					if (range <= 0.f)
 						continue;	// The combat unit cannot attack the burrowed or invis unit
+					if (burrowedOrInvisUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED)
+					{
+						auto enemyRange = Util::GetAttackRangeForTarget(burrowedOrInvisUnit, combatUnit.getUnitPtr(), m_bot);
+						if (range <= enemyRange)
+							continue;	// We don't want to attack activated Widow Mines if we don't have more range
+					}
 					range += Util::getSpeedOfUnit(combatUnit.getUnitPtr(), m_bot);	// We add a small buffer
 					const auto dist = Util::DistSq(combatUnit, burrowedOrInvisUnit->pos);
 					if (dist <= range * range)

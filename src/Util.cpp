@@ -1211,7 +1211,7 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 	else
 		unitRange = GetMaxAttackRange(unit.getUnitPtr(), bot);
 	///////// HEALTH
-	float unitPower = pow(unit.getHitPoints() + unit.getShields(), 0.65f);	// just enough so that a Hellion has more power than a Reaper (one against the other)
+	float unitPower = std::max(1.f, pow(unit.getHitPoints() + unit.getShields(), 0.65f));	// just enough so that a Hellion has more power than a Reaper (one against the other)
 	///////// DPS
 	if (target.isValid())
 		unitPower *= isMedivac ? 12.6f : std::max(1.f, GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot));
@@ -1673,6 +1673,8 @@ float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
 		maxRange += unit->radius;
 		if (unit->alliance == sc2::Unit::Enemy)
 			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED && unit->health_max > 0 && !Util::IsPositionUnderDetection(unit->pos, bot))
+			maxRange = 0.f;	// The Widow Mine cannot attack between shots
 	}
 	
 	return std::max(0.f, maxRange);
@@ -1704,6 +1706,8 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 		maxRange += unit->radius;
 		if (unit->alliance == sc2::Unit::Enemy)
 			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED && unit->health_max > 0 && !Util::IsPositionUnderDetection(unit->pos, bot))
+			maxRange = 0.f;	// The Widow Mine cannot attack between shots
 	}
 
 	return std::max(0.f, maxRange);
@@ -1741,6 +1745,8 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
 		if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY && (unit->alliance != target->alliance || target->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY))
 			maxRange = 0.f;
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED && unit->health_max > 0 && !Util::IsPositionUnderDetection(unit->pos, bot))
+			maxRange = 0.f;	// The Widow Mine cannot attack between shots
 	}
 
 	return std::max(0.f, maxRange); 
@@ -1784,6 +1790,8 @@ float Util::GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot)
 		maxRange += unit->radius;
 		if (unit->alliance == sc2::Unit::Enemy)
 			maxRange += GetAttackRangeBonus(unitTypeData.unit_type_id, bot);
+		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED && unit->health_max > 0 && !Util::IsPositionUnderDetection(unit->pos, bot))
+			maxRange = 0.f;	// The Widow Mine cannot attack between shots
 	}
 
 	return std::max(0.f, maxRange);
@@ -1955,7 +1963,10 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	}
 	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED)
 	{
-		dps = 50.f;	//DPS is not really relevant since it's a single powerful attack
+		if (unit->health_max > 0 && !Util::IsPositionUnderDetection(unit->pos, bot))
+			dps = 0.f;	// The Widow Mine cannot attack between shots
+		else
+			dps = 50.f;	//DPS is not really relevant since it's a single powerful attack
 	}
 	else if(unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON && !unit->is_powered)
 	{
