@@ -1211,7 +1211,7 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 	else
 		unitRange = GetMaxAttackRange(unit.getUnitPtr(), bot);
 	///////// HEALTH
-	float unitPower = std::max(1.f, pow(unit.getHitPoints() + unit.getShields(), 0.65f));	// just enough so that a Hellion has more power than a Reaper (one against the other)
+	float unitPower = std::max(1.f, float(pow(unit.getHitPoints() + unit.getShields(), 0.65f)));	// just enough so that a Hellion has more power than a Reaper (one against the other)
 	///////// DPS
 	if (target.isValid())
 		unitPower *= isMedivac ? 12.6f : std::max(1.f, GetDpsForTarget(unit.getUnitPtr(), target.getUnitPtr(), bot));
