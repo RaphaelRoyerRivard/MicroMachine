@@ -25,6 +25,7 @@ class CombatAnalyzer {
 	std::list<std::pair<CCPosition, uint32_t>> m_areasUnderDetection;
 	std::set<const sc2::Unit *> enemyPickedUpUnits;
 	std::set<const sc2::Unit *> burrowedUnits;
+	std::set<const sc2::Unit *> invisUnits;
 
 	bool m_enemyHasCombatAirUnit = false;
 
@@ -61,6 +62,7 @@ class CombatAnalyzer {
 	int getUnitUpgradeWeapon(const sc2::Unit* unit);
 
 	void DetectBurrowingUnits();
+	void DetectInvisibleUnits();
 	void clearAreasUnderDetection();
 	void UpdateTotalHealthLoss();
 	void drawDamageHealthRatio();
@@ -125,7 +127,9 @@ public:
 	bool enemyHasCombatAirUnit() const { return m_enemyHasCombatAirUnit; }
 	void detectUpgrades(Unit & unit, UnitState & state);
 	void detectTechs(Unit & unit, UnitState & state);
+	std::set<const sc2::Unit *> getBurrowedAndInvisUnits() const;
 	const std::set<const sc2::Unit *> & getBurrowedUnits() const { return burrowedUnits; }
 	void addBurrowedUnits(const sc2::Unit * burrowedUnit) { burrowedUnits.insert(burrowedUnit); }
+	const std::set<const sc2::Unit *> & getInvisUnits() const { return invisUnits; }
 	int getEnemyLightGroundUnitCount() const { return totalGroundLightCount; }
 };
