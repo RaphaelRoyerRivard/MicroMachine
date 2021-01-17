@@ -434,7 +434,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				}
 				
 				// Go to idle position if not using a good siege position in our main base
-				if (goalDescription != "MainBaseSiegePosition")
+				if (goalDescription != "MainBaseSiegePosition" && !defending)
 				{
 					auto base = m_bot.Bases().getBaseContainingPosition(m_bot.Commander().Combat().GetIdlePosition());
 					if (base && base->getResourceDepot().isValid())
