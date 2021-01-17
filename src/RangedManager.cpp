@@ -366,7 +366,20 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 					}
 				}
 			}
-			if (m_order.getStatus() == "Retreat" || m_order.getType() == SquadOrderTypes::Defend || !hasFrontLineUnits)
+			bool defending = m_order.getType() == SquadOrderTypes::Defend;
+			bool defendingAgainstCombatBuildings = false;
+			if (defending)
+			{
+				for (auto enemy : rangedUnitTargets)
+				{
+					if (UnitType(enemy->unit_type, m_bot).isAttackingBuilding())
+					{
+						defendingAgainstCombatBuildings = true;
+						break;
+					}
+				}
+			}
+			if (m_order.getStatus() == "Retreat" || (defending && !defendingAgainstCombatBuildings) || !hasFrontLineUnits)
 			{
 				const auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 				int basesWithResourceDepot = 0;
