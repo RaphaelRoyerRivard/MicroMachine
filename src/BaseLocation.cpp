@@ -28,6 +28,18 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
         if (resource.getType().isMineral())
         {
             m_minerals.push_back(resource);
+			if (resource.getUnitPtr()->mineral_contents == 1800)
+			{
+				m_mineralsClose.push_back(resource);
+			}
+			else if (resource.getUnitPtr()->mineral_contents == 900)
+			{
+				m_mineralsFar.push_back(resource);
+			}
+			else
+			{
+				Util::DisplayError("Mineral contents is not 900 or 1800.", "0x00000011", m_bot, false);
+			}
             m_mineralPositions.push_back(resource.getPosition());
 
             // add the position of the minerals to the center
@@ -296,6 +308,25 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 				m_minerals = minerals;
 				m_geysers = geysers;
 				m_snapshotsRemoved = true;
+
+				//Set the close and far patches
+				m_mineralsClose.empty();
+				m_mineralsFar.empty();
+				for (auto & mineral : m_minerals)
+				{
+					if (mineral.getUnitPtr()->mineral_contents == 1800)
+					{
+						m_mineralsClose.push_back(mineral);
+					}
+					else if (mineral.getUnitPtr()->mineral_contents == 900)
+					{
+						m_mineralsFar.push_back(mineral);
+					}
+					else
+					{
+						Util::DisplayError("Mineral contents is not 900 or 1800.", "0x00000011", m_bot, false);
+					}
+				}
 			}
 		}
 	}
@@ -374,6 +405,16 @@ const std::vector<Unit> & BaseLocation::getGeysers() const
 const std::vector<Unit> & BaseLocation::getMinerals() const
 {
     return m_minerals;
+}
+
+const std::vector<Unit> & BaseLocation::getCloseMinerals() const
+{
+	return m_mineralsClose;
+}
+
+const std::vector<Unit> & BaseLocation::getFarMinerals() const
+{
+	return m_mineralsFar;
 }
 
 const CCTilePosition BaseLocation::getCenterOfMinerals() const

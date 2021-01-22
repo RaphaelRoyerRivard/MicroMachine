@@ -198,7 +198,7 @@ void CCBot::OnUnitEnterVision(const sc2::Unit*) {}
 void CCBot::OnNuclearLaunchDetected() {}
 
 void CCBot::OnGameStart() //full start
-{	
+{
     m_config.readConfigFile();
 	if (!m_realtime)
 		Util::InitializeCombatSimulator();
@@ -268,7 +268,7 @@ void CCBot::OnStep()
 	const bool executeMacro = m_gameLoop - m_previousMacroGameLoop > framesSinceLastStep;
 	if (executeMacro)
 		m_previousMacroGameLoop = m_gameLoop;
-	
+
 	StartProfiling("0.1 checkKeyState");
 	if (Config().AllowDebug)
 	{
@@ -283,48 +283,84 @@ void CCBot::OnStep()
 	StopProfiling("0.1 checkKeyState");
 
 	StartProfiling("0.2 setUnits");
-    setUnits();
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		setUnits();
 	StopProfiling("0.2 setUnits");
 
-	checkForConcede();
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		checkForConcede();
 
 	StartProfiling("0.4 m_map.onFrame");
-	m_map.onFrame();
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		m_map.onFrame();
 	StopProfiling("0.4 m_map.onFrame");
 
 	StartProfiling("0.5 m_unitInfo.onFrame");
-    m_unitInfo.onFrame();
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		m_unitInfo.onFrame();
 	StopProfiling("0.5 m_unitInfo.onFrame");
 
 	StartProfiling("0.12 m_combatAnalyzer.onFrame");
-	m_combatAnalyzer.onFrame();
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		m_combatAnalyzer.onFrame();
 	StopProfiling("0.12 m_combatAnalyzer.onFrame");
 
 	StartProfiling("0.6 m_bases.onFrame");
-    m_bases.onFrame();
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		m_bases.onFrame();
 	StopProfiling("0.6 m_bases.onFrame");
 
 	StartProfiling("0.7 m_workers.onFrame");
-	m_workers.onFrame(executeMacro);
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		m_workers.onFrame(executeMacro);
 	StopProfiling("0.7 m_workers.onFrame");
 
 	StartProfiling("0.8 m_buildings.onFrame");
-	m_buildings.onFrame(executeMacro);
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		m_buildings.onFrame(executeMacro);
 	StopProfiling("0.8 m_buildings.onFrame");
 
 	StartProfiling("0.9 m_strategy.onFrame");
-    m_strategy.onFrame(executeMacro);
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		m_strategy.onFrame(executeMacro);
 	StopProfiling("0.9 m_strategy.onFrame");
 
 	StartProfiling("0.11 m_repairStations.onFrame");
-	m_repairStations.onFrame();
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		m_repairStations.onFrame();
 	StopProfiling("0.11 m_repairStations.onFrame");
 
 	StartProfiling("0.10 m_gameCommander.onFrame");
-	m_gameCommander.onFrame(executeMacro);
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		m_gameCommander.onFrame(executeMacro);
 	StopProfiling("0.10 m_gameCommander.onFrame");
 
-	updatePreviousFrameEnemyUnitPos();
+#ifdef ROBUST_MODE
+	if (setjmp(gBuffer) == 0)
+#endif
+		updatePreviousFrameEnemyUnitPos();
 
 	StopProfiling("0.0 OnStep");	//Do not remove
 
@@ -335,21 +371,21 @@ void CCBot::OnStep()
 	if (Config().AllowDebug)
 	{
 		Debug()->SendDebug();
-	}
 
-	if (Config().TimeControl)
-	{
-		int speed = Util::GetTimeControlSpeed();
-		if (speed != Util::GetTimeControlMaxSpeed())
+		if (Config().TimeControl)
 		{
-			long elapsedTime;
-			do
+			int speed = Util::GetTimeControlSpeed();
+			if (speed != Util::GetTimeControlMaxSpeed())
 			{
-				elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - m_lastFrameEndTime).count() / 1000;
-			} while (elapsedTime < (1000 / 22.4f) / (speed / 100.f));
+				long elapsedTime;
+				do
+				{
+					elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - m_lastFrameEndTime).count() / 1000;
+				} while (elapsedTime < (1000 / 22.4f) / (speed / 100.f));
 
-			m_lastFrameEndTime = std::chrono::steady_clock::now();
-			drawTimeControl();
+				m_lastFrameEndTime = std::chrono::steady_clock::now();
+				drawTimeControl();
+			}
 		}
 	}
 
@@ -1104,10 +1140,29 @@ void CCBot::clearDeadUnits()
 				m_KD8ChargesSpawnFrame.erase(tag);
 			if (unit.getPlayer() == Players::Enemy)
 				m_parasitedUnits.insert(unit.getUnitPtr()->tag);
+			else
+			{
+				switch ((sc2::UNIT_TYPEID)unit.getUnitPtr()->unit_type)
+				{
+					case sc2::UNIT_TYPEID::TERRAN_SCV:
+					case sc2::UNIT_TYPEID::PROTOSS_PROBE:
+					case sc2::UNIT_TYPEID::ZERG_DRONE:
+						//Workers().getWorkerData().m_workerMineralMap[]
+						//Workers().getWorkerData().
+						auto workerData = Workers().getWorkerData();
+						if (workerData.m_workerMineralMap.find(unit) != workerData.m_workerMineralMap.end())
+						{
+							workerData.m_mineralWorkersMap[workerData.m_workerMineralMap[unit]].remove(unit.getTag());
+						}
+						workerData.m_workerMineralMap.erase(unit);
+						break;
+				}
+			}
 			if (m_deadAllyUnitsCount.find(unit.getAPIUnitType()) == m_deadAllyUnitsCount.end())
 				m_deadAllyUnitsCount[unit.getAPIUnitType()] = 1;
 			else
 				m_deadAllyUnitsCount[unit.getAPIUnitType()] += 1;
+
 		}
 	}
 	// Remove dead ally units
@@ -1986,11 +2041,13 @@ void CCBot::IssueCheats()
 	}
 
 	//Kill all aggressive enemy units, runs every frame to kill every visible enemy units
-#ifdef NO_OPPONENT
+#if defined(NO_OPPONENT_UNIT) || defined(NO_OPPONENT)
 	for (auto unit : GetEnemyUnits())
 	{
+#ifdef NO_OPPONENT_UNIT
 		if (!unit.second.getType().isBuilding() && unit.second.isValid() && unit.second.isAlive() && unit.second.getUnitPtr()->display_type != sc2::Unit::Snapshot && unit.second.getUnitPtr()->display_type != sc2::Unit::Hidden
 			&& unit.second.getUnitPtr()->last_seen_game_loop == GetCurrentFrame())
+#endif
 		{
 			Debug()->DebugKillUnit(unit.second.getUnitPtr());
 			Util::ClearChat(*this);

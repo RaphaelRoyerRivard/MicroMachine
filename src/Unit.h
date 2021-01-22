@@ -85,7 +85,9 @@ public:
 	void patrol			(const CCPosition & targetPosition) const;
 	void patrol			(const CCTilePosition & targetPosition) const;
 	void rightClick     (const Unit & target) const;
+	void shiftRightClick(const Unit & target) const;
 	void rightClick		(const CCPosition position) const;
+	void shiftRightClick(const CCPosition position) const;
     void repair         (const Unit & target) const;
     void build          (const UnitType & buildingType, CCTilePosition pos) const;
     void buildTarget    (const UnitType & buildingType, const Unit & target) const;

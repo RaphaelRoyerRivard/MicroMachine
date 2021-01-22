@@ -28,11 +28,15 @@ class WorkerManager
 		int deathFrame;
 		int lastCargoReturnFrame;
 		int harvestFramesRequired;
+		Unit mineral;
 	};
 	//we are not removing killed mules from this map, but it doesn't really matter
 	std::map<CCUnitID, mule_info> muleHarvests;
 	//Mineral ID, frame number of when the mineral field will no longer have a mule on it
 	std::map<CCUnitID, int> mineralMuleDeathFrame;
+
+	std::map <sc2::Tag, Unit *> workerMineral;
+	std::map<sc2::Tag, std::vector<Unit *>> mineralWorkers;
 
     mutable WorkerData  m_workerData;
     Unit m_previousClosestWorker;
@@ -40,6 +44,7 @@ class WorkerManager
     void setMineralWorker(const Unit & unit);
     
 	void handleMineralWorkers();
+	std::vector<CCUnitID> dispatchWorkerToMineral(Unit mineral, std::vector<CCUnitID> usedWorkers, Unit ressourceDepot);
 	void handleMules();
     void handleGasWorkers();
 	void handleIdleWorkers();
@@ -58,6 +63,7 @@ public:
     void onFrame(bool executeMacro);
 
     void finishedWithWorker(const Unit & unit);
+	void sendIdleWorkerToIdleSpot(const Unit & worker);
     void drawResourceDebugInfo();
     void drawWorkerInformation();
     void setScoutWorker(Unit worker);
@@ -88,11 +94,10 @@ public:
 	Unit getDepotAtBasePosition(CCPosition basePosition) const;
 	int  getWorkerCountAtBasePosition(CCPosition basePosition) const;
     Unit getClosestDepot(Unit worker) const;
-	Unit getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f, bool filterMoving = true, bool filterDifferentHeight = false) const;
-	Unit getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f, bool filterMoving = true, bool filterDiffenrentHeight = false) const;
-	Unit getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving = true, bool allowCombatWorkers = false, bool filterDifferentHeight = false) const;
+	Unit getClosestAvailableWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f, bool filterMoving = true, bool filterDifferentHeight = false) const;
+	Unit getClosestAvailableWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f, bool filterMoving = true, bool filterDiffenrentHeight = false) const;
+	Unit getClosestAvailableWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving = true, bool allowCombatWorkers = false, bool filterDifferentHeight = false) const;
 	Unit getClosestGasWorkerTo(const CCPosition & pos, float minHpPercentage = 0.f) const;
 	Unit getClosestGasWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage = 0.f) const;
 	Unit getClosest(const Unit unit, const std::list<Unit> units) const;
-	//std::list<Unit> orderByDistance(const std::list<Unit> units, CCPosition pos, bool closestFirst);
 };

@@ -2532,7 +2532,7 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
 Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight) const
 {
     // get our worker unit that is mining that is closest to it
-    Unit workerDefender = m_bot.Workers().getClosestMineralWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
+    Unit workerDefender = m_bot.Workers().getClosestAvailableWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT);
 
 	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy, enemyUnits, allowDifferentHeight))
 	{
@@ -2549,8 +2549,6 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 {
 	if (!worker.isValid())
 		return false;
-	if (worker.getUnitPtr()->is_selected)
-		auto a = 0;
 	if (m_bot.Workers().getWorkerData().isProxyWorker(worker))
 		return false;
 	if (!m_squadData.canAssignUnitToSquad(worker, defenseSquad))

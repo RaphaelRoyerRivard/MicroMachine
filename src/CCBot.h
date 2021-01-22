@@ -1,19 +1,27 @@
 #pragma once
 //#define PUBLIC_RELEASE
-//#define NO_UNITS
+#define ROBUST_MODE//Attempt to recover from errors by skipping managers
+
+#define NO_UNITS
 //#define NO_EXPANSION
 //#define NO_PRODUCTION
 //#define NO_BUILDING
 //#define NO_MICRO
-//#define NO_OPPONENT
+//#define NO_OPPONENT_UNIT
+#define NO_OPPONENT
 
 //Debug only draw only
 //#define COMPUTE_WALKABLE_TILES
 
 #ifdef PUBLIC_RELEASE
 #undef NO_UNITS
+#undef NO_EXPANSION
 #undef NO_PRODUCTION
 #undef NO_BUILDING
+#undef NO_MICRO
+#undef NO_OPPONENT_UNIT
+#undef NO_OPPONENT
+#undef COMPUTE_WALKABLE_TILES
 #endif
 
 #include "Common.h"
@@ -30,6 +38,12 @@
 #include "TechTree.h"
 #include "Unit.h"
 #include "RepairStationManager.h"
+
+#include <csetjmp>
+
+#ifdef ROBUST_MODE
+extern jmp_buf gBuffer;
+#endif
 
 class CCBot : public sc2::Agent 
 {
