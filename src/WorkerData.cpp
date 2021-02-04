@@ -72,6 +72,21 @@ void WorkerData::updateAllWorkerData()
     }
 }
 
+void WorkerData::updateIdleMineralTarget()
+{
+	auto base = m_bot.Bases().getNextExpansion(Players::Self, false, false, true);
+	if (!base->isOccupiedByPlayer(Players::Self) && !base->isOccupiedByPlayer(Players::Enemy))//Has to validate Self, because we return the main base if all bases at taken.
+	{
+		const BaseLocation * homeBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+		m_idleMineralTarget = GetBestMineralInList(base->getMinerals(), homeBase->getResourceDepot(), false);
+
+		if (m_idleMineralTarget.isValid() && m_idleMineralTarget.getUnitPtr()->display_type == sc2::Unit::Snapshot)
+		{
+			base->updateMineral(m_idleMineralTarget);
+		}
+	}
+}
+
 void WorkerData::workerDestroyed(const Unit & unit)//deadWorker
 {
     clearPreviousJob(unit);
@@ -122,7 +137,7 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
 	}
 	else if (previousJob == WorkerJobs::None)//Only affects newly spawned workers
 	{
-		sendIdleWorkerToIdleSpot(worker, true);
+		sendIdleWorkerToMiningSpot(worker, true);
 	}
 
 	clearPreviousJob(worker);
@@ -226,7 +241,7 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
 	else if (job == WorkerJobs::Idle)
 	{//Must not call stop().
 		m_idleWorkers.insert(worker);
-		sendIdleWorkerToIdleSpot(worker, false);
+		sendIdleWorkerToMiningSpot(worker, false);
 	}
 }
 
@@ -307,7 +322,12 @@ int WorkerData::getWorkerJob(const Unit & unit) const
 
 bool WorkerData::isReturningCargo(const Unit & unit) const
 {
-	return sc2::IsCarryingMinerals(*unit.getUnitPtr()) || sc2::IsCarryingVespene(*unit.getUnitPtr());
+	return (sc2::IsCarryingMinerals(*unit.getUnitPtr()) || sc2::IsCarryingVespene(*unit.getUnitPtr()));
+}
+
+bool WorkerData::isActivelyReturningCargo(const Unit & unit) const
+{
+	return isReturningCargo(unit) && unit.getUnitPtr()->orders.size() > 0 && unit.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::HARVEST_RETURN;
 }
 
 Unit WorkerData::getMineralToMine(const Unit & depot, const CCPosition location) const
@@ -332,21 +352,24 @@ Unit WorkerData::getMineralToMine(const Unit & depot, const CCPosition location)
     // If we did not found minerals, we fall back to all minerals
     if (!bestMineral.isValid())
     {
-        GetBestMineralInList(m_bot.GetUnits(), depot, bestMineral);
+		bestMineral = GetBestMineralInList(m_bot.GetUnits(), depot, true);
     }
 
     return bestMineral;
 }
 
 
-void WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & depot, Unit & bestMineral) const
+Unit WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & depot, bool checkVisibility) const
 {
 	double bestDist = 100000;
+	Unit & bestMineral = Unit();
+
 	//Need to check the close and far patches, than determine where the worker should go. Definitely need to rename the function.
     for (auto & mineral : unitsToTest)
     {
-		if (!mineral.getType().isMineral() || !mineral.isAlive() || mineral.getUnitPtr()->display_type != sc2::Unit::DisplayType::Visible)
-			continue;
+		if (!mineral.getType().isMineral() || !mineral.isAlive())
+			if(!checkVisibility || mineral.getUnitPtr()->display_type != sc2::Unit::DisplayType::Visible)
+				continue;
 
         double dist = Util::DistSq(mineral, depot);
 
@@ -356,6 +379,8 @@ void WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, con
             bestDist = dist;
         }
     }
+
+	return bestMineral;
 }
 
 const Unit & WorkerData::GetBestMineralWithLessWorkersInLists(const std::vector<Unit> & closeMinerals, const std::vector<Unit> & farMinerals, const CCPosition location) const
@@ -540,29 +565,6 @@ std::vector<Unit> WorkerData::getAssignedWorkersRefinery(const Unit & unit)
 	return std::vector<Unit>();
 }
 
-int WorkerData::getExtraMineralWorkersNumber()
-{
-	//!!should no longer be used!!//
-	
-	int totalExtra = 0;
-	for (auto & base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
-	{
-		auto & depot = base->getResourceDepot();
-		if (!depot.isValid())
-			continue;
-
-		auto it = m_depotWorkerCount.find(depot);
-
-		// if there is an entry, return it
-		if (it != m_depotWorkerCount.end())
-		{
-			totalExtra += it->second - base->getOptimalMineralWorkerCount();
-		}
-	}
-
-	return totalExtra;
-}
-
 const char * WorkerData::getJobCode(const Unit & unit)
 {
     const int j = getWorkerJob(unit);
@@ -637,6 +639,32 @@ void WorkerData::sendIdleWorkerToIdleSpot(const Unit & worker, bool force)
 	{
 		//If all else fail, just cancel current order.
 		worker.stop();
+	}
+}
+
+void WorkerData::sendIdleWorkerToMiningSpot(const Unit & worker, bool force)
+{
+	if (worker.getType().isMule() || isActivelyReturningCargo(worker))
+	{
+		return;
+	}
+	if (!m_idleMineralTarget.isValid() || !Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), m_idleMineralTarget.getPosition(), false, m_bot))
+	{
+		sendIdleWorkerToIdleSpot(worker, force);
+	}
+	else
+	{
+		if (worker.getUnitPtr()->orders.size() < 1 || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::HARVEST_GATHER || Util::DistSq(worker.getPosition(), m_idleMineralTarget.getPosition()) > 25)
+		{
+			if (m_idleMineralTarget.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())//When the mineral is visible, just click it.
+			{
+				worker.rightClick(m_idleMineralTarget);
+			}
+			else if(worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE || worker.getUnitPtr()->orders[0].target_pos != m_idleMineralTarget.getPosition())
+			{
+				worker.rightClick(m_idleMineralTarget.getPosition());
+			}
+		}
 	}
 }
 

@@ -32,6 +32,9 @@ void CombatAnalyzer::onFrame()
 	// Detect burrowed Zerg units
 	DetectBurrowingUnits();
 
+	// Detect all invisible enemy units
+	DetectInvisibleUnits();
+
 	lowPriorityChecks();
 //drawAreasUnderDetection();
 }
@@ -278,6 +281,11 @@ void CombatAnalyzer::DetectBurrowingUnits()
 	for (const auto unit : unitsToRemove)
 	{
 		burrowedUnits.erase(unit);
+		if (unit->tag == 0)
+		{
+			// This was a dummy unit
+			Util::ReleaseDummyBurrowedZergling(unit);
+		}
 	}
 
 	unitsToRemove.clear();
@@ -310,9 +318,10 @@ void CombatAnalyzer::DetectBurrowingUnits()
 				continue;
 			
 			bool canSeeSurroundingTiles = true;
-			for (int x = -1; x <= 1; ++x)
+			int numberOfTilesAround = 2;
+			for (int x = -numberOfTilesAround; x <= numberOfTilesAround; ++x)
 			{
-				for (int y = -1; y <= 1; ++y)
+				for (int y = -numberOfTilesAround; y <= numberOfTilesAround; ++y)
 				{
 					if (!m_bot.Map().isVisible(unit.getPosition() + CCPosition(x, y)))
 					{
@@ -353,6 +362,23 @@ void CombatAnalyzer::DetectBurrowingUnits()
 						}
 					}
 				}
+			}
+		}
+	}
+}
+
+void CombatAnalyzer::DetectInvisibleUnits()
+{
+	invisUnits.clear();
+
+	for (const auto & enemyUnitPair : m_bot.GetEnemyUnits())
+	{
+		const auto & enemyUnit = enemyUnitPair.second;
+		if (enemyUnit.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
+		{
+			if ((enemyUnit.isCloaked() || enemyUnit.isBurrowed()) && enemyUnit.getUnitPtr()->health_max == 0)
+			{
+				invisUnits.insert(enemyUnit.getUnitPtr());
 			}
 		}
 	}
@@ -910,4 +936,12 @@ void CombatAnalyzer::detectTechs(Unit & unit, UnitState & state)
 		}
 	}
 	m_bot.StopProfiling("0.10.4.4.2.3.1      checkForRangeUpgrade");
+}
+
+std::set<const sc2::Unit *> CombatAnalyzer::getBurrowedAndInvisUnits() const
+{
+	std::set<const sc2::Unit *> burrowedAndInvisUnits;
+	burrowedAndInvisUnits.insert(burrowedUnits.begin(), burrowedUnits.end());
+	burrowedAndInvisUnits.insert(invisUnits.begin(), invisUnits.end());
+	return burrowedAndInvisUnits;
 }

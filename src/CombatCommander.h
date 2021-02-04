@@ -141,7 +141,7 @@ class CombatCommander
 	std::vector<std::vector<float>> m_groundFromGroundCloakedCombatInfluenceMap;
 	std::vector<std::vector<bool>> m_blockedTiles;
 	std::vector<CCPosition> m_enemyScans;
-	std::list<CCPosition> m_allyScans;
+	std::list<std::pair<CCPosition, long>> m_allyScans;	// <position, casted_frame>
 	std::map<sc2::ABILITY_ID, std::map<const sc2::Unit *, uint32_t>> m_nextAvailableAbility;
 	std::map<sc2::ABILITY_ID, float> m_abilityCastingRanges;
 	std::set<const sc2::Unit *> m_unitsBeingRepaired;
@@ -169,6 +169,8 @@ class CombatCommander
 	std::map<const sc2::Unit *, const sc2::Unit *> m_cyclonesWithHelper;
 	std::vector<sc2::AvailableAbilities> m_unitsAbilities;
 	bool m_blockedExpandByInvis = false;
+	std::vector<CCTilePosition> m_mainBaseSiegePositions;
+	sc2::Units m_mainBaseSiegeTanks;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
@@ -188,8 +190,8 @@ class CombatCommander
     bool            isSquadUpdateFrame();
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);
-    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight = false) const;
-	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool allowDifferentHeight = false) const;
+    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight = false) const;
+	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight = true) const;
 	bool			WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const;
 
 	CCPosition		exploreMap();
@@ -207,6 +209,8 @@ class CombatCommander
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
 	void			updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect, bool cloaked);
 	void			updateBlockedTilesWithUnit(const Unit& unit);
+	void			findMainBaseSiegePositions();
+	void			drawMainBaseSiegePositions();
 	void			drawCombatInformation();
 	void			drawInfluenceMaps();
 	void			drawBlockedTiles();
@@ -239,8 +243,8 @@ public:
 	void setBlockedTile(int x, int y);
 	const std::map<const sc2::Unit *, FlyingHelperMission> & getCycloneFlyingHelpers() const { return m_cycloneFlyingHelpers; }
 	const std::map<const sc2::Unit *, const sc2::Unit *> & getCyclonesWithHelper() const { return m_cyclonesWithHelper; }
-	const std::list<CCPosition> & getAllyScans() const { return m_allyScans; }
-	void addAllyScan(CCPosition scanPos) { m_allyScans.push_back(scanPos); }
+	const std::list<std::pair<CCPosition, long>> & getAllyScans() const { return m_allyScans; }
+	void addAllyScan(CCPosition scanPos);
 	bool isExpandBlockedByInvis() const { return m_blockedExpandByInvis; }
 	float getTotalGroundInfluence(CCTilePosition tilePosition) const;
 	float getTotalAirInfluence(CCTilePosition tilePosition) const;
@@ -269,5 +273,8 @@ public:
 	void CalcBestFlyingCycloneHelpers();
 	bool ShouldUnitHeal(const sc2::Unit * unit) const;
 	bool GetUnitAbilities(const sc2::Unit * unit, sc2::AvailableAbilities & outUnitAbilities) const;
+	SquadData & getSquadData() { return m_squadData; }
+	const std::vector<CCTilePosition> & getMainBaseSiegePositions() const { return m_mainBaseSiegePositions; }
+	sc2::Units & getMainBaseSiegeTanks() { return m_mainBaseSiegeTanks; }
 };
 

@@ -30,10 +30,10 @@ class WorkerData
     std::map<Unit, std::set<Unit>> m_workerRepairing;
 	std::map<const BaseLocation*, std::list<Unit>> m_repairStationWorkers;
     std::map<Unit, Unit>    m_workerRepairTarget;
+	Unit					m_idleMineralTarget;
 
     void clearPreviousJob(const Unit & unit);
     std::set<Unit> getWorkerRepairingThatTarget(const Unit & unit);
-    void GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & worker, Unit & bestMineral) const;
 	const Unit & GetBestMineralWithLessWorkersInLists(const std::vector<Unit> & closeMinerals, const std::vector<Unit> & farMinerals, const CCPosition location) const;
 
 public:
@@ -45,6 +45,7 @@ public:
 
     void    workerDestroyed(const Unit & unit);
     void    updateAllWorkerData();
+	void	updateIdleMineralTarget();
     void    updateWorker(const Unit & unit);
     void    setWorkerJob(const Unit & unit, int job, Unit jobUnit = Unit());
     void    drawDepotDebugInfo();
@@ -54,6 +55,7 @@ public:
 	std::vector<Unit> getAssignedWorkersRefinery(const Unit & unit);
     int     getWorkerJob(const Unit & unit) const;
 	bool	isReturningCargo(const Unit & unit) const;
+	bool	isActivelyReturningCargo(const Unit & unit) const;
 	int		getCountWorkerAtDepot(const Unit & depot) const;
     Unit    getMineralToMine(const Unit & unit, const CCPosition location) const;
     Unit    getWorkerDepot(const Unit & unit) const;
@@ -63,6 +65,7 @@ public:
 	const std::set<Unit> getIdleWorkers() const;
 	const std::set<Unit> getMineralWorkers() const;
 	void sendIdleWorkerToIdleSpot(const Unit & worker, bool force);
+	void sendIdleWorkerToMiningSpot(const Unit & worker, bool force);
 	bool isProxyWorker(const Unit & unit) const;
 	void setProxyWorker(const Unit & unit);
 	bool isAnyMineralAvailable() const;
@@ -70,6 +73,7 @@ public:
 	void clearProxyWorkers();
 	std::map<const BaseLocation*, std::list<Unit>>& getRepairStationWorkers();
 	void validateRepairStationWorkers();
+	Unit GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & worker, bool checkVisibility) const;
     Unit getWorkerRepairTarget(const Unit & unit) const;
 	int getWorkerRepairingTargetCount(const Unit & unit);
     const std::set<Unit> getWorkerRepairingThatTargetC(const Unit & unit) const;

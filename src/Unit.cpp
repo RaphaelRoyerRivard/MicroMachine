@@ -694,6 +694,16 @@ void Unit::buildTarget(const UnitType & buildingType, const Unit & target) const
 #endif
 }
 
+void Unit::harvestTarget(const Unit & target) const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+#ifdef SC2API
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::HARVEST_GATHER, target.getUnitPtr());
+#else
+	BOT_ASSERT(false, "buildTarget shouldn't be called for BWAPI bots");
+#endif
+}
+
 void Unit::train(const UnitType & type) const
 {
     BOT_ASSERT(isValid(), "Unit is not valid");

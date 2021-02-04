@@ -86,4 +86,5 @@ public:
 	void clearQueue();
 	MM::BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);
 	void SetWantToQuickExpand(bool value);
+	bool hasProducedAtLeastOneFactoryUnit() const;
 };

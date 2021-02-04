@@ -342,7 +342,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				if (Util::DistSq(marine, goal) <= 3 * 3)
 					++groupedSupply;
 			}
-			if (groupedSupply >= 6)
+			if (groupedSupply >= 4)
 				m_marauderAttackInitiated = true;
 		}
 		else if (isBanshee && m_order.getType() == SquadOrderTypes::Harass)
@@ -366,17 +366,101 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 					}
 				}
 			}
-			if (m_order.getStatus() == "Retreat" || !hasFrontLineUnits)
+			bool defending = m_order.getType() == SquadOrderTypes::Defend;
+			bool defendingAgainstCombatBuildings = false;
+			if (defending)
 			{
-				auto base = m_bot.Bases().getBaseContainingPosition(m_bot.Commander().Combat().GetIdlePosition());
-				if (base && base->getResourceDepot().isValid())
+				for (auto enemy : rangedUnitTargets)
 				{
-					goal = base->getDepotPosition() + Util::Normalized(base->getDepotPosition() - base->getPosition()) * 2;
-					goalDescription = "CloseToResourceDepot";
+					if (UnitType(enemy->unit_type, m_bot).isAttackingBuilding())
+					{
+						defendingAgainstCombatBuildings = true;
+						break;
+					}
+				}
+			}
+			if (m_order.getStatus() == "Retreat" || (defending && !defendingAgainstCombatBuildings) || !hasFrontLineUnits)
+			{
+				const auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+				int basesWithResourceDepot = 0;
+				for (const auto base : bases)
+				{
+					if (base->getResourceDepot().isValid())
+						++basesWithResourceDepot;
+				}
+
+				if (basesWithResourceDepot <= 5)
+				{
+					if (basesWithResourceDepot <= 1)
+					{
+						auto naturalBase = m_bot.Bases().getPlayerNat(Players::Self);
+						if (naturalBase)
+						{
+							auto wallPosition = Util::GetPosition(m_bot.Buildings().getWallPosition());
+							auto towardsMainBase = Util::Normalized(wallPosition - naturalBase->getDepotPosition());
+							goal = wallPosition + towardsMainBase * 6;
+							goalDescription = "MainBaseSiegePosition";
+						}
+					}
+					else
+					{
+						// Use the good siege positions in the main base if available
+						auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();
+						const auto & siegePositions = m_bot.Commander().Combat().getMainBaseSiegePositions();
+						for (int i = 0; i < siegePositions.size(); ++i)
+						{
+							if (siegeTanks[i] == nullptr || siegeTanks[i] == rangedUnit)
+							{
+								bool shouldSiegeInMainBase = m_order.getType() != SquadOrderTypes::Defend;
+								if (!shouldSiegeInMainBase)
+								{
+									auto baseToDefend = m_bot.Bases().getBaseContainingPosition(m_order.getPosition());
+									if (baseToDefend)
+									{
+										float dist = Util::DistSq(siegePositions[i], baseToDefend->getDepotPosition());
+										shouldSiegeInMainBase = dist < 20 * 20;
+									}
+								}
+								if (shouldSiegeInMainBase)
+								{
+									siegeTanks[i] = rangedUnit;
+									goal = Util::GetPosition(siegePositions[i]);
+									goalDescription = "MainBaseSiegePosition";
+									break;
+								}
+							}
+						}
+					}
+				}
+				
+				// Go to idle position if not using a good siege position in our main base
+				if (goalDescription != "MainBaseSiegePosition" && !defending)
+				{
+					auto base = m_bot.Bases().getBaseContainingPosition(m_bot.Commander().Combat().GetIdlePosition());
+					if (base && base->getResourceDepot().isValid())
+					{
+						goal = base->getDepotPosition() + Util::Normalized(base->getDepotPosition() - base->getPosition()) * 2;
+						goalDescription = "CloseToResourceDepot";
+					}
 				}
 			}
 		}
 	}
+
+	// Remove Tank from main base siege tanks
+	if (isTank && goalDescription != "MainBaseSiegePosition")
+	{
+		auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();
+		for (int i = 0; i < siegeTanks.size(); ++i)
+		{
+			if (siegeTanks[i] == rangedUnit)
+			{
+				siegeTanks[i] = nullptr;
+				break;
+			}
+		}
+	}
+
 	// To allow tanks to siege up the closest they can to their goal, we need to know for how long they've been close to it
 	if (isTank && Util::DistSq(rangedUnit->pos, goal) > 6 * 6)
 	{
@@ -1169,7 +1253,7 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 	return morph;
 }
 
-bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, sc2::Units & rangedUnits, bool unitShouldHeal)
+bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, sc2::Units & rangedUnits)
 {
 	// If the tank already has a target close enough, no need to morph, unless they are too close
 	if (target && target->last_seen_game_loop == m_bot.GetCurrentFrame())
@@ -1193,34 +1277,132 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 	// Siege logic
 	if (tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
 	{
-		bool siege = false;
-		// Siege if it has been close to the retreat location for several seconds
-		if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 5)
+		bool hasEffectInfluence = false;
+		for (int x = -1; x <= 1; ++x)
 		{
-			siege = true;
-		}
-		else
-		{
-			// Also siege if there is an enemy not too far away
-			auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
-			auto newTarget = getTarget(&dummySiegeTankSieged, targets, false, true, true, false, true);	// TODO remove the "considerOnlyUnitsInRange" flag
-			if (newTarget)
+			for (int y = -1; y <= 1; ++y)
 			{
-				float dist = Util::Dist(tank->pos, newTarget->pos);
-				float range = Util::GetAttackRangeForTarget(&dummySiegeTankSieged, newTarget, m_bot);
-				float speed = Util::getSpeedOfUnit(newTarget, m_bot);
-				// TODO consider movement of enemy units
-				if (dist <= range)// + speed)
+				auto tile = CCTilePosition(tank->pos.x + x, tank->pos.y + y);
+				if (Util::PathFinding::GetEffectInfluenceOnTile(tile, false, m_bot) > 0.f)
 				{
-					siege = true;
+					hasEffectInfluence = true;
+					break;
 				}
 			}
 		}
-		if (siege)
+		if (!hasEffectInfluence)
 		{
-			morphAbility = sc2::ABILITY_ID::MORPH_SIEGEMODE;
-			frameCount = TANK_SIEGE_FRAME_COUNT;
-			morph = true;
+			bool siege = false;
+			// Siege if it has been close to the retreat location for several seconds
+			if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 4)
+			{
+				siege = true;
+			}
+			else
+			{
+				// Also siege if there is an enemy not too far away
+				auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
+				auto newTarget = getTarget(&dummySiegeTankSieged, targets, false, true, true, false, true);	// TODO remove the "considerOnlyUnitsInRange" flag
+				if (newTarget)
+				{
+					float dist = Util::Dist(tank->pos, newTarget->pos);
+					float range = Util::GetAttackRangeForTarget(&dummySiegeTankSieged, newTarget, m_bot);
+					float speed = Util::getSpeedOfUnit(newTarget, m_bot);
+					// TODO consider movement of enemy units
+					if (dist <= range)// + speed)
+					{
+						// Compute potential threats (units that are still far but could attack the Tank)
+						sc2::Units potentialThreats;
+						for (const auto potentialThreat : targets)
+						{
+							float potentialThreatRange = Util::GetAttackRangeForTarget(potentialThreat, tank, m_bot);
+							// Can't attack the tank, so not a threat
+							if (potentialThreatRange <= 0.f)
+								continue;
+							float potentialThreatSpeed = Util::getRealMovementSpeedOfUnit(potentialThreat, m_bot);
+							float potentialThreatDist = Util::Dist(tank->pos, potentialThreat->pos);
+							// If it would take the potential threat less than 5 seconds to reach the tank, we consider it as a potential threat
+							if (potentialThreatSpeed > 0 && potentialThreatDist / potentialThreatSpeed < 5)
+							{
+								potentialThreats.push_back(potentialThreat);
+							}
+						}
+						// Do not siege if their is a fast ground enemy on the same height or higher
+						float tankHeight = Util::TerrainHeight(Util::GetTilePosition(tank->pos));
+						float tankSpeed = Util::getSpeedOfUnit(tank, m_bot);
+						bool fastEnemyOnSameHeight = false;
+						for (const auto threat : potentialThreats)
+						{
+							// Reapers can climb easily and are fast, so we don't want to siege against them
+							if (threat->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+							{
+								fastEnemyOnSameHeight = true;
+								break;
+							}
+							float threatHeight = Util::TerrainHeight(Util::GetTilePosition(threat->pos));
+							// We don't want to prevent the siege from a unit on lower ground
+							if (threatHeight < tankHeight)
+								continue;
+							float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+							// The threat is fast and on the same height, so we might not want to siege up
+							if (threatSpeed > tankSpeed)
+							{
+								fastEnemyOnSameHeight = true;
+								break;
+							}
+						}
+						if (fastEnemyOnSameHeight)
+						{
+							// Check if we have allies to protect the tank
+							bool allyProtectingAgainstAllGroundThreats = true;
+							for (const auto threat : potentialThreats)
+							{
+								bool allyProtecting = false;
+								float threatDist = Util::DistSq(tank->pos, threat->pos);
+								auto vectorToThreat = Util::Normalized(threat->pos - tank->pos);
+								for (const auto ally : rangedUnits)
+								{
+									// If our ally is flying, it won't be able to protect the tank much
+									if (ally->is_flying)
+										continue;
+									float allyDist = Util::DistSq(tank->pos, ally->pos);
+									// If our ally is farther than the threat, it won't be able to protect the tank
+									if (allyDist > threatDist)
+										continue;
+									auto vectorToAlly = Util::Normalized(ally->pos - tank->pos);
+									float dotProduct = Util::GetDotProduct(vectorToThreat, vectorToAlly);
+									// Check if our ally is within 45 degrees of the threat
+									if (dotProduct >= 0.5f)
+									{
+										allyProtecting = true;
+										break;
+									}
+								}
+								if (!allyProtecting)
+								{
+									allyProtectingAgainstAllGroundThreats = false;
+									break;
+								}
+							}
+							// Do not siege unless we have allies to protect the tank
+							if (allyProtectingAgainstAllGroundThreats)
+							{
+								siege = true;
+							}
+						}
+						else
+						{
+							siege = true;
+						}
+					}
+				}
+			}
+			if (siege)
+			{
+				morphAbility = sc2::ABILITY_ID::MORPH_SIEGEMODE;
+				frameCount = TANK_SIEGE_FRAME_COUNT;
+				morph = true;
+			}
 		}
 	}
 	// Unsiege logic
@@ -1230,16 +1412,22 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 		// Unsiege only if there is no target
 		if (!newTarget)// || Util::Dist(tank->pos, newTarget->pos) > Util::GetAttackRangeForTarget(tank, newTarget, m_bot) + Util::getSpeedOfUnit(newTarget, m_bot))
 		{
-			// And only after 2.5s passed since the last valid target
-			if (m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f)
+			// Check if there there are ground threats
+			bool groundThreats = false;
+			for (const auto threat : threats)
 			{
-				// And only if the tank is not close to its retreat location
-				if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] == 0)
+				if (!threat->is_flying)
 				{
-					morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
-					frameCount = TANK_UNSIEGE_FRAME_COUNT;
-					morph = true;
+					groundThreats = true;
+					break;
 				}
+			}
+			// And there are ground threats or 2.5s passed since the last valid target while not being close to its retreat location
+			if (groundThreats || (m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f && m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] == 0))
+			{
+				morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
+				frameCount = TANK_UNSIEGE_FRAME_COUNT;
+				morph = true;
 			}
 		}
 		else
@@ -1968,7 +2156,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
-	float simulationResult = Util::SimulateCombat(closeUnits, threatsToKeep, m_bot);
+	float simulationResult = Util::SimulateCombat(closeUnits, threatsToKeep, false, m_bot);
 	float minDesiredOutcome = 0.f;
 	if (m_order.getType() == SquadOrderTypes::Harass)
 	{
@@ -1997,7 +2185,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			else
 				units.push_back(closeUnit);
 		}
-		const float stimedSimulationResult = Util::SimulateCombat(closeUnits, units, threatsToKeep, m_bot);
+		const float stimedSimulationResult = Util::SimulateCombat(closeUnits, units, threatsToKeep, false, m_bot);
 		if (stimedSimulationResult > simulationResult && (enemyHasLongRangeUnits || unitsPower + stimedUnitsPowerDifference >= targetsPower))
 		{
 			winSimulation = true;
@@ -2014,7 +2202,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			const auto otherEnemies = threatsToKeep.size() - tempests.size();
 			if (otherEnemies > 0)
 			{
-				winSimulation = Util::SimulateCombat(vikings, tempests, m_bot) > 0.f;
+				winSimulation = Util::SimulateCombat(vikings, tempests, false, m_bot) > 0.f;
 			}
 			shouldFight = winSimulation;
 			/*std::stringstream ss;
@@ -2154,6 +2342,14 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				continue;
 			}
 
+			// Check if we should morph the tank
+			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED)
+			{
+				auto goal = m_order.getPosition();
+				if (ExecuteTankMorphLogic(unit, goal, unitTarget, threatsToKeep, rangedUnitTargets, closeUnits))
+					continue;
+			}
+
 			// Micro the Medivac
 			if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 			{
@@ -2182,28 +2378,40 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		const auto enemyRange = Util::GetAttackRangeForTarget(unitTarget, unit, m_bot);
 		const auto unitSpeed = Util::getSpeedOfUnit(unit, m_bot);
 		const auto enemySpeed = Util::getSpeedOfUnit(unitTarget, m_bot);
-		const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > enemyRange && unitSpeed > enemySpeed);
-		const bool shouldChase = unitRange < enemyRange && enemySpeed > 0;	//unitSpeed >= enemySpeed;
-		if (!canAttackNow && AllowUnitToPathFind(unit, false, "ThreatFighting"))
+		if (movePosition == CCPosition() && closeUnits.size() == 1 && threatsToKeep.size() == 1 && unitSpeed <= enemySpeed)
 		{
-			if (shouldKite || (injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)))
+			float cooldown = Util::GetWeaponCooldown(unit, unitTarget, m_bot);
+			if (unit->weapon_cooldown > 5 && unit->weapon_cooldown < cooldown * 0.8f)
 			{
-				movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, true, m_bot);
-				if (movePosition == CCPosition())
-					PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
-			}
-			if(movePosition == CCPosition() && shouldChase)
-			{
-				auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, false, m_bot);
-				movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, true, m_bot);
-				if (movePosition == CCPosition())
-					PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
+				// In a 1v1 with a slower (or equally fast) unit, we want to stay close to kill the enemy unit if it tries to flee (mostly thinking about Reapers)
+				movePosition = unitTarget->pos;
 			}
 		}
-		if (movePosition == CCPosition() && unitTarget->last_seen_game_loop < m_bot.GetCurrentFrame())
+		else
 		{
-			// The target is not visible, so we should move towards until it is visible so we can attack it
-			movePosition = unitTarget->pos;
+			const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > enemyRange && unitSpeed > enemySpeed);
+			const bool shouldChase = unitRange < enemyRange && enemySpeed > 0;	//unitSpeed >= enemySpeed;
+			if (!canAttackNow && AllowUnitToPathFind(unit, false, "ThreatFighting"))
+			{
+				if (shouldKite || (injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)))
+				{
+					movePosition = Util::PathFinding::FindOptimalPathToSaferRange(unit, unitTarget, unitRange, true, m_bot);
+					if (movePosition == CCPosition())
+						PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
+				}
+				if (movePosition == CCPosition() && shouldChase)
+				{
+					auto path = Util::PathFinding::FindOptimalPath(unit, unitTarget->pos, {}, unitRange, false, false, true, true, 0, false, false, m_bot);
+					movePosition = Util::PathFinding::GetCommandPositionFromPath(path, unit, true, m_bot);
+					if (movePosition == CCPosition())
+						PreventUnitToPathFind(unit, "ThreatFighting", unitTarget);
+				}
+			}
+			if (movePosition == CCPosition() && unitTarget->last_seen_game_loop < m_bot.GetCurrentFrame())
+			{
+				// The target is not visible, so we should move towards until it is visible so we can attack it
+				movePosition = unitTarget->pos;
+			}
 		}
 		m_bot.StopProfiling("0.10.4.1.5.1.5.5.10            CalcMovePosition");
 		if (movePosition != CCPosition())
@@ -2545,7 +2753,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 	const bool hasFlyingHelper = cycloneWithHelperIt != cyclonesWithHelper.end();
 
 	m_bot.StartProfiling("0.10.4.1.5.1.b.3            DefineGoal");
-	if (!unitShouldHeal && !cycloneShouldStayCloseToTarget && m_order.getType() != SquadOrderTypes::Defend)
+	if (!unitShouldHeal && !cycloneShouldStayCloseToTarget && m_order.getType() != SquadOrderTypes::Defend && m_order.getType() != SquadOrderTypes::Clear)
 	{
 		// If the Cyclone wants to use its lock-on ability, we make sure it stays close to its flying helper to keep a good vision
 		if (cycloneShouldUseLockOn && hasFlyingHelper)
@@ -2662,7 +2870,7 @@ bool RangedManager::ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * range
 
 	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK || rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED)
 	{
-		if (ExecuteTankMorphLogic(rangedUnit, goal, target, threats, targets, allyUnits, unitShouldHeal))
+		if (ExecuteTankMorphLogic(rangedUnit, goal, target, threats, targets, allyUnits))
 			return true;
 	}
 
@@ -3183,6 +3391,12 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		return nullptr;
 	}
 
+	// Computes a binary value of the 4 boolean parameters as an int
+	int params = int(filterHigherUnits);
+	params = (params << 1) + int(considerOnlyUnitsInRange);
+	params = (params << 1) + int(filterPassiveBuildings);
+	params = (params << 1) + int(considerOnlyVisibleUnits);
+
 	// Load target from cache if possible
 	std::set<const sc2::Unit *> currentTargets;
 	if (!harass)
@@ -3192,7 +3406,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		if (it != m_threatTargetForUnit.end())
 		{
 			const auto & savedTargets = it->second;
-			const auto it2 = savedTargets.find(currentTargets);
+			const auto it2 = savedTargets.find(std::make_pair(params, currentTargets));
 			if (it2 != savedTargets.end())
 			{
 				return it2->second;
@@ -3218,7 +3432,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     	if (filterPassiveBuildings || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && m_order.getType() != SquadOrderTypes::Defend))
     	{
 			auto targetUnitType = UnitType(target->unit_type, m_bot);
-			if (targetUnitType.isBuilding() && !targetUnitType.isCombatUnit())
+			if (targetUnitType.isBuilding() && !targetUnitType.isCombatUnit() && !(targetUnitType.isCreepTumor() && target->last_seen_game_loop == m_bot.GetCurrentFrame()))
 				continue;
     	}
 
@@ -3259,7 +3473,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 
 	const sc2::Unit * target = targetPriorities.empty() ? nullptr : (*targetPriorities.rbegin()).second;	//last target because it's the one with the highest priority
 	if (!harass)
-		m_threatTargetForUnit[rangedUnit][currentTargets] = target;
+		m_threatTargetForUnit[rangedUnit][std::make_pair(params, currentTargets)] = target;
 	return target;		
 }
 

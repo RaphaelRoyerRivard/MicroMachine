@@ -314,17 +314,14 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 				m_mineralsFar.empty();
 				for (auto & mineral : m_minerals)
 				{
-					if (mineral.getUnitPtr()->mineral_contents == 1800)
+					//Cant check exact values since some minerals could be missing already.
+					if (mineral.getUnitPtr()->mineral_contents > 900)
 					{
 						m_mineralsClose.push_back(mineral);
 					}
-					else if (mineral.getUnitPtr()->mineral_contents == 900)
-					{
-						m_mineralsFar.push_back(mineral);
-					}
 					else
 					{
-						Util::DisplayError("Mineral contents is not 900 or 1800.", "0x00000011", m_bot, false);
+						m_mineralsFar.push_back(mineral);
 					}
 				}
 			}
@@ -340,6 +337,27 @@ bool BaseLocation::isOccupiedByPlayer(CCPlayer player) const
 bool BaseLocation::isExplored() const
 {
     return m_bot.Map().isExplored(m_centerOfResources);
+}
+
+bool BaseLocation::updateMineral(Unit mineral)
+{
+	std::pair<sc2::Tag, Unit> replacedMineral;
+	for (auto snapshotMineral : m_bot.GetNeutralUnits())
+	{
+		if (snapshotMineral.first != mineral.getTag() && snapshotMineral.second.getPosition() == mineral.getPosition())
+		{
+			replacedMineral = snapshotMineral;
+		}
+	}
+	if (replacedMineral.first == 0)
+	{//Mineral not found or not yet visible.
+		return false;
+	}
+
+	auto it = find(m_minerals.begin(), m_minerals.end(), mineral);
+	m_minerals.erase(it);
+	m_minerals.push_back(replacedMineral.second);
+	return true;
 }
 
 bool BaseLocation::isPlayerStartLocation(CCPlayer player) const

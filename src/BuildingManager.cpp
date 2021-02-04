@@ -93,13 +93,9 @@ void BuildingManager::lowPriorityChecks()
 		}
 
 		//Trying to build an addon on a building that already has an addon.
-		if (building.buildingUnit.isValid() && building.buildingUnit.getType().isAddon() && building.builderUnit.isValid() && building.builderUnit.getAddonTag() != 0)
+		if (!building.buildingUnit.isValid() && building.type.isAddon() && building.builderUnit.isValid() && building.builderUnit.getAddonTag() != 0)
 		{
-			auto remove = CancelBuilding(building, "trying to build an addon on a build with an addon", false);
-			if (remove.finalPosition != CCTilePosition(0, 0))
-			{
-				toRemove.push_back(remove);
-			}
+			toRemove.push_back(CancelBuilding(building, "trying to build an addon on a building with an addon", false));
 		}
 
 		auto position = building.finalPosition;
@@ -120,9 +116,12 @@ void BuildingManager::lowPriorityChecks()
 			{
 				if (building.type == Util::GetResourceDepotType())//Special code for expands, we want to flag them as blocked and build elsewhere.
 				{
-					m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(building.finalPosition), building.type);
-					building.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
-					building.buildCommandGiven = false;
+					if (Util::DistSq(building.builderUnit, Util::GetPosition(building.finalPosition)) < 3 * 3)
+					{
+						m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(building.finalPosition), building.type);
+						building.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
+						building.buildCommandGiven = false;
+					}
 				}
 				else
 				{
@@ -945,16 +944,20 @@ void BuildingManager::constructAssignedBuildings()
 							else // The addon position is not blocked by a building or non buildable tile
 							{
 								// We need to check if there is an enemy unit blocking it, if so, we just want to wait until it is not there
+								CCPosition addonPos = b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f);
 								for (auto & unit : m_bot.GetUnits())
 								{
 									if (unit.isFlying() || unit.getType().isBuilding() || unit.getUnitPtr()->alliance == sc2::Unit::Alliance::Neutral)
 										continue;
-									const float dist = Util::Dist(b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f), unit.getPosition());
+									const float dist = Util::Dist(addonPos, unit.getPosition());
 									const auto addonRadius = 1.f;
 									if (dist <= addonRadius + unit.getUnitPtr()->radius)
 									{
-										// Enemy unit is blocking addon
+										// Unit is blocking addon
 										blocked = true;
+										std::stringstream ss;
+										ss << "Cannot build " << sc2::UnitTypeToName(b.type.getAPIUnitType()) << " at (" << addonPos.x << ", " << addonPos.y << ") because " << sc2::UnitTypeToName(unit.getAPIUnitType()) << " at (" << unit.getPosition().x << ", " << unit.getPosition().y << ") is blocking it.";
+										Util::Log(__FUNCTION__, ss.str(), m_bot);
 										break;
 									}
 								}
@@ -963,16 +966,23 @@ void BuildingManager::constructAssignedBuildings()
 
 								// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
 								const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
+								bool isFlyingType = Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes);
 								const auto it = m_liftedBuildingPositions.find(b.builderUnit.getTag());
-								if (it != m_liftedBuildingPositions.end() && !Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes))
+								if (it != m_liftedBuildingPositions.end())
 								{
 									m_liftedBuildingPositions.erase(it);
 									getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y, 3, 3, true);
 									getBuildingPlacer().freeTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2, true);
 								}
 
-								// Spam the build ability in case there is a unit blocking it
-								Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
+								if (!b.builderUnit.isFlying() && !isFlyingType)
+								{
+									// Spam the build ability in case there is a unit blocking it
+									Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
+									std::stringstream ss;
+									ss << sc2::UnitTypeToName(b.builderUnit.getAPIUnitType()) << " at (" << b.builderUnit.getPosition().x << ", " << b.builderUnit.getPosition().y << ") was given the command " << sc2::AbilityTypeToName(m_bot.Data(b.type).buildAbility);
+									Util::Log(__FUNCTION__, ss.str(), m_bot);
+								}
 							}
 						}
 					}
@@ -991,7 +1001,7 @@ void BuildingManager::constructAssignedBuildings()
 								if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
 								{
 									// We want the worker to be close so it doesn't flag the base as blocked by error
-									const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 7.f * 7.f;
+									const bool closeEnough = Util::DistSq(b.builderUnit, Util::GetPosition(b.finalPosition)) <= 3.f * 3.f;
 									// If we can't build here, we can flag it as blocked, checking closeEnough for the tilesBuildable variable is just an optimisation and not part of the logic
 									if (closeEnough)
 									{
@@ -1589,7 +1599,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 			const CCPosition towardsMineralLine = Util::Normalized(behindMineralLine - depotPos);
 			const CCPosition towardsEnemyBase = Util::Normalized(enemyBasePosition - depotPos);
 			// if the base is close to the enemy base and the direction towards the mineral line is roughly in the same direction as the enemy base
-			if (Util::DistSq(behindMineralLine, enemyBasePosition) < 40 && Util::GetDotProduct(towardsMineralLine, towardsEnemyBase) > 0.5)
+			if (Util::DistSq(behindMineralLine, enemyBasePosition) < 40 * 40 && Util::GetDotProduct(towardsMineralLine, towardsEnemyBase) > 0.5)
 				continue;
 
 			// Do not use base location if we cannot reach behind the mineral line
@@ -1655,7 +1665,7 @@ CCTilePosition BuildingManager::getProxyLocation()
 			const CCPosition towardsMineralLine = Util::Normalized(behindMineralLine - depotPos);
 			const CCPosition towardsEnemyBase = Util::Normalized(enemyBasePosition - depotPos);
 			// build behind mineral line only if if the base is far from to the enemy base or the direction towards the mineral line is not roughly in the same direction as the enemy base
-			if (Util::DistSq(behindMineralLine, enemyBasePosition) >= 40 || Util::GetDotProduct(towardsMineralLine, towardsEnemyBase) <= 0.5)
+			if (Util::DistSq(behindMineralLine, enemyBasePosition) >= 40 * 40 || Util::GetDotProduct(towardsMineralLine, towardsEnemyBase) <= 0.5)
 				m_proxyLocation = Util::GetTilePosition(behindMineralLine);
 			m_proxyLocation2 = depotPos + Util::Normalized(depotPos - centerOfMinerals) * 8;
 			return m_proxyLocation;
@@ -2072,37 +2082,43 @@ void BuildingManager::castBuildingsAbilities()
 		}*/
 
 		const auto SCAN_RADIUS = 13;
-		const auto & burrowedUnits = m_bot.Analyzer().getBurrowedUnits();
-		if (!burrowedUnits.empty())
+		const auto burrowedAndInvisUnits = m_bot.Analyzer().getBurrowedAndInvisUnits();
+		if (!burrowedAndInvisUnits.empty())
 		{
 			keepEnergy = true;
-			m_bot.StartProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedUnits");
+			m_bot.StartProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedOrInvisUnits");
 			const auto & combatUnits = m_bot.Commander().Combat().GetCombatUnits();
-			sc2::Units closeBurrowedUnits;
+			sc2::Units closeBurrowedOrInvisUnits;
 			std::set<const sc2::Unit *> closeCombatUnits;
-			for (const auto burrowedUnit : burrowedUnits)
+			for (const auto burrowedOrInvisUnit : burrowedAndInvisUnits)
 			{
-				if (burrowedUnit->last_seen_game_loop == m_bot.GetCurrentFrame())
+				if (burrowedOrInvisUnit->last_seen_game_loop == m_bot.GetCurrentFrame() && burrowedOrInvisUnit->health_max > 0)
 					continue;	// Already visible
 
-				// Check if we have a combat unit near the burrowed unit
+				// Check if we have a combat unit near the burrowed or invis unit
 				for (const auto & combatUnit : combatUnits)
 				{
-					auto range = Util::GetAttackRangeForTarget(combatUnit.getUnitPtr(), burrowedUnit, m_bot);
+					auto range = Util::GetAttackRangeForTarget(combatUnit.getUnitPtr(), burrowedOrInvisUnit, m_bot);
 					if (range <= 0.f)
-						continue;	// The combat unit cannot attack the burrowed unit
+						continue;	// The combat unit cannot attack the burrowed or invis unit
+					if (burrowedOrInvisUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED)
+					{
+						auto enemyRange = Util::GetAttackRangeForTarget(burrowedOrInvisUnit, combatUnit.getUnitPtr(), m_bot);
+						if (range <= enemyRange)
+							continue;	// We don't want to attack activated Widow Mines if we don't have more range
+					}
 					range += Util::getSpeedOfUnit(combatUnit.getUnitPtr(), m_bot);	// We add a small buffer
-					const auto dist = Util::DistSq(combatUnit, burrowedUnit->pos);
+					const auto dist = Util::DistSq(combatUnit, burrowedOrInvisUnit->pos);
 					if (dist <= range * range)
 					{
-						closeBurrowedUnits.push_back(burrowedUnit);
+						closeBurrowedOrInvisUnits.push_back(burrowedOrInvisUnit);
 						closeCombatUnits.insert(combatUnit.getUnitPtr());
 						break;
 					}
 				}
 			}
-			m_bot.StopProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedUnits");
-			if (!closeBurrowedUnits.empty())
+			m_bot.StopProfiling("0.8.8.3.1   FindCombatUnitCloseToBurrowedOrInvisUnits");
+			if (!closeBurrowedOrInvisUnits.empty())
 			{
 				m_bot.StartProfiling("0.8.8.3.2   FindOtherTargets");
 				// Check if there are no other ground targets nearby
@@ -2114,8 +2130,7 @@ void BuildingManager::castBuildingsAbilities()
 						const auto & enemyUnit = enemyUnitPair.second;
 						if (enemyUnit.isFlying() || 
 							(enemyUnit.getType().isBuilding() && !enemyUnit.getType().isCombatUnit()) || 
-							enemyUnit.isBurrowed() || 
-							enemyUnit.isCloaked() ||
+							((enemyUnit.isBurrowed() || enemyUnit.isCloaked()) && enemyUnit.getUnitPtr()->health_max == 0) ||
 							enemyUnit.getUnitPtr()->last_seen_game_loop != m_bot.GetCurrentFrame())
 							continue;
 						if (Util::DistSq(enemyUnit, combatUnit->pos) < 10 * 10)
@@ -2134,16 +2149,16 @@ void BuildingManager::castBuildingsAbilities()
 					m_bot.StartProfiling("0.8.8.3.3   CalcScanPosition");
 					// Calculate the middle point of all close burrowed unit
 					CCPosition middlePoint;
-					for (const auto closeBurrowedUnit : closeBurrowedUnits)
+					for (const auto closeBurrowedOrInvisUnit : closeBurrowedOrInvisUnits)
 					{
-						middlePoint += closeBurrowedUnit->pos;
+						middlePoint += closeBurrowedOrInvisUnit->pos;
 					}
-					middlePoint /= closeBurrowedUnits.size();
-					// Check to see if a scan on the middle point would cover all of the burrowed units
+					middlePoint /= closeBurrowedOrInvisUnits.size();
+					// Check to see if a scan on the middle point would cover all of the burrowed or invis units
 					bool middleCoversAllPoints = true;
-					for (const auto closeBurrowedUnit : closeBurrowedUnits)
+					for (const auto closeBurrowedOrInvisUnit : closeBurrowedOrInvisUnits)
 					{
-						const auto dist = Util::DistSq(middlePoint, closeBurrowedUnit->pos);
+						const auto dist = Util::DistSq(middlePoint, closeBurrowedOrInvisUnit->pos);
 						if (dist > SCAN_RADIUS * SCAN_RADIUS)
 						{
 							middleCoversAllPoints = false;
@@ -2155,19 +2170,19 @@ void BuildingManager::castBuildingsAbilities()
 						// Find the burrowed unit that is the most close to the others
 						const sc2::Unit * mostCenteredUnit = nullptr;
 						int maxNumberOfCoveredUnits = -1;
-						for (const auto closeBurrowedUnit : closeBurrowedUnits)
+						for (const auto closeBurrowedOrInvisUnit : closeBurrowedOrInvisUnits)
 						{
 							int numberOfCoveredUnits = 0;
-							for (const auto otherCloseBurrowedUnit : closeBurrowedUnits)
+							for (const auto otherCloseBurrowedOrInvisUnit : closeBurrowedOrInvisUnits)
 							{
-								if (Util::DistSq(closeBurrowedUnit->pos, otherCloseBurrowedUnit->pos) <= SCAN_RADIUS * SCAN_RADIUS)
+								if (Util::DistSq(closeBurrowedOrInvisUnit->pos, otherCloseBurrowedOrInvisUnit->pos) <= SCAN_RADIUS * SCAN_RADIUS)
 								{
 									++numberOfCoveredUnits;
 								}
 							}
 							if (numberOfCoveredUnits > maxNumberOfCoveredUnits)
 							{
-								mostCenteredUnit = closeBurrowedUnit;
+								mostCenteredUnit = closeBurrowedOrInvisUnit;
 								maxNumberOfCoveredUnits = numberOfCoveredUnits;
 							}
 						}
@@ -2178,12 +2193,15 @@ void BuildingManager::castBuildingsAbilities()
 					// Check if we already have a scan near that point (might happen because we receive the observations 1 frame later)
 					bool closeScan = false;
 					const auto & scans = m_bot.Commander().Combat().getAllyScans();
-					for (const auto scanPosition : scans)
+					for (const auto scan : scans)
 					{
-						if (Util::DistSq(middlePoint, scanPosition) < 5.f * 5.f)
+						if (m_bot.GetCurrentFrame() > scan.second + 1)
 						{
-							closeScan = true;
-							break;
+							if (Util::DistSq(middlePoint, scan.first) < 5.f * 5.f)
+							{
+								closeScan = true;
+								break;
+							}
 						}
 					}
 
@@ -2424,13 +2442,36 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 				(unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING || 
 				unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING))
 			{
-				landingPosition = Util::GetPosition(m_bot.Bases().getNextExpansionPosition(Players::Self, false, false, true));
-				if (unit.getUnitPtr()->orders.size() == 0 && 
-					m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end() && m_commandCenterLandPosition[unit.getTag()] == landingPosition)
-				{//The land order likely was cancelled, the expand is most likely blocked.
-					m_bot.Bases().SetLocationAsBlocked(landingPosition, unit.getType());
+				auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false, true);
+				if (nextExpansion)
+				{
+					landingPosition = nextExpansion->getDepotPosition();
+					if (unit.getHitPointsPercentage() > 50 && unit.getUnitPtr()->orders.size() == 0 &&
+						m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end() && m_commandCenterLandPosition[unit.getTag()] == landingPosition)
+					{
+						bool isBlocked = !nextExpansion->isUnderAttack();
+						if (!isBlocked)
+						{
+							for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+							{
+								if (enemyUnit.getType().isBuilding())
+								{
+									float dist = Util::Dist(enemyUnit, landingPosition);
+									if (dist < 3.5f + enemyUnit.getUnitPtr()->radius)
+									{
+										isBlocked = true;
+										break;
+									}
+								}
+							}
+						}
+						if (isBlocked)
+						{//The land order likely was cancelled, the expand is most likely blocked.
+							m_bot.Bases().SetLocationAsBlocked(landingPosition, unit.getType());
+						}
+					}
+					m_commandCenterLandPosition[unit.getTag()] = landingPosition;
 				}
-				m_commandCenterLandPosition[unit.getTag()] = landingPosition;
 			}
 			else
 			{
@@ -2468,6 +2509,16 @@ bool BuildingManager::isEnemyUnitNear(CCTilePosition center, int radius) const
 		float distance_sq = pow(distanceX, 2) + pow(distanceY, 2);
 
 		return distance_sq <= pow(r + radius, 2);
+	}
+	return false;
+}
+
+bool BuildingManager::hasEnergyForScan() const
+{
+	for (const auto & b : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND))
+	{
+		if (b.getEnergy() >= 50 && !b.isFlying())
+			return true;
 	}
 	return false;
 }

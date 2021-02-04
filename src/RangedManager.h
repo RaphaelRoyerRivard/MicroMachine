@@ -45,7 +45,7 @@ private:
 	std::map<sc2::Tag, sc2::Unit> m_dummyFighterVikings;
 	std::map<sc2::Tag, sc2::Unit> m_dummyStimedUnits;
 	std::map<const sc2::Unit *, sc2::Units> m_threatsForUnit;
-	std::map<const sc2::Unit *, std::map<std::set<const sc2::Unit *>, const sc2::Unit *>> m_threatTargetForUnit;	//<unit, <potential targets, target>>
+	std::map<const sc2::Unit *, std::map<std::pair<int, std::set<const sc2::Unit *>>, const sc2::Unit *>> m_threatTargetForUnit;	//<unit, <<parameters, potential targets>, target>>
 	std::map<const sc2::Unit *, long> m_siegedTanksLastValidTargetFrame;
 	std::map<const sc2::Unit *, long> m_tanksLastFrameFarFromRetreatGoal;
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
@@ -68,7 +68,7 @@ private:
 	bool TeleportBattlecruiser(const sc2::Unit * battlecruiser, CCPosition location);
 	CCPosition GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const;
 	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, bool unitShouldHeal, bool isCycloneHelper);
-	bool ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, sc2::Units & rangedUnits, bool unitShouldHeal);
+	bool ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, sc2::Units & rangedUnits);
 	bool ExecuteThorMorphLogic(const sc2::Unit * thor);
 	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition goal, std::string goalDescription, bool unitShouldHeal, bool force);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;

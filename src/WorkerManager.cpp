@@ -40,6 +40,10 @@ void WorkerManager::onFrame(bool executeMacro)
 	m_bot.StartProfiling("0.7.1   m_workerData.updateAllWorkerData");
     m_workerData.updateAllWorkerData();
 	m_bot.StopProfiling("0.7.1   m_workerData.updateAllWorkerData");
+
+	m_bot.StartProfiling("0.7.1.1   m_workerData.updateIdleMineralTarget");
+	m_workerData.updateIdleMineralTarget();
+	m_bot.StopProfiling("0.7.1.1   m_workerData.updateIdleMineralTarget");
 	if (executeMacro)
 	{
 		m_bot.StartProfiling("0.7.2   handleMineralWorkers");
@@ -879,7 +883,7 @@ void WorkerManager::handleIdleWorkers()
 					}
 					else//Do not set as mineral worker if there is no place for it
 					{
-						m_workerData.sendIdleWorkerToIdleSpot(worker, false);
+						m_workerData.sendIdleWorkerToMiningSpot(worker, false);
 					}
 				}
 			}
@@ -898,6 +902,7 @@ void WorkerManager::handleRepairWorkers()
 	int mineral = m_bot.GetFreeMinerals();
 	int gas = m_bot.GetFreeGas();
 
+	m_bot.StartProfiling("0.7.7.1    stopRepairing");
     for (auto & worker : m_workerData.getWorkers())
     {
         if (!worker.isValid()) { continue; }
@@ -956,6 +961,7 @@ void WorkerManager::handleRepairWorkers()
             }
         }*/
     }
+	m_bot.StopProfiling("0.7.7.1    stopRepairing");
 
 	if (mineral < REPAIR_STATION_MIN_MINERAL)//Stop repairing if not enough minerals
 	{
@@ -980,6 +986,7 @@ void WorkerManager::handleRepairWorkers()
 	*/
 	int currentMaxRepairWorker = std::min(MAX_REPAIR_WORKER, (int)floor(MAX_REPAIR_WORKER * (mineral / (float)FULL_REPAIR_MINERAL)));
 
+	m_bot.StartProfiling("0.7.7.2    chooseRepairStationWorkers");
 	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 	for (auto & base : bases)
 	{
@@ -1049,7 +1056,9 @@ void WorkerManager::handleRepairWorkers()
 			}
 		}
 	}
-	
+	m_bot.StopProfiling("0.7.7.2    chooseRepairStationWorkers");
+
+	m_bot.StartProfiling("0.7.7.3    repairBuildings");
 	//Automatically repair low health buildings, maximum 1 worker
 	const float MIN_HEALTH = 50.f;
 	const float MAX_HEALTH = 100.f;
@@ -1082,6 +1091,42 @@ void WorkerManager::handleRepairWorkers()
 			}
 		}
 	}
+	m_bot.StopProfiling("0.7.7.3    repairBuildings");
+
+	m_bot.StartProfiling("0.7.7.4    repairSlowMechs");
+	// Automatically repair slow mechs defending our base
+	std::vector<sc2::UNIT_TYPEID> slowMechTypes = { sc2::UNIT_TYPEID::TERRAN_SIEGETANK, sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, sc2::UNIT_TYPEID::TERRAN_THOR, sc2::UNIT_TYPEID::TERRAN_THORAP, sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
+	std::map<std::string, Squad> & squads = m_bot.Commander().Combat().getSquadData().getSquads();
+	for (auto & squadPair : squads)
+	{
+		auto & squad = squadPair.second;
+		if (squad.getSquadOrder().getType() == SquadOrderTypes::Defend)
+		{
+			for (auto & unit : squad.getUnits())
+			{
+				// Only repair injured units
+				if (unit.getHitPointsPercentage() == 100.f)
+					continue;
+				// Check if we have the required gas to repair it
+				if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
+					continue;
+				// Check if the unit is a slow mech
+				if (!Util::Contains(unit.getAPIUnitType(), slowMechTypes))
+					continue;
+				int repairerCount = m_workerData.getWorkerRepairingTargetCount(unit);
+				int repairerCountTarget = std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f)));
+				while (repairerCount < repairerCountTarget)
+				{
+					Unit repairer = getClosestAvailableWorkerTo(unit.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, true);
+					if (!repairer.isValid())
+						break;
+					setRepairWorker(repairer, unit);
+					++repairerCount;
+				}
+			}
+		}
+	}
+	m_bot.StopProfiling("0.7.7.4    repairSlowMechs");
 }
 
 void WorkerManager::repairCombatBuildings()//Ignores if the path or the area around the building is safe or not.
@@ -1241,7 +1286,7 @@ Unit WorkerManager::getClosestAvailableWorkerTo(const CCPosition & pos, const st
 	const auto & baseLocations = m_bot.Bases().getBaseLocations();
 	for (const auto baseLocation : baseLocations)
 	{
-		if (Util::DistSq(pos, Util::GetPosition(baseLocation->getDepotTilePosition())) < 10 * 10)
+		if (Util::DistSq(pos, Util::GetPosition(baseLocation->getDepotTilePosition())) < 10 * 10 && Util::TerrainHeight(pos) == Util::TerrainHeight(baseLocation->getDepotPosition()))
 		{
 			base = baseLocation;
 			break;
@@ -1257,11 +1302,15 @@ Unit WorkerManager::getClosestAvailableWorkerTo(const CCPosition & pos, const st
 			continue;
 
 		// if it is a mineral worker, Idle or None
-		if (!isFree(worker) && (!allowCombatWorkers || m_workerData.getWorkerJob(worker) != WorkerJobs::Combat))
+		int workerJob = m_workerData.getWorkerJob(worker);
+		auto workerSquad = m_bot.Commander().Combat().getSquadData().getUnitSquad(worker);
+		if (!isFree(worker) && (!allowCombatWorkers || workerJob != WorkerJobs::Combat))
 			continue;
 		if (isReturningCargo(worker))
 			continue;
-		if (filterMoving && worker.isMoving() && (!allowCombatWorkers || m_workerData.getWorkerJob(worker) != WorkerJobs::Combat))
+		if (m_workerData.isProxyWorker(worker) && Util::DistSq(pos, m_bot.Buildings().getProxyLocation()) > 20 * 20)
+			continue;
+		if (filterMoving && worker.isMoving() && (!allowCombatWorkers || workerJob != WorkerJobs::Combat))
 			continue;
 		if (filterDifferentHeight && Util::TerrainHeight(pos) != Util::TerrainHeight(worker.getPosition()))
 			continue;

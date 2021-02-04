@@ -46,7 +46,7 @@ public:
 	void FixNullPlayerStartingBaseLocation();
 	int getBaseCount(int player, bool isCompleted = false) const;
 
-	BaseLocation* getNextExpansion(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles) const;
+	BaseLocation* getNextExpansion(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles, std::vector<BaseLocation*> basesToIgnore = {}) const;
 	CCTilePosition getNextExpansionPosition(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles) const;
 	BaseLocation* getPlayerNat(int player);
 	CCTilePosition getBasePosition(int player, int index) const;
