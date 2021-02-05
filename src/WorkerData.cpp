@@ -78,11 +78,14 @@ void WorkerData::updateIdleMineralTarget()
 	if (base && !base->isOccupiedByPlayer(Players::Self) && !base->isOccupiedByPlayer(Players::Enemy))//Has to validate Self, because we return the main base if all bases at taken.
 	{
 		const BaseLocation * homeBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-		m_idleMineralTarget = GetBestMineralInList(base->getMinerals(), homeBase->getResourceDepot(), false);
-
-		if (m_idleMineralTarget.isValid() && m_idleMineralTarget.getUnitPtr()->display_type == sc2::Unit::Snapshot)
+		if (homeBase->getResourceDepot().isValid())
 		{
-			base->updateMineral(m_idleMineralTarget);
+			m_idleMineralTarget = GetBestMineralInList(base->getMinerals(), homeBase->getResourceDepot(), false);
+
+			if (m_idleMineralTarget.isValid() && m_idleMineralTarget.getUnitPtr()->display_type == sc2::Unit::Snapshot)
+			{
+				base->updateMineral(m_idleMineralTarget);
+			}
 		}
 	}
 }
