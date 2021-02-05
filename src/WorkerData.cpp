@@ -75,7 +75,7 @@ void WorkerData::updateAllWorkerData()
 void WorkerData::updateIdleMineralTarget()
 {
 	auto base = m_bot.Bases().getNextExpansion(Players::Self, false, false, true);
-	if (!base->isOccupiedByPlayer(Players::Self) && !base->isOccupiedByPlayer(Players::Enemy))//Has to validate Self, because we return the main base if all bases at taken.
+	if (base && !base->isOccupiedByPlayer(Players::Self) && !base->isOccupiedByPlayer(Players::Enemy))//Has to validate Self, because we return the main base if all bases at taken.
 	{
 		const BaseLocation * homeBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
 		m_idleMineralTarget = GetBestMineralInList(base->getMinerals(), homeBase->getResourceDepot(), false);
