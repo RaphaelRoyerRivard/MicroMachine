@@ -682,6 +682,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		}
 		m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
 		const auto isPathToGoalSafe = Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot);
+
 		m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 		if(!isPathToGoalSafe && b.canBeBuiltElseWhere)
 		{
@@ -2222,6 +2223,7 @@ void BuildingManager::castBuildingsAbilities()
 			//0 = any regular base not under attack
 			//1 = any gold base not under attack
 			//2 = any base, even under attack
+			CCPosition depotPosition;
 			for (int i = 0; i < 3; ++i)
 			{
 				for (auto base : bases)
@@ -2239,6 +2241,7 @@ void BuildingManager::castBuildingsAbilities()
 						continue;
 
 					closestMineral = getLargestCloseMineralForMules(depot, false, 225);
+					depotPosition = depot.getPosition();
 					if (closestMineral == nullptr)
 					{
 						continue;
@@ -2255,6 +2258,7 @@ void BuildingManager::castBuildingsAbilities()
 			{
 				//If none of our bases fit the requirements (have minerals + not underattack), drop on closest mineral
 				closestMineral = getClosestMineral(b.getPosition());
+				depotPosition = closestMineral->pos;
 
 				if (closestMineral == nullptr)
 				{
@@ -2263,14 +2267,8 @@ void BuildingManager::castBuildingsAbilities()
 				}
 			}
 
-			auto point = closestMineral->pos;
-			if (m_bot.Config().StarCraft2Version < "4.11.0" && orbitalPosition != CCPosition())//Validate version because we can drop the mule straigth on the mineral past this version
-			{
-				//Get the middle point. Then the middle point of the middle point, then again... so we get a point at 7/8 of the way to the mineral from the Orbital command.
-				point.x = (point.x + (point.x + (point.x + orbitalPosition.x) / 2) / 2) / 2;
-				point.y = (point.y + (point.y + (point.y + orbitalPosition.y) / 2) / 2) / 2;
-			}
-
+			//Drops the mule between the CC and mineral, as far from the mineral as possible, while still able to mine it
+			auto point = closestMineral->pos + Util::Normalized(depotPosition - closestMineral->pos) * 1.4;
 			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
 			m_bot.Workers().setMineralMuleDeathFrame(closestMineral->tag);
 		}

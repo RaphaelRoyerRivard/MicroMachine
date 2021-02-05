@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <csignal>
 #include <cstdlib>
+#include <csetjmp>
 
 #include "sc2utils/sc2_manage_process.h"
 #include "sc2api/sc2_api.h"
@@ -21,6 +22,10 @@
 	#include <stdlib.h>
 	#include <unistd.h>
 	#include <cxxabi.h>
+#endif
+
+#ifdef ROBUST_MODE
+jmp_buf gBuffer;
 #endif
 
 class Human : public sc2::Agent {
@@ -151,7 +156,13 @@ void handler(int sig) {
 	}
 	fflush(stdout);
 #endif
+
+#ifdef ROBUST_MODE
+	signal(sig, handler);//Re-set the handler so it can be used again, otherwise it is discarded and will no longer trigger.
+	longjmp(gBuffer, 3);
+#else
 	exit(1);
+#endif
 }
 
 int main(int argc, char* argv[]) 
