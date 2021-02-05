@@ -34,7 +34,7 @@ class WorkerData
 
     void clearPreviousJob(const Unit & unit);
     std::set<Unit> getWorkerRepairingThatTarget(const Unit & unit);
-	const Unit & GetBestMineralWithLessWorkersInLists(const std::vector<Unit> & closeMinerals, const std::vector<Unit> & farMinerals, const CCPosition location) const;
+	const Unit GetBestMineralWithLessWorkersInLists(const std::vector<Unit> & closeMinerals, const std::vector<Unit> & farMinerals, const CCPosition location) const;
 
 public:
 	//Public variables for simplicity

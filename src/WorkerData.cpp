@@ -378,7 +378,7 @@ Unit WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, con
 	return bestMineral;
 }
 
-const Unit & WorkerData::GetBestMineralWithLessWorkersInLists(const std::vector<Unit> & closeMinerals, const std::vector<Unit> & farMinerals, const CCPosition location) const
+const Unit WorkerData::GetBestMineralWithLessWorkersInLists(const std::vector<Unit> & closeMinerals, const std::vector<Unit> & farMinerals, const CCPosition location) const
 {
 	std::vector<Unit> sortedCloseMinerals = closeMinerals;
 	if (location.x != 0 && location.y != 0)
