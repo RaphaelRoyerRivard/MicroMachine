@@ -357,7 +357,7 @@ Unit WorkerData::getMineralToMine(const Unit & depot, const CCPosition location)
 Unit WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & depot, bool checkVisibility) const
 {
 	double bestDist = 100000;
-	Unit & bestMineral = Unit();
+	Unit bestMineral = Unit();
 
 	//Need to check the close and far patches, than determine where the worker should go. Definitely need to rename the function.
     for (auto & mineral : unitsToTest)
