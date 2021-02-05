@@ -642,9 +642,24 @@ void Unit::rightClick(const Unit & target) const
 #endif
 }
 
+void Unit::shiftRightClick(const Unit & target) const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+#ifdef SC2API
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::SMART, target.getUnitPtr(), true);
+#else
+	m_unit->rightClick(target.getUnitPtr());
+#endif
+}
+
 void Unit::rightClick(const CCPosition position) const
 {
 	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::SMART, sc2::Point2D(position.x, position.y));
+}
+
+void Unit::shiftRightClick(const CCPosition position) const
+{
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::SMART, sc2::Point2D(position.x, position.y), true);
 }
 
 void Unit::repair(const Unit & target) const
@@ -676,6 +691,16 @@ void Unit::buildTarget(const UnitType & buildingType, const Unit & target) const
     m_bot->Actions()->UnitCommand(m_unit, m_bot->Data(buildingType).buildAbility, target.getUnitPtr());
 #else
     BOT_ASSERT(false, "buildTarget shouldn't be called for BWAPI bots");
+#endif
+}
+
+void Unit::harvestTarget(const Unit & target) const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+#ifdef SC2API
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::HARVEST_GATHER, target.getUnitPtr());
+#else
+	BOT_ASSERT(false, "buildTarget shouldn't be called for BWAPI bots");
 #endif
 }
 

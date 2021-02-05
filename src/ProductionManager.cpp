@@ -360,7 +360,7 @@ void ProductionManager::manageBuildOrderQueue()
 							m_bot.StopProfiling("0.10.2.2.2.2.2.1       getNextBuildingLocation");
 							if (targetLocation != CCTilePosition(0, 0))
 							{
-								Unit worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(targetLocation));
+								Unit worker = m_bot.Workers().getClosestAvailableWorkerTo(Util::GetPosition(targetLocation));
 								if (worker.isValid())
 								{
 									b.finalPosition = targetLocation;
@@ -1617,7 +1617,7 @@ void ProductionManager::lowPriorityChecks()
 					continue;
 			
 				int refineryBeingBuilt = m_bot.Buildings().countBeingBuilt(Util::GetRefineryType(), false) + m_bot.Buildings().countBeingBuilt(Util::GetRichRefineryType(), false);
-				int extraWorkers = m_bot.Workers().getWorkerData().getExtraMineralWorkersNumber();
+				int extraWorkers = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Idle);
 				int mineralWorkers = m_bot.Workers().getWorkerData().getNumAssignedWorkers(resourceDepot);
 				if (mineralWorkers < 3 && extraWorkers - (refineryBeingBuilt * 3) < 3)
 				{
@@ -1719,7 +1719,7 @@ void ProductionManager::lowPriorityChecks()
 					if (!hasBunker)//Has no bunker so lets build one
 					{
 						m_bot.Buildings().getBuildingPlacer().freeTilesForBunker(bunkerLocation);
-						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(bunkerLocation.x, bunkerLocation.y));
+						auto worker = m_bot.Workers().getClosestAvailableWorkerTo(CCPosition(bunkerLocation.x, bunkerLocation.y));
 						if (worker.isValid())
 						{
 							if (Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), Util::GetPosition(bunkerLocation), false, m_bot))
@@ -1783,7 +1783,7 @@ void ProductionManager::lowPriorityChecks()
 					if (!hasTurret)
 					{
 						m_bot.Buildings().getBuildingPlacer().freeTilesForTurrets(position);
-						auto worker = m_bot.Workers().getClosestMineralWorkerTo(CCPosition(position.x, position.y));
+						auto worker = m_bot.Workers().getClosestAvailableWorkerTo(CCPosition(position.x, position.y));
 						auto boItem = MM::BuildOrderItem(MetaTypeEnum::MissileTurret, 0, false);
 						create(worker, boItem, position, true, true, false);
 					}
@@ -2833,7 +2833,7 @@ bool ProductionManager::ValidateBuildingTiming(Building & b) const
 			return false;
 		}
 		
-		auto worker = m_bot.Workers().getClosestMineralWorkerTo(Util::GetPosition(nextRefinery));
+		auto worker = m_bot.Workers().getClosestAvailableWorkerTo(Util::GetPosition(nextRefinery));
 		if (!worker.isValid())
 		{
 			return false;

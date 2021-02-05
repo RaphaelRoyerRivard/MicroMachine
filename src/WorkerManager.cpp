@@ -19,25 +19,31 @@ void WorkerManager::onStart()
 
 void WorkerManager::onFrame(bool executeMacro)
 {
-	/*//22.4 frames per second
-	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % 24 == 0 && m_bot.GetCurrentFrame() >= (int)(22.5 * 8 * 60))//Every seconds starting at 5 minutes
+	//22.4 frames per second
+	if (m_bot.GetCurrentFrame() > 0)// && m_bot.GetCurrentFrame() % 24 == 0 && m_bot.GetCurrentFrame() >= (int)(22.5 * 8 * 60))//Every seconds starting at 5 minutes
 	{
 		const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals;
 		const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene;
+		Util::AddStatistic("Mineral GatherRate", mineralRate);
 		Util::AddStatistic("Gas GatherRate", gasRate);
 	}
 	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % (int)(22.4 * 10 * 60) == 0)//after 5 minutes
 	{
+		Util::DisplayStatistic(m_bot, "Mineral GatherRate");
 		Util::DisplayStatistic(m_bot, "Gas GatherRate");
 	}
 	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % (int)(22.4 * 10 * 60 + 1) == 0)
 	{
 		Util::ClearChat(m_bot);
-	}*/
+	}
 
 	m_bot.StartProfiling("0.7.1   m_workerData.updateAllWorkerData");
     m_workerData.updateAllWorkerData();
 	m_bot.StopProfiling("0.7.1   m_workerData.updateAllWorkerData");
+
+	m_bot.StartProfiling("0.7.1.1   m_workerData.updateIdleMineralTarget");
+	m_workerData.updateIdleMineralTarget();
+	m_bot.StopProfiling("0.7.1.1   m_workerData.updateIdleMineralTarget");
 	if (executeMacro)
 	{
 		m_bot.StartProfiling("0.7.2   handleMineralWorkers");
@@ -93,12 +99,66 @@ void WorkerManager::lowPriorityChecks()
 	m_bot.StopProfiling("0.7.6.1     SalvageDepletedGeysers");
 
 	m_bot.StartProfiling("0.7.6.2     HandleWorkerTransfer");
-	HandleWorkerTransfer();
+	//No longer need to transfer workers since we limit the number of workers per base. Still can be used to send workers to gold bases in advance.
+	//HandleWorkerTransfer();
 	m_bot.StopProfiling("0.7.6.2     HandleWorkerTransfer");
 
 	m_bot.StartProfiling("0.7.6.3     validateRepairStationWorkers");
 	m_bot.Workers().getWorkerData().validateRepairStationWorkers();
 	m_bot.StopProfiling("0.7.6.3     validateRepairStationWorkers");
+
+	m_bot.StartProfiling("0.7.6.4     clean mineral and workers association");
+	std::vector<Unit> mineralWorkerToRemove;
+	std::vector<Unit> workerMineralToRemove;
+	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+	for (auto & mineralWorkers : m_workerData.m_mineralWorkersMap)
+	{
+		bool remove = true;
+		if (mineralWorkers.first.isValid() && mineralWorkers.first.isAlive() && mineralWorkers.first.getUnitPtr()->mineral_contents > 0)
+		{
+			for (auto & base : bases)
+			{
+				auto & depot = base->getResourceDepot();
+				if (!depot.isValid() || !depot.isAlive())
+				{
+					continue;
+				}
+				for (auto & mineral : base->getMinerals())
+				{
+					if (mineralWorkers.first.getTag() == mineral.getTag())
+					{
+						remove = false;
+						break;
+					}
+				}
+				if (!remove)
+				{
+					break;
+				}
+			}
+		}
+		if (remove)
+		{
+			mineralWorkerToRemove.push_back(mineralWorkers.first);
+			for (auto & workerMineral : m_workerData.m_workerMineralMap)
+			{
+				if (workerMineral.second.getTag() == mineralWorkers.first.getTag())
+				{
+					workerMineralToRemove.push_back(workerMineral.first);
+				}
+			}
+		}
+	}
+	for (auto & remove : mineralWorkerToRemove)
+	{
+		m_workerData.m_mineralWorkersMap.erase(remove);
+	}
+	for (auto & remove : workerMineralToRemove)
+	{
+		m_workerData.m_workerMineralMap.erase(remove);
+		m_workerData.setWorkerJob(remove, WorkerJobs::Idle);
+	}
+	m_bot.StopProfiling("0.7.6.4     clean mineral and workers association");
 }
 
 //Worker split between bases (transfer worker)
@@ -111,6 +171,7 @@ void WorkerManager::HandleWorkerTransfer()
 
 	auto & workers = getWorkers();
 	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+	std::set<Unit> idleWorkers = m_bot.Workers().getWorkerData().getIdleWorkers();
 	std::list<std::pair<BaseLocation*, int>> unorderedBasesWithFewWorkers;
 	std::list<std::pair<BaseLocation*, int>> unorderedBasesWithExtraWorkers;
 	for (auto & base : bases)
@@ -161,10 +222,34 @@ void WorkerManager::HandleWorkerTransfer()
 		auto & depot = baseWithFewWorkers.first->getResourceDepot();
 		if (!depot.isValid())
 			continue;
+		auto closestWorker = this->getClosestAvailableWorkerTo(depot.getPosition());//Could be replaced by a path from a depot, once its possible.
 		int fewWorkerNeeded = baseWithFewWorkers.second;
 
+		//Transfer idle workers first then extra workers
+		for (auto & idleWorker : idleWorkers)
+		{
+			if (fewWorkerNeeded <= 0)
+			{
+				break;
+			}
+
+			if (!Util::PathFinding::IsPathToGoalSafe(closestWorker.getUnitPtr(), idleWorker.getPosition(), true, m_bot))
+			{//Path isn't safe
+				continue;
+			}
+
+			m_workerData.setWorkerJob(idleWorker, WorkerJobs::Minerals, depot);
+			fewWorkerNeeded--;
+		}
+
+		//TODO Is this even needed anymore? Can it still happen?
 		for (auto & baseWithExtraWorkers : basesWithExtraWorkers)
 		{
+			if (fewWorkerNeeded <= 0)
+			{
+				break;
+			}
+
 			bool shouldSendWorkers = false;
 			if (depot.isBeingConstructed())
 			{
@@ -190,8 +275,7 @@ void WorkerManager::HandleWorkerTransfer()
 
 			if (shouldSendWorkers)
 			{
-				auto closestWorler = this->getClosestMineralWorkerTo(depot.getPosition());//Could be replaced by a path from a depot, once its possible.
-				if (!Util::PathFinding::IsPathToGoalSafe(closestWorler.getUnitPtr(), Util::GetPosition(baseWithExtraWorkers.first->getCenterOfMinerals()), true, m_bot))
+				if (!Util::PathFinding::IsPathToGoalSafe(closestWorker.getUnitPtr(), Util::GetPosition(baseWithExtraWorkers.first->getCenterOfMinerals()), true, m_bot))
 				{//Path isn't safe
 					continue;
 				}
@@ -204,7 +288,7 @@ void WorkerManager::HandleWorkerTransfer()
 						const auto workerDepot = m_workerData.getWorkerDepot(worker);
 						if (workerDepot.isValid() && workerDepot.getTag() == baseWithExtraWorkers.first->getResourceDepot().getTag())
 						{
-							m_workerData.setWorkerJob(worker, WorkerJobs::Minerals, depot, true);
+							m_workerData.setWorkerJob(worker, WorkerJobs::Minerals, depot);
 							extraWorkers--;
 							fewWorkerNeeded--;
 							if (extraWorkers <= 0 || fewWorkerNeeded <= 0)
@@ -236,6 +320,8 @@ void WorkerManager::handleMineralWorkers()
 {
 	handleMules();
 
+	const auto & workers = getWorkers();
+
 	Unit proxyWorker;
 	// Send second proxy worker for proxy Marauders strategy
 	if (m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS 
@@ -243,7 +329,6 @@ void WorkerManager::handleMineralWorkers()
 		&& m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), true, true, true) == 1)
 	{
 		float minDist = 0.f;
-		const auto & workers = getWorkers();
 		const auto rampPosition = Util::GetPosition(m_bot.Buildings().getWallPosition());
 		for (const auto & worker : workers)
 		{
@@ -260,103 +345,90 @@ void WorkerManager::handleMineralWorkers()
 		{
 			proxyWorker.move(m_bot.Buildings().getProxyLocation());
 			m_workerData.setProxyWorker(proxyWorker);
+			m_workerData.setWorkerJob(proxyWorker, WorkerJobs::Idle);
 			m_secondProxyWorkerSent = true;
+		}
+	}
+
+	//TODO If no idle, move far patch worker to close patch?
+	for (auto & worker : workers)
+	{
+		if (!worker.isValid() || !worker.isAlive() || worker.isReturningCargo() || worker.getType().isMule())
+			continue;
+		auto job = m_workerData.getWorkerJob(worker);
+
+		//Correct the mining workers target if its not the right one.
+		if (job == WorkerJobs::Minerals)
+		{
+			sc2::Tag target;
+			if (worker.getUnitPtr()->orders.size() > 0)
+			{
+				target = worker.getUnitPtr()->orders[0].target_unit_tag;
+			}
+
+			auto it = m_workerData.m_workerMineralMap.find(worker);
+			if (it != m_workerData.m_workerMineralMap.end())
+			{
+				if (it->second.getTag() != target)
+				{
+					worker.rightClick(it->second);
+				}
+			}
+			else//Unfound, not normal
+			{
+				m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
+			}
 		}
 	}
 
 	//split workers on first frame
 	//TODO can be improved by preventing the worker from retargetting a very far mineral patch
-	if (!m_isFirstFrame || m_bot.GetCurrentFrame() == 0)
+	if (!m_isFirstFrame)
 	{
 		return;
 	}
 	m_isFirstFrame = false;
 
-	m_bot.StartProfiling("0.7.2.2     selectMinerals");
-	std::list<Unit> minerals;
-	std::map<Unit, int> mineralsUsage;
-	for (auto& base : m_bot.Bases().getBaseLocations())
+	m_bot.StartProfiling("0.7.2.2     frame1WorkerSplit");
+	auto & main = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+	auto & closePatch = (*main.begin())->getCloseMinerals();
+	auto & farPatch = (*main.begin())->getFarMinerals();
+	std::vector<CCUnitID> usedWorkers;
+	for (auto & mineral : closePatch)
 	{
-		if (base->isOccupiedByPlayer(Players::Self))
-		{
-			auto & mineralsVector = base->getMinerals();
-			for (auto& t : mineralsVector)
-			{
-				minerals.push_back(t);
-				mineralsUsage[t] = 0;
-			}
-		}
+		usedWorkers = dispatchWorkerToMineral(mineral, usedWorkers, (*main.begin())->getResourceDepot());
 	}
-	m_bot.StopProfiling("0.7.2.2     selectMinerals");
-
-	// Send the first worker at the proxy location if we have a proxy strategy, but not with proxy Marauders because we want to make the first Barracks at home
-	if (m_bot.Strategy().isProxyStartingStrategy() && m_bot.Strategy().getStartingStrategy() != PROXY_MARAUDERS)
+	for (auto & mineral : farPatch)
 	{
-		float minDist = 0.f;
-		const auto & workers = getWorkers();
-		const auto rampPosition = Util::GetPosition(m_bot.Buildings().getWallPosition());
-		for (const auto & worker : workers)
-		{
-			const auto dist = Util::DistSq(worker, rampPosition);
-			if (!proxyWorker.isValid() || dist < minDist)
-			{
-				minDist = dist;
-				proxyWorker = worker;
-			}
-		}
-		proxyWorker.move(m_bot.Buildings().getProxyLocation());
-		m_workerData.setProxyWorker(proxyWorker);
+		usedWorkers = dispatchWorkerToMineral(mineral, usedWorkers, (*main.begin())->getResourceDepot());
 	}
-
-	m_bot.StartProfiling("0.7.2.3     orderedMineralWorkers");
-	std::map<Unit, int> workerMineralDistance;
-	for (auto & worker : getWorkers())
+	for (auto & mineral : closePatch)
 	{
-		if (worker == proxyWorker)
-			continue;
-		CCPosition position = worker.getPosition();
-		int maxDist = -1;
-		for (auto& mineral : mineralsUsage)
-		{
-			int distance = Util::DistSq(position, mineral.first.getPosition());
-			if (distance > maxDist)
-			{
-				maxDist = distance;
-			}
-		}
-		workerMineralDistance[worker] = maxDist;
+		usedWorkers = dispatchWorkerToMineral(mineral, usedWorkers, (*main.begin())->getResourceDepot());
 	}
-
-	//Sorting the workers by furthest distance
-	//Defining a lambda function to compare two pairs. It will compare two pairs using the value
-	WorkerSplitComparator compFunctor = [](std::pair<Unit, int> elem1, std::pair<Unit, int> elem2)
+	for (auto & mineral : farPatch)
 	{
-		return elem1.second > elem2.second;
-	};
-
-	//Declaring a set that will store the pairs using above comparision logic
-	std::set<std::pair<Unit, int>, WorkerSplitComparator> orderedMineralWorkers(workerMineralDistance.begin(), workerMineralDistance.end(), compFunctor);
-	m_bot.StopProfiling("0.7.2.3     orderedMineralWorkers");
-
-	m_bot.StartProfiling("0.7.2.4     splitMineralWorkers");
-	for (auto& mineralWorker : orderedMineralWorkers)
-	{
-		auto worker = mineralWorker.first;
-		if (!worker.isValid())
-		{
-			continue;
-		}
-
-		auto closestMineral = getClosest(worker, minerals);
-		mineralsUsage[closestMineral]++;
-		if (mineralsUsage[closestMineral] >= 2)
-		{
-			minerals.remove(closestMineral);
-		}
-
-		worker.rightClick(closestMineral);
+		usedWorkers = dispatchWorkerToMineral(mineral, usedWorkers, (*main.begin())->getResourceDepot());
 	}
-	m_bot.StopProfiling("0.7.2.4     splitMineralWorkers");
+	m_bot.StopProfiling("0.7.2.2     frame1WorkerSplit");
+}
+
+std::vector<CCUnitID> WorkerManager::dispatchWorkerToMineral(Unit mineral, std::vector<CCUnitID> usedWorkers, Unit ressourceDepot)
+{
+	auto & worker = getClosestAvailableWorkerTo(mineral.getPosition(), usedWorkers, 0);
+	if (!worker.isValid())
+	{
+		return usedWorkers;
+	}
+	usedWorkers.push_back(worker.getTag());
+
+	worker.rightClick(mineral);
+
+	m_workerData.m_workerMineralMap[worker] = mineral;
+	m_workerData.m_mineralWorkersMap[mineral].push_back(worker.getTag());
+
+	m_workerData.setWorkerJob(worker, WorkerJobs::Minerals, ressourceDepot);
+	return usedWorkers;
 }
 
 void WorkerManager::handleMules()
@@ -391,14 +463,17 @@ void WorkerManager::handleMules()
 		}
 		else
 		{
-			//Do not run on first frame of Mule existance, or we might assign it to the wrong mineral
-			if (m_bot.Config().StarCraft2Version < "4.11.0")
+			if (!muleHarvests[id].mineral.isValid() && (mule.getUnitPtr()->orders.size() == 0 || mule.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE))
 			{
-				auto unit = mule.getUnitPtr();
-				if (unit->orders.size() == 0)//version below 4.11.0 only
+				auto mineral = m_bot.Buildings().getClosestMineral(mule.getPosition());
+				Micro::SmartRightClick(mule.getUnitPtr(), mineral, m_bot);//Cannot be done frame 1, thats why its in the 'else' clause
+				for (auto & unit : m_bot.GetNeutralUnits())
 				{
-					auto mineral = m_bot.Buildings().getClosestMineral(unit->pos);
-					mule.rightClick(mineral->pos);
+					if (unit.first == mineral->tag)
+					{
+						muleHarvests[id].mineral = unit.second;
+						break;
+					}
 				}
 			}
 		}
@@ -414,7 +489,8 @@ void WorkerManager::handleMules()
 				muleHarvests[id].isReturningCargo = false;
 				muleHarvests[id].finishedHarvestCount++;
 
-				if (muleHarvests[id].harvestFramesRequired != 0 && m_bot.GetCurrentFrame() + muleHarvests[id].harvestFramesRequired > muleHarvests[id].deathFrame)//Maximum of 9 harvest per mule, the mules can't finish the 10th.
+				//if (muleHarvests[id].harvestFramesRequired != 0 && m_bot.GetCurrentFrame() + muleHarvests[id].harvestFramesRequired > muleHarvests[id].deathFrame)//Maximum of 9 harvest per mule, the mules can't finish the 10th.
+				if(m_bot.GetCurrentFrame() + muleHarvests[id].harvestFramesRequired > muleHarvests[id].deathFrame)
 				{
 					mule.move(m_bot.Map().center());
 					muleHarvests.erase(id);
@@ -423,6 +499,13 @@ void WorkerManager::handleMules()
 				{
 					muleHarvests[id].harvestFramesRequired = (muleHarvests[id].lastCargoReturnFrame == 0 ? 0 : m_bot.GetCurrentFrame() - muleHarvests[id].lastCargoReturnFrame);
 					muleHarvests[id].lastCargoReturnFrame = m_bot.GetCurrentFrame();
+
+					//Micro mules, does not seem possible to get a 10th trip.... so its commented out. Missing just a handful of frames to succeed
+					//mule.move(muleHarvests[id].mineral.getPosition());
+					//auto a = mule.getUnitPtr()->radius;
+					//auto b = muleHarvests[id].mineral.getUnitPtr()->radius;
+					//mule.move(muleHarvests[id].mineral.getPosition() + Util::Normalized(mule.getPosition() - muleHarvests[id].mineral.getPosition()) * 2.9);//2.5? 2.7 (146)?
+					//mule.shiftRightClick(muleHarvests[id].mineral);
 				}
 			}
 		}
@@ -709,6 +792,7 @@ void WorkerManager::handleIdleWorkers()
         if (idle &&
             // We need to consider building worker because of builder finishing the job of another worker is not consider idle.
 			//(m_workerData.getWorkerJob(worker) != WorkerJobs::Build) && 
+			(workerJob != WorkerJobs::Idle) &&
             (workerJob != WorkerJobs::Move) &&
             (workerJob != WorkerJobs::Repair) &&
 			(workerJob != WorkerJobs::Scout) &&
@@ -793,7 +877,15 @@ void WorkerManager::handleIdleWorkers()
 				
 				if (!isBuilder && !m_workerData.isProxyWorker(worker))
 				{
-					setMineralWorker(worker);
+					
+					if (m_workerData.isAnyMineralAvailable())
+					{
+						setMineralWorker(worker);
+					}
+					else//Do not set as mineral worker if there is no place for it
+					{
+						m_workerData.sendIdleWorkerToMiningSpot(worker, false);
+					}
 				}
 			}
 		}
@@ -985,7 +1077,7 @@ void WorkerManager::handleRepairWorkers()
 		if (percentage <= MIN_HEALTH && repairCount < MAX_WORKER_PER_BUILDING)
 		{
 			auto position = building.getPosition();
-			auto worker = getClosestMineralWorkerTo(position);
+			auto worker = getClosestAvailableWorkerTo(position);
 			if (worker.isValid() && Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), position, true, m_bot))
 			{
 				setRepairWorker(worker, building);
@@ -1026,7 +1118,7 @@ void WorkerManager::handleRepairWorkers()
 				int repairerCountTarget = std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f)));
 				while (repairerCount < repairerCountTarget)
 				{
-					Unit repairer = getClosestMineralWorkerTo(unit.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, true);
+					Unit repairer = getClosestAvailableWorkerTo(unit.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, true);
 					if (!repairer.isValid())
 						break;
 					setRepairWorker(repairer, unit);
@@ -1167,7 +1259,7 @@ void WorkerManager::repairCombatBuildings()//Ignores if the path or the area aro
 
 			for (int i = 0; i < reparator - alreadyRepairing; i++)
 			{
-				Unit worker = getClosestMineralWorkerTo(building.getPosition(), 0.f, true, true);
+				Unit worker = getClosestAvailableWorkerTo(building.getPosition(), 0.f, true, true);
 				if (worker.isValid())
 					setRepairWorker(worker, building);
 				else
@@ -1177,15 +1269,17 @@ void WorkerManager::repairCombatBuildings()//Ignores if the path or the area aro
 	}
 }
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage, bool filterMoving, bool filterDifferentHeight) const
+Unit WorkerManager::getClosestAvailableWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage, bool filterMoving, bool filterDifferentHeight) const
 {
 	auto workersToIgnore = std::vector<CCUnitID>();
 	workersToIgnore.push_back(workerToIgnore);
-	return getClosestMineralWorkerTo(pos, workersToIgnore, minHpPercentage, filterMoving, false, filterDifferentHeight);
+	return getClosestAvailableWorkerTo(pos, workersToIgnore, minHpPercentage, filterMoving, false, filterDifferentHeight);
 }
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving, bool allowCombatWorkers, bool filterDifferentHeight) const
+Unit WorkerManager::getClosestAvailableWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving, bool allowCombatWorkers, bool filterDifferentHeight) const
 {
+	//TODO priorise workers on far patches? Or maybe rebalance workers in a lowPriorityCheck or when the worker drops off his mineral?
+
 	Unit closestMineralWorker;
 	auto closestDist = 0.f;
 
@@ -1238,9 +1332,9 @@ Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, const std:
 }
 
 
-Unit WorkerManager::getClosestMineralWorkerTo(const CCPosition & pos, float minHpPercentage, bool filterMoving, bool filterDifferentHeight) const
+Unit WorkerManager::getClosestAvailableWorkerTo(const CCPosition & pos, float minHpPercentage, bool filterMoving, bool filterDifferentHeight) const
 {
-    return getClosestMineralWorkerTo(pos, CCUnitID{}, minHpPercentage, filterMoving, filterDifferentHeight);
+    return getClosestAvailableWorkerTo(pos, CCUnitID{}, minHpPercentage, filterMoving, filterDifferentHeight);
 }
 
 Unit WorkerManager::getClosestGasWorkerTo(const CCPosition & pos, CCUnitID workerToIgnore, float minHpPercentage) const
@@ -1427,7 +1521,7 @@ void WorkerManager::finishedWithWorker(const Unit & unit)
 
 Unit WorkerManager::getMineralWorker(Unit refinery) const
 {
-    return getClosestMineralWorkerTo(refinery.getPosition());
+    return getClosestAvailableWorkerTo(refinery.getPosition());
 }
 
 Unit WorkerManager::getGasWorker(Unit refinery, bool checkReturningCargo, bool checkInsideRefinery) const
@@ -1519,12 +1613,26 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMo
 	
 	do
 	{
+		builderWorker = Unit();
 		isValid = true;
-		builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0, filterMoving);
+		if (invalidWorkers.size() == 0)//Priorize Idle workers
+		{
+			std::vector<CCUnitID> mineralWorkers;
+			for (auto & worker : m_workerData.getMineralWorkers())
+			{
+				mineralWorkers.push_back(worker.getTag());
+			}
+			builderWorker = getClosestAvailableWorkerTo(Util::GetPosition(b.finalPosition), mineralWorkers, 0, filterMoving);
+		}
+		if(!builderWorker.isValid())//If no idle workers available, use mineral workers
+		{
+			builderWorker = getClosestAvailableWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0, filterMoving);
+		}
+
 		if (!builderWorker.isValid())	// If we can't find a free worker
 		{
 			// Check for a combat worker
-			builderWorker = getClosestMineralWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0, filterMoving, true);
+			builderWorker = getClosestAvailableWorkerTo(Util::GetPosition(b.finalPosition), invalidWorkers, 0, filterMoving, true);
 			if (!builderWorker.isValid())	//If no worker left to check
 			{
 				break;
@@ -1666,7 +1774,31 @@ void WorkerManager::drawWorkerInformation()
 				oss << " [Proxy]";
 			}
 		}
+
 		m_bot.Map().drawText(worker.getPosition(), oss.str());
+
+		if (true)//Advantage mineral worker display
+		{
+			auto & workers = getWorkers();
+			for (auto & mineralWorker : m_workerData.m_mineralWorkersMap)
+			{
+				std::ostringstream oss;
+				oss << mineralWorker.second.size();
+				m_bot.Map().drawText(mineralWorker.first.getPosition(), oss.str());
+
+				for (auto & worker : workers)
+				{
+					//if (m_workerData.getWorkerJob(worker) != WorkerJobs::Minerals)
+					//{
+					//	continue;
+					//}
+					if (std::find(mineralWorker.second.begin(), mineralWorker.second.end(), worker.getTag()) != mineralWorker.second.end())//worker.getTag() != mineralWorker.second)
+					{
+						m_bot.Map().drawLine(mineralWorker.first.getPosition(), worker.getPosition(), CCColor(0, 255, 0));
+					}
+				}
+			}
+		}
     }
 }
  
@@ -1721,7 +1853,6 @@ int WorkerManager::getNumMineralWorkers()
 int WorkerManager::getNumGasWorkers()
 {
     return m_workerData.getWorkerJobCount(WorkerJobs::Gas);
-
 }
 
 int WorkerManager::getNumWorkers()

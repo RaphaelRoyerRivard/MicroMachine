@@ -19,6 +19,8 @@ class BaseLocation
     CCPosition                  m_centerOfResources;
     std::vector<Unit>           m_geysers;
     std::vector<Unit>           m_minerals;
+	std::vector<Unit>           m_mineralsClose;
+	std::vector<Unit>           m_mineralsFar;
 	Unit						m_resourceDepot;
 	std::vector<Unit>			m_gasBunkers;
 	std::vector<std::pair<CCPosition, CCPosition>> m_gasBunkersGeyserDrop;//<Geyser position, target location the bunker will drop SCVs towards>
@@ -69,6 +71,8 @@ public:
     const CCPosition & getPosition() const;
     const std::vector<Unit> & getGeysers() const;
     const std::vector<Unit> & getMinerals() const;
+	const std::vector<Unit> & getCloseMinerals() const;
+	const std::vector<Unit> & getFarMinerals() const;
 	const Unit& getResourceDepot() const { return m_resourceDepot; }
 	void setResourceDepot(Unit resourceDepot) { m_resourceDepot = resourceDepot; }
 	const std::vector<Unit> & getGasBunkers() const { return m_gasBunkers; }
@@ -89,6 +93,7 @@ public:
 	const CCTilePosition getCenterOfMinerals() const;
     bool isOccupiedByPlayer(CCPlayer player) const;
     bool isExplored() const;
+	bool updateMineral(Unit mineral);
 
     void setPlayerOccupying(CCPlayer player, bool occupying);
 
