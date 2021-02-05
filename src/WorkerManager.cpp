@@ -415,7 +415,7 @@ void WorkerManager::handleMineralWorkers()
 
 std::vector<CCUnitID> WorkerManager::dispatchWorkerToMineral(Unit mineral, std::vector<CCUnitID> usedWorkers, Unit ressourceDepot)
 {
-	auto & worker = getClosestAvailableWorkerTo(mineral.getPosition(), usedWorkers, 0);
+	auto worker = getClosestAvailableWorkerTo(mineral.getPosition(), usedWorkers, 0);
 	if (!worker.isValid())
 	{
 		return usedWorkers;
