@@ -99,7 +99,8 @@ void WorkerManager::lowPriorityChecks()
 	m_bot.StopProfiling("0.7.6.1     SalvageDepletedGeysers");
 
 	m_bot.StartProfiling("0.7.6.2     HandleWorkerTransfer");
-	HandleWorkerTransfer();
+	//No longer need to transfer workers since we limit the number of workers per base. Still can be used to send workers to gold bases in advance.
+	//HandleWorkerTransfer();
 	m_bot.StopProfiling("0.7.6.2     HandleWorkerTransfer");
 
 	m_bot.StartProfiling("0.7.6.3     validateRepairStationWorkers");

@@ -120,26 +120,6 @@ void WorkerData::updateWorker(const Unit & unit)
 
 void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
 {
-	auto previousJob = getWorkerJob(worker);
-	//Handle leaving a job
-	if (previousJob == WorkerJobs::Minerals)
-	{
-		if (m_workerMineralMap.find(worker) != m_workerMineralMap.end())
-		{
-			m_mineralWorkersMap[m_workerMineralMap[worker]].remove(worker.getTag());
-		}
-		m_workerMineralMap.erase(worker);
-		m_mineralWorkers.erase(worker);
-	}
-	else if (previousJob == WorkerJobs::Idle)
-	{
-		m_idleWorkers.erase(worker);
-	}
-	else if (previousJob == WorkerJobs::None)//Only affects newly spawned workers
-	{
-		sendIdleWorkerToMiningSpot(worker, true);
-	}
-
 	clearPreviousJob(worker);
     m_workerJobMap[worker] = job;
     m_workerJobCount[job]++;
@@ -258,6 +238,13 @@ void WorkerData::clearPreviousJob(const Unit & unit)
 		{
 			m_depotWorkerCount[m_workerDepotMap[unit]]--;
 			m_workerDepotMap.erase(unit);
+
+			if (m_workerMineralMap.find(unit) != m_workerMineralMap.end())
+			{
+				m_mineralWorkersMap[m_workerMineralMap[unit]].remove(unit.getTag());
+			}
+			m_workerMineralMap.erase(unit);
+			m_mineralWorkers.erase(unit);
 		}
     }
     else if (previousJob == WorkerJobs::Gas)
@@ -280,10 +267,18 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     {
 
     }
+	else if (previousJob == WorkerJobs::Idle)
+	{
+		m_idleWorkers.erase(unit);
+	}
     else if (previousJob == WorkerJobs::Move)
     {
 
     }
+	else if (previousJob == WorkerJobs::None)//Only affects newly spawned workers
+	{
+		sendIdleWorkerToMiningSpot(unit, true);
+	}
 
     m_workerJobMap.erase(unit);
 }
