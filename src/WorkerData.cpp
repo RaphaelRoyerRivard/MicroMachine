@@ -358,6 +358,8 @@ Unit WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, con
 {
 	double bestDist = 100000;
 	Unit & bestMineral = Unit();
+	if (!depot.isValid())
+		return bestMineral;
 
 	//Need to check the close and far patches, than determine where the worker should go. Definitely need to rename the function.
     for (auto & mineral : unitsToTest)
@@ -655,7 +657,7 @@ void WorkerData::sendIdleWorkerToMiningSpot(const Unit & worker, bool force)
 			{
 				worker.rightClick(m_idleMineralTarget);
 			}
-			else if(worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE || worker.getUnitPtr()->orders[0].target_pos != m_idleMineralTarget.getPosition())
+			else if(worker.getUnitPtr()->orders.size() < 1 || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE || worker.getUnitPtr()->orders[0].target_pos != m_idleMineralTarget.getPosition())
 			{
 				worker.rightClick(m_idleMineralTarget.getPosition());
 			}
