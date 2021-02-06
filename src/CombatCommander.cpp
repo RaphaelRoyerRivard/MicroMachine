@@ -2519,7 +2519,7 @@ void CombatCommander::updateDefenseSquads()
 				}
 				else
 				{
-					support = region.antiGroundPowerNeeded() >= region.antiAirPowerNeeded() ? "ground" : "air";
+					support = region.airEnemyPower > 0.f && region.antiAirPowerNeeded() > region.antiGroundPowerNeeded() ? "air" : "ground";
 				}
 				bool needsMoreSupport = true;
 				if (support == "ground")
