@@ -3585,3 +3585,16 @@ bool CombatCommander::GetUnitAbilities(const sc2::Unit * unit, sc2::AvailableAbi
 	}
 	return false;
 }
+
+bool CombatCommander::isBunkerDangerous(const sc2::Unit * bunker) const
+{
+	auto it = m_dangerousEnemyBunkers.find(bunker);
+	if (it != m_dangerousEnemyBunkers.end() && m_bot.GetCurrentFrame() - it->second < 22.4f * 60 * 2)
+		return true;
+	return false;
+}
+
+void CombatCommander::setBunkerIsDangerous(const sc2::Unit * bunker)
+{
+	m_dangerousEnemyBunkers[bunker] = m_bot.GetCurrentFrame();
+}
