@@ -333,7 +333,8 @@ Unit WorkerData::getMineralToMine(const Unit & depot, const CCPosition location)
     Unit bestMineral;
 
 	auto base = m_bot.Bases().getBaseForDepot(depot);
-	bestMineral = GetBestMineralWithLessWorkersInLists(base->getCloseMinerals(), base->getFarMinerals(), location);
+	if (base)
+		bestMineral = GetBestMineralWithLessWorkersInLists(base->getCloseMinerals(), base->getFarMinerals(), location);
 
     // If the base has no mineral (why was it assigned here in the first place?), we search in all our bases minerals (we do not want to long range mine)
 	if (!bestMineral.isValid())
