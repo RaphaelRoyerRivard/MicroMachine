@@ -286,6 +286,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
+	bool defendingAgainstCombatBuildings = false;	// Only computed for Tanks
 	m_bot.StartProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 	bool unitShouldHeal = m_bot.Commander().Combat().ShouldUnitHeal(rangedUnit);
 	if (unitShouldHeal)
@@ -367,7 +368,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				}
 			}
 			bool defending = m_order.getType() == SquadOrderTypes::Defend;
-			bool defendingAgainstCombatBuildings = false;
 			if (defending)
 			{
 				for (auto enemy : rangedUnitTargets)
@@ -467,7 +467,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	if (isTank && Util::DistSq(rangedUnit->pos, goal) > 6 * 6)
 	{
 		bool alreadyDefendingBaseUnderAttack = false;
-		if (m_order.getType() == SquadOrderTypes::Defend)
+		if (m_order.getType() == SquadOrderTypes::Defend && !defendingAgainstCombatBuildings)
 		{
 			auto baseContainingEnemies = m_bot.Bases().getBaseContainingPosition(goal);
 			auto baseContainingTank = m_bot.Bases().getBaseContainingPosition(rangedUnit->pos);
