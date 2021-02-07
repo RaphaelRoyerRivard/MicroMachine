@@ -48,6 +48,7 @@ private:
 	std::map<const sc2::Unit *, std::map<std::pair<int, std::set<const sc2::Unit *>>, const sc2::Unit *>> m_threatTargetForUnit;	//<unit, <<parameters, potential targets>, target>>
 	std::map<const sc2::Unit *, long> m_siegedTanksLastValidTargetFrame;
 	std::map<const sc2::Unit *, long> m_tanksLastFrameFarFromRetreatGoal;
+	std::map<const sc2::Unit *, long> m_tanksLastSiegeFrame;
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
 	bool m_marauderAttackInitiated = false;
 
