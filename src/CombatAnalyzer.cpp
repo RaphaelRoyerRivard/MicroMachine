@@ -593,12 +593,22 @@ void CombatAnalyzer::checkUnitState(Unit unit)
 			}
 		}
 		m_bot.StopProfiling("0.10.4.4.2.1        checkForRangeUpgrade");
-		m_bot.StartProfiling("0.10.4.4.2.1        saveDetectedArea");
+		m_bot.StartProfiling("0.10.4.4.2.2        checkForDangerousBunker");
+		for (const auto & enemyBunker : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::TERRAN_BUNKER))
+		{
+			float bunkerRange = enemyBunker.getUnitPtr()->radius + unit.getUnitPtr()->radius + (unit.isFlying() ? 6 : 7);
+			if (Util::DistSq(unit, enemyBunker) < bunkerRange * bunkerRange)
+			{
+				m_bot.Commander().Combat().setBunkerIsDangerous(enemyBunker.getUnitPtr());
+			}
+		}
+		m_bot.StopProfiling("0.10.4.4.2.2        checkForDangerousBunker");
+		m_bot.StartProfiling("0.10.4.4.2.3        saveDetectedArea");
 		if (unit.getUnitPtr()->cloak == sc2::Unit::CloakedAllied && !Util::IsPositionUnderDetection(unit.getPosition(), m_bot))
 		{
 			m_areasUnderDetection.push_back({ unit.getPosition(), m_bot.GetGameLoop() });
 		}
-		m_bot.StopProfiling("0.10.4.4.2.1        saveDetectedArea");
+		m_bot.StopProfiling("0.10.4.4.2.3        saveDetectedArea");
 
 		//Is building underconstruction. Cancel building
 		if (unit.isBeingConstructed())

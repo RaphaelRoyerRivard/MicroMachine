@@ -171,6 +171,7 @@ class CombatCommander
 	bool m_blockedExpandByInvis = false;
 	std::vector<CCTilePosition> m_mainBaseSiegePositions;
 	sc2::Units m_mainBaseSiegeTanks;
+	std::map<const sc2::Unit *, long> m_dangerousEnemyBunkers;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
@@ -276,5 +277,7 @@ public:
 	SquadData & getSquadData() { return m_squadData; }
 	const std::vector<CCTilePosition> & getMainBaseSiegePositions() const { return m_mainBaseSiegePositions; }
 	sc2::Units & getMainBaseSiegeTanks() { return m_mainBaseSiegeTanks; }
+	bool isBunkerDangerous(const sc2::Unit * bunker) const;
+	void setBunkerIsDangerous(const sc2::Unit * bunker);
 };
 

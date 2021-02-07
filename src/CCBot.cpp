@@ -1407,6 +1407,7 @@ void CCBot::IssueGameStartCheats()
 	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
 	const auto offset = towardsCenter * 15;
 	const auto enemyLocation = GetEnemyStartLocations()[0];
+	const auto main = m_bases.getPlayerStartingBaseLocation(Players::Self);
 	const auto naturalExpansion = m_bases.getNextExpansion(Players::Self, false, false, false);
 	const auto thirdExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion });
 	const auto fourthExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion, thirdExpansion });
@@ -1983,7 +1984,8 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, nat + towardsCenter * 9, player1, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, nat + towardsCenter * 9, player1, 5);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 15, player1, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 9 - towardsCenterX * 1 + towardsCenterY * 4, player1, 1);*/
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, nat + towardsCenter * 9 - towardsCenterX * 1 + towardsCenterY * 4, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_startLocation + towardsCenter * 5, player2, 2);*/
 
 	// Test to try to reproduce a bug where workers would suicide against Stalkers and Immortals on GoldenWallLE
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, nat + towardsCenter * 15 + towardsCenterY * 3, player1, 1);
@@ -2012,6 +2014,18 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, fourth, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, fourth + towardsCenter * 5, player2, 5);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter, player1, 30);*/
+
+	// Test to see if our Tanks are keeping their defensive siege position when they should (on SubmarineLE)
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, (m_startLocation + nat) / 2 + towardsCenter * 30, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_startLocation + towardsCenter * 5, player2, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player1, 10);*/
+
+	// Test to see if Bunkers are identified as dangerous when they should be
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, nat + towardsCenter * 15, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, nat + towardsCenter * 15, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat - towardsCenter * 5, player2, 1);*/
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat - towardsCenter * 5, player1, 100); 
 }
 
 void CCBot::IssueCheats()
@@ -2085,7 +2099,7 @@ void CCBot::IssueCheats()
 		for (auto u : Observation()->GetUnits())
 		{
 			if (u->is_selected) {
-				Debug()->DebugSetLife(10.0f, u);
+				Debug()->DebugSetLife(50.0f, u);
 			}
 		}
 		Util::ClearChat(*this);

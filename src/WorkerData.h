@@ -34,7 +34,7 @@ class WorkerData
 
     void clearPreviousJob(const Unit & unit);
     std::set<Unit> getWorkerRepairingThatTarget(const Unit & unit);
-	const Unit & GetBestMineralWithLessWorkersInLists(const std::vector<Unit> & closeMinerals, const std::vector<Unit> & farMinerals, const CCPosition location) const;
+	const Unit GetBestMineralWithLessWorkersInLists(const std::vector<Unit> & closeMinerals, const std::vector<Unit> & farMinerals, const CCPosition location) const;
 
 public:
 	//Public variables for simplicity
@@ -68,11 +68,12 @@ public:
 	void sendIdleWorkerToMiningSpot(const Unit & worker, bool force);
 	bool isProxyWorker(const Unit & unit) const;
 	void setProxyWorker(const Unit & unit);
-	bool isAnyMineralAvailable() const;
+	bool isAnyMineralAvailable(CCPosition workerCurrentPosition) const;
 	void removeProxyWorker(const Unit & unit);
 	void clearProxyWorkers();
 	std::map<const BaseLocation*, std::list<Unit>>& getRepairStationWorkers();
 	void validateRepairStationWorkers();
+	Unit GetBestMineralInList(const std::vector<Unit> & unitsToTest, CCPosition depotPosition, bool checkVisibility) const;
 	Unit GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & worker, bool checkVisibility) const;
     Unit getWorkerRepairTarget(const Unit & unit) const;
 	int getWorkerRepairingTargetCount(const Unit & unit);

@@ -19,22 +19,25 @@ void WorkerManager::onStart()
 
 void WorkerManager::onFrame(bool executeMacro)
 {
-	//22.4 frames per second
-	if (m_bot.GetCurrentFrame() > 0)// && m_bot.GetCurrentFrame() % 24 == 0 && m_bot.GetCurrentFrame() >= (int)(22.5 * 8 * 60))//Every seconds starting at 5 minutes
+	if (m_bot.Config().AllowDebug)
 	{
-		const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals;
-		const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene;
-		Util::AddStatistic("Mineral GatherRate", mineralRate);
-		Util::AddStatistic("Gas GatherRate", gasRate);
-	}
-	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % (int)(22.4 * 10 * 60) == 0)//after 5 minutes
-	{
-		Util::DisplayStatistic(m_bot, "Mineral GatherRate");
-		Util::DisplayStatistic(m_bot, "Gas GatherRate");
-	}
-	if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % (int)(22.4 * 10 * 60 + 1) == 0)
-	{
-		Util::ClearChat(m_bot);
+		//22.4 frames per second
+		if (m_bot.GetCurrentFrame() > 0)// && m_bot.GetCurrentFrame() % 24 == 0 && m_bot.GetCurrentFrame() >= (int)(22.5 * 8 * 60))//Every seconds starting at 5 minutes
+		{
+			const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals;
+			const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene;
+			Util::AddStatistic("Mineral GatherRate", mineralRate);
+			Util::AddStatistic("Gas GatherRate", gasRate);
+		}
+		if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % (int)(22.4 * 10 * 60) == 0)//after 5 minutes
+		{
+			Util::DisplayStatistic(m_bot, "Mineral GatherRate");
+			Util::DisplayStatistic(m_bot, "Gas GatherRate");
+		}
+		if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % (int)(22.4 * 10 * 60 + 1) == 0)
+		{
+			Util::ClearChat(m_bot);
+		}
 	}
 
 	m_bot.StartProfiling("0.7.1   m_workerData.updateAllWorkerData");
@@ -415,7 +418,7 @@ void WorkerManager::handleMineralWorkers()
 
 std::vector<CCUnitID> WorkerManager::dispatchWorkerToMineral(Unit mineral, std::vector<CCUnitID> usedWorkers, Unit ressourceDepot)
 {
-	auto & worker = getClosestAvailableWorkerTo(mineral.getPosition(), usedWorkers, 0);
+	auto worker = getClosestAvailableWorkerTo(mineral.getPosition(), usedWorkers, 0);
 	if (!worker.isValid())
 	{
 		return usedWorkers;
@@ -881,7 +884,7 @@ void WorkerManager::handleIdleWorkers()
 				if (!isBuilder && !m_workerData.isProxyWorker(worker))
 				{
 					
-					if (m_workerData.isAnyMineralAvailable())
+					if (m_workerData.isAnyMineralAvailable(worker.getPosition()))
 					{
 						setMineralWorker(worker);
 					}
@@ -1282,6 +1285,7 @@ Unit WorkerManager::getClosestAvailableWorkerTo(const CCPosition & pos, CCUnitID
 Unit WorkerManager::getClosestAvailableWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving, bool allowCombatWorkers, bool filterDifferentHeight) const
 {
 	//TODO priorise workers on far patches? Or maybe rebalance workers in a lowPriorityCheck or when the worker drops off his mineral?
+	//TODO doesnt priorize idle workers?
 
 	Unit closestMineralWorker;
 	auto closestDist = 0.f;

@@ -1538,7 +1538,7 @@ sc2::Unit Util::CreateDummySiegeTankSiegedFromUnit(const sc2::Unit * unit)
 
 bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
 {
-	if (GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air) > 0.f)
+	if (GetSpecialCaseRange(unit, bot, sc2::Weapon::TargetType::Air) > 0.f)
 		return true;
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 	for (auto & weapon : unitTypeData.weapons)
@@ -1551,7 +1551,7 @@ bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
 
 bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 {
-	if (GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground) > 0.f)
+	if (GetSpecialCaseRange(unit, bot, sc2::Weapon::TargetType::Ground) > 0.f)
 		return true;
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 	for (auto & weapon : unitTypeData.weapons)
@@ -1562,9 +1562,14 @@ bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 	return false;
 }
 
-float Util::GetSpecialCaseRange(const sc2::Unit* unit, sc2::Weapon::TargetType where, bool ignoreSpells)
+float Util::GetSpecialCaseRange(const sc2::Unit* unit, CCBot & bot, sc2::Weapon::TargetType where, bool ignoreSpells)
 {
-	return GetSpecialCaseRange(unit->unit_type, where, ignoreSpells);
+	float range = GetSpecialCaseRange(unit->unit_type, where, ignoreSpells);
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER && !bot.Commander().Combat().isBunkerDangerous(unit))
+	{
+		range = -1.f;
+	}
+	return range;
 }
 
 float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::TargetType where, bool ignoreSpells)
@@ -1578,7 +1583,10 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	}
 	else if (unitType == sc2::UNIT_TYPEID::TERRAN_BUNKER)
 	{
-		range = 7.f;
+		if (where == sc2::Weapon::TargetType::Air)
+			range = 6.f;
+		else
+			range = 7.f;
 	}
 	else if (unitType == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 	{
@@ -1656,7 +1664,7 @@ float Util::GetGroundAttackRange(const sc2::Unit * unit, CCBot & bot)
 
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
-	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Ground);
+	float maxRange = GetSpecialCaseRange(unit, bot, sc2::Weapon::TargetType::Ground);
 
 	if (maxRange < 0.f)
 	{
@@ -1690,7 +1698,7 @@ float Util::GetAirAttackRange(const sc2::Unit * unit, CCBot & bot)
 
 	sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 
-	float maxRange = GetSpecialCaseRange(unit->unit_type, sc2::Weapon::TargetType::Air);
+	float maxRange = GetSpecialCaseRange(unit, bot, sc2::Weapon::TargetType::Air);
 	if (maxRange < 0.f)
 	{
 		for (auto & weapon : unitTypeData.weapons)
@@ -1727,7 +1735,7 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 	const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
 	const sc2::Weapon::TargetType expectedWeaponType = target->is_flying ? sc2::Weapon::TargetType::Air : sc2::Weapon::TargetType::Ground;
 	
-	float maxRange = GetSpecialCaseRange(unit->unit_type, expectedWeaponType, ignoreSpells);
+	float maxRange = GetSpecialCaseRange(unit, bot, expectedWeaponType, ignoreSpells);
 	if (maxRange < 0.f)
 	{
 		for (auto & weapon : unitTypeData.weapons)
@@ -1747,6 +1755,9 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 			maxRange = 0.f;
 		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED && unit->health_max > 0 && !Util::IsPositionUnderDetection(unit->pos, bot))
 			maxRange = 0.f;	// The Widow Mine cannot attack between shots
+		auto targetUnitType = UnitType(target->unit_type, bot);
+		if (targetUnitType.isBuilding() && !targetUnitType.isCombatUnit())
+			maxRange -= 0.25f;	// To fix a bug where the radius is too large for buildings
 	}
 
 	return std::max(0.f, maxRange); 
@@ -1774,7 +1785,7 @@ float Util::GetMaxAttackRange(const sc2::Unit * unit, CCBot & bot)
 
 	const sc2::UnitTypeData unitTypeData(bot.Observation()->GetUnitTypeData()[unit->unit_type]);
 	
-	float maxRange = GetSpecialCaseRange(unitTypeData.unit_type_id);
+	float maxRange = GetSpecialCaseRange(unit, bot);
 	if (maxRange < 0.f)
 	{
 		for (auto & weapon : unitTypeData.weapons)
@@ -1945,7 +1956,8 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
     else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
     {
         //A special case must be done for bunkers since they have no weapon and the cargo space is not available
-        dps = 30.f;
+		if (bot.Commander().Combat().isBunkerDangerous(unit))
+			dps = 30.f;
     }
 	else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 	{
@@ -2978,8 +2990,8 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		{
 			if (unit->is_hallucination)
 				continue;
-			// Since bunkers deal no damage in the simulation, we swap them for 4 Marines with extra health
-			if(unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+			// Since bunkers deal no damage in the simulation, we swap them for 4 Marines with extra health, unless the bunker is enemy and not dangerous
+			if(unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER && (unit->alliance == sc2::Unit::Alliance::Self || bot.Commander().Combat().isBunkerDangerous(unit)))
 			{
 				const int owner = i == 0 ? playerId : 3 - playerId;
 				const int marineCount = owner == playerId ? unit->passengers.size() : 4;

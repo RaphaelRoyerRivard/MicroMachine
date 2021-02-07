@@ -286,6 +286,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
+	bool defendingAgainstCombatBuildings = false;	// Only computed for Tanks
 	m_bot.StartProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 	bool unitShouldHeal = m_bot.Commander().Combat().ShouldUnitHeal(rangedUnit);
 	if (unitShouldHeal)
@@ -367,7 +368,6 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 				}
 			}
 			bool defending = m_order.getType() == SquadOrderTypes::Defend;
-			bool defendingAgainstCombatBuildings = false;
 			if (defending)
 			{
 				for (auto enemy : rangedUnitTargets)
@@ -409,7 +409,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 						const auto & siegePositions = m_bot.Commander().Combat().getMainBaseSiegePositions();
 						for (int i = 0; i < siegePositions.size(); ++i)
 						{
-							if (siegeTanks[i] == nullptr || siegeTanks[i] == rangedUnit)
+							if ((siegeTanks[i] == nullptr && !Util::Contains(rangedUnit, siegeTanks)) || siegeTanks[i] == rangedUnit)
 							{
 								bool shouldSiegeInMainBase = m_order.getType() != SquadOrderTypes::Defend;
 								if (!shouldSiegeInMainBase)
@@ -418,8 +418,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 									if (baseToDefend)
 									{
 										float dist = Util::DistSq(siegePositions[i], baseToDefend->getDepotPosition());
-										shouldSiegeInMainBase = dist < 20 * 20;
+										shouldSiegeInMainBase = dist < 30 * 30;
 									}
+									else
+										shouldSiegeInMainBase = true;
 								}
 								if (shouldSiegeInMainBase)
 								{
@@ -464,7 +466,17 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	// To allow tanks to siege up the closest they can to their goal, we need to know for how long they've been close to it
 	if (isTank && Util::DistSq(rangedUnit->pos, goal) > 6 * 6)
 	{
-		m_tanksLastFrameFarFromRetreatGoal[rangedUnit] = m_bot.GetCurrentFrame();
+		bool alreadyDefendingBaseUnderAttack = false;
+		if (m_order.getType() == SquadOrderTypes::Defend && !defendingAgainstCombatBuildings)
+		{
+			auto baseContainingEnemies = m_bot.Bases().getBaseContainingPosition(goal);
+			auto baseContainingTank = m_bot.Bases().getBaseContainingPosition(rangedUnit->pos);
+			auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();	// Don't move main base siege tanks when defending
+			if (!baseContainingEnemies || baseContainingEnemies == baseContainingTank || Util::Contains(rangedUnit, siegeTanks))
+				alreadyDefendingBaseUnderAttack = true;
+		}
+		if (!alreadyDefendingBaseUnderAttack)
+			m_tanksLastFrameFarFromRetreatGoal[rangedUnit] = m_bot.GetCurrentFrame();
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
@@ -1255,15 +1267,17 @@ bool RangedManager::ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition
 
 bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, sc2::Units & rangedUnits)
 {
+	bool isSieged = tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED;
+
 	// If the tank already has a target close enough, no need to morph, unless they are too close
 	if (target && target->last_seen_game_loop == m_bot.GetCurrentFrame())
 	{
 		float dist = Util::Dist(tank->pos, target->pos);
 		float maxRange = Util::GetAttackRangeForTarget(tank, target, m_bot);
-		float minRange = tank->radius + target->radius + 2.f;
+		float minRange = isSieged ? tank->radius + target->radius + 2.f : 0;
 		if (dist <= maxRange && dist >= minRange)
 		{
-			if (tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED)
+			if (isSieged)
 			{
 				m_siegedTanksLastValidTargetFrame[tank] = m_bot.GetCurrentFrame();
 			}
@@ -1275,7 +1289,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 	sc2::AbilityID morphAbility = 0;
 	int frameCount = 0;
 	// Siege logic
-	if (tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
+	if (!isSieged)
 	{
 		bool hasEffectInfluence = false;
 		for (int x = -1; x <= 1; ++x)

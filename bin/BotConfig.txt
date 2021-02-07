@@ -16,7 +16,7 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.13.26",
+        "BotVersion"                : "1.14.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
@@ -24,7 +24,7 @@
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Zerg",
+        "EnemyRace"                 : "Terran",
         "MapFile"                   : "SubmarineLE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
@@ -100,7 +100,7 @@
         "ScoutHarassEnemy"          : true,
         "EnableMultiThreading"      : false,
         "TournamentMode"            : false,
-        "StarCraft2Version"         : "4.11.4"
+        "StarCraft2Version"         : "5.0.6"
     },
     
     "UCTConsideringDurations" :

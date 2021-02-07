@@ -895,7 +895,7 @@ void CombatCommander::updateWorkerFleeSquad()
 		const bool isWorkerRushed = m_bot.Strategy().isWorkerRushed();
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
 		if (Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
-			|| (!earlyRushed &&
+			|| ((!earlyRushed || job == WorkerJobs::Idle) &&
 				((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
 				|| (groundThreat && (injured || (isProxyWorker && isWorkerRushed)) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))))
 		{
@@ -2519,7 +2519,7 @@ void CombatCommander::updateDefenseSquads()
 				}
 				else
 				{
-					support = region.antiGroundPowerNeeded() >= region.antiAirPowerNeeded() ? "ground" : "air";
+					support = region.airEnemyPower > 0.f && region.antiAirPowerNeeded() > region.antiGroundPowerNeeded() ? "air" : "ground";
 				}
 				bool needsMoreSupport = true;
 				if (support == "ground")
@@ -3584,4 +3584,17 @@ bool CombatCommander::GetUnitAbilities(const sc2::Unit * unit, sc2::AvailableAbi
 		}
 	}
 	return false;
+}
+
+bool CombatCommander::isBunkerDangerous(const sc2::Unit * bunker) const
+{
+	auto it = m_dangerousEnemyBunkers.find(bunker);
+	if (it != m_dangerousEnemyBunkers.end() && m_bot.GetCurrentFrame() - it->second < 22.4f * 60 * 2)
+		return true;
+	return false;
+}
+
+void CombatCommander::setBunkerIsDangerous(const sc2::Unit * bunker)
+{
+	m_dangerousEnemyBunkers[bunker] = m_bot.GetCurrentFrame();
 }
