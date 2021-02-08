@@ -1756,8 +1756,8 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED && unit->health_max > 0 && !Util::IsPositionUnderDetection(unit->pos, bot))
 			maxRange = 0.f;	// The Widow Mine cannot attack between shots
 		auto targetUnitType = UnitType(target->unit_type, bot);
-		if (targetUnitType.isBuilding() && !targetUnitType.isCombatUnit())
-			maxRange -= 0.25f;	// To fix a bug where the radius is too large for buildings
+		if (targetUnitType.isBuilding())
+			maxRange -= 0.35f;	// To fix a bug where the radius is too large for buildings
 	}
 
 	return std::max(0.f, maxRange); 

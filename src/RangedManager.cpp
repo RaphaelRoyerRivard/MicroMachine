@@ -1269,12 +1269,12 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 {
 	bool isSieged = tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED;
 
+	float minRange = !isSieged ? 0 : 2 + tank->radius + (target ? target->radius : 0);
 	// If the tank already has a target close enough, no need to morph, unless they are too close
 	if (target && target->last_seen_game_loop == m_bot.GetCurrentFrame())
 	{
 		float dist = Util::Dist(tank->pos, target->pos);
 		float maxRange = Util::GetAttackRangeForTarget(tank, target, m_bot);
-		float minRange = isSieged ? tank->radius + target->radius + 2.f : 0;
 		if (dist <= maxRange && dist >= minRange)
 		{
 			if (isSieged)
@@ -1416,6 +1416,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 				morphAbility = sc2::ABILITY_ID::MORPH_SIEGEMODE;
 				frameCount = TANK_SIEGE_FRAME_COUNT;
 				morph = true;
+				m_tanksLastSiegeFrame[tank] = m_bot.GetCurrentFrame() + frameCount;
 			}
 		}
 	}
@@ -1426,22 +1427,31 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 		// Unsiege only if there is no target
 		if (!newTarget)// || Util::Dist(tank->pos, newTarget->pos) > Util::GetAttackRangeForTarget(tank, newTarget, m_bot) + Util::getSpeedOfUnit(newTarget, m_bot))
 		{
-			// Check if there there are ground threats
+			// Check if there are ground threats
 			bool groundThreats = false;
+			bool closeGroundThreats = false;
 			for (const auto threat : threats)
 			{
 				if (!threat->is_flying)
 				{
 					groundThreats = true;
-					break;
+					if (Util::DistSq(tank->pos, threat->pos) < minRange * minRange)
+					{
+						closeGroundThreats = true;
+						break;
+					}
 				}
 			}
 			// And there are ground threats or 2.5s passed since the last valid target while not being close to its retreat location
 			if (groundThreats || (m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f && m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] == 0))
 			{
-				morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
-				frameCount = TANK_UNSIEGE_FRAME_COUNT;
-				morph = true;
+				// If there are close ground threats or if it's been at least 2.5s since the tank morphed
+				if (closeGroundThreats || m_bot.GetCurrentFrame() - m_tanksLastSiegeFrame[tank] > 22.4f * 2.5f)
+				{
+					morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
+					frameCount = TANK_UNSIEGE_FRAME_COUNT;
+					morph = true;
+				}
 			}
 		}
 		else

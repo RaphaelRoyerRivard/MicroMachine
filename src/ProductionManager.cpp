@@ -904,7 +904,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if (!produceMarauders && (reaperCount == 0 || (((proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted) || enemyRace == sc2::Race::Terran) && producedReaperCount < earlyRushed ? 4 : 2)))
+				if (!produceMarauders && (reaperCount == 0 || (((proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted) || enemyRace == sc2::Race::Terran) && producedReaperCount < 2)))
 				{
 					if (!m_queue.contains(MetaTypeEnum::Reaper))
 					{
@@ -1049,6 +1049,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Medivac, 0, false));
 						}
 					}
+				}
+
+				// Produce Marines if we are not producing Reapers or Marauders
+				if (!m_queue.contains(MetaTypeEnum::Reaper) && !m_queue.contains(MetaTypeEnum::Reaper) && !m_queue.contains(MetaTypeEnum::Marine))
+				{
+					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
 				}
 #endif
 				const bool proxyCombatBuilding = m_bot.Strategy().enemyHasProxyCombatBuildings();
