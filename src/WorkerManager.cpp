@@ -366,6 +366,10 @@ void WorkerManager::handleMineralWorkers()
 			sc2::Tag target;
 			if (worker.getUnitPtr()->orders.size() > 0)
 			{
+				if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
+				{
+					continue;
+				}
 				target = worker.getUnitPtr()->orders[0].target_unit_tag;
 			}
 
@@ -469,13 +473,16 @@ void WorkerManager::handleMules()
 			if (!muleHarvests[id].mineral.isValid() && (mule.getUnitPtr()->orders.size() == 0 || mule.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE))
 			{
 				auto mineral = m_bot.Buildings().getClosestMineral(mule.getPosition());
-				Micro::SmartRightClick(mule.getUnitPtr(), mineral, m_bot);//Cannot be done frame 1, thats why its in the 'else' clause
-				for (auto & unit : m_bot.GetNeutralUnits())
+				if (mineral != nullptr)
 				{
-					if (unit.first == mineral->tag)
+					Micro::SmartRightClick(mule.getUnitPtr(), mineral, m_bot);//Cannot be done frame 1, thats why its in the 'else' clause
+					for (auto & unit : m_bot.GetNeutralUnits())
 					{
-						muleHarvests[id].mineral = unit.second;
-						break;
+						if (unit.first == mineral->tag)
+						{
+							muleHarvests[id].mineral = unit.second;
+							break;
+						}
 					}
 				}
 			}
@@ -621,7 +628,7 @@ void WorkerManager::handleGasWorkers()
 							auto mineralWorker = getMineralWorker(geyser);
 							if (mineralWorker.isValid())
 							{
-								if (Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyserPosition, true, m_bot))
+								if (!base->isUnderAttack() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyserPosition, true, m_bot))
 								{
 									m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
 								}
@@ -881,7 +888,7 @@ void WorkerManager::handleIdleWorkers()
 				if (!isBuilder && !m_workerData.isProxyWorker(worker))
 				{
 					
-					if (m_workerData.isAnyMineralAvailable())
+					if (m_workerData.isAnyMineralAvailable(worker.getPosition()))
 					{
 						setMineralWorker(worker);
 					}
@@ -1282,6 +1289,7 @@ Unit WorkerManager::getClosestAvailableWorkerTo(const CCPosition & pos, CCUnitID
 Unit WorkerManager::getClosestAvailableWorkerTo(const CCPosition & pos, const std::vector<CCUnitID> & workersToIgnore, float minHpPercentage, bool filterMoving, bool allowCombatWorkers, bool filterDifferentHeight) const
 {
 	//TODO priorise workers on far patches? Or maybe rebalance workers in a lowPriorityCheck or when the worker drops off his mineral?
+	//TODO doesnt priorize idle workers?
 
 	Unit closestMineralWorker;
 	auto closestDist = 0.f;

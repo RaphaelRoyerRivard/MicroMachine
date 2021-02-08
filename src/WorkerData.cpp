@@ -373,29 +373,35 @@ Unit WorkerData::getMineralToMine(const Unit & depot, const CCPosition location)
     return bestMineral;
 }
 
-
-Unit WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & depot, bool checkVisibility) const
+Unit WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, CCPosition depotPosition, bool checkVisibility) const
 {
 	double bestDist = 100000;
 	Unit bestMineral = Unit();
 
 	//Need to check the close and far patches, than determine where the worker should go. Definitely need to rename the function.
-    for (auto & mineral : unitsToTest)
-    {
+	for (auto & mineral : unitsToTest)
+	{
 		if (!mineral.getType().isMineral() || !mineral.isAlive())
-			if(!checkVisibility || mineral.getUnitPtr()->display_type != sc2::Unit::DisplayType::Visible)
+			if (!checkVisibility || mineral.getUnitPtr()->display_type != sc2::Unit::DisplayType::Visible)
 				continue;
 
-        double dist = Util::DistSq(mineral, depot);
+		double dist = Util::DistSq(mineral.getPosition(), depotPosition);
 
-        if (dist < bestDist)
-        {
-            bestMineral = mineral;
-            bestDist = dist;
-        }
-    }
+		if (dist < bestDist)
+		{
+			bestMineral = mineral;
+			bestDist = dist;
+		}
+	}
 
 	return bestMineral;
+}
+
+Unit WorkerData::GetBestMineralInList(const std::vector<Unit> & unitsToTest, const Unit & depot, bool checkVisibility) const
+{
+	if (!depot.isValid())
+		return Unit();
+	return GetBestMineralInList(unitsToTest, depot.getPosition(), checkVisibility);
 }
 
 const Unit WorkerData::GetBestMineralWithLessWorkersInLists(const std::vector<Unit> & closeMinerals, const std::vector<Unit> & farMinerals, const CCPosition location) const
@@ -486,11 +492,11 @@ const Unit WorkerData::GetBestMineralWithLessWorkersInLists(const std::vector<Un
 	return Unit();
 }
 
-bool WorkerData::isAnyMineralAvailable() const
+bool WorkerData::isAnyMineralAvailable(CCPosition workerCurrentPosition) const
 {
 	for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
 	{
-		if (base->isUnderAttack())
+		if (base->isUnderAttack() && !base->containsPositionApproximative(workerCurrentPosition))
 			continue;
 		auto & depot = base->getResourceDepot();
 		if (!depot.isValid() || depot.getBuildProgress() < 0.99)
@@ -676,6 +682,7 @@ void WorkerData::sendIdleWorkerToMiningSpot(const Unit & worker, bool force)
 				worker.rightClick(m_idleMineralTarget);
 			}
 			else if(worker.getUnitPtr()->orders.empty() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE || worker.getUnitPtr()->orders[0].target_pos != m_idleMineralTarget.getPosition())
+
 			{
 				worker.rightClick(m_idleMineralTarget.getPosition());
 			}

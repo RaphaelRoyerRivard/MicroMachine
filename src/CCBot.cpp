@@ -2106,7 +2106,7 @@ void CCBot::IssueCheats()
 		for (auto u : Observation()->GetUnits())
 		{
 			if (u->is_selected) {
-				Debug()->DebugSetLife(10.0f, u);
+				Debug()->DebugSetLife(50.0f, u);
 			}
 		}
 		Util::ClearChat(*this);
