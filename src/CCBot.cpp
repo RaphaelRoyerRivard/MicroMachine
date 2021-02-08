@@ -2025,7 +2025,6 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, nat + towardsCenter * 15, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, nat + towardsCenter * 15, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat - towardsCenter * 5, player2, 1);*/
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat - towardsCenter * 5, player1, 100); 
 }
 
 void CCBot::IssueCheats()

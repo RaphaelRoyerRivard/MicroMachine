@@ -366,6 +366,10 @@ void WorkerManager::handleMineralWorkers()
 			sc2::Tag target;
 			if (worker.getUnitPtr()->orders.size() > 0)
 			{
+				if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
+				{
+					continue;
+				}
 				target = worker.getUnitPtr()->orders[0].target_unit_tag;
 			}
 
