@@ -167,6 +167,28 @@ void CombatCommander::clearAllyScans()
 	}
 }
 
+void CombatCommander::clearDangerousEnemyBunkers()
+{
+	for (auto it = m_dangerousEnemyBunkers.begin(); it != m_dangerousEnemyBunkers.end();)
+	{
+		if (!it->first || !it->first->is_alive)
+			m_dangerousEnemyBunkers.erase(it++);
+		else
+			++it;
+	}
+}
+
+void CombatCommander::clearFleeingWorkers()
+{
+	for (auto it = m_lastFleeingWorkerFrame.begin(); it != m_lastFleeingWorkerFrame.end();)
+	{
+		if (!it->first || !it->first->is_alive)
+			m_lastFleeingWorkerFrame.erase(it++);
+		else
+			++it;
+	}
+}
+
 void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 {
 	if (m_mainBaseSiegePositions.empty())
@@ -180,13 +202,11 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	m_logVikingActions = false;
 
 	CleanActions(combatUnits);
-
 	clearYamatoTargets();
-
 	clearAllyScans();
-
+	clearDangerousEnemyBunkers();
+	clearFleeingWorkers();
 	Util::ClearSeenEnemies();
-
 	m_medivacTargets.clear();
 
     m_combatUnits = combatUnits;
@@ -905,6 +925,7 @@ void CombatCommander::updateWorkerFleeSquad()
 				m_bot.Workers().setCombatWorker(worker);
 				m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 			}
+			m_lastFleeingWorkerFrame[worker.getUnitPtr()] = m_bot.GetCurrentFrame();
 		}
 		else
 		{
@@ -950,6 +971,7 @@ void CombatCommander::updateWorkerFleeSquad()
 								m_bot.Workers().setCombatWorker(worker);
 								m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 							}
+							m_lastFleeingWorkerFrame[worker.getUnitPtr()] = m_bot.GetCurrentFrame();
 							continue;
 						}
 					}
@@ -958,8 +980,11 @@ void CombatCommander::updateWorkerFleeSquad()
 			const auto squad = m_squadData.getUnitSquad(worker);
 			if(squad != nullptr && squad == &workerFleeSquad)
 			{
-				m_bot.Workers().finishedWithWorker(worker);
-				workerFleeSquad.removeUnit(worker);
+				if (m_bot.GetCurrentFrame() - m_lastFleeingWorkerFrame[worker.getUnitPtr()] > 22.4f * 2)
+				{
+					m_bot.Workers().finishedWithWorker(worker);
+					workerFleeSquad.removeUnit(worker);
+				}
 			}
 		}
 	}

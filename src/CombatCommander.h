@@ -172,9 +172,12 @@ class CombatCommander
 	std::vector<CCTilePosition> m_mainBaseSiegePositions;
 	sc2::Units m_mainBaseSiegeTanks;
 	std::map<const sc2::Unit *, long> m_dangerousEnemyBunkers;
+	std::map<const sc2::Unit *, long> m_lastFleeingWorkerFrame;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
+	void			clearDangerousEnemyBunkers();
+	void			clearFleeingWorkers();
 	void			updateIdlePosition();
     void            updateScoutDefenseSquad();
 	void            updateDefenseBuildings();
