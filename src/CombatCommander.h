@@ -211,7 +211,7 @@ class CombatCommander
 	void			updateGroundInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateAirInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
-	void			updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect, bool cloaked);
+	void			updateInfluenceMap(float dps, float minRange, float maxRange, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect, bool cloaked);
 	void			updateBlockedTilesWithUnit(const Unit& unit);
 	void			findMainBaseSiegePositions();
 	void			drawMainBaseSiegePositions();
