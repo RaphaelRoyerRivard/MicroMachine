@@ -17,7 +17,7 @@ const size_t DropPriority = 5;
 const float DefaultOrderRadius = 25;			//Order radius is the threat awareness range of units in the squad
 const float WorkerRushDefenseOrderRadius = 250;
 const float BaseDefenseOrderRadius = 50;
-const float MainAttackOrderRadius = 15;
+const float MainAttackOrderRadius = 35;
 const float HarassOrderRadius = 25;
 const float ScoutOrderRadius = 15;				//Small number to prevent the scout from targeting far units instead of going to the next base location (cannot be too small otherwise the unit will ignore threats)
 const float MainAttackMaxDistance = 20;			//Distance from the center of the Main Attack Squad for a unit to be considered in it
@@ -1031,8 +1031,8 @@ void CombatCommander::updateBackupSquads()
         {
 			if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION)
 				idleHellions.push_back(&unit);
-			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE)
-				idleMarines.push_back(&unit);
+			/*else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE)
+				idleMarines.push_back(&unit);*/
 			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 				idleVikings.push_back(&unit);
 			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
@@ -1052,14 +1052,14 @@ void CombatCommander::updateBackupSquads()
 	}
 
 	// MARINES
-	const auto battlecruisers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
+	/*const auto battlecruisers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
 	if (idleMarines.size() >= 10 && battlecruisers > 0)
 	{
 		for (auto marine : idleMarines)
 		{
 			m_squadData.assignUnitToSquad(*marine, backupSquad);
 		}
-	}
+	}*/
 
 	// VIKINGS
 	const auto tempestCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
@@ -1681,7 +1681,7 @@ void CombatCommander::updateAttackSquads()
 		backupSquad.getSquadOrder().setStatus(orderStatus);
 	}
 
-	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, HarassOrderRadius, orderStatus);
+	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, MainAttackOrderRadius, orderStatus);
 	mainAttackSquad.setSquadOrder(mainAttackOrder);
 
     /*if (mainAttackSquad.needsToRetreat())
