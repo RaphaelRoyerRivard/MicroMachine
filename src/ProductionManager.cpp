@@ -1051,8 +1051,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				// Produce Marines if we are not producing Reapers or Marauders
-				if (!m_queue.contains(MetaTypeEnum::Reaper) && !m_queue.contains(MetaTypeEnum::Reaper) && !m_queue.contains(MetaTypeEnum::Marine))
+				// Produce Marines if we are not producing Reapers
+				if (!m_queue.contains(MetaTypeEnum::Reaper) && !m_queue.contains(MetaTypeEnum::Marine))
 				{
 					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
 				}
