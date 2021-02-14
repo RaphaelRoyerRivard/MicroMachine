@@ -1457,6 +1457,8 @@ bool RangedManager::ShouldTankUnsiege(const sc2::Unit * tank, sc2::Units & targe
 		int tankDistToBase = startingBase->getGroundDistance(tank->pos);
 		for (auto enemy : targets)
 		{
+			if (enemy->is_flying)
+				continue;
 			int enemyDistToBase = startingBase->getGroundDistance(enemy->pos);
 			if (enemyDistToBase >= 0 && enemyDistToBase < tankDistToBase)
 			{
@@ -1481,16 +1483,14 @@ bool RangedManager::ShouldTankUnsiege(const sc2::Unit * tank, sc2::Units & targe
 		}
 	}
 	bool isSieged = tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED;
-	bool siegedTankHasNoTargetForAWhile = isSieged && !isCloseToRetreatGoal && m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f;
-	// And there are ground threats or 2.5s passed since the last valid target while not being close to its retreat location
-	if (enemiesCloserToMainBase || groundThreats || siegedTankHasNoTargetForAWhile)
+	bool siegedTankHasNoTargetForAWhile = !isCloseToRetreatGoal && m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f;
+	bool tankSiegedRecently = m_bot.GetCurrentFrame() - m_tanksLastSiegeFrame[tank] < 22.4f * 2.5f;
+	// If there are close ground threats
+	// or 2.5s passed since the last valid target while not being close to its retreat location
+	// or it's been at least 2.5s since the tank morphed
+	if (enemiesCloserToMainBase || groundThreats || (isSieged && !tankSiegedRecently && siegedTankHasNoTargetForAWhile))
 	{
-		bool tankSiegedRecently = m_bot.GetCurrentFrame() - m_tanksLastSiegeFrame[tank] < 22.4f * 2.5f;
-		// If there are close ground threats or if it's been at least 2.5s since the tank morphed
-		if (closeGroundThreats || (isSieged && !tankSiegedRecently))
-		{
-			return true;
-		}
+		return true;
 	}
 
 	return false;
