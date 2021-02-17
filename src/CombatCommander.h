@@ -270,6 +270,7 @@ public:
 	void SetLogVikingActions(bool log);
 	bool ShouldSkipFrame(const sc2::Unit * combatUnit) const;
 	bool PlanAction(const sc2::Unit* rangedUnit, UnitAction action);
+	void ClearActions();
 	void CleanActions(const std::vector<Unit> &rangedUnits);
 	void ExecuteActions();
 	UnitAction& GetUnitAction(const sc2::Unit * combatUnit);
