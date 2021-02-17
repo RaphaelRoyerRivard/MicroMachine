@@ -206,6 +206,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	clearAllyScans();
 	clearDangerousEnemyBunkers();
 	clearFleeingWorkers();
+	Util::ClearDeadDummyUnits();
 	Util::ClearSeenEnemies();
 	m_medivacTargets.clear();
 
@@ -3154,6 +3155,11 @@ bool CombatCommander::PlanAction(const sc2::Unit* rangedUnit, UnitAction action)
 
 	unitActions[rangedUnit] = action;
 	return true;
+}
+
+void CombatCommander::ClearActions()
+{
+	unitActions.clear();
 }
 
 void CombatCommander::CleanActions(const std::vector<Unit> &combatUnits)
