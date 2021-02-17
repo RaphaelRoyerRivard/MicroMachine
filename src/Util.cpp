@@ -1511,7 +1511,7 @@ void Util::UpdateDummyUnit(sc2::Unit * dummy, const sc2::Unit * unit)
 
 sc2::Unit * Util::CreateDummyFromUnit(const sc2::Unit * unit)
 {
-	auto & it = m_dummyUnits.find(std::make_pair(unit, unit->unit_type));
+	auto it = m_dummyUnits.find(std::make_pair(unit, unit->unit_type));
 	if (it != m_dummyUnits.end())
 	{
 		auto dummyUnit = it->second;
