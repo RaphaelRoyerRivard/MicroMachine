@@ -1,5 +1,5 @@
 #pragma once
-//#define PUBLIC_RELEASE
+#define PUBLIC_RELEASE
 //#define ROBUST_MODE//Attempt to recover from errors by skipping managers
 
 //#define NO_UNITS
