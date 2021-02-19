@@ -172,9 +172,12 @@ class CombatCommander
 	std::vector<CCTilePosition> m_mainBaseSiegePositions;
 	sc2::Units m_mainBaseSiegeTanks;
 	std::map<const sc2::Unit *, long> m_dangerousEnemyBunkers;
+	std::map<const sc2::Unit *, long> m_lastFleeingWorkerFrame;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
+	void			clearDangerousEnemyBunkers();
+	void			clearFleeingWorkers();
 	void			updateIdlePosition();
     void            updateScoutDefenseSquad();
 	void            updateDefenseBuildings();
@@ -208,7 +211,7 @@ class CombatCommander
 	void			updateGroundInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateAirInfluenceMapForUnit(const Unit& enemyUnit);
 	void			updateInfluenceMapForUnit(const Unit& enemyUnit, const bool ground);
-	void			updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect, bool cloaked);
+	void			updateInfluenceMap(float dps, float minRange, float maxRange, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect, bool cloaked);
 	void			updateBlockedTilesWithUnit(const Unit& unit);
 	void			findMainBaseSiegePositions();
 	void			drawMainBaseSiegePositions();
@@ -267,6 +270,7 @@ public:
 	void SetLogVikingActions(bool log);
 	bool ShouldSkipFrame(const sc2::Unit * combatUnit) const;
 	bool PlanAction(const sc2::Unit* rangedUnit, UnitAction action);
+	void ClearActions();
 	void CleanActions(const std::vector<Unit> &rangedUnits);
 	void ExecuteActions();
 	UnitAction& GetUnitAction(const sc2::Unit * combatUnit);

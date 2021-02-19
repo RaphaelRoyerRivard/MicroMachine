@@ -17,7 +17,7 @@ const size_t DropPriority = 5;
 const float DefaultOrderRadius = 25;			//Order radius is the threat awareness range of units in the squad
 const float WorkerRushDefenseOrderRadius = 250;
 const float BaseDefenseOrderRadius = 50;
-const float MainAttackOrderRadius = 15;
+const float MainAttackOrderRadius = 35;
 const float HarassOrderRadius = 25;
 const float ScoutOrderRadius = 15;				//Small number to prevent the scout from targeting far units instead of going to the next base location (cannot be too small otherwise the unit will ignore threats)
 const float MainAttackMaxDistance = 20;			//Distance from the center of the Main Attack Squad for a unit to be considered in it
@@ -167,6 +167,28 @@ void CombatCommander::clearAllyScans()
 	}
 }
 
+void CombatCommander::clearDangerousEnemyBunkers()
+{
+	for (auto it = m_dangerousEnemyBunkers.begin(); it != m_dangerousEnemyBunkers.end();)
+	{
+		if (!it->first || !it->first->is_alive)
+			m_dangerousEnemyBunkers.erase(it++);
+		else
+			++it;
+	}
+}
+
+void CombatCommander::clearFleeingWorkers()
+{
+	for (auto it = m_lastFleeingWorkerFrame.begin(); it != m_lastFleeingWorkerFrame.end();)
+	{
+		if (!it->first || !it->first->is_alive)
+			m_lastFleeingWorkerFrame.erase(it++);
+		else
+			++it;
+	}
+}
+
 void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 {
 	if (m_mainBaseSiegePositions.empty())
@@ -180,13 +202,12 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	m_logVikingActions = false;
 
 	CleanActions(combatUnits);
-
 	clearYamatoTargets();
-
 	clearAllyScans();
-
+	clearDangerousEnemyBunkers();
+	clearFleeingWorkers();
+	Util::ClearDeadDummyUnits();
 	Util::ClearSeenEnemies();
-
 	m_medivacTargets.clear();
 
     m_combatUnits = combatUnits;
@@ -425,7 +446,7 @@ void CombatCommander::updateInfluenceMapsWithUnits()
 				{
 					const float dps = Util::GetSpecialCaseDps(enemyUnit.getUnitPtr(), m_bot, sc2::Weapon::TargetType::Ground);
 					const float radius = Util::GetSpecialCaseRange(enemyUnit.getAPIUnitType(), sc2::Weapon::TargetType::Ground);
-					updateInfluenceMap(dps, radius, 1.f, enemyUnit.getPosition(), true, true, true, false);
+					updateInfluenceMap(dps, 0, radius, 1.f, enemyUnit.getPosition(), true, true, true, false);
 				}
 				else
 				{
@@ -557,9 +578,9 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 			for (auto & pos : effect.positions)
 			{
 				if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Air)
-					updateInfluenceMap(dps, radius, 1.f, pos, false, true, true, false);
+					updateInfluenceMap(dps, 0, radius, 1.f, pos, false, true, true, false);
 				if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Ground)
-					updateInfluenceMap(dps, radius, 1.f, pos, true, true, true, false);
+					updateInfluenceMap(dps, 0, radius, 1.f, pos, true, true, true, false);
 			}
 		}
 	}
@@ -567,7 +588,7 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 	// Generate effect influence around stacked enemy workers
 	for (const auto & stackedEnemyWorkers : m_bot.GetStackedEnemyWorkers())
 	{
-		updateInfluenceMap(stackedEnemyWorkers.size() * 5, 1.5f, 1.f, stackedEnemyWorkers[0]->pos, true, true, true, false);
+		updateInfluenceMap(stackedEnemyWorkers.size() * 5, 0, 1.5f, 1.f, stackedEnemyWorkers[0]->pos, true, true, true, false);
 	}
 }
 
@@ -586,18 +607,19 @@ void CombatCommander::updateInfluenceMapForUnit(const Unit& enemyUnit, const boo
 	const float dps = ground ? Util::GetGroundDps(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirDps(enemyUnit.getUnitPtr(), m_bot);
 	if (dps == 0.f)
 		return;
+	float minRange = enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED ? 2 + enemyUnit.getUnitPtr()->radius : 0;
 	float range = ground ? Util::GetGroundAttackRange(enemyUnit.getUnitPtr(), m_bot) : Util::GetAirAttackRange(enemyUnit.getUnitPtr(), m_bot);
 	if (range == 0.f)
 		return;
 	if (!ground && enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_TEMPEST)
 		range += 2;
 	const float speed = std::max(2.5f, Util::getSpeedOfUnit(enemyUnit.getUnitPtr(), m_bot));
-	updateInfluenceMap(dps, range, speed, enemyUnit.getPosition(), ground, !enemyUnit.isFlying(), false, enemyUnit.getUnitPtr()->cloak == sc2::Unit::Cloaked);
+	updateInfluenceMap(dps, minRange, range, speed, enemyUnit.getPosition(), ground, !enemyUnit.isFlying(), false, enemyUnit.getUnitPtr()->cloak == sc2::Unit::Cloaked);
 }
 
-void CombatCommander::updateInfluenceMap(float dps, float range, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect, bool cloaked)
+void CombatCommander::updateInfluenceMap(float dps, float minRange, float maxRange, float speed, const CCPosition & position, bool ground, bool fromGround, bool effect, bool cloaked)
 {
-	const float totalRange = range + speed;
+	const float totalRange = maxRange + speed;
 
 	const float fminX = floor(position.x - totalRange);
 	const float fmaxX = ceil(position.x + totalRange);
@@ -618,9 +640,11 @@ void CombatCommander::updateInfluenceMap(float dps, float range, float speed, co
 		for (int y = minY; y < maxY; ++y)
 		{
 			const float distance = Util::Dist(position, CCPosition(x + 0.5f, y + 0.5f));
+			if (distance < minRange)
+				continue;
 			float multiplier = 1.f;
-			if (distance > range)
-				multiplier = std::max(0.f, (speed - (distance - range)) / speed);	//value is linearly interpolated in the speed buffer zone
+			if (distance > maxRange)
+				multiplier = std::max(0.f, (speed - (distance - maxRange)) / speed);	//value is linearly interpolated in the speed buffer zone
 			influenceMap[x][y] += dps * multiplier;
 			if (fromGround && cloaked)
 				m_groundFromGroundCloakedCombatInfluenceMap[x][y] += dps * multiplier;
@@ -905,6 +929,7 @@ void CombatCommander::updateWorkerFleeSquad()
 				m_bot.Workers().setCombatWorker(worker);
 				m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 			}
+			m_lastFleeingWorkerFrame[worker.getUnitPtr()] = m_bot.GetCurrentFrame();
 		}
 		else
 		{
@@ -950,6 +975,7 @@ void CombatCommander::updateWorkerFleeSquad()
 								m_bot.Workers().setCombatWorker(worker);
 								m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 							}
+							m_lastFleeingWorkerFrame[worker.getUnitPtr()] = m_bot.GetCurrentFrame();
 							continue;
 						}
 					}
@@ -958,8 +984,11 @@ void CombatCommander::updateWorkerFleeSquad()
 			const auto squad = m_squadData.getUnitSquad(worker);
 			if(squad != nullptr && squad == &workerFleeSquad)
 			{
-				m_bot.Workers().finishedWithWorker(worker);
-				workerFleeSquad.removeUnit(worker);
+				if (m_bot.GetCurrentFrame() - m_lastFleeingWorkerFrame[worker.getUnitPtr()] > 22.4f * 2)
+				{
+					m_bot.Workers().finishedWithWorker(worker);
+					workerFleeSquad.removeUnit(worker);
+				}
 			}
 		}
 	}
@@ -1003,8 +1032,8 @@ void CombatCommander::updateBackupSquads()
         {
 			if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_HELLION)
 				idleHellions.push_back(&unit);
-			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE)
-				idleMarines.push_back(&unit);
+			/*else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_MARINE)
+				idleMarines.push_back(&unit);*/
 			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER || unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
 				idleVikings.push_back(&unit);
 			else if (unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
@@ -1024,14 +1053,14 @@ void CombatCommander::updateBackupSquads()
 	}
 
 	// MARINES
-	const auto battlecruisers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
+	/*const auto battlecruisers = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
 	if (idleMarines.size() >= 10 && battlecruisers > 0)
 	{
 		for (auto marine : idleMarines)
 		{
 			m_squadData.assignUnitToSquad(*marine, backupSquad);
 		}
-	}
+	}*/
 
 	// VIKINGS
 	const auto tempestCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
@@ -1653,7 +1682,7 @@ void CombatCommander::updateAttackSquads()
 		backupSquad.getSquadOrder().setStatus(orderStatus);
 	}
 
-	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, HarassOrderRadius, orderStatus);
+	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, MainAttackOrderRadius, orderStatus);
 	mainAttackSquad.setSquadOrder(mainAttackOrder);
 
     /*if (mainAttackSquad.needsToRetreat())
@@ -3126,6 +3155,11 @@ bool CombatCommander::PlanAction(const sc2::Unit* rangedUnit, UnitAction action)
 
 	unitActions[rangedUnit] = action;
 	return true;
+}
+
+void CombatCommander::ClearActions()
+{
+	unitActions.clear();
 }
 
 void CombatCommander::CleanActions(const std::vector<Unit> &combatUnits)

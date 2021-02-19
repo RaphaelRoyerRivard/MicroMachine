@@ -307,7 +307,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 	else
 	{
-		if (!isCycloneHelper && (isMedivac || isRaven || ((isMarine || isViking || isHellion) && m_order.getType() != SquadOrderTypes::Defend)) && m_order.getType() != SquadOrderTypes::Clear)
+		if (!isCycloneHelper && (isMedivac || isRaven || ((/*isMarine ||*/ isViking || isHellion) && m_order.getType() != SquadOrderTypes::Defend)) && m_order.getType() != SquadOrderTypes::Clear)
 		{
 			goal = GetBestSupportPosition(rangedUnit, allCombatAllies);
 			goalDescription = "Support";
@@ -464,7 +464,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 
 	// To allow tanks to siege up the closest they can to their goal, we need to know for how long they've been close to it
-	if (isTank && Util::DistSq(rangedUnit->pos, goal) > 6 * 6)
+	if (isTank && (Util::DistSq(rangedUnit->pos, goal) > 5 * 5 || Util::TerrainHeight(rangedUnit->pos) != Util::TerrainHeight(goal)))
 	{
 		bool alreadyDefendingBaseUnderAttack = false;
 		if (m_order.getType() == SquadOrderTypes::Defend && !defendingAgainstCombatBuildings)
@@ -1269,12 +1269,12 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 {
 	bool isSieged = tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED;
 
+	float minRange = !isSieged ? 0 : 2 + tank->radius + (target ? target->radius : 0);
 	// If the tank already has a target close enough, no need to morph, unless they are too close
 	if (target && target->last_seen_game_loop == m_bot.GetCurrentFrame())
 	{
 		float dist = Util::Dist(tank->pos, target->pos);
 		float maxRange = Util::GetAttackRangeForTarget(tank, target, m_bot);
-		float minRange = isSieged ? tank->radius + target->radius + 2.f : 0;
 		if (dist <= maxRange && dist >= minRange)
 		{
 			if (isSieged)
@@ -1291,6 +1291,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 	// Siege logic
 	if (!isSieged)
 	{
+		// Do not siege on influence
 		bool hasEffectInfluence = false;
 		for (int x = -1; x <= 1; ++x)
 		{
@@ -1306,116 +1307,38 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 		}
 		if (!hasEffectInfluence)
 		{
-			bool siege = false;
-			// Siege if it has been close to the retreat location for several seconds
-			if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 4)
+			if (!IsTankVulnerable(tank, targets, rangedUnits))
 			{
-				siege = true;
-			}
-			else
-			{
-				// Also siege if there is an enemy not too far away
-				auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
-				auto newTarget = getTarget(&dummySiegeTankSieged, targets, false, true, true, false, true);	// TODO remove the "considerOnlyUnitsInRange" flag
-				if (newTarget)
+				bool siege = false;
+				// Siege if it has been close to the retreat location for several seconds
+				if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 4)
 				{
-					float dist = Util::Dist(tank->pos, newTarget->pos);
-					float range = Util::GetAttackRangeForTarget(&dummySiegeTankSieged, newTarget, m_bot);
-					float speed = Util::getSpeedOfUnit(newTarget, m_bot);
-					// TODO consider movement of enemy units
-					if (dist <= range)// + speed)
+					siege = true;
+				}
+				else
+				{
+					// Also siege if there is an enemy not too far away
+					auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
+					auto newTarget = getTarget(dummySiegeTankSieged, targets, false, true, true, false, true);	// TODO remove the "considerOnlyUnitsInRange" flag
+					if (newTarget)
 					{
-						// Compute potential threats (units that are still far but could attack the Tank)
-						sc2::Units potentialThreats;
-						for (const auto potentialThreat : targets)
-						{
-							float potentialThreatRange = Util::GetAttackRangeForTarget(potentialThreat, tank, m_bot);
-							// Can't attack the tank, so not a threat
-							if (potentialThreatRange <= 0.f)
-								continue;
-							float potentialThreatSpeed = Util::getRealMovementSpeedOfUnit(potentialThreat, m_bot);
-							float potentialThreatDist = Util::Dist(tank->pos, potentialThreat->pos);
-							// If it would take the potential threat less than 5 seconds to reach the tank, we consider it as a potential threat
-							if (potentialThreatSpeed > 0 && potentialThreatDist / potentialThreatSpeed < 5)
-							{
-								potentialThreats.push_back(potentialThreat);
-							}
-						}
-						// Do not siege if their is a fast ground enemy on the same height or higher
-						float tankHeight = Util::TerrainHeight(Util::GetTilePosition(tank->pos));
-						float tankSpeed = Util::getSpeedOfUnit(tank, m_bot);
-						bool fastEnemyOnSameHeight = false;
-						for (const auto threat : potentialThreats)
-						{
-							// Reapers can climb easily and are fast, so we don't want to siege against them
-							if (threat->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
-							{
-								fastEnemyOnSameHeight = true;
-								break;
-							}
-							float threatHeight = Util::TerrainHeight(Util::GetTilePosition(threat->pos));
-							// We don't want to prevent the siege from a unit on lower ground
-							if (threatHeight < tankHeight)
-								continue;
-							float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
-							// The threat is fast and on the same height, so we might not want to siege up
-							if (threatSpeed > tankSpeed)
-							{
-								fastEnemyOnSameHeight = true;
-								break;
-							}
-						}
-						if (fastEnemyOnSameHeight)
-						{
-							// Check if we have allies to protect the tank
-							bool allyProtectingAgainstAllGroundThreats = true;
-							for (const auto threat : potentialThreats)
-							{
-								bool allyProtecting = false;
-								float threatDist = Util::DistSq(tank->pos, threat->pos);
-								auto vectorToThreat = Util::Normalized(threat->pos - tank->pos);
-								for (const auto ally : rangedUnits)
-								{
-									// If our ally is flying, it won't be able to protect the tank much
-									if (ally->is_flying)
-										continue;
-									float allyDist = Util::DistSq(tank->pos, ally->pos);
-									// If our ally is farther than the threat, it won't be able to protect the tank
-									if (allyDist > threatDist)
-										continue;
-									auto vectorToAlly = Util::Normalized(ally->pos - tank->pos);
-									float dotProduct = Util::GetDotProduct(vectorToThreat, vectorToAlly);
-									// Check if our ally is within 45 degrees of the threat
-									if (dotProduct >= 0.5f)
-									{
-										allyProtecting = true;
-										break;
-									}
-								}
-								if (!allyProtecting)
-								{
-									allyProtectingAgainstAllGroundThreats = false;
-									break;
-								}
-							}
-							// Do not siege unless we have allies to protect the tank
-							if (allyProtectingAgainstAllGroundThreats)
-							{
-								siege = true;
-							}
-						}
-						else
+						float dist = Util::Dist(tank->pos, newTarget->pos);
+						float range = Util::GetAttackRangeForTarget(dummySiegeTankSieged, newTarget, m_bot);
+						float speed = Util::getSpeedOfUnit(newTarget, m_bot);
+						// TODO consider movement of enemy units
+						if (dist <= range)// + speed)
 						{
 							siege = true;
 						}
 					}
 				}
-			}
-			if (siege)
-			{
-				morphAbility = sc2::ABILITY_ID::MORPH_SIEGEMODE;
-				frameCount = TANK_SIEGE_FRAME_COUNT;
-				morph = true;
+				if (siege && !ShouldTankUnsiege(tank, targets, threats, minRange))
+				{
+					morphAbility = sc2::ABILITY_ID::MORPH_SIEGEMODE;
+					frameCount = TANK_SIEGE_FRAME_COUNT;
+					morph = true;
+					m_tanksLastSiegeFrame[tank] = m_bot.GetCurrentFrame() + frameCount;
+				}
 			}
 		}
 	}
@@ -1426,18 +1349,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 		// Unsiege only if there is no target
 		if (!newTarget)// || Util::Dist(tank->pos, newTarget->pos) > Util::GetAttackRangeForTarget(tank, newTarget, m_bot) + Util::getSpeedOfUnit(newTarget, m_bot))
 		{
-			// Check if there there are ground threats
-			bool groundThreats = false;
-			for (const auto threat : threats)
-			{
-				if (!threat->is_flying)
-				{
-					groundThreats = true;
-					break;
-				}
-			}
-			// And there are ground threats or 2.5s passed since the last valid target while not being close to its retreat location
-			if (groundThreats || (m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f && m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] == 0))
+			if (ShouldTankUnsiege(tank, targets, threats, minRange))
 			{
 				morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
 				frameCount = TANK_UNSIEGE_FRAME_COUNT;
@@ -1455,6 +1367,133 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 		morph = m_bot.Commander().Combat().PlanAction(tank, action);
 	}
 	return morph;
+}
+
+bool RangedManager::IsTankVulnerable(const sc2::Unit * tank, sc2::Units & targets, sc2::Units & rangedUnits)
+{
+	// Compute potential threats (units that are still far but could attack the Tank)
+	sc2::Units potentialThreats;
+	for (const auto potentialThreat : targets)
+	{
+		float potentialThreatRange = Util::GetAttackRangeForTarget(potentialThreat, tank, m_bot);
+		// Can't attack the tank, so not a threat
+		if (potentialThreatRange <= 0.f)
+			continue;
+		float potentialThreatSpeed = Util::getRealMovementSpeedOfUnit(potentialThreat, m_bot);
+		float potentialThreatDist = Util::Dist(tank->pos, potentialThreat->pos);
+		// If it would take the potential threat less than 5 seconds to reach the tank, we consider it as a potential threat
+		if (potentialThreatSpeed > 0 && potentialThreatDist / potentialThreatSpeed < 5)
+		{
+			potentialThreats.push_back(potentialThreat);
+		}
+	}
+	// Do not siege if there is a fast ground enemy on the same height or higher
+	float tankHeight = Util::TerrainHeight(Util::GetTilePosition(tank->pos));
+	float tankSpeed = Util::getSpeedOfUnit(tank, m_bot);
+	bool fastEnemyOnSameHeight = false;
+	for (const auto threat : potentialThreats)
+	{
+		// Reapers can climb easily and are fast, so we don't want to siege against them
+		if (threat->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+		{
+			fastEnemyOnSameHeight = true;
+			break;
+		}
+		float threatHeight = Util::TerrainHeight(Util::GetTilePosition(threat->pos));
+		// We don't want to prevent the siege from a unit on lower ground
+		if (threatHeight < tankHeight)
+			continue;
+		float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
+		// The threat is fast and on the same height, so we might not want to siege up
+		if (threatSpeed > tankSpeed)
+		{
+			fastEnemyOnSameHeight = true;
+			break;
+		}
+	}
+	if (fastEnemyOnSameHeight)
+	{
+		// Check if we have allies to protect the tank
+		bool allyProtectingAgainstAllGroundThreats = true;
+		for (const auto threat : potentialThreats)
+		{
+			bool allyProtecting = false;
+			float threatDist = Util::DistSq(tank->pos, threat->pos);
+			auto vectorToThreat = Util::Normalized(threat->pos - tank->pos);
+			for (const auto ally : rangedUnits)
+			{
+				// If our ally is flying, it won't be able to protect the tank much
+				if (ally->is_flying)
+					continue;
+				float allyDist = Util::DistSq(tank->pos, ally->pos);
+				// If our ally is farther than the threat, it won't be able to protect the tank
+				if (allyDist > threatDist)
+					continue;
+				auto vectorToAlly = Util::Normalized(ally->pos - tank->pos);
+				float dotProduct = Util::GetDotProduct(vectorToThreat, vectorToAlly);
+				// Check if our ally is within 45 degrees of the threat
+				if (dotProduct >= 0.5f)
+				{
+					allyProtecting = true;
+					break;
+				}
+			}
+			if (!allyProtecting)
+			{
+				// Do not siege if we have no allies to protect the tank
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool RangedManager::ShouldTankUnsiege(const sc2::Unit * tank, sc2::Units & targets, sc2::Units & threats, float minRange)
+{
+	bool isCloseToRetreatGoal = m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] > 0;
+	bool enemiesCloserToMainBase = false;
+	// Check if Tank is on a main base siege position and there are targets closer to our mineral line
+	if (isCloseToRetreatGoal && Util::Contains(tank, m_bot.Commander().Combat().getMainBaseSiegeTanks()))
+	{
+		auto startingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+		int tankDistToBase = startingBase->getGroundDistance(tank->pos);
+		for (auto enemy : targets)
+		{
+			if (enemy->is_flying)
+				continue;
+			int enemyDistToBase = startingBase->getGroundDistance(enemy->pos);
+			if (enemyDistToBase >= 0 && enemyDistToBase < tankDistToBase)
+			{
+				enemiesCloserToMainBase = true;
+				break;
+			}
+		}
+	}
+	// Check if there are ground threats
+	bool closeGroundThreats = false;
+	for (const auto threat : threats)
+	{
+		if (!threat->is_flying)
+		{
+			if (Util::DistSq(tank->pos, threat->pos) < minRange * minRange)
+			{
+				closeGroundThreats = true;
+				break;
+			}
+		}
+	}
+	bool isSieged = tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED;
+	bool siegedTankHasNoTargetForAWhile = !isCloseToRetreatGoal && m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f;
+	bool tankSiegedRecently = m_bot.GetCurrentFrame() - m_tanksLastSiegeFrame[tank] < 22.4f * 2.5f;
+	// If there are close ground threats
+	// or 2.5s passed since the last valid target while not being close to its retreat location
+	// or it's been at least 2.5s since the tank morphed
+	if (enemiesCloserToMainBase || closeGroundThreats || (isSieged && !tankSiegedRecently && siegedTankHasNoTargetForAWhile))
+	{
+		return true;
+	}
+
+	return false;
 }
 
 bool RangedManager::ExecuteThorMorphLogic(const sc2::Unit * thor)
@@ -1478,7 +1517,8 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 {
 	if (force ||
 		(threats.empty()
-		&& (unitShouldHeal || !target || Util::DistSq(rangedUnit->pos, target->pos) > m_order.getRadius() * m_order.getRadius())))
+			// commented out to allow units to get down from cliffs when the ramp is in the opposite direction to the goal
+		/*&& (unitShouldHeal || !target || Util::DistSq(rangedUnit->pos, target->pos) > m_order.getRadius() * m_order.getRadius())*/))
 	{
 #ifndef PUBLIC_RELEASE
 		if (m_bot.Config().DrawHarassInfo)
@@ -2475,7 +2515,7 @@ const sc2::Unit* RangedManager::GetSimulatedUnit(const sc2::Unit * rangedUnit)
 		}
 		if (!simulatedUnit)
 		{
-			dummyMap[rangedUnit->tag] = Util::CreateDummyFromUnit(rangedUnit);
+			dummyMap[rangedUnit->tag] = *Util::CreateDummyFromUnit(rangedUnit);
 			simulatedUnit = &dummyMap[rangedUnit->tag];
 		}
 	}

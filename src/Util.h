@@ -38,6 +38,7 @@ namespace Util
 	static sc2::Unit * m_dummyStimedMarauder;
 	static sc2::Unit * m_dummySiegeTank;
 	static sc2::Unit * m_dummySiegeTankSieged;
+	static std::map<std::pair<const sc2::Unit *, sc2::UNIT_TYPEID>, sc2::Unit *> m_dummyUnits;	// <<real_unit, type>, dummy_unit>
 	static std::list<const sc2::Unit *> m_dummyBurrowedZerglings;
 	static std::map<const sc2::Unit *, std::pair<std::set<const sc2::Unit *>, std::set<const sc2::Unit *>>> m_seenEnemies;	// <enemy, <allies_with_vision, allies_without_vision>
 
@@ -190,15 +191,18 @@ namespace Util
 	void CreateDummySiegeTankSieged(CCBot & bot);
 	sc2::Unit * CreateDummyBurrowedZergling(CCPosition pos, CCBot & bot);
 	void ReleaseDummyBurrowedZergling(const sc2::Unit * burrowedZergling);
+	void ReleaseDummyUnit(std::pair<const sc2::Unit *, sc2::UNIT_TYPEID> & unitPair);
+	void ClearDeadDummyUnits();
 	void SetBaseUnitValues(sc2::Unit * unit, CCBot & bot);
-	sc2::Unit CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit);
-	sc2::Unit CreateDummyFromUnit(const sc2::Unit * unit);
-	sc2::Unit CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit);
-	sc2::Unit CreateDummyVikingFighterFromUnit(const sc2::Unit * unit);
-	sc2::Unit CreateDummyStimedMarineFromUnit(const sc2::Unit * unit);
-	sc2::Unit CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit);
-	sc2::Unit CreateDummySiegeTankFromUnit(const sc2::Unit * unit);
-	sc2::Unit CreateDummySiegeTankSiegedFromUnit(const sc2::Unit * unit);
+	sc2::Unit * CreateDummyFromUnit(sc2::Unit * dummyModel, const sc2::Unit * unit);
+	void UpdateDummyUnit(sc2::Unit * dummy, const sc2::Unit * unit);
+	sc2::Unit * CreateDummyFromUnit(const sc2::Unit * unit);
+	sc2::Unit * CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit);
+	sc2::Unit * CreateDummyVikingFighterFromUnit(const sc2::Unit * unit);
+	sc2::Unit * CreateDummyStimedMarineFromUnit(const sc2::Unit * unit);
+	sc2::Unit * CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit);
+	sc2::Unit * CreateDummySiegeTankFromUnit(const sc2::Unit * unit);
+	sc2::Unit * CreateDummySiegeTankSiegedFromUnit(const sc2::Unit * unit);
 	bool CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot);
 	bool CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot);
     float GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot, bool ignoreSpells = false);

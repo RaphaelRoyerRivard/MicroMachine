@@ -1438,6 +1438,25 @@ void Util::ReleaseDummyBurrowedZergling(const sc2::Unit * burrowedZergling)
 	delete burrowedZergling;
 }
 
+void Util::ReleaseDummyUnit(std::pair<const sc2::Unit *, sc2::UNIT_TYPEID> & unitPair)
+{
+	auto dummy = m_dummyUnits[unitPair];
+	m_dummyUnits.erase(unitPair);
+	delete dummy;
+}
+
+void Util::ClearDeadDummyUnits()
+{
+	std::vector<std::pair<const sc2::Unit *, sc2::UNIT_TYPEID>> unitsToRemove;
+	for (auto & dummyPair : m_dummyUnits)
+	{
+		if (!dummyPair.first.first->is_alive)
+			unitsToRemove.push_back(dummyPair.first);
+	}
+	for (auto unit : unitsToRemove)
+		ReleaseDummyUnit(unit);
+}
+
 void Util::SetBaseUnitValues(sc2::Unit * unit, CCBot & bot)
 {
 	unit->tag = 0;
@@ -1467,24 +1486,39 @@ void Util::SetBaseUnitValues(sc2::Unit * unit, CCBot & bot)
 	unit->buffs = {};
 	unit->is_powered = false;
 	unit->last_seen_game_loop = 0;
+	unit->is_hallucination = false;
 }
 
-sc2::Unit Util::CreateDummyFromUnit(sc2::Unit * dummyPointer, const sc2::Unit * unit)
+sc2::Unit * Util::CreateDummyFromUnit(sc2::Unit * dummyModel, const sc2::Unit * unit)
 {
-	sc2::Unit dummy = sc2::Unit(*dummyPointer);
-	dummy.pos = unit->pos;
-	dummy.facing = unit->facing;
-	dummy.health = unit->health;
-	dummy.health_max = unit->health_max;	// Useful for Marines with combat shield upgrade
-	dummy.tag = unit->tag;
-	dummy.last_seen_game_loop = unit->last_seen_game_loop;
-	dummy.owner = unit->owner;
-	dummy.alliance = unit->alliance;
+	sc2::Unit * dummy = new sc2::Unit(*dummyModel);
+	UpdateDummyUnit(dummy, unit);
+	m_dummyUnits[std::make_pair(unit, unit->unit_type)] = dummy;
 	return dummy;
 }
 
-sc2::Unit Util::CreateDummyFromUnit(const sc2::Unit * unit)
+void Util::UpdateDummyUnit(sc2::Unit * dummy, const sc2::Unit * unit)
 {
+	dummy->pos = unit->pos;
+	dummy->facing = unit->facing;
+	dummy->health = unit->health;
+	dummy->health_max = unit->health_max;	// Useful for Marines with combat shield upgrade
+	dummy->tag = unit->tag;
+	dummy->last_seen_game_loop = unit->last_seen_game_loop;
+	dummy->owner = unit->owner;
+	dummy->alliance = unit->alliance;
+}
+
+sc2::Unit * Util::CreateDummyFromUnit(const sc2::Unit * unit)
+{
+	auto it = m_dummyUnits.find(std::make_pair(unit, unit->unit_type));
+	if (it != m_dummyUnits.end())
+	{
+		auto dummyUnit = it->second;
+		UpdateDummyUnit(dummyUnit, unit);
+		return dummyUnit;
+	}
+
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER)
 		return CreateDummyVikingAssaultFromUnit(unit);
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT)
@@ -1497,43 +1531,41 @@ sc2::Unit Util::CreateDummyFromUnit(const sc2::Unit * unit)
 		return CreateDummySiegeTankSiegedFromUnit(unit);
 	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED)
 		return CreateDummySiegeTankFromUnit(unit);
-	return sc2::Unit();
+	return nullptr;
 }
 
-sc2::Unit Util::CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit)
+sc2::Unit * Util::CreateDummyVikingAssaultFromUnit(const sc2::Unit * unit)
 {
 	return CreateDummyFromUnit(m_dummyVikingAssault, unit);
 }
 
-sc2::Unit Util::CreateDummyVikingFighterFromUnit(const sc2::Unit * unit)
+sc2::Unit * Util::CreateDummyVikingFighterFromUnit(const sc2::Unit * unit)
 {
 	return CreateDummyFromUnit(m_dummyVikingFighter, unit);
 }
 
-sc2::Unit Util::CreateDummyStimedMarineFromUnit(const sc2::Unit * unit)
+sc2::Unit * Util::CreateDummyStimedMarineFromUnit(const sc2::Unit * unit)
 {
-	sc2::Unit dummyStimedMarine = CreateDummyFromUnit(m_dummyStimedMarine, unit);
-	dummyStimedMarine.health -= 10;
+	sc2::Unit * dummyStimedMarine = CreateDummyFromUnit(m_dummyStimedMarine, unit);
+	dummyStimedMarine->health -= 10;
 	return dummyStimedMarine;
 }
 
-sc2::Unit Util::CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit)
+sc2::Unit * Util::CreateDummyStimedMarauderFromUnit(const sc2::Unit * unit)
 {
-	sc2::Unit dummyStimedMarauder = CreateDummyFromUnit(m_dummyStimedMarauder, unit);
-	dummyStimedMarauder.health -= 20;
+	sc2::Unit * dummyStimedMarauder = CreateDummyFromUnit(m_dummyStimedMarauder, unit);
+	dummyStimedMarauder->health -= 20;
 	return dummyStimedMarauder;
 }
 
-sc2::Unit Util::CreateDummySiegeTankFromUnit(const sc2::Unit * unit)
+sc2::Unit * Util::CreateDummySiegeTankFromUnit(const sc2::Unit * unit)
 {
-	sc2::Unit dummySiegeTank = CreateDummyFromUnit(m_dummySiegeTank, unit);
-	return dummySiegeTank;
+	return CreateDummyFromUnit(m_dummySiegeTank, unit);
 }
 
-sc2::Unit Util::CreateDummySiegeTankSiegedFromUnit(const sc2::Unit * unit)
+sc2::Unit * Util::CreateDummySiegeTankSiegedFromUnit(const sc2::Unit * unit)
 {
-	sc2::Unit dummySiegeTankSieged = CreateDummyFromUnit(m_dummySiegeTankSieged, unit);
-	return dummySiegeTankSieged;
+	return CreateDummyFromUnit(m_dummySiegeTankSieged, unit);
 }
 
 bool Util::CanUnitAttackAir(const sc2::Unit * unit, CCBot & bot)
@@ -1756,8 +1788,8 @@ float Util::GetAttackRangeForTarget(const sc2::Unit * unit, const sc2::Unit * ta
 		if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED && unit->health_max > 0 && !Util::IsPositionUnderDetection(unit->pos, bot))
 			maxRange = 0.f;	// The Widow Mine cannot attack between shots
 		auto targetUnitType = UnitType(target->unit_type, bot);
-		if (targetUnitType.isBuilding() && !targetUnitType.isCombatUnit())
-			maxRange -= 0.25f;	// To fix a bug where the radius is too large for buildings
+		if (targetUnitType.isBuilding())
+			maxRange -= 0.35f;	// To fix a bug where the radius is too large for buildings
 	}
 
 	return std::max(0.f, maxRange); 
@@ -3001,14 +3033,14 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 			// Consider enemy siege tanks as sieged when in fog of war
 			else if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANK && unit->last_seen_game_loop < bot.GetCurrentFrame())
 			{
-				state.units.push_back(CombatUnit(CreateDummyFromUnit(unit)));
+				state.units.push_back(CombatUnit(*CreateDummyFromUnit(unit)));
 			}
 			// Consider our sieged siege tanks as unsieged if we need to (helps delay our main attack when we have many tanks)
 			else if (considerOurTanksUnsieged && unit->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED)
 			{
 				const int owner = i == 0 ? playerId : 3 - playerId;
 				if (owner == playerId)
-					state.units.push_back(CombatUnit(CreateDummyFromUnit(unit)));
+					state.units.push_back(CombatUnit(*CreateDummyFromUnit(unit)));
 				else
 					state.units.push_back(CombatUnit(*unit));
 			}

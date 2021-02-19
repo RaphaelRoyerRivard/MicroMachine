@@ -620,7 +620,7 @@ BaseLocation * BaseLocationManager::getFarthestOccupiedBaseLocation() const
 int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 {
 	std::vector<sc2::UNIT_TYPEID> baseTypes;
-	switch (m_bot.GetSelfRace())
+	switch (m_bot.GetPlayerRace(player))
 	{
 		case CCRace::Terran:
 			baseTypes = { sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND , sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS };
@@ -632,7 +632,15 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 			baseTypes = { sc2::UNIT_TYPEID::ZERG_HATCHERY, sc2::UNIT_TYPEID::ZERG_LAIR , sc2::UNIT_TYPEID::ZERG_HIVE };
 			break;
 	}
-	return m_bot.Buildings().getBuildingCountOfType(baseTypes, isCompleted);
+	if (player == Players::Self)
+		return m_bot.Buildings().getBuildingCountOfType(baseTypes, isCompleted);
+	// Else: enemy
+	int bases = 0;
+	for (auto baseType : baseTypes)
+	{
+		bases += m_bot.GetEnemyUnits(baseType).size();
+	}
+	return bases;
 }
 
 BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocked, bool checkBuildable, bool ignoreReservedTiles, std::vector<BaseLocation*> basesToIgnore) const
