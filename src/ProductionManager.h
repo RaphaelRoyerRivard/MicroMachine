@@ -31,6 +31,7 @@ class ProductionManager
 	UnitType workerType;
 	MetaType workerMetatype;
 	int m_lastProductionLogFrame = 0;
+	std::vector<sc2::UNIT_TYPEID> factoryUnitTypes = { sc2::UNIT_TYPEID::TERRAN_HELLION, sc2::UNIT_TYPEID::TERRAN_HELLIONTANK, sc2::UNIT_TYPEID::TERRAN_WIDOWMINE, sc2::UNIT_TYPEID::TERRAN_SIEGETANK, sc2::UNIT_TYPEID::TERRAN_CYCLONE, sc2::UNIT_TYPEID::TERRAN_THOR };
 
 	void	validateUpgradesProgress();
     Unit    getClosestUnitToPosition(const std::vector<Unit> & units, CCPosition closestTo) const;
@@ -86,5 +87,5 @@ public:
 	void clearQueue();
 	MM::BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);
 	void SetWantToQuickExpand(bool value);
-	bool hasProducedAtLeastOneFactoryUnit() const;
+	bool hasProducedAtLeastXFactoryUnit(int x) const;
 };
