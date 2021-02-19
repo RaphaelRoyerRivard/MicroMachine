@@ -715,7 +715,11 @@ void WorkerManager::handleGasWorkers()
 								bunker.rightClick(base->getGasBunkerUnloadTarget(geyser.getPosition()));//geyser.getPosition());
 								//m_bot.Commander().AddDelayedSmartAbility(worker, 0, geyser.getPosition());
 							}
+#ifdef PUBLIC_RELEASE
+							bunker.unloadUnit(worker.getTag());
+#else
 							Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+#endif
 							hasUnload = true;
 						}
 					}
@@ -752,8 +756,11 @@ void WorkerManager::handleGasWorkers()
 						auto distDepot = Util::DistSq(worker.getPosition(), base->getDepotPosition());
 						if (worker.isReturningCargo())
 						{
-							if ((std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end() || hasReturningWorker)
-								&& distRefinery < distDepot)//If the bunker is empty or if there is already a returning worker, click to enter bunker
+#ifdef PUBLIC_RELEASE
+							if (distRefinery < distDepot)//If the bunker is empty or if there is already a returning worker, click to enter bunker
+#else
+							if ((std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end() || hasReturningWorker) && distRefinery < distDepot)
+#endif
 							{
 								worker.rightClick(bunker.getPosition());
 
@@ -772,7 +779,11 @@ void WorkerManager::handleGasWorkers()
 							{
 								Micro::SmartAbility(worker.getUnitPtr(), sc2::ABILITY_ID::HARVEST_GATHER,geyser.getUnitPtr(), m_bot);
 							}
-							else if(std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end())//Click to enter bunker
+#ifdef PUBLIC_RELEASE
+							else//Click to enter bunker
+#else
+							else if (std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end())
+#endif
 							{
 								worker.rightClick(bunker.getPosition());
 								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);
