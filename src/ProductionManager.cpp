@@ -430,6 +430,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
 	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(sc2::UNIT_TYPEID::TERRAN_STARPORT, m_bot), false, true);
 	const int deadStarportCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_STARPORT);
+	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, false);
 	if (currentItem.type.getUnitType().isRefinery())
 	{
 		const bool hasBarracks = barracksCount > 0;
@@ -480,7 +481,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 			shouldSkip = true;
 		if (starportCount + deadStarportCount == 0)
 		{
-			if (!hasProducedAtLeastOneFactoryUnit())
+			if (!hasProducedAtLeastXFactoryUnit(1))
 				shouldSkip = true;
 		}
 	}
@@ -557,7 +558,6 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 		{
 			if (currentItem.type == MetaTypeEnum::Factory)
 			{
-				const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, false);
 				// Let the factory be built if we have too much resources
 				const bool tooMuchResources = m_bot.GetMinerals() > 600 && m_bot.GetGas() > 200;
 				if (baseCount < 2 && !tooMuchResources)
@@ -572,7 +572,6 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 				const auto hasRefinery = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true) > 0;
 				/*const auto hasCompletedBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, true) > 0;
 				shouldSkip = hasRefinery && !hasCompletedBarracks;*/
-				const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, false);
 				if (hasRefinery && baseCount < 2)
 					shouldSkip = true;
 			}
@@ -618,7 +617,6 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 		}
 		else if (fastPF)
 		{
-			const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, false);
 			if (currentItem.type == MetaTypeEnum::Refinery || currentItem.type == MetaTypeEnum::Barracks)
 			{
 				if (!m_initialBuildOrderFinished)
@@ -661,6 +659,11 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 			{
 				const auto hasStarport = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true) > 0;
 				shouldSkip = !hasStarport && m_bot.GetMinerals() < 600;
+			}
+			// We want to limit the amount of units produced by the Factory before expanding, unless we are under attack or have too much minerals
+			else if (baseCount < 2 && hasProducedAtLeastXFactoryUnit(2) && !m_bot.Strategy().isEarlyRushed() && Util::Contains(currentItem.type.getUnitType().getAPIUnitType(), factoryUnitTypes))
+			{
+				shouldSkip = m_bot.GetFreeMinerals() < 550;
 			}
 		}
 	}
@@ -1102,7 +1105,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want to have tanks to keep a balance between ground and air force, depending on what the enemy unit is producing
-				else if (!proxyCyclonesStrategy && enemySupplyAirGroundRatio <= cycloneTankRatio && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0))
+				else if (!proxyCyclonesStrategy && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0) && (cycloneCount > 0 || tankCount == 0))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Thor);
 					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
@@ -2873,13 +2876,13 @@ void ProductionManager::SetWantToQuickExpand(bool value)
 	wantToQuickExpand = value;
 }
 
-bool ProductionManager::hasProducedAtLeastOneFactoryUnit() const
+bool ProductionManager::hasProducedAtLeastXFactoryUnit(int x) const
 {
-	std::vector<sc2::UNIT_TYPEID> factoryUnitTypes = { sc2::UNIT_TYPEID::TERRAN_HELLION, sc2::UNIT_TYPEID::TERRAN_HELLIONTANK, sc2::UNIT_TYPEID::TERRAN_WIDOWMINE, sc2::UNIT_TYPEID::TERRAN_SIEGETANK, sc2::UNIT_TYPEID::TERRAN_CYCLONE, sc2::UNIT_TYPEID::TERRAN_THOR };
+	int count = 0;
 	for (auto factoryUnitType : factoryUnitTypes)
 	{
-		const auto unitCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(factoryUnitType, m_bot), false, true) + m_bot.GetDeadAllyUnitsCount(factoryUnitType);
-		if (unitCount > 0)
+		count += m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(factoryUnitType, m_bot), false, true) + m_bot.GetDeadAllyUnitsCount(factoryUnitType);
+		if (count >= x)
 			return true;
 	}
 	return false;
