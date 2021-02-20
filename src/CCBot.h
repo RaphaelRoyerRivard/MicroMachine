@@ -2,7 +2,7 @@
 //#define PUBLIC_RELEASE
 //#define ROBUST_MODE//Attempt to recover from errors by skipping managers
 
-#define NO_UNITS
+//#define NO_UNITS
 //#define NO_EXPANSION
 //#define NO_PRODUCTION
 //#define NO_BUILDING
