@@ -186,6 +186,8 @@ static void RunBot(int argc, char *argv[], CCBot *Agent, sc2::Race race, bool lo
     coordinator.Connect(Options.GamePort);
     coordinator.SetupPorts(num_agents, Options.StartPort, false);
 	coordinator.SetRawAffectsSelection(!allowDebug && !archonMode);
+	sc2::FeatureLayerSettings settings;
+	coordinator.SetFeatureLayers(settings);
     // Step forward the game simulation.
     coordinator.JoinGame();
     coordinator.SetTimeoutMS(120000);	// 2 min

@@ -280,7 +280,8 @@ void ProductionManager::manageBuildOrderQueue()
 					auto unitTypeID = currentItem.type.getUnitType().getAPIUnitType();
 					if (currentItem.type.isBuilding() && (unitTypeID == sc2::UNIT_TYPEID::TERRAN_ARMORY || Util::Contains(unitTypeID, getProductionBuildingTypes())))
 					{
-						auto idleTypes = getIdleImportantProductionBuildingTypes();
+						bool laxIdleRules = unitTypeID != sc2::UNIT_TYPEID::TERRAN_BARRACKS;
+						auto idleTypes = getIdleImportantProductionBuildingTypes(laxIdleRules, laxIdleRules);
 						if (!idleTypes.empty())
 						{
 							bool isNonRequiredArmory = unitTypeID == sc2::UNIT_TYPEID::TERRAN_ARMORY && !m_queue.contains(MetaTypeEnum::Thor);
@@ -902,7 +903,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (hasPicked && !m_queue.contains(toBuild) && (forceProductionBuilding || !m_queue.contains(MetaTypeEnum::CommandCenter) || m_bot.GetFreeMinerals() > 400 || m_bot.Bases().getFreeBaseLocationCount() == 0))
 				{
 					// No need to check for idle production buildings if we want to force its creation
-					if (forceProductionBuilding || !isImportantProductionBuildingIdle())
+					bool laxIdleRules = finishedBaseCount < 3;
+					if (forceProductionBuilding || !isImportantProductionBuildingIdle(laxIdleRules, laxIdleRules))
 						m_queue.queueAsLowestPriority(toBuild, false);
 				}
 
@@ -1438,12 +1440,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	}
 }
 
-bool ProductionManager::isImportantProductionBuildingIdle()
+bool ProductionManager::isImportantProductionBuildingIdle(bool underConstructionConsideredIdle, bool constructingAddonConsideredIdle)
 {
-	return getIdleImportantProductionBuildingTypes().size() > 0;
+	return getIdleImportantProductionBuildingTypes(underConstructionConsideredIdle, constructingAddonConsideredIdle).size() > 0;
 }
 
-std::vector<sc2::UNIT_TYPEID> ProductionManager::getIdleImportantProductionBuildingTypes()
+std::vector<sc2::UNIT_TYPEID> ProductionManager::getIdleImportantProductionBuildingTypes(bool underConstructionConsideredIdle, bool constructingAddonConsideredIdle)
 {
 	std::vector<sc2::UNIT_TYPEID> idleImportantProductionBuildingTypes;
 	std::vector<sc2::UNIT_TYPEID> importantProductionBuildingTypes = { sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_STARPORT };
@@ -1459,7 +1461,7 @@ std::vector<sc2::UNIT_TYPEID> ProductionManager::getIdleImportantProductionBuild
 		{
 			for (const auto & productionBuilding : productionBuildings)
 			{
-				if (productionBuilding.isProductionBuildingIdle())
+				if (productionBuilding.isProductionBuildingIdle(underConstructionConsideredIdle, constructingAddonConsideredIdle))
 				{
 					idleImportantProductionBuildingTypes.push_back(importantProductionBuildingType);
 					break;

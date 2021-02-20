@@ -73,7 +73,7 @@ public:
 	bool isReturningCargo() const;
 	sc2::Tag getAddonTag() const;
 	bool isProducingAddon() const;
-	bool isProductionBuildingIdle() const;
+	bool isProductionBuildingIdle(bool underConstructionConsideredIdle, bool constructingAddonConsideredIdle) const;
 	bool isMoving() const;
 
     void stop           () const;
