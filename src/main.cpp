@@ -332,6 +332,13 @@ int main(int argc, char* argv[])
         otherPlayer
     });
 
+#ifdef PUBLIC_RELEASE
+	// Setup the UI for transports
+	coordinator.SetRawAffectsSelection(true);
+	sc2::FeatureLayerSettings settings;
+	coordinator.SetFeatureLayers(settings);
+#endif
+
     // Start the game.
     coordinator.LaunchStarcraft();
     coordinator.StartGame(mapString);

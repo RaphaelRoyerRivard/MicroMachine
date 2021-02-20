@@ -725,6 +725,44 @@ void Unit::morph(const UnitType & type) const
 #endif
 }
 
+bool Unit::unloadUnit(const sc2::Tag passengerTag) const
+{
+	auto ptr = getUnitPtr();
+	int passengerIndex = -1;
+	for (int index = 0; index < ptr->passengers.size(); index++)
+	{
+		if (ptr->passengers.at(index).tag == passengerTag)
+		{
+			passengerIndex = index;
+			break;
+		}
+	}
+	if (passengerIndex == -1)
+	{
+		return false;
+	}
+
+	SC2APIProtocol::RequestAction* request_action = m_bot->Actions()->GetRequestAction();
+	{
+		// select unit
+		SC2APIProtocol::Action *action = request_action->add_actions();
+		SC2APIProtocol::ActionRaw *action_raw = action->mutable_action_raw();
+		SC2APIProtocol::ActionRawUnitCommand *command = action_raw->mutable_unit_command();
+	
+		command->set_ability_id(0);
+		command->add_unit_tags(m_unit->tag);
+	}
+	{
+		// drop passenger
+		SC2APIProtocol::Action *action = request_action->add_actions();
+		SC2APIProtocol::ActionUI *action_ui = action->mutable_action_ui();
+		SC2APIProtocol::ActionCargoPanelUnload *command = action_ui->mutable_cargo_panel();
+	
+		command->set_unit_index(passengerIndex);
+	}
+	m_bot->Actions()->SendActions();
+}
+
 sc2::AvailableAbilities Unit::getAbilities() const
 {
 	return m_bot->Query()->GetAbilitiesForUnit(m_unit);
