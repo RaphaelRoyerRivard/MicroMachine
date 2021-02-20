@@ -584,17 +584,11 @@ void WorkerManager::handleGasWorkers()
         // if that unit is a refinery
         if (geyser.isCompleted() && geyser.getUnitPtr()->vespene_contents > 0)
         {
+			// get the number of workers currently assigned to it
+			int numAssigned = m_workerData.getNumAssignedWorkers(geyser);
+
 			auto geyserPosition = geyser.getPosition();
 			auto base = m_bot.Bases().getBaseContainingPosition(geyserPosition, Players::Self);
-
-            // get the number of workers currently assigned to it
-            int numAssigned = m_workerData.getNumAssignedWorkers(geyser);
-
-			//TODO doesn't handle split geysers if only one of the geysers has a bunker.
-			const auto & gasBunkers = base->getGasBunkers();
-			//Bunker counts as a worker (for 2 and 3 only, we still want 1 worker at 1)
-			int geyserGasWorkersTarget = (gasBunkers.size() > 0 && gasBunkers[0].isCompleted() && gasWorkersTarget > 1 ? gasWorkersTarget - 1 : gasWorkersTarget);
-
 			if (base == nullptr)
 			{
 				//if the base is destroyed, remove the gas workers
@@ -603,67 +597,72 @@ void WorkerManager::handleGasWorkers()
 					auto gasWorker = getGasWorker(geyser, false, false);
 					m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
 				}
+				continue;
 			}
-			else
-			{
-				auto & depot = base->getResourceDepot();
-				if (depot.isValid() && depot.isCompleted())
-				{
-					if (numAssigned < geyserGasWorkersTarget)
-					{
-						// if it's less than we want it to be, fill 'er up
-						bool shouldAssignThisWorker = true;
-						auto refineryWorkers = m_workerData.getAssignedWorkersRefinery(geyser);
-						for (auto & worker : refineryWorkers)
-						{
-							if (!isInsideGeyser(worker) && !isReturningCargo(worker))
-							{
-								shouldAssignThisWorker = false;
-								break;
-							}
-						}
 
-						if (shouldAssignThisWorker)
+			//TODO doesn't handle split geysers if only one of the geysers has a bunker.
+			const auto & gasBunkers = base->getGasBunkers();
+
+			//Bunker counts as a worker (for 2 and 3 only, we still want 1 worker at 1)
+			int geyserGasWorkersTarget = (!gasBunkers.empty() && gasBunkers.size() > 0 && gasBunkers[0].isCompleted() && gasWorkersTarget > 1 ? gasWorkersTarget - 1 : gasWorkersTarget);
+
+			auto & depot = base->getResourceDepot();
+			if (depot.isValid() && depot.isCompleted())
+			{
+				if (numAssigned < geyserGasWorkersTarget)
+				{
+					// if it's less than we want it to be, fill 'er up
+					bool shouldAssignThisWorker = true;
+					auto refineryWorkers = m_workerData.getAssignedWorkersRefinery(geyser);
+					for (auto & worker : refineryWorkers)
+					{
+						if (!isInsideGeyser(worker) && !isReturningCargo(worker))
 						{
-							auto mineralWorker = getMineralWorker(geyser);
-							if (mineralWorker.isValid())
+							shouldAssignThisWorker = false;
+							break;
+						}
+					}
+
+					if (shouldAssignThisWorker)
+					{
+						auto mineralWorker = getMineralWorker(geyser);
+						if (mineralWorker.isValid())
+						{
+							if (!base->isUnderAttack() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyserPosition, true, m_bot))
 							{
-								if (!base->isUnderAttack() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyserPosition, true, m_bot))
-								{
-									m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
-								}
+								m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
 							}
 						}
 					}
-					else if (numAssigned > geyserGasWorkersTarget)
+				}
+				else if (numAssigned > geyserGasWorkersTarget)
+				{
+					int mineralWorkerRoom = 26;//Number of free spaces for mineral workers
+					int mineralWorkersCount = m_workerData.getNumAssignedWorkers(depot);
+					int optimalWorkersCount = base->getOptimalMineralWorkerCount();
+					mineralWorkerRoom = optimalWorkersCount - mineralWorkersCount;
+
+					// if it's more than we want it to be, empty it up
+					for (int i = 0; i<(numAssigned - geyserGasWorkersTarget); ++i)
 					{
-						int mineralWorkerRoom = 26;//Number of free spaces for mineral workers
-						int mineralWorkersCount = m_workerData.getNumAssignedWorkers(depot);
-						int optimalWorkersCount = base->getOptimalMineralWorkerCount();
-						mineralWorkerRoom = optimalWorkersCount - mineralWorkersCount;
+						//check if we have room for more mineral workers
+						if (mineralWorkerRoom <= 0 && numAssigned < 3)
+						{//Do not remove gas workers if we don't have room for an additional mineral worker, except if we are at 3 gas workers (exception for bunkers).
+							break;
+						}
 
-						// if it's more than we want it to be, empty it up
-						for (int i = 0; i<(numAssigned - geyserGasWorkersTarget); ++i)
+						auto gasWorker = getGasWorker(geyser, true, true);
+						if (gasWorker.isValid())
 						{
-							//check if we have room for more mineral workers
-							if (mineralWorkerRoom <= 0 && numAssigned < 3)
-							{//Do not remove gas workers if we don't have room for an additional mineral worker, except if we are at 3 gas workers (exception for bunkers).
-								break;
-							}
-
-							auto gasWorker = getGasWorker(geyser, true, true);
-							if (gasWorker.isValid())
+							if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
 							{
-								if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
-								{
-									Util::DisplayError(__FUNCTION__, "Worker assigned to a refinery is not a gas worker.", m_bot);
-								}
-
-								gasWorker.stop();
-								getWorkerData().setWorkerJob(gasWorker, WorkerJobs::Idle);
-
-								mineralWorkerRoom--;
+								Util::DisplayError(__FUNCTION__, "Worker assigned to a refinery is not a gas worker.", m_bot);
 							}
+
+							gasWorker.stop();
+							getWorkerData().setWorkerJob(gasWorker, WorkerJobs::Idle);
+
+							mineralWorkerRoom--;
 						}
 					}
 				}
@@ -675,6 +674,10 @@ void WorkerManager::handleGasWorkers()
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
 	{
 		auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
+		if (base == nullptr)
+		{
+			continue;
+		}
 		auto & depot = base->getResourceDepot();
 		bool hasUsableDepot = true;
 		if (!depot.isValid() || (depot.isValid() && depot.getUnitPtr()->build_progress < 1))//Do not using the gas bunker with an unfinished or inexistant depot.
