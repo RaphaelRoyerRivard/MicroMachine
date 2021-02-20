@@ -73,7 +73,7 @@ public:
 	bool isReturningCargo() const;
 	sc2::Tag getAddonTag() const;
 	bool isProducingAddon() const;
-	bool isProductionBuildingIdle() const;
+	bool isProductionBuildingIdle(bool underConstructionConsideredIdle, bool constructingAddonConsideredIdle) const;
 	bool isMoving() const;
 
     void stop           () const;
@@ -94,7 +94,8 @@ public:
 	void harvestTarget	(const Unit & target) const;
     void train          (const UnitType & buildingType) const;
     void morph          (const UnitType & type) const;
-	bool useAbility(const sc2::ABILITY_ID abilityId) const;
+	bool unloadUnit		(const sc2::Tag passengerTag) const;
+	bool useAbility		(const sc2::ABILITY_ID abilityId) const;
 	sc2::AvailableAbilities getAbilities() const;
 	void getBuildingLimits(CCTilePosition & bottomLeft, CCTilePosition & topRight) const;
 };

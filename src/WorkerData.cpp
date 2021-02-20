@@ -499,7 +499,7 @@ bool WorkerData::isAnyMineralAvailable(CCPosition workerCurrentPosition) const
 		if (base->isUnderAttack() && !base->containsPositionApproximative(workerCurrentPosition))
 			continue;
 		auto & depot = base->getResourceDepot();
-		if (!depot.isValid() || depot.getBuildProgress() < 0.99)
+		if (!depot.isValid() || !depot.isAlive() || depot.getBuildProgress() < 0.99)
 			continue;
 		if (GetBestMineralWithLessWorkersInLists(base->getCloseMinerals(), base->getFarMinerals(), CCPosition()).isValid())
 		{
@@ -682,7 +682,6 @@ void WorkerData::sendIdleWorkerToMiningSpot(const Unit & worker, bool force)
 				worker.rightClick(m_idleMineralTarget);
 			}
 			else if(worker.getUnitPtr()->orders.empty() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE || worker.getUnitPtr()->orders[0].target_pos != m_idleMineralTarget.getPosition())
-
 			{
 				worker.rightClick(m_idleMineralTarget.getPosition());
 			}
