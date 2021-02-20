@@ -2480,10 +2480,14 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 
 			if (landingPosition != CCPosition())
 			{
-				// If there is no more danger on the ground
-				if (Util::PathFinding::GetTotalInfluenceOnTiles(landingPosition, false, unit.getUnitPtr()->radius, m_bot) <= 0.f)
+				//Check if its current order is not the same order we are about to give it
+				if (unit.getUnitPtr()->orders.size() == 0 || unit.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::LAND || unit.getUnitPtr()->orders[0].target_pos != landingPosition)
 				{
-					Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
+					// If there is no more danger on the ground
+					if (Util::PathFinding::GetTotalInfluenceOnTiles(landingPosition, false, unit.getUnitPtr()->radius, m_bot) <= 0.f)
+					{
+						Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
+					}
 				}
 			}
 		}

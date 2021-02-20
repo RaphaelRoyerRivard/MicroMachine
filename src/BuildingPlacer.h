@@ -20,7 +20,6 @@ class BuildingPlacer
 
     // queries for various BuildingPlacer data
 	bool isGeyserAssigned(CCTilePosition geyserTilePos) const;
-    bool isReserved(int x, int y) const;
     bool tileOverlapsBaseLocation(int x, int y, UnitType type) const;
 
 public:
@@ -51,5 +50,6 @@ public:
     void freeTiles(int x, int y, int width, int height, bool setBlocked);
 	void freeTilesForTurrets(CCTilePosition position);
 	void freeTilesForBunker(CCTilePosition position);
+	bool isReserved(int x, int y) const;
     CCTilePosition getRefineryPosition();
 };

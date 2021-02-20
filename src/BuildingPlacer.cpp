@@ -377,7 +377,7 @@ CCTilePosition BuildingPlacer::getBuildLocationNear(const Building & b, bool ign
 			{
 				buildLocation.y = m_bot.Map().mapMax().y - 1;
 			}
-
+		
 			if (offset == MAX_OFFSET)//Did not find any walkable space within 25 tiles in all directions
 			{
 				buildLocation = b.desiredPosition;//Avoids crashing, but this won't work well.
