@@ -186,6 +186,46 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 
 	Building b(MetaTypeEnum::MissileTurret.getUnitType(), m_centerOfMinerals);
 	m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, true, false, true);
+
+	//If the turret is on the other side of the mineral field, move the desired build position towards the CC
+	while (Util::DistSq(m_depotPosition, m_turretPosition) > Util::DistSq(m_depotPosition, m_centerOfMinerals))
+	{
+		int diffx = m_depotPosition.x - b.desiredPosition.x;
+		int diffy = m_depotPosition.y - b.desiredPosition.y;
+
+		if (diffx == diffy == 0)
+		{
+			Util::DisplayError("Failed to place turret, no position found.", "0x00000012", m_bot, false);
+			b.desiredPosition = m_centerOfMinerals;
+			m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, true, false, true);
+			break;
+		}
+
+		if (abs(diffx) > abs(diffy))
+		{
+			if (diffx < 0)
+			{
+				b.desiredPosition.x--;
+			}
+			else
+			{
+				b.desiredPosition.x++;
+			}
+		}
+		else
+		{
+			if (diffy < 0)
+			{
+				b.desiredPosition.y--;
+			}
+			else
+			{
+				b.desiredPosition.y++;
+			}
+		}
+
+		m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, true, false, true);
+	}
 }
 
 const CCTilePosition & BaseLocation::getTurretPosition() const
