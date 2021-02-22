@@ -2892,9 +2892,6 @@ bool ProductionManager::hasProducedAtLeastXFactoryUnit(int x) const
 
 void ProductionManager::drawProductionInformation()
 {
-#ifdef PUBLIC_RELEASE
-	return;
-#endif
 	const bool draw = m_bot.Config().DrawProductionInfo;
 	const bool log = m_bot.GetCurrentFrame() >= m_lastProductionLogFrame + m_bot.Config().ProductionPrintFrequency * 22.4f;
     if (!draw && !log)
