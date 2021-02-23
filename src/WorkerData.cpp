@@ -79,7 +79,7 @@ void WorkerData::updateIdleMineralTarget()
 	auto & allyBases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 	for (auto base : allyBases)
 	{
-		if (base && (!base->getResourceDepot().isValid() || !base->getResourceDepot().isCompleted()))
+		if (base && !base->isUnderAttack() && (!base->getResourceDepot().isValid() || !base->getResourceDepot().isCompleted()))
 		{
 			closestBase = base;
 			break;
