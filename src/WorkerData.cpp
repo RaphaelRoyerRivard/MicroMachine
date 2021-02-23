@@ -675,7 +675,7 @@ void WorkerData::sendIdleWorkerToMiningSpot(const Unit & worker, bool force)
 	}
 	else
 	{
-		if (worker.getUnitPtr()->orders.empty() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::HARVEST_GATHER || Util::DistSq(worker.getPosition(), m_idleMineralTarget.getPosition()) > 25)
+		if (worker.getUnitPtr()->orders.empty() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::HARVEST_GATHER || Util::DistSq(worker.getPosition(), m_idleMineralTarget.getPosition()) > 75)
 		{
 			if (m_idleMineralTarget.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())//When the mineral is visible, just click it.
 			{
