@@ -529,7 +529,7 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 				break;
 			case 8: // Liberator Defender Zone Setup
 			case 9: // Liberator Defender Zone
-				radius = effectData.radius;
+				radius = effectData.radius + 0.5f;
 				dps = 65.8f;
 				targetType = sc2::Weapon::TargetType::Ground;
 				break;
@@ -1654,7 +1654,7 @@ void CombatCommander::updateAttackSquads()
 			}
 			else
 			{
-				m_winAttackSimulation = simulationResult > 0.5f || m_bot.GetCurrentSupply() >= 195;
+				m_winAttackSimulation = simulationResult > 0.7f || m_bot.GetCurrentSupply() >= 195;
 				if (m_winAttackSimulation)
 				{
 					auto allySupply = Util::GetSupplyOfUnits(allyUnits, m_bot);

@@ -91,7 +91,7 @@ void WorkerData::updateIdleMineralTarget()
 		closestBase = m_bot.Bases().getNextExpansion(Players::Self, false, false, true);
 	}
 	// If that base is not occupied by the enemy and does not have a completed resource depot, we find the mineral patch to mine from
-	if (closestBase && !closestBase->isOccupiedByPlayer(Players::Enemy) && (!closestBase->getResourceDepot().isValid() || !closestBase->getResourceDepot().isCompleted()))
+	if (closestBase && !closestBase->isUnderAttack() && !closestBase->isOccupiedByPlayer(Players::Enemy) && (!closestBase->getResourceDepot().isValid() || !closestBase->getResourceDepot().isCompleted()))
 	{
 		const BaseLocation * homeBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
 		if (homeBase->getResourceDepot().isValid())
