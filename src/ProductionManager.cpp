@@ -878,7 +878,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyGatewayCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_GATEWAY).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_WARPGATE).size();
 				const bool startPumpingOutMarauders = pumpOutMarauders && completedSupplyProviders >= 1 && barracksCount < 2;
 				const bool buildMoreBarracksAgainstMultiGateways = produceMarauders && completedSupplyProviders >= 1 && barracksCount < (enemyGatewayCount - 1);
-				if (barracksCount < 1 || startPumpingOutMarauders || buildMoreBarracksAgainstMultiGateways || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && (barracksCount * 2 < finishedBaseCount || m_bot.GetFreeMinerals() >= 1000)))
+				if (barracksCount < 10 && (barracksCount < 1 || startPumpingOutMarauders || buildMoreBarracksAgainstMultiGateways || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && (barracksCount * 2 < finishedBaseCount || m_bot.GetFreeMinerals() >= 1000))))
 				{
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
