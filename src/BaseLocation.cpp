@@ -438,8 +438,23 @@ bool BaseLocation::containsUnitApproximative(const Unit & unit, int maxDistance)
 
 	if (unit.isFlying())
 	{
+		if (containsPosition(unit.getPosition()))
+			return true;
+		float baseDistance = Util::DistSq(this->m_depotPosition, unit.getPosition());
 		maxDistance = maxDistance > 0 ? maxDistance : ApproximativeBaseLocationTileDistance;
-		return Util::DistSq(unit, Util::GetPosition(m_depotTilePosition)) < maxDistance * maxDistance;
+		if (baseDistance > maxDistance * maxDistance)
+			return false;
+		for (auto base : m_bot.Bases().getBaseLocations())
+		{
+			if (base == this)
+				continue;
+			if (base->containsPosition(unit.getPosition()))
+				return false;
+			float dist = Util::DistSq(base->m_depotPosition, unit.getPosition());
+			if (dist < baseDistance)
+				return false;
+		}
+		return true;
 	}
 
 	return containsPositionApproximative(unit.getPosition(), maxDistance, true);
