@@ -1463,13 +1463,78 @@ std::vector<sc2::UNIT_TYPEID> ProductionManager::getIdleImportantProductionBuild
 			{
 				if (productionBuilding.isProductionBuildingIdle(underConstructionConsideredIdle, constructingAddonConsideredIdle))
 				{
-					idleImportantProductionBuildingTypes.push_back(importantProductionBuildingType);
-					break;
+					// if the building is idle but there is no unit it can produce in the production queue, then it's ok if it is idle
+					if (ProductionQueueContainsItemProduceableByUnit(productionBuilding))
+					{
+						idleImportantProductionBuildingTypes.push_back(importantProductionBuildingType);
+						break;
+					}
 				}
 			}
 		}
 	}
 	return idleImportantProductionBuildingTypes;
+}
+
+bool ProductionManager::ProductionQueueContainsItemProduceableByUnit(const Unit & productionBuiding)
+{
+	bool isReactored = false;
+	auto addonTag = productionBuiding.getAddonTag();
+	if (addonTag != 0)
+	{
+		auto addon = m_bot.GetUnit(addonTag);
+		switch (addon.getAPIUnitType().ToType())
+		{
+			case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+			case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+			case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+				isReactored = true;
+				break;
+		}
+	}
+
+	std::vector<MetaType> produceableTypes;
+	switch (productionBuiding.getAPIUnitType().ToType())
+	{
+		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+			produceableTypes = { MetaTypeEnum::Marine, MetaTypeEnum::Reaper };
+			if (!isReactored)
+			{
+				produceableTypes.push_back(MetaTypeEnum::Marauder);
+				bool completedGhostAcademy = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::GhostAcademy.getUnitType(), true, true) > 0;
+				if (completedGhostAcademy)
+					produceableTypes.push_back(MetaTypeEnum::Ghost);
+			}
+			break;
+		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+			produceableTypes = { MetaTypeEnum::Hellion, MetaTypeEnum::WidowMine };
+			if (!isReactored)
+			{
+				produceableTypes.push_back(MetaTypeEnum::Cyclone);
+				produceableTypes.push_back(MetaTypeEnum::SiegeTank);
+				bool completedArmory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Armory.getUnitType(), true, true) > 0;
+				if (completedArmory)
+					produceableTypes.push_back(MetaTypeEnum::Thor);
+			}
+			break;
+		case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+			produceableTypes = { MetaTypeEnum::Viking, MetaTypeEnum::Medivac, MetaTypeEnum::Liberator };
+			if (!isReactored)
+			{
+				produceableTypes.push_back(MetaTypeEnum::Raven);
+				produceableTypes.push_back(MetaTypeEnum::Banshee);
+				bool completedFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
+				if (completedFusionCore)
+					produceableTypes.push_back(MetaTypeEnum::Battlecruiser);
+			}
+			break;
+	}
+	for (auto & unitType : produceableTypes)
+	{
+		if (m_queue.contains(unitType))
+			return true;
+	}
+	return false;
 }
 
 void ProductionManager::QueueDeadBuildings()
