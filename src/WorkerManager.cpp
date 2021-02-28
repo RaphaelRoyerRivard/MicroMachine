@@ -396,6 +396,25 @@ void WorkerManager::handleMineralWorkers()
 	}
 	m_isFirstFrame = false;
 
+	// Send the first worker at the proxy location if we have a proxy strategy, but not with proxy Marauders because we want to make the first Barracks at home
+	if (m_bot.Strategy().isProxyStartingStrategy() && m_bot.Strategy().getStartingStrategy() != PROXY_MARAUDERS)
+	{
+		float minDist = 0.f;
+		const auto & workers = getWorkers();
+		const auto rampPosition = Util::GetPosition(m_bot.Buildings().getWallPosition());
+		for (const auto & worker : workers)
+		{
+			const auto dist = Util::DistSq(worker, rampPosition);
+			if (!proxyWorker.isValid() || dist < minDist)
+			{
+				minDist = dist;
+				proxyWorker = worker;
+			}
+		}
+		proxyWorker.move(m_bot.Buildings().getProxyLocation());
+		m_workerData.setProxyWorker(proxyWorker);
+	}
+
 	m_bot.StartProfiling("0.7.2.2     frame1WorkerSplit");
 	auto & main = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 	auto & closePatch = (*main.begin())->getCloseMinerals();
