@@ -2067,6 +2067,11 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, nat, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, third, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, fourth, player2, 1);*/
+
+	// Test to see if long distance workers are fleeing from threats
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, nat, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, m_startLocation, player2, 10);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player2, 2);*/
 }
 
 void CCBot::IssueCheats()
