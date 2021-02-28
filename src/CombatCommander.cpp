@@ -1199,6 +1199,7 @@ void CombatCommander::updateClearExpandSquads()
 			// Check the units requirement
 			const auto & blockingUnits = baseLocation->getBlockingUnits();
 			bool groundUnits = blockingUnits.empty();	// If we see no unit that block the base, it's probably a burrowed unit
+			bool visibleGroundUnits = false;
 			bool airUnits = false;
 			bool invisUnits = blockingUnits.empty();	// If we see no unit that block the base, it's probably a burrowed unit
 			for (const auto & blockingUnit : blockingUnits)
@@ -1206,7 +1207,10 @@ void CombatCommander::updateClearExpandSquads()
 				if (blockingUnit.isFlying())
 					airUnits = true;
 				else
+				{
 					groundUnits = true;
+					visibleGroundUnits = true;
+				}
 				if (blockingUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::Cloaked || blockingUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::CloakedDetected || blockingUnit.getUnitPtr()->is_burrowed)
 					invisUnits = true;
 			}
@@ -1225,17 +1229,21 @@ void CombatCommander::updateClearExpandSquads()
 					}
 				}
 				// Create a burrowed unit if there is none we know of, to allow the use of a scan
-				if (!closeBurrowedUnit && !allCornersDetected && allCornersVisible)
+				if (!visibleGroundUnits && !closeBurrowedUnit && !allCornersDetected && allCornersVisible)
 				{
-					invisUnits = true;
-					if (creepCleared)
+					const auto enemyPlayerRace = m_bot.GetPlayerRace(Players::Enemy);
+					if (enemyPlayerRace == sc2::Zerg)
 					{
-						m_bot.Analyzer().addBurrowedUnits(Util::CreateDummyBurrowedZergling(basePosition, m_bot));
-					}
-					else if (!creepCleared && !airUnits)
-					{
-						// TODO should be a Creep tumor, but it doesn't really matter
-						m_bot.Analyzer().addBurrowedUnits(Util::CreateDummyBurrowedZergling(basePosition, m_bot));
+						invisUnits = true;
+						if (creepCleared)
+						{
+							m_bot.Analyzer().addBurrowedUnits(Util::CreateDummyBurrowedZergling(basePosition, m_bot));
+						}
+						else if (!creepCleared && !airUnits)
+						{
+							// TODO should be a Creep tumor, but it doesn't really matter
+							m_bot.Analyzer().addBurrowedUnits(Util::CreateDummyBurrowedZergling(basePosition, m_bot));
+						}
 					}
 				}
 			}
