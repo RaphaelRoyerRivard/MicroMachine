@@ -730,10 +730,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 
-		if (startingStrategy == FAST_PF)
+		const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
+		if (engineeringBayCount <= 0)
 		{
-			const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
-			if (engineeringBayCount <= 0 && totalBaseCount > 1 && orbitalCount > 0)
+			if ((startingStrategy == FAST_PF && totalBaseCount > 1 && orbitalCount > 0) || (enemyRace == sc2::Race::Zerg && m_bot.GetCurrentFrame() >= 4.5f * 60 * 22.4f))
 			{
 				if (!m_queue.contains(MetaTypeEnum::EngineeringBay))
 				{

@@ -679,7 +679,7 @@ void CCBot::setUnits()
 			if (!m_strategy.shouldProduceAntiAirDefense())
 			{
 				// If unit is flying and not part of the following list, we should produce Anti Air units
-				if (unitptr->is_flying)
+				if (unitptr->is_flying || unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_SPIRE)
 				{
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{
@@ -692,6 +692,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
 					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
 					case sc2::UNIT_TYPEID::ZERG_MUTALISK:
+					case sc2::UNIT_TYPEID::ZERG_SPIRE:
 						m_strategy.setShouldProduceAntiAirDefense(true);
 						m_strategy.setShouldProduceAntiAirOffense(true);
 						Actions()->SendChat("Planning on harassing with air units? That's MY strategy! >:(");
