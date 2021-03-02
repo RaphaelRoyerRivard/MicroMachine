@@ -81,6 +81,12 @@ void WorkerData::updateIdleMineralTarget()
 	{
 		if (base && !base->isUnderAttack() && (!base->getResourceDepot().isValid() || !base->getResourceDepot().isCompleted()))
 		{
+			if (m_bot.Strategy().wasProxyStartingStrategy())
+			{
+				auto groundDistance = base->getGroundDistance(m_bot.Buildings().getProxyLocation());
+				if (groundDistance <= 15)
+					continue;
+			}
 			closestBase = base;
 			break;
 		}
@@ -239,8 +245,11 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
     }
 	else if (job == WorkerJobs::Idle)
 	{//Must not call stop().
-		m_idleWorkers.insert(worker);
-		sendIdleWorkerToMiningSpot(worker, false);
+		if (!isProxyWorker(worker))
+		{
+			m_idleWorkers.insert(worker);
+			sendIdleWorkerToMiningSpot(worker, false);
+		}
 	}
 }
 
