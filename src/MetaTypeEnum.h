@@ -65,6 +65,7 @@ class MetaTypeEnum
 		static MetaType TerranVehicleAndShipArmorsLevel2;
 		static MetaType TerranVehicleAndShipArmorsLevel3;
 		static MetaType Stimpack;
+		static MetaType CombatShield;
 		static MetaType InfernalPreIgniter;
 		static MetaType BansheeCloak;
 		static MetaType HyperflightRotors;
