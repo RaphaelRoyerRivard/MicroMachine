@@ -2073,6 +2073,12 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, nat, player1, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, m_startLocation, player2, 10);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player2, 2);*/
+
+	// Test to reproduce bug where Cyclone is not chasing its target
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, nat + Util::Normalized(m_startLocation - nat) * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, nat, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);*/
 }
 
 void CCBot::IssueCheats()
