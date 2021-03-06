@@ -526,7 +526,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		else if (!shouldAttack)
 		{
 			// Cyclone with its Lock-On active
-			bool allyUnitSeesTarget = Util::AllyUnitSeesEnemyUnit(rangedUnit, target, 0.5f, m_bot);
+			bool allyUnitSeesTarget = Util::AllyUnitSeesEnemyUnit(rangedUnit, target, 0.5f, true, m_bot);
 			unitAttackRange = (allyUnitSeesTarget ? 14.f : 10.f) + rangedUnit->radius + target->radius;
 		}
 		else
@@ -610,7 +610,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 
 	// Opportunistic attack (often on buildings)
-	if ((shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat && (!isCyclone || !Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit->is_flying, m_bot)))
+	if (goalDescription != "LockedOnStart" && (shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat && (!isCyclone || !Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit->is_flying, m_bot)))
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.f          OpportunisticAttack");
 		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true, true, false);
@@ -1692,7 +1692,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				if (it != lockedOnTargets.end() && potentialTarget->health + potentialTarget->shield <= it->second.size() * 60)
 					continue;
 				const float threatHeight = m_bot.Map().terrainHeight(potentialTarget->pos);
-				if (threatHeight > cycloneHeight && !Util::AllyUnitSeesEnemyUnit(cyclone, potentialTarget, 0.f, m_bot))
+				if (threatHeight > cycloneHeight && !Util::AllyUnitSeesEnemyUnit(cyclone, potentialTarget, 0.f, false, m_bot))
 					continue;
 				const float dist = Util::Dist(cyclone->pos, potentialTarget->pos) - potentialTarget->radius;
 				if (shouldHeal && dist > partialLockOnRange + potentialTarget->radius)
@@ -1700,8 +1700,8 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				if (potentialTarget->display_type == sc2::Unit::Hidden)
 					continue;
 				// The lower the better
-				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 3.f);
-				const auto healthScore = 0.25f * (potentialTarget->health + potentialTarget->shield * 1.5f);
+				const auto distanceScore = 1.5f * std::pow(std::max(0.f, dist - 2), 3.f);
+				const auto healthScore = 0.5f * (potentialTarget->health + potentialTarget->shield * 1.5f);
 				// The higher the better
 				const auto energyScore = 0.25f * potentialTarget->energy;
 				const auto energyLessSpellcasterScore = 15 * (potentialTarget->unit_type == sc2::UNIT_TYPEID::TERRAN_LIBERATORAG || potentialTarget->unit_type == sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR);
@@ -1721,7 +1721,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				const auto detectorScore = 15 * (potentialTarget->detect_range > 0.f);
 				const auto threatRange = Util::GetAttackRangeForTarget(potentialTarget, cyclone, m_bot);
 				const auto threatDps = Util::GetDpsForTarget(potentialTarget, cyclone, m_bot);
-				const float powerScore = threatRange * threatDps * 1.5f;
+				const float powerScore = threatRange * threatDps;
 				const float speedScore = Util::getSpeedOfUnit(potentialTarget, m_bot) * 6.f;
 				auto armoredScore = 0.f;
 				if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
@@ -2777,7 +2777,7 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 			if (enemyRange >= 10.f && enemyDps > 0.f)
 			{
 				// We check if we have another unit that is close to it, but if not, the Cyclone should stay close to it
-				bool closeAlly = Util::AllyUnitSeesEnemyUnit(cyclone, lockOnTarget, 0.5f, m_bot);
+				bool closeAlly = Util::AllyUnitSeesEnemyUnit(cyclone, lockOnTarget, 0.5f, false, m_bot);
 				/*for (const auto ally : rangedUnits)
 				{
 					if (ally == cyclone)
@@ -3493,7 +3493,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 		if (considerOnlyVisibleUnits && target->last_seen_game_loop != m_bot.GetCurrentFrame())
 			continue;
 
-		float priority = getAttackPriority(rangedUnit, target, harass, considerOnlyUnitsInRange, !harass);
+		float priority = getAttackPriority(rangedUnit, target, targets, harass, considerOnlyUnitsInRange, !harass);
 		if(priority > 0.f)
 			targetPriorities.insert(std::pair<float, const sc2::Unit*>(priority, target));
     }

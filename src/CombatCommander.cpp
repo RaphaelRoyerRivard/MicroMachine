@@ -1971,7 +1971,10 @@ struct RegionArmyInformation
 	std::unordered_map<const sc2::Unit*, float> unitDetectionScores;
 	float airEnemyPower;
 	float groundEnemyPower;
+	bool airAttackingEnemies;
+	bool groundAttackingEnemies;
 	bool invisEnemies;
+	bool detectorEnemies;
 	float antiAirAllyPower;
 	float antiGroundAllyPower;
 	bool antiInvis;
@@ -1984,7 +1987,10 @@ struct RegionArmyInformation
 		, bot(bot)
 		, airEnemyPower(0)
 		, groundEnemyPower(0)
+		, airAttackingEnemies(false)
+		, groundAttackingEnemies(false)
 		, invisEnemies(false)
+		, detectorEnemies(false)
 		, antiAirAllyPower(0)
 		, antiGroundAllyPower(0)
 		, antiInvis(false)
@@ -2019,8 +2025,14 @@ struct RegionArmyInformation
 				airEnemyPower += power;
 			else
 				groundEnemyPower += power;
+			if (Util::CanUnitAttackAir(unit.getUnitPtr(), bot))
+				airAttackingEnemies = true;
+			if (Util::CanUnitAttackGround(unit.getUnitPtr(), bot))
+				groundAttackingEnemies = true;
 			if (unit.isCloaked() || unit.isBurrowed())
 				invisEnemies = true;
+			if (unit.getType().isDetector())
+				detectorEnemies = true;
 		}
 	}
 
@@ -2421,6 +2433,8 @@ void CombatCommander::updateDefenseSquads()
 				const bool workerScout = region.enemyUnits.size() == 1 && region.enemyUnits[0].getType().isWorker();
 				if (workerScout)
 					continue;	// We do not want to send a combat unit against an enemy scout
+				if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE && region.detectorEnemies && region.airAttackingEnemies)
+					continue;	// We would rather harass with our Banshees than defend against detectors and air attacking units
 				if (harassUnit && orderPositionDist < distance)
 					continue;	// We do not want to make our harass units come back to defend if they are close to their harass target base
 				if (unit.getUnitPtr() == offensiveReaper)

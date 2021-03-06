@@ -59,6 +59,7 @@ MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel1;
 MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel2;
 MetaType MetaTypeEnum::TerranVehicleAndShipArmorsLevel3;
 MetaType MetaTypeEnum::Stimpack;
+MetaType MetaTypeEnum::CombatShield;
 MetaType MetaTypeEnum::InfernalPreIgniter;
 MetaType MetaTypeEnum::BansheeCloak;
 MetaType MetaTypeEnum::HyperflightRotors;
@@ -170,6 +171,7 @@ void MetaTypeEnum::Initialize(CCBot & m_bot)
 	MetaTypeEnum::TerranVehicleAndShipArmorsLevel2 = MetaType("TerranVehicleAndShipArmorsLevel2", m_bot);
 	MetaTypeEnum::TerranVehicleAndShipArmorsLevel3 = MetaType("TerranVehicleAndShipArmorsLevel3", m_bot);
 	MetaTypeEnum::Stimpack = MetaType("Stimpack", m_bot);
+	MetaTypeEnum::CombatShield = MetaType("ShieldWall", m_bot);
 	MetaTypeEnum::InfernalPreIgniter = MetaType("HighCapacityBarrels", m_bot);
 	MetaTypeEnum::BansheeCloak = MetaType("BansheeCloak", m_bot);
 	MetaTypeEnum::HyperflightRotors = MetaType("BansheeSpeed", m_bot);

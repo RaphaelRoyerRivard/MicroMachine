@@ -209,6 +209,11 @@ Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets) 
     Unit bestTarget;
 	const auto unitHeight = Util::TerrainHeight(meleeUnit.getPosition());
 	const auto unitBaseLocation = m_bot.Bases().getBaseContainingPosition(meleeUnit.getPosition());
+	sc2::Units allTargets;	// Only needed for splash computation
+	if (UnitType::hasSplashingAttack(meleeUnit.getUnitPtr()->unit_type, false) || UnitType::hasSplashingAttack(meleeUnit.getUnitPtr()->unit_type, true))
+	{
+		Util::CCUnitsToSc2Units(targets, allTargets);
+	}
 
     // for each target possiblity
     for (auto & targetUnit : targets)
@@ -219,7 +224,7 @@ Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets) 
 		if (meleeUnit.getType().isWorker() && m_squad->getName() != "ScoutDefense" && Util::TerrainHeight(targetUnit.getPosition()) != unitHeight && unitBaseLocation != m_bot.Bases().getBaseContainingPosition(targetUnit.getPosition()))
 			continue;
     	
-        const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), false, false, true);
+		const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), allTargets, false, false, true);
 
         if (!bestTarget.isValid() || priority > highestPriority)
         {

@@ -58,7 +58,7 @@ float MicroManager::getTargetsPower(const std::vector<Unit>& units) const
 	return Util::GetUnitsPower(m_targets, units, m_bot);
 }
 
-float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, bool filterHighRangeUnits, bool considerOnlyUnitsInRange, bool reducePriorityOfUnpowered) const
+float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, const sc2::Units & allTargets, bool filterHighRangeUnits, bool considerOnlyUnitsInRange, bool reducePriorityOfUnpowered) const
 {
 	BOT_ASSERT(target, "null unit in getAttackPriority");
 
@@ -120,7 +120,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	{
 		if (attacker->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED && Util::Dist(attacker->pos, target->pos) < attacker->radius + target->radius + 2)
 			return 0.f;	// Sieged up tanks cannot attack units that are too close
-		float splashPriority =  getPriorityOfTargetConsideringSplash(attacker, target);
+		float splashPriority =  getPriorityOfTargetConsideringSplash(attacker, target, allTargets);
 		if (splashPriority > 0.f)
 			return splashPriority;
 	}
@@ -226,7 +226,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 	return std::max(0.1f, (proximityValue * 50 - healthValue) * invisModifier * unpoweredModifier * hallucinationModifier / 100.f);		//we do not want non combat buildings to have a higher priority than other units
 }
 
-float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attacker, const sc2::Unit * target) const
+float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attacker, const sc2::Unit * target, const sc2::Units & allTargets) const
 {
 	//consider unit distance (bool as parameter to activate) to give a minor buff to unit closer
 	//consider building splash, should be a very minor buff, as to avoid splash on buildings instead of units

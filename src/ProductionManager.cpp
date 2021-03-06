@@ -944,7 +944,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						if (m_bot.GetFreeMinerals() >= 450 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
 						{
-							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, -1, false));
 						}
 
 						if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
@@ -1008,12 +1008,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				/*const auto completedBarracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), true, true);
-				if (proxyMaraudersStrategy && completedBarracksReactorCount > 0 && !m_queue.contains(MetaTypeEnum::Marine))
-				{
-					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
-				}*/
-
 				bool enoughMedivacs = true;
 				if (produceMarauders)
 				{
@@ -1026,7 +1020,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						{
 							if (!m_queue.contains(MetaTypeEnum::Marine))
 							{
-								m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+								m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, -1, false));
 							}
 						}
 						if (!m_queue.contains(MetaTypeEnum::Marauder))
@@ -1040,11 +1034,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						queueTech(MetaTypeEnum::ConcussiveShells);
 					}
 
-					if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES) && marinesCount + maraudersCount >= 10 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
-					{
-						queueTech(MetaTypeEnum::Stimpack);
-					}
-
 					// 1 Medivac for every 4 Marauders
 					if (medivacCount < floor(maraudersCount / 4.f))
 					{
@@ -1056,10 +1045,20 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
+				if ((!produceMarauders || m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES)) && marinesCount + maraudersCount * 2 >= 10 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
+				{
+					queueTech(MetaTypeEnum::Stimpack);
+				}
+
+				if (marinesCount > 10 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::SHIELDWALL) && !isTechQueuedOrStarted(MetaTypeEnum::CombatShield))
+				{
+					queueTech(MetaTypeEnum::CombatShield);
+				}
+
 				// Produce Marines if we are not producing Reapers
 				if (!proxyMaraudersStrategy && !m_queue.contains(MetaTypeEnum::Reaper) && !m_queue.contains(MetaTypeEnum::Marine))
 				{
-					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, -1, false));
 				}
 #endif
 				const bool proxyCombatBuilding = m_bot.Strategy().enemyHasProxyCombatBuildings();
@@ -1650,13 +1649,16 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
 					switch (m_bot.GetPlayerRace(Players::Self))
 					{
 						case CCRace::Protoss:
-							m_queue.queueAsHighestPriority(MetaTypeEnum::Zealot, false);
+							if (!m_queue.contains(MetaTypeEnum::Zealot))
+								m_queue.queueAsHighestPriority(MetaTypeEnum::Zealot, false);
 							break;
 						case CCRace::Zerg:
-							m_queue.queueAsHighestPriority(MetaTypeEnum::Zergling, false);
+							if (!m_queue.contains(MetaTypeEnum::Zergling))
+								m_queue.queueAsHighestPriority(MetaTypeEnum::Zergling, false);
 							break;
 						case CCRace::Terran:
-							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+							if (!m_queue.contains(MetaTypeEnum::Marine))
+								m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
 							break;
 					}
 #endif
