@@ -1700,8 +1700,8 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				if (potentialTarget->display_type == sc2::Unit::Hidden)
 					continue;
 				// The lower the better
-				const auto distanceScore = std::pow(std::max(0.f, dist - 2), 3.f);
-				const auto healthScore = 0.25f * (potentialTarget->health + potentialTarget->shield * 1.5f);
+				const auto distanceScore = 1.5f * std::pow(std::max(0.f, dist - 2), 3.f);
+				const auto healthScore = 0.5f * (potentialTarget->health + potentialTarget->shield * 1.5f);
 				// The higher the better
 				const auto energyScore = 0.25f * potentialTarget->energy;
 				const auto energyLessSpellcasterScore = 15 * (potentialTarget->unit_type == sc2::UNIT_TYPEID::TERRAN_LIBERATORAG || potentialTarget->unit_type == sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR);
@@ -1721,7 +1721,7 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 				const auto detectorScore = 15 * (potentialTarget->detect_range > 0.f);
 				const auto threatRange = Util::GetAttackRangeForTarget(potentialTarget, cyclone, m_bot);
 				const auto threatDps = Util::GetDpsForTarget(potentialTarget, cyclone, m_bot);
-				const float powerScore = threatRange * threatDps * 1.5f;
+				const float powerScore = threatRange * threatDps;
 				const float speedScore = Util::getSpeedOfUnit(potentialTarget, m_bot) * 6.f;
 				auto armoredScore = 0.f;
 				if(m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::CYCLONELOCKONDAMAGEUPGRADE))
