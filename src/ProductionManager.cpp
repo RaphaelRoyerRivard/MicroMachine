@@ -1045,12 +1045,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				if ((!produceMarauders || m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES)) && marinesCount + maraudersCount * 2 >= 15 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
+				if ((!produceMarauders || m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES)) && marinesCount + maraudersCount * 2 >= 10 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
 				{
 					queueTech(MetaTypeEnum::Stimpack);
 				}
 
-				if (marinesCount >= 8 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::SHIELDWALL) && !isTechQueuedOrStarted(MetaTypeEnum::CombatShield))
+				if (marinesCount > 10 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::SHIELDWALL) && !isTechQueuedOrStarted(MetaTypeEnum::CombatShield))
 				{
 					queueTech(MetaTypeEnum::CombatShield);
 				}
