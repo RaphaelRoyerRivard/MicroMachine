@@ -610,7 +610,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 
 	// Opportunistic attack (often on buildings)
-	if ((shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat && (!isCyclone || !Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit->is_flying, m_bot)))
+	if (goalDescription != "LockedOnStart" && (shouldAttack || cycloneShouldUseLockOn) && !fasterEnemyThreat && (!isCyclone || !Util::PathFinding::HasInfluenceOnTile(Util::GetTilePosition(rangedUnit->pos), rangedUnit->is_flying, m_bot)))
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.f          OpportunisticAttack");
 		const auto closeTarget = getTarget(rangedUnit, rangedUnitTargets, true, true, true, false);
