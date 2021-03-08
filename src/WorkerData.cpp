@@ -79,29 +79,26 @@ void WorkerData::updateIdleMineralTarget()
 	auto & allyBases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 	for (auto base : allyBases)
 	{
-		if (base && !base->isUnderAttack() && (!base->getResourceDepot().isValid() || !base->getResourceDepot().isCompleted()))
+		if (base && !base->isUnderAttack() && (!base->getResourceDepot().isValid() || !base->getResourceDepot().isCompleted()) && base->getMinerals().size() != 0)
 		{
 			closestBase = base;
 			break;
 		}
 	}
+
 	// If we have none, choose the next expansion
 	if (!closestBase)
 	{
 		closestBase = m_bot.Bases().getNextExpansion(Players::Self, false, false, true);
 	}
 	// If that base is not occupied by the enemy and does not have a completed resource depot, we find the mineral patch to mine from
-	if (closestBase && !closestBase->isOccupiedByPlayer(Players::Enemy) && (!closestBase->getResourceDepot().isValid() || !closestBase->getResourceDepot().isCompleted()))
+	if (closestBase && !closestBase->isUnderAttack() && !closestBase->isOccupiedByPlayer(Players::Enemy) && (!closestBase->getResourceDepot().isValid() || !closestBase->getResourceDepot().isCompleted()))
 	{
 		const BaseLocation * homeBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
 		if (homeBase->getResourceDepot().isValid())
 		{
 			m_idleMineralTarget = GetBestMineralInList(closestBase->getMinerals(), homeBase->getResourceDepot(), false);
-
-			if (m_idleMineralTarget.isValid() && m_idleMineralTarget.getUnitPtr()->display_type == sc2::Unit::Snapshot)
-			{
-				closestBase->updateMineral(m_idleMineralTarget);
-			}
+			closestBase->updateMineral(m_idleMineralTarget);
 		}
 	}
 }
@@ -617,6 +614,11 @@ void WorkerData::drawDepotDebugInfo()
 
         m_bot.Map().drawText(depot.getPosition(), ss.str());
     }
+
+	if (m_idleMineralTarget.isValid())
+	{
+		m_bot.Map().drawCircle(m_idleMineralTarget.getPosition(), 1, CCColor(125, 125, 125));
+	}
 }
 
 const std::set<Unit> & WorkerData::getWorkers() const

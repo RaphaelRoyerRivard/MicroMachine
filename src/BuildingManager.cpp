@@ -120,6 +120,14 @@ void BuildingManager::lowPriorityChecks()
 					{
 						m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(building.finalPosition), building.type);
 						building.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
+						if (building.finalPosition == CCPosition())
+						{
+							auto remove = CancelBuilding(building, "invalid or blocked location", false);
+							if (remove.finalPosition != CCTilePosition(0, 0))
+							{
+								toRemove.push_back(remove);
+							}
+						}
 						building.buildCommandGiven = false;
 					}
 				}
@@ -657,7 +665,15 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		CCTilePosition testLocation;
 		if (b.canBeBuiltElseWhere)
 		{
-			testLocation = getNextBuildingLocation(b, !isRushed, true, includeAddonTiles, ignoreExtraBorder, forceSameHeight);//Only check m_nextBuildLocation if we are not being rushed
+
+			if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && m_bot.GetCurrentFrame() < 4086)//[expand in main first CC], before 3 minutes
+			{
+				testLocation = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, false, true, false, true, true);
+			}
+			if(testLocation == CCTilePosition())
+			{
+				testLocation = getNextBuildingLocation(b, !isRushed, true, includeAddonTiles, ignoreExtraBorder, forceSameHeight);//Only check m_nextBuildLocation if we are not being rushed
+			}
 		}
 		else
 		{
@@ -708,7 +724,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 			}
 			if (!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
 			{
-				if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER)
+				if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER)//[expand in main]
 				{
 					auto location = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, false, true, false, false, false);
 					if (location == CCPosition())//If no build location is found
