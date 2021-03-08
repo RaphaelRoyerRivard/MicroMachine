@@ -42,8 +42,9 @@ class ProductionManager
     void    manageBuildOrderQueue();
 	bool	ShouldSkipQueueItem(const MM::BuildOrderItem & currentItem);
 	void	putImportantBuildOrderItemsInQueue();
-	bool	isImportantProductionBuildingIdle();
-	std::vector<sc2::UNIT_TYPEID> getIdleImportantProductionBuildingTypes();
+	bool	isImportantProductionBuildingIdle(bool underConstructionConsideredIdle, bool constructingAddonConsideredIdle);
+	std::vector<sc2::UNIT_TYPEID> getIdleImportantProductionBuildingTypes(bool underConstructionConsideredIdle, bool constructingAddonConsideredIdle);
+	bool	ProductionQueueContainsItemProduceableByUnit(const Unit & productionBuiding);
 	void	QueueDeadBuildings();
 
 	void	fixBuildOrderDeadlock(MM::BuildOrderItem & item);

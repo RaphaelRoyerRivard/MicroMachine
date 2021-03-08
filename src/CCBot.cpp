@@ -679,7 +679,7 @@ void CCBot::setUnits()
 			if (!m_strategy.shouldProduceAntiAirDefense())
 			{
 				// If unit is flying and not part of the following list, we should produce Anti Air units
-				if (unitptr->is_flying)
+				if (unitptr->is_flying || unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_SPIRE)
 				{
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{
@@ -692,6 +692,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
 					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
 					case sc2::UNIT_TYPEID::ZERG_MUTALISK:
+					case sc2::UNIT_TYPEID::ZERG_SPIRE:
 						m_strategy.setShouldProduceAntiAirDefense(true);
 						m_strategy.setShouldProduceAntiAirOffense(true);
 						Actions()->SendChat("Planning on harassing with air units? That's MY strategy! >:(");
@@ -2061,6 +2062,35 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, enemyLocation - towardsCenter * 10, player1, 1);
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter + towardsCenter * 15, player1, 5);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + towardsCenter * 10, player1, 15);*/
+
+	// Test to see if we are able to construct multiple production buildings at once
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, enemyLocation, player1, 100);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, third, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, fourth, player2, 1);*/
+
+	// Test to see if long distance workers are fleeing from threats
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, nat, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SCV, m_startLocation, player2, 10);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter, player2, 2);*/
+
+	// Test to reproduce bug where Cyclone is not chasing its target
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, nat + Util::Normalized(m_startLocation - nat) * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, nat, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);*/
+
+	// Test to reproduce bug where Cyclone is not locking on the right target
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_IMMORTAL, mapCenter + towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 4, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter - towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 5, player2, 1);*/
+
+	// Test to see if our Banshees harass instead of defend against detectors and air attacking units
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_IMMORTAL, m_startLocation + towardsCenter * 10, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + towardsCenter * 10, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation + towardsCenter * 10, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);*/
 }
 
 void CCBot::IssueCheats()

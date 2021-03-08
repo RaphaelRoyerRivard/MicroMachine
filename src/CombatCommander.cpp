@@ -529,7 +529,7 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 				break;
 			case 8: // Liberator Defender Zone Setup
 			case 9: // Liberator Defender Zone
-				radius = effectData.radius;
+				radius = effectData.radius + 0.5f;
 				dps = 65.8f;
 				targetType = sc2::Weapon::TargetType::Ground;
 				break;
@@ -919,7 +919,8 @@ void CombatCommander::updateWorkerFleeSquad()
 		const bool isWorkerRushed = m_bot.Strategy().isWorkerRushed();
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
 		if (Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
-			|| ((!earlyRushed || job == WorkerJobs::Idle) &&
+			|| (job == WorkerJobs::Idle && (groundThreat || flyingThreat))
+			|| (!earlyRushed &&
 				((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
 				|| (groundThreat && (injured || (isProxyWorker && isWorkerRushed)) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))))
 		{
@@ -1199,6 +1200,7 @@ void CombatCommander::updateClearExpandSquads()
 			// Check the units requirement
 			const auto & blockingUnits = baseLocation->getBlockingUnits();
 			bool groundUnits = blockingUnits.empty();	// If we see no unit that block the base, it's probably a burrowed unit
+			bool visibleGroundUnits = false;
 			bool airUnits = false;
 			bool invisUnits = blockingUnits.empty();	// If we see no unit that block the base, it's probably a burrowed unit
 			for (const auto & blockingUnit : blockingUnits)
@@ -1206,7 +1208,10 @@ void CombatCommander::updateClearExpandSquads()
 				if (blockingUnit.isFlying())
 					airUnits = true;
 				else
+				{
 					groundUnits = true;
+					visibleGroundUnits = true;
+				}
 				if (blockingUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::Cloaked || blockingUnit.getUnitPtr()->cloak == sc2::Unit::CloakState::CloakedDetected || blockingUnit.getUnitPtr()->is_burrowed)
 					invisUnits = true;
 			}
@@ -1225,17 +1230,21 @@ void CombatCommander::updateClearExpandSquads()
 					}
 				}
 				// Create a burrowed unit if there is none we know of, to allow the use of a scan
-				if (!closeBurrowedUnit && !allCornersDetected && allCornersVisible)
+				if (!visibleGroundUnits && !closeBurrowedUnit && !allCornersDetected && allCornersVisible)
 				{
-					invisUnits = true;
-					if (creepCleared)
+					const auto enemyPlayerRace = m_bot.GetPlayerRace(Players::Enemy);
+					if (enemyPlayerRace == sc2::Zerg)
 					{
-						m_bot.Analyzer().addBurrowedUnits(Util::CreateDummyBurrowedZergling(basePosition, m_bot));
-					}
-					else if (!creepCleared && !airUnits)
-					{
-						// TODO should be a Creep tumor, but it doesn't really matter
-						m_bot.Analyzer().addBurrowedUnits(Util::CreateDummyBurrowedZergling(basePosition, m_bot));
+						invisUnits = true;
+						if (creepCleared)
+						{
+							m_bot.Analyzer().addBurrowedUnits(Util::CreateDummyBurrowedZergling(basePosition, m_bot));
+						}
+						else if (!creepCleared && !airUnits)
+						{
+							// TODO should be a Creep tumor, but it doesn't really matter
+							m_bot.Analyzer().addBurrowedUnits(Util::CreateDummyBurrowedZergling(basePosition, m_bot));
+						}
 					}
 				}
 			}
@@ -1654,7 +1663,7 @@ void CombatCommander::updateAttackSquads()
 			}
 			else
 			{
-				m_winAttackSimulation = simulationResult > 0.5f || m_bot.GetCurrentSupply() >= 195;
+				m_winAttackSimulation = simulationResult > 0.7f || m_bot.GetCurrentSupply() >= 195;
 				if (m_winAttackSimulation)
 				{
 					auto allySupply = Util::GetSupplyOfUnits(allyUnits, m_bot);
@@ -1962,7 +1971,10 @@ struct RegionArmyInformation
 	std::unordered_map<const sc2::Unit*, float> unitDetectionScores;
 	float airEnemyPower;
 	float groundEnemyPower;
+	bool airAttackingEnemies;
+	bool groundAttackingEnemies;
 	bool invisEnemies;
+	bool detectorEnemies;
 	float antiAirAllyPower;
 	float antiGroundAllyPower;
 	bool antiInvis;
@@ -1975,7 +1987,10 @@ struct RegionArmyInformation
 		, bot(bot)
 		, airEnemyPower(0)
 		, groundEnemyPower(0)
+		, airAttackingEnemies(false)
+		, groundAttackingEnemies(false)
 		, invisEnemies(false)
+		, detectorEnemies(false)
 		, antiAirAllyPower(0)
 		, antiGroundAllyPower(0)
 		, antiInvis(false)
@@ -2010,8 +2025,14 @@ struct RegionArmyInformation
 				airEnemyPower += power;
 			else
 				groundEnemyPower += power;
+			if (Util::CanUnitAttackAir(unit.getUnitPtr(), bot))
+				airAttackingEnemies = true;
+			if (Util::CanUnitAttackGround(unit.getUnitPtr(), bot))
+				groundAttackingEnemies = true;
 			if (unit.isCloaked() || unit.isBurrowed())
 				invisEnemies = true;
+			if (unit.getType().isDetector())
+				detectorEnemies = true;
 		}
 	}
 
@@ -2412,6 +2433,8 @@ void CombatCommander::updateDefenseSquads()
 				const bool workerScout = region.enemyUnits.size() == 1 && region.enemyUnits[0].getType().isWorker();
 				if (workerScout)
 					continue;	// We do not want to send a combat unit against an enemy scout
+				if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE && region.detectorEnemies && region.airAttackingEnemies)
+					continue;	// We would rather harass with our Banshees than defend against detectors and air attacking units
 				if (harassUnit && orderPositionDist < distance)
 					continue;	// We do not want to make our harass units come back to defend if they are close to their harass target base
 				if (unit.getUnitPtr() == offensiveReaper)

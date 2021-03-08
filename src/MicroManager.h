@@ -36,6 +36,6 @@ public:
 	float getAverageTargetsSpeed() const;
     float getSquadPower() const;
     float getTargetsPower(const std::vector<Unit>& units) const;
-	float getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, bool filterHighRangeUnits, bool considerOnlyUnitsInRange, bool reducePriorityOfUnpowered) const;
-	float getPriorityOfTargetConsideringSplash(const sc2::Unit * attacker, const sc2::Unit * target) const;
+	float getAttackPriority(const sc2::Unit * attacker, const sc2::Unit * target, const sc2::Units & allTargets, bool filterHighRangeUnits, bool considerOnlyUnitsInRange, bool reducePriorityOfUnpowered) const;
+	float getPriorityOfTargetConsideringSplash(const sc2::Unit * attacker, const sc2::Unit * target, const sc2::Units & allTargets) const;
 };

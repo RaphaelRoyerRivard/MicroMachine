@@ -228,14 +228,15 @@ bool Unit::isProducingAddon() const
 	return false;
 }
 
-bool Unit::isProductionBuildingIdle() const
+bool Unit::isProductionBuildingIdle(bool underConstructionConsideredIdle, bool constructingAddonConsideredIdle) const
 {
 	if(getType().isBuilding())
 	{
 		//Check if this building is idle
-		if (isIdle() || isProducingAddon())
+		if (isIdle() || (constructingAddonConsideredIdle && isProducingAddon()))
 		{
-			return true;
+			if (underConstructionConsideredIdle || isCompleted())
+				return true;
 		}
 	}
 	return false;

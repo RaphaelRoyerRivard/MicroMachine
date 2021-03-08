@@ -242,7 +242,7 @@ namespace Util
 	bool isUnitAffectedByParasiticBomb(const sc2::Unit * unit);
 	bool unitHasBuff(const sc2::Unit * unit, sc2::BUFF_ID buffId);
 	void ClearSeenEnemies();
-	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, float visionBuffer, CCBot & bot);
+	bool AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, float visionBuffer, bool filterStationaryUnits, CCBot & bot);
 	bool CanUnitSeeEnemyUnit(const sc2::Unit * unit, const sc2::Unit * enemyUnit, float buffer, CCBot & bot);
 	bool IsEnemyHiddenOnHighGround(const sc2::Unit * unit, const sc2::Unit * enemyUnit, CCBot & bot);
 	bool IsPositionUnderDetection(CCPosition position, CCBot & bot);

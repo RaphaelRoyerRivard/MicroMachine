@@ -30,16 +30,19 @@ class MetaTypeEnum
 		static MetaType MissileTurret;
 		static MetaType FusionCore;
 		static MetaType Armory;
+		static MetaType GhostAcademy;
 			//Units
 		static MetaType SCV;
 		static MetaType Marine;
 		static MetaType Marauder;
 		static MetaType Reaper;
+		static MetaType Ghost;
 		static MetaType Hellion;
 		static MetaType WidowMine;
 		static MetaType Banshee;
 		static MetaType Viking;
 		static MetaType Medivac;
+		static MetaType Liberator;
 		static MetaType Raven;
 		static MetaType Cyclone;
 		static MetaType Battlecruiser;
@@ -62,6 +65,7 @@ class MetaTypeEnum
 		static MetaType TerranVehicleAndShipArmorsLevel2;
 		static MetaType TerranVehicleAndShipArmorsLevel3;
 		static MetaType Stimpack;
+		static MetaType CombatShield;
 		static MetaType InfernalPreIgniter;
 		static MetaType BansheeCloak;
 		static MetaType HyperflightRotors;

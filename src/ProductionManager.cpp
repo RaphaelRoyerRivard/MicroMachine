@@ -280,7 +280,8 @@ void ProductionManager::manageBuildOrderQueue()
 					auto unitTypeID = currentItem.type.getUnitType().getAPIUnitType();
 					if (currentItem.type.isBuilding() && (unitTypeID == sc2::UNIT_TYPEID::TERRAN_ARMORY || Util::Contains(unitTypeID, getProductionBuildingTypes())))
 					{
-						auto idleTypes = getIdleImportantProductionBuildingTypes();
+						bool laxIdleRules = unitTypeID != sc2::UNIT_TYPEID::TERRAN_BARRACKS;
+						auto idleTypes = getIdleImportantProductionBuildingTypes(laxIdleRules, laxIdleRules);
 						if (!idleTypes.empty())
 						{
 							bool isNonRequiredArmory = unitTypeID == sc2::UNIT_TYPEID::TERRAN_ARMORY && !m_queue.contains(MetaTypeEnum::Thor);
@@ -729,10 +730,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			}
 		}
 
-		if (startingStrategy == FAST_PF)
+		const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
+		if (engineeringBayCount <= 0)
 		{
-			const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
-			if (engineeringBayCount <= 0 && totalBaseCount > 1 && orbitalCount > 0)
+			if ((startingStrategy == FAST_PF && totalBaseCount > 1 && orbitalCount > 0) || (enemyRace == sc2::Race::Zerg && m_bot.GetCurrentFrame() >= 4.5f * 60 * 22.4f))
 			{
 				if (!m_queue.contains(MetaTypeEnum::EngineeringBay))
 				{
@@ -877,7 +878,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyGatewayCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_GATEWAY).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_WARPGATE).size();
 				const bool startPumpingOutMarauders = pumpOutMarauders && completedSupplyProviders >= 1 && barracksCount < 2;
 				const bool buildMoreBarracksAgainstMultiGateways = produceMarauders && completedSupplyProviders >= 1 && barracksCount < (enemyGatewayCount - 1);
-				if (barracksCount < 1 || startPumpingOutMarauders || buildMoreBarracksAgainstMultiGateways || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && (barracksCount * 2 < finishedBaseCount || m_bot.GetFreeMinerals() >= 1000)))
+				if (barracksCount < 10 && (barracksCount < 1 || startPumpingOutMarauders || buildMoreBarracksAgainstMultiGateways || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && (barracksCount * 2 < finishedBaseCount || m_bot.GetFreeMinerals() >= 1000))))
 				{
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
@@ -902,7 +903,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (hasPicked && !m_queue.contains(toBuild) && (forceProductionBuilding || !m_queue.contains(MetaTypeEnum::CommandCenter) || m_bot.GetFreeMinerals() > 400 || m_bot.Bases().getFreeBaseLocationCount() == 0))
 				{
 					// No need to check for idle production buildings if we want to force its creation
-					if (forceProductionBuilding || !isImportantProductionBuildingIdle())
+					bool laxIdleRules = finishedBaseCount < 3;
+					if (forceProductionBuilding || !isImportantProductionBuildingIdle(laxIdleRules, laxIdleRules))
 						m_queue.queueAsLowestPriority(toBuild, false);
 				}
 
@@ -942,7 +944,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						if (m_bot.GetFreeMinerals() >= 450 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
 						{
-							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, -1, false));
 						}
 
 						if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
@@ -1006,12 +1008,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
-				/*const auto completedBarracksReactorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::BarracksReactor.getUnitType(), true, true);
-				if (proxyMaraudersStrategy && completedBarracksReactorCount > 0 && !m_queue.contains(MetaTypeEnum::Marine))
-				{
-					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
-				}*/
-
 				bool enoughMedivacs = true;
 				if (produceMarauders)
 				{
@@ -1024,7 +1020,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						{
 							if (!m_queue.contains(MetaTypeEnum::Marine))
 							{
-								m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+								m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, -1, false));
 							}
 						}
 						if (!m_queue.contains(MetaTypeEnum::Marauder))
@@ -1038,11 +1034,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						queueTech(MetaTypeEnum::ConcussiveShells);
 					}
 
-					if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES) && marinesCount + maraudersCount >= 10 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
-					{
-						queueTech(MetaTypeEnum::Stimpack);
-					}
-
 					// 1 Medivac for every 4 Marauders
 					if (medivacCount < floor(maraudersCount / 4.f))
 					{
@@ -1054,10 +1045,20 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 
+				if ((!produceMarauders || m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES)) && marinesCount + maraudersCount * 2 >= 10 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
+				{
+					queueTech(MetaTypeEnum::Stimpack);
+				}
+
+				if (marinesCount > 10 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::SHIELDWALL) && !isTechQueuedOrStarted(MetaTypeEnum::CombatShield))
+				{
+					queueTech(MetaTypeEnum::CombatShield);
+				}
+
 				// Produce Marines if we are not producing Reapers
 				if (!proxyMaraudersStrategy && !m_queue.contains(MetaTypeEnum::Reaper) && !m_queue.contains(MetaTypeEnum::Marine))
 				{
-					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, 0, false));
+					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, -1, false));
 				}
 #endif
 				const bool proxyCombatBuilding = m_bot.Strategy().enemyHasProxyCombatBuildings();
@@ -1438,12 +1439,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 	}
 }
 
-bool ProductionManager::isImportantProductionBuildingIdle()
+bool ProductionManager::isImportantProductionBuildingIdle(bool underConstructionConsideredIdle, bool constructingAddonConsideredIdle)
 {
-	return getIdleImportantProductionBuildingTypes().size() > 0;
+	return getIdleImportantProductionBuildingTypes(underConstructionConsideredIdle, constructingAddonConsideredIdle).size() > 0;
 }
 
-std::vector<sc2::UNIT_TYPEID> ProductionManager::getIdleImportantProductionBuildingTypes()
+std::vector<sc2::UNIT_TYPEID> ProductionManager::getIdleImportantProductionBuildingTypes(bool underConstructionConsideredIdle, bool constructingAddonConsideredIdle)
 {
 	std::vector<sc2::UNIT_TYPEID> idleImportantProductionBuildingTypes;
 	std::vector<sc2::UNIT_TYPEID> importantProductionBuildingTypes = { sc2::UNIT_TYPEID::TERRAN_FACTORY, sc2::UNIT_TYPEID::TERRAN_STARPORT };
@@ -1459,15 +1460,80 @@ std::vector<sc2::UNIT_TYPEID> ProductionManager::getIdleImportantProductionBuild
 		{
 			for (const auto & productionBuilding : productionBuildings)
 			{
-				if (productionBuilding.isProductionBuildingIdle())
+				if (productionBuilding.isProductionBuildingIdle(underConstructionConsideredIdle, constructingAddonConsideredIdle))
 				{
-					idleImportantProductionBuildingTypes.push_back(importantProductionBuildingType);
-					break;
+					// if the building is idle but there is no unit it can produce in the production queue, then it's ok if it is idle
+					if (ProductionQueueContainsItemProduceableByUnit(productionBuilding))
+					{
+						idleImportantProductionBuildingTypes.push_back(importantProductionBuildingType);
+						break;
+					}
 				}
 			}
 		}
 	}
 	return idleImportantProductionBuildingTypes;
+}
+
+bool ProductionManager::ProductionQueueContainsItemProduceableByUnit(const Unit & productionBuiding)
+{
+	bool isReactored = false;
+	auto addonTag = productionBuiding.getAddonTag();
+	if (addonTag != 0)
+	{
+		auto addon = m_bot.GetUnit(addonTag);
+		switch (addon.getAPIUnitType().ToType())
+		{
+			case sc2::UNIT_TYPEID::TERRAN_BARRACKSREACTOR:
+			case sc2::UNIT_TYPEID::TERRAN_FACTORYREACTOR:
+			case sc2::UNIT_TYPEID::TERRAN_STARPORTREACTOR:
+				isReactored = true;
+				break;
+		}
+	}
+
+	std::vector<MetaType> produceableTypes;
+	switch (productionBuiding.getAPIUnitType().ToType())
+	{
+		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+			produceableTypes = { MetaTypeEnum::Marine, MetaTypeEnum::Reaper };
+			if (!isReactored)
+			{
+				produceableTypes.push_back(MetaTypeEnum::Marauder);
+				bool completedGhostAcademy = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::GhostAcademy.getUnitType(), true, true) > 0;
+				if (completedGhostAcademy)
+					produceableTypes.push_back(MetaTypeEnum::Ghost);
+			}
+			break;
+		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+			produceableTypes = { MetaTypeEnum::Hellion, MetaTypeEnum::WidowMine };
+			if (!isReactored)
+			{
+				produceableTypes.push_back(MetaTypeEnum::Cyclone);
+				produceableTypes.push_back(MetaTypeEnum::SiegeTank);
+				bool completedArmory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Armory.getUnitType(), true, true) > 0;
+				if (completedArmory)
+					produceableTypes.push_back(MetaTypeEnum::Thor);
+			}
+			break;
+		case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+			produceableTypes = { MetaTypeEnum::Viking, MetaTypeEnum::Medivac, MetaTypeEnum::Liberator };
+			if (!isReactored)
+			{
+				produceableTypes.push_back(MetaTypeEnum::Raven);
+				produceableTypes.push_back(MetaTypeEnum::Banshee);
+				bool completedFusionCore = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FusionCore.getUnitType(), true, true) > 0;
+				if (completedFusionCore)
+					produceableTypes.push_back(MetaTypeEnum::Battlecruiser);
+			}
+			break;
+	}
+	for (auto & unitType : produceableTypes)
+	{
+		if (m_queue.contains(unitType))
+			return true;
+	}
+	return false;
 }
 
 void ProductionManager::QueueDeadBuildings()
@@ -1583,13 +1649,16 @@ void ProductionManager::fixBuildOrderDeadlock(MM::BuildOrderItem & item)
 					switch (m_bot.GetPlayerRace(Players::Self))
 					{
 						case CCRace::Protoss:
-							m_queue.queueAsHighestPriority(MetaTypeEnum::Zealot, false);
+							if (!m_queue.contains(MetaTypeEnum::Zealot))
+								m_queue.queueAsHighestPriority(MetaTypeEnum::Zealot, false);
 							break;
 						case CCRace::Zerg:
-							m_queue.queueAsHighestPriority(MetaTypeEnum::Zergling, false);
+							if (!m_queue.contains(MetaTypeEnum::Zergling))
+								m_queue.queueAsHighestPriority(MetaTypeEnum::Zergling, false);
 							break;
 						case CCRace::Terran:
-							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+							if (!m_queue.contains(MetaTypeEnum::Marine))
+								m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
 							break;
 					}
 #endif
@@ -2890,9 +2959,6 @@ bool ProductionManager::hasProducedAtLeastXFactoryUnit(int x) const
 
 void ProductionManager::drawProductionInformation()
 {
-#ifdef PUBLIC_RELEASE
-	return;
-#endif
 	const bool draw = m_bot.Config().DrawProductionInfo;
 	const bool log = m_bot.GetCurrentFrame() >= m_lastProductionLogFrame + m_bot.Config().ProductionPrintFrequency * 22.4f;
     if (!draw && !log)

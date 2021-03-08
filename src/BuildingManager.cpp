@@ -2211,13 +2211,10 @@ void BuildingManager::castBuildingsAbilities()
 					const auto & scans = m_bot.Commander().Combat().getAllyScans();
 					for (const auto scan : scans)
 					{
-						if (m_bot.GetCurrentFrame() > scan.second + 1)
+						if (Util::DistSq(middlePoint, scan.first) < 5.f * 5.f)
 						{
-							if (Util::DistSq(middlePoint, scan.first) < 5.f * 5.f)
-							{
-								closeScan = true;
-								break;
-							}
+							closeScan = true;
+							break;
 						}
 					}
 
@@ -2225,6 +2222,14 @@ void BuildingManager::castBuildingsAbilities()
 					{
 						Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SCAN, middlePoint, m_bot);
 						m_bot.Commander().Combat().addAllyScan(middlePoint);
+						std::stringstream ss;
+						ss << "Scanning for at (" << middlePoint.x << ", " << middlePoint.y << ") for " << closeBurrowedOrInvisUnits.size() << " burrowed or invis units of types ";
+						for (auto burrowedOrInvisUnit : closeBurrowedOrInvisUnits)
+						{
+							ss << sc2::UnitTypeToName(burrowedOrInvisUnit->unit_type) << ", ";
+						}
+						ss << " with " << closeCombatUnits.size() << " close combat units.";
+						Util::Log(__FUNCTION__, ss.str(), m_bot);
 					}
 				}
 			}

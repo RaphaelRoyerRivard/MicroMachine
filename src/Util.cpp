@@ -416,11 +416,18 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 				bool closer = false;
 				if (closestNode != nullptr)
 				{
-					const CCPosition shiftedPos = GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
-					if (flee && maxRange > 0.f)
-						closer = Dist(shiftedPos, goal) < maxRange && GetTotalInfluenceOnTile(currentNode->position, unit->is_flying, bot) < GetTotalInfluenceOnTile(closestNode->position, unit->is_flying, bot);
-					else
-						closer = Dist(shiftedPos, goal) < Dist(GetPosition(closestNode->position) + CCPosition(0.5f, 0.5f), goal);
+					const CCPosition closestShiftedPos = GetPosition(closestNode->position) + CCPosition(0.5f, 0.5f);
+					const CCPosition currentShiftedPos = GetPosition(currentNode->position) + CCPosition(0.5f, 0.5f);
+					const float currentDistToGoal = Dist(currentShiftedPos, goal);
+					const float closestDistToGoal = Dist(closestShiftedPos, goal);
+					closer = currentDistToGoal < closestDistToGoal;
+					if (closer && flee && maxRange > 0.f)
+					{
+						const float currentInfluenceOnTile = GetTotalInfluenceOnTile(currentNode->position, unit->is_flying, bot);
+						const float closestInfluenceOnTile = GetTotalInfluenceOnTile(closestNode->position, unit->is_flying, bot);
+						const bool closestIsStillFar = closestDistToGoal > maxRange - 2;
+						closer = closestIsStillFar && currentDistToGoal < maxRange && currentInfluenceOnTile <= closestInfluenceOnTile;
+					}
 				}
 				if (closestNode == nullptr || closer)
 				{
@@ -2365,13 +2372,21 @@ void Util::ClearSeenEnemies()
 	m_seenEnemies.clear();
 }
 
-bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, float visionBuffer, CCBot & bot)
+bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit * enemyUnit, float visionBuffer, bool filterStationaryUnits, CCBot & bot)
 {
 	auto & allyUnitsPair = m_seenEnemies[enemyUnit];
 	auto & alliesWithVisionOfEnemy = allyUnitsPair.first;
 	auto & alliesWithoutVisionOfEnemy = allyUnitsPair.second;
 	if (alliesWithVisionOfEnemy.size() > 1 || (alliesWithVisionOfEnemy.size() == 1 && alliesWithVisionOfEnemy.find(exceptUnit) == alliesWithVisionOfEnemy.end()))
-		return true;	// another ally unit can see the enemy unit
+	{
+		if (!filterStationaryUnits)
+			return true;	// another ally unit can see the enemy unit
+		for (auto ally : alliesWithVisionOfEnemy)
+		{
+			if (Util::getSpeedOfUnit(ally, bot) > 0)
+				return true;	// another non stationary ally unit can see the enemy unit
+		}
+	}
 	if (alliesWithoutVisionOfEnemy.size() == bot.GetAllyUnits().size())
 		return false;	// we already know no ally unit can see the enemy unit
 
@@ -2385,7 +2400,10 @@ bool Util::AllyUnitSeesEnemyUnit(const sc2::Unit * exceptUnit, const sc2::Unit *
 		{
 			alliesWithVisionOfEnemy.insert(allyUnitPtr);
 			if (allyUnitPtr != exceptUnit)
-				return true;
+			{
+				if (!filterStationaryUnits || Util::getSpeedOfUnit(allyUnitPtr, bot) > 0)
+					return true;
+			}
 		}
 		else
 		{

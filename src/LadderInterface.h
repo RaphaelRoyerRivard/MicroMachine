@@ -179,17 +179,21 @@ static void RunBot(int argc, char *argv[], CCBot *Agent, sc2::Race race, bool lo
 		Agent->SetOpponentId(Options.OpponentId);
     }
 
-    // Start the game.
-
-    // Step forward the game simulation.
+    // Request the feature layers to allow the use of the single drop micro
+	sc2::FeatureLayerSettings settings;
+	coordinator.SetFeatureLayers(settings);
+    // Connect to the game client
     std::cout << "Connecting to port " << Options.GamePort << std::endl;
     coordinator.Connect(Options.GamePort);
     coordinator.SetupPorts(num_agents, Options.StartPort, false);
+	// Set the unit selection policy
+	// (if true, the selection will jump around everywhere so it can be harder to debug and doesn't allow a human to play at the same time)
 	coordinator.SetRawAffectsSelection(!allowDebug && !archonMode);
-    // Step forward the game simulation.
+	// Join the already started game
     coordinator.JoinGame();
     coordinator.SetTimeoutMS(120000);	// 2 min
     std::cout << "Successfully joined game" << std::endl;
+	// Step forward the game simulation.
     while (coordinator.Update()) {
     }
 }
