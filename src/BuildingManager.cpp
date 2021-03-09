@@ -666,7 +666,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		if (b.canBeBuiltElseWhere)
 		{
 
-			if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && m_bot.GetCurrentFrame() < 5448)//[expand in main first CC], before 4 minutes
+			if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && m_bot.GetCurrentFrame() < 0)//[expand in main first CC], before 4 minutes (temporarily set to 0 because it is causing bugs with long distance mining workers)
 			{
 				testLocation = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, false, true, false, true, true);
 			}
