@@ -359,7 +359,7 @@ void ProductionManager::manageBuildOrderQueue()
 							m_bot.StartProfiling("0.10.2.2.2.2.2.1       getNextBuildingLocation");
 							const CCTilePosition targetLocation = m_bot.Buildings().getNextBuildingLocation(b, true, true);
 							m_bot.StopProfiling("0.10.2.2.2.2.2.1       getNextBuildingLocation");
-							if (targetLocation != CCTilePosition(0, 0))
+							if (targetLocation != CCTilePosition())
 							{
 								Unit worker = m_bot.Workers().getClosestAvailableWorkerTo(Util::GetPosition(targetLocation));
 								if (worker.isValid())

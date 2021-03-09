@@ -379,25 +379,30 @@ bool BaseLocation::isExplored() const
     return m_bot.Map().isExplored(m_centerOfResources);
 }
 
-bool BaseLocation::updateMineral(Unit mineral)
+void BaseLocation::updateMineral(Unit snapshotMineral)
 {
-	std::pair<sc2::Tag, Unit> replacedMineral;
-	for (auto snapshotMineral : m_bot.GetNeutralUnits())
+	if (snapshotMineral.isValid() && snapshotMineral.getUnitPtr()->display_type == sc2::Unit::Snapshot)
 	{
-		if (snapshotMineral.first != mineral.getTag() && snapshotMineral.second.getPosition() == mineral.getPosition())
+		for (auto & mineral : m_bot.GetNeutralUnits())
 		{
-			replacedMineral = snapshotMineral;
+			if (mineral.first != snapshotMineral.getTag() && mineral.second.getPosition() == snapshotMineral.getPosition())
+			{
+				auto it = find(m_minerals.begin(), m_minerals.end(), snapshotMineral);
+				m_minerals.erase(it);
+				m_minerals.push_back(mineral.second);
+				return;
+			}
+		}
+
+		if (m_bot.Map().isExplored(snapshotMineral.getTilePosition()))
+		{
+			auto it = find(m_minerals.begin(), m_minerals.end(), snapshotMineral);
+			if (it != m_minerals.end())
+			{
+				m_minerals.erase(it);
+			}
 		}
 	}
-	if (replacedMineral.first == 0)
-	{//Mineral not found or not yet visible.
-		return false;
-	}
-
-	auto it = find(m_minerals.begin(), m_minerals.end(), mineral);
-	m_minerals.erase(it);
-	m_minerals.push_back(replacedMineral.second);
-	return true;
 }
 
 bool BaseLocation::isPlayerStartLocation(CCPlayer player) const
