@@ -317,7 +317,13 @@ void BaseLocationManager::onFrame()
 				m_bot.Map().drawLine(unit.getPosition(), baseLocation->getPosition(), sc2::Colors::Green);
 			baseLocation->setPlayerOccupying(Players::Self, true);
 			if (unit.getType().isResourceDepot())
-				baseLocation->setResourceDepot(unit);
+			{
+				//If we have multiple depot in the same base, take the most finished out of the two and priorise the first depot that was created.
+				if (!baseLocation->getResourceDepot().isValid() || baseLocation->getResourceDepot().getBuildProgress() < unit.getBuildProgress())
+				{
+					baseLocation->setResourceDepot(unit);
+				}
+			}
 			else if (unit.getType() == MetaTypeEnum::Bunker.getUnitType())
 			{
 				for (auto bunkerLocation : baseLocation->getGasBunkerLocations())
@@ -471,9 +477,11 @@ void BaseLocationManager::drawBaseLocations()
 
     // draw a purple sphere at the next expansion location
     CCTilePosition nextExpansionPosition = getNextExpansionPosition(Players::Self, false, false, false);
-
-    m_bot.Map().drawCircle(Util::GetPosition(nextExpansionPosition), 1, CCColor(255, 0, 255));
-    m_bot.Map().drawText(Util::GetPosition(nextExpansionPosition), "Next Expansion Location", CCColor(255, 0, 255));
+	if (nextExpansionPosition != CCTilePosition())
+	{
+		m_bot.Map().drawCircle(Util::GetPosition(nextExpansionPosition), 1, CCColor(255, 0, 255));
+		m_bot.Map().drawText(Util::GetPosition(nextExpansionPosition), "Next Expansion Location", CCColor(255, 0, 255));
+	}
 }
 
 void BaseLocationManager::drawTileBaseLocationAssociations() const

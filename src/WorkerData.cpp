@@ -79,7 +79,7 @@ void WorkerData::updateIdleMineralTarget()
 	auto & allyBases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
 	for (auto base : allyBases)
 	{
-		if (base && !base->isUnderAttack() && (!base->getResourceDepot().isValid() || !base->getResourceDepot().isCompleted()))
+		if (base && !base->isUnderAttack() && (!base->getResourceDepot().isValid() || !base->getResourceDepot().isCompleted()) && base->getMinerals().size() != 0)
 		{
 			if (m_bot.Strategy().wasProxyStartingStrategy())
 			{
@@ -91,6 +91,7 @@ void WorkerData::updateIdleMineralTarget()
 			break;
 		}
 	}
+
 	// If we have none, choose the next expansion
 	if (!closestBase)
 	{
@@ -103,11 +104,7 @@ void WorkerData::updateIdleMineralTarget()
 		if (homeBase->getResourceDepot().isValid())
 		{
 			m_idleMineralTarget = GetBestMineralInList(closestBase->getMinerals(), homeBase->getResourceDepot(), false);
-
-			if (m_idleMineralTarget.isValid() && m_idleMineralTarget.getUnitPtr()->display_type == sc2::Unit::Snapshot)
-			{
-				closestBase->updateMineral(m_idleMineralTarget);
-			}
+			closestBase->updateMineral(m_idleMineralTarget);
 		}
 	}
 }
@@ -626,6 +623,11 @@ void WorkerData::drawDepotDebugInfo()
 
         m_bot.Map().drawText(depot.getPosition(), ss.str());
     }
+
+	if (m_idleMineralTarget.isValid())
+	{
+		m_bot.Map().drawCircle(m_idleMineralTarget.getPosition(), 1, CCColor(125, 125, 125));
+	}
 }
 
 const std::set<Unit> & WorkerData::getWorkers() const

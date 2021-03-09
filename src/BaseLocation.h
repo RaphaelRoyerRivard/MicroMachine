@@ -93,7 +93,7 @@ public:
 	const CCTilePosition getCenterOfMinerals() const;
     bool isOccupiedByPlayer(CCPlayer player) const;
     bool isExplored() const;
-	bool updateMineral(Unit mineral);
+	void updateMineral(Unit mineral);
 
     void setPlayerOccupying(CCPlayer player, bool occupying);
 
