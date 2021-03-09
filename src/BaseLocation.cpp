@@ -383,7 +383,7 @@ void BaseLocation::updateMineral(Unit snapshotMineral)
 {
 	if (snapshotMineral.isValid() && snapshotMineral.getUnitPtr()->display_type == sc2::Unit::Snapshot)
 	{
-		for (auto mineral : m_bot.GetNeutralUnits())
+		for (auto & mineral : m_bot.GetNeutralUnits())
 		{
 			if (mineral.first != snapshotMineral.getTag() && mineral.second.getPosition() == snapshotMineral.getPosition())
 			{
