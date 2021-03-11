@@ -104,7 +104,7 @@ void WorkerData::updateIdleMineralTarget()
 		if (homeBase->getResourceDepot().isValid())
 		{
 			m_idleMineralTarget = GetBestMineralInList(closestBase->getMinerals(), homeBase->getResourceDepot(), false);
-			closestBase->updateMineral(m_idleMineralTarget);
+			//closestBase->updateMineral(m_idleMineralTarget);
 		}
 	}
 }
@@ -505,7 +505,12 @@ bool WorkerData::isAnyMineralAvailable(CCPosition workerCurrentPosition) const
 		if (base->isUnderAttack() && !base->containsPositionApproximative(workerCurrentPosition))
 			continue;
 		auto & depot = base->getResourceDepot();
-		if (!depot.isValid() || !depot.isAlive() || depot.getBuildProgress() < 0.99)
+		if (!depot.isValid() || !depot.isAlive())
+			continue;
+		if (depot.getBuildProgress() < 0.99 && (depot.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND ||
+												depot.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS ||
+												depot.getAPIUnitType() != sc2::UNIT_TYPEID::ZERG_LAIR ||
+												depot.getAPIUnitType() != sc2::UNIT_TYPEID::ZERG_HIVE))
 			continue;
 		if (GetBestMineralWithLessWorkersInLists(base->getCloseMinerals(), base->getFarMinerals(), CCPosition()).isValid())
 		{
@@ -688,9 +693,10 @@ void WorkerData::sendIdleWorkerToMiningSpot(const Unit & worker, bool force)
 	{
 		if (worker.getUnitPtr()->orders.empty() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::HARVEST_GATHER || Util::DistSq(worker.getPosition(), m_idleMineralTarget.getPosition()) > 75)
 		{
-			if (m_idleMineralTarget.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())//When the mineral is visible, just click it.
+			if (Util::DistSq(worker.getPosition(), m_idleMineralTarget.getPosition()) < 30)//When the mineral is visible, just click it.
 			{
-				worker.rightClick(m_idleMineralTarget);
+				auto mineral = m_bot.Buildings().getClosestMineral(m_idleMineralTarget.getPosition());
+				worker.rightClick(mineral);
 			}
 			else if(worker.getUnitPtr()->orders.empty() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE || worker.getUnitPtr()->orders[0].target_pos != m_idleMineralTarget.getPosition())
 			{

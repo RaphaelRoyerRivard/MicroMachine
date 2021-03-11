@@ -653,6 +653,26 @@ void Unit::shiftRightClick(const Unit & target) const
 #endif
 }
 
+void Unit::rightClick(const sc2::Unit * target) const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+#ifdef SC2API
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::SMART, target);
+#else
+	m_unit->rightClick(target);
+#endif
+}
+
+void Unit::shiftRightClick(const sc2::Unit * target) const
+{
+	BOT_ASSERT(isValid(), "Unit is not valid");
+#ifdef SC2API
+	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::SMART, target, true);
+#else
+	m_unit->rightClick(target);
+#endif
+}
+
 void Unit::rightClick(const CCPosition position) const
 {
 	m_bot->Actions()->UnitCommand(m_unit, sc2::ABILITY_ID::SMART, sc2::Point2D(position.x, position.y));
