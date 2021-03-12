@@ -86,6 +86,8 @@ public:
 	void patrol			(const CCTilePosition & targetPosition) const;
 	void rightClick     (const Unit & target) const;
 	void shiftRightClick(const Unit & target) const;
+	void rightClick		(const sc2::Unit * target) const;
+	void shiftRightClick(const sc2::Unit * target) const;
 	void rightClick		(const CCPosition position) const;
 	void shiftRightClick(const CCPosition position) const;
     void repair         (const Unit & target) const;
