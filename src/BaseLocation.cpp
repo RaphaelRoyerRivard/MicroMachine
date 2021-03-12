@@ -381,24 +381,32 @@ bool BaseLocation::isExplored() const
 
 void BaseLocation::updateMineral(Unit snapshotMineral)
 {
+	///NO LONGER USED, 3/11/2021
 	if (snapshotMineral.isValid() && snapshotMineral.getUnitPtr()->display_type == sc2::Unit::Snapshot)
 	{
-		for (auto & mineral : m_bot.GetNeutralUnits())
-		{
-			if (mineral.first != snapshotMineral.getTag() && mineral.second.getPosition() == snapshotMineral.getPosition())
-			{
-				auto it = find(m_minerals.begin(), m_minerals.end(), snapshotMineral);
-				m_minerals.erase(it);
-				m_minerals.push_back(mineral.second);
-				return;
-			}
-		}
-
 		if (m_bot.Map().isExplored(snapshotMineral.getTilePosition()))
 		{
+			for (auto & mineral : m_bot.GetNeutralUnits())
+			{
+				if (mineral.second.getUnitPtr()->display_type == sc2::Unit::Snapshot)
+				{
+					continue;
+				}
+				
+				//The Snapshot and the mineral actual position are always slightly off.
+				if(Util::DistSq(mineral.second.getPosition(), snapshotMineral.getPosition()) <= 1)//This doesnt quite work
+				{
+					auto it = find(m_minerals.begin(), m_minerals.end(), snapshotMineral);
+					m_minerals.erase(it);
+					m_minerals.push_back(mineral.second);
+					return;
+				}
+			}
+
 			auto it = find(m_minerals.begin(), m_minerals.end(), snapshotMineral);
 			if (it != m_minerals.end())
 			{
+				//this has to be reactived
 				m_minerals.erase(it);
 			}
 		}

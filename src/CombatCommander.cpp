@@ -2303,7 +2303,7 @@ void CombatCommander::updateDefenseSquads()
 				Unit base = m_bot.Buildings().getClosestResourceDepot(basePosition);
 				if (base.isValid())
 				{
-					if (base.isFlying())
+					if (base.isFlying() && Util::DistSq(basePosition, base.getPosition()) < 100)//If the base is less than 10 tiles away
 					{
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LAND, basePosition, m_bot);
 					}
