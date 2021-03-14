@@ -819,6 +819,29 @@ void WorkerManager::handleGasWorkers()
 			{
 				//UNHANDLED SINGLE GEYSER
 			}
+			for (auto & unit : bunker.getUnitPtr()->passengers)
+			{
+				if (unit.unit_type != Util::GetWorkerType().getAPIUnitType())
+					continue;
+				bool isOutOfPlace = true;
+				for (auto & worker : workers)
+				{
+					if (unit.tag == worker.getTag())
+					{
+						isOutOfPlace = false;
+						break;
+					}
+				}
+				if (isOutOfPlace)
+				{
+#ifdef PUBLIC_RELEASE
+					bunker.unloadUnit(unit.tag);
+#else
+					//Technically illogical, it cannot happen if we use UNLOADALL above. But I'd rather have the code anyway in case anything changes.
+					Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+#endif
+				}
+			}
 		}
 	}
 }
