@@ -3131,6 +3131,7 @@ Util::CombatSimulationResult Util::SimulateCombat(const sc2::Units & units, cons
 	// Simulate for at most 100 *game* seconds
 	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
 	settings.maxTime = 100;
+	settings.enableTimingAdjustment = false;
 	settings.stopWhenNoTarget = stopSimulationWhenGroupHasNoTarget;
 	const CombatResult outcome = m_simulator->predict_engage(state, settings, nullptr, defenderPlayer, &bot);
 	bot.StopProfiling("s.2 predict_engage");
