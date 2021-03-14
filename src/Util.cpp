@@ -3005,21 +3005,35 @@ void Util::TimeControlDecreaseSpeed()
 	}
 }
 
-float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot)
+Util::CombatSimulationResult Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, bool stopSimulationWhenGroupHasNoTarget, CCBot & bot)
 {
-	return SimulateCombat(units, units, enemyUnits, considerOurTanksUnsieged, bot);
+	return SimulateCombat(units, units, enemyUnits, considerOurTanksUnsieged, stopSimulationWhenGroupHasNoTarget, bot);
 }
 
 /**
  * Uses the combat simulator of libvoxel that simulates units attacking each other, but without considering the positions of units.
- * Returns a value between 1 and 0, representing the army supply remaining after the fight.
+ * Returns a combat simulation result containing our precentage of army supply remaining after the fight and the opponent's, as well as the supply
+ * damage we inflicted and received.
  */
-float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot)
+Util::CombatSimulationResult Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, bool stopSimulationWhenGroupHasNoTarget, CCBot & bot)
 {
+	CombatSimulationResult combatSimulationResult;
 	if (units.empty() || simulatedUnits.empty())
-		return 0.f;
+	{
+		combatSimulationResult.supplyLost = 100;
+		combatSimulationResult.supplyPercentageRemaining = 0;
+		combatSimulationResult.enemySupplyLost = 0;
+		combatSimulationResult.enemySupplyPercentageRemaining = 1;
+		return combatSimulationResult;
+	}
 	if (enemyUnits.empty())
-		return 1.f;
+	{
+		combatSimulationResult.supplyLost = 0;
+		combatSimulationResult.supplyPercentageRemaining = 1;
+		combatSimulationResult.enemySupplyLost = 100;
+		combatSimulationResult.enemySupplyPercentageRemaining = 0;
+		return combatSimulationResult;
+	}
 	// Check if it's a 1v1 mirror and if so, we want to trade
 	if (units.size() == 1 && enemyUnits.size() == 1)
 	{
@@ -3027,7 +3041,11 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		auto enemyUnit = enemyUnits[0];
 		if (unit->unit_type == enemyUnit->unit_type && unit->health >= enemyUnit->health && unit->shield >= enemyUnit->shield)
 		{
-			return 0.001f;
+			combatSimulationResult.supplyLost = 0;
+			combatSimulationResult.supplyPercentageRemaining = 0.001f;
+			combatSimulationResult.enemySupplyLost = 1;
+			combatSimulationResult.enemySupplyPercentageRemaining = 0;
+			return combatSimulationResult;
 		}
 	}
 	bot.StartProfiling("s.0 PrepareForCombatSimulation");
@@ -3086,6 +3104,12 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
 		armySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit->health / std::max(1.f, unit->health_max));
 	}
+	float enemyArmySupplyScore = 0.f;
+	for (const auto unit : enemyUnits)
+	{
+		const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
+		enemyArmySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit->health / std::max(1.f, unit->health_max));
+	}
 
 	CombatUpgrades player1upgrades = {};
 
@@ -3107,27 +3131,37 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 	// Simulate for at most 100 *game* seconds
 	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
 	settings.maxTime = 100;
+	settings.stopWhenNoTarget = stopSimulationWhenGroupHasNoTarget;
 	const CombatResult outcome = m_simulator->predict_engage(state, settings, nullptr, defenderPlayer, &bot);
 	bot.StopProfiling("s.2 predict_engage");
 	bot.StartProfiling("s.3 owner_with_best_outcome");
 	const int winner = outcome.state.owner_with_best_outcome();
 	bot.StopProfiling("s.3 owner_with_best_outcome");
-	if (winner != playerId)
-		return 0.f;
 
 	bot.StartProfiling("s.4 ComputeArmyRating");
+	// Ally
 	float resultArmySupplyScore = 0.f;
+	float resultEnemyArmySupplyScore = 0.f;
 	for (const auto & unit : outcome.state.units)
 	{
-		if (unit.owner == playerId && unit.health > 0)
+		if (unit.health > 0)
 		{
 			const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[sc2::UnitTypeID(unit.type)];
-			resultArmySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit.health / unit.health_max);
+			const float score = unitTypeData.food_required * (0.25f + 0.75f * unit.health / unit.health_max);
+			if (unit.owner == playerId)
+				resultArmySupplyScore += score;
+			else
+				resultEnemyArmySupplyScore += score;
 		}
 	}
 	const float armyRating = resultArmySupplyScore / std::max(1.f, armySupplyScore);
+	const float enemyArmyRating = resultEnemyArmySupplyScore / std::max(1.f, enemyArmySupplyScore);
 	bot.StopProfiling("s.4 ComputeArmyRating");
-	return armyRating;
+	combatSimulationResult.supplyLost = armySupplyScore - resultArmySupplyScore;
+	combatSimulationResult.supplyPercentageRemaining = armyRating;
+	combatSimulationResult.enemySupplyLost = enemyArmySupplyScore - resultEnemyArmySupplyScore;
+	combatSimulationResult.enemySupplyPercentageRemaining = enemyArmyRating;
+	return combatSimulationResult;
 }
 
 int Util::GetSelfPlayerId(const CCBot & bot)

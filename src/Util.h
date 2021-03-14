@@ -93,6 +93,14 @@ namespace Util
         bool operator()(const sc2::Unit * unit, const sc2::ObservationInterface*);
     };
 
+	struct CombatSimulationResult
+	{
+		float supplyLost;
+		float supplyPercentageRemaining;
+		float enemySupplyLost;
+		float enemySupplyPercentageRemaining;
+	};
+
 	namespace PathFinding
 	{
 		enum FailureReason
@@ -335,8 +343,8 @@ namespace Util
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
 	float DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point);
 
-	float SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot);
-	float SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot);
+	CombatSimulationResult SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, bool stopSimulationWhenGroupHasNoTarget, CCBot & bot);
+	CombatSimulationResult SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, bool stopSimulationWhenGroupHasNoTarget, CCBot & bot);
 	int GetSelfPlayerId(const CCBot & bot);
 
 	int GetSupplyOfUnits(const sc2::Units & units, CCBot & bot);

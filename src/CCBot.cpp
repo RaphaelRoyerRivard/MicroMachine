@@ -2091,6 +2091,19 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, m_startLocation + towardsCenter * 10, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation + towardsCenter * 10, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BANSHEE, m_startLocation, player2, 1);*/
+
+	// Test to see if our ground army helps our air army even if it loses
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter - towardsCenter * 5, player1, 11);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 5, player1, 5);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + towardsCenter * 5, player2, 10);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter + towardsCenter * 5, player2, 10);*/
+
+	// Test to see if our air units do not suicide for nothing
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter - towardsCenter * 5, player1, 11);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 5, player1, 5);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + towardsCenter * 5, player2, 10);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter + towardsCenter * 10, player2, 5);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter + towardsCenter * 5, player2, 2);*/
 }
 
 void CCBot::IssueCheats()
