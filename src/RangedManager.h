@@ -40,7 +40,7 @@ private:
 		sc2::UNIT_TYPEID::TERRAN_HELLIONTANK
 	};
 	std::map<const sc2::Unit *, std::map<std::string, uint32_t>> nextPathFindingFrameForUnit;
-	std::map<std::set<const sc2::Unit *>, bool> m_combatSimulationResults;
+	std::map<std::set<const sc2::Unit *>, std::vector<bool>> m_combatSimulationResults;	// <ally units, <ground result, air result>>
 	std::map<sc2::Tag, sc2::Unit> m_dummyAssaultVikings;
 	std::map<sc2::Tag, sc2::Unit> m_dummyFighterVikings;
 	std::map<sc2::Tag, sc2::Unit> m_dummyStimedUnits;
@@ -83,7 +83,7 @@ private:
 	bool ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, bool unitShouldHeal, sc2::Units & rangedUnits, sc2::Units & threats, sc2::Units & rangedUnitTargets, sc2::Units & otherSquadsUnits);
 	const sc2::Unit* GetSimulatedUnit(const sc2::Unit * rangedUnit);
 	std::map<sc2::Tag, sc2::Unit> & GetDummyMap(sc2::UNIT_TYPEID type);
-	void CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & allyCombatUnits, sc2::Units & rangedUnitTargets, bool ignoreCyclones, std::set<const sc2::Unit *> & closeUnitsSet, bool & morphFlyingVikings, bool & morphLandedVikings, std::map<const sc2::Unit *, const sc2::Unit *> & simulatedStimedUnits, float & stimedUnitsPowerDifference, std::map<const sc2::Unit*, const sc2::Unit*> & closeUnitsTarget, float & unitsPower, float & minUnitRange);
+	void CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & allyCombatUnits, sc2::Units & rangedUnitTargets, bool ignoreCyclones, std::set<const sc2::Unit *> & closeUnitsSet, bool & morphFlyingVikings, bool & morphLandedVikings, std::map<const sc2::Unit *, const sc2::Unit *> & simulatedStimedUnits, float & stimedUnitsPowerDifference, std::map<const sc2::Unit*, const sc2::Unit*> & closeUnitsTarget, float & unitsPower, float & groundUnitsPower, float & airUnitsPower, float & minUnitRange);
 	bool ChangeBehaviorFromBuffs(const sc2::Unit * rangedUnit, bool isUnitDisabled, sc2::Units & allCombatAllies, CCPosition & goal, std::string & goalDescription, bool & unitShouldHeal);
 	void ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDisabled, bool & unitShouldHeal, bool & shouldAttack, bool & cycloneShouldUseLockOn, bool & cycloneShouldStayCloseToTarget, const sc2::Units & rangedUnits, const sc2::Units & threats, const sc2::Units & rangedUnitTargets, const sc2::Unit * & target, CCPosition & goal, std::string & goalDescription, sc2::AvailableAbilities & abilities);
 	bool ExecutePrioritizedUnitAbilitiesLogic(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats, sc2::Units & targets, sc2::Units & allyUnits, CCPosition goal, bool unitShouldHeal, bool isCycloneHelper);
