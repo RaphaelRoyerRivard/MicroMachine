@@ -61,11 +61,11 @@ class StrategyManager
 
 	// Only strategies in this list and in the race specific list can be chosen
 	std::vector<std::string> STRATEGY_ORDER = {
-		"STANDARD",
 		"EARLY_EXPAND",
-		"PROXY_MARAUDERS",
+		"STANDARD",
 		"FAST_PF",
-		"PROXY_CYCLONES"
+		"PROXY_CYCLONES",
+		"PROXY_MARAUDERS"
 	};
 	
     CCBot & m_bot;
