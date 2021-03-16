@@ -265,6 +265,7 @@ void CCBot::OnStep()
 	{
 		Util::ClearDisplayedErrors();
 	}
+	Util::PathFinding::ClearExpiredPathFindingResults(m_gameLoop);
 	const bool executeMacro = m_gameLoop - m_previousMacroGameLoop > framesSinceLastStep;
 	if (executeMacro)
 		m_previousMacroGameLoop = m_gameLoop;

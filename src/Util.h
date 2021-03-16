@@ -112,28 +112,32 @@ namespace Util
 		
 		struct IMNode;
 
-		struct SafePathResult
+		struct PathFindingResult
 		{
-			CCPosition m_position;
-			uint32_t m_frame;
-			bool m_result;
+			CCPosition m_from;
+			CCPosition m_to;
+			uint32_t m_expiration;
+			bool m_safe;
 
-			SafePathResult()
-				: m_position(CCPosition())
-				, m_frame(0)
-				, m_result(true)
+			PathFindingResult()
+				: m_from(CCPosition())
+				, m_to(CCPosition())
+				, m_expiration(0)
+				, m_safe(true)
 			{}
 
-			SafePathResult(CCPosition position, uint32_t frame, bool result)
-				: m_position(position)
-				, m_frame(frame)
-				, m_result(result)
+			PathFindingResult(CCPosition from, CCPosition to, uint32_t expiration, bool safe)
+				: m_from(from)
+				, m_to(to)
+				, m_expiration(expiration)
+				, m_safe(safe)
 			{}
 		};
 
-		static std::map<sc2::Tag, std::vector<SafePathResult>> m_lastPathFindingResultsForUnit;
+		static std::map<sc2::UNIT_TYPEID, std::list<PathFindingResult>> m_lastPathFindingResultsForUnitType;
 
 		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
+		void ClearExpiredPathFindingResults(long currentFrame);
 		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool considerOnlyEffects, float maxInfluence, CCBot & bot);
 		CCPosition FindEngagePosition(const sc2::Unit * unit, const sc2::Unit* target, float maxRange, CCBot & bot);

@@ -210,6 +210,23 @@ bool Util::PathFinding::SetContainsNode(const std::set<IMNode*> & set, IMNode* n
 	return false;
 }
 
+void Util::PathFinding::ClearExpiredPathFindingResults(long currentFrame)
+{
+	for (auto & resultsForType : m_lastPathFindingResultsForUnitType)
+	{
+		auto & results = resultsForType.second;
+		auto it = results.begin();
+		while (it != results.end())
+		{
+			auto & result = *it;
+			if (currentFrame >= result.m_expiration)
+				it = results.erase(it);
+			else
+				++it;
+		}
+	}
+}
+
 bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot)
 {
 	if (!unit)
@@ -218,34 +235,31 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 		return false;
 	}
 
-	int foundIndex = -1;
-	SafePathResult releventResult;
-	auto & safePathResults = m_lastPathFindingResultsForUnit[unit->tag];
-	for (size_t i = 0; i < safePathResults.size(); ++i)
+	bool found = false;
+	PathFindingResult releventResult;
+	auto & pathFindingResults = m_lastPathFindingResultsForUnitType[unit->unit_type];
+	for (auto & safePathResult : pathFindingResults)
 	{
-		auto & safePathResult = safePathResults[i];
-		if(safePathResult.m_position == goal)
+		float closeToGoal = Util::DistSq(goal, safePathResult.m_to) < 5 * 5;
+		if(closeToGoal)
 		{
-			releventResult = safePathResult;
-			foundIndex = i;
-			break;
+			bool closeToUnitPos = Util::DistSq(unit->pos, safePathResult.m_from) < 5 * 5;
+			if (closeToUnitPos)
+			{
+				releventResult = safePathResult;
+				found = true;
+				break;
+			}
 		}
 	}
-	if (foundIndex >= 0 && bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
-		return releventResult.m_result;
+	if (found)
+		return releventResult.m_safe;
 
 	FailureReason failureReason;
 	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, 0, false, false, true, failureReason, bot);
 	const bool success = !path.empty() || failureReason == TIMEOUT;
-	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
-	if(foundIndex >= 0)
-	{
-		m_lastPathFindingResultsForUnit[unit->tag][foundIndex] = safePathResult;
-	}
-	else
-	{
-		m_lastPathFindingResultsForUnit[unit->tag].push_back(safePathResult);
-	}
+	const PathFindingResult safePathResult = PathFindingResult(unit->pos, goal, bot.GetCurrentFrame() + WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL, success);
+	m_lastPathFindingResultsForUnitType[unit->unit_type].push_back(safePathResult);
 	return success;
 }
 
