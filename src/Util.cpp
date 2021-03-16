@@ -220,9 +220,9 @@ void Util::PathFinding::ClearExpiredPathFindingResults(long currentFrame)
 		{
 			auto & result = *it;
 			if (currentFrame >= result.m_expiration)
-			{
 				it = results.erase(it);
-			}
+			else
+				++it;
 		}
 	}
 }
