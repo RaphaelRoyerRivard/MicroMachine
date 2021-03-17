@@ -107,7 +107,10 @@ void BuildingManager::lowPriorityChecks()
 			{
 				if (building.finalPosition == b.getTilePosition())
 				{
-					isAlreadyBuilt = true;
+					if (b.getBuildProgress() < 1)//If the building is already finished, might be a landed building.
+					{
+						isAlreadyBuilt = true;
+					}
 					break;
 				}
 			}
@@ -129,6 +132,21 @@ void BuildingManager::lowPriorityChecks()
 							}
 						}
 						building.buildCommandGiven = false;
+					}
+					else
+					{
+						for (auto & b : m_baseBuildings)
+						{
+							if (b.getTilePosition() == building.finalPosition)//There already is a depot at that location (can happen with flying command center)
+							{
+								auto remove = CancelBuilding(building, "invalid or blocked location", false);
+								if (remove.finalPosition != CCTilePosition(0, 0))
+								{
+									toRemove.push_back(remove);
+									break;
+								}
+							}
+						}
 					}
 				}
 				else
