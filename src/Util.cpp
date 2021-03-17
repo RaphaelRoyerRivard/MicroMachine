@@ -11,7 +11,8 @@ const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float PATHFINDING_TURN_COST = 3.f;
 const float PATHFINDING_SECONDARY_GOAL_HEURISTIC_MULTIPLIER = 10.f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
-const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
+const uint32_t WORKER_PATHFINDING_CACHE_DURATION = 50;
+const uint32_t ARMY_UNIT_PATHFINDING_CACHE_DURATION = 1;
 const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
 const float UNIT_CLUSTERING_MAX_DISTANCE = 5.f;
 
@@ -258,21 +259,58 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	FailureReason failureReason;
 	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, 0, false, false, true, failureReason, bot);
 	const bool success = !path.empty() || failureReason == TIMEOUT;
-	const PathFindingResult safePathResult = PathFindingResult(unit->pos, goal, bot.GetCurrentFrame() + WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL, success);
+	const PathFindingResult safePathResult = PathFindingResult(unit->pos, goal, bot.GetCurrentFrame() + WORKER_PATHFINDING_CACHE_DURATION, success);
 	m_lastPathFindingResultsForUnitType[unit->unit_type].push_back(safePathResult);
 	return success;
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool considerOnlyEffects, float maxInfluence, CCBot & bot)
 {
+	bool exitOnInfluence = false;
 	bool getCloser = false;
 	if (target)
 	{
 		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
 		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot) || target->last_seen_game_loop < bot.GetCurrentFrame();
 	}
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, considerOnlyEffects, getCloser, false, maxInfluence, false, false, bot);
-	return GetCommandPositionFromPath(path, unit, true, bot);
+	bool ignoreInfluence = false;
+	bool flee = false;
+	bool checkVisibility = false;
+
+	// Create parameters int
+	int params = int(exitOnInfluence);
+	params = (params << 1) + int(considerOnlyEffects);
+	params = (params << 1) + int(getCloser);
+	params = (params << 1) + int(ignoreInfluence);
+	params = (params << 1) + int(flee);
+	params = (params << 1) + int(checkVisibility);
+	// Check if there is a usable cache
+	auto & cache = m_lastPathFindingResultsForUnitType[unit->unit_type];
+	for (auto & pathfindingResult : cache)
+	{
+		bool sameParameters = params == pathfindingResult.m_parameters;
+		if (sameParameters)
+		{
+			bool closeToPos = DistSq(unit->pos, pathfindingResult.m_from) < 2 * 2;
+			if (closeToPos)
+			{
+				bool closeToGoal = DistSq(goal, pathfindingResult.m_to) < 2 * 2;
+				if (closeToGoal)
+				{
+					// We found a match
+					if (pathfindingResult.m_movement == CCPosition())
+						return pathfindingResult.m_movement;
+					return unit->pos + pathfindingResult.m_movement;
+				}
+			}
+		}
+	}
+	// Compute the pos as a movement vector
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, maxInfluence, flee, checkVisibility, bot);
+	auto movement = GetCommandPositionFromPath(path, unit, true, bot);
+	// Save result to cache
+	cache.push_back(PathFindingResult(unit->pos, goal, bot.GetCurrentFrame() + ARMY_UNIT_PATHFINDING_CACHE_DURATION, params, movement));
+	return movement;
 }
 
 CCPosition Util::PathFinding::FindEngagePosition(const sc2::Unit * unit, const sc2::Unit* target, float maxRange, CCBot & bot)

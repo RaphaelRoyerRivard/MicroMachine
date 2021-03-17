@@ -117,20 +117,36 @@ namespace Util
 			CCPosition m_from;
 			CCPosition m_to;
 			uint32_t m_expiration;
-			bool m_safe;
+			int m_parameters;	// For FindOptimalPathToTarget
+			bool m_safe;	// For IsPathToGoalSafe
+			CCPosition m_movement;	// For FindOptimalPathToTarget
 
 			PathFindingResult()
 				: m_from(CCPosition())
 				, m_to(CCPosition())
 				, m_expiration(0)
+				, m_parameters(0)
 				, m_safe(true)
+				, m_movement(CCPosition())
 			{}
 
+			// For IsPathToGoalSafe
 			PathFindingResult(CCPosition from, CCPosition to, uint32_t expiration, bool safe)
 				: m_from(from)
 				, m_to(to)
 				, m_expiration(expiration)
+				, m_parameters(0)
 				, m_safe(safe)
+			{}
+
+			// For FindOptimalPathToTarget
+			PathFindingResult(CCPosition from, CCPosition to, uint32_t expiration, int parameters, CCPosition movement)
+				: m_from(from)
+				, m_to(to)
+				, m_expiration(expiration)
+				, m_safe(true)
+				, m_parameters(parameters)
+				, m_movement(movement)
 			{}
 		};
 
