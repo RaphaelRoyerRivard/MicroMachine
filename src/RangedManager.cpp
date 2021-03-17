@@ -2939,10 +2939,14 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 	{
 		auto & nextAvailableAbility = m_bot.Commander().Combat().getNextAvailableAbility();
 		const auto currentFrame = m_bot.GetCurrentFrame();
-		if (nextAvailableAbility[sc2::ABILITY_ID::EFFECT_LOCKON][cyclone] - currentFrame > CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT / 2)
+		const auto nextAvailableFrame = nextAvailableAbility[sc2::ABILITY_ID::EFFECT_LOCKON][cyclone];
+		if (nextAvailableFrame - currentFrame > CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT / 2)
 		{
 			goal = m_bot.GetStartLocation();
-			goalDescription = "CooldownStart";
+			if (shouldAttack || cycloneShouldUseLockOn)
+				goalDescription = "CooldownStart";
+			else
+				goalDescription = "KeepTarget";
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.b.3            DefineGoal");

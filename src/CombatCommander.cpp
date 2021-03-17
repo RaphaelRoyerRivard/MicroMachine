@@ -3375,7 +3375,7 @@ void CombatCommander::CleanLockOnTargets()
 	{
 		const auto cyclone = cyclonePair.first;
 		const auto target = cyclonePair.second.first;
-		if (!cyclone->is_alive || !target->is_alive || target->last_seen_game_loop < m_bot.GetCurrentFrame())
+		if (!cyclone->is_alive /*|| !target->is_alive || target->last_seen_game_loop < m_bot.GetCurrentFrame()*/)
 			toRemove.push_back(cyclone);
 	}
 	for (const auto cyclone : toRemove)
