@@ -957,7 +957,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				else
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Battlecruiser);
-					m_queue.removeAllOfType(MetaTypeEnum::YamatoCannon);
+					if (battlecruiserCount < 1)
+						m_queue.removeAllOfType(MetaTypeEnum::YamatoCannon);
 					m_queue.removeAllOfType(MetaTypeEnum::FusionCore);
 				}
 
@@ -2467,12 +2468,12 @@ void ProductionManager::validateUpgradesProgress()
 			if (incompleteUpgradesProgress.at(upgrade.first) >= progress)
 			{
 				toRemove.push_back(upgrade.first);
-				Util::DebugLog(__FUNCTION__, "upgrade canceled " + upgrade.first.getName(), m_bot);
+				Util::Log(__FUNCTION__, "upgrade canceled " + upgrade.first.getName(), m_bot);
 			}
 			else if (progress > 0.99f)//About to finish, lets consider it done.
 			{
 				toRemove.push_back(upgrade.first);
-				Util::DebugLog(__FUNCTION__, "upgrade finished " + upgrade.first.getName(), m_bot);
+				Util::Log(__FUNCTION__, "upgrade finished " + upgrade.first.getName(), m_bot);
 			}
 			else
 			{
@@ -2482,7 +2483,7 @@ void ProductionManager::validateUpgradesProgress()
 		else
 		{
 			toRemove.push_back(upgrade.first);
-			Util::DebugLog(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName() + ". Unit has " + (unitPtr->orders.empty() ? "no order" : "order of ID " + unitPtr->orders[0].ability_id.to_string()), m_bot);
+			Util::Log(__FUNCTION__, "upgrade failed to start " + upgrade.first.getName() + ". Unit has " + (unitPtr->orders.empty() ? "no order" : "order of ID " + unitPtr->orders[0].ability_id.to_string()), m_bot);
 		}
 	}
 	for (auto & remove : toRemove)
@@ -2584,7 +2585,7 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 		incompleteUpgrades.insert(std::make_pair(item.type, producer));
 		incompleteUpgradesMetatypes.push_back(item.type);
 		incompleteUpgradesProgress.insert(std::make_pair(item.type, 0.f));
-		Util::DebugLog(__FUNCTION__, "upgrade starting " + item.type.getName(), m_bot);
+		Util::Log(__FUNCTION__, "starting upgrade " + item.type.getName(), m_bot);
 		result = true;
 	}
 

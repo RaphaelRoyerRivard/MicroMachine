@@ -601,94 +601,101 @@ void WorkerManager::handleGasWorkers()
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
     {
         // if that unit is a refinery
-        if (geyser.isCompleted() && geyser.getUnitPtr()->vespene_contents > 0)
-        {
-			// get the number of workers currently assigned to it
-			int numAssigned = m_workerData.getNumAssignedWorkers(geyser);
+		if (!geyser.isCompleted() || geyser.getUnitPtr()->vespene_contents <= 0)
+			continue;
 
-			auto geyserPosition = geyser.getPosition();
-			auto base = m_bot.Bases().getBaseContainingPosition(geyserPosition, Players::Self);
-			if (base == nullptr)
+		// get the number of workers currently assigned to it
+		int numAssigned = m_workerData.getNumAssignedWorkers(geyser);
+
+		auto geyserPosition = geyser.getPosition();
+		auto base = m_bot.Bases().getBaseContainingPosition(geyserPosition, Players::Self);
+		if (base == nullptr)
+		{
+			m_bot.StartProfiling("0.7.3.1    setIdleWhenBaseIsDestroyed");
+			//if the base is destroyed, remove the gas workers
+			for (int i = 0; i < numAssigned; i++)
 			{
-				//if the base is destroyed, remove the gas workers
-				for (int i = 0; i < numAssigned; i++)
+				auto gasWorker = getGasWorker(geyser, false, false);
+				m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
+			}
+			m_bot.StopProfiling("0.7.3.1    setIdleWhenBaseIsDestroyed");
+			continue;
+		}
+
+		//TODO doesn't handle split geysers if only one of the geysers has a bunker.
+		const auto & gasBunkers = base->getGasBunkers();
+
+		//Bunker counts as a worker (for 2 and 3 only, we still want 1 worker at 1)
+		int geyserGasWorkersTarget = (!gasBunkers.empty() && gasBunkers.size() > 0 && gasBunkers[0].isCompleted() && gasWorkersTarget > 1 ? gasWorkersTarget - 1 : gasWorkersTarget);
+
+		auto & depot = base->getResourceDepot();
+		if (!depot.isValid() || !depot.isCompleted())
+			continue;
+
+		if (numAssigned < geyserGasWorkersTarget)
+		{
+			m_bot.StartProfiling("0.7.3.2    assignNewGasWorkers");
+			// if it's less than we want it to be, fill 'er up
+			bool shouldAssignThisWorker = true;
+			auto refineryWorkers = m_workerData.getAssignedWorkersRefinery(geyser);
+			for (auto & worker : refineryWorkers)
+			{
+				if (!isInsideGeyser(worker) && !isReturningCargo(worker))
 				{
-					auto gasWorker = getGasWorker(geyser, false, false);
-					m_workerData.setWorkerJob(gasWorker, WorkerJobs::Idle);
+					shouldAssignThisWorker = false;
+					break;
 				}
-				continue;
 			}
 
-			//TODO doesn't handle split geysers if only one of the geysers has a bunker.
-			const auto & gasBunkers = base->getGasBunkers();
-
-			//Bunker counts as a worker (for 2 and 3 only, we still want 1 worker at 1)
-			int geyserGasWorkersTarget = (!gasBunkers.empty() && gasBunkers.size() > 0 && gasBunkers[0].isCompleted() && gasWorkersTarget > 1 ? gasWorkersTarget - 1 : gasWorkersTarget);
-
-			auto & depot = base->getResourceDepot();
-			if (depot.isValid() && depot.isCompleted())
+			if (shouldAssignThisWorker)
 			{
-				if (numAssigned < geyserGasWorkersTarget)
+				auto mineralWorker = getMineralWorker(geyser);
+				if (mineralWorker.isValid())
 				{
-					// if it's less than we want it to be, fill 'er up
-					bool shouldAssignThisWorker = true;
-					auto refineryWorkers = m_workerData.getAssignedWorkersRefinery(geyser);
-					for (auto & worker : refineryWorkers)
+					if (!base->isUnderAttack() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyserPosition, true, m_bot))
 					{
-						if (!isInsideGeyser(worker) && !isReturningCargo(worker))
-						{
-							shouldAssignThisWorker = false;
-							break;
-						}
-					}
-
-					if (shouldAssignThisWorker)
-					{
-						auto mineralWorker = getMineralWorker(geyser);
-						if (mineralWorker.isValid())
-						{
-							if (!base->isUnderAttack() && Util::PathFinding::IsPathToGoalSafe(mineralWorker.getUnitPtr(), geyserPosition, true, m_bot))
-							{
-								m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
-							}
-						}
-					}
-				}
-				else if (numAssigned > geyserGasWorkersTarget)
-				{
-					int mineralWorkerRoom = 26;//Number of free spaces for mineral workers
-					int mineralWorkersCount = m_workerData.getNumAssignedWorkers(depot);
-					int optimalWorkersCount = base->getOptimalMineralWorkerCount();
-					mineralWorkerRoom = optimalWorkersCount - mineralWorkersCount;
-
-					// if it's more than we want it to be, empty it up
-					for (int i = 0; i<(numAssigned - geyserGasWorkersTarget); ++i)
-					{
-						//check if we have room for more mineral workers
-						if (mineralWorkerRoom <= 0 && numAssigned < 3)
-						{//Do not remove gas workers if we don't have room for an additional mineral worker, except if we are at 3 gas workers (exception for bunkers).
-							break;
-						}
-
-						auto gasWorker = getGasWorker(geyser, true, true);
-						if (gasWorker.isValid())
-						{
-							if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
-							{
-								Util::DisplayError(__FUNCTION__, "Worker assigned to a refinery is not a gas worker.", m_bot);
-							}
-
-							gasWorker.stop();
-							getWorkerData().setWorkerJob(gasWorker, WorkerJobs::Idle);
-
-							mineralWorkerRoom--;
-						}
+						m_workerData.setWorkerJob(mineralWorker, WorkerJobs::Gas, geyser);
 					}
 				}
 			}
-        }
+			m_bot.StopProfiling("0.7.3.2    assignNewGasWorkers");
+		}
+		else if (numAssigned > geyserGasWorkersTarget)
+		{
+			m_bot.StartProfiling("0.7.3.3    unassignGasWorkers");
+			int mineralWorkerRoom = 26;//Number of free spaces for mineral workers
+			int mineralWorkersCount = m_workerData.getNumAssignedWorkers(depot);
+			int optimalWorkersCount = base->getOptimalMineralWorkerCount();
+			mineralWorkerRoom = optimalWorkersCount - mineralWorkersCount;
+
+			// if it's more than we want it to be, empty it up
+			for (int i = 0; i<(numAssigned - geyserGasWorkersTarget); ++i)
+			{
+				//check if we have room for more mineral workers
+				if (mineralWorkerRoom <= 0 && numAssigned < 3)
+				{//Do not remove gas workers if we don't have room for an additional mineral worker, except if we are at 3 gas workers (exception for bunkers).
+					break;
+				}
+
+				auto gasWorker = getGasWorker(geyser, true, true);
+				if (gasWorker.isValid())
+				{
+					if (m_workerData.getWorkerJob(gasWorker) != WorkerJobs::Gas)
+					{
+						Util::DisplayError(__FUNCTION__, "Worker assigned to a refinery is not a gas worker.", m_bot);
+					}
+
+					gasWorker.stop();
+					getWorkerData().setWorkerJob(gasWorker, WorkerJobs::Idle);
+
+					mineralWorkerRoom--;
+				}
+			}
+			m_bot.StopProfiling("0.7.3.3    unassignGasWorkers");
+		}
     }
 
+	m_bot.StartProfiling("0.7.3.4    gasBunkerMicro");
 	std::vector<sc2::Tag> bunkerHasLoaded;
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
 	{
@@ -844,6 +851,7 @@ void WorkerManager::handleGasWorkers()
 			}
 		}
 	}
+	m_bot.StopProfiling("0.7.3.4    gasBunkerMicro");
 }
 
 void WorkerManager::handleIdleWorkers()
@@ -865,13 +873,16 @@ void WorkerManager::handleIdleWorkers()
 			(workerJob != WorkerJobs::Combat) &&
 			(workerJob != WorkerJobs::Build))//Prevent premoved builder from going Idle if they lack the ressources, also prevents refinery builder from going Idle
 		{
+			m_bot.StartProfiling("0.7.4.1    setIdleJob");
 			m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 			workerJob = WorkerJobs::Idle;
+			m_bot.StopProfiling("0.7.4.1    setIdleJob");
 		}
 		else if (workerJob == WorkerJobs::Build)
 		{
 			if (!worker.isConstructingAnything())
 			{
+				m_bot.StartProfiling("0.7.4.2    checkHasBuilding");
 				bool hasBuilding = false;
 				bool isCloseToBuildingLocation = false;
 				if (idle)
@@ -896,6 +907,7 @@ void WorkerManager::handleIdleWorkers()
 						}
 					}
 				}
+				m_bot.StopProfiling("0.7.4.2    checkHasBuilding");
 				if (hasBuilding)
 				{
 					if (isCloseToBuildingLocation)
@@ -914,9 +926,11 @@ void WorkerManager::handleIdleWorkers()
 					auto orders = worker.getUnitPtr()->orders;
 					if (!orders.empty() && orders[0].ability_id != sc2::ABILITY_ID::PATROL)
 					{
+						m_bot.StartProfiling("0.7.4.3    setIdleJobToBuilder");
 						//return mining
 						m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 						workerJob = WorkerJobs::Idle;
+						m_bot.StopProfiling("0.7.4.3    setIdleJobToBuilder");
 					}
 				}
 			}
@@ -930,6 +944,7 @@ void WorkerManager::handleIdleWorkers()
 			}
 			else
 			{
+				m_bot.StartProfiling("0.7.4.4    setBuildJob");
 				bool isBuilder = false;
 				for(const auto & building : m_bot.Buildings().getBuildings())
 				{
@@ -940,17 +955,24 @@ void WorkerManager::handleIdleWorkers()
 						break;
 					}
 				}
+				m_bot.StopProfiling("0.7.4.4    setBuildJob");
 				
 				if (!isBuilder && !m_workerData.isProxyWorker(worker))
 				{
-					
-					if (m_workerData.isAnyMineralAvailable(worker.getPosition()))
+					m_bot.StartProfiling("0.7.4.5    isAnyMineralAvailable");
+					const bool isAnyMineralAvailable = m_workerData.isAnyMineralAvailable(worker.getPosition());
+					m_bot.StopProfiling("0.7.4.5    isAnyMineralAvailable");
+					if (isAnyMineralAvailable)
 					{
+						m_bot.StartProfiling("0.7.4.6    setMineralWorker");
 						setMineralWorker(worker);
+						m_bot.StopProfiling("0.7.4.6    setMineralWorker");
 					}
 					else//Do not set as mineral worker if there is no place for it
 					{
+						m_bot.StartProfiling("0.7.4.7    sendIdleWorkerToMiningSpot");
 						m_workerData.sendIdleWorkerToMiningSpot(worker, false);
+						m_bot.StopProfiling("0.7.4.7    sendIdleWorkerToMiningSpot");
 					}
 				}
 			}

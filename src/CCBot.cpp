@@ -2662,7 +2662,8 @@ void CCBot::drawProfilingInfo()
 			}
 		}
 
-		if (currentStepTime >= Config().LogFrameDurationThreshold * 1000 && queue.size() > 0 && queue[0].first > 0)
+		// Log only when frames take over 100ms and that specific block of code took more than 5ms
+		if (currentStepTime >= Config().LogFrameDurationThreshold * 1000 && queue.size() > 0 && queue[0].first > 5000)
 		{
 			Util::Log(__FUNCTION__, mapPair.first + " took " + std::to_string(0.001f * queue[0].first) + "ms for " + std::to_string(queue[0].second) + " calls", *this);
 		}

@@ -142,12 +142,12 @@ bool UnitType::hasSplashingAttack(sc2::UnitTypeID unitTypeId, bool air)
 	// only ground
 	case sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED:
 	case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS:
+	case sc2::UNIT_TYPEID::TERRAN_HELLION:
+	case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
 		return !air;
 	// only air
 	case sc2::UNIT_TYPEID::TERRAN_LIBERATOR:
 	case sc2::UNIT_TYPEID::TERRAN_THOR:
-	case sc2::UNIT_TYPEID::TERRAN_HELLION:
-	case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK:
 		return air;
 	default:
 		return false;
