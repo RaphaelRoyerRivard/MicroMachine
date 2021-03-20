@@ -1271,7 +1271,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 
 	float minRange = !isSieged ? 0 : 2 + tank->radius + (target ? target->radius : 0);
 	// If the tank already has a target close enough, no need to morph, unless they are too close
-	if (target && target->last_seen_game_loop == m_bot.GetCurrentFrame())
+	if (target && target->last_seen_game_loop == m_bot.GetCurrentFrame() && target->display_type == sc2::Unit::DisplayType::Visible)
 	{
 		float dist = Util::Dist(tank->pos, target->pos);
 		float maxRange = Util::GetAttackRangeForTarget(tank, target, m_bot);
@@ -1310,10 +1310,12 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 			if (!IsTankVulnerable(tank, targets, rangedUnits))
 			{
 				bool siege = false;
+				std::stringstream siegeReason;
 				// Siege if it has been close to the retreat location for several seconds
 				if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 4)
 				{
 					siege = true;
+					siegeReason << "close to retreat location";
 				}
 				else
 				{
@@ -1329,6 +1331,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 						if (dist <= range)// + speed)
 						{
 							siege = true;
+							siegeReason << "in siege range of a " << sc2::UnitTypeToName(newTarget->unit_type) << " at (" << newTarget->pos.x << ", " << newTarget->pos.y << ")";
 						}
 					}
 				}
@@ -1338,6 +1341,9 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 					frameCount = TANK_SIEGE_FRAME_COUNT;
 					morph = true;
 					m_tanksLastSiegeFrame[tank] = m_bot.GetCurrentFrame() + frameCount;
+					std::stringstream ss;
+					ss << "Tank at (" << tank->pos.x << ", " << tank->pos.y << ") with " << tank->health << "hp is sieging because it is " << siegeReason.str();
+					Util::Log(__FUNCTION__, ss.str(), m_bot);
 				}
 			}
 		}
@@ -1354,6 +1360,9 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 				morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
 				frameCount = TANK_UNSIEGE_FRAME_COUNT;
 				morph = true;
+				std::stringstream ss;
+				ss << "Tank at (" << tank->pos.x << ", " << tank->pos.y << ") with " << tank->health << "hp is unsieging because it has no target";
+				Util::Log(__FUNCTION__, ss.str(), m_bot);
 			}
 		}
 		else
