@@ -114,28 +114,21 @@ namespace Util
 
 		struct PathFindingResult
 		{
-			CCPosition m_from;
-			CCPosition m_to;
-			uint32_t m_expiration;
-			int m_parameters;	// For FindOptimalPathToTarget
-			bool m_safe;	// For IsPathToGoalSafe
-			CCPosition m_movement;	// For FindOptimalPathToTarget
+			CCPosition m_from = CCPosition();
+			CCPosition m_to = CCPosition();
+			uint32_t m_expiration = 0;
+			int m_parameters = 0;
+			bool m_safe = true;	// For IsPathToGoalSafe
+			CCPosition m_movement = CCPosition();	// For FindOptimalPathToTarget
+			float m_pathDistance = 0;	// For FindOptimalPathDistance
 
-			PathFindingResult()
-				: m_from(CCPosition())
-				, m_to(CCPosition())
-				, m_expiration(0)
-				, m_parameters(0)
-				, m_safe(true)
-				, m_movement(CCPosition())
-			{}
+			PathFindingResult() {}
 
 			// For IsPathToGoalSafe
 			PathFindingResult(CCPosition from, CCPosition to, uint32_t expiration, bool safe)
 				: m_from(from)
 				, m_to(to)
 				, m_expiration(expiration)
-				, m_parameters(0)
 				, m_safe(safe)
 			{}
 
@@ -144,9 +137,17 @@ namespace Util
 				: m_from(from)
 				, m_to(to)
 				, m_expiration(expiration)
-				, m_safe(true)
 				, m_parameters(parameters)
 				, m_movement(movement)
+			{}
+
+			// For FindOptimalPathDistance
+			PathFindingResult(CCPosition from, CCPosition to, uint32_t expiration, int parameters, float pathDistance)
+				: m_from(from)
+				, m_to(to)
+				, m_expiration(expiration)
+				, m_parameters(parameters)
+				, m_pathDistance(pathDistance)
 			{}
 		};
 
