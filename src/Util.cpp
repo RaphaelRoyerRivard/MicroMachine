@@ -13,6 +13,7 @@ const float PATHFINDING_SECONDARY_GOAL_HEURISTIC_MULTIPLIER = 10.f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const uint32_t WORKER_PATHFINDING_CACHE_DURATION = 50;
 const uint32_t ARMY_UNIT_PATHFINDING_CACHE_DURATION = 1;
+const uint32_t OPTIMAL_PATH_DISTANCE_CACHE_DURATION = 50;
 const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
 const float UNIT_CLUSTERING_MAX_DISTANCE = 5.f;
 
@@ -241,15 +242,18 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	auto & pathFindingResults = m_lastPathFindingResultsForUnitType[unit->unit_type];
 	for (auto & safePathResult : pathFindingResults)
 	{
-		float closeToGoal = Util::DistSq(goal, safePathResult.m_to) < 5 * 5;
-		if(closeToGoal)
+		if (Util::TerrainHeight(goal) == Util::TerrainHeight(safePathResult.m_to) && Util::TerrainHeight(unit->pos) == Util::TerrainHeight(safePathResult.m_from))
 		{
-			bool closeToUnitPos = Util::DistSq(unit->pos, safePathResult.m_from) < 5 * 5;
-			if (closeToUnitPos)
+			float closeToGoal = Util::DistSq(goal, safePathResult.m_to) < 5 * 5;
+			if (closeToGoal)
 			{
-				releventResult = safePathResult;
-				found = true;
-				break;
+				bool closeToUnitPos = Util::DistSq(unit->pos, safePathResult.m_from) < 10 * 10;
+				if (closeToUnitPos)
+				{
+					releventResult = safePathResult;
+					found = true;
+					break;
+				}
 			}
 		}
 	}
@@ -339,22 +343,56 @@ CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit
  */
 float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot)
 {
-	const auto path = FindOptimalPath(unit, goal, CCPosition(), 3.f, !ignoreInfluence, false, false, ignoreInfluence, 0, false, false, bot);
-	if (path.empty())
+	bool exitOnInfluence = !ignoreInfluence;
+	bool considerOnlyEffects = false;
+	bool getCloser = false;
+	bool flee = false;
+	bool checkVisibility = false;
+
+	// Create parameters int
+	int params = int(exitOnInfluence);
+	params = (params << 1) + int(considerOnlyEffects);
+	params = (params << 1) + int(getCloser);
+	params = (params << 1) + int(ignoreInfluence);
+	params = (params << 1) + int(flee);
+	params = (params << 1) + int(checkVisibility);
+
+	// Check if there is a usable cache
+	auto & cache = m_lastPathFindingResultsForUnitType[unit->unit_type];
+	for (auto & pathfindingResult : cache)
 	{
-		return -1.f;
+		bool sameParameters = params == pathfindingResult.m_parameters;
+		if (sameParameters)
+		{
+			bool closeToPos = DistSq(unit->pos, pathfindingResult.m_from) < 2 * 2;
+			if (closeToPos)
+			{
+				bool closeToGoal = DistSq(goal, pathfindingResult.m_to) < 2 * 2;
+				if (closeToGoal)
+				{
+					// We found a match
+					return pathfindingResult.m_pathDistance;
+				}
+			}
+		}
 	}
 
-	float dist = 0.f;
-	CCPosition lastPosition;
-	for (const auto position : path)
+	const auto path = FindOptimalPath(unit, goal, CCPosition(), 3.f, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, 0, flee, checkVisibility, bot);
+	float dist = -1.f;
+	if (!path.empty())
 	{
-		if (lastPosition != CCPosition())
+		CCPosition lastPosition;
+		for (const auto position : path)
 		{
-			dist += Dist(lastPosition, position);
+			if (lastPosition != CCPosition())
+			{
+				dist += Dist(lastPosition, position);
+			}
+			lastPosition = position;
 		}
-		lastPosition = position;
 	}
+	// Save result to cache
+	cache.push_back(PathFindingResult(unit->pos, goal, bot.GetCurrentFrame() + OPTIMAL_PATH_DISTANCE_CACHE_DURATION, params, dist));
 	return dist;
 }
 

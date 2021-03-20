@@ -1312,10 +1312,10 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 				bool siege = false;
 				std::stringstream siegeReason;
 				// Siege if it has been close to the retreat location for several seconds
-				if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 4)
+				if (m_tanksLastFrameFarFromRetreatGoal[tank] > 0 && m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 4)
 				{
 					siege = true;
-					siegeReason << "close to retreat location";
+					siegeReason << "close to its retreat location";
 				}
 				else
 				{
@@ -1342,7 +1342,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 					morph = true;
 					m_tanksLastSiegeFrame[tank] = m_bot.GetCurrentFrame() + frameCount;
 					std::stringstream ss;
-					ss << "Tank at (" << tank->pos.x << ", " << tank->pos.y << ") with " << tank->health << "hp is sieging because it is " << siegeReason.str();
+					ss << "Tank " << tank->tag << " at (" << tank->pos.x << ", " << tank->pos.y << ") with " << tank->health << "hp is sieging because it is " << siegeReason.str();
 					Util::Log(__FUNCTION__, ss.str(), m_bot);
 				}
 			}
@@ -1361,7 +1361,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 				frameCount = TANK_UNSIEGE_FRAME_COUNT;
 				morph = true;
 				std::stringstream ss;
-				ss << "Tank at (" << tank->pos.x << ", " << tank->pos.y << ") with " << tank->health << "hp is unsieging because it has no target";
+				ss << "Tank " << tank->tag << " at (" << tank->pos.x << ", " << tank->pos.y << ") with " << tank->health << "hp is unsieging because it has no target";
 				Util::Log(__FUNCTION__, ss.str(), m_bot);
 			}
 		}
