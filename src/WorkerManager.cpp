@@ -88,14 +88,17 @@ void WorkerManager::lowPriorityChecks()
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
 	{
 		//if Depleted
-		if (geyser.getUnitPtr()->vespene_contents == 0)
+		if (geyser.isValid() && geyser.getUnitPtr()->vespene_contents == 0)
 		{
 			//Salvage gas bunkers, if any
 			auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
 			auto & gasBunkers = base->getGasBunkers();
 			for (auto & bunker : gasBunkers)
 			{
-				Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SALVAGE, m_bot);
+				if (bunker.isValid())
+				{
+					Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::EFFECT_SALVAGE, m_bot);
+				}
 			}
 		}
 	}
@@ -128,7 +131,7 @@ void WorkerManager::lowPriorityChecks()
 				}
 				for (auto & mineral : base->getMinerals())
 				{
-					if (mineralWorkers.first.getTag() == mineral.getTag())
+					if (mineral.isValid() && mineralWorkers.first.getTag() == mineral.getTag())
 					{
 						remove = false;
 						break;
@@ -145,7 +148,7 @@ void WorkerManager::lowPriorityChecks()
 			mineralWorkerToRemove.push_back(mineralWorkers.first);
 			for (auto & workerMineral : m_workerData.m_workerMineralMap)
 			{
-				if (workerMineral.second.getTag() == mineralWorkers.first.getTag())
+				if (workerMineral.second.isValid() && mineralWorkers.first.isValid() && workerMineral.second.getTag() == mineralWorkers.first.getTag())
 				{
 					workerMineralToRemove.push_back(workerMineral.first);
 				}
@@ -860,6 +863,8 @@ void WorkerManager::handleIdleWorkers()
     for (auto & worker : m_workerData.getWorkers())
     {
         if (!worker.isValid()) { continue; }
+		if (worker.getType().isMule()) 
+		{ continue; }
 
 		int workerJob = m_workerData.getWorkerJob(worker);
 		bool idle = worker.isIdle();

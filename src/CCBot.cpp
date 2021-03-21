@@ -2155,6 +2155,19 @@ void CCBot::IssueCheats()
 		actionTotal++;
 	}*/
 
+	/* //Reproduce the lancing CC and building CC bug.
+	if (GetCurrentFrame() == 2)
+	{
+		Debug()->DebugGiveAllResources();
+		Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING, m_startLocation, 1, 1);
+	}
+	if (GetCurrentFrame() == 280)
+	{
+		CCTilePosition location = this->Bases().getNextExpansionPosition(Players::Self, true, false, false);
+		this->m_gameCommander.Production().createSkipQueue(MetaTypeEnum::CommandCenter, Util::GetPosition(location));
+	}
+	*/
+
 	//Kill all selected units
 	if (keyDelete)
 	{

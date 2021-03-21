@@ -89,4 +89,5 @@ public:
 	MM::BuildOrderItem queueAsHighestPriority(const MetaType & type, bool blocking);
 	void SetWantToQuickExpand(bool value);
 	bool hasProducedAtLeastXFactoryUnit(int x) const;
+	void createSkipQueue(MetaType type, CCPosition location);
 };
