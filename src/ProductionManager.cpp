@@ -2523,6 +2523,26 @@ Unit ProductionManager::getClosestUnitToPosition(const std::vector<Unit> & units
     return closestUnit;
 }
 
+void ProductionManager::createSkipQueue(MetaType type, CCPosition location)
+{
+	Unit producer = getProducer(type, false, location, true, false);
+	Building b(type.getUnitType(), location);
+	b.finalPosition = location;
+	bool includeAddonTiles;
+	switch ((sc2::UNIT_TYPEID)type.getUnitType().getAPIUnitType())
+	{
+		case sc2::UNIT_TYPEID::TERRAN_BARRACKS:
+		case sc2::UNIT_TYPEID::TERRAN_FACTORY:
+		case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+			includeAddonTiles = true;
+			break;
+		default:
+			includeAddonTiles = false;
+	}
+	auto boItem = MM::BuildOrderItem(type, 0, true);
+	create(producer, boItem, location, false, false, true, includeAddonTiles, true, true);
+}
+
 // this function will check to see if all preconditions are met and then create a unit
 // Used to create unit/tech/buildings (when we have the ressources)
 bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources, bool filterMovingWorker, bool canBePlacedElsewhere, bool includeAddonTiles, bool ignoreExtraBorder, bool forceSameHeight)
