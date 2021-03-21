@@ -260,8 +260,19 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 	if (found)
 		return releventResult.m_safe;
 
+	CCPosition secondaryGoal = CCPosition();
+	auto goalBaseLocation = bot.Bases().getBaseContainingPosition(goal);
+	if (goalBaseLocation)
+	{
+		auto unitBaseLocation = bot.Bases().getBaseContainingPosition(unit->pos);
+		if (unitBaseLocation != goalBaseLocation)
+		{
+			secondaryGoal = goalBaseLocation->getPosition();
+		}
+	}
+
 	FailureReason failureReason;
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, 0, false, false, true, failureReason, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, addBuffer ? 3.f : 1.f, true, false, false, false, 0, false, false, true, failureReason, bot);
 	const bool success = !path.empty() || failureReason == TIMEOUT;
 	const PathFindingResult safePathResult = PathFindingResult(unit->pos, goal, bot.GetCurrentFrame() + WORKER_PATHFINDING_CACHE_DURATION, success);
 	m_lastPathFindingResultsForUnitType[unit->unit_type].push_back(safePathResult);
@@ -377,7 +388,18 @@ float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosit
 		}
 	}
 
-	const auto path = FindOptimalPath(unit, goal, CCPosition(), 3.f, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, 0, flee, checkVisibility, bot);
+	CCPosition secondaryGoal = CCPosition();
+	auto goalBaseLocation = bot.Bases().getBaseContainingPosition(goal);
+	if (goalBaseLocation)
+	{
+		auto unitBaseLocation = bot.Bases().getBaseContainingPosition(unit->pos);
+		if (unitBaseLocation != goalBaseLocation)
+		{
+			secondaryGoal = goalBaseLocation->getDepotPosition();
+		}
+	}
+
+	const auto path = FindOptimalPath(unit, goal, secondaryGoal, 3.f, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, 0, flee, checkVisibility, bot);
 	float dist = -1.f;
 	if (!path.empty())
 	{
@@ -440,7 +462,8 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	const auto enemyTerrainHeight = TerrainHeight(goal);
 	const CCTilePosition startPosition = GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = GetTilePosition(goal);
-	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT ? CCTilePosition() : GetTilePosition(secondaryGoal);
+	// We need the secondary goal position for workers to use the ground distance values
+	const CCTilePosition secondaryGoalPosition = unit->is_flying || /*IsWorker(unit->unit_type) ||*/ unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT ? CCTilePosition() : GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
 	bestCosts[start->getTag()] = 0;
 	opened.insert(start);
