@@ -1644,18 +1644,20 @@ void CombatCommander::updateAttackSquads()
 			m_bot.StopProfiling("0.10.4.2.3.0     calcEnemies");
 			m_bot.StartProfiling("0.10.4.2.3.1     simulateCombat");
 			bool considerOurSiegeTanksUnsieged = !m_winAttackSimulation;
-			const float simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, considerOurSiegeTanksUnsieged, m_bot);
+			bool stopSimulationWhenGroupHasNoTarget = false;
+			const auto simulationResult = Util::SimulateCombat(allyUnits, enemyUnits, considerOurSiegeTanksUnsieged, stopSimulationWhenGroupHasNoTarget, m_bot);
+			float armyRemainingDifference = simulationResult.supplyPercentageRemaining - simulationResult.enemySupplyPercentageRemaining;
 			m_bot.StopProfiling("0.10.4.2.3.1     simulateCombat");
 			if (m_winAttackSimulation)
 			{
-				m_winAttackSimulation = simulationResult > 0.f || m_bot.GetCurrentSupply() >= 195;
+				m_winAttackSimulation = armyRemainingDifference > 0.f || m_bot.GetCurrentSupply() >= 195;
 				if (!m_winAttackSimulation)
 				{
 					auto allySupply = Util::GetSupplyOfUnits(allyUnits, m_bot);
 					auto enemySupply = Util::GetSupplyOfUnits(enemyUnits, m_bot);
 					std::stringstream ss;
 					ss << std::fixed << std::setprecision(2);	// floats will show only 2 decimals
-					ss << "Cancel offensive (" << simulationResult * 100 << "%, " << allySupply << " ally supply vs " << enemySupply << " enemy supply)";
+					ss << "Cancel offensive (" << armyRemainingDifference * 100 << "%, " << allySupply << " ally supply vs " << enemySupply << " enemy supply)";
 					m_bot.Actions()->SendChat(ss.str(), sc2::ChatChannel::Team);
 					Util::Log(__FUNCTION__, ss.str(), m_bot);
 					m_lastRetreatFrame = m_bot.GetCurrentFrame();
@@ -1663,14 +1665,14 @@ void CombatCommander::updateAttackSquads()
 			}
 			else
 			{
-				m_winAttackSimulation = simulationResult > 0.7f || m_bot.GetCurrentSupply() >= 195;
+				m_winAttackSimulation = armyRemainingDifference > 0.7f || m_bot.GetCurrentSupply() >= 195;
 				if (m_winAttackSimulation)
 				{
 					auto allySupply = Util::GetSupplyOfUnits(allyUnits, m_bot);
 					auto enemySupply = Util::GetSupplyOfUnits(enemyUnits, m_bot);
 					std::stringstream ss;
 					ss << std::fixed << std::setprecision(2);	// floats will show only 2 decimals
-					ss << "Relaunch offensive (" << simulationResult * 100 << "%, " << allySupply << " ally supply vs " << enemySupply << " enemy supply)";
+					ss << "Relaunch offensive (" << armyRemainingDifference * 100 << "%, " << allySupply << " ally supply vs " << enemySupply << " enemy supply)";
 					m_bot.Actions()->SendChat(ss.str(), sc2::ChatChannel::Team);
 					Util::Log(__FUNCTION__, ss.str(), m_bot);
 				}
@@ -2701,8 +2703,10 @@ void CombatCommander::updateDefenseSquads()
 					// This is the proxy location, we don't want to defend it if we don't have enough unit to protect it
 					sc2::Units enemyUnits;
 					Util::CCUnitsToSc2Units(region.enemyUnits, enemyUnits);
-					float simulationResult = Util::SimulateCombat(region.affectedAllyUnits, enemyUnits, true, m_bot);
-					if (simulationResult <= 0)
+					bool stopSimulationWhenGroupHasNoTarget = true;
+					auto simulationResult = Util::SimulateCombat(region.affectedAllyUnits, enemyUnits, true, stopSimulationWhenGroupHasNoTarget, m_bot);
+					float armyRemainingDifference = simulationResult.supplyPercentageRemaining - simulationResult.enemySupplyPercentageRemaining;
+					if (armyRemainingDifference <= 0)
 					{
 						auto & mainAttackSquad = m_squadData.getSquad("MainAttack");
 						for (const auto & unit : region.squad->getUnits())
@@ -3262,11 +3266,14 @@ void CombatCommander::ExecuteActions()
 		}
 		else
 		{
+			float distToGoal = 0;
+			if (action.position != CCPosition())
+				distToGoal = Util::DistSq(action.position, rangedUnit->pos);
 			m_bot.GetCommandMutex().lock();
 			switch (action.microActionType)
 			{
 			case MicroActionType::AttackMove:
-				if (Util::DistSq(action.position, rangedUnit->pos) < 0.1f)
+				if (distToGoal < (action.description == "MoveToGoalOrder" ? 10.f : 0.1f))
 					skip = true;
 				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
 				{
@@ -3293,7 +3300,7 @@ void CombatCommander::ExecuteActions()
 					Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
 				break;
 			case MicroActionType::Move:
-				if (Util::DistSq(action.position, rangedUnit->pos) < 0.1f)
+				if (distToGoal < (action.description == "MoveToGoalOrder" ? 10.f : 0.1f))
 					skip = true;
 				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
 				{
@@ -3371,7 +3378,7 @@ void CombatCommander::CleanLockOnTargets()
 	{
 		const auto cyclone = cyclonePair.first;
 		const auto target = cyclonePair.second.first;
-		if (!cyclone->is_alive || !target->is_alive || target->last_seen_game_loop < m_bot.GetCurrentFrame())
+		if (!cyclone->is_alive /*|| !target->is_alive || target->last_seen_game_loop < m_bot.GetCurrentFrame()*/)
 			toRemove.push_back(cyclone);
 	}
 	for (const auto cyclone : toRemove)

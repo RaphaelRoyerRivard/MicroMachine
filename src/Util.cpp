@@ -11,7 +11,9 @@ const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float PATHFINDING_TURN_COST = 3.f;
 const float PATHFINDING_SECONDARY_GOAL_HEURISTIC_MULTIPLIER = 10.f;
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
-const uint32_t WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL = 50;
+const uint32_t WORKER_PATHFINDING_CACHE_DURATION = 50;
+const uint32_t ARMY_UNIT_PATHFINDING_CACHE_DURATION = 1;
+const uint32_t OPTIMAL_PATH_DISTANCE_CACHE_DURATION = 50;
 const uint32_t UNIT_CLUSTERING_COOLDOWN = 24;
 const float UNIT_CLUSTERING_MAX_DISTANCE = 5.f;
 
@@ -210,6 +212,23 @@ bool Util::PathFinding::SetContainsNode(const std::set<IMNode*> & set, IMNode* n
 	return false;
 }
 
+void Util::PathFinding::ClearExpiredPathFindingResults(long currentFrame)
+{
+	for (auto & resultsForType : m_lastPathFindingResultsForUnitType)
+	{
+		auto & results = resultsForType.second;
+		auto it = results.begin();
+		while (it != results.end())
+		{
+			auto & result = *it;
+			if (currentFrame >= result.m_expiration)
+				it = results.erase(it);
+			else
+				++it;
+		}
+	}
+}
+
 bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot)
 {
 	if (!unit)
@@ -218,47 +237,95 @@ bool Util::PathFinding::IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal
 		return false;
 	}
 
-	int foundIndex = -1;
-	SafePathResult releventResult;
-	auto & safePathResults = m_lastPathFindingResultsForUnit[unit->tag];
-	for (size_t i = 0; i < safePathResults.size(); ++i)
+	bool found = false;
+	PathFindingResult releventResult;
+	auto & pathFindingResults = m_lastPathFindingResultsForUnitType[unit->unit_type];
+	for (auto & safePathResult : pathFindingResults)
 	{
-		auto & safePathResult = safePathResults[i];
-		if(safePathResult.m_position == goal)
+		if (Util::TerrainHeight(goal) == Util::TerrainHeight(safePathResult.m_to) && Util::TerrainHeight(unit->pos) == Util::TerrainHeight(safePathResult.m_from))
 		{
-			releventResult = safePathResult;
-			foundIndex = i;
-			break;
+			float closeToGoal = Util::DistSq(goal, safePathResult.m_to) < 5 * 5;
+			if (closeToGoal)
+			{
+				bool closeToUnitPos = Util::DistSq(unit->pos, safePathResult.m_from) < 10 * 10;
+				if (closeToUnitPos)
+				{
+					releventResult = safePathResult;
+					found = true;
+					break;
+				}
+			}
 		}
 	}
-	if (foundIndex >= 0 && bot.GetCurrentFrame() - releventResult.m_frame < WORKER_PATHFINDING_COOLDOWN_AFTER_FAIL)
-		return releventResult.m_result;
+	if (found)
+		return releventResult.m_safe;
+
+	CCPosition secondaryGoal = CCPosition();
+	auto goalBaseLocation = bot.Bases().getBaseContainingPosition(goal);
+	if (goalBaseLocation)
+	{
+		auto unitBaseLocation = bot.Bases().getBaseContainingPosition(unit->pos);
+		if (unitBaseLocation != goalBaseLocation)
+		{
+			secondaryGoal = goalBaseLocation->getPosition();
+		}
+	}
 
 	FailureReason failureReason;
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, CCPosition(), addBuffer ? 3.f : 1.f, true, false, false, false, 0, false, false, true, failureReason, bot);
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, addBuffer ? 3.f : 1.f, true, false, false, false, 0, false, false, true, failureReason, bot);
 	const bool success = !path.empty() || failureReason == TIMEOUT;
-	const SafePathResult safePathResult = SafePathResult(goal, bot.GetCurrentFrame(), success);
-	if(foundIndex >= 0)
-	{
-		m_lastPathFindingResultsForUnit[unit->tag][foundIndex] = safePathResult;
-	}
-	else
-	{
-		m_lastPathFindingResultsForUnit[unit->tag].push_back(safePathResult);
-	}
+	const PathFindingResult safePathResult = PathFindingResult(unit->pos, goal, bot.GetCurrentFrame() + WORKER_PATHFINDING_CACHE_DURATION, success);
+	m_lastPathFindingResultsForUnitType[unit->unit_type].push_back(safePathResult);
 	return success;
 }
 
 CCPosition Util::PathFinding::FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool considerOnlyEffects, float maxInfluence, CCBot & bot)
 {
+	bool exitOnInfluence = false;
 	bool getCloser = false;
 	if (target)
 	{
 		const float targetRange = GetAttackRangeForTarget(target, unit, bot);
 		getCloser = targetRange == 0.f || Dist(unit->pos, target->pos) > getThreatRange(unit, target, bot) || target->last_seen_game_loop < bot.GetCurrentFrame();
 	}
-	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, false, considerOnlyEffects, getCloser, false, maxInfluence, false, false, bot);
-	return GetCommandPositionFromPath(path, unit, true, bot);
+	bool ignoreInfluence = false;
+	bool flee = false;
+	bool checkVisibility = false;
+
+	// Create parameters int
+	int params = int(exitOnInfluence);
+	params = (params << 1) + int(considerOnlyEffects);
+	params = (params << 1) + int(getCloser);
+	params = (params << 1) + int(ignoreInfluence);
+	params = (params << 1) + int(flee);
+	params = (params << 1) + int(checkVisibility);
+	// Check if there is a usable cache
+	auto & cache = m_lastPathFindingResultsForUnitType[unit->unit_type];
+	for (auto & pathfindingResult : cache)
+	{
+		bool sameParameters = params == pathfindingResult.m_parameters;
+		if (sameParameters)
+		{
+			bool closeToPos = DistSq(unit->pos, pathfindingResult.m_from) < 2 * 2;
+			if (closeToPos)
+			{
+				bool closeToGoal = DistSq(goal, pathfindingResult.m_to) < 2 * 2;
+				if (closeToGoal)
+				{
+					// We found a match
+					if (pathfindingResult.m_movement == CCPosition())
+						return pathfindingResult.m_movement;
+					return unit->pos + pathfindingResult.m_movement;
+				}
+			}
+		}
+	}
+	// Compute the pos as a movement vector
+	std::list<CCPosition> path = FindOptimalPath(unit, goal, secondaryGoal, maxRange, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, maxInfluence, flee, checkVisibility, bot);
+	auto movement = GetCommandPositionFromPath(path, unit, true, bot);
+	// Save result to cache
+	cache.push_back(PathFindingResult(unit->pos, goal, bot.GetCurrentFrame() + ARMY_UNIT_PATHFINDING_CACHE_DURATION, params, movement));
+	return movement;
 }
 
 CCPosition Util::PathFinding::FindEngagePosition(const sc2::Unit * unit, const sc2::Unit* target, float maxRange, CCBot & bot)
@@ -287,22 +354,67 @@ CCPosition Util::PathFinding::FindOptimalPathToSaferRange(const sc2::Unit * unit
  */
 float Util::PathFinding::FindOptimalPathDistance(const sc2::Unit * unit, CCPosition goal, bool ignoreInfluence, CCBot & bot)
 {
-	const auto path = FindOptimalPath(unit, goal, CCPosition(), 3.f, !ignoreInfluence, false, false, ignoreInfluence, 0, false, false, bot);
-	if (path.empty())
+	bool exitOnInfluence = !ignoreInfluence;
+	bool considerOnlyEffects = false;
+	bool getCloser = false;
+	bool flee = false;
+	bool checkVisibility = false;
+
+	// Create parameters int
+	int params = int(exitOnInfluence);
+	params = (params << 1) + int(considerOnlyEffects);
+	params = (params << 1) + int(getCloser);
+	params = (params << 1) + int(ignoreInfluence);
+	params = (params << 1) + int(flee);
+	params = (params << 1) + int(checkVisibility);
+
+	// Check if there is a usable cache
+	auto & cache = m_lastPathFindingResultsForUnitType[unit->unit_type];
+	for (auto & pathfindingResult : cache)
 	{
-		return -1.f;
+		bool sameParameters = params == pathfindingResult.m_parameters;
+		if (sameParameters)
+		{
+			bool closeToPos = DistSq(unit->pos, pathfindingResult.m_from) < 2 * 2;
+			if (closeToPos)
+			{
+				bool closeToGoal = DistSq(goal, pathfindingResult.m_to) < 2 * 2;
+				if (closeToGoal)
+				{
+					// We found a match
+					return pathfindingResult.m_pathDistance;
+				}
+			}
+		}
 	}
 
-	float dist = 0.f;
-	CCPosition lastPosition;
-	for (const auto position : path)
+	CCPosition secondaryGoal = CCPosition();
+	auto goalBaseLocation = bot.Bases().getBaseContainingPosition(goal);
+	if (goalBaseLocation)
 	{
-		if (lastPosition != CCPosition())
+		auto unitBaseLocation = bot.Bases().getBaseContainingPosition(unit->pos);
+		if (unitBaseLocation != goalBaseLocation)
 		{
-			dist += Dist(lastPosition, position);
+			secondaryGoal = goalBaseLocation->getDepotPosition();
 		}
-		lastPosition = position;
 	}
+
+	const auto path = FindOptimalPath(unit, goal, secondaryGoal, 3.f, exitOnInfluence, considerOnlyEffects, getCloser, ignoreInfluence, 0, flee, checkVisibility, bot);
+	float dist = -1.f;
+	if (!path.empty())
+	{
+		CCPosition lastPosition;
+		for (const auto position : path)
+		{
+			if (lastPosition != CCPosition())
+			{
+				dist += Dist(lastPosition, position);
+			}
+			lastPosition = position;
+		}
+	}
+	// Save result to cache
+	cache.push_back(PathFindingResult(unit->pos, goal, bot.GetCurrentFrame() + OPTIMAL_PATH_DISTANCE_CACHE_DURATION, params, dist));
 	return dist;
 }
 
@@ -350,7 +462,8 @@ std::list<CCPosition> Util::PathFinding::FindOptimalPath(const sc2::Unit * unit,
 	const auto enemyTerrainHeight = TerrainHeight(goal);
 	const CCTilePosition startPosition = GetTilePosition(unit->pos);
 	const CCTilePosition goalPosition = GetTilePosition(goal);
-	const CCTilePosition secondaryGoalPosition = unit->is_flying || IsWorker(unit->unit_type) || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT ? CCTilePosition() : GetTilePosition(secondaryGoal);
+	// We need the secondary goal position for workers to use the ground distance values
+	const CCTilePosition secondaryGoalPosition = unit->is_flying || /*IsWorker(unit->unit_type) ||*/ unit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER || unit->unit_type == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT ? CCTilePosition() : GetTilePosition(secondaryGoal);
 	const auto start = new IMNode(startPosition);
 	bestCosts[start->getTag()] = 0;
 	opened.insert(start);
@@ -3005,21 +3118,35 @@ void Util::TimeControlDecreaseSpeed()
 	}
 }
 
-float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot)
+Util::CombatSimulationResult Util::SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, bool stopSimulationWhenGroupHasNoTarget, CCBot & bot)
 {
-	return SimulateCombat(units, units, enemyUnits, considerOurTanksUnsieged, bot);
+	return SimulateCombat(units, units, enemyUnits, considerOurTanksUnsieged, stopSimulationWhenGroupHasNoTarget, bot);
 }
 
 /**
  * Uses the combat simulator of libvoxel that simulates units attacking each other, but without considering the positions of units.
- * Returns a value between 1 and 0, representing the army supply remaining after the fight.
+ * Returns a combat simulation result containing our precentage of army supply remaining after the fight and the opponent's, as well as the supply
+ * damage we inflicted and received.
  */
-float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot)
+Util::CombatSimulationResult Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, bool stopSimulationWhenGroupHasNoTarget, CCBot & bot)
 {
+	CombatSimulationResult combatSimulationResult;
 	if (units.empty() || simulatedUnits.empty())
-		return 0.f;
+	{
+		combatSimulationResult.supplyLost = 100;
+		combatSimulationResult.supplyPercentageRemaining = 0;
+		combatSimulationResult.enemySupplyLost = 0;
+		combatSimulationResult.enemySupplyPercentageRemaining = 1;
+		return combatSimulationResult;
+	}
 	if (enemyUnits.empty())
-		return 1.f;
+	{
+		combatSimulationResult.supplyLost = 0;
+		combatSimulationResult.supplyPercentageRemaining = 1;
+		combatSimulationResult.enemySupplyLost = 100;
+		combatSimulationResult.enemySupplyPercentageRemaining = 0;
+		return combatSimulationResult;
+	}
 	// Check if it's a 1v1 mirror and if so, we want to trade
 	if (units.size() == 1 && enemyUnits.size() == 1)
 	{
@@ -3027,7 +3154,11 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		auto enemyUnit = enemyUnits[0];
 		if (unit->unit_type == enemyUnit->unit_type && unit->health >= enemyUnit->health && unit->shield >= enemyUnit->shield)
 		{
-			return 0.001f;
+			combatSimulationResult.supplyLost = 0;
+			combatSimulationResult.supplyPercentageRemaining = 0.001f;
+			combatSimulationResult.enemySupplyLost = 1;
+			combatSimulationResult.enemySupplyPercentageRemaining = 0;
+			return combatSimulationResult;
 		}
 	}
 	bot.StartProfiling("s.0 PrepareForCombatSimulation");
@@ -3086,6 +3217,12 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 		const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
 		armySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit->health / std::max(1.f, unit->health_max));
 	}
+	float enemyArmySupplyScore = 0.f;
+	for (const auto unit : enemyUnits)
+	{
+		const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[unit->unit_type];
+		enemyArmySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit->health / std::max(1.f, unit->health_max));
+	}
 
 	CombatUpgrades player1upgrades = {};
 
@@ -3107,27 +3244,38 @@ float Util::SimulateCombat(const sc2::Units & units, const sc2::Units & simulate
 	// Simulate for at most 100 *game* seconds
 	// Just to show that it can be configured, in this case 100 game seconds is more than enough for the battle to finish.
 	settings.maxTime = 100;
+	settings.enableTimingAdjustment = false;
+	settings.stopWhenNoTarget = stopSimulationWhenGroupHasNoTarget;
 	const CombatResult outcome = m_simulator->predict_engage(state, settings, nullptr, defenderPlayer, &bot);
 	bot.StopProfiling("s.2 predict_engage");
 	bot.StartProfiling("s.3 owner_with_best_outcome");
 	const int winner = outcome.state.owner_with_best_outcome();
 	bot.StopProfiling("s.3 owner_with_best_outcome");
-	if (winner != playerId)
-		return 0.f;
 
 	bot.StartProfiling("s.4 ComputeArmyRating");
+	// Ally
 	float resultArmySupplyScore = 0.f;
+	float resultEnemyArmySupplyScore = 0.f;
 	for (const auto & unit : outcome.state.units)
 	{
-		if (unit.owner == playerId && unit.health > 0)
+		if (unit.health > 0)
 		{
 			const sc2::UnitTypeData & unitTypeData = bot.Observation()->GetUnitTypeData()[sc2::UnitTypeID(unit.type)];
-			resultArmySupplyScore += unitTypeData.food_required * (0.25f + 0.75f * unit.health / unit.health_max);
+			const float score = unitTypeData.food_required * (0.25f + 0.75f * unit.health / unit.health_max);
+			if (unit.owner == playerId)
+				resultArmySupplyScore += score;
+			else
+				resultEnemyArmySupplyScore += score;
 		}
 	}
 	const float armyRating = resultArmySupplyScore / std::max(1.f, armySupplyScore);
+	const float enemyArmyRating = resultEnemyArmySupplyScore / std::max(1.f, enemyArmySupplyScore);
 	bot.StopProfiling("s.4 ComputeArmyRating");
-	return armyRating;
+	combatSimulationResult.supplyLost = armySupplyScore - resultArmySupplyScore;
+	combatSimulationResult.supplyPercentageRemaining = armyRating;
+	combatSimulationResult.enemySupplyLost = enemyArmySupplyScore - resultEnemyArmySupplyScore;
+	combatSimulationResult.enemySupplyPercentageRemaining = enemyArmyRating;
+	return combatSimulationResult;
 }
 
 int Util::GetSelfPlayerId(const CCBot & bot)

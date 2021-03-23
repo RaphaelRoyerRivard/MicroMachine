@@ -438,7 +438,7 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
 		if (bot)
 			bot->StopProfiling("s.2.3 GuardianShield");
 
-
+		bool groupHasTarget = false;
         for (int group = 0; group < 2; group++) {
             // TODO: Group 1 always attacks first
             auto& g1 = group == 0 ? units1 : units2;
@@ -611,6 +611,7 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                         float timeToReachEnemy = timeToBeAbleToAttack(env, unit, distanceToEnemy);
                         if (time < timeToReachEnemy) {
                             changed = true;
+							groupHasTarget = true;
                             continue;
                         }
                     } else {
@@ -618,6 +619,7 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
                         float timeToReachEnemy = fastestAttackerSpeed > 0 ? (maxRangeDefender - env.attackRange(unit)) / fastestAttackerSpeed : 100000;
                         if (time < timeToReachEnemy) {
                             changed = true;
+							groupHasTarget = true;
                             continue;
                         }
                     }
@@ -692,6 +694,7 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
 					bot->StopProfiling("s.2.9 GetTarget");
 
                 if (bestTarget != nullptr) {
+					groupHasTarget = true;
 					if (bot)
 						bot->StartProfiling("s.2.10 ComputeDamage");
                     if (isUnitMelee) {
@@ -785,7 +788,15 @@ CombatResult CombatPredictor::predict_engage(const CombatState& inputState, Comb
 
             if (debug)
                 cout << "Meleee attackers used: " << numMeleeUnitsUsed << " did change during last iteration: " << changed << endl;
+
+			if (settings.stopWhenNoTarget && !groupHasTarget)
+				break;
+			if (group == 0)
+				groupHasTarget = false;
         }
+
+		if (settings.stopWhenNoTarget && !groupHasTarget)
+			break;
 
         time += dt;
         if (time >= settings.maxTime) break;

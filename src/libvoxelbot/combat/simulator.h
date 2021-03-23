@@ -80,6 +80,7 @@ struct CombatSettings {
     bool enableMeleeBlocking = true;
 	bool workersDoNoDamage = false;
 	bool assumeReasonablePositioning = true;
+	bool stopWhenNoTarget = true;
 	float maxTime = std::numeric_limits<float>::infinity();
 	float startTime = 0;
 };

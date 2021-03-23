@@ -93,6 +93,14 @@ namespace Util
         bool operator()(const sc2::Unit * unit, const sc2::ObservationInterface*);
     };
 
+	struct CombatSimulationResult
+	{
+		float supplyLost;
+		float supplyPercentageRemaining;
+		float enemySupplyLost;
+		float enemySupplyPercentageRemaining;
+	};
+
 	namespace PathFinding
 	{
 		enum FailureReason
@@ -104,28 +112,49 @@ namespace Util
 		
 		struct IMNode;
 
-		struct SafePathResult
+		struct PathFindingResult
 		{
-			CCPosition m_position;
-			uint32_t m_frame;
-			bool m_result;
+			CCPosition m_from = CCPosition();
+			CCPosition m_to = CCPosition();
+			uint32_t m_expiration = 0;
+			int m_parameters = 0;
+			bool m_safe = true;	// For IsPathToGoalSafe
+			CCPosition m_movement = CCPosition();	// For FindOptimalPathToTarget
+			float m_pathDistance = 0;	// For FindOptimalPathDistance
 
-			SafePathResult()
-				: m_position(CCPosition())
-				, m_frame(0)
-				, m_result(true)
+			PathFindingResult() {}
+
+			// For IsPathToGoalSafe
+			PathFindingResult(CCPosition from, CCPosition to, uint32_t expiration, bool safe)
+				: m_from(from)
+				, m_to(to)
+				, m_expiration(expiration)
+				, m_safe(safe)
 			{}
 
-			SafePathResult(CCPosition position, uint32_t frame, bool result)
-				: m_position(position)
-				, m_frame(frame)
-				, m_result(result)
+			// For FindOptimalPathToTarget
+			PathFindingResult(CCPosition from, CCPosition to, uint32_t expiration, int parameters, CCPosition movement)
+				: m_from(from)
+				, m_to(to)
+				, m_expiration(expiration)
+				, m_parameters(parameters)
+				, m_movement(movement)
+			{}
+
+			// For FindOptimalPathDistance
+			PathFindingResult(CCPosition from, CCPosition to, uint32_t expiration, int parameters, float pathDistance)
+				: m_from(from)
+				, m_to(to)
+				, m_expiration(expiration)
+				, m_parameters(parameters)
+				, m_pathDistance(pathDistance)
 			{}
 		};
 
-		static std::map<sc2::Tag, std::vector<SafePathResult>> m_lastPathFindingResultsForUnit;
+		static std::map<sc2::UNIT_TYPEID, std::list<PathFindingResult>> m_lastPathFindingResultsForUnitType;
 
 		bool SetContainsNode(const std::set<IMNode*> & set, IMNode* node, bool mustHaveLowerCost);
+		void ClearExpiredPathFindingResults(long currentFrame);
 		bool IsPathToGoalSafe(const sc2::Unit * unit, CCPosition goal, bool addBuffer, CCBot & bot);
 		CCPosition FindOptimalPathToTarget(const sc2::Unit * unit, CCPosition goal, CCPosition secondaryGoal, const sc2::Unit* target, float maxRange, bool considerOnlyEffects, float maxInfluence, CCBot & bot);
 		CCPosition FindEngagePosition(const sc2::Unit * unit, const sc2::Unit* target, float maxRange, CCBot & bot);
@@ -335,8 +364,8 @@ namespace Util
     CCPositionType DistSq(const CCPosition & p1, const CCPosition & p2);
 	float DistBetweenLineAndPoint(const CCPosition & linePoint1, const CCPosition & linePoint2, const CCPosition & point);
 
-	float SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot);
-	float SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, CCBot & bot);
+	CombatSimulationResult SimulateCombat(const sc2::Units & units, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, bool stopSimulationWhenGroupHasNoTarget, CCBot & bot);
+	CombatSimulationResult SimulateCombat(const sc2::Units & units, const sc2::Units & simulatedUnits, const sc2::Units & enemyUnits, bool considerOurTanksUnsieged, bool stopSimulationWhenGroupHasNoTarget, CCBot & bot);
 	int GetSelfPlayerId(const CCBot & bot);
 
 	int GetSupplyOfUnits(const sc2::Units & units, CCBot & bot);

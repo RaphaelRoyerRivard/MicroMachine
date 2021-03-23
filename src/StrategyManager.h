@@ -63,9 +63,9 @@ class StrategyManager
 	std::vector<std::string> STRATEGY_ORDER = {
 		"STANDARD",
 		"EARLY_EXPAND",
-		"PROXY_MARAUDERS",
 		"FAST_PF",
-		"PROXY_CYCLONES"
+		"PROXY_CYCLONES",
+		"PROXY_MARAUDERS"
 	};
 	
     CCBot & m_bot;

@@ -464,19 +464,26 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 
 	// To allow tanks to siege up the closest they can to their goal, we need to know for how long they've been close to it
-	if (isTank && (Util::DistSq(rangedUnit->pos, goal) > 5 * 5 || Util::TerrainHeight(rangedUnit->pos) != Util::TerrainHeight(goal)))
+	if (isTank)
 	{
-		bool alreadyDefendingBaseUnderAttack = false;
-		if (m_order.getType() == SquadOrderTypes::Defend && !defendingAgainstCombatBuildings)
+		if (Util::DistSq(rangedUnit->pos, goal) > 5 * 5 || Util::TerrainHeight(rangedUnit->pos) != Util::TerrainHeight(goal))
 		{
-			auto baseContainingEnemies = m_bot.Bases().getBaseContainingPosition(goal);
-			auto baseContainingTank = m_bot.Bases().getBaseContainingPosition(rangedUnit->pos);
-			auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();	// Don't move main base siege tanks when defending
-			if (!baseContainingEnemies || baseContainingEnemies == baseContainingTank || Util::Contains(rangedUnit, siegeTanks))
-				alreadyDefendingBaseUnderAttack = true;
+			bool alreadyDefendingBaseUnderAttack = false;
+			if (m_order.getType() == SquadOrderTypes::Defend && !defendingAgainstCombatBuildings)
+			{
+				auto baseContainingEnemies = m_bot.Bases().getBaseContainingPosition(goal);
+				auto baseContainingTank = m_bot.Bases().getBaseContainingPosition(rangedUnit->pos);
+				auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();	// Don't move main base siege tanks when defending
+				if (!baseContainingEnemies || baseContainingEnemies == baseContainingTank || Util::Contains(rangedUnit, siegeTanks))
+					alreadyDefendingBaseUnderAttack = true;
+			}
+			if (!alreadyDefendingBaseUnderAttack)
+				m_tanksLastFrameFarFromRetreatGoal[rangedUnit] = m_bot.GetCurrentFrame();
 		}
-		if (!alreadyDefendingBaseUnderAttack)
-			m_tanksLastFrameFarFromRetreatGoal[rangedUnit] = m_bot.GetCurrentFrame();
+		else if (m_tanksLastFrameFarFromRetreatGoal[rangedUnit] == 0)
+		{
+			m_tanksLastFrameFarFromRetreatGoal[rangedUnit] = 1;
+		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
@@ -1271,7 +1278,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 
 	float minRange = !isSieged ? 0 : 2 + tank->radius + (target ? target->radius : 0);
 	// If the tank already has a target close enough, no need to morph, unless they are too close
-	if (target && target->last_seen_game_loop == m_bot.GetCurrentFrame())
+	if (target && target->last_seen_game_loop == m_bot.GetCurrentFrame() && target->display_type == sc2::Unit::DisplayType::Visible)
 	{
 		float dist = Util::Dist(tank->pos, target->pos);
 		float maxRange = Util::GetAttackRangeForTarget(tank, target, m_bot);
@@ -1310,10 +1317,12 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 			if (!IsTankVulnerable(tank, targets, rangedUnits))
 			{
 				bool siege = false;
+				std::stringstream siegeReason;
 				// Siege if it has been close to the retreat location for several seconds
-				if (m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 4)
+				if (m_tanksLastFrameFarFromRetreatGoal[tank] > 0 && m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 4)
 				{
 					siege = true;
+					siegeReason << "close to its retreat location";
 				}
 				else
 				{
@@ -1329,6 +1338,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 						if (dist <= range)// + speed)
 						{
 							siege = true;
+							siegeReason << "in siege range of a " << sc2::UnitTypeToName(newTarget->unit_type) << " at (" << newTarget->pos.x << ", " << newTarget->pos.y << ")";
 						}
 					}
 				}
@@ -1338,6 +1348,9 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 					frameCount = TANK_SIEGE_FRAME_COUNT;
 					morph = true;
 					m_tanksLastSiegeFrame[tank] = m_bot.GetCurrentFrame() + frameCount;
+					std::stringstream ss;
+					ss << "Tank " << tank->tag << " at (" << tank->pos.x << ", " << tank->pos.y << ") with " << tank->health << "hp is sieging because it is " << siegeReason.str();
+					Util::Log(__FUNCTION__, ss.str(), m_bot);
 				}
 			}
 		}
@@ -1354,6 +1367,9 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 				morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
 				frameCount = TANK_UNSIEGE_FRAME_COUNT;
 				morph = true;
+				std::stringstream ss;
+				ss << "Tank " << tank->tag << " at (" << tank->pos.x << ", " << tank->pos.y << ") with " << tank->health << "hp is unsieging because it has no target";
+				Util::Log(__FUNCTION__, ss.str(), m_bot);
 			}
 		}
 		else
@@ -1542,7 +1558,7 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings()) || m_bot.Data(rangedUnit->unit_type).isBuilding;
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 		std::stringstream actionDescription;
-		actionDescription << "MoveToGoal" << goalDescription;
+		actionDescription << "MoveToGoal" << goalDescription;	// Do not change the string, it is used in CombatCommander::ExecuteActions
 		const auto action = UnitAction(moveWithoutAttack ? MicroActionType::Move : MicroActionType::AttackMove, goal, unitShouldHeal, actionDuration, actionDescription.str());
 		m_bot.Commander().Combat().PlanAction(rangedUnit, action);
 		return true;
@@ -1796,6 +1812,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		return false;
 
 	float unitsPower = 0.f;
+	float groundUnitsPower = 0.f;
+	float airUnitsPower = 0.f;
 	float stimedUnitsPowerDifference = 0.f;
 	float targetsPower = 0.f;
 	bool morphFlyingVikings = false;
@@ -1956,8 +1974,11 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		if (Util::Contains(rangedUnit, allyUnits))
 		//if (allyUnits == closeUnitsSet)
 		{
-			bool savedResult = combatSimulationResultPair.second;
-			if (savedResult)
+			auto& savedResults = combatSimulationResultPair.second;
+			bool groundResult = savedResults[0];
+			bool airResult = savedResults[1];
+			bool shouldFight = (!rangedUnit->is_flying && groundResult) || (rangedUnit->is_flying && airResult);
+			if (shouldFight)
 			{
 				auto action = m_bot.Commander().Combat().GetUnitAction(rangedUnit);
 				std::stringstream ss;
@@ -1965,7 +1986,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				Util::Log(__FUNCTION__, ss.str(), m_bot);
 			}
 			m_bot.StopProfiling("0.10.4.1.5.1.5.d          CheckSavedResult");
-			return savedResult;
+			return shouldFight;
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.5.d          CheckSavedResult");
@@ -1977,7 +1998,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	sc2::Units allyCombatUnits;
 	allyCombatUnits.insert(allyCombatUnits.end(), rangedUnits.begin(), rangedUnits.end());
 	allyCombatUnits.insert(allyCombatUnits.end(), otherSquadsUnits.begin(), otherSquadsUnits.end());
-	CalcCloseUnits(rangedUnit, target, allyCombatUnits, rangedUnitTargets, true, closeUnitsSet, morphFlyingVikings, morphLandedVikings, simulatedStimedUnits, stimedUnitsPowerDifference, closeUnitsTarget, unitsPower, minUnitRange);
+	CalcCloseUnits(rangedUnit, target, allyCombatUnits, rangedUnitTargets, true, closeUnitsSet, morphFlyingVikings, morphLandedVikings, simulatedStimedUnits, stimedUnitsPowerDifference, closeUnitsTarget, unitsPower, groundUnitsPower, airUnitsPower, minUnitRange);
 	m_bot.StopProfiling("0.10.4.1.5.1.5.1          CalcCloseUnits");
 
 	if (closeUnitsSet.empty() || !Util::Contains(rangedUnit, closeUnitsSet))
@@ -1991,8 +2012,16 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	}
 
 	sc2::Units closeUnits;
+	sc2::Units closeGroundUnits;
+	sc2::Units closeAirUnits;
 	for (const auto closeUnit : closeUnitsSet)
+	{
 		closeUnits.push_back(closeUnit);
+		if (closeUnit->is_flying)
+			closeAirUnits.push_back(closeUnit);
+		else
+			closeGroundUnits.push_back(closeUnit);
+	}
 
 	m_bot.StartProfiling("0.10.4.1.5.1.5.2          CalcThreats");
 	// Calculate all the threats of all the ally units participating in the fight
@@ -2126,6 +2155,10 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	float maxThreatSpeed = 0.f;
 	float maxThreatRange = 0.f;
 	sc2::Units threatsToKeep;
+	sc2::Units groundAttackingThreats;
+	sc2::Units airAttackingThreats;
+	float groundEnemyPower = 0;
+	float airEnemyPower = 0;
 	// Calculate enemy power
 	for (auto threat : allThreats)
 	{
@@ -2134,6 +2167,8 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		if (threat->unit_type == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY)	// Keep it but do not consider its power
 		{
 			threatsToKeep.push_back(threat);
+			groundAttackingThreats.push_back(threat);
+			airAttackingThreats.push_back(threat);
 			continue;
 		}
 		const float threatSpeed = Util::getSpeedOfUnit(threat, m_bot);
@@ -2171,15 +2206,26 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}*/
 		if (threatRange > maxThreatRange)
 			maxThreatRange = threatRange;
-		targetsPower += Util::GetUnitPower(threat, threatTarget, m_bot);
+		float threatPower = Util::GetUnitPower(threat, threatTarget, m_bot);
+		targetsPower += threatPower;
 		threatsToKeep.push_back(threat);
+		if (Util::CanUnitAttackGround(threat, m_bot))
+		{
+			groundEnemyPower += threatPower;
+			groundAttackingThreats.push_back(threat);
+		}
+		if (Util::CanUnitAttackAir(threat, m_bot))
+		{
+			airEnemyPower += threatPower;
+			airAttackingThreats.push_back(threat);
+		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.5.3          CalcThreatsPower");
 
 	// If our units have 2 more range, they should kite, not trade
 	if (!morphFlyingVikings && minUnitRange - maxThreatRange >= 2.f)
 	{
-		m_combatSimulationResults[closeUnitsSet] = false;
+		m_combatSimulationResults[closeUnitsSet] = { false, false };	// TODO, we might still want to allow the ground or air to trade
 		return false;
 	}
 
@@ -2210,7 +2256,15 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
-	float simulationResult = Util::SimulateCombat(closeUnits, threatsToKeep, false, m_bot);
+	auto simulationResult = Util::SimulateCombat(closeUnits, threatsToKeep, false, true, m_bot);
+	auto groundSimulationResult = Util::SimulateCombat(closeGroundUnits, groundAttackingThreats, false, true, m_bot);
+	auto airSimulationResult = Util::SimulateCombat(closeAirUnits, airAttackingThreats, false, true, m_bot);
+	float remainingArmyPercentageDifference = simulationResult.supplyPercentageRemaining - simulationResult.enemySupplyPercentageRemaining;
+	float remainingGroundArmyPercentageDifference = groundSimulationResult.supplyPercentageRemaining - groundSimulationResult.enemySupplyPercentageRemaining;
+	float remainingAirArmyPercentageDifference = airSimulationResult.supplyPercentageRemaining - airSimulationResult.enemySupplyPercentageRemaining;
+	/*float supplyLostDifference = simulationResult.enemySupplyLost - simulationResult.supplyLost;
+	float groundSupplyLostDifference = groundSimulationResult.enemySupplyLost - groundSimulationResult.supplyLost;
+	float airSupplyLostDifference = airSimulationResult.enemySupplyLost - airSimulationResult.supplyLost;*/
 	float minDesiredOutcome = 0.f;
 	if (m_order.getType() == SquadOrderTypes::Harass)
 	{
@@ -2224,9 +2278,15 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			}
 		}
 	}
-	bool winSimulation = simulationResult > minDesiredOutcome;
+	bool winSimulation = remainingArmyPercentageDifference > minDesiredOutcome;
+	bool winGroundSimulation = remainingGroundArmyPercentageDifference > minDesiredOutcome;
+	bool winAirSimulation = remainingAirArmyPercentageDifference > minDesiredOutcome;
 	bool formulaWin = unitsPower >= targetsPower;
-	bool shouldFight = winSimulation && formulaWin;
+	bool formulaGroundWin = groundUnitsPower >= groundEnemyPower;
+	bool formulaAirWin = airUnitsPower >= airEnemyPower;
+	//bool shouldFight = winSimulation && formulaWin;
+	bool shouldGroundFight = winGroundSimulation && formulaGroundWin;
+	bool shouldAirFight = winAirSimulation && formulaAirWin;
 
 	if (!simulatedStimedUnits.empty())
 	{
@@ -2239,26 +2299,36 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			else
 				units.push_back(closeUnit);
 		}
-		const float stimedSimulationResult = Util::SimulateCombat(closeUnits, units, threatsToKeep, false, m_bot);
-		if (stimedSimulationResult > simulationResult && (enemyHasLongRangeUnits || unitsPower + stimedUnitsPowerDifference >= targetsPower))
+		const auto stimedGroundSimulationResult = Util::SimulateCombat(closeUnits, units, groundAttackingThreats, false, true, m_bot);
+		float remainingStimedGroundArmyPercentageDifference = stimedGroundSimulationResult.supplyPercentageRemaining - stimedGroundSimulationResult.enemySupplyPercentageRemaining;
+		if (remainingStimedGroundArmyPercentageDifference > remainingGroundArmyPercentageDifference && (enemyHasLongRangeUnits || groundUnitsPower + stimedUnitsPowerDifference >= groundEnemyPower))
 		{
-			winSimulation = true;
-			formulaWin = true;
-			shouldFight = true;
+			winGroundSimulation = true;
+			formulaGroundWin = true;
+			shouldGroundFight = true;
 			useStim = true;
+			remainingGroundArmyPercentageDifference = remainingStimedGroundArmyPercentageDifference;
 		}
 	}
 
-	if (!shouldFight)
+	if (winSimulation && remainingGroundArmyPercentageDifference < remainingArmyPercentageDifference && remainingAirArmyPercentageDifference < remainingArmyPercentageDifference)
 	{
-		if (!winSimulation && !vikings.empty() && !tempests.empty())
+		shouldGroundFight = true;
+		shouldAirFight = true;
+	}
+
+	if (!shouldGroundFight || !shouldAirFight)
+	{
+		if (!winAirSimulation && !vikings.empty() && !tempests.empty())
 		{
 			const auto otherEnemies = threatsToKeep.size() - tempests.size();
 			if (otherEnemies > 0)
 			{
-				winSimulation = Util::SimulateCombat(vikings, tempests, false, m_bot) > 0.f;
+				auto vikingsVsTempestsSimulationResult = Util::SimulateCombat(vikings, tempests, false, true, m_bot);
+				float remainingVikingsVsTempestsArmyPercentageDifference = vikingsVsTempestsSimulationResult.supplyPercentageRemaining - vikingsVsTempestsSimulationResult.enemySupplyPercentageRemaining;
+				winAirSimulation = remainingVikingsVsTempestsArmyPercentageDifference > 0.f;
 			}
-			shouldFight = winSimulation;
+			shouldAirFight = winAirSimulation;
 			/*std::stringstream ss;
 			ss << getSquad()->getName() << ": " << vikings.size() << " Vikings (" << injuredVikings << " injured) vs " << tempests.size() << " Tempests (" << injuredTempests << " injured): " << (winSimulation ? "win" : "LOSE");
 			Util::Log(__FUNCTION__, ss.str(), m_bot);
@@ -2266,13 +2336,15 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 		else if (enemyHasLongRangeUnits)
 		{
-			shouldFight = winSimulation;	// We consider only the simulation for long range enemies because our formula is shit
+			// We consider only the simulation for long range enemies because our formula is shit
+			shouldGroundFight = winGroundSimulation;
+			shouldAirFight = winAirSimulation;
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
 
 	// Save result
-	m_combatSimulationResults[closeUnitsSet] = shouldFight;
+	m_combatSimulationResults[closeUnitsSet] = { shouldGroundFight, shouldAirFight };
 
 	m_bot.StartProfiling("0.10.4.1.5.1.5.5          GiveActions");
 	// Choose an action for each of our close units
@@ -2281,6 +2353,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		auto unit = unitAndTarget.first;
 		const sc2::Unit* simulatedUnit = nullptr;
 		const auto unitTarget = unitAndTarget.second;
+		bool shouldFight = unit->is_flying ? shouldAirFight : shouldGroundFight;
 
 		// Cloak Banshee if threatened
 		m_bot.StartProfiling("0.10.4.1.5.1.5.5.1            CloakBanshee");
@@ -2499,7 +2572,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.5.5          GiveActions");
-	return shouldFight;
+	return rangedUnit->is_flying ? shouldAirFight : shouldGroundFight;
 }
 
 const sc2::Unit* RangedManager::GetSimulatedUnit(const sc2::Unit * rangedUnit)
@@ -2543,17 +2616,17 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 	std::map<const sc2::Unit *, const sc2::Unit *> simulatedStimedUnits;
 	float stimedUnitsPowerDifference;
 	std::map<const sc2::Unit*, const sc2::Unit*> closeUnitsTarget;
-	float unitsPower;
+	float unitsPower, groundUnitsPower, airUnitsPower;
 	float minUnitRange;
 	const bool ignoreCyclones = false;
-	CalcCloseUnits(rangedUnit, target, allyCombatUnits, rangedUnitTargets, ignoreCyclones, closeUnitsSet, morphFlyingVikings, morphLandedVikings, simulatedStimedUnits, stimedUnitsPowerDifference, closeUnitsTarget, unitsPower, minUnitRange);
+	CalcCloseUnits(rangedUnit, target, allyCombatUnits, rangedUnitTargets, ignoreCyclones, closeUnitsSet, morphFlyingVikings, morphLandedVikings, simulatedStimedUnits, stimedUnitsPowerDifference, closeUnitsTarget, unitsPower, groundUnitsPower, airUnitsPower, minUnitRange);
 }
 /*
  * Calculates the ally units to be considered in a combat simulation.
  * The result is stored in the closeUnitsSet.
  * We use a set because we need an ordered data structure for accurate and efficient comparison with data in memory.
  */
-void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & allyCombatUnits, sc2::Units & rangedUnitTargets, bool ignoreCyclones, std::set<const sc2::Unit *> & closeUnitsSet, bool & morphFlyingVikings, bool & morphLandedVikings, std::map<const sc2::Unit *, const sc2::Unit *> & simulatedStimedUnits, float & stimedUnitsPowerDifference, std::map<const sc2::Unit*, const sc2::Unit*> & closeUnitsTarget, float & unitsPower, float & minUnitRange)
+void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & allyCombatUnits, sc2::Units & rangedUnitTargets, bool ignoreCyclones, std::set<const sc2::Unit *> & closeUnitsSet, bool & morphFlyingVikings, bool & morphLandedVikings, std::map<const sc2::Unit *, const sc2::Unit *> & simulatedStimedUnits, float & stimedUnitsPowerDifference, std::map<const sc2::Unit*, const sc2::Unit*> & closeUnitsTarget, float & unitsPower, float & groundUnitsPower, float & airUnitsPower, float & minUnitRange)
 {
 	std::vector<const sc2::Unit *> morphingVikings;
 	bool checkedForFlyingTarget = false;
@@ -2665,6 +2738,10 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 				closeUnitsSet.insert(unitToSave);
 				closeUnitsTarget[unitToSave] = unitTarget;
 				unitsPower += unitPower;
+				if (unitToSave->is_flying)
+					airUnitsPower += unitPower;
+				else
+					groundUnitsPower += unitPower;
 				const float unitRange = Util::GetAttackRangeForTarget(unitToSave, unitTarget, m_bot);
 				if (minUnitRange < 0 || unitRange < minUnitRange)
 					minUnitRange = unitRange;
@@ -2878,10 +2955,14 @@ void RangedManager::ExecuteCycloneLogic(const sc2::Unit * cyclone, bool isUnitDi
 	{
 		auto & nextAvailableAbility = m_bot.Commander().Combat().getNextAvailableAbility();
 		const auto currentFrame = m_bot.GetCurrentFrame();
-		if (nextAvailableAbility[sc2::ABILITY_ID::EFFECT_LOCKON][cyclone] - currentFrame > CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT / 2)
+		const auto nextAvailableFrame = nextAvailableAbility[sc2::ABILITY_ID::EFFECT_LOCKON][cyclone];
+		if (nextAvailableFrame - currentFrame > CYCLONE_LOCKON_COOLDOWN_FRAME_COUNT / 2)
 		{
 			goal = m_bot.GetStartLocation();
-			goalDescription = "CooldownStart";
+			if (shouldAttack || cycloneShouldUseLockOn)
+				goalDescription = "CooldownStart";
+			else
+				goalDescription = "KeepTarget";
 		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.b.3            DefineGoal");
