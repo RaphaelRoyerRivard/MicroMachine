@@ -702,9 +702,11 @@ void WorkerManager::handleGasWorkers()
 	std::vector<sc2::Tag> bunkerHasLoaded;
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
 	{
+		m_bot.StartProfiling("0.7.3.4.1     initialChecks");
 		auto base = m_bot.Bases().getBaseContainingPosition(geyser.getPosition(), Players::Self);
 		if (base == nullptr)
 		{
+			m_bot.StopProfiling("0.7.3.4.1     initialChecks");
 			continue;
 		}
 		auto & depot = base->getResourceDepot();
@@ -715,6 +717,7 @@ void WorkerManager::handleGasWorkers()
 		}
 
 		auto workers = m_bot.Workers().m_workerData.getAssignedWorkersRefinery(geyser);
+		m_bot.StopProfiling("0.7.3.4.1     initialChecks");
 		for (auto & bunker : base->getGasBunkers())
 		{
 			if (!bunker.isCompleted())
@@ -731,6 +734,7 @@ void WorkerManager::handleGasWorkers()
 			auto hasUnload = false;
 			if (!base->isGeyserSplit())
 			{
+				m_bot.StartProfiling("0.7.3.4.2     handleWorkersInside");
 				for (auto & worker : workers)//Handle workers inside
 				{
 					if (m_bot.Commander().isInside(worker.getTag()))
@@ -764,10 +768,12 @@ void WorkerManager::handleGasWorkers()
 						worker.rightClick(geyser.getPosition());
 					}
 				}
-				if (workers.size() == 0)//Empty bunkers if they they units inside that shouldn't be inside
+				m_bot.StopProfiling("0.7.3.4.2     handleWorkersInside");
+				m_bot.StartProfiling("0.7.3.4.3     unloadUnwantedPassengers");
+				if (workers.size() == 0)//Empty bunkers if they have units inside that shouldn't be inside
 				{
 					auto passengers = bunker.getUnitPtr()->passengers;
-					for (auto passenger : passengers)
+					for (auto & passenger : passengers)
 					{
 						switch ((sc2::UNIT_TYPEID) passenger.unit_type)
 						{
@@ -778,8 +784,10 @@ void WorkerManager::handleGasWorkers()
 						}
 					}
 				}
+				m_bot.StopProfiling("0.7.3.4.3     unloadUnwantedPassengers");
 
 				bool hasReturningWorker = false;
+				m_bot.StartProfiling("0.7.3.4.4     handleWorkersOutside");
 				for (auto & worker : workers)//Handle workers outside
 				{
 					if (!m_bot.Commander().isInside(worker.getTag()))
@@ -809,7 +817,7 @@ void WorkerManager::handleGasWorkers()
 						{
 							if (distRefinery < distDepot)//Click to enter refinery
 							{
-								Micro::SmartAbility(worker.getUnitPtr(), sc2::ABILITY_ID::HARVEST_GATHER,geyser.getUnitPtr(), m_bot);
+								Micro::SmartAbility(worker.getUnitPtr(), sc2::ABILITY_ID::HARVEST_GATHER, geyser.getUnitPtr(), m_bot);
 							}
 #ifdef PUBLIC_RELEASE
 							else//Click to enter bunker
@@ -824,11 +832,13 @@ void WorkerManager::handleGasWorkers()
 						}
 					}
 				}
+				m_bot.StopProfiling("0.7.3.4.4     handleWorkersOutside");
 			}
 			else
 			{
 				//UNHANDLED SINGLE GEYSER
 			}
+			m_bot.StartProfiling("0.7.3.4.5     unloadOutOfPlaceWorkers");
 			for (auto & unit : bunker.getUnitPtr()->passengers)
 			{
 				if (unit.unit_type != Util::GetWorkerType().getAPIUnitType())
@@ -852,6 +862,7 @@ void WorkerManager::handleGasWorkers()
 #endif
 				}
 			}
+			m_bot.StopProfiling("0.7.3.4.5     unloadOutOfPlaceWorkers");
 		}
 	}
 	m_bot.StopProfiling("0.7.3.4    gasBunkerMicro");

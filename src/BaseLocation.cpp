@@ -240,7 +240,7 @@ const std::vector<CCTilePosition> & BaseLocation::getGasBunkerLocations() const
 
 CCPosition BaseLocation::getGasBunkerUnloadTarget(CCPosition geyserPos) const
 {
-	for (auto p : m_gasBunkersGeyserDrop)
+	for (auto & p : m_gasBunkersGeyserDrop)
 	{
 		if (p.first == geyserPos)
 		{

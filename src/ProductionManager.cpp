@@ -421,11 +421,12 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 	const auto completedFactoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
 	const auto ccs = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), false, true);
+	const auto completedCCs = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), true, true);
 	const auto orbitals = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::OrbitalCommand.getUnitType(), false, true);
 	const auto deadCCs = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
 	const auto deadOrbitals = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND);
 	const bool hasStartedFirstExpand = ccs + orbitals + deadCCs + deadOrbitals > 1;
-	const auto earlyExpand = m_bot.Strategy().getStartingStrategy() == EARLY_EXPAND && m_bot.GetCurrentFrame() < 3360 && m_bot.GetFreeMinerals() < 700 && !hasStartedFirstExpand;	// 2:30 min
+	const auto earlyExpand = m_bot.Strategy().getStartingStrategy() == EARLY_EXPAND && m_bot.GetFreeMinerals() < 700;
 	const auto fastPF = m_bot.Strategy().getStartingStrategy() == FAST_PF && m_bot.GetFreeMinerals() < 700;
 	const auto proxyMaraudersStrategy = m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS;
 	const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true);
@@ -606,14 +607,27 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 		}
 		else if (earlyExpand)
 		{
-			if (currentItem.type == MetaTypeEnum::Refinery)
+			if (!hasStartedFirstExpand && m_bot.GetCurrentFrame() < 2.5f * 22.4f * 60)
 			{
-				const auto hasRefinery = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true) > 0;
-				shouldSkip = hasRefinery;
+				if (currentItem.type == MetaTypeEnum::Refinery)
+				{
+					const auto hasRefinery = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true) > 0;
+					shouldSkip = hasRefinery;
+				}
+				else if (currentItem.type == MetaTypeEnum::Factory || currentItem.type == MetaTypeEnum::Starport)
+				{
+					shouldSkip = true;
+				}
 			}
-			else if (currentItem.type == MetaTypeEnum::Factory || currentItem.type == MetaTypeEnum::Starport)
+			else if (completedCCs < 2)
 			{
-				shouldSkip = true;
+				if (currentItem.type == MetaTypeEnum::Refinery)
+				{
+					if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true) < 2)
+						shouldSkip = orbitals == 0;
+					else
+						shouldSkip = starportCount < 1;
+				}
 			}
 		}
 		else if (fastPF)

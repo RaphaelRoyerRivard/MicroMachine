@@ -464,19 +464,26 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	}
 
 	// To allow tanks to siege up the closest they can to their goal, we need to know for how long they've been close to it
-	if (isTank && (Util::DistSq(rangedUnit->pos, goal) > 5 * 5 || Util::TerrainHeight(rangedUnit->pos) != Util::TerrainHeight(goal)))
+	if (isTank)
 	{
-		bool alreadyDefendingBaseUnderAttack = false;
-		if (m_order.getType() == SquadOrderTypes::Defend && !defendingAgainstCombatBuildings)
+		if (Util::DistSq(rangedUnit->pos, goal) > 5 * 5 || Util::TerrainHeight(rangedUnit->pos) != Util::TerrainHeight(goal))
 		{
-			auto baseContainingEnemies = m_bot.Bases().getBaseContainingPosition(goal);
-			auto baseContainingTank = m_bot.Bases().getBaseContainingPosition(rangedUnit->pos);
-			auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();	// Don't move main base siege tanks when defending
-			if (!baseContainingEnemies || baseContainingEnemies == baseContainingTank || Util::Contains(rangedUnit, siegeTanks))
-				alreadyDefendingBaseUnderAttack = true;
+			bool alreadyDefendingBaseUnderAttack = false;
+			if (m_order.getType() == SquadOrderTypes::Defend && !defendingAgainstCombatBuildings)
+			{
+				auto baseContainingEnemies = m_bot.Bases().getBaseContainingPosition(goal);
+				auto baseContainingTank = m_bot.Bases().getBaseContainingPosition(rangedUnit->pos);
+				auto & siegeTanks = m_bot.Commander().Combat().getMainBaseSiegeTanks();	// Don't move main base siege tanks when defending
+				if (!baseContainingEnemies || baseContainingEnemies == baseContainingTank || Util::Contains(rangedUnit, siegeTanks))
+					alreadyDefendingBaseUnderAttack = true;
+			}
+			if (!alreadyDefendingBaseUnderAttack)
+				m_tanksLastFrameFarFromRetreatGoal[rangedUnit] = m_bot.GetCurrentFrame();
 		}
-		if (!alreadyDefendingBaseUnderAttack)
-			m_tanksLastFrameFarFromRetreatGoal[rangedUnit] = m_bot.GetCurrentFrame();
+		else if (m_tanksLastFrameFarFromRetreatGoal[rangedUnit] == 0)
+		{
+			m_tanksLastFrameFarFromRetreatGoal[rangedUnit] = 1;
+		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.2          ShouldUnitHeal");
 
