@@ -3266,11 +3266,14 @@ void CombatCommander::ExecuteActions()
 		}
 		else
 		{
+			float distToGoal = 0;
+			if (action.position != CCPosition())
+				distToGoal = Util::DistSq(action.position, rangedUnit->pos);
 			m_bot.GetCommandMutex().lock();
 			switch (action.microActionType)
 			{
 			case MicroActionType::AttackMove:
-				if (Util::DistSq(action.position, rangedUnit->pos) < 0.1f)
+				if (distToGoal < (action.description == "MoveToGoalOrder" ? 10.f : 0.1f))
 					skip = true;
 				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
 				{
@@ -3297,7 +3300,7 @@ void CombatCommander::ExecuteActions()
 					Micro::SmartAttackUnit(rangedUnit, action.target, m_bot);
 				break;
 			case MicroActionType::Move:
-				if (Util::DistSq(action.position, rangedUnit->pos) < 0.1f)
+				if (distToGoal < (action.description == "MoveToGoalOrder" ? 10.f : 0.1f))
 					skip = true;
 				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
 				{

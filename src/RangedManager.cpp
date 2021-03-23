@@ -1551,7 +1551,7 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings()) || m_bot.Data(rangedUnit->unit_type).isBuilding;
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 		std::stringstream actionDescription;
-		actionDescription << "MoveToGoal" << goalDescription;
+		actionDescription << "MoveToGoal" << goalDescription;	// Do not change the string, it is used in CombatCommander::ExecuteActions
 		const auto action = UnitAction(moveWithoutAttack ? MicroActionType::Move : MicroActionType::AttackMove, goal, unitShouldHeal, actionDuration, actionDescription.str());
 		m_bot.Commander().Combat().PlanAction(rangedUnit, action);
 		return true;
