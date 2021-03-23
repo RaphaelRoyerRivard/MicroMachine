@@ -532,6 +532,8 @@ void WorkerManager::handleMules()
 					muleHarvests[id].harvestFramesRequired = (muleHarvests[id].lastCargoReturnFrame == 0 ? 0 : m_bot.GetCurrentFrame() - muleHarvests[id].lastCargoReturnFrame);
 					muleHarvests[id].lastCargoReturnFrame = m_bot.GetCurrentFrame();
 
+					//mule.move(muleHarvests[id].mineral.getPosition());
+
 					//Micro mules, does not seem possible to get a 10th trip.... so its commented out. Missing just a handful of frames to succeed
 					//mule.move(muleHarvests[id].mineral.getPosition());
 					//auto a = mule.getUnitPtr()->radius;

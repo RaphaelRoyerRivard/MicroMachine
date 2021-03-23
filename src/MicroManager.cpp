@@ -231,30 +231,309 @@ float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attac
 	//consider unit distance (bool as parameter to activate) to give a minor buff to unit closer
 	//consider building splash, should be a very minor buff, as to avoid splash on buildings instead of units
 
-	//foreach weapon
-		//check unit weapon to know if its splash or not
-		//if not splash
-			//foreach enemy in range of the weapons
-				//calculate target priority :
-					//if unit will die
-						//priority += total unit health
-					//priority += damage dealt
-		//if splash
-			//foreach enemy in range + 50% of splash range (if its circle splash)
-				//calculate target priority :
-					//if unit will die
-						//priority += total unit health
-					//priority += damage dealt
-					//foreach splash zone
-						//foreach unit hit by splash, except main target
-							//if hurt unit is part of the 'attackers' team
-								//if unit will die
-									//priority -= total unit health
-								//priority -= damage dealt
-							//else
-								//if unit will die
-									//priority += total unit health
-								//priority += damage dealt
+	bool isHandled = false;//TEMPORARY
+
+	bool canSplash = true;
+	bool canSplashFriendlies = false;
+	bool hitAir = false;
+	bool hitGround = false;
+
+	bool isCircle = false;
+	bool isHalfCircle = false;
+	bool isLine = false;
+	bool isHLine = false;
+
+	//if 0 range, is only main target
+	float zone1Range = 0;
+	float zone2Range = 0;
+	float zone3Range = 0;
+
+	//if 0 percent, does not hit
+	float zone1Percentage = 1;
+	float zone2Percentage = 0;
+	float zone3Percentage = 0;
+
+	switch ((sc2::UNIT_TYPEID)attacker->unit_type)
+	{
+		//line
+		case sc2::UNIT_TYPEID::TERRAN_HELLION://line
+			isLine = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			break;
+		case sc2::UNIT_TYPEID::ZERG_LURKERMPBURROWED://line
+			isLine = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			break;
+
+		//horizontal line
+		case sc2::UNIT_TYPEID::PROTOSS_COLOSSUS://horizontal line
+			isHLine = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			break;
+
+		//half circle
+		case sc2::UNIT_TYPEID::TERRAN_HELLIONTANK://half circle, melee
+			isHalfCircle = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			break;
+		case sc2::UNIT_TYPEID::ZERG_ULTRALISK://half circle, melee, has main target
+			isHalfCircle = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			break;
+
+		//circle
+		case sc2::UNIT_TYPEID::TERRAN_NUKE://circle
+			zone1Range = 4;
+			zone2Range = 6;
+			zone3Range = 8;
+
+			zone2Percentage = 0.5f;
+			zone3Percentage = 0.25f;
+
+			isCircle = true;
+			hitAir = true;
+			hitGround = true;
+			canSplashFriendlies = true;
+			isHandled = true;
+			break;
+		case sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS://circle
+			zone1Range = 0.5f;
+			zone2Range = 0.8f;
+			zone3Range = 1.25f;
+
+			zone2Percentage = 0.75f;
+			zone3Percentage = 0.375f;
+
+			isCircle = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			isHandled = true;
+			break;
+		case sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED://circle
+			zone1Range = 0.4687f;
+			zone2Range = 0.7812f;
+			zone3Range = 1.25f;
+
+			zone2Percentage = 0.5f;
+			zone3Percentage = 0.25f;
+
+			isCircle = true;
+			hitGround = true;
+			canSplashFriendlies = true;
+			isHandled = true;
+			break;
+		case sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED://circle, has main target
+			///TODO NOT EXACT, THIS IS AN APPROXIMATION
+			zone1Range = 0;
+			zone2Range = 1.75;
+
+			zone2Percentage = 0.33f;
+
+			isCircle = true;
+			hitAir = true;
+			hitGround = true;
+			canSplashFriendlies = true;
+			isHandled = true;
+			break;
+		case sc2::UNIT_TYPEID::TERRAN_LIBERATOR://circle
+			zone1Range = 1.5;
+
+			isCircle = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			isHandled = true;
+			break;
+		case sc2::UNIT_TYPEID::PROTOSS_ARCHON://circle
+			zone1Range = 0.25f;
+			zone2Range = 0.5f;
+			zone3Range = 1.f;
+
+			zone2Percentage = 0.5f;
+			zone3Percentage = 0.25f;
+
+			isCircle = true;
+			hitAir = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			isHandled = true;
+			break;
+		case sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR://circle
+		case sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED://circle
+			zone1Range = 1.5f;
+
+			isCircle = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			isHandled = true;
+			break;
+		case sc2::UNIT_TYPEID::PROTOSS_HIGHTEMPLAR://circle
+			isCircle = true;
+			hitAir = true;
+			hitGround = true;
+			canSplashFriendlies = true;
+			isHandled = false;
+			break;
+		case sc2::UNIT_TYPEID::ZERG_BANELING://circle
+			zone1Range = 2.2f;
+
+			isCircle = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			isHandled = true;
+			break;
+		case sc2::UNIT_TYPEID::ZERG_BANELINGBURROWED://circle
+			zone1Range = 2.2f;
+
+			isCircle = true;
+			hitGround = true;
+			canSplashFriendlies = false;
+			isHandled = true;
+			break;
+		case sc2::UNIT_TYPEID::TERRAN_THOR://circle
+			zone1Range = 0.5f;
+
+			isCircle = true;
+			hitAir = true;
+			canSplashFriendlies = false;
+			isHandled = true;
+			break;
+		default:
+			canSplash = false;
+			break;
+	}
+
+	float damageScore = 0.f;//0 if not splash, will be handled by the target priority elsewhere
+	if (canSplash && isHandled)
+	{
+		for (auto & splashTarget : allTargets)
+		{
+			if ((hitAir && hitGround) || (splashTarget->is_flying && hitAir) || (!splashTarget->is_flying && hitGround))
+			{
+				float distSq = Util::DistSq(target->pos, splashTarget->pos);
+				if (zone1Range == 0 || distSq < pow(zone1Range + splashTarget->radius, 2))
+				{
+					float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone1Percentage;
+					if (damage >= target->health + target->shield)
+					{
+						float buildP = splashTarget->build_progress;
+						damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
+					}
+					if (UnitType(splashTarget->unit_type, m_bot).isBuilding())
+					{
+						damage *= 0.10f;
+					}
+					damageScore += damage;
+				}
+				else  if (zone2Range != 0 && distSq < pow(zone2Range + splashTarget->radius, 2))
+				{
+					float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone2Percentage;
+					if (damage >= target->health)
+					{
+						damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
+					}
+					if (UnitType(splashTarget->unit_type, m_bot).isBuilding())
+					{
+						damage *= 0.10f;
+					}
+					damageScore += damage;
+				}
+				else  if (zone3Range != 0 && distSq < pow(zone3Range + splashTarget->radius, 2))
+				{
+					float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone3Percentage;
+					if (damage >= target->health)
+					{
+						damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
+					}
+					if (UnitType(splashTarget->unit_type, m_bot).isBuilding())
+					{
+						damage *= 0.10f;
+					}
+					damageScore += damage;
+				}
+			}
+		}
+
+		if (canSplashFriendlies)
+		{
+			//for all friendly units
+			//if type is same, switch to see if it splashes on allies of same type or not
+			auto & allies = m_bot.GetAllyUnits();
+			for (auto & ally : allies)
+			{
+				auto allyPtr = ally.second.getUnitPtr();
+				if ((hitAir && hitGround) || (allyPtr->is_flying && hitAir) || (!allyPtr->is_flying && hitGround))
+				{
+					switch ((sc2::UNIT_TYPEID)attacker->unit_type)
+					{
+						case sc2::UNIT_TYPEID::PROTOSS_HIGHTEMPLAR:
+						case sc2::UNIT_TYPEID::TERRAN_NUKE:
+						case sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED:
+							break;
+						case sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR:
+						case sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED:
+							if (ally.second.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTOR || ally.second.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
+								continue;//Skip these units, they cannot splash on one another
+							else
+								break;
+						case sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
+							if (ally.second.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED || ally.second.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_WIDOWMINE)
+								continue;//Skip these units, they cannot splash on one another
+							else
+								break;
+						default:
+							Util::DisplayError("Unit is marked has able to hit allies, but isn't supposed to be able.", "0x00000014", m_bot, false);
+							break;
+					}
+
+					float distSq = Util::DistSq(target->pos, allyPtr->pos);
+					if (zone1Range == 0 || distSq < pow(zone1Range + allyPtr->radius, 2))
+					{
+						float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone1Percentage;
+						if (damage >= target->health + target->shield)
+						{
+							damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
+						}
+						if (UnitType(allyPtr->unit_type, m_bot).isBuilding())
+						{
+							damage *= 0.10f;
+						}
+						damageScore -= damage * 2;
+					}
+					else  if (zone2Range != 0 && distSq < pow(zone2Range + allyPtr->radius, 2))
+					{
+						float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone2Percentage;
+						if (damage >= target->health)
+						{
+							damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
+						}
+						if (UnitType(allyPtr->unit_type, m_bot).isBuilding())
+						{
+							damage *= 0.10f;
+						}
+						damageScore -= damage * 2;
+					}
+					else  if (zone3Range != 0 && distSq < pow(zone3Range + allyPtr->radius, 2))
+					{
+						float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone3Percentage;
+						if (damage >= target->health)
+						{
+							damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
+						}
+						if (UnitType(allyPtr->unit_type, m_bot).isBuilding())
+						{
+							damage *= 0.10f;
+						}
+						damageScore -= damage * 2;
+					}
+				}
+			}
+		}
+	}
 						
-	return 0.f;
+	return damageScore;
 }
