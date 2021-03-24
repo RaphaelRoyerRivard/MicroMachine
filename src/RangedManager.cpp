@@ -276,6 +276,10 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		if (m_order.getType() != SquadOrderTypes::Defend && (isFlyingBarracks || Util::DistSq(rangedUnit->pos, helperGoalPosition) < 20 * 20))
 		{
 			goal = helperGoalPosition;
+			if (cycloneFlyingHelperIt->second.goal == ESCORT)
+			{
+				goal = goal + Util::Normalized(m_order.getPosition() - goal) * 2;	// Move 2 tiles closer to the order position
+			}
 			std::stringstream ss;
 			ss << "Helper" << (cycloneFlyingHelperIt->second.goal == ESCORT ? "Escort" : "Track");
 			goalDescription = ss.str();
