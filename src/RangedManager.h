@@ -49,6 +49,7 @@ private:
 	std::map<const sc2::Unit *, long> m_siegedTanksLastValidTargetFrame;
 	std::map<const sc2::Unit *, long> m_tanksLastFrameFarFromRetreatGoal;
 	std::map<const sc2::Unit *, long> m_tanksLastSiegeFrame;
+	std::map<const sc2::Unit *, long> m_lastStimFrame;
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
 	bool m_marauderAttackInitiated = false;
 
@@ -93,8 +94,8 @@ private:
 	bool ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, bool prioritize = false);
 	const sc2::Unit * GetHealTarget(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool filterFullHealthUnits) const;
 	bool ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target, bool prioritize = false);
-	bool ExecuteStimLogic(const sc2::Unit * unit) const;
-	bool CanUseStim(const sc2::Unit * unit) const;
+	bool ExecuteStimLogic(const sc2::Unit * unit);
+	bool CanUseStim(const sc2::Unit * unit);
 	bool QueryIsAbilityAvailable(const sc2::Unit* unit, sc2::ABILITY_ID abilityId) const;
 	bool CanUseKD8Charge(const sc2::Unit * reaper);
 	bool ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::Units & threats);
@@ -108,4 +109,5 @@ private:
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	sc2::Units & getThreats(const sc2::Unit * rangedUnit, const sc2::Units & targets);
 	const sc2::Unit * getTargetOnHighGround(const sc2::Unit * rangedUnit, const sc2::Units & targets, const sc2::Units & threats);
+	void cleanLastStimFrame();
 };

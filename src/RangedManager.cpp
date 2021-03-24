@@ -37,6 +37,7 @@ const int TANK_SIEGE_FRAME_COUNT = 65;
 const int TANK_UNSIEGE_FRAME_COUNT = 57;
 const int THOR_GROUND_ATTACK_FRAME_COUNT = 21;
 const int THOR_MORPH_FRAME_COUNT = 40;
+const int STIM_BUFF_DURATION = 246;
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_ATTACK = "ThreatFightAttack";
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_BC_MOVE_ATTACK = "ThreatFightBCMoveAttack";
 const std::string ACTION_DESCRIPTION_THREAT_FIGHT_MOVE = "ThreatFightMove";
@@ -170,6 +171,7 @@ void RangedManager::HarassLogic(sc2::Units &rangedUnits, sc2::Units &rangedUnitT
 	m_dummyAssaultVikings.clear();
 	m_dummyFighterVikings.clear();
 	m_dummyStimedUnits.clear();
+	cleanLastStimFrame();
 
 	m_bot.StartProfiling("0.10.4.1.5.1        HarassLogicForUnit");
 	if (m_bot.Config().EnableMultiThreading)
@@ -2487,7 +2489,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			}
 
 			// Stim the Marine or Marauder if it is close enough to its target (to prevent using it from very far away)
-			if (useStim && Util::DistSq(unit->pos, unitTarget->pos) <= 10 * 10 && ExecuteStimLogic(unit))
+			if (useStim && Util::DistSq(unit->pos, unitTarget->pos) <= 10 * 10)
 			{
 				m_bot.StartProfiling("0.10.4.1.5.1.5.5.9            ExecuteStimLogic");
 				if (ExecuteStimLogic(unit))
@@ -3210,17 +3212,18 @@ bool RangedManager::ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Uni
 	return false;
 }
 
-bool RangedManager::ExecuteStimLogic(const sc2::Unit * unit) const
+bool RangedManager::ExecuteStimLogic(const sc2::Unit * unit)
 {
 	if (!CanUseStim(unit))
 		return false;
 
 	const auto action = UnitAction(MicroActionType::Ability, sc2::ABILITY_ID::EFFECT_STIM, true, 0, "Stim");
 	m_bot.Commander().Combat().PlanAction(unit, action);
+	m_lastStimFrame[unit] = m_bot.GetCurrentFrame();
 	return true;
 }
 
-bool RangedManager::CanUseStim(const sc2::Unit * unit) const
+bool RangedManager::CanUseStim(const sc2::Unit * unit)
 {
 	if (!m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK))
 		return false;
@@ -3233,6 +3236,10 @@ bool RangedManager::CanUseStim(const sc2::Unit * unit) const
 		return false;
 
 	if (Util::unitHasBuff(unit, isMarine ? sc2::BUFF_ID::STIMPACK : sc2::BUFF_ID::STIMPACKMARAUDER))
+		return false;
+
+	// If the unit used stim recently, do not spam it
+	if (m_bot.GetCurrentFrame() - m_lastStimFrame[unit] < STIM_BUFF_DURATION)
 		return false;
 
 	return true;
@@ -3665,4 +3672,16 @@ bool RangedManager::isTargetRanged(const sc2::Unit * target)
     BOT_ASSERT(target, "target is null");
     const float maxRange = Util::GetMaxAttackRange(target, m_bot);
     return maxRange > 2.5f;
+}
+
+void RangedManager::cleanLastStimFrame()
+{
+	auto it = m_lastStimFrame.begin();
+	while (it != m_lastStimFrame.end())
+	{
+		if (!it->first || !it->first->is_alive)
+			it = m_lastStimFrame.erase(it);
+		else
+			++it;
+	}
 }
