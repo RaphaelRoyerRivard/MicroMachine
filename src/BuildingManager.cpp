@@ -992,7 +992,9 @@ void BuildingManager::constructAssignedBuildings()
 										std::stringstream ss;
 										ss << "Cannot build " << sc2::UnitTypeToName(b.type.getAPIUnitType()) << " at (" << addonPos.x << ", " << addonPos.y << ") because " << sc2::UnitTypeToName(unit.getAPIUnitType()) << " at (" << unit.getPosition().x << ", " << unit.getPosition().y << ") is blocking it.";
 										Util::Log(__FUNCTION__, ss.str(), m_bot);
-										break;
+										// We want to allow the command to be sent only once per second
+										if (m_bot.GetCurrentFrame() - m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] < 22)
+											break;
 									}
 								}
 								if (blocked)
@@ -1013,6 +1015,7 @@ void BuildingManager::constructAssignedBuildings()
 								{
 									// Spam the build ability in case there is a unit blocking it
 									Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
+									m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] = m_bot.GetCurrentFrame();
 									std::stringstream ss;
 									ss << sc2::UnitTypeToName(b.builderUnit.getAPIUnitType()) << " at (" << b.builderUnit.getPosition().x << ", " << b.builderUnit.getPosition().y << ") was given the command " << sc2::AbilityTypeToName(m_bot.Data(b.type).buildAbility);
 									Util::Log(__FUNCTION__, ss.str(), m_bot);
@@ -1984,6 +1987,14 @@ void BuildingManager::updateBaseBuildings()
 		{
 			m_baseBuildings.push_back(building);
 		}
+	}
+	auto it = m_buildAddonCommandFrame.begin();
+	while (it != m_buildAddonCommandFrame.end())
+	{
+		if (!it->first || !it->first->is_alive || it->first->add_on_tag != 0)
+			it = m_buildAddonCommandFrame.erase(it);
+		else
+			++it;
 	}
 }
 

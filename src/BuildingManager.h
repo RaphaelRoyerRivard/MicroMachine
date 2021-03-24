@@ -35,6 +35,7 @@ class BuildingManager
 	std::map<sc2::Tag, CCPosition> m_liftedBuildingPositions;
 	bool m_wallsBarracksPointsTowardBase = false;
 	std::map<sc2::Tag, CCPosition> m_commandCenterLandPosition;
+	std::map<const sc2::Unit *, long> m_buildAddonCommandFrame;
 
     bool            m_debugMode;
 
