@@ -460,8 +460,7 @@ float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attac
 
 		if (canSplashFriendlies)
 		{
-			//for all friendly units
-			//if type is same, switch to see if it splashes on allies of same type or not
+			//if the unit splashes on allies, switch to see if it splashes on allies of same type or not
 			auto & allies = m_bot.GetAllyUnits();
 			for (auto & ally : allies)
 			{
