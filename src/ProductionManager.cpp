@@ -1079,6 +1079,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const bool proxyCombatBuilding = m_bot.Strategy().enemyHasProxyCombatBuildings();
 				const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
 				const int tankCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SiegeTank.getUnitType(), false, true);
+				const int deadTankCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_SIEGETANK) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED);
 				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), false, true);
 				const int thorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Thor.getUnitType(), false, true);
 				const int deadHellionCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_HELLION);
@@ -1121,7 +1122,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want to have tanks to keep a balance between ground and air force, depending on what the enemy unit is producing
-				else if (!proxyCyclonesStrategy && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0) && (cycloneCount > 0 || tankCount == 0))
+				else if (!proxyCyclonesStrategy && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0 || tankCount + deadTankCount == 0) && (cycloneCount > 0 || tankCount == 0))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Thor);
 					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
