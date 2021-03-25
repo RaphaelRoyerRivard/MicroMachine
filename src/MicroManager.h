@@ -20,6 +20,8 @@ protected:
 
     virtual void executeMicro() = 0;
 
+	float calculateSplashDamageScore(const sc2::Unit * attacker, const sc2::Unit * splashTarget, float zoneDamagePercent) const;
+
 public:
 
     MicroManager(CCBot & bot);
