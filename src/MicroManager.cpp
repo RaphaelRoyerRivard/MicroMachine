@@ -417,43 +417,15 @@ float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attac
 				float distSq = Util::DistSq(target->pos, splashTarget->pos);
 				if (zone1Range == 0 || distSq < pow(zone1Range + splashTarget->radius, 2))
 				{
-					float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone1Percentage;
-					if (damage >= target->health + target->shield)
-					{
-						float buildP = splashTarget->build_progress;
-						damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
-					}
-					if (UnitType(splashTarget->unit_type, m_bot).isBuilding())
-					{
-						damage *= 0.10f;
-					}
-					damageScore += damage;
+					damageScore += calculateSplashDamageScore(attacker, splashTarget, zone1Percentage);
 				}
 				else  if (zone2Range != 0 && distSq < pow(zone2Range + splashTarget->radius, 2))
 				{
-					float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone2Percentage;
-					if (damage >= target->health)
-					{
-						damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
-					}
-					if (UnitType(splashTarget->unit_type, m_bot).isBuilding())
-					{
-						damage *= 0.10f;
-					}
-					damageScore += damage;
+					damageScore += calculateSplashDamageScore(attacker, splashTarget, zone2Percentage);
 				}
 				else  if (zone3Range != 0 && distSq < pow(zone3Range + splashTarget->radius, 2))
 				{
-					float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone3Percentage;
-					if (damage >= target->health)
-					{
-						damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
-					}
-					if (UnitType(splashTarget->unit_type, m_bot).isBuilding())
-					{
-						damage *= 0.10f;
-					}
-					damageScore += damage;
+					damageScore += calculateSplashDamageScore(attacker, splashTarget, zone3Percentage);
 				}
 			}
 		}
@@ -492,42 +464,15 @@ float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attac
 					float distSq = Util::DistSq(target->pos, allyPtr->pos);
 					if (zone1Range == 0 || distSq < pow(zone1Range + allyPtr->radius, 2))
 					{
-						float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone1Percentage;
-						if (damage >= target->health + target->shield)
-						{
-							damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
-						}
-						if (UnitType(allyPtr->unit_type, m_bot).isBuilding())
-						{
-							damage *= 0.10f;
-						}
-						damageScore -= damage * 2;
+						damageScore -= calculateSplashDamageScore(attacker, ally.second.getUnitPtr(), zone1Percentage) * 2;
 					}
 					else  if (zone2Range != 0 && distSq < pow(zone2Range + allyPtr->radius, 2))
 					{
-						float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone2Percentage;
-						if (damage >= target->health)
-						{
-							damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
-						}
-						if (UnitType(allyPtr->unit_type, m_bot).isBuilding())
-						{
-							damage *= 0.10f;
-						}
-						damageScore -= damage * 2;
+						damageScore -= calculateSplashDamageScore(attacker, ally.second.getUnitPtr(), zone2Percentage) * 2;
 					}
 					else  if (zone3Range != 0 && distSq < pow(zone3Range + allyPtr->radius, 2))
 					{
-						float damage = Util::GetDamageForTarget(attacker, target, m_bot) * zone3Percentage;
-						if (damage >= target->health)
-						{
-							damage = target->health + (target->shield * 0.5) + target->health_max + (target->shield_max * 0.5);
-						}
-						if (UnitType(allyPtr->unit_type, m_bot).isBuilding())
-						{
-							damage *= 0.10f;
-						}
-						damageScore -= damage * 2;
+						damageScore -= calculateSplashDamageScore(attacker, ally.second.getUnitPtr(), zone3Percentage) * 2;
 					}
 				}
 			}
@@ -535,4 +480,20 @@ float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attac
 	}
 						
 	return damageScore;
+}
+
+float MicroManager::calculateSplashDamageScore(const sc2::Unit * attacker, const sc2::Unit * splashTarget, float zoneDamagePercent) const
+{
+	float damage = Util::GetDamageForTarget(attacker, splashTarget, m_bot) * zoneDamagePercent;
+	if (damage >= splashTarget->health + splashTarget->shield)
+	{
+		damage = splashTarget->health + (splashTarget->shield * 0.5) + splashTarget->health_max + (splashTarget->shield_max * 0.5);
+	}
+
+	auto type = UnitType(splashTarget->unit_type, m_bot);
+	if (type.isBuilding())
+	{
+		damage *= 0.10f;
+	}
+	return (damage / (splashTarget->health_max + splashTarget->shield_max)) * (type.mineralPrice + type.gasPrice);
 }
