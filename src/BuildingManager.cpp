@@ -907,7 +907,11 @@ void BuildingManager::constructAssignedBuildings()
 						if (b.builderUnit.isFlying())
 						{
 							const auto landingPosition = m_liftedBuildingPositions[b.builderUnit.getTag()];
-							Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
+							if (b.builderUnit.getUnitPtr()->orders.size() == 0 || b.builderUnit.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::LIFT && 
+								(b.builderUnit.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::LAND || b.builderUnit.getUnitPtr()->orders[0].target_pos != landingPosition))
+							{
+								Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
+							}
 						}
 						else
 						{
