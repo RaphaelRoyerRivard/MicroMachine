@@ -495,5 +495,5 @@ float MicroManager::calculateSplashDamageScore(const sc2::Unit * attacker, const
 	{
 		damage *= 0.10f;
 	}
-	return (damage / (splashTarget->health_max + splashTarget->shield_max)) * (type.mineralPrice + type.gasPrice);
+	return (damage / (splashTarget->health_max + splashTarget->shield_max)) * (type.mineralPrice() + type.gasPrice());
 }
