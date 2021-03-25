@@ -766,7 +766,7 @@ void WorkerManager::handleGasWorkers()
 #ifdef PUBLIC_RELEASE
 							if (distWorkerDepot > distDepotBunker)//If the bunker is empty or if there is already a returning worker, click to enter bunker
 #else
-							if ((std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end() || hasReturningWorker) && distRefinery < distDepot)
+							if ((std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end() || hasReturningWorker) && distWorkerDepot > distDepotBunker)
 #endif
 							{
 								if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != bunker.getTag())
