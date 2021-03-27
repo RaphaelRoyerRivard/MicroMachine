@@ -231,7 +231,19 @@ float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attac
 	//consider unit distance (bool as parameter to activate) to give a minor buff to unit closer
 	//consider building splash, should be a very minor buff, as to avoid splash on buildings instead of units
 
-	bool isHandled = false;//TEMPORARY
+	if (attacker->alliance != sc2::Unit::Self)
+	{
+		return 0.f;
+	}
+
+	float range = Util::GetAttackRangeForTarget(attacker, target, m_bot);
+	float distSq = Util::DistSq(attacker->pos, target->pos);
+	if (distSq > range * range)
+	{
+		return 0.f;//Cannot attack the target
+	}
+
+	bool isHandled = false;//TEMPORARY until all types of splash are handled
 
 	bool canSplash = true;
 	bool canSplashFriendlies = false;
@@ -407,11 +419,21 @@ float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attac
 			break;
 	}
 
-	float damageScore = 0.f;//0 if not splash, will be handled by the target priority elsewhere
+	float damageScore = calculateSplashDamageScore(attacker, target, 1.f);
 	if (canSplash && isHandled)
 	{
 		for (auto & splashTarget : allTargets)
 		{
+			if (splashTarget->tag == attacker->tag || splashTarget->tag == target->tag)
+			{//units cant target themselves
+				continue;
+			}
+
+			if (!UnitType::isTargetable(splashTarget->unit_type) || m_bot.IsParasited(splashTarget))
+			{
+				continue;//Is a spell or a parasited unit
+			}
+
 			if ((hitAir && hitGround) || (splashTarget->is_flying && hitAir) || (!splashTarget->is_flying && hitGround))
 			{
 				float distSq = Util::DistSq(target->pos, splashTarget->pos);
@@ -484,16 +506,57 @@ float MicroManager::getPriorityOfTargetConsideringSplash(const sc2::Unit * attac
 
 float MicroManager::calculateSplashDamageScore(const sc2::Unit * attacker, const sc2::Unit * splashTarget, float zoneDamagePercent) const
 {
+	//Shield is valued at 50% of the value of health.
+	//Kills are valued at 100% of the unit max health + 50% of the unit max shield + the actual damage done to its health/shield.
+	//Building splash is valued at only 10% if it is terran, 1% if it is zerg and 5% if it will affect the protoss building health, otherwise 1%. However if the building would die, then it is fully valued.
+	//Then we consider the damage done to it / max health/shield * value. This is to prefer splashing on smaller units with low max health, but we factor in the unit cost so we can still splash on large units.
+	auto type = UnitType(splashTarget->unit_type, m_bot);
 	float damage = Util::GetDamageForTarget(attacker, splashTarget, m_bot) * zoneDamagePercent;
 	if (damage >= splashTarget->health + splashTarget->shield)
 	{
 		damage = splashTarget->health + (splashTarget->shield * 0.5) + splashTarget->health_max + (splashTarget->shield_max * 0.5);
 	}
-
-	auto type = UnitType(splashTarget->unit_type, m_bot);
-	if (type.isBuilding())
+	else if (type.isBuilding())
 	{
-		damage *= 0.10f;
+		switch (m_bot.GetPlayerRace(splashTarget->owner))
+		{
+			case CCRace::Zerg:
+				damage *= 0.01f;
+				break;
+			case CCRace::Protoss:
+				if (damage > splashTarget->shield)
+				{
+					damage *= 0.05f;
+				}
+				else
+				{
+					damage *= 0.01f;
+				}
+			case CCRace::Random:
+			case CCRace::Terran:
+				damage *= 0.10f;
+				break;
+		}
 	}
-	return (damage / (splashTarget->health_max + splashTarget->shield_max)) * (type.mineralPrice() + type.gasPrice());
+
+	int value;
+	switch ((sc2::UNIT_TYPEID)type.getAPIUnitType())
+	{
+		case sc2::UNIT_TYPEID::TERRAN_MULE:
+		case sc2::UNIT_TYPEID::TERRAN_AUTOTURRET:
+		case sc2::UNIT_TYPEID::TERRAN_POINTDEFENSEDRONE:
+		case sc2::UNIT_TYPEID::ZERG_BROODLING:
+		case sc2::UNIT_TYPEID::ZERG_CREEPTUMOR:
+		case sc2::UNIT_TYPEID::ZERG_CREEPTUMORBURROWED:
+		case sc2::UNIT_TYPEID::ZERG_CREEPTUMORQUEEN:
+		case sc2::UNIT_TYPEID::ZERG_LOCUSTMP:
+		case sc2::UNIT_TYPEID::ZERG_LOCUSTMPFLYING:
+		case sc2::UNIT_TYPEID::PROTOSS_ORACLESTASISTRAP:
+			value = 10;
+			break;
+		default:
+			value = type.mineralPrice() + type.gasPrice();
+			break;
+	}
+	return (damage / (splashTarget->health_max + splashTarget->shield_max)) * value;
 }
