@@ -532,6 +532,8 @@ void WorkerManager::handleMules()
 					muleHarvests[id].harvestFramesRequired = (muleHarvests[id].lastCargoReturnFrame == 0 ? 0 : m_bot.GetCurrentFrame() - muleHarvests[id].lastCargoReturnFrame);
 					muleHarvests[id].lastCargoReturnFrame = m_bot.GetCurrentFrame();
 
+					//mule.move(muleHarvests[id].mineral.getPosition());
+
 					//Micro mules, does not seem possible to get a 10th trip.... so its commented out. Missing just a handful of frames to succeed
 					//mule.move(muleHarvests[id].mineral.getPosition());
 					//auto a = mule.getUnitPtr()->radius;
@@ -699,7 +701,9 @@ void WorkerManager::handleGasWorkers()
     }
 
 	m_bot.StartProfiling("0.7.3.4    gasBunkerMicro");
+#ifndef PUBLIC_RELEASE
 	std::vector<sc2::Tag> bunkerHasLoaded;
+#endif
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
 	{
 		m_bot.StartProfiling("0.7.3.4.1     initialChecks");
@@ -731,93 +735,65 @@ void WorkerManager::handleGasWorkers()
 				continue;
 			}
 
-			auto hasUnload = false;
+			auto hasReturningWorker = false;
 			if (!base->isGeyserSplit())
 			{
-				m_bot.StartProfiling("0.7.3.4.2     handleWorkersInside");
+				m_bot.StartProfiling("0.7.3.4.2     handleWorkers");
 				for (auto & worker : workers)//Handle workers inside
 				{
 					if (m_bot.Commander().isInside(worker.getTag()))
 					{
-						if (!hasUnload)
+						if (worker.isReturningCargo())//drop on CC side
 						{
-							if (worker.isReturningCargo())//drop on CC side
-							{
-								bunker.rightClick(base->getDepotPosition());
-								//m_bot.Commander().AddDelayedSmartAbility(worker, 0, base->getDepotPosition()); Replaced by the worker.rightCLick a few lines below, keeping just in case
-							}
-							else//drop on refinery side
-							{
-								bunker.rightClick(base->getGasBunkerUnloadTarget(geyser.getPosition()));//geyser.getPosition());
-								//m_bot.Commander().AddDelayedSmartAbility(worker, 0, geyser.getPosition());
-							}
-#ifdef PUBLIC_RELEASE
-							bunker.unloadUnit(worker.getTag());
-#else
-							Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
-#endif
-							hasUnload = true;
+							bunker.rightClick(base->getDepotPosition());
 						}
-					}
-					else if (worker.isReturningCargo())
-					{
-						worker.rightClick(base->getDepotPosition());
+						else//drop on refinery side
+						{
+							bunker.rightClick(base->getGasBunkerUnloadTarget(geyser.getPosition()));
+						}
+#ifdef PUBLIC_RELEASE
+						bunker.unloadUnit(worker.getTag());
+#else
+						Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+#endif
 					}
 					else
 					{
-						worker.rightClick(geyser.getPosition());
-					}
-				}
-				m_bot.StopProfiling("0.7.3.4.2     handleWorkersInside");
-				m_bot.StartProfiling("0.7.3.4.3     unloadUnwantedPassengers");
-				if (workers.size() == 0)//Empty bunkers if they have units inside that shouldn't be inside
-				{
-					auto passengers = bunker.getUnitPtr()->passengers;
-					for (auto & passenger : passengers)
-					{
-						switch ((sc2::UNIT_TYPEID) passenger.unit_type)
-						{
-							case sc2::UNIT_TYPEID::TERRAN_SCV:
-							case sc2::UNIT_TYPEID::PROTOSS_PROBE:
-							case sc2::UNIT_TYPEID::ZERG_DRONE:
-								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
-						}
-					}
-				}
-				m_bot.StopProfiling("0.7.3.4.3     unloadUnwantedPassengers");
-
-				bool hasReturningWorker = false;
-				m_bot.StartProfiling("0.7.3.4.4     handleWorkersOutside");
-				for (auto & worker : workers)//Handle workers outside
-				{
-					if (!m_bot.Commander().isInside(worker.getTag()))
-					{
-						auto distRefinery = Util::DistSq(worker.getPosition(), geyser.getPosition());
-						auto distDepot = Util::DistSq(worker.getPosition(), base->getDepotPosition());
+						auto distWorkerDepot = Util::DistSq(worker.getPosition(), base->getDepotPosition());
+						auto distDepotBunker = Util::DistSq(base->getDepotPosition(), bunker.getPosition());
 						if (worker.isReturningCargo())
 						{
 #ifdef PUBLIC_RELEASE
-							if (distRefinery < distDepot)//If the bunker is empty or if there is already a returning worker, click to enter bunker
+							if (distWorkerDepot > distDepotBunker)//If the bunker is empty or if there is already a returning worker, click to enter bunker
 #else
-							if ((std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end() || hasReturningWorker) && distRefinery < distDepot)
+							if ((std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end() || hasReturningWorker) && distWorkerDepot > distDepotBunker)
 #endif
 							{
-								worker.rightClick(bunker.getPosition());
-
-								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);
+								if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != bunker.getTag())
+								{
+									worker.rightClick(bunker);
+								}
+#ifndef PUBLIC_RELEASE
 								bunkerHasLoaded.push_back(bunker.getTag());
+#endif
 								hasReturningWorker = true;
 							}
 							else//Click to drop resource
 							{
-								Micro::SmartAbility(worker.getUnitPtr(), sc2::ABILITY_ID::HARVEST_RETURN, m_bot);
+								if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != depot.getTag())
+								{
+									worker.rightClick(depot);
+								}
 							}
 						}
 						else
 						{
-							if (distRefinery < distDepot)//Click to enter refinery
+							if (distWorkerDepot > distDepotBunker)//Click to enter refinery
 							{
-								Micro::SmartAbility(worker.getUnitPtr(), sc2::ABILITY_ID::HARVEST_GATHER, geyser.getUnitPtr(), m_bot);
+								if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != geyser.getTag())
+								{
+									worker.rightClick(geyser);
+								}
 							}
 #ifdef PUBLIC_RELEASE
 							else//Click to enter bunker
@@ -825,14 +801,36 @@ void WorkerManager::handleGasWorkers()
 							else if (std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end())
 #endif
 							{
-								worker.rightClick(bunker.getPosition());
-								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);
+								if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != bunker.getTag())
+								{
+									Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);//Causes the workers to do a full 180, instead of taking 2-3 frames to turn around.
+								}
+#ifndef PUBLIC_RELEASE
 								bunkerHasLoaded.push_back(bunker.getTag());
+#endif
 							}
 						}
 					}
 				}
-				m_bot.StopProfiling("0.7.3.4.4     handleWorkersOutside");
+				m_bot.StopProfiling("0.7.3.4.2     handleWorkers");
+				m_bot.StartProfiling("0.7.3.4.3     unloadUnwantedPassengers");
+				if (workers.size() == 0)//Empty bunkers if they have units inside that shouldn't be inside
+				{
+					auto passengers = bunker.getUnitPtr()->passengers;
+					for (auto & passenger : passengers)
+					{
+						if(passenger.unit_type == sc2::UNIT_TYPEID::TERRAN_SCV)
+						{
+#ifdef PUBLIC_RELEASE
+							bunker.unloadUnit(passenger.tag);
+#else
+							Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+							break;
+#endif
+						}
+					}
+				}
+				m_bot.StopProfiling("0.7.3.4.3     unloadUnwantedPassengers");
 			}
 			else
 			{
@@ -841,25 +839,24 @@ void WorkerManager::handleGasWorkers()
 			m_bot.StartProfiling("0.7.3.4.5     unloadOutOfPlaceWorkers");
 			for (auto & unit : bunker.getUnitPtr()->passengers)
 			{
-				if (unit.unit_type != Util::GetWorkerType().getAPIUnitType())
+				if (unit.unit_type != sc2::UNIT_TYPEID::TERRAN_SCV)
 					continue;
 				bool isOutOfPlace = true;
 				for (auto & worker : workers)
 				{
 					if (unit.tag == worker.getTag())
 					{
-						isOutOfPlace = false;
-						break;
-					}
-				}
-				if (isOutOfPlace)
-				{
+						if (getWorkerData().getWorkerJob(worker) != WorkerJobs::Gas)
+						{
 #ifdef PUBLIC_RELEASE
-					bunker.unloadUnit(unit.tag);
+							bunker.unloadUnit(unit.tag);
 #else
-					//Technically illogical, it cannot happen if we use UNLOADALL above. But I'd rather have the code anyway in case anything changes.
-					Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+							//Technically illogical, it cannot happen if we use UNLOADALL above. But I'd rather have the code anyway in case anything changes.
+							Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
 #endif
+							break;
+						}
+					}
 				}
 			}
 			m_bot.StopProfiling("0.7.3.4.5     unloadOutOfPlaceWorkers");

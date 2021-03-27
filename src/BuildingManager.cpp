@@ -907,7 +907,11 @@ void BuildingManager::constructAssignedBuildings()
 						if (b.builderUnit.isFlying())
 						{
 							const auto landingPosition = m_liftedBuildingPositions[b.builderUnit.getTag()];
-							Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
+							if (b.builderUnit.getUnitPtr()->orders.size() == 0 || b.builderUnit.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::LIFT && 
+								(b.builderUnit.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::LAND || b.builderUnit.getUnitPtr()->orders[0].target_pos != landingPosition))
+							{
+								Micro::SmartAbility(b.builderUnit.getUnitPtr(), sc2::ABILITY_ID::LAND, landingPosition, m_bot);
+							}
 						}
 						else
 						{
@@ -1311,7 +1315,9 @@ void BuildingManager::checkForCompletedBuildings()
             {
 				if(b.type.isRefinery())//Worker that built the refinery, will be a gas worker for it.
 				{
+					m_bot.StartProfiling("0.8.7.1    setGasJob");
 					m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Gas, b.buildingUnit);
+					m_bot.StopProfiling("0.8.7.1    setGasJob");
 				}
 				else
 				{
@@ -1325,13 +1331,17 @@ void BuildingManager::checkForCompletedBuildings()
 						}
 					}
 
+					m_bot.StartProfiling("0.8.7.2    finishedWithWorker");
 					m_bot.Workers().finishedWithWorker(b.builderUnit);
+					m_bot.StopProfiling("0.8.7.2    finishedWithWorker");
 					if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
 					{
 						if (b.buildingUnit.getType() == MetaTypeEnum::Factory.getUnitType() && Util::DistSq(b.buildingUnit, Util::GetPosition(m_proxyLocation)) < 15.f * 15.f)
 						{
+							m_bot.StartProfiling("0.8.7.3    setRepairJob");
 							m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Repair);
 							b.builderUnit.move(m_proxyLocation);
+							m_bot.StopProfiling("0.8.7.3    setRepairJob");
 						}
 					}
 
