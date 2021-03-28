@@ -2203,10 +2203,11 @@ void CCBot::IssueCheats()
 
 	if (keyEnd)
 	{
-		for (auto u : Observation()->GetUnits())
+		for (auto & u : Observation()->GetUnits())
 		{
 			if (u->is_selected) {
-				Debug()->DebugSetLife(50.0f, u);
+				auto life = u->health > 50 ? 50 : 25;
+				Debug()->DebugSetLife(life, u);
 			}
 		}
 		Util::ClearChat(*this);
