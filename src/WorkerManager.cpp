@@ -493,9 +493,9 @@ void WorkerManager::handleMules()
 		else
 		{
 			auto mineral = muleHarvests[id].mineral.getUnitPtr();
-			auto abilityId = mule.getUnitPtr()->orders.empty() ? 0 : mule.getUnitPtr()->orders[0].ability_id;
+			auto abilityId = mule.getUnitPtr()->orders.empty() ? sc2::ABILITY_ID::INVALID : mule.getUnitPtr()->orders[0].ability_id;
 			auto allowedAbilities = { sc2::ABILITY_ID::MOVE, sc2::ABILITY_ID::HARVEST_GATHER, sc2::ABILITY_ID::HARVEST_RETURN };
-			if (abilityId == 0 || !Util::Contains(abilityId, allowedAbilities))
+			if (abilityId == sc2::ABILITY_ID::INVALID || !Util::Contains(abilityId, allowedAbilities))
 			{
 				if (!mineral)
 					mineral = m_bot.Buildings().getClosestMineral(mule.getPosition());
