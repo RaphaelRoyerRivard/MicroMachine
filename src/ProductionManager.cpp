@@ -1076,7 +1076,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, -1, false));
 				}
 #endif
-				const bool proxyCombatBuilding = m_bot.Strategy().enemyHasProxyCombatBuildings();
+				const bool dangerousProxyBuilding = m_bot.Strategy().enemyHasProxyCombatBuildings() || m_bot.Strategy().enemyHasProxyHatchery();
 				const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
 				const int tankCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SiegeTank.getUnitType(), false, true);
 				const int deadTankCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_SIEGETANK) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED);
@@ -1102,7 +1102,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want at least 1 Hellion for every 2 enemy Zealot or 4 enemy Zergling. Against Zerg, we want to make at least 1 asap to defend against potential zergling rushes (unless the opponent already has Roaches)
-				else if (!shouldProduceFirstCyclone && !proxyCombatBuilding && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ shouldProduceHellionsAgainstEarlyLightUnitsRush || (hellionCount + 1) * 4 < enemyZerglingCount))
+				else if (!shouldProduceFirstCyclone && !dangerousProxyBuilding && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ shouldProduceHellionsAgainstEarlyLightUnitsRush || (hellionCount + 1) * 4 < enemyZerglingCount))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
