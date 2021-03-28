@@ -497,31 +497,18 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 			if (m_bot.GetFreeMinerals() < typeData.mineralCost * 3 || m_bot.GetFreeGas() < typeData.gasCost * 3)
 			{
 				// Do not research upgrade if we are under attack early (we want to save our resources)
-				if (m_bot.Strategy().isEarlyRushed())
+				/*if (m_bot.Strategy().isEarlyRushed())
+				{
+					shouldSkip = true;
+				}
+				else*/ if (currentItem.type == MetaTypeEnum::CombatShield && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK))
 				{
 					shouldSkip = true;
 				}
 				else
 				{
 					// Do not research upgrade unless all our production structures are in use
-					const auto productionBuildingTypes = getProductionBuildingTypes(false);
-					for (const auto productionBuildingType : productionBuildingTypes)
-					{
-						// We don't care about Barracks, sometimes we do not use them
-						if (productionBuildingType == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
-							continue;
-						const auto & productionBuildings = m_bot.GetAllyUnits(productionBuildingType);
-						for (const auto & productionBuilding : productionBuildings)
-						{
-							if (!productionBuilding.isBeingConstructed() && (productionBuilding.isIdle() || productionBuilding.getUnitPtr()->orders[0].progress >= 0.8))
-							{
-								shouldSkip = true;
-								break;
-							}
-						}
-						if (shouldSkip)
-							break;
-					}
+					shouldSkip = isImportantProductionBuildingIdle(false, false);
 				}
 			}
 		}
