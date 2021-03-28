@@ -492,20 +492,17 @@ void WorkerManager::handleMules()
 		}
 		else
 		{
-			if (!muleHarvests[id].mineral.isValid() && (mule.getUnitPtr()->orders.size() == 0 || mule.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE))
+			auto mineral = muleHarvests[id].mineral.getUnitPtr();
+			auto abilityId = mule.getUnitPtr()->orders.empty() ? 0 : mule.getUnitPtr()->orders[0].ability_id;
+			auto allowedAbilities = { sc2::ABILITY_ID::MOVE, sc2::ABILITY_ID::HARVEST_GATHER, sc2::ABILITY_ID::HARVEST_RETURN };
+			if (abilityId == 0 || !Util::Contains(abilityId, allowedAbilities))
 			{
-				auto mineral = m_bot.Buildings().getClosestMineral(mule.getPosition());
-				if (mineral != nullptr)
+				if (!mineral)
+					mineral = m_bot.Buildings().getClosestMineral(mule.getPosition());
+				if (mineral)
 				{
 					Micro::SmartRightClick(mule.getUnitPtr(), mineral, m_bot);//Cannot be done frame 1, thats why its in the 'else' clause
-					for (auto & unit : m_bot.GetNeutralUnits())
-					{
-						if (unit.first == mineral->tag)
-						{
-							muleHarvests[id].mineral = unit.second;
-							break;
-						}
-					}
+					muleHarvests[id].mineral = m_bot.GetNeutralUnits()[mineral->tag];
 				}
 			}
 		}
