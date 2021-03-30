@@ -2120,6 +2120,11 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter + towardsCenter * 10, player2, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter + towardsCenter * 5, player2, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter + towardsCenter * 5, player2, 1);*/
+
+	// Test to see if our Tank is fleeing instead of sieging against a unit we see but is out of vision
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter - towardsCenterX * 6.5f, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, mapCenter + towardsCenterX * 6.5f, player1, 1);*/
 }
 
 void CCBot::IssueCheats()
