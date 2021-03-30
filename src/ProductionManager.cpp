@@ -501,7 +501,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 				{
 					shouldSkip = true;
 				}
-				else*/ if (currentItem.type == MetaTypeEnum::CombatShield && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK))
+				else*/ if (currentItem.type == MetaTypeEnum::CombatShield && !isTechStarted(MetaTypeEnum::Stimpack))
 				{
 					shouldSkip = true;
 				}
@@ -807,11 +807,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int marinesCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marine.getUnitType(), false, true);
 				const int maraudersCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), false, true);
 				const int enemyStalkerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_STALKER).size();
-				const int enemyRoachAndRavagerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACH).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGER).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON).size();
-				const int enemyUnitsWeakAgainstMarauders = enemyStalkerCount + enemyRoachAndRavagerCount;
+				const int enemyRoachCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACH).size();
+				const int enemyUnitsWeakAgainstMarauders = enemyStalkerCount + enemyRoachCount;
 				const bool enemyEarlyRoachWarren = m_bot.GetCurrentFrame() < 4032 && !m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACHWARREN).empty();	// 3 minutes
-				const bool pumpOutMarauders = proxyMaraudersStrategy || enemyUnitsWeakAgainstMarauders >= 5;
-				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount < enemyUnitsWeakAgainstMarauders || (enemyRace == sc2::Protoss && reaperCount > 0 && !enemyHasStargate));
+				const bool pumpOutMarauders = proxyMaraudersStrategy;
+				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount * 2 < enemyUnitsWeakAgainstMarauders || (enemyRace == sc2::Protoss && reaperCount > 0 && !enemyHasStargate));
 				const auto factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
 
 				if (productionBuildingAddonCount < productionBuildingCount)
@@ -1065,6 +1065,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 #endif
 				const bool dangerousProxyBuilding = m_bot.Strategy().enemyHasProxyCombatBuildings() || m_bot.Strategy().enemyHasProxyHatchery();
 				const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
+				const int deadCycloneCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_CYCLONE);
 				const int tankCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SiegeTank.getUnitType(), false, true);
 				const int deadTankCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_SIEGETANK) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED);
 				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), false, true);
@@ -1109,7 +1110,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want to have tanks to keep a balance between ground and air force, depending on what the enemy unit is producing
-				else if (!proxyCyclonesStrategy && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0 || tankCount + deadTankCount == 0) && (cycloneCount > 0 || tankCount == 0))
+				else if ((!proxyCyclonesStrategy || (cycloneCount + deadCycloneCount >= 1)) && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0 || tankCount + deadTankCount == 0) && (cycloneCount > 0 || tankCount == 0))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Thor);
 					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
