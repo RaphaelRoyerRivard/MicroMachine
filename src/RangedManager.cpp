@@ -3582,8 +3582,17 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
 				continue;
     	}
 
-		if (considerOnlyVisibleUnits && target->last_seen_game_loop != m_bot.GetCurrentFrame())
-			continue;
+		if (considerOnlyVisibleUnits)
+		{
+			if (target->last_seen_game_loop != m_bot.GetCurrentFrame())
+				continue;
+			if (!m_bot.Map().isVisible(target->pos))
+			{
+				bool allyUnitSeesTarget = Util::AllyUnitSeesEnemyUnit(nullptr, target, 0, false, m_bot);
+				if (!allyUnitSeesTarget)
+					continue;
+			}
+		}
 
 		float priority = getAttackPriority(rangedUnit, target, targets, harass, considerOnlyUnitsInRange, !harass);
 		if(priority > 0.f)
