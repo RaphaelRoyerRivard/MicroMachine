@@ -1814,9 +1814,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	if (threats.empty())
 		return false;
 
-	if (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
-		return false;
-
 	float unitsPower = 0.f;
 	float groundUnitsPower = 0.f;
 	float airUnitsPower = 0.f;
@@ -2004,7 +2001,9 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	sc2::Units allyCombatUnits;
 	allyCombatUnits.insert(allyCombatUnits.end(), rangedUnits.begin(), rangedUnits.end());
 	allyCombatUnits.insert(allyCombatUnits.end(), otherSquadsUnits.begin(), otherSquadsUnits.end());
-	CalcCloseUnits(rangedUnit, target, allyCombatUnits, rangedUnitTargets, true, closeUnitsSet, morphFlyingVikings, morphLandedVikings, simulatedStimedUnits, stimedUnitsPowerDifference, closeUnitsTarget, unitsPower, groundUnitsPower, airUnitsPower, minUnitRange);
+	// We want to allow Cyclones to fight only if we are early rushed and they are in the defense squad
+	const bool ignoreCyclones = !m_bot.Strategy().isEarlyRushed() || m_order.getType() != SquadOrderTypes::Defend;
+	CalcCloseUnits(rangedUnit, target, allyCombatUnits, rangedUnitTargets, ignoreCyclones, closeUnitsSet, morphFlyingVikings, morphLandedVikings, simulatedStimedUnits, stimedUnitsPowerDifference, closeUnitsTarget, unitsPower, groundUnitsPower, airUnitsPower, minUnitRange);
 	m_bot.StopProfiling("0.10.4.1.5.1.5.1          CalcCloseUnits");
 
 	if (closeUnitsSet.empty() || !Util::Contains(rangedUnit, closeUnitsSet))
@@ -2748,7 +2747,8 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 					airUnitsPower += unitPower;
 				else
 					groundUnitsPower += unitPower;
-				const float unitRange = Util::GetAttackRangeForTarget(unitToSave, unitTarget, m_bot);
+				const bool ignoreSpells = unitToSave->unit_type == sc2::UNIT_TYPEID::TERRAN_CYCLONE;
+				const float unitRange = Util::GetAttackRangeForTarget(unitToSave, unitTarget, m_bot, ignoreSpells);
 				if (minUnitRange < 0 || unitRange < minUnitRange)
 					minUnitRange = unitRange;
 			}
