@@ -1134,10 +1134,12 @@ void CCBot::clearDeadUnits()
 	{
 		auto tag = pair.first;
 		auto& unit = pair.second;
-		if (!unit.isAlive() ||
+		if (!unit.isValid() || !unit.isAlive() ||
 			unit.getPlayer() == Players::Enemy)	// In case of one of our units get neural parasited, its alliance will switch)
 		{
 			unitsToRemove.push_back(tag);
+			if (!unit.isValid())
+				continue;
 			if (unit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 				m_KD8ChargesSpawnFrame.erase(tag);
 			if (unit.getPlayer() == Players::Enemy)
