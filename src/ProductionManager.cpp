@@ -348,7 +348,7 @@ void ProductionManager::manageBuildOrderQueue()
 						else if (data.isBuilding
 							&& !data.isAddon
 							&& !currentItem.type.getUnitType().isMorphedBuilding()
-							&& (!data.isResourceDepot || wantToQuickExpand))//If its a resource depot, we don't pre-move unless we want to expand quickly.
+							&& (!data.isResourceDepot))//If its a resource depot, we don't pre-move
 						{
 							// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
@@ -372,11 +372,6 @@ void ProductionManager::manageBuildOrderQueue()
 										{
 											worker.move(targetLocation);
 											m_queue.removeCurrentHighestPriorityItem();
-
-											if (wantToQuickExpand && currentItem.type.getUnitType() == Util::GetResourceDepotType())//Remove the quick expand flag once we expand
-											{
-												SetWantToQuickExpand(false);
-											}
 										}
 
 										// don't actually loop around in here
@@ -2962,11 +2957,6 @@ bool ProductionManager::ValidateBuildingTiming(Building & b) const
 	}
 	
 	return true;
-}
-
-void ProductionManager::SetWantToQuickExpand(bool value)
-{
-	wantToQuickExpand = value;
 }
 
 bool ProductionManager::hasProducedAtLeastXFactoryUnit(int x) const
