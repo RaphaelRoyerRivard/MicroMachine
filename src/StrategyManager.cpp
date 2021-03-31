@@ -489,8 +489,6 @@ void StrategyManager::setStartingStrategy(StartingStrategy startingStrategy)
 		Util::Log(__FUNCTION__, ss.str(), m_bot);
 	}
 	m_startingStrategy = startingStrategy;
-	const bool quickExpand = (startingStrategy == FAST_PF || startingStrategy == EARLY_EXPAND) && m_bot.Bases().getBaseCount(Players::Self, false) < 2;
-	m_bot.Commander().Production().SetWantToQuickExpand(quickExpand);
 }
 
 bool StrategyManager::shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers) const

@@ -1134,10 +1134,12 @@ void CCBot::clearDeadUnits()
 	{
 		auto tag = pair.first;
 		auto& unit = pair.second;
-		if (!unit.isAlive() ||
+		if (!unit.isValid() || !unit.isAlive() ||
 			unit.getPlayer() == Players::Enemy)	// In case of one of our units get neural parasited, its alliance will switch)
 		{
 			unitsToRemove.push_back(tag);
+			if (!unit.isValid())
+				continue;
 			if (unit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 				m_KD8ChargesSpawnFrame.erase(tag);
 			if (unit.getPlayer() == Players::Enemy)
@@ -2125,6 +2127,10 @@ void CCBot::IssueGameStartCheats()
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter - towardsCenterX * 6.5f, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, mapCenter, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, mapCenter + towardsCenterX * 6.5f, player1, 1);*/
+
+	// Test to see if our Cyclone can attack threats when defending an early rush
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation + towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation - towardsCenter * 10, player1, 4);*/
 }
 
 void CCBot::IssueCheats()
