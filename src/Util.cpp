@@ -1802,6 +1802,10 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		range = 6.f;
 	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+	{
+		range = 8.f;	// Their normal range is 6, but once they started attacking, it goes up to 8
+	}
 
 	return range;
 }

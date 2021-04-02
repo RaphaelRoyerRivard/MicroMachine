@@ -484,27 +484,23 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	}
 	else if (currentItem.type.isUpgrade())
 	{
-		// We don't want to skip the Banshee Cloak or Concussive Shell upgrade as they are very important
-		if (currentItem.type.getUpgrade() != MetaTypeEnum::BansheeCloak.getUpgrade() && currentItem.type.getUpgrade() != MetaTypeEnum::ConcussiveShells.getUpgrade())
+		const auto & typeData = m_bot.Data(currentItem.type);
+		// We don't want to skip the upgrade if we have a big bank of resources
+		if (m_bot.GetFreeMinerals() < typeData.mineralCost * 3 || m_bot.GetFreeGas() < typeData.gasCost * 3)
 		{
-			const auto & typeData = m_bot.Data(currentItem.type);
-			// We don't want to skip the upgrade if we have a big bank of resources
-			if (m_bot.GetFreeMinerals() < typeData.mineralCost * 3 || m_bot.GetFreeGas() < typeData.gasCost * 3)
+			// Do not research upgrade if we are under attack early (we want to save our resources)
+			/*if (m_bot.Strategy().isEarlyRushed())
 			{
-				// Do not research upgrade if we are under attack early (we want to save our resources)
-				/*if (m_bot.Strategy().isEarlyRushed())
-				{
-					shouldSkip = true;
-				}
-				else*/ if (currentItem.type == MetaTypeEnum::CombatShield && !isTechStarted(MetaTypeEnum::Stimpack))
-				{
-					shouldSkip = true;
-				}
-				else
-				{
-					// Do not research upgrade unless all our production structures are in use
-					shouldSkip = isImportantProductionBuildingIdle(false, false);
-				}
+				shouldSkip = true;
+			}
+			else*/ if (currentItem.type == MetaTypeEnum::CombatShield && !isTechStarted(MetaTypeEnum::Stimpack))
+			{
+				shouldSkip = true;
+			}
+			else
+			{
+				// Do not research upgrade unless all our production structures are in use
+				shouldSkip = isImportantProductionBuildingIdle(false, false);
 			}
 		}
 	}
@@ -806,7 +802,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyUnitsWeakAgainstMarauders = enemyStalkerCount + enemyRoachCount;
 				const bool enemyEarlyRoachWarren = m_bot.GetCurrentFrame() < 4032 && !m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACHWARREN).empty();	// 3 minutes
 				const bool pumpOutMarauders = proxyMaraudersStrategy;
-				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount * 2 < enemyUnitsWeakAgainstMarauders || (enemyRace == sc2::Protoss && reaperCount > 0 && !enemyHasStargate));
+				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount * 2 < enemyUnitsWeakAgainstMarauders);
 				const auto factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
 
 				if (productionBuildingAddonCount < productionBuildingCount)

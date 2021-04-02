@@ -2062,6 +2062,9 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, m_startLocation + towardsCenterX * 20 - towardsCenterY * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation + towardsCenterX * 20 - towardsCenterY * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat + towardsCenterX * 25, player1, 2);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_startLocation + towardsCenter * 20, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, nat + towardsCenter * 10, player2, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_RAVAGER, m_startLocation + towardsCenterX * 20 - towardsCenterY * 5, player1, 3);*/
 
 	// Test to see if siege tanks siege and unsiege when they should
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter - towardsCenter * 15, player2, 5);

@@ -402,10 +402,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 						auto naturalBase = m_bot.Bases().getPlayerNat(Players::Self);
 						if (naturalBase)
 						{
-							auto wallPosition = Util::GetPosition(m_bot.Buildings().getWallPosition());
-							auto towardsMainBase = Util::Normalized(wallPosition - naturalBase->getDepotPosition());
-							goal = wallPosition + towardsMainBase * 6;
-							goalDescription = "MainBaseSiegePosition";
+							if (!AreEnemiesCloserToOurMineralLine(rangedUnit, rangedUnitTargets))
+							{
+								auto wallPosition = Util::GetPosition(m_bot.Buildings().getWallPosition());
+								auto towardsMainBase = Util::Normalized(wallPosition - naturalBase->getDepotPosition());
+								goal = wallPosition + towardsMainBase * 6;
+								goalDescription = "MainBaseSiegePosition";
+							}
 						}
 					}
 					else
@@ -1323,6 +1326,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 			if (!IsTankVulnerable(tank, targets, rangedUnits))
 			{
 				bool siege = false;
+				bool wouldHaveTarget = false;
 				std::stringstream siegeReason;
 				// Siege if it has been close to the retreat location for several seconds
 				if (m_tanksLastFrameFarFromRetreatGoal[tank] > 0 && m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] >= 22.5f * 4)
@@ -1343,12 +1347,13 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 						// TODO consider movement of enemy units
 						if (dist <= range)// + speed)
 						{
+							wouldHaveTarget = true;
 							siege = true;
 							siegeReason << "in siege range of a " << sc2::UnitTypeToName(newTarget->unit_type) << " at (" << newTarget->pos.x << ", " << newTarget->pos.y << ")";
 						}
 					}
 				}
-				if (siege && !ShouldTankUnsiege(tank, targets, threats, minRange))
+				if (siege && !ShouldTankUnsiege(tank, targets, threats, minRange, wouldHaveTarget))
 				{
 					morphAbility = sc2::ABILITY_ID::MORPH_SIEGEMODE;
 					frameCount = TANK_SIEGE_FRAME_COUNT;
@@ -1368,7 +1373,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 		// Unsiege only if there is no target
 		if (!newTarget)// || Util::Dist(tank->pos, newTarget->pos) > Util::GetAttackRangeForTarget(tank, newTarget, m_bot) + Util::getSpeedOfUnit(newTarget, m_bot))
 		{
-			if (ShouldTankUnsiege(tank, targets, threats, minRange))
+			if (ShouldTankUnsiege(tank, targets, threats, minRange, false))
 			{
 				morphAbility = sc2::ABILITY_ID::MORPH_UNSIEGE;
 				frameCount = TANK_UNSIEGE_FRAME_COUNT;
@@ -1470,26 +1475,14 @@ bool RangedManager::IsTankVulnerable(const sc2::Unit * tank, sc2::Units & target
 	return false;
 }
 
-bool RangedManager::ShouldTankUnsiege(const sc2::Unit * tank, sc2::Units & targets, sc2::Units & threats, float minRange)
+bool RangedManager::ShouldTankUnsiege(const sc2::Unit * tank, sc2::Units & targets, sc2::Units & threats, float minRange, bool wouldHaveTarget)
 {
 	bool isCloseToRetreatGoal = m_bot.GetCurrentFrame() - m_tanksLastFrameFarFromRetreatGoal[tank] > 0;
 	bool enemiesCloserToMainBase = false;
 	// Check if Tank is on a main base siege position and there are targets closer to our mineral line
-	if (isCloseToRetreatGoal && Util::Contains(tank, m_bot.Commander().Combat().getMainBaseSiegeTanks()))
+	if (!wouldHaveTarget && isCloseToRetreatGoal && (Util::Contains(tank, m_bot.Commander().Combat().getMainBaseSiegeTanks()) || m_bot.Bases().getBaseCount(Players::Self, false) == 1))
 	{
-		auto startingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-		int tankDistToBase = startingBase->getGroundDistance(tank->pos);
-		for (auto enemy : targets)
-		{
-			if (enemy->is_flying)
-				continue;
-			int enemyDistToBase = startingBase->getGroundDistance(enemy->pos);
-			if (enemyDistToBase >= 0 && enemyDistToBase < tankDistToBase)
-			{
-				enemiesCloserToMainBase = true;
-				break;
-			}
-		}
+		enemiesCloserToMainBase = AreEnemiesCloserToOurMineralLine(tank, targets);
 	}
 	// Check if there are ground threats
 	bool closeGroundThreats = false;
@@ -1515,6 +1508,23 @@ bool RangedManager::ShouldTankUnsiege(const sc2::Unit * tank, sc2::Units & targe
 		return true;
 	}
 
+	return false;
+}
+
+bool RangedManager::AreEnemiesCloserToOurMineralLine(const sc2::Unit * tank, sc2::Units & targets)
+{
+	auto startingBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+	int tankDistToBase = startingBase->getGroundDistance(tank->pos);
+	for (auto enemy : targets)
+	{
+		if (enemy->is_flying)
+			continue;
+		int enemyDistToBase = startingBase->getGroundDistance(enemy->pos);
+		if (enemyDistToBase >= 0 && enemyDistToBase < tankDistToBase)
+		{
+			return true;
+		}
+	}
 	return false;
 }
 

@@ -1199,29 +1199,33 @@ void WorkerManager::handleRepairWorkers()
 	for (auto & squadPair : squads)
 	{
 		auto & squad = squadPair.second;
-		if (squad.getSquadOrder().getType() == SquadOrderTypes::Defend)
+		for (auto & unit : squad.getUnits())
 		{
-			for (auto & unit : squad.getUnits())
+			// Only repair injured units
+			if (unit.getHitPointsPercentage() == 100.f)
+				continue;
+			// Check if we have the required gas to repair it
+			if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
+				continue;
+			// Check if the unit is a slow mech
+			if (!Util::Contains(unit.getAPIUnitType(), slowMechTypes))
+				continue;
+			// Check in which base the slow mech is
+			auto unitBase = m_bot.Bases().getBaseContainingPosition(unit.getPosition());
+			if (!unitBase)
+				continue;
+			int repairerCount = m_workerData.getWorkerRepairingTargetCount(unit);
+			int repairerCountTarget = std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f)));
+			while (repairerCount < repairerCountTarget)
 			{
-				// Only repair injured units
-				if (unit.getHitPointsPercentage() == 100.f)
-					continue;
-				// Check if we have the required gas to repair it
-				if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
-					continue;
-				// Check if the unit is a slow mech
-				if (!Util::Contains(unit.getAPIUnitType(), slowMechTypes))
-					continue;
-				int repairerCount = m_workerData.getWorkerRepairingTargetCount(unit);
-				int repairerCountTarget = std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f)));
-				while (repairerCount < repairerCountTarget)
-				{
-					Unit repairer = getClosestAvailableWorkerTo(unit.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, true);
-					if (!repairer.isValid())
-						break;
-					setRepairWorker(repairer, unit);
-					++repairerCount;
-				}
+				Unit repairer = getClosestAvailableWorkerTo(unit.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, true);
+				if (!repairer.isValid())
+					break;
+				auto repairerBase = m_bot.Bases().getBaseContainingPosition(repairer.getPosition());
+				if (!repairerBase)
+					break;
+				setRepairWorker(repairer, unit);
+				++repairerCount;
 			}
 		}
 	}
