@@ -806,7 +806,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyUnitsWeakAgainstMarauders = enemyStalkerCount + enemyRoachCount;
 				const bool enemyEarlyRoachWarren = m_bot.GetCurrentFrame() < 4032 && !m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACHWARREN).empty();	// 3 minutes
 				const bool pumpOutMarauders = proxyMaraudersStrategy;
-				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount * 2 < enemyUnitsWeakAgainstMarauders || (enemyRace == sc2::Protoss && reaperCount > 0 && !enemyHasStargate));
+				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount * 2 < enemyUnitsWeakAgainstMarauders);
 				const auto factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
 
 				if (productionBuildingAddonCount < productionBuildingCount)
