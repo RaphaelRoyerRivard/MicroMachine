@@ -901,7 +901,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if (!produceMarauders && (reaperCount == 0 || (((proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted) || enemyRace == sc2::Race::Terran) && producedReaperCount < 2)))
+				if (!produceMarauders && (producedReaperCount == 0 || (((proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted) || enemyRace == sc2::Race::Terran) && producedReaperCount < 2)))
 				{
 					if (!m_queue.contains(MetaTypeEnum::Reaper))
 					{
