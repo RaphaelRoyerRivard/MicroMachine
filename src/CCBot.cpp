@@ -2151,6 +2151,13 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 5, player2, 6);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 5, player1, 5);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, mapCenter + towardsCenter * 8, player1, 2);*/
+
+	// Test to see if Marines are retreating instead of attacking Void Rays near Shield Batteries
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, nat, player2, 8);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, nat + towardsCenterX * 8, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, nat + towardsCenterX * 13, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, nat + towardsCenterX * 10, player1, 3);*/
 }
 
 void CCBot::IssueCheats()
