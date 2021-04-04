@@ -559,6 +559,8 @@ void CCBot::setUnits()
 	m_unitCompletedCount.clear();
 	m_strategy.setEnemyCurrentlyHasInvisible(m_gameCommander.Combat().isExpandBlockedByInvis());
 	m_strategy.setEnemyHasProxyHatchery(false);
+	auto mainBase = m_bases.getPlayerStartingBaseLocation(Players::Self);
+	auto enemyMainBase = m_bases.getPlayerStartingBaseLocation(Players::Enemy);
 	bool firstPhoenix = true;
 	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
 	StartProfiling("0.2.1 loopAllUnits");
@@ -689,6 +691,15 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_OVERSEER:
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
+						break;
+					case sc2::UNIT_TYPEID::PROTOSS_VOIDRAY:
+					case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
+						m_strategy.setShouldProduceAntiAirOffense(true);
+						if (mainBase && enemyMainBase && Util::DistSq(unitptr->pos, mainBase->getPosition()) < Util::DistSq(unitptr->pos, enemyMainBase->getPosition()))
+						{
+							m_strategy.setShouldProduceAntiAirDefense(true);
+							Util::DebugLog(__FUNCTION__, "Air Harass detected: " + unit.getType().getName(), *this);
+						}
 						break;
 					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
 					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
