@@ -228,6 +228,7 @@ void StrategyManager::checkForStrategyChange()
 			if (m_startingStrategy == PROXY_MARAUDERS && !m_bot.Commander().Combat().winAttackSimulation())
 			{
 				bool cancelProxy = false;
+				auto enemyLocation = m_bot.GetEnemyStartLocations()[0];
 				// Cancel PROXY_MARAUDERS if the opponent has too much static defenses
 				int activeStaticDefenseUnits = 0;
 				const auto staticDefenseTypes = { sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY };
@@ -236,8 +237,17 @@ void StrategyManager::checkForStrategyChange()
 					const auto & staticDefenseUnits = m_bot.GetEnemyUnits(staticDefenseType);
 					for (const auto & staticDefenseUnit : staticDefenseUnits)
 					{
+						if (staticDefenseUnit.isValid())
+							continue;
 						if (staticDefenseUnit.isPowered() && staticDefenseUnit.isCompleted())
-							++activeStaticDefenseUnits;
+						{
+							auto distToBase = Util::DistSq(m_bot.GetStartLocation(), staticDefenseUnit.getPosition());
+							auto distToEnemyBase = Util::DistSq(enemyLocation, staticDefenseUnit.getPosition());
+							if (distToEnemyBase < distToBase)
+							{
+								++activeStaticDefenseUnits;	// Count only static defenses on the opponent's side of the map
+							}
+						}
 					}
 				}
 
@@ -262,6 +272,12 @@ void StrategyManager::checkForStrategyChange()
 						// Cancel PROXY_MARAUDERS if the opponent has an immortal or attacking flying units
 						for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
 						{
+							if (enemyUnit.isValid())
+								continue;
+							auto distToBase = Util::DistSq(m_bot.GetStartLocation(), enemyUnit.getPosition());
+							auto distToEnemyBase = Util::DistSq(enemyLocation, enemyUnit.getPosition());
+							if (distToBase < distToEnemyBase)
+								continue;	// Do not cancel against proxied enemy units
 							if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
 							{
 								cancelProxy = true;

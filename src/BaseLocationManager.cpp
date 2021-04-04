@@ -358,6 +358,15 @@ void BaseLocationManager::onFrame()
     }*/
 	for (auto & unit : m_bot.GetKnownEnemyUnits())
 	{
+		if (!unit.isValid())
+			continue;
+
+		if (!unit.getType().isBuilding())
+			continue;
+
+		if (unit.getType().isCreepTumor())
+			continue;
+
 		BaseLocation * baseLocation = getBaseLocation(unit.getPosition());
 
 		if (baseLocation != nullptr)
