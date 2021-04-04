@@ -373,10 +373,25 @@ void BaseLocationManager::onFrame()
 		{
 			if (!baseLocation->isOccupiedByPlayer(Players::Self))
 			{
-				baseLocation->setPlayerOccupying(Players::Enemy, true);
-
 				if (unit.getType().isResourceDepot())
+				{
 					baseLocation->setResourceDepot(unit);
+					baseLocation->setPlayerOccupying(Players::Enemy, true);
+				}
+				else
+				{
+					auto main = getPlayerStartingBaseLocation(Players::Self);
+					auto enemyMain = getPlayerStartingBaseLocation(Players::Enemy);
+					if (main && enemyMain)
+					{
+						auto distToMain = Util::DistSq(main->getPosition(), baseLocation->getPosition());
+						auto distToEnemyMain = Util::DistSq(enemyMain->getPosition(), baseLocation->getPosition());
+						if (distToEnemyMain < distToMain)
+						{
+							baseLocation->setPlayerOccupying(Players::Enemy, true);
+						}
+					}
+				}
 			}
 		}
 	}
