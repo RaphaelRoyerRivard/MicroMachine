@@ -559,8 +559,8 @@ void CCBot::setUnits()
 	m_unitCompletedCount.clear();
 	m_strategy.setEnemyCurrentlyHasInvisible(m_gameCommander.Combat().isExpandBlockedByInvis());
 	m_strategy.setEnemyHasProxyHatchery(false);
-	auto mainBase = m_bases.getPlayerStartingBaseLocation(Players::Self);
-	auto enemyMainBase = m_bases.getPlayerStartingBaseLocation(Players::Enemy);
+	auto mainBasePosition = m_startLocation;
+	auto enemyMainBasePosition = m_enemyBaseLocations[0];
 	bool firstPhoenix = true;
 	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
 	StartProfiling("0.2.1 loopAllUnits");
@@ -695,7 +695,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::PROTOSS_VOIDRAY:
 					case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
 						m_strategy.setShouldProduceAntiAirOffense(true);
-						if (mainBase && enemyMainBase && Util::DistSq(unitptr->pos, mainBase->getPosition()) < Util::DistSq(unitptr->pos, enemyMainBase->getPosition()))
+						if (Util::DistSq(unitptr->pos, mainBasePosition) < Util::DistSq(unitptr->pos, enemyMainBasePosition))
 						{
 							m_strategy.setShouldProduceAntiAirDefense(true);
 							Util::DebugLog(__FUNCTION__, "Air Harass detected: " + unit.getType().getName(), *this);
