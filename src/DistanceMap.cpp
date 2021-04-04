@@ -61,7 +61,11 @@ void DistanceMap::computeDistanceMap(CCBot & m_bot, const CCTilePosition & start
 
 			// TODO isTileBlocked() might return different values during the game, so we should find a way to update the distance maps in the bot
             // if the new tile is inside the map bounds, is walkable, and has not been visited yet, set the distance of its parent + 1
-            if (m_bot.Map().isWalkable(nextTile) && !m_bot.Commander().Combat().isTileBlocked(nextTile.x, nextTile.y) && getDistance(nextTile) == -1)
+			bool walkable = m_bot.Map().isWalkable(nextTile);
+			bool blocked = m_bot.Commander().Combat().isTileBlocked(nextTile.x, nextTile.y);
+			bool closeToStartLocation = Util::DistSq(m_bot.GetStartLocation(), Util::GetPosition(nextTile)) <= 3 * 3;
+			bool notExplored = getDistance(nextTile) == -1;
+			if (walkable && (!blocked || closeToStartLocation) && notExplored)
             {
                 m_dist[(int)nextTile.x][(int)nextTile.y] = m_dist[(int)tile.x][(int)tile.y] + 1;
                 fringe.push_back(nextTile);

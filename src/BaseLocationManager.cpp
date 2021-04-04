@@ -358,16 +358,17 @@ void BaseLocationManager::onFrame()
     }*/
 	for (auto & unit : m_bot.GetKnownEnemyUnits())
 	{
-		// we only care about resource depots
-		if (!unit.getType().isResourceDepot())
-			continue;
-
 		BaseLocation * baseLocation = getBaseLocation(unit.getPosition());
 
 		if (baseLocation != nullptr)
 		{
-			baseLocation->setPlayerOccupying(Players::Enemy, true);
-			baseLocation->setResourceDepot(unit);
+			if (!baseLocation->isOccupiedByPlayer(Players::Self))
+			{
+				baseLocation->setPlayerOccupying(Players::Enemy, true);
+
+				if (unit.getType().isResourceDepot())
+					baseLocation->setResourceDepot(unit);
+			}
 		}
 	}
 	m_bot.StopProfiling("0.6.4   updateEnemyBaseLocations");

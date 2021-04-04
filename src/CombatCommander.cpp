@@ -1376,16 +1376,20 @@ void CombatCommander::updateScoutSquad()
 	}
 	else if (scoutSquad.getUnits().empty())
 	{
+		std::vector<sc2::UNIT_TYPEID> scoutUnitTypes = { sc2::UNIT_TYPEID::TERRAN_REAPER, sc2::UNIT_TYPEID::TERRAN_MARINE };
 		Unit bestCandidate;
-		float distanceFromBase = 0.f;
-		for (auto & unit : m_combatUnits)
+		const auto base = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+		if (base)
 		{
-			BOT_ASSERT(unit.isValid(), "null unit in combat units");
-			if (unit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+			for (auto scoutUnitType : scoutUnitTypes)
 			{
-				const auto base = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-				if(base)
+				float distanceFromBase = 0.f;
+				for (auto & unit : m_combatUnits)
 				{
+					BOT_ASSERT(unit.isValid(), "null unit in combat units");
+					if (unit.getUnitPtr()->unit_type != scoutUnitType)
+						continue;
+
 					const float dist = Util::DistSq(unit, base->getPosition());
 					if (!bestCandidate.isValid() || dist < distanceFromBase)
 					{
@@ -1396,11 +1400,12 @@ void CombatCommander::updateScoutSquad()
 						}
 					}
 				}
+				if (bestCandidate.isValid())
+				{
+					m_squadData.assignUnitToSquad(bestCandidate, scoutSquad);
+					break;
+				}
 			}
-		}
-		if(bestCandidate.isValid())
-		{
-			m_squadData.assignUnitToSquad(bestCandidate, scoutSquad);
 		}
 	}
 
@@ -3123,10 +3128,11 @@ CCPosition CombatCommander::GetNextBaseLocationToScout()
 			{
 				continue;
 			}
-			if (baseLocation->isOccupiedByPlayer(Players::Enemy) ||
-				baseLocation->isOccupiedByPlayer(Players::Self) ||
-				m_bot.Map().getGroundDistance(baseLocation->getDepotPosition(), m_bot.GetStartLocation()) < 0 ||	// Cannot reach base by ground
-				Util::DistSq(scoutUnit, baseLocation->getPosition()) < 5.f * 5.f)
+			bool occupiedByEnemy = baseLocation->isOccupiedByPlayer(Players::Enemy);
+			bool occupiedBySelf = baseLocation->isOccupiedByPlayer(Players::Self);
+			bool unreachable = m_bot.Map().getGroundDistance(baseLocation->getDepotPosition(), m_bot.GetStartLocation()) < 0;	// Cannot reach base by ground
+			bool closeEnough = Util::DistSq(scoutUnit, baseLocation->getPosition()) < 5.f * 5.f;
+			if (occupiedByEnemy || occupiedBySelf || unreachable || closeEnough)
 			{
 				m_visitedBaseLocations.push_back(baseLocation);
 				continue;
