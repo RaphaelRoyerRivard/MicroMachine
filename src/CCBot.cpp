@@ -2145,10 +2145,10 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterY * 13, player2, 1);*/
 
 	// Test to see if Vikings can avoid trading badly against Tempests when there are ground units to support the Tempests
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, mapCenter + towardsCenter * 5, player2, 1);
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, mapCenter + towardsCenter * 5, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 5, player2, 6);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 5, player1, 5);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, mapCenter + towardsCenter * 8, player1, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, mapCenter + towardsCenter * 8, player1, 2);*/
 }
 
 void CCBot::IssueCheats()
