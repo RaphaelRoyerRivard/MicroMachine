@@ -693,6 +693,7 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
 						break;
 					case sc2::UNIT_TYPEID::PROTOSS_VOIDRAY:
+					case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
 						m_strategy.setShouldProduceAntiAirOffense(true);
 						if (mainBase && enemyMainBase && Util::DistSq(unitptr->pos, mainBase->getPosition()) < Util::DistSq(unitptr->pos, enemyMainBase->getPosition()))
 						{
