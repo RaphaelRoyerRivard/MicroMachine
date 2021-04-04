@@ -1876,7 +1876,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	
 	m_bot.StopProfiling("0.10.4.1.5.1.5.a          VikingMorph");
 	const float range = Util::GetAttackRangeForTarget(rangedUnit, target, m_bot);
-	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
 	if (!target || (!isTargetRanged(target) && !morphFlyingVikings))
 	{
 		return false;
@@ -2021,6 +2020,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		return false;
 	}
 
+	const bool closeToEnemyTempest = target && target->unit_type == sc2::UNIT_TYPEID::PROTOSS_TEMPEST && Util::DistSq(rangedUnit->pos, target->pos) <= range * range;
 	if (closeUnitsSet.size() > 1 && unitShouldHeal && !closeToEnemyTempest)
 	{
 		return false;
@@ -2041,17 +2041,14 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 	m_bot.StartProfiling("0.10.4.1.5.1.5.2          CalcThreats");
 	// Calculate all the threats of all the ally units participating in the fight
 	std::set<const sc2::Unit *> allThreatsSet;
-	std::map<sc2::UnitTypeID, sc2::Units> allyGroundUnitsByType;
+	std::map<sc2::UnitTypeID, sc2::Units> allyUnitsByType;
 	for (const auto allyUnit : closeUnits)
 	{
 		const auto & allyUnitThreats = getThreats(allyUnit, rangedUnitTargets);
 		for (const auto threat : allyUnitThreats)
 			allThreatsSet.insert(threat);
-		if (!allyUnit->is_flying)
-		{
-			auto & allyUnitsOfType = allyGroundUnitsByType[allyUnit->unit_type];
-			allyUnitsOfType.push_back(allyUnit);
-		}
+		auto & allyUnitsOfType = allyUnitsByType[allyUnit->unit_type];
+		allyUnitsOfType.push_back(allyUnit);
 	}
 	// Add enemies that are close to the threats
 	/*for (const auto enemy : rangedUnitTargets)
@@ -2095,7 +2092,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		allThreats.push_back(threat);
 	}
 	// We do a pathfinding with the closest unit of every type we have towards its target to check if we want to add more enemy units
-	for (const auto & allyUnitsByTypePair : allyGroundUnitsByType)
+	for (const auto & allyUnitsByTypePair : allyUnitsByType)
 	{
 		const sc2::Unit * closestUnit = nullptr;
 		const sc2::Unit * closestUnitTarget = nullptr;
@@ -2114,7 +2111,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				}
 			}
 		}
-		if (closestUnit && minDistance < 20 * 20)
+		if (closestUnit && minDistance < 25 * 25)
 		{
 			std::string pathfindingTypeForEngagePosition = "FindEngagePosition";
 			if (AllowUnitToPathFind(closestUnit, false, pathfindingTypeForEngagePosition))
@@ -2129,8 +2126,6 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 					for (const auto enemy : rangedUnitTargets)
 					{
 						if (Util::Contains(enemy, allThreatsSet))
-							continue;
-						if (!Util::CanUnitAttackGround(enemy, m_bot))
 							continue;
 						const auto threatRange = Util::getThreatRange(closestUnit, enemy, m_bot);
 						if (Util::DistSq(enemy->pos, engagePosition) <= threatRange * threatRange)
@@ -2246,7 +2241,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 	const bool enemyHasLongRangeUnits = maxThreatRange >= 10;
 
-	sc2::Units vikings;
+	/*sc2::Units vikings;
 	sc2::Units tempests;
 	int injuredVikings = 0;
 	int injuredTempests = 0;
@@ -2267,7 +2262,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			if (threat->health < threat->health_max || threat->shield < threat->shield_max)
 				++injuredTempests;
 		}
-	}
+	}*/
 
 	// If we can beat the enemy
 	m_bot.StartProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
@@ -2334,7 +2329,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 
 	if (!shouldGroundFight || !shouldAirFight)
 	{
-		if (!winAirSimulation && !vikings.empty() && !tempests.empty())
+		/*if (!winAirSimulation && !vikings.empty() && !tempests.empty())
 		{
 			const auto otherEnemies = threatsToKeep.size() - tempests.size();
 			if (otherEnemies > 0)
@@ -2344,12 +2339,12 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 				winAirSimulation = remainingVikingsVsTempestsArmyPercentageDifference > 0.f;
 			}
 			shouldAirFight = winAirSimulation;
-			/*std::stringstream ss;
-			ss << getSquad()->getName() << ": " << vikings.size() << " Vikings (" << injuredVikings << " injured) vs " << tempests.size() << " Tempests (" << injuredTempests << " injured): " << (winSimulation ? "win" : "LOSE");
-			Util::Log(__FUNCTION__, ss.str(), m_bot);
-			m_bot.Commander().Combat().SetLogVikingActions(true);*/
+			//std::stringstream ss;
+			//ss << getSquad()->getName() << ": " << vikings.size() << " Vikings (" << injuredVikings << " injured) vs " << tempests.size() << " Tempests (" << injuredTempests << " injured): " << (winSimulation ? "win" : "LOSE");
+			//Util::Log(__FUNCTION__, ss.str(), m_bot);
+			//m_bot.Commander().Combat().SetLogVikingActions(true);
 		}
-		else if (enemyHasLongRangeUnits)
+		else*/ if (enemyHasLongRangeUnits)
 		{
 			// We consider only the simulation for long range enemies because our formula is shit
 			shouldGroundFight = winGroundSimulation;
