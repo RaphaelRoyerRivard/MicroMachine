@@ -1181,14 +1181,16 @@ void CCBot::clearDeadUnits()
 	{
 		auto& unit = pair.second;
 		// Remove dead unit or old snapshot
-		if (!unit.isAlive() || 
+		if (!unit.isValid() || !unit.isAlive() || 
 			(unit.getPlayer() == Players::Self && unit.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_KD8CHARGE) ||	// In case of one of our units get neural parasited, its alliance will switch
 			(unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
 			&& m_map.isVisible(unit.getPosition())
 			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
 		{
+			unitsToRemove.push_back(pair.first);
+			if (!unit.isValid())
+				continue;
 			const auto unitPtr = unit.getUnitPtr();
-			unitsToRemove.push_back(unitPtr->tag);
 			this->Analyzer().increaseDeadEnemy(unitPtr->unit_type);
 			if (unit.getPlayer() == Players::Self)
 				m_parasitedUnits.erase(unitPtr->tag);
@@ -1205,10 +1207,10 @@ void CCBot::clearDeadUnits()
 	for (auto& pair : m_neutralUnits)
 	{
 		auto& unit = pair.second;
-		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
+		if (!unit.isValid() || !unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
 			&& m_map.isVisible(unit.getPosition())
 			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
-			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+			unitsToRemove.push_back(pair.first);
 	}
 	// Remove dead neutral units
 	for (auto & tag : unitsToRemove)
