@@ -282,7 +282,7 @@ int main(int argc, char* argv[])
 		bool loadSettings = false;
 		JSONTools::ReadBool("LoadSettings", j["SC2API"], loadSettings);
 		CCBot bot(botName, botVersion, !ForceStepMode);
-		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings, AllowDebug, ArchonMode);
+		RunBot(argc, argv, &bot, Util::GetRaceFromString(botRaceString), loadSettings, AllowDebug, ArchonMode);
 
 		return 0;
 	}
