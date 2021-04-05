@@ -133,6 +133,9 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
         }
     }
 
+	// also compute the distance map from the depot position
+	m_bot.Map().getDistanceMap(m_depotPosition);
+
 	//Determine if the geysers are together or split
 	if (m_geyserPositions.size() == 1)
 	{
