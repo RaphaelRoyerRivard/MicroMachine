@@ -898,6 +898,8 @@ void CombatCommander::updateIdleSquad()
 
 void CombatCommander::updateWorkerFleeSquad()
 {
+	if (m_bot.Strategy().getStartingStrategy() == StartingStrategy::WORKER_RUSH)
+		return;
 	Squad & workerFleeSquad = m_squadData.getSquad("WorkerFlee");
 	const bool earlyRushed = m_bot.Strategy().isEarlyRushed();
 	for (auto & worker : m_bot.Workers().getWorkers())
