@@ -1502,20 +1502,21 @@ void CombatCommander::updateAttackSquads()
     Squad & mainAttackSquad = m_squadData.getSquad("MainAttack");
 
 	// Worker rush strategy is not used anymore
-	/*if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH && m_bot.GetCurrentFrame() >= 224)
+	if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH)
 	{
-		for (auto & scv : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SCV))
+		for (auto & probe : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_PROBE))
 		{
-			if (!scv.isReturningCargo() && mainAttackSquad.getUnits().size() < 11 && m_squadData.canAssignUnitToSquad(scv, mainAttackSquad, true))
+			if (m_squadData.canAssignUnitToSquad(probe, mainAttackSquad, false))
 			{
-				m_bot.Workers().getWorkerData().setWorkerJob(scv, WorkerJobs::Combat);
-				m_squadData.assignUnitToSquad(scv, mainAttackSquad);
+				m_bot.Workers().getWorkerData().setWorkerJob(probe, WorkerJobs::Combat);
+				m_squadData.assignUnitToSquad(probe, mainAttackSquad);
 			}
 		}
 		
 		const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, getMainAttackLocation(), MainAttackOrderRadius, "Attack");
 		mainAttackSquad.setSquadOrder(mainAttackOrder);
-	}*/
+		return;
+	}
 
 	const auto squadCenter = mainAttackSquad.calcCenter();
 	std::vector<Unit> unitsToTransfer;

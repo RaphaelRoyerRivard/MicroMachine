@@ -111,6 +111,7 @@ class CCBot : public sc2::Agent
 	std::mutex m_command_mutex;
 	bool m_concede;
 	bool m_saidHallucinationLine;
+	std::string m_botName;
 	std::string m_botVersion;
 	std::string m_opponentId;
 	bool m_player1IsHuman;
@@ -152,7 +153,7 @@ class CCBot : public sc2::Agent
 
 public:
 
-	CCBot(std::string botVersion, bool realtime);
+	CCBot(std::string botName, std::string botVersion, bool realtime);
 	~CCBot();
 
 	void OnGameFullStart() override;

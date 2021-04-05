@@ -644,7 +644,8 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 		}
 		else if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH)
 		{
-			shouldSkip = true;
+			if (!currentItem.type.getUnitType().isWorker())
+				shouldSkip = true;
 		}
 		else if (m_bot.Strategy().getStartingStrategy() == STANDARD)
 		{

@@ -17,6 +17,7 @@ protected:
     SquadOrder m_order;
     std::vector<Unit> m_units;
     std::vector<Unit> m_targets;
+	std::set<sc2::Tag> m_healingProbes;
 
     virtual void executeMicro() = 0;
 

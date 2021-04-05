@@ -205,6 +205,7 @@ int main(int argc, char* argv[])
         exit(-1);
     }*/
 
+	std::string botName;
 	std::string botVersion;
 	bool connectToLadder = false;
     std::string botRaceString;
@@ -222,6 +223,11 @@ int main(int argc, char* argv[])
 	{
 		const json & debug = j["Debug"];
 		JSONTools::ReadBool("AllowDebug", debug, AllowDebug);
+	}
+	if (j.count("Bot Info") && j["Bot Info"].is_object())
+	{
+		const json & info = j["Bot Info"];
+		JSONTools::ReadString("BotName", info, botName);
 	}
     if (j.count("SC2API") && j["SC2API"].is_object())
     {
@@ -275,7 +281,7 @@ int main(int argc, char* argv[])
 	{
 		bool loadSettings = false;
 		JSONTools::ReadBool("LoadSettings", j["SC2API"], loadSettings);
-		CCBot bot(botVersion, !ForceStepMode);
+		CCBot bot(botName, botVersion, !ForceStepMode);
 		RunBot(argc, argv, &bot, sc2::Race::Terran, loadSettings, AllowDebug, ArchonMode);
 
 		return 0;
@@ -290,8 +296,8 @@ int main(int argc, char* argv[])
 	}
 
     // Add the custom bot, it will control the players.
-    CCBot bot(botVersion, !ForceStepMode);
-    CCBot bot2(botVersion, !ForceStepMode);
+    CCBot bot(botName, botVersion, !ForceStepMode);
+    CCBot bot2(botName, botVersion, !ForceStepMode);
 
     Human human_bot;
 
