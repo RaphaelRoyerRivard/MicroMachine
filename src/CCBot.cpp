@@ -1,7 +1,7 @@
 #include "CCBot.h"
 #include "Util.h"
 
-CCBot::CCBot(std::string botVersion, bool realtime)
+CCBot::CCBot(std::string botName, std::string botVersion, bool realtime)
 	: m_map(*this)
 	, m_bases(*this)
 	, m_unitInfo(*this)
@@ -14,6 +14,7 @@ CCBot::CCBot(std::string botVersion, bool realtime)
 	, m_techTree(*this)
 	, m_concede(false)
 	, m_saidHallucinationLine(false)
+	, m_botName(botName)
 	, m_botVersion(botVersion)
 	, m_previousMacroGameLoop(-1)
 	, m_player1IsHuman(false)
@@ -218,7 +219,7 @@ void CCBot::OnGameStart() //full start
 
 	// Create logfile
 	Util::CreateLog(*this);
-	m_versionMessage << "MicroMachine v" << m_botVersion;
+	m_versionMessage << m_botName << " v" << m_botVersion;
 	Util::Log(__FUNCTION__, m_versionMessage.str(), *this);
 	std::cout << m_versionMessage.str() << std::endl;
 	selfRace = GetPlayerRace(Players::Self);
