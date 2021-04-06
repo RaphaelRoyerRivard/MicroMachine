@@ -950,7 +950,10 @@ void CombatCommander::updateWorkerFleeSquad()
 				m_bot.Workers().setCombatWorker(worker);
 				m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 			}
-			m_lastFleeingWorkerFrame[worker.getUnitPtr()] = m_bot.GetCurrentFrame();
+			if (!targettedByOracle)	// Do not let our workers flee for long when (maybe) targetted by an Oracle
+			{
+				m_lastFleeingWorkerFrame[worker.getUnitPtr()] = m_bot.GetCurrentFrame();
+			}
 		}
 		else
 		{
