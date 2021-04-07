@@ -16,6 +16,7 @@ class BaseLocation
 	CCTilePosition				m_turretPosition;
 	CCPosition					m_depotPosition;
     CCTilePosition              m_depotTilePosition;
+	CCPosition					m_repairStationTilePosition;
     CCPosition                  m_centerOfResources;
     std::vector<Unit>           m_geysers;
     std::vector<Unit>           m_minerals;
@@ -66,6 +67,7 @@ public:
 	CCPosition getGasBunkerUnloadTarget(CCPosition geyserPos) const;
 	const CCPosition & getDepotPosition() const;
     const CCTilePosition & getDepotTilePosition() const;
+	const CCPosition & getRepairStationTilePosition() const;
 	int getOptimalMineralWorkerCount() const;
 	int getOptimalGasWorkerCount() const;
     const CCPosition & getPosition() const;

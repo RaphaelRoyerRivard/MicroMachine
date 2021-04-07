@@ -2308,12 +2308,12 @@ void BuildingManager::castBuildingsAbilities()
 					Util::DebugLog(__FUNCTION__, "No mineral found.", m_bot);
 					continue;
 				}
-			}
 
-			//Drops the mule between the CC and mineral, as far from the mineral as possible, while still able to mine it
-			auto point = closestMineral->pos + Util::Normalized(depotPosition - closestMineral->pos) * 1.4;
-			Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
-			m_bot.Workers().setMineralMuleDeathFrame(closestMineral->tag);
+				//Drops the mule between the CC and mineral, as far from the mineral as possible, while still able to mine it
+				auto point = closestMineral->pos + Util::Normalized(depotPosition - closestMineral->pos) * 1.4;
+				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
+				m_bot.Workers().setMineralMuleDeathFrame(closestMineral->tag);
+			}
 		}
 	}
 	m_bot.StopProfiling("0.8.8.3  OrbitalCommands");

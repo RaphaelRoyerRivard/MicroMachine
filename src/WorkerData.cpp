@@ -190,7 +190,8 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
 
 			if (mineralToMine.isValid())
 			{
-				worker.rightClick(mineralToMine);
+				worker.move(mineralToMine.getPosition() + Util::Normalized(worker.getPosition() - mineralToMine.getPosition()) * 1.5);//2.5? 2.7 (146)?
+				worker.shiftRightClick(mineralToMine);
 
 				if (!worker.getType().isMule())
 				{
@@ -500,10 +501,11 @@ const Unit WorkerData::GetBestMineralWithLessWorkersInLists(const std::vector<Un
 
 bool WorkerData::isAnyMineralAvailable(CCPosition workerCurrentPosition) const
 {
-	for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+	for (auto base : bases)
 	{
-		if (base->isUnderAttack() && !base->containsPositionApproximative(workerCurrentPosition))
-			continue;
+		if (bases.size() > 1 && base->isUnderAttack() && !base->containsPositionApproximative(workerCurrentPosition))
+			continue;//if the worker is in a base underattack, do not assign it as mineral, except if its our only base.
 		auto & depot = base->getResourceDepot();
 		if (!depot.isValid() || !depot.isAlive())
 			continue;

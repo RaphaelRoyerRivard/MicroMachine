@@ -348,7 +348,7 @@ void ProductionManager::manageBuildOrderQueue()
 						else if (data.isBuilding
 							&& !data.isAddon
 							&& !currentItem.type.getUnitType().isMorphedBuilding()
-							&& (!data.isResourceDepot || wantToQuickExpand))//If its a resource depot, we don't pre-move unless we want to expand quickly.
+							&& (!data.isResourceDepot))//If its a resource depot, we don't pre-move.
 						{
 							// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
@@ -372,11 +372,6 @@ void ProductionManager::manageBuildOrderQueue()
 										{
 											worker.move(targetLocation);
 											m_queue.removeCurrentHighestPriorityItem();
-
-											if (wantToQuickExpand && currentItem.type.getUnitType() == Util::GetResourceDepotType())//Remove the quick expand flag once we expand
-											{
-												SetWantToQuickExpand(false);
-											}
 										}
 
 										// don't actually loop around in here
@@ -785,21 +780,25 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 		if (!m_queue.contains(workerMetatype))//check queue
 		{
-			//[Worker limit][Max worker]
-			auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
-			int optimalWorkers = 0;
-			for (const auto base : bases)
+			auto idleCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Idle);
+			if (idleCount < 4)//[Number idle worker] If we have less idle workers than our maximum of 4 idle workers, 1 for each close patch in our next expand
 			{
-				optimalWorkers += base->getOptimalMineralWorkerCount() + base->getOptimalGasWorkerCount();
-			}
-			const int maxWorkersForNextExpansion = totalBaseCount > bases.size() ? 22 : 11;	// 16 minerals + 6 gas
-			const int maxWorkers = 80;
-			const int workerCount = m_bot.Workers().getNumWorkers();
-			if (optimalWorkers + maxWorkersForNextExpansion > workerCount && workerCount < maxWorkers)
-			{
-				if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
+				//[Worker limit][Max worker]
+				auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+				int optimalWorkers = 0;
+				for (const auto base : bases)
 				{
-					m_queue.queueItem(MM::BuildOrderItem(workerMetatype, 1, false));
+					optimalWorkers += base->getOptimalMineralWorkerCount() + base->getOptimalGasWorkerCount();
+				}
+				const int maxWorkersForNextExpansion = totalBaseCount > bases.size() ? 22 : 11;	// 16 minerals + 6 gas
+				const int maxWorkers = 80;
+				const int workerCount = m_bot.Workers().getNumWorkers();
+				if (optimalWorkers + maxWorkersForNextExpansion > workerCount && workerCount < maxWorkers)
+				{
+					if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
+					{
+						m_queue.queueItem(MM::BuildOrderItem(workerMetatype, 1, false));
+					}
 				}
 			}
 		}
@@ -2973,11 +2972,6 @@ bool ProductionManager::ValidateBuildingTiming(Building & b) const
 	}
 	
 	return true;
-}
-
-void ProductionManager::SetWantToQuickExpand(bool value)
-{
-	wantToQuickExpand = value;
 }
 
 bool ProductionManager::hasProducedAtLeastXFactoryUnit(int x) const
