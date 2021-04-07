@@ -467,15 +467,19 @@ void StrategyManager::checkForStrategyChange()
 		if (!enemyUnits.empty())
 		{
 			bool groundUnit = false;
+			bool building = false;
 			for (const auto & enemyUnit : enemyUnits)
 			{
 				if (!enemyUnit.isFlying())
 				{
 					groundUnit = true;
-					break;
+				}
+				if (enemyUnit.getType().isBuilding())
+				{
+					building = true;
 				}
 			}
-			if (!groundUnit)
+			if (building && !groundUnit)
 			{
 				setStartingStrategy(STANDARD);
 			}

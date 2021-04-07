@@ -53,7 +53,7 @@ void CombatCommander::onStart()
 	SquadOrder idleOrder(SquadOrderTypes::Idle, CCPosition(), DefaultOrderRadius, "Prepare for battle");
 	m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
-	// the squad that consists of fleeing workers
+	// the squad that consists of fleeing workers;
 	SquadOrder fleeOrder(SquadOrderTypes::Retreat, m_bot.GetStartLocation(), DefaultOrderRadius, "Worker flee");
 	m_squadData.addSquad("WorkerFlee", Squad("WorkerFlee", fleeOrder, WorkerFleePriority, m_bot));
 
@@ -898,8 +898,7 @@ void CombatCommander::updateIdleSquad()
 
 void CombatCommander::updateWorkerFleeSquad()
 {
-	if (m_bot.Strategy().getStartingStrategy() == StartingStrategy::WORKER_RUSH)
-		return;
+	const bool workerRush = m_bot.Strategy().getStartingStrategy() == StartingStrategy::WORKER_RUSH;
 	Squad & workerFleeSquad = m_squadData.getSquad("WorkerFlee");
 	const bool earlyRushed = m_bot.Strategy().isEarlyRushed();
 	for (auto & worker : m_bot.Workers().getWorkers())
@@ -912,19 +911,38 @@ void CombatCommander::updateWorkerFleeSquad()
 			const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
 			fleeFromSlowThreats = !WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits);
 		}
+		const bool effectInfluence = Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot);
 		const bool flyingThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), false, m_bot);
 		const bool groundCloakedThreat = Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(tile, m_bot);
 		const bool groundThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), true, m_bot);
+		const bool slightlyInjured = worker.getHitPointsPercentage() < 100.f;
 		const bool injured = worker.getHitPointsPercentage() < m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT * 100;
 		const auto job = m_bot.Workers().getWorkerData().getWorkerJob(worker);
 		const auto isProxyWorker = m_bot.Workers().getWorkerData().isProxyWorker(worker);
 		const bool isWorkerRushed = m_bot.Strategy().isWorkerRushed();
+		bool targettedByOracle = false;
+		if (earlyRushed)	// no need to check after that, our workers will flee no matter what
+		{
+			for (auto & oracle : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_ORACLE))
+			{
+				if (!Util::unitHasBuff(oracle.getUnitPtr(), sc2::BUFF_ID::ORACLEWEAPON))
+					continue;
+				auto oracleRange = Util::GetAttackRangeForTarget(oracle.getUnitPtr(), worker.getUnitPtr(), m_bot);
+				if (Util::DistSq(oracle, worker) > oracleRange * oracleRange)
+					continue;
+				if (Util::isUnitFacingAnother(oracle.getUnitPtr(), worker.getUnitPtr()))
+				{
+					targettedByOracle = true;
+					break;
+				}
+			}
+		}
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
-		if (Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
-			|| (job == WorkerJobs::Idle && (groundThreat || flyingThreat))
-			|| (!earlyRushed &&
+		if (effectInfluence || (!workerRush &&
+			(job == WorkerJobs::Idle && worker.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_MULE && (groundThreat || flyingThreat))
+			|| ((!earlyRushed || slightlyInjured || targettedByOracle) &&
 				((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
-				|| (groundThreat && (injured || (isProxyWorker && isWorkerRushed)) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))))
+				|| (groundThreat && (injured || (isProxyWorker && isWorkerRushed)) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE)))))
 		{
 			// Put it in the squad if it is not defending or already in the squad
 			if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
@@ -932,7 +950,10 @@ void CombatCommander::updateWorkerFleeSquad()
 				m_bot.Workers().setCombatWorker(worker);
 				m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 			}
-			m_lastFleeingWorkerFrame[worker.getUnitPtr()] = m_bot.GetCurrentFrame();
+			if (!targettedByOracle && !workerRush)	// Do not let our workers flee for long when (maybe) targetted by an Oracle or when we do a worker rush
+			{
+				m_lastFleeingWorkerFrame[worker.getUnitPtr()] = m_bot.GetCurrentFrame();
+			}
 		}
 		else
 		{

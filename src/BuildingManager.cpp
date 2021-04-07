@@ -980,29 +980,30 @@ void BuildingManager::constructAssignedBuildings()
 							}
 							else // The addon position is not blocked by a building or non buildable tile
 							{
-								// We need to check if there is an enemy unit blocking it, if so, we just want to wait until it is not there
-								CCPosition addonPos = b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f);
-								for (auto & unit : m_bot.GetUnits())
+								// We want to allow the command to be sent only once per second
+								if (m_bot.GetCurrentFrame() - m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] < 22)
 								{
-									if (unit.isFlying() || unit.getType().isBuilding() || unit.getUnitPtr()->alliance == sc2::Unit::Alliance::Neutral)
-										continue;
-									const float dist = Util::Dist(addonPos, unit.getPosition());
-									const auto addonRadius = 1.f;
-									if (dist <= addonRadius + unit.getUnitPtr()->radius)
+									// We need to check if there is an enemy unit blocking it, if so, we just want to wait until it is not there
+									CCPosition addonPos = b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f);
+									for (auto & unit : m_bot.GetUnits())
 									{
-										// Unit is blocking addon
-										blocked = true;
-										std::stringstream ss;
-										ss << "Cannot build " << sc2::UnitTypeToName(b.type.getAPIUnitType()) << " at (" << addonPos.x << ", " << addonPos.y << ") because " << sc2::UnitTypeToName(unit.getAPIUnitType()) << " at (" << unit.getPosition().x << ", " << unit.getPosition().y << ") is blocking it.";
-										Util::Log(__FUNCTION__, ss.str(), m_bot);
-										// We want to allow the command to be sent only once per second
-										if (m_bot.GetCurrentFrame() - m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] < 22)
+										if (unit.isFlying() || unit.getType().isBuilding() || unit.getUnitPtr()->alliance == sc2::Unit::Alliance::Neutral)
+											continue;
+										const float dist = Util::Dist(addonPos, unit.getPosition());
+										const auto addonRadius = 1.f;
+										if (dist <= addonRadius + unit.getUnitPtr()->radius)
+										{
+											// Unit is blocking addon
+											blocked = true;
+											std::stringstream ss;
+											ss << "Cannot build " << sc2::UnitTypeToName(b.type.getAPIUnitType()) << " at (" << addonPos.x << ", " << addonPos.y << ") because " << sc2::UnitTypeToName(unit.getAPIUnitType()) << " at (" << unit.getPosition().x << ", " << unit.getPosition().y << ") is blocking it.";
+											Util::Log(__FUNCTION__, ss.str(), m_bot);
 											break;
+										}
 									}
+									if (blocked)
+										continue;
 								}
-								if (blocked)
-									continue;
-
 								// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
 								const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
 								bool isFlyingType = Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes);
