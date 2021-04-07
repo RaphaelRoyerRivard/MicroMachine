@@ -1,7 +1,7 @@
 #include "CCBot.h"
 #include "Util.h"
 
-CCBot::CCBot(std::string botVersion, bool realtime)
+CCBot::CCBot(std::string botName, std::string botVersion, bool realtime)
 	: m_map(*this)
 	, m_bases(*this)
 	, m_unitInfo(*this)
@@ -14,6 +14,7 @@ CCBot::CCBot(std::string botVersion, bool realtime)
 	, m_techTree(*this)
 	, m_concede(false)
 	, m_saidHallucinationLine(false)
+	, m_botName(botName)
 	, m_botVersion(botVersion)
 	, m_previousMacroGameLoop(-1)
 	, m_player1IsHuman(false)
@@ -218,7 +219,7 @@ void CCBot::OnGameStart() //full start
 
 	// Create logfile
 	Util::CreateLog(*this);
-	m_versionMessage << "MicroMachine v" << m_botVersion;
+	m_versionMessage << m_botName << " v" << m_botVersion;
 	Util::Log(__FUNCTION__, m_versionMessage.str(), *this);
 	std::cout << m_versionMessage.str() << std::endl;
 	selfRace = GetPlayerRace(Players::Self);
@@ -559,6 +560,8 @@ void CCBot::setUnits()
 	m_unitCompletedCount.clear();
 	m_strategy.setEnemyCurrentlyHasInvisible(m_gameCommander.Combat().isExpandBlockedByInvis());
 	m_strategy.setEnemyHasProxyHatchery(false);
+	auto mainBasePosition = m_startLocation;
+	auto enemyMainBasePosition = m_enemyBaseLocations[0];
 	bool firstPhoenix = true;
 	const bool zergEnemy = GetPlayerRace(Players::Enemy) == CCRace::Zerg;
 	StartProfiling("0.2.1 loopAllUnits");
@@ -689,6 +692,15 @@ void CCBot::setUnits()
 					case sc2::UNIT_TYPEID::ZERG_OVERSEER:
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVER:
 					case sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE:
+						break;
+					case sc2::UNIT_TYPEID::PROTOSS_VOIDRAY:
+					case sc2::UNIT_TYPEID::PROTOSS_STARGATE:
+						m_strategy.setShouldProduceAntiAirOffense(true);
+						if (Util::DistSq(unitptr->pos, mainBasePosition) < Util::DistSq(unitptr->pos, enemyMainBasePosition))
+						{
+							m_strategy.setShouldProduceAntiAirDefense(true);
+							Util::DebugLog(__FUNCTION__, "Air Harass detected: " + unit.getType().getName(), *this);
+						}
 						break;
 					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
 					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
@@ -1134,10 +1146,12 @@ void CCBot::clearDeadUnits()
 	{
 		auto tag = pair.first;
 		auto& unit = pair.second;
-		if (!unit.isAlive() ||
+		if (!unit.isValid() || !unit.isAlive() ||
 			unit.getPlayer() == Players::Enemy)	// In case of one of our units get neural parasited, its alliance will switch)
 		{
 			unitsToRemove.push_back(tag);
+			if (!unit.isValid())
+				continue;
 			if (unit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_KD8CHARGE)
 				m_KD8ChargesSpawnFrame.erase(tag);
 			if (unit.getPlayer() == Players::Enemy)
@@ -1179,14 +1193,16 @@ void CCBot::clearDeadUnits()
 	{
 		auto& unit = pair.second;
 		// Remove dead unit or old snapshot
-		if (!unit.isAlive() || 
+		if (!unit.isValid() || !unit.isAlive() || 
 			(unit.getPlayer() == Players::Self && unit.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_KD8CHARGE) ||	// In case of one of our units get neural parasited, its alliance will switch
 			(unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
 			&& m_map.isVisible(unit.getPosition())
 			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
 		{
+			unitsToRemove.push_back(pair.first);
+			if (!unit.isValid())
+				continue;
 			const auto unitPtr = unit.getUnitPtr();
-			unitsToRemove.push_back(unitPtr->tag);
 			this->Analyzer().increaseDeadEnemy(unitPtr->unit_type);
 			if (unit.getPlayer() == Players::Self)
 				m_parasitedUnits.erase(unitPtr->tag);
@@ -1203,10 +1219,10 @@ void CCBot::clearDeadUnits()
 	for (auto& pair : m_neutralUnits)
 	{
 		auto& unit = pair.second;
-		if (!unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
+		if (!unit.isValid() || !unit.isAlive() || (unit.getUnitPtr()->display_type == sc2::Unit::Snapshot
 			&& m_map.isVisible(unit.getPosition())
 			&& unit.getUnitPtr()->last_seen_game_loop < GetCurrentFrame()))
-			unitsToRemove.push_back(unit.getUnitPtr()->tag);
+			unitsToRemove.push_back(pair.first);
 	}
 	// Remove dead neutral units
 	for (auto & tag : unitsToRemove)
@@ -1558,6 +1574,12 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 3, player1, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, mapCenter - towardsCenter * 3, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 3, player2, 4);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 3, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 8, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 13, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 15, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, mapCenter - towardsCenter * 18, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, mapCenter + towardsCenter * 3, player2, 7);*/
 
 	// Test for Reaper trade
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter - towardsCenter * 2.5, player1, 1);
@@ -2054,6 +2076,9 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MEDIVAC, m_startLocation + towardsCenterX * 20 - towardsCenterY * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_LIBERATOR, m_startLocation + towardsCenterX * 20 - towardsCenterY * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, nat + towardsCenterX * 25, player1, 2);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_startLocation + towardsCenter * 20, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, nat + towardsCenter * 10, player2, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_RAVAGER, m_startLocation + towardsCenterX * 20 - towardsCenterY * 5, player1, 3);*/
 
 	// Test to see if siege tanks siege and unsiege when they should
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter - towardsCenter * 15, player2, 5);
@@ -2114,6 +2139,40 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter + towardsCenter * 10, player2, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter + towardsCenter * 5, player2, 2);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, mapCenter + towardsCenter * 5, player2, 1);*/
+
+	// Test to see if our Tank is fleeing instead of sieging against a unit we see but is out of vision
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, mapCenter - towardsCenterX * 6.5f, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_RAVEN, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, mapCenter + towardsCenterX * 6.5f, player1, 1);*/
+
+	// Test to see if our Cyclone can attack threats when defending an early rush
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation + towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_HELLION, m_startLocation - towardsCenter * 10, player1, 4);*/
+
+	// Test to see if our scout unit can skip to other base even if it can't see the enemy's resource depot
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenter * 10, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenterX * 10, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenterY * 10, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenter * 13, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterX * 13, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterY * 13, player2, 1);*/
+
+	// Test to see if Vikings can avoid trading badly against Tempests when there are ground units to support the Tempests
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, mapCenter + towardsCenter * 5, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, mapCenter - towardsCenter * 5, player2, 6);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STALKER, mapCenter + towardsCenter * 5, player1, 5);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_TEMPEST, mapCenter + towardsCenter * 8, player1, 2);*/
+
+	// Test to see if Marines are retreating instead of attacking Void Rays near Shield Batteries
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, nat, player2, 8);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_CYCLONE, m_startLocation, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, nat + towardsCenterX * 8, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, nat + towardsCenterX * 13, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, nat + towardsCenterX * 10, player1, 3);*/
+
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation - towardsCenter * 3, player2, 3);
+	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ORACLE, m_startLocation + towardsCenter * 10, player1, 1);
 }
 
 void CCBot::IssueCheats()
@@ -2197,10 +2256,11 @@ void CCBot::IssueCheats()
 
 	if (keyEnd)
 	{
-		for (auto u : Observation()->GetUnits())
+		for (auto & u : Observation()->GetUnits())
 		{
 			if (u->is_selected) {
-				Debug()->DebugSetLife(50.0f, u);
+				auto life = u->health > 50 ? 50 : 25;
+				Debug()->DebugSetLife(life, u);
 			}
 		}
 		Util::ClearChat(*this);

@@ -25,11 +25,24 @@ Strategy::Strategy(const std::string & name, const CCRace & race, const MM::Buil
 StrategyManager::StrategyManager(CCBot & bot)
     : m_bot(bot)
 {
-
+	STRATEGY_ORDERS[sc2::Terran] = {
+		"STANDARD",
+		"EARLY_EXPAND",
+		"FAST_PF",
+		"PROXY_CYCLONES",
+		"PROXY_MARAUDERS"
+	};
+	STRATEGY_ORDERS[sc2::Protoss] = {
+		"WORKER_RUSH"
+	};
+	STRATEGY_ORDERS[sc2::Zerg] = {
+	};
 }
 
 void StrategyManager::onStart()
 {
+	const auto selfRace = m_bot.GetPlayerRace(Players::Self);
+	auto & strategyOrder = STRATEGY_ORDERS[selfRace];
 	const auto opponentId = m_bot.GetOpponentId();
 	Util::DebugLog(__FUNCTION__, "Playing against " + opponentId, m_bot);
     readStrategyFile(m_bot.Config().ConfigFileLocation);
@@ -83,14 +96,14 @@ void StrategyManager::onStart()
 			bool validRaceSpecificStrategy = raceSpecificStrategy && enemyPlayerRace == it->second;
 			if (bestStrat < 0 || winPercentage > bestScore || (winPercentage == bestScore && ((winPercentage > 0.f && games >= bestScoreGames) || (winPercentage == 0.f && games < bestScoreGames))))
 			{
-				if ((!raceSpecificStrategy || validRaceSpecificStrategy) && Util::Contains(strategyName, STRATEGY_ORDER))
+				if ((!raceSpecificStrategy || validRaceSpecificStrategy) && Util::Contains(strategyName, strategyOrder))
 				{
 					bool currentStratHasPriority = true;
 					if (bestStrat >= 0 && winPercentage == bestScore)
 					{
 						std::string bestStrategyName = STRATEGY_NAMES[bestStrat];
-						auto currentStratOrderIndex = std::distance(STRATEGY_ORDER.begin(), std::find(STRATEGY_ORDER.begin(), STRATEGY_ORDER.end(), strategyName));
-						auto bestStratOrderIndex = std::distance(STRATEGY_ORDER.begin(), std::find(STRATEGY_ORDER.begin(), STRATEGY_ORDER.end(), bestStrategyName));
+						auto currentStratOrderIndex = std::distance(strategyOrder.begin(), std::find(strategyOrder.begin(), strategyOrder.end(), strategyName));
+						auto bestStratOrderIndex = std::distance(strategyOrder.begin(), std::find(strategyOrder.begin(), strategyOrder.end(), bestStrategyName));
 						if (currentStratOrderIndex > bestStratOrderIndex)
 							currentStratHasPriority = false;
 					}
@@ -228,6 +241,7 @@ void StrategyManager::checkForStrategyChange()
 			if (m_startingStrategy == PROXY_MARAUDERS && !m_bot.Commander().Combat().winAttackSimulation())
 			{
 				bool cancelProxy = false;
+				auto enemyLocation = m_bot.GetEnemyStartLocations()[0];
 				// Cancel PROXY_MARAUDERS if the opponent has too much static defenses
 				int activeStaticDefenseUnits = 0;
 				const auto staticDefenseTypes = { sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY };
@@ -236,8 +250,17 @@ void StrategyManager::checkForStrategyChange()
 					const auto & staticDefenseUnits = m_bot.GetEnemyUnits(staticDefenseType);
 					for (const auto & staticDefenseUnit : staticDefenseUnits)
 					{
+						if (staticDefenseUnit.isValid())
+							continue;
 						if (staticDefenseUnit.isPowered() && staticDefenseUnit.isCompleted())
-							++activeStaticDefenseUnits;
+						{
+							auto distToBase = Util::DistSq(m_bot.GetStartLocation(), staticDefenseUnit.getPosition());
+							auto distToEnemyBase = Util::DistSq(enemyLocation, staticDefenseUnit.getPosition());
+							if (distToEnemyBase < distToBase)
+							{
+								++activeStaticDefenseUnits;	// Count only static defenses on the opponent's side of the map
+							}
+						}
 					}
 				}
 
@@ -262,6 +285,12 @@ void StrategyManager::checkForStrategyChange()
 						// Cancel PROXY_MARAUDERS if the opponent has an immortal or attacking flying units
 						for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
 						{
+							if (enemyUnit.isValid())
+								continue;
+							auto distToBase = Util::DistSq(m_bot.GetStartLocation(), enemyUnit.getPosition());
+							auto distToEnemyBase = Util::DistSq(enemyLocation, enemyUnit.getPosition());
+							if (distToBase < distToEnemyBase)
+								continue;	// Do not cancel against proxied enemy units
 							if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
 							{
 								cancelProxy = true;
@@ -438,15 +467,19 @@ void StrategyManager::checkForStrategyChange()
 		if (!enemyUnits.empty())
 		{
 			bool groundUnit = false;
+			bool building = false;
 			for (const auto & enemyUnit : enemyUnits)
 			{
 				if (!enemyUnit.isFlying())
 				{
 					groundUnit = true;
-					break;
+				}
+				if (enemyUnit.getType().isBuilding())
+				{
+					building = true;
 				}
 			}
-			if (!groundUnit)
+			if (building && !groundUnit)
 			{
 				setStartingStrategy(STANDARD);
 			}

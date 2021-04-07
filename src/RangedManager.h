@@ -49,6 +49,7 @@ private:
 	std::map<const sc2::Unit *, long> m_siegedTanksLastValidTargetFrame;
 	std::map<const sc2::Unit *, long> m_tanksLastFrameFarFromRetreatGoal;
 	std::map<const sc2::Unit *, long> m_tanksLastSiegeFrame;
+	std::map<const sc2::Unit *, long> m_lastStimFrame;
 	bool m_flyingBarracksShouldReachEnemyRamp = true;
 	bool m_marauderAttackInitiated = false;
 
@@ -71,7 +72,8 @@ private:
 	bool ExecuteVikingMorphLogic(const sc2::Unit * viking, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, bool unitShouldHeal, bool isCycloneHelper);
 	bool ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goal, const sc2::Unit* target, sc2::Units & threats, sc2::Units & targets, sc2::Units & rangedUnits);
 	bool IsTankVulnerable(const sc2::Unit * tank, sc2::Units & targets, sc2::Units & rangedUnits);
-	bool ShouldTankUnsiege(const sc2::Unit * tank, sc2::Units & targets, sc2::Units & threats, float minRange);
+	bool ShouldTankUnsiege(const sc2::Unit * tank, sc2::Units & targets, sc2::Units & threats, float minRange, bool wouldHaveTarget);
+	bool AreEnemiesCloserToOurMineralLine(const sc2::Unit * tank, sc2::Units & targets);
 	bool ExecuteThorMorphLogic(const sc2::Unit * thor);
 	bool MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threats, const sc2::Unit * target, CCPosition goal, std::string goalDescription, bool unitShouldHeal, bool force);
 	bool ShouldAttackTarget(const sc2::Unit * rangedUnit, const sc2::Unit * target, sc2::Units & threats) const;
@@ -93,8 +95,8 @@ private:
 	bool ExecuteHealLogic(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool shouldHeal, bool prioritize = false);
 	const sc2::Unit * GetHealTarget(const sc2::Unit * medivac, const sc2::Units & allyUnits, bool filterFullHealthUnits) const;
 	bool ExecuteHealCommand(const sc2::Unit * medivac, const sc2::Unit * target, bool prioritize = false);
-	bool ExecuteStimLogic(const sc2::Unit * unit) const;
-	bool CanUseStim(const sc2::Unit * unit) const;
+	bool ExecuteStimLogic(const sc2::Unit * unit);
+	bool CanUseStim(const sc2::Unit * unit);
 	bool QueryIsAbilityAvailable(const sc2::Unit* unit, sc2::ABILITY_ID abilityId) const;
 	bool CanUseKD8Charge(const sc2::Unit * reaper);
 	bool ExecuteKD8ChargeLogic(const sc2::Unit * reaper, const sc2::Units & threats);
@@ -108,4 +110,5 @@ private:
 	CCPosition AttenuateZigzag(const sc2::Unit* rangedUnit, std::vector<const sc2::Unit*>& threats, CCPosition safeTile, CCPosition summedFleeVec) const;
 	sc2::Units & getThreats(const sc2::Unit * rangedUnit, const sc2::Units & targets);
 	const sc2::Unit * getTargetOnHighGround(const sc2::Unit * rangedUnit, const sc2::Units & targets, const sc2::Units & threats);
+	void cleanLastStimFrame();
 };

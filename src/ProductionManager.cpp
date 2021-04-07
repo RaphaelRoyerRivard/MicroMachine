@@ -348,7 +348,7 @@ void ProductionManager::manageBuildOrderQueue()
 						else if (data.isBuilding
 							&& !data.isAddon
 							&& !currentItem.type.getUnitType().isMorphedBuilding()
-							&& (!data.isResourceDepot))//If its a resource depot, we don't pre-move.
+							&& (!data.isResourceDepot))//If its a resource depot, we don't pre-move
 						{
 							// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
@@ -484,40 +484,23 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	}
 	else if (currentItem.type.isUpgrade())
 	{
-		// We don't want to skip the Banshee Cloak or Concussive Shell upgrade as they are very important
-		if (currentItem.type.getUpgrade() != MetaTypeEnum::BansheeCloak.getUpgrade() && currentItem.type.getUpgrade() != MetaTypeEnum::ConcussiveShells.getUpgrade())
+		const auto & typeData = m_bot.Data(currentItem.type);
+		// We don't want to skip the upgrade if we have a big bank of resources
+		if (m_bot.GetFreeMinerals() < typeData.mineralCost * 3 || m_bot.GetFreeGas() < typeData.gasCost * 3)
 		{
-			const auto & typeData = m_bot.Data(currentItem.type);
-			// We don't want to skip the upgrade if we have a big bank of resources
-			if (m_bot.GetFreeMinerals() < typeData.mineralCost * 3 || m_bot.GetFreeGas() < typeData.gasCost * 3)
+			// Do not research upgrade if we are under attack early (we want to save our resources)
+			/*if (m_bot.Strategy().isEarlyRushed())
 			{
-				// Do not research upgrade if we are under attack early (we want to save our resources)
-				if (m_bot.Strategy().isEarlyRushed())
-				{
-					shouldSkip = true;
-				}
-				else
-				{
-					// Do not research upgrade unless all our production structures are in use
-					const auto productionBuildingTypes = getProductionBuildingTypes(false);
-					for (const auto productionBuildingType : productionBuildingTypes)
-					{
-						// We don't care about Barracks, sometimes we do not use them
-						if (productionBuildingType == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
-							continue;
-						const auto & productionBuildings = m_bot.GetAllyUnits(productionBuildingType);
-						for (const auto & productionBuilding : productionBuildings)
-						{
-							if (!productionBuilding.isBeingConstructed() && (productionBuilding.isIdle() || productionBuilding.getUnitPtr()->orders[0].progress >= 0.8))
-							{
-								shouldSkip = true;
-								break;
-							}
-						}
-						if (shouldSkip)
-							break;
-					}
-				}
+				shouldSkip = true;
+			}
+			else*/ if (currentItem.type == MetaTypeEnum::CombatShield && !isTechStarted(MetaTypeEnum::Stimpack))
+			{
+				shouldSkip = true;
+			}
+			else
+			{
+				// Do not research upgrade unless all our production structures are in use
+				shouldSkip = isImportantProductionBuildingIdle(false, false);
 			}
 		}
 	}
@@ -661,7 +644,8 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 		}
 		else if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH)
 		{
-			shouldSkip = true;
+			if (!currentItem.type.getUnitType().isWorker())
+				shouldSkip = true;
 		}
 		else if (m_bot.Strategy().getStartingStrategy() == STANDARD)
 		{
@@ -819,11 +803,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int marinesCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marine.getUnitType(), false, true);
 				const int maraudersCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), false, true);
 				const int enemyStalkerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_STALKER).size();
-				const int enemyRoachAndRavagerCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACH).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGER).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_RAVAGERCOCOON).size();
-				const int enemyUnitsWeakAgainstMarauders = enemyStalkerCount + enemyRoachAndRavagerCount;
+				const int enemyRoachCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACH).size();
+				const int enemyUnitsWeakAgainstMarauders = enemyStalkerCount + enemyRoachCount;
 				const bool enemyEarlyRoachWarren = m_bot.GetCurrentFrame() < 4032 && !m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ROACHWARREN).empty();	// 3 minutes
-				const bool pumpOutMarauders = proxyMaraudersStrategy || enemyUnitsWeakAgainstMarauders >= 5;
-				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount < enemyUnitsWeakAgainstMarauders || (enemyRace == sc2::Protoss && reaperCount > 0 && !enemyHasStargate));
+				const bool pumpOutMarauders = proxyMaraudersStrategy;
+				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount * 2 < enemyUnitsWeakAgainstMarauders);
 				const auto factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
 
 				if (productionBuildingAddonCount < productionBuildingCount)
@@ -922,7 +906,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				}
 
 #ifndef NO_UNITS
-				if (!produceMarauders && (reaperCount == 0 || (((proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted) || enemyRace == sc2::Race::Terran) && producedReaperCount < 2)))
+				if (!produceMarauders && (producedReaperCount == 0 || (((proxyCyclonesStrategy && !proxyCyclonesStrategyCompleted) || enemyRace == sc2::Race::Terran) && producedReaperCount < 2)))
 				{
 					if (!m_queue.contains(MetaTypeEnum::Reaper))
 					{
@@ -1075,9 +1059,11 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, -1, false));
 				}
 #endif
-				const bool proxyCombatBuilding = m_bot.Strategy().enemyHasProxyCombatBuildings();
+				const bool dangerousProxyBuilding = m_bot.Strategy().enemyHasProxyCombatBuildings() || m_bot.Strategy().enemyHasProxyHatchery();
 				const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
+				const int deadCycloneCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_CYCLONE);
 				const int tankCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SiegeTank.getUnitType(), false, true);
+				const int deadTankCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_SIEGETANK) + m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED);
 				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), false, true);
 				const int thorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Thor.getUnitType(), false, true);
 				const int deadHellionCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_HELLION);
@@ -1100,7 +1086,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want at least 1 Hellion for every 2 enemy Zealot or 4 enemy Zergling. Against Zerg, we want to make at least 1 asap to defend against potential zergling rushes (unless the opponent already has Roaches)
-				else if (!shouldProduceFirstCyclone && !proxyCombatBuilding && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ shouldProduceHellionsAgainstEarlyLightUnitsRush || (hellionCount + 1) * 4 < enemyZerglingCount))
+				else if (!shouldProduceFirstCyclone && !dangerousProxyBuilding && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ shouldProduceHellionsAgainstEarlyLightUnitsRush || (hellionCount + 1) * 4 < enemyZerglingCount))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
@@ -1120,7 +1106,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want to have tanks to keep a balance between ground and air force, depending on what the enemy unit is producing
-				else if (!proxyCyclonesStrategy && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0) && (cycloneCount > 0 || tankCount == 0))
+				else if ((!proxyCyclonesStrategy || (cycloneCount + deadCycloneCount >= 1)) && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0 || (startingStrategy != StartingStrategy::FAST_PF && tankCount + deadTankCount == 0)) && (cycloneCount > 0 || tankCount == 0))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Thor);
 					m_queue.removeAllOfType(MetaTypeEnum::Hellion);

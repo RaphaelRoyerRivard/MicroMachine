@@ -527,20 +527,17 @@ void WorkerManager::handleMules()
 		}
 		else
 		{
-			if (!muleHarvests[id].mineral.isValid() && (mule.getUnitPtr()->orders.size() == 0 || mule.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE))
+			auto mineral = muleHarvests[id].mineral.getUnitPtr();
+			auto abilityId = mule.getUnitPtr()->orders.empty() ? sc2::ABILITY_ID::INVALID : mule.getUnitPtr()->orders[0].ability_id.ToType();
+			auto allowedAbilities = { sc2::ABILITY_ID::MOVE, sc2::ABILITY_ID::HARVEST_GATHER, sc2::ABILITY_ID::HARVEST_RETURN };
+			if (abilityId == sc2::ABILITY_ID::INVALID || !Util::Contains(abilityId, allowedAbilities))
 			{
-				auto mineral = m_bot.Buildings().getClosestMineral(mule.getPosition());
-				if (mineral != nullptr)
+				if (!mineral)
+					mineral = m_bot.Buildings().getClosestMineral(mule.getPosition());
+				if (mineral)
 				{
 					Micro::SmartRightClick(mule.getUnitPtr(), mineral, m_bot);//Cannot be done frame 1, thats why its in the 'else' clause
-					for (auto & unit : m_bot.GetNeutralUnits())
-					{
-						if (unit.first == mineral->tag)
-						{
-							muleHarvests[id].mineral = unit.second;
-							break;
-						}
-					}
+					muleHarvests[id].mineral = m_bot.GetNeutralUnits()[mineral->tag];
 				}
 			}
 		}
@@ -1250,29 +1247,33 @@ void WorkerManager::handleRepairWorkers()
 	for (auto & squadPair : squads)
 	{
 		auto & squad = squadPair.second;
-		if (squad.getSquadOrder().getType() == SquadOrderTypes::Defend)
+		for (auto & unit : squad.getUnits())
 		{
-			for (auto & unit : squad.getUnits())
+			// Only repair injured units
+			if (unit.getHitPointsPercentage() == 100.f)
+				continue;
+			// Check if we have the required gas to repair it
+			if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
+				continue;
+			// Check if the unit is a slow mech
+			if (!Util::Contains(unit.getAPIUnitType(), slowMechTypes))
+				continue;
+			// Check in which base the slow mech is
+			auto unitBase = m_bot.Bases().getBaseContainingPosition(unit.getPosition());
+			if (!unitBase)
+				continue;
+			int repairerCount = m_workerData.getWorkerRepairingTargetCount(unit);
+			int repairerCountTarget = std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f)));
+			while (repairerCount < repairerCountTarget)
 			{
-				// Only repair injured units
-				if (unit.getHitPointsPercentage() == 100.f)
-					continue;
-				// Check if we have the required gas to repair it
-				if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
-					continue;
-				// Check if the unit is a slow mech
-				if (!Util::Contains(unit.getAPIUnitType(), slowMechTypes))
-					continue;
-				int repairerCount = m_workerData.getWorkerRepairingTargetCount(unit);
-				int repairerCountTarget = std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f)));
-				while (repairerCount < repairerCountTarget)
-				{
-					Unit repairer = getClosestAvailableWorkerTo(unit.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, true);
-					if (!repairer.isValid())
-						break;
-					setRepairWorker(repairer, unit);
-					++repairerCount;
-				}
+				Unit repairer = getClosestAvailableWorkerTo(unit.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, true);
+				if (!repairer.isValid())
+					break;
+				auto repairerBase = m_bot.Bases().getBaseContainingPosition(repairer.getPosition());
+				if (!repairerBase)
+					break;
+				setRepairWorker(repairer, unit);
+				++repairerCount;
 			}
 		}
 	}

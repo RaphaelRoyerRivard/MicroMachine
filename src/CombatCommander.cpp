@@ -53,7 +53,7 @@ void CombatCommander::onStart()
 	SquadOrder idleOrder(SquadOrderTypes::Idle, CCPosition(), DefaultOrderRadius, "Prepare for battle");
 	m_squadData.addSquad("Idle", Squad("Idle", idleOrder, IdlePriority, m_bot));
 
-	// the squad that consists of fleeing workers
+	// the squad that consists of fleeing workers;
 	SquadOrder fleeOrder(SquadOrderTypes::Retreat, m_bot.GetStartLocation(), DefaultOrderRadius, "Worker flee");
 	m_squadData.addSquad("WorkerFlee", Squad("WorkerFlee", fleeOrder, WorkerFleePriority, m_bot));
 
@@ -896,6 +896,7 @@ void CombatCommander::updateIdleSquad()
 
 void CombatCommander::updateWorkerFleeSquad()
 {
+	const bool workerRush = m_bot.Strategy().getStartingStrategy() == StartingStrategy::WORKER_RUSH;
 	Squad & workerFleeSquad = m_squadData.getSquad("WorkerFlee");
 	const bool earlyRushed = m_bot.Strategy().isEarlyRushed();
 	for (auto & worker : m_bot.Workers().getWorkers())
@@ -908,19 +909,38 @@ void CombatCommander::updateWorkerFleeSquad()
 			const auto & enemyUnits = m_bot.GetKnownEnemyUnits();
 			fleeFromSlowThreats = !WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits);
 		}
+		const bool effectInfluence = Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot);
 		const bool flyingThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), false, m_bot);
 		const bool groundCloakedThreat = Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(tile, m_bot);
 		const bool groundThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), true, m_bot);
+		const bool slightlyInjured = worker.getHitPointsPercentage() < 100.f;
 		const bool injured = worker.getHitPointsPercentage() < m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT * 100;
 		const auto job = m_bot.Workers().getWorkerData().getWorkerJob(worker);
 		const auto isProxyWorker = m_bot.Workers().getWorkerData().isProxyWorker(worker);
 		const bool isWorkerRushed = m_bot.Strategy().isWorkerRushed();
+		bool targettedByOracle = false;
+		if (earlyRushed)	// no need to check after that, our workers will flee no matter what
+		{
+			for (auto & oracle : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_ORACLE))
+			{
+				if (!Util::unitHasBuff(oracle.getUnitPtr(), sc2::BUFF_ID::ORACLEWEAPON))
+					continue;
+				auto oracleRange = Util::GetAttackRangeForTarget(oracle.getUnitPtr(), worker.getUnitPtr(), m_bot);
+				if (Util::DistSq(oracle, worker) > oracleRange * oracleRange)
+					continue;
+				if (Util::isUnitFacingAnother(oracle.getUnitPtr(), worker.getUnitPtr()))
+				{
+					targettedByOracle = true;
+					break;
+				}
+			}
+		}
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
-		if (Util::PathFinding::HasEffectInfluenceOnTile(tile, worker.isFlying(), m_bot)
-			|| (job == WorkerJobs::Idle && (groundThreat || flyingThreat))
-			|| (!earlyRushed &&
+		if (effectInfluence || (!workerRush &&
+			(job == WorkerJobs::Idle && worker.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_MULE && (groundThreat || flyingThreat))
+			|| ((!earlyRushed || slightlyInjured || targettedByOracle) &&
 				((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
-				|| (groundThreat && (injured || (isProxyWorker && isWorkerRushed)) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE))))
+				|| (groundThreat && (injured || (isProxyWorker && isWorkerRushed)) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE)))))
 		{
 			// Put it in the squad if it is not defending or already in the squad
 			if (m_squadData.canAssignUnitToSquad(worker, workerFleeSquad))
@@ -928,7 +948,10 @@ void CombatCommander::updateWorkerFleeSquad()
 				m_bot.Workers().setCombatWorker(worker);
 				m_squadData.assignUnitToSquad(worker, workerFleeSquad);
 			}
-			m_lastFleeingWorkerFrame[worker.getUnitPtr()] = m_bot.GetCurrentFrame();
+			if (!targettedByOracle && !workerRush)	// Do not let our workers flee for long when (maybe) targetted by an Oracle or when we do a worker rush
+			{
+				m_lastFleeingWorkerFrame[worker.getUnitPtr()] = m_bot.GetCurrentFrame();
+			}
 		}
 		else
 		{
@@ -1374,16 +1397,20 @@ void CombatCommander::updateScoutSquad()
 	}
 	else if (scoutSquad.getUnits().empty())
 	{
+		std::vector<sc2::UNIT_TYPEID> scoutUnitTypes = { sc2::UNIT_TYPEID::TERRAN_REAPER, sc2::UNIT_TYPEID::TERRAN_MARINE };
 		Unit bestCandidate;
-		float distanceFromBase = 0.f;
-		for (auto & unit : m_combatUnits)
+		const auto base = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+		if (base)
 		{
-			BOT_ASSERT(unit.isValid(), "null unit in combat units");
-			if (unit.getUnitPtr()->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER)
+			for (auto scoutUnitType : scoutUnitTypes)
 			{
-				const auto base = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-				if(base)
+				float distanceFromBase = 0.f;
+				for (auto & unit : m_combatUnits)
 				{
+					BOT_ASSERT(unit.isValid(), "null unit in combat units");
+					if (unit.getUnitPtr()->unit_type != scoutUnitType)
+						continue;
+
 					const float dist = Util::DistSq(unit, base->getPosition());
 					if (!bestCandidate.isValid() || dist < distanceFromBase)
 					{
@@ -1394,11 +1421,12 @@ void CombatCommander::updateScoutSquad()
 						}
 					}
 				}
+				if (bestCandidate.isValid())
+				{
+					m_squadData.assignUnitToSquad(bestCandidate, scoutSquad);
+					break;
+				}
 			}
-		}
-		if(bestCandidate.isValid())
-		{
-			m_squadData.assignUnitToSquad(bestCandidate, scoutSquad);
 		}
 	}
 
@@ -1495,20 +1523,21 @@ void CombatCommander::updateAttackSquads()
     Squad & mainAttackSquad = m_squadData.getSquad("MainAttack");
 
 	// Worker rush strategy is not used anymore
-	/*if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH && m_bot.GetCurrentFrame() >= 224)
+	if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH)
 	{
-		for (auto & scv : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_SCV))
+		for (auto & probe : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::PROTOSS_PROBE))
 		{
-			if (!scv.isReturningCargo() && mainAttackSquad.getUnits().size() < 11 && m_squadData.canAssignUnitToSquad(scv, mainAttackSquad, true))
+			if (m_squadData.canAssignUnitToSquad(probe, mainAttackSquad, false))
 			{
-				m_bot.Workers().getWorkerData().setWorkerJob(scv, WorkerJobs::Combat);
-				m_squadData.assignUnitToSquad(scv, mainAttackSquad);
+				m_bot.Workers().getWorkerData().setWorkerJob(probe, WorkerJobs::Combat);
+				m_squadData.assignUnitToSquad(probe, mainAttackSquad);
 			}
 		}
 		
 		const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, getMainAttackLocation(), MainAttackOrderRadius, "Attack");
 		mainAttackSquad.setSquadOrder(mainAttackOrder);
-	}*/
+		return;
+	}
 
 	const auto squadCenter = mainAttackSquad.calcCenter();
 	std::vector<Unit> unitsToTransfer;
@@ -3121,10 +3150,11 @@ CCPosition CombatCommander::GetNextBaseLocationToScout()
 			{
 				continue;
 			}
-			if (baseLocation->isOccupiedByPlayer(Players::Enemy) ||
-				baseLocation->isOccupiedByPlayer(Players::Self) ||
-				m_bot.Map().getGroundDistance(baseLocation->getDepotPosition(), m_bot.GetStartLocation()) < 0 ||	// Cannot reach base by ground
-				Util::DistSq(scoutUnit, baseLocation->getPosition()) < 5.f * 5.f)
+			bool occupiedByEnemy = baseLocation->isOccupiedByPlayer(Players::Enemy);
+			bool occupiedBySelf = baseLocation->isOccupiedByPlayer(Players::Self);
+			bool unreachable = m_bot.Map().getGroundDistance(baseLocation->getDepotPosition(), m_bot.GetStartLocation()) < 0;	// Cannot reach base by ground
+			bool closeEnough = Util::DistSq(scoutUnit, baseLocation->getPosition()) < 5.f * 5.f;
+			if (occupiedByEnemy || occupiedBySelf || unreachable || closeEnough)
 			{
 				m_visitedBaseLocations.push_back(baseLocation);
 				continue;

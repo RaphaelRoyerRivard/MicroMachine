@@ -133,9 +133,8 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
         }
     }
 
-	//Determine the repair station location
-	const auto vectorAwayFromBase = Util::Normalized(getDepotPosition() - Util::GetPosition(getCenterOfMinerals()));
-	m_repairStationTilePosition = getDepotPosition() + vectorAwayFromBase * 7.f;
+	// also compute the distance map from the depot position
+	m_bot.Map().getDistanceMap(m_depotPosition);
 
 	//Determine if the geysers are together or split
 	if (m_geyserPositions.size() == 1)

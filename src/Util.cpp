@@ -1717,9 +1717,15 @@ bool Util::CanUnitAttackGround(const sc2::Unit * unit, CCBot & bot)
 float Util::GetSpecialCaseRange(const sc2::Unit* unit, CCBot & bot, sc2::Weapon::TargetType where, bool ignoreSpells)
 {
 	float range = GetSpecialCaseRange(unit->unit_type, where, ignoreSpells);
-	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER && !bot.Commander().Combat().isBunkerDangerous(unit))
+	if (unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER)
 	{
-		range = -1.f;
+		if (!bot.Commander().Combat().isBunkerDangerous(unit))
+			range = -1.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
+	{
+		if (!Util::unitHasBuff(unit, sc2::BUFF_ID::ORACLEWEAPON))
+			range = -1.f;
 	}
 	return range;
 }
@@ -1761,7 +1767,7 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
 	{
 		if (where != sc2::Weapon::TargetType::Air)
-			range = 4.f;
+			range = 6.f;	// They have a range of 4, but it seems like they can reach farther like Void Rays
 	}
 	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
 	{
@@ -1801,6 +1807,10 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY)
 	{
 		range = 6.f;
+	}
+	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+	{
+		range = 8.f;	// Their normal range is 6, but once they started attacking, it goes up to 8
 	}
 
 	return range;
@@ -2138,8 +2148,8 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	}
 	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
 	{
-		if (where != sc2::Weapon::TargetType::Air)
-			dps = 15.f;
+		if (where != sc2::Weapon::TargetType::Air && unitHasBuff(unit, sc2::BUFF_ID::ORACLEWEAPON))
+			dps = 24.4f;
 	}
 	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_DISRUPTORPHASED)
 	{
@@ -2257,6 +2267,11 @@ float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapo
 	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_SENTRY)
 	{
 		damage = 6.f;
+	}
+	else if (unit->unit_type == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
+	{
+		if (where != sc2::Weapon::TargetType::Air && Util::unitHasBuff(unit, sc2::BUFF_ID::ORACLEWEAPON))
+			damage = 15.f;
 	}
 
 	return damage;
@@ -2447,7 +2462,8 @@ bool Util::isUnitFacingAnother(const sc2::Unit * unitA, const sc2::Unit * unitB)
 {
 	const CCPosition facingVector = getFacingVector(unitA);
 	const CCPosition unitsVector = Util::Normalized(unitB->pos - unitA->pos);
-	return sc2::Dot2D(facingVector, unitsVector) > 0.99f;
+	const auto dot2d = sc2::Dot2D(facingVector, unitsVector);
+	return dot2d > 0.999f;
 }
 
 bool Util::isUnitLockedOn(const sc2::Unit * unit)

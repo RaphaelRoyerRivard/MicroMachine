@@ -34,6 +34,25 @@ void MeleeManager::executeMicro()
     {
         BOT_ASSERT(meleeUnit.isValid(), "melee unit is null");
 
+		bool isProbe = meleeUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PROBE;
+		bool isHealing = false;
+		if (isProbe)
+		{
+			if (meleeUnit.getShields() <= 5)
+			{
+				m_healingProbes.emplace(meleeUnit.getTag());
+				isHealing = true;
+			}
+			else if (meleeUnit.getShields() == meleeUnit.getUnitPtr()->shield_max)
+			{
+				m_healingProbes.erase(meleeUnit.getTag());
+			}
+			else if (m_healingProbes.find(meleeUnit.getTag()) != m_healingProbes.end())
+			{
+				isHealing = true;
+			}
+		}
+
 		bool flee = false;
 		if (m_order.getType() == SquadOrderTypes::Retreat)
 		{
@@ -57,13 +76,13 @@ void MeleeManager::executeMicro()
 				{
 					bool injured = false;
 					bool injuredUnitInDanger = false;
-					if (meleeUnit.getHitPointsPercentage() <= 25)
+					if (isProbe ? isHealing : (meleeUnit.getHitPointsPercentage() <= 25))
 					{
 						injured = true;
 						for (const auto & threat : m_targets)
 						{
 							const auto enemyRange = Util::GetAttackRangeForTarget(threat.getUnitPtr(), meleeUnit.getUnitPtr(), m_bot);
-							if (Util::Dist(threat, meleeUnit) < enemyRange + 0.75f)
+							if (Util::Dist(threat, meleeUnit) < enemyRange + (isProbe ? 2.f : 0.75f))
 							{
 								injuredUnitInDanger = true;
 								break;
@@ -88,7 +107,7 @@ void MeleeManager::executeMicro()
 						const sc2::Unit* closestRepairTarget = nullptr;
 						float distanceToClosestRepairTarget = 0;
 						// If the melee unit is a slightly injured worker
-						if (meleeUnit.getType().isWorker() && meleeUnit.getHitPointsPercentage() <= 50 && m_bot.GetMinerals() > (!hasRefinery ? 80 : hasBarracks ? 55 : 0) && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
+						if (meleeUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV && meleeUnit.getHitPointsPercentage() <= 50 && m_bot.GetMinerals() > (!hasRefinery ? 80 : hasBarracks ? 55 : 0) && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
 						{
 							const float range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
 							const float distSq = Util::DistSq(meleeUnit, target);
@@ -127,7 +146,7 @@ void MeleeManager::executeMicro()
 							const auto action = UnitAction(MicroActionType::RightClick, repairTarget, false, 0, "repair");
 							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 						}
-						else if (!injured)
+						else if (!injured || m_bot.Strategy().getStartingStrategy() == StartingStrategy::WORKER_RUSH)
 						{
 							// attack the target if we can see it, otherwise move towards it
 							if (target.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
@@ -221,7 +240,7 @@ Unit MeleeManager::getTarget(Unit meleeUnit, const std::vector<Unit> & targets) 
         BOT_ASSERT(targetUnit.isValid(), "null target unit in getTarget");
 
     	// We don't want workers to leave base to fight
-		if (meleeUnit.getType().isWorker() && m_squad->getName() != "ScoutDefense" && Util::TerrainHeight(targetUnit.getPosition()) != unitHeight && unitBaseLocation != m_bot.Bases().getBaseContainingPosition(targetUnit.getPosition()))
+		if (meleeUnit.getType().isWorker() && m_squad->getName() != "ScoutDefense" && m_squad->getName() != "MainAttack" && Util::TerrainHeight(targetUnit.getPosition()) != unitHeight && unitBaseLocation != m_bot.Bases().getBaseContainingPosition(targetUnit.getPosition()))
 			continue;
     	
 		const float priority = getAttackPriority(meleeUnit.getUnitPtr(), targetUnit.getUnitPtr(), allTargets, false, false, true);

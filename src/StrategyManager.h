@@ -59,14 +59,8 @@ class StrategyManager
 		//{ PROXY_MARAUDERS, sc2::Race::Protoss }
 	};
 
-	// Only strategies in this list and in the race specific list can be chosen
-	std::vector<std::string> STRATEGY_ORDER = {
-		"STANDARD",
-		"EARLY_EXPAND",
-		"FAST_PF",
-		"PROXY_CYCLONES",
-		"PROXY_MARAUDERS"
-	};
+	// Only strategies in this list and in the race specific list can be chosen, defined in the constructor
+	std::map<sc2::Race, std::vector<std::string>> STRATEGY_ORDERS;
 	
     CCBot & m_bot;
 

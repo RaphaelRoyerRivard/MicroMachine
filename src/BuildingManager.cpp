@@ -683,8 +683,7 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		CCTilePosition testLocation;
 		if (b.canBeBuiltElseWhere)
 		{
-
-			if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && m_bot.GetCurrentFrame() < 0)//[expand in main first CC], before 4 minutes
+			if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER && m_bot.GetCurrentFrame() < 4 * 60 * 22.4f)//[expand in main first CC], before 4 minutes
 			{
 				testLocation = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, false, true, false, true, true);
 			}
@@ -981,27 +980,30 @@ void BuildingManager::constructAssignedBuildings()
 							}
 							else // The addon position is not blocked by a building or non buildable tile
 							{
-								// We need to check if there is an enemy unit blocking it, if so, we just want to wait until it is not there
-								CCPosition addonPos = b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f);
-								for (auto & unit : m_bot.GetUnits())
+								// We want to allow the command to be sent only once per second
+								if (m_bot.GetCurrentFrame() - m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] < 22)
 								{
-									if (unit.isFlying() || unit.getType().isBuilding() || unit.getUnitPtr()->alliance == sc2::Unit::Alliance::Neutral)
-										continue;
-									const float dist = Util::Dist(addonPos, unit.getPosition());
-									const auto addonRadius = 1.f;
-									if (dist <= addonRadius + unit.getUnitPtr()->radius)
+									// We need to check if there is an enemy unit blocking it, if so, we just want to wait until it is not there
+									CCPosition addonPos = b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f);
+									for (auto & unit : m_bot.GetUnits())
 									{
-										// Unit is blocking addon
-										blocked = true;
-										std::stringstream ss;
-										ss << "Cannot build " << sc2::UnitTypeToName(b.type.getAPIUnitType()) << " at (" << addonPos.x << ", " << addonPos.y << ") because " << sc2::UnitTypeToName(unit.getAPIUnitType()) << " at (" << unit.getPosition().x << ", " << unit.getPosition().y << ") is blocking it.";
-										Util::Log(__FUNCTION__, ss.str(), m_bot);
-										break;
+										if (unit.isFlying() || unit.getType().isBuilding() || unit.getUnitPtr()->alliance == sc2::Unit::Alliance::Neutral)
+											continue;
+										const float dist = Util::Dist(addonPos, unit.getPosition());
+										const auto addonRadius = 1.f;
+										if (dist <= addonRadius + unit.getUnitPtr()->radius)
+										{
+											// Unit is blocking addon
+											blocked = true;
+											std::stringstream ss;
+											ss << "Cannot build " << sc2::UnitTypeToName(b.type.getAPIUnitType()) << " at (" << addonPos.x << ", " << addonPos.y << ") because " << sc2::UnitTypeToName(unit.getAPIUnitType()) << " at (" << unit.getPosition().x << ", " << unit.getPosition().y << ") is blocking it.";
+											Util::Log(__FUNCTION__, ss.str(), m_bot);
+											break;
+										}
 									}
+									if (blocked)
+										continue;
 								}
-								if (blocked)
-									continue;
-
 								// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
 								const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
 								bool isFlyingType = Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes);
@@ -1017,6 +1019,7 @@ void BuildingManager::constructAssignedBuildings()
 								{
 									// Spam the build ability in case there is a unit blocking it
 									Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
+									m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] = m_bot.GetCurrentFrame();
 									std::stringstream ss;
 									ss << sc2::UnitTypeToName(b.builderUnit.getAPIUnitType()) << " at (" << b.builderUnit.getPosition().x << ", " << b.builderUnit.getPosition().y << ") was given the command " << sc2::AbilityTypeToName(m_bot.Data(b.type).buildAbility);
 									Util::Log(__FUNCTION__, ss.str(), m_bot);
@@ -1312,7 +1315,9 @@ void BuildingManager::checkForCompletedBuildings()
             {
 				if(b.type.isRefinery())//Worker that built the refinery, will be a gas worker for it.
 				{
+					m_bot.StartProfiling("0.8.7.1    setGasJob");
 					m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Gas, b.buildingUnit);
+					m_bot.StopProfiling("0.8.7.1    setGasJob");
 				}
 				else
 				{
@@ -1326,13 +1331,17 @@ void BuildingManager::checkForCompletedBuildings()
 						}
 					}
 
+					m_bot.StartProfiling("0.8.7.2    finishedWithWorker");
 					m_bot.Workers().finishedWithWorker(b.builderUnit);
+					m_bot.StopProfiling("0.8.7.2    finishedWithWorker");
 					if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
 					{
 						if (b.buildingUnit.getType() == MetaTypeEnum::Factory.getUnitType() && Util::DistSq(b.buildingUnit, Util::GetPosition(m_proxyLocation)) < 15.f * 15.f)
 						{
+							m_bot.StartProfiling("0.8.7.3    setRepairJob");
 							m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Repair);
 							b.builderUnit.move(m_proxyLocation);
+							m_bot.StopProfiling("0.8.7.3    setRepairJob");
 						}
 					}
 
@@ -1988,6 +1997,14 @@ void BuildingManager::updateBaseBuildings()
 		{
 			m_baseBuildings.push_back(building);
 		}
+	}
+	auto it = m_buildAddonCommandFrame.begin();
+	while (it != m_buildAddonCommandFrame.end())
+	{
+		if (!it->first || !it->first->is_alive || it->first->add_on_tag != 0)
+			it = m_buildAddonCommandFrame.erase(it);
+		else
+			++it;
 	}
 }
 
