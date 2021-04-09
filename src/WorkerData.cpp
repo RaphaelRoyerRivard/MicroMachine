@@ -246,7 +246,7 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
 		if (!isProxyWorker(worker))
 		{
 			m_idleWorkers.insert(worker);
-			sendIdleWorkerToMiningSpot(worker, false);
+			//sendIdleWorkerToMiningSpot(worker, false);	// commented it because it caused problem with combat workers trying to defend
 		}
 	}
 }
