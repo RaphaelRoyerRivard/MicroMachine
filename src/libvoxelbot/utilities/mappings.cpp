@@ -284,10 +284,23 @@ void init() {
     carrier1.range = 9; // Start range is 8, but after the interceptors are launched the carrier can move up to 14 units away
     carrier1.speed = 2.14 * 1.4; // Note: this is in normal game speed
 
+	Weapon oracle1;
+	oracle1.type = Weapon::TargetType::Ground;
+	oracle1.damage_ = 15;
+	DamageBonus oracleBonus;
+	oracleBonus.attribute = sc2::Attribute::Light;
+	oracleBonus.bonus = 7;
+	oracle1.damage_bonus = { oracleBonus };
+	oracle1.attacks = 1;
+	oracle1.range = 6;
+	oracle1.speed = 0.61 * 1.4; // Note: this is in normal game speed
+
     // Battlecruiser's attacks don't seem to be included...
     mUnitTypes[(int)UNIT_TYPEID::TERRAN_BATTLECRUISER].weapons = { bc1, bc2 };
 
     mUnitTypes[(int)UNIT_TYPEID::PROTOSS_CARRIER].weapons = { carrier1 };
+
+	mUnitTypes[(int)UNIT_TYPEID::PROTOSS_ORACLE].weapons = { oracle1 };
 
     // Hacky fix for build order optimizer not taking this into account
     mUnitTypes[(int)UNIT_TYPEID::PROTOSS_GATEWAY].tech_requirement = UNIT_TYPEID::PROTOSS_PYLON;

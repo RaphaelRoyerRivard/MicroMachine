@@ -2346,6 +2346,24 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 			shouldGroundFight = winGroundSimulation;
 			shouldAirFight = winAirSimulation;
 		}
+		else if (m_order.getType() == SquadOrderTypes::Defend)
+		{
+			bool onlyOracles = true;
+			for (auto threat : threatsToKeep)
+			{
+				if (threat->unit_type != sc2::UNIT_TYPEID::PROTOSS_ORACLE)
+				{
+					onlyOracles = false;
+					break;
+				}
+			}
+			if (onlyOracles)
+			{
+				// We should always try to defend against Oracles since it's better to lose army units than workers
+				shouldGroundFight = true;
+				shouldAirFight = true;
+			}
+		}
 	}
 	m_bot.StopProfiling("0.10.4.1.5.1.5.4          SimulateCombat");
 
