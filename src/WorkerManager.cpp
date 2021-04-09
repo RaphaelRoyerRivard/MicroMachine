@@ -1072,7 +1072,7 @@ void WorkerManager::handleRepairWorkers()
 					stopRepairing(worker);
 				}
 				//Stop repairing units that are no longer wanting to be repaired
-				else if (Util::DistSq(repairedUnit, m_bot.Commander().Combat().GetIdlePosition()) < 100 )
+				else if (m_bot.Bases().getBaseContainingPosition(worker.getPosition()) != m_bot.Bases().getBaseContainingPosition(repairedUnit.getPosition()))
 				{
 					stopRepairing(worker);
 				}
@@ -1148,6 +1148,11 @@ void WorkerManager::handleRepairWorkers()
 				continue;
 			}
 
+			if (getWorkerData().getWorkerRepairingTargetCount(unit) > std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f))))//Max number of worker proportional to health. Same logic as lower in this method.
+			{
+				continue;
+			}
+
 			float healthPercentage = unit.getHitPointsPercentage();
 			if (healthPercentage < 100 && !unit.isBeingConstructed())
 			{
@@ -1158,7 +1163,7 @@ void WorkerManager::handleRepairWorkers()
 				if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
 					continue;
 
-				const float distanceSquare = Util::DistSq(unit, base->getPosition());
+				const float distanceSquare = Util::DistSq(unit, base->getRepairStationTilePosition());
 				if (distanceSquare < REPAIR_STATION_SIZE * REPAIR_STATION_SIZE)
 				{
 					unitsToRepair.push_back(unit);
@@ -1179,9 +1184,9 @@ void WorkerManager::handleRepairWorkers()
 					break;
 				}
 
-				if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || workerData.getWorkerJob(worker) == WorkerJobs::Repair)
+				if (workerData.getWorkerJob(worker) == WorkerJobs::Idle || workerData.getWorkerJob(worker) == WorkerJobs::Minerals || workerData.getWorkerJob(worker) == WorkerJobs::Repair)
 				{
-					const float distanceSquare = Util::DistSq(worker, base->getPosition());
+					const float distanceSquare = Util::DistSq(worker, base->getRepairStationTilePosition());
 					if (distanceSquare < REPAIR_STATION_WORKER_ZONE_SIZE * REPAIR_STATION_WORKER_ZONE_SIZE)
 					{
 						//Add worker to the list of repair station worker for this base
@@ -1263,7 +1268,7 @@ void WorkerManager::handleRepairWorkers()
 			if (!unitBase)
 				continue;
 			int repairerCount = m_workerData.getWorkerRepairingTargetCount(unit);
-			int repairerCountTarget = std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f)));
+			int repairerCountTarget = std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f)));//Max number of worker proportional to health. Same logic as higher in this method.
 			while (repairerCount < repairerCountTarget)
 			{
 				Unit repairer = getClosestAvailableWorkerTo(unit.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, true);

@@ -291,7 +291,7 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     }
     else if (previousJob == WorkerJobs::Repair)
     {
-
+		
     }
 	else if (previousJob == WorkerJobs::Idle)
 	{
@@ -817,5 +817,6 @@ void WorkerData::WorkerStoppedRepairing(const Unit & unit)
     {
         getWorkerRepairingThatTarget(target).erase(unit);
         m_workerRepairTarget.erase(unit);
+		m_workerRepairing[target].erase(unit);
     }
 }

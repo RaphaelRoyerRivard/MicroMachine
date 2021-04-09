@@ -64,7 +64,7 @@ CCPosition RepairStationManager::getBestRepairStationForUnit(const sc2::Unit* un
 	const auto it = m_destinations.find(unit);
 	if (it != m_destinations.end() && it->second != nullptr)
 	{
-		return it->second->getPosition();
+		return it->second->getRepairStationTilePosition();
 	}
 
 	reservePlaceForUnit(unit);
@@ -75,7 +75,7 @@ CCPosition RepairStationManager::getBestRepairStationForUnit(const sc2::Unit* un
 		return {};
 	}
 
-	return base->getPosition();
+	return base->getRepairStationTilePosition();
 }
 
 bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocation * baseLocation, bool ignoreUnderAttack) const
@@ -108,7 +108,7 @@ bool RepairStationManager::isRepairStationValidForBaseLocation(const BaseLocatio
 		bool proxyRepairWorker = false;
 		for (const auto & worker : workerData.getWorkers())
 		{
-			if (workerData.getWorkerJob(worker) == WorkerJobs::Repair && Util::DistSq(worker, baseLocation->getPosition()) < 10 * 10)
+			if (workerData.getWorkerJob(worker) == WorkerJobs::Repair && Util::DistSq(worker, baseLocation->getRepairStationTilePosition()) < 10 * 10)
 			{
 				proxyRepairWorker = true;
 				break;
@@ -138,7 +138,7 @@ void RepairStationManager::reservePlaceForUnit(const sc2::Unit* unit)
 				continue;
 
 			const int count = repairStation.second.size();
-			const float distance = Util::DistSq(unit->pos, repairStation.first->getPosition());
+			const float distance = Util::DistSq(unit->pos, repairStation.first->getRepairStationTilePosition());
 			if (baseLocation == nullptr || count < lowestCount || (count == lowestCount && distance < lowestDistance))
 			{
 				baseLocation = repairStation.first;
@@ -161,6 +161,6 @@ void RepairStationManager::drawRepairStations()
 #endif
 	for(const auto & repairStation : m_repairStations)
 	{
-		m_bot.Map().drawText(repairStation.first->getPosition(), "Units to repair: " + std::to_string(repairStation.second.size()));
+		m_bot.Map().drawText(repairStation.first->getRepairStationTilePosition(), "Units to repair: " + std::to_string(repairStation.second.size()));
 	}
 }
