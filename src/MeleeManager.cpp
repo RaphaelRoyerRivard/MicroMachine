@@ -28,6 +28,21 @@ void MeleeManager::executeMicro()
     const std::vector<Unit> & meleeUnits = getUnits();
 	const bool hasBarracks = !m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS).empty();
 	const bool hasRefinery = !m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERY).empty();
+	const bool workerRushStrat = m_bot.Strategy().getStartingStrategy() == WORKER_RUSH;
+	if (workerRushStrat)
+	{
+		if (!m_waitForProbesHealed)
+		{
+			if (m_healingProbes.size() >= meleeUnits.size() - 1)
+			{
+				m_waitForProbesHealed = true;
+			}
+		}
+		else if (m_healingProbes.size() <= 1)
+		{
+			m_waitForProbesHealed = false;
+		}
+	}
 
     // for each meleeUnit
     for (auto & meleeUnit : meleeUnits)
@@ -51,9 +66,14 @@ void MeleeManager::executeMicro()
 			{
 				isHealing = true;
 			}
+			if (!isHealing && m_waitForProbesHealed)
+			{
+				isHealing = true;
+			}
 		}
 
 		bool flee = false;
+		bool noTarget = false;
 		if (m_order.getType() == SquadOrderTypes::Retreat)
 		{
 			flee = true;
@@ -62,7 +82,7 @@ void MeleeManager::executeMicro()
         {
 			if (m_targets.empty())
 			{
-				flee = true;
+				noTarget = true;
 			}
 			else
 			{
@@ -70,7 +90,7 @@ void MeleeManager::executeMicro()
 				Unit target = getTarget(meleeUnit, m_targets);
 				if (!target.isValid())
 				{
-					flee = true;
+					noTarget = true;
 				}
 				else
 				{
@@ -107,7 +127,7 @@ void MeleeManager::executeMicro()
 						const sc2::Unit* closestRepairTarget = nullptr;
 						float distanceToClosestRepairTarget = 0;
 						// If the melee unit is a slightly injured worker
-						if (meleeUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV && meleeUnit.getHitPointsPercentage() <= 50 && m_bot.GetMinerals() > (!hasRefinery ? 80 : hasBarracks ? 55 : 0) && (m_bot.Strategy().isWorkerRushed() || m_bot.Strategy().getStartingStrategy() == WORKER_RUSH))
+						if (meleeUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV && meleeUnit.getHitPointsPercentage() <= 50 && m_bot.GetMinerals() > (!hasRefinery ? 80 : hasBarracks ? 55 : 0) && (m_bot.Strategy().isWorkerRushed() || workerRushStrat))
 						{
 							const float range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
 							const float distSq = Util::DistSq(meleeUnit, target);
@@ -146,7 +166,7 @@ void MeleeManager::executeMicro()
 							const auto action = UnitAction(MicroActionType::RightClick, repairTarget, false, 0, "repair");
 							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 						}
-						else if (!injured || m_bot.Strategy().getStartingStrategy() == StartingStrategy::WORKER_RUSH)
+						else if (!injured || workerRushStrat)
 						{
 							// attack the target if we can see it, otherwise move towards it
 							if (target.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
@@ -190,7 +210,7 @@ void MeleeManager::executeMicro()
             }
         }
 		
-		if(flee)
+		if(flee || noTarget)
 		{
 			if (Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(meleeUnit.getPosition()), meleeUnit.getUnitPtr(), m_bot) > 0)
 			{
@@ -205,7 +225,14 @@ void MeleeManager::executeMicro()
 					flee = false;
 				}
 			}
-			if (flee)
+			auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+			if (noTarget && workerRushStrat && enemyBase && enemyBase->containsPositionApproximative(m_order.getPosition()))
+			{
+				auto enemyMineral = enemyBase->getMinerals()[0].getUnitPtr();
+				const auto action = UnitAction(MicroActionType::RightClick, enemyMineral, false, 0, "mineral walk");
+				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+			}
+			else if (flee || noTarget)
 			{
 				const auto action = UnitAction(MicroActionType::Move, m_order.getPosition(), false, 0, "flee");
 				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
