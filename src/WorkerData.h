@@ -26,7 +26,6 @@ class WorkerData
     std::map<Unit, int>     m_depotWorkerCount;
     std::map<Unit, Unit>    m_workerRefineryMap;
 	std::map<Unit, std::vector<Unit>> m_refineryWorkerMap;
-    std::map<Unit, Unit>    m_workerDepotMap;
     std::map<Unit, std::set<Unit>> m_workerRepairing;
 	std::map<const BaseLocation*, std::list<Unit>> m_repairStationWorkers;
     std::map<Unit, Unit>    m_workerRepairTarget;
@@ -40,6 +39,7 @@ public:
 	//Public variables for simplicity
 	std::map<Unit, Unit>	m_workerMineralMap;
 	std::map<Unit, std::list<sc2::Tag>> m_mineralWorkersMap;
+	std::map<Unit, Unit>    m_workerDepotMap;
 
     WorkerData(CCBot & bot);
 

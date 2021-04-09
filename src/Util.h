@@ -278,6 +278,7 @@ namespace Util
 	bool IsUnitCloakedAndSafe(const sc2::Unit * unit, CCBot & bot);
 	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * unit, const std::vector<sc2::AvailableAbilities> & availableAbilitiesForUnits);
 	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbilities & availableAbilities);
+	bool IsFarMineralPatch(const sc2::UNIT_TYPEID type);
     
     std::string     GetStringFromRace(const sc2::Race & race);
     sc2::Race       GetRaceFromString(const std::string & race);

@@ -21,23 +21,24 @@ void WorkerManager::onFrame(bool executeMacro)
 {
 	if (m_bot.Config().AllowDebug)
 	{
-		//22.4 frames per second
-		if (m_bot.GetCurrentFrame() > 0)// && m_bot.GetCurrentFrame() % 24 == 0 && m_bot.GetCurrentFrame() >= (int)(22.5 * 8 * 60))//Every seconds starting at 5 minutes
-		{
-			const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals;
-			const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene;
-			Util::AddStatistic("Mineral GatherRate", mineralRate);
-			Util::AddStatistic("Gas GatherRate", gasRate);
-		}
-		if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % (int)(22.4 * 10 * 60) == 0)//after 5 minutes
-		{
-			Util::DisplayStatistic(m_bot, "Mineral GatherRate");
-			Util::DisplayStatistic(m_bot, "Gas GatherRate");
-		}
-		if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % (int)(22.4 * 10 * 60 + 1) == 0)
-		{
-			Util::ClearChat(m_bot);
-		}
+		//const int minutes = 2;
+		//const int frames = (int)(22.4 * minutes * 60);
+		//if (m_bot.GetCurrentFrame() > 0)
+		//{
+		//	const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals;
+		//	const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene;
+		//	Util::AddStatistic("Mineral GatherRate", mineralRate);
+		//	Util::AddStatistic("Gas GatherRate", gasRate);
+		//}
+		//if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % frames == 0)//after 5 minutes
+		//{
+		//	Util::DisplayStatistic(m_bot, "Mineral GatherRate");
+		//	Util::DisplayStatistic(m_bot, "Gas GatherRate");
+		//}
+		//if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % frames + 1 == 0)
+		//{
+		//	Util::ClearChat(m_bot);
+		//}
 	}
 
 	m_bot.StartProfiling("0.7.1   m_workerData.updateAllWorkerData");
@@ -359,29 +360,64 @@ void WorkerManager::handleMineralWorkers()
 	//TODO If no idle, move far patch worker to close patch?
 	for (auto & worker : workers)
 	{
-		if (!worker.isValid() || !worker.isAlive() || worker.isReturningCargo() || worker.getType().isMule())
+		if (!worker.isValid() || !worker.isAlive() || worker.getType().isMule())
 			continue;
 		auto job = m_workerData.getWorkerJob(worker);
 
 		//Correct the mining workers target if its not the right one.
 		if (job == WorkerJobs::Minerals)
 		{
-			sc2::Tag target;
-			if (worker.getUnitPtr()->orders.size() > 0)
+			auto mineral = m_workerData.m_workerMineralMap.find(worker);
+			if (mineral != m_workerData.m_workerMineralMap.end())
 			{
-				if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
+				auto mineralWorkers = m_workerData.m_mineralWorkersMap.find(mineral->second);
+				
+				if (worker.isReturningCargo())
 				{
-					continue;
+					if (!m_bot.Config().IsRealTime)
+					{
+						auto depot = m_workerData.m_workerDepotMap.find(worker);
+						if (depot != m_workerData.m_workerDepotMap.end())
+						{
+							auto distsq = Util::DistSq(worker.getPosition(), depot->second.getPosition());
+							if (distsq > 14 && worker.getUnitPtr()->orders.size() < 2)//Distsq 14 is arbitrary but works
+							{
+								//3.5 is the distance with the center of the depot, its arbitrary
+								worker.move(depot->second.getPosition() + Util::Normalized(worker.getPosition() - depot->second.getPosition()) * 3.5);
+								worker.shiftRightClick(depot->second);
+							}
+						}
+					}
 				}
-				target = worker.getUnitPtr()->orders[0].target_unit_tag;
-			}
-
-			auto it = m_workerData.m_workerMineralMap.find(worker);
-			if (it != m_workerData.m_workerMineralMap.end())
-			{
-				if (it->second.getTag() != target)
+				else
 				{
-					worker.rightClick(it->second);
+					if (!m_bot.Config().IsRealTime && Util::DistSq(worker.getPosition(), mineral->second.getPosition()) > 3 && worker.getUnitPtr()->orders.size() < 2)//Distsq 3 is arbitrary but works great
+					{
+						if (!Util::IsFarMineralPatch(mineral->second.getAPIUnitType()))
+						{
+							//1.3 is the distance with the mineral, its arbitrary
+							worker.move(mineral->second.getPosition() + Util::Normalized(worker.getPosition() - mineral->second.getPosition()) * 1.3);
+							worker.shiftRightClick(mineral->second);
+						}
+					}
+					else
+					{
+				
+						sc2::Tag target;
+						if (worker.getUnitPtr()->orders.size() > 0)
+						{
+							if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
+							{
+								continue;
+							}
+							target = worker.getUnitPtr()->orders[0].target_unit_tag;
+						}
+				
+						if (mineral->second.getTag() != target)
+						{
+							worker.rightClick(mineral->second);
+						}
+					}
 				}
 			}
 			else//Unfound, not normal
@@ -391,8 +427,7 @@ void WorkerManager::handleMineralWorkers()
 		}
 	}
 
-	//split workers on first frame
-	//TODO can be improved by preventing the worker from retargetting a very far mineral patch
+	//split workers on first frame and handle proxy
 	if (!m_isFirstFrame)
 	{
 		return;
@@ -597,7 +632,15 @@ void WorkerManager::handleGasWorkers()
 
 	if (m_bot.Strategy().isWorkerRushed())
 	{
-		gasWorkersTarget = 3;
+		//If we have enough gas to produce reaper or we are/have produced one, we don't need gas anymore.
+		if (m_bot.GetGas() >= 50 || m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, true, true) > 0)
+		{
+			gasWorkersTarget = 0;
+		}
+		else
+		{
+			gasWorkersTarget = 3;
+		}
 	}
 
 	for (auto & geyser : m_bot.GetAllyGeyserUnits())
@@ -1013,7 +1056,7 @@ void WorkerManager::handleRepairWorkers()
 				// We inform the manager that we are no longer repairing
 				stopRepairing(worker);
 			}
-            Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
+            Unit& repairedUnit = m_workerData.getWorkerRepairTarget(worker);
 			if (repairedUnit.isValid())
 			{
 				auto type = repairedUnit.getType();
@@ -1025,6 +1068,11 @@ void WorkerManager::handleRepairWorkers()
 				}
 				// We do not try to repair dead units nor full health units
 				else if (!repairedUnit.isAlive() || repairedUnit.getHitPoints() + std::numeric_limits<float>::epsilon() >= repairedUnit.getUnitPtr()->health_max)
+				{
+					stopRepairing(worker);
+				}
+				//Stop repairing units that are no longer wanting to be repaired
+				else if (m_bot.Bases().getBaseContainingPosition(worker.getPosition()) != m_bot.Bases().getBaseContainingPosition(repairedUnit.getPosition()))
 				{
 					stopRepairing(worker);
 				}
@@ -1100,6 +1148,11 @@ void WorkerManager::handleRepairWorkers()
 				continue;
 			}
 
+			if (getWorkerData().getWorkerRepairingTargetCount(unit) > std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f))))//Max number of worker proportional to health. Same logic as lower in this method.
+			{
+				continue;
+			}
+
 			float healthPercentage = unit.getHitPointsPercentage();
 			if (healthPercentage < 100 && !unit.isBeingConstructed())
 			{
@@ -1110,7 +1163,7 @@ void WorkerManager::handleRepairWorkers()
 				if (unit.getType().gasPrice() > 0 && gas <= MIN_GAS_TO_REPAIR)
 					continue;
 
-				const float distanceSquare = Util::DistSq(unit, base->getPosition());
+				const float distanceSquare = Util::DistSq(unit, base->getRepairStationTilePosition());
 				if (distanceSquare < REPAIR_STATION_SIZE * REPAIR_STATION_SIZE)
 				{
 					unitsToRepair.push_back(unit);
@@ -1131,9 +1184,9 @@ void WorkerManager::handleRepairWorkers()
 					break;
 				}
 
-				if (workerData.getWorkerJob(worker) == WorkerJobs::Minerals || workerData.getWorkerJob(worker) == WorkerJobs::Repair)
+				if (workerData.getWorkerJob(worker) == WorkerJobs::Idle || workerData.getWorkerJob(worker) == WorkerJobs::Minerals || workerData.getWorkerJob(worker) == WorkerJobs::Repair)
 				{
-					const float distanceSquare = Util::DistSq(worker, base->getPosition());
+					const float distanceSquare = Util::DistSq(worker, base->getRepairStationTilePosition());
 					if (distanceSquare < REPAIR_STATION_WORKER_ZONE_SIZE * REPAIR_STATION_WORKER_ZONE_SIZE)
 					{
 						//Add worker to the list of repair station worker for this base
@@ -1215,7 +1268,7 @@ void WorkerManager::handleRepairWorkers()
 			if (!unitBase)
 				continue;
 			int repairerCount = m_workerData.getWorkerRepairingTargetCount(unit);
-			int repairerCountTarget = std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f)));
+			int repairerCountTarget = std::min(3, 5 - int(std::floor(unit.getHitPointsPercentage() / 20.f)));//Max number of worker proportional to health. Same logic as higher in this method.
 			while (repairerCount < repairerCountTarget)
 			{
 				Unit repairer = getClosestAvailableWorkerTo(unit.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, true);

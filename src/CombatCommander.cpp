@@ -859,9 +859,7 @@ void CombatCommander::updateIdlePosition()
 		}
 		if (baseLocation)
 		{
-			// Don't go on the base location, but a bit in front to not block it
-			const auto vectorAwayFromBase = Util::Normalized(baseLocation->getDepotPosition() - Util::GetPosition(baseLocation->getCenterOfMinerals()));
-			idlePosition = baseLocation->getDepotPosition() + vectorAwayFromBase * 7.f;
+			idlePosition = baseLocation->getRepairStationTilePosition();
 		}
 		m_idlePosition = idlePosition;
 	}

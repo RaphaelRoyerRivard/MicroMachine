@@ -764,21 +764,25 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 		if (!m_queue.contains(workerMetatype))//check queue
 		{
-			//[Worker limit][Max worker]
-			auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
-			int optimalWorkers = 0;
-			for (const auto base : bases)
+			auto idleCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Idle);
+			if (idleCount < 4)//[Number idle worker] If we have less idle workers than our maximum of 4 idle workers, 1 for each close patch in our next expand
 			{
-				optimalWorkers += base->getOptimalMineralWorkerCount() + base->getOptimalGasWorkerCount();
-			}
-			const int maxWorkersForNextExpansion = totalBaseCount > bases.size() ? 22 : 11;	// 16 minerals + 6 gas
-			const int maxWorkers = 80;
-			const int workerCount = m_bot.Workers().getNumWorkers();
-			if (optimalWorkers + maxWorkersForNextExpansion > workerCount && workerCount < maxWorkers)
-			{
-				if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
+				//[Worker limit][Max worker]
+				auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+				int optimalWorkers = 0;
+				for (const auto base : bases)
 				{
-					m_queue.queueItem(MM::BuildOrderItem(workerMetatype, 1, false));
+					optimalWorkers += base->getOptimalMineralWorkerCount() + base->getOptimalGasWorkerCount();
+				}
+				const int maxWorkersForNextExpansion = totalBaseCount > bases.size() ? 22 : 11;	// 16 minerals + 6 gas
+				const int maxWorkers = 80;
+				const int workerCount = m_bot.Workers().getNumWorkers();
+				if (optimalWorkers + maxWorkersForNextExpansion > workerCount && workerCount < maxWorkers)
+				{
+					if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
+					{
+						m_queue.queueItem(MM::BuildOrderItem(workerMetatype, 1, false));
+					}
 				}
 			}
 		}
