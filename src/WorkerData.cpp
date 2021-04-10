@@ -612,6 +612,7 @@ const char * WorkerData::getJobCode(const Unit & unit)
     if (j == WorkerJobs::Repair)    return "R";
     if (j == WorkerJobs::Move)      return "O";
     if (j == WorkerJobs::Scout)     return "S";
+    if (j == WorkerJobs::GeyserProtect) return "P";
     return "X";
 }
 

@@ -37,14 +37,16 @@ class WorkerManager
 
 	std::map <sc2::Tag, Unit *> workerMineral;
 	std::map<sc2::Tag, std::vector<Unit *>> mineralWorkers;
-
+	std::map<const sc2::Unit*, Unit> geyserProtectors;	//<geyser, worker>
     mutable WorkerData  m_workerData;
     Unit m_previousClosestWorker;
 
     void setMineralWorker(const Unit & unit);
     
+	void handleGeyserProtectWorkers();
+	void freeGeyserProtectors();
 	void handleMineralWorkers();
-	std::vector<CCUnitID> dispatchWorkerToMineral(Unit mineral, std::vector<CCUnitID> usedWorkers, Unit ressourceDepot);
+	std::vector<CCUnitID> dispatchWorkerToMineral(const Unit & mineral, std::vector<CCUnitID> usedWorkers, const Unit & ressourceDepot);
 	void handleMules();
     void handleGasWorkers();
 	void handleIdleWorkers();
