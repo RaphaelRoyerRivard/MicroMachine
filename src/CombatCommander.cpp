@@ -3234,12 +3234,12 @@ void CombatCommander::CleanActions(const std::vector<Unit> &combatUnits)
 			continue;
 		}
 
-		// If the unit is no longer in this squad
-		if (!Util::Contains(rangedUnit, units))
+		// If the unit is no longer in this squad (this was causing bugs)
+		/*if (!Util::Contains(rangedUnit, units))
 		{
 			unitsToClear.push_back(rangedUnit);
 			continue;
-		}
+		}*/
 
 		// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 		if (ShouldSkipFrame(rangedUnit))

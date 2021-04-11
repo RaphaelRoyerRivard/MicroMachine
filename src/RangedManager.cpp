@@ -1494,12 +1494,20 @@ bool RangedManager::ShouldTankUnsiege(const sc2::Unit * tank, sc2::Units & targe
 		}
 	}
 	bool isSieged = tank->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED;
-	bool siegedTankHasNoTargetForAWhile = !isCloseToRetreatGoal && m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] > 22.4f * 2.5f;
+	bool tankRecentlyHadTarget = m_bot.GetCurrentFrame() - m_siegedTanksLastValidTargetFrame[tank] < 22.4f * 2.5f;
+	bool siegedTankHasNoTargetForAWhile = !isCloseToRetreatGoal && !tankRecentlyHadTarget;
 	bool tankSiegedRecently = m_bot.GetCurrentFrame() - m_tanksLastSiegeFrame[tank] < 22.4f * 2.5f;
 	// If there are close ground threats
 	// or 2.5s passed since the last valid target while not being close to its retreat location
 	// or it's been at least 2.5s since the tank morphed
 	if (enemiesCloserToMainBase || closeGroundThreats || (isSieged && !tankSiegedRecently && siegedTankHasNoTargetForAWhile))
+	{
+		return true;
+	}
+
+	// If tank is blocking an addon and hadn't recently shot
+	auto & addonBlockingTanks = m_bot.Commander().Combat().getAddonBlockingTanks();
+	if (!tankRecentlyHadTarget && addonBlockingTanks.find(tank) != addonBlockingTanks.end())
 	{
 		return true;
 	}
