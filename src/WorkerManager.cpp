@@ -68,6 +68,9 @@ void WorkerManager::onFrame(bool executeMacro)
 		m_bot.StartProfiling("0.7.7   handleRepairWorkers");
 		handleRepairWorkers();
 		m_bot.StopProfiling("0.7.7   handleRepairWorkers");
+		m_bot.StartProfiling("0.7.8   handleBuildWorkers");
+		handleBuildWorkers();
+		m_bot.StopProfiling("0.7.8   handleBuildWorkers");
 	}
     drawResourceDebugInfo();
     drawWorkerInformation();
@@ -1041,8 +1044,8 @@ void WorkerManager::handleRepairWorkers()
     if (!Util::IsTerran(m_bot.GetSelfRace()))
         return;
 
-	int mineral = m_bot.GetFreeMinerals();
-	int gas = m_bot.GetFreeGas();
+	int mineral = m_bot.GetMinerals();
+	int gas = m_bot.GetGas();
 
 	m_bot.StartProfiling("0.7.7.1    stopRepairing");
     for (auto & worker : m_workerData.getWorkers())
@@ -1072,7 +1075,7 @@ void WorkerManager::handleRepairWorkers()
 					stopRepairing(worker);
 				}
 				//Stop repairing units that are no longer wanting to be repaired
-				else if (m_bot.Bases().getBaseContainingPosition(worker.getPosition()) != m_bot.Bases().getBaseContainingPosition(repairedUnit.getPosition()))
+				else if (!repairedUnit.getType().isBuilding() && m_bot.Bases().getBaseContainingPosition(worker.getPosition()) != m_bot.Bases().getBaseContainingPosition(repairedUnit.getPosition()))
 				{
 					stopRepairing(worker);
 				}
@@ -1229,10 +1232,13 @@ void WorkerManager::handleRepairWorkers()
 		{
 			auto position = building.getPosition();
 			auto worker = getClosestAvailableWorkerTo(position);
-			if (worker.isValid() && Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), position, true, m_bot))
+			if (worker.isValid())
 			{
-				setRepairWorker(worker, building);
-				buildingAutomaticallyRepaired.push_back(building);
+				if (Util::DistSq(position, worker.getPosition()) < 30 * 30 && Util::PathFinding::IsPathToGoalSafe(worker.getUnitPtr(), position, true, m_bot))
+				{
+					setRepairWorker(worker, building);
+					buildingAutomaticallyRepaired.push_back(building);
+				}
 			}
 		}
 		else if (percentage >= MAX_HEALTH)
@@ -1277,12 +1283,36 @@ void WorkerManager::handleRepairWorkers()
 				auto repairerBase = m_bot.Bases().getBaseContainingPosition(repairer.getPosition());
 				if (!repairerBase)
 					break;
+				if (unitBase != repairerBase)
+					break;
 				setRepairWorker(repairer, unit);
 				++repairerCount;
 			}
 		}
 	}
 	m_bot.StopProfiling("0.7.7.4    repairSlowMechs");
+}
+
+void WorkerManager::handleBuildWorkers()
+{
+	for (auto & worker : getWorkers())
+	{
+		if (m_workerData.getWorkerJob(worker) != WorkerJobs::Build)
+			continue;
+		bool found = false;
+		for (auto & building : m_bot.Buildings().getBuildings())
+		{
+			if (building.builderUnit.getTag() == worker.getTag())
+			{
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+		{
+			finishedWithWorker(worker);
+		}
+	}
 }
 
 void WorkerManager::repairCombatBuildings()//Ignores if the path or the area around the building is safe or not.

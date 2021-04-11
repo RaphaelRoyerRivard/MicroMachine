@@ -49,6 +49,7 @@ class WorkerManager
     void handleGasWorkers();
 	void handleIdleWorkers();
     void handleRepairWorkers();
+	void handleBuildWorkers();
 	void repairCombatBuildings();
 	void HandleWorkerTransfer();
 	void lowPriorityChecks();
@@ -63,7 +64,6 @@ public:
     void onFrame(bool executeMacro);
 
     void finishedWithWorker(const Unit & unit);
-	void sendIdleWorkerToIdleSpot(const Unit & worker);
     void drawResourceDebugInfo();
     void drawWorkerInformation();
     void setScoutWorker(Unit worker);

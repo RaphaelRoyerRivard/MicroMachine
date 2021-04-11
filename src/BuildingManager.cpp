@@ -1331,9 +1331,6 @@ void BuildingManager::checkForCompletedBuildings()
 						}
 					}
 
-					m_bot.StartProfiling("0.8.7.2    finishedWithWorker");
-					m_bot.Workers().finishedWithWorker(b.builderUnit);
-					m_bot.StopProfiling("0.8.7.2    finishedWithWorker");
 					if (m_bot.Strategy().getStartingStrategy() == PROXY_CYCLONES)
 					{
 						if (b.buildingUnit.getType() == MetaTypeEnum::Factory.getUnitType() && Util::DistSq(b.buildingUnit, Util::GetPosition(m_proxyLocation)) < 15.f * 15.f)

@@ -44,16 +44,6 @@ void WorkerData::updateAllWorkerData()
         {
             setWorkerJob(worker, WorkerJobs::Idle);
         }
-
-    	// This caused a bug where the first proxy worker wouldn't stay a proxy worker
-		/*auto it = m_proxyWorkers.find(worker);
-    	if (it != m_proxyWorkers.end())
-    	{
-			if (job == WorkerJobs::Minerals || job == WorkerJobs::Gas)
-				m_proxyWorkers.erase(it);
-    	}*/
-
-        // TODO: If it's a gas worker whose refinery has been destroyed, set to minerals
     }
 
     // remove any worker units which no longer exist in the game
@@ -246,7 +236,6 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
 		if (!isProxyWorker(worker))
 		{
 			m_idleWorkers.insert(worker);
-			sendIdleWorkerToMiningSpot(worker, false);
 		}
 	}
 }
@@ -303,7 +292,7 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     }
 	else if (previousJob == WorkerJobs::None)//Only affects newly spawned workers
 	{
-		sendIdleWorkerToMiningSpot(unit, true);
+
 	}
 
     m_workerJobMap.erase(unit);
