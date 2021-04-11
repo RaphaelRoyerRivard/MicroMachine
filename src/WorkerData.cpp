@@ -821,3 +821,18 @@ void WorkerData::WorkerStoppedRepairing(const Unit & unit)
 		m_workerRepairing[target].erase(unit);
     }
 }
+
+Unit WorkerData::updateWorkerDepot(const Unit & worker, const Unit & mineral)
+{
+	auto base = m_bot.Bases().getBaseContainingPosition(mineral.getPosition());
+	if (base)
+	{
+		auto & depot = base->getResourceDepot();
+		if (depot.isValid() && depot.isCompleted() && !depot.isFlying())
+		{
+			m_workerDepotMap[worker] = depot;
+			return depot;
+		}
+	}
+	return Unit();
+}

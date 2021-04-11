@@ -456,54 +456,55 @@ void WorkerManager::handleMineralWorkers()
 			auto mineral = m_workerData.m_workerMineralMap.find(worker);
 			if (mineral != m_workerData.m_workerMineralMap.end())
 			{
-				auto mineralWorkers = m_workerData.m_mineralWorkersMap.find(mineral->second);
-				
-				if (worker.isReturningCargo())
+				auto depot = m_workerData.updateWorkerDepot(worker, mineral->second);
+				if (depot.isValid())
 				{
-					if (!m_bot.Config().IsRealTime)
+					if (worker.isReturningCargo())
 					{
-						auto depot = m_workerData.m_workerDepotMap.find(worker);
-						if (depot != m_workerData.m_workerDepotMap.end())
+						if (!m_bot.Config().IsRealTime)
 						{
-							auto distsq = Util::DistSq(worker.getPosition(), depot->second.getPosition());
+							auto distsq = Util::DistSq(worker.getPosition(), depot.getPosition());
 							if (distsq > 14 && worker.getUnitPtr()->orders.size() < 2)//Distsq 14 is arbitrary but works
 							{
 								//3.5 is the distance with the center of the depot, its arbitrary
-								worker.move(depot->second.getPosition() + Util::Normalized(worker.getPosition() - depot->second.getPosition()) * 3.5);
-								worker.shiftRightClick(depot->second);
+								worker.move(depot.getPosition() + Util::Normalized(worker.getPosition() - depot.getPosition()) * 3.5);
+								worker.shiftRightClick(depot);
 							}
-						}
-					}
-				}
-				else
-				{
-					if (!m_bot.Config().IsRealTime && Util::DistSq(worker.getPosition(), mineral->second.getPosition()) > 3 && worker.getUnitPtr()->orders.size() < 2)//Distsq 3 is arbitrary but works great
-					{
-						if (!Util::IsFarMineralPatch(mineral->second.getAPIUnitType()))
-						{
-							//1.3 is the distance with the mineral, its arbitrary
-							worker.move(mineral->second.getPosition() + Util::Normalized(worker.getPosition() - mineral->second.getPosition()) * 1.3);
-							worker.shiftRightClick(mineral->second);
 						}
 					}
 					else
 					{
-				
-						sc2::Tag target;
-						if (worker.getUnitPtr()->orders.size() > 0)
+						if (!m_bot.Config().IsRealTime && Util::DistSq(worker.getPosition(), mineral->second.getPosition()) > 3 && worker.getUnitPtr()->orders.size() < 2)//Distsq 3 is arbitrary but works great
 						{
-							if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
+							if (!Util::IsFarMineralPatch(mineral->second.getAPIUnitType()))
 							{
-								continue;
+								//1.3 is the distance with the mineral, its arbitrary
+								worker.move(mineral->second.getPosition() + Util::Normalized(worker.getPosition() - mineral->second.getPosition()) * 1.3);
+								worker.shiftRightClick(mineral->second);
 							}
-							target = worker.getUnitPtr()->orders[0].target_unit_tag;
 						}
-				
-						if (mineral->second.getTag() != target)
+						else
 						{
-							worker.rightClick(mineral->second);
+							sc2::Tag target;
+							if (worker.getUnitPtr()->orders.size() > 0)
+							{
+								if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
+								{
+									continue;
+								}
+								target = worker.getUnitPtr()->orders[0].target_unit_tag;
+							}
+
+							if (mineral->second.getTag() != target)
+							{
+								worker.rightClick(mineral->second);
+							}
 						}
 					}
+				}
+				else // No depot for the mineral, the worker shouldn't be a mineral worker
+				{
+					m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 				}
 			}
 			else//Unfound, not normal
