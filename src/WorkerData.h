@@ -8,7 +8,7 @@ class CCBot;
 
 namespace WorkerJobs
 {
-    enum { Minerals, Gas, Build, Combat, Idle, Repair, Move, Scout, None, Num };
+    enum { Minerals, Gas, Build, Combat, Idle, Repair, Move, Scout, GeyserProtect, None, Num };
 }
 
 class WorkerData
@@ -39,7 +39,7 @@ public:
 	//Public variables for simplicity
 	std::map<Unit, Unit>	m_workerMineralMap;
 	std::map<Unit, std::list<sc2::Tag>> m_mineralWorkersMap;
-	std::map<Unit, Unit>    m_workerDepotMap;
+	std::map<Unit, Unit>    m_workerDepotMap;	//<worker, depot>
 
     WorkerData(CCBot & bot);
 
@@ -79,4 +79,5 @@ public:
 	int getWorkerRepairingTargetCount(const Unit & unit);
     const std::set<Unit> getWorkerRepairingThatTargetC(const Unit & unit) const;
     void WorkerStoppedRepairing(const Unit & unit);
+	Unit updateWorkerDepot(const Unit & worker, const Unit & mineral);
 };

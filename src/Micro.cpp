@@ -35,6 +35,13 @@ MicroActionType Micro::SmartMove(const sc2::Unit * unit, const sc2::Point2D & ta
 	return MicroActionType::Move;
 }
 
+MicroActionType Micro::SmartHold(const sc2::Unit * unit, bool queued, CCBot & bot)
+{
+	BOT_ASSERT(unit != nullptr, "Unit is null");
+	bot.Actions()->UnitCommand(unit, sc2::ABILITY_ID::HOLDPOSITION, queued);
+	return MicroActionType::Move;
+}
+
 MicroActionType Micro::SmartRightClick(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
     BOT_ASSERT(unit != nullptr, "Unit is null");

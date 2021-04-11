@@ -50,6 +50,7 @@ void WorkerManager::onFrame(bool executeMacro)
 	m_bot.StopProfiling("0.7.1.1   m_workerData.updateIdleMineralTarget");
 	if (executeMacro)
 	{
+		handleGeyserProtectWorkers();
 		m_bot.StartProfiling("0.7.2   handleMineralWorkers");
 		handleMineralWorkers();
 		m_bot.StopProfiling("0.7.2   handleMineralWorkers");
@@ -326,6 +327,91 @@ void WorkerManager::stopRepairing(const Unit & worker)
     finishedWithWorker(worker);
 }
 
+void WorkerManager::handleGeyserProtectWorkers()
+{
+	auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
+	if (m_bot.Strategy().isWorkerRushed() || enemyRace == sc2::Race::Terran || enemyRace == sc2::Race::Random)
+		return;
+	auto mainBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+	if (!mainBase)
+		return;
+	if (m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() > 1)
+	{
+		freeGeyserProtectors();
+		return;
+	}
+	auto enemyWorkerType = enemyRace == sc2::Race::Protoss ? sc2::UNIT_TYPEID::PROTOSS_PROBE : sc2::UNIT_TYPEID::ZERG_DRONE;
+	auto & gasBuildings = m_bot.GetAllyUnits(Util::GetRefineryType().getAPIUnitType());
+	sc2::Units freeGeysers;
+	for (auto & geyser : mainBase->getGeysers())
+	{
+		bool freeGeyser = true;
+		for (auto & gasBuilding : gasBuildings)
+		{
+			if (Util::DistSq(gasBuilding, geyser) < 1)
+			{
+				freeGeyser = false;
+				break;
+			}
+		}
+		if (freeGeyser)
+			freeGeysers.push_back(geyser.getUnitPtr());
+	}
+	if (freeGeysers.empty())
+	{
+		freeGeyserProtectors();
+		return;
+	}
+	for (auto freeGeyser : freeGeysers)
+	{
+		bool shouldProtect = false;
+		for (auto & enemyWorker : m_bot.GetEnemyUnits(enemyWorkerType))
+		{
+			if (!enemyWorker.isValid())
+				continue;
+			if (enemyWorker.getUnitPtr()->last_seen_game_loop != m_bot.GetCurrentFrame())
+				continue;
+			if (Util::DistSq(enemyWorker, freeGeyser->pos) < 10 * 10)
+			{
+				shouldProtect = true;
+				break;
+			}
+		}
+		auto it = geyserProtectors.find(freeGeyser);
+		if (it == geyserProtectors.end())
+		{
+			if (shouldProtect)
+			{
+				auto worker = getClosestAvailableWorkerTo(freeGeyser->pos);
+				if (worker.isValid())
+				{
+					geyserProtectors[freeGeyser] = worker;
+					m_workerData.setWorkerJob(worker, WorkerJobs::GeyserProtect);
+					Micro::SmartMove(worker.getUnitPtr(), freeGeyser->pos, m_bot);
+					Micro::SmartHold(worker.getUnitPtr(), true, m_bot);
+				}
+			}
+		}
+		else
+		{
+			if (!shouldProtect)
+			{
+				m_workerData.setWorkerJob(it->second, WorkerJobs::Idle);
+				geyserProtectors.erase(it);
+			}
+		}
+	}
+}
+
+void WorkerManager::freeGeyserProtectors()
+{
+	for (auto geyserProtector : geyserProtectors)
+	{
+		m_workerData.setWorkerJob(geyserProtector.second, WorkerJobs::Idle);
+	}
+	geyserProtectors.clear();
+}
+
 void WorkerManager::handleMineralWorkers()
 {
 	handleMules();
@@ -373,54 +459,55 @@ void WorkerManager::handleMineralWorkers()
 			auto mineral = m_workerData.m_workerMineralMap.find(worker);
 			if (mineral != m_workerData.m_workerMineralMap.end())
 			{
-				auto mineralWorkers = m_workerData.m_mineralWorkersMap.find(mineral->second);
-				
-				if (worker.isReturningCargo())
+				auto depot = m_workerData.updateWorkerDepot(worker, mineral->second);
+				if (depot.isValid())
 				{
-					if (!m_bot.Config().IsRealTime)
+					if (worker.isReturningCargo())
 					{
-						auto depot = m_workerData.m_workerDepotMap.find(worker);
-						if (depot != m_workerData.m_workerDepotMap.end())
+						if (!m_bot.Config().IsRealTime)
 						{
-							auto distsq = Util::DistSq(worker.getPosition(), depot->second.getPosition());
+							auto distsq = Util::DistSq(worker.getPosition(), depot.getPosition());
 							if (distsq > 14 && worker.getUnitPtr()->orders.size() < 2)//Distsq 14 is arbitrary but works
 							{
 								//3.5 is the distance with the center of the depot, its arbitrary
-								worker.move(depot->second.getPosition() + Util::Normalized(worker.getPosition() - depot->second.getPosition()) * 3.5);
-								worker.shiftRightClick(depot->second);
+								worker.move(depot.getPosition() + Util::Normalized(worker.getPosition() - depot.getPosition()) * 3.5);
+								worker.shiftRightClick(depot);
 							}
-						}
-					}
-				}
-				else
-				{
-					if (!m_bot.Config().IsRealTime && Util::DistSq(worker.getPosition(), mineral->second.getPosition()) > 3 && worker.getUnitPtr()->orders.size() < 2)//Distsq 3 is arbitrary but works great
-					{
-						if (!Util::IsFarMineralPatch(mineral->second.getAPIUnitType()))
-						{
-							//1.3 is the distance with the mineral, its arbitrary
-							worker.move(mineral->second.getPosition() + Util::Normalized(worker.getPosition() - mineral->second.getPosition()) * 1.3);
-							worker.shiftRightClick(mineral->second);
 						}
 					}
 					else
 					{
-				
-						sc2::Tag target;
-						if (worker.getUnitPtr()->orders.size() > 0)
+						if (!m_bot.Config().IsRealTime && Util::DistSq(worker.getPosition(), mineral->second.getPosition()) > 3 && worker.getUnitPtr()->orders.size() < 2)//Distsq 3 is arbitrary but works great
 						{
-							if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
+							if (!Util::IsFarMineralPatch(mineral->second.getAPIUnitType()))
 							{
-								continue;
+								//1.3 is the distance with the mineral, its arbitrary
+								worker.move(mineral->second.getPosition() + Util::Normalized(worker.getPosition() - mineral->second.getPosition()) * 1.3);
+								worker.shiftRightClick(mineral->second);
 							}
-							target = worker.getUnitPtr()->orders[0].target_unit_tag;
 						}
-				
-						if (mineral->second.getTag() != target)
+						else
 						{
-							worker.rightClick(mineral->second);
+							sc2::Tag target;
+							if (worker.getUnitPtr()->orders.size() > 0)
+							{
+								if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
+								{
+									continue;
+								}
+								target = worker.getUnitPtr()->orders[0].target_unit_tag;
+							}
+
+							if (mineral->second.getTag() != target)
+							{
+								worker.rightClick(mineral->second);
+							}
 						}
 					}
+				}
+				else // No depot for the mineral, the worker shouldn't be a mineral worker
+				{
+					m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 				}
 			}
 			else//Unfound, not normal
@@ -480,7 +567,7 @@ void WorkerManager::handleMineralWorkers()
 	m_bot.StopProfiling("0.7.2.2     frame1WorkerSplit");
 }
 
-std::vector<CCUnitID> WorkerManager::dispatchWorkerToMineral(Unit mineral, std::vector<CCUnitID> usedWorkers, Unit ressourceDepot)
+std::vector<CCUnitID> WorkerManager::dispatchWorkerToMineral(const Unit & mineral, std::vector<CCUnitID> usedWorkers, const Unit & ressourceDepot)
 {
 	auto worker = getClosestAvailableWorkerTo(mineral.getPosition(), usedWorkers, 0);
 	if (!worker.isValid())

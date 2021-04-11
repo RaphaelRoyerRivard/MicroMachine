@@ -308,7 +308,7 @@ float MapTools::terrainHeight(float x, float y) const
 
 int MapTools::getGroundDistance(const CCPosition & src, const CCPosition & dest) const
 {
-    if (m_allMaps.size() > 50)
+    if (m_allMaps.size() > 100)
     {
         m_allMaps.clear();
     }

@@ -601,6 +601,7 @@ const char * WorkerData::getJobCode(const Unit & unit)
     if (j == WorkerJobs::Repair)    return "R";
     if (j == WorkerJobs::Move)      return "O";
     if (j == WorkerJobs::Scout)     return "S";
+    if (j == WorkerJobs::GeyserProtect) return "P";
     return "X";
 }
 
@@ -808,4 +809,19 @@ void WorkerData::WorkerStoppedRepairing(const Unit & unit)
         m_workerRepairTarget.erase(unit);
 		m_workerRepairing[target].erase(unit);
     }
+}
+
+Unit WorkerData::updateWorkerDepot(const Unit & worker, const Unit & mineral)
+{
+	auto base = m_bot.Bases().getBaseContainingPosition(mineral.getPosition());
+	if (base)
+	{
+		auto & depot = base->getResourceDepot();
+		if (depot.isValid() && depot.isCompleted() && !depot.isFlying())
+		{
+			m_workerDepotMap[worker] = depot;
+			return depot;
+		}
+	}
+	return Unit();
 }

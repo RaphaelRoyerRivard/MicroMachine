@@ -28,6 +28,7 @@ namespace Micro
 	MicroActionType SmartAttackUnit    (const sc2::Unit * attacker,  const sc2::Unit * target, CCBot & bot);
 	MicroActionType SmartAttackMove    (const sc2::Unit * attacker,  const sc2::Point2D & targetPosition, CCBot & bot);
 	MicroActionType SmartMove          (const sc2::Unit * unit,  const sc2::Point2D & targetPosition, CCBot & bot);
+	MicroActionType SmartHold          (const sc2::Unit * unit, bool queued, CCBot & bot);
 	MicroActionType SmartRightClick    (const sc2::Unit * unit,      const sc2::Unit * target, CCBot & bot);
 	MicroActionType SmartRepair        (const sc2::Unit * unit,      const sc2::Unit * target, CCBot & bot);
 	MicroActionType SmartAbility	   (const sc2::Unit * unit, const sc2::AbilityID & abilityID, CCBot & bot);

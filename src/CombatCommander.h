@@ -173,6 +173,7 @@ class CombatCommander
 	sc2::Units m_mainBaseSiegeTanks;
 	std::map<const sc2::Unit *, long> m_dangerousEnemyBunkers;
 	std::map<const sc2::Unit *, long> m_lastFleeingWorkerFrame;
+	std::set<const sc2::Unit *> m_addonBlockingTanks;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
@@ -283,5 +284,6 @@ public:
 	sc2::Units & getMainBaseSiegeTanks() { return m_mainBaseSiegeTanks; }
 	bool isBunkerDangerous(const sc2::Unit * bunker) const;
 	void setBunkerIsDangerous(const sc2::Unit * bunker);
+	std::set<const sc2::Unit *> & getAddonBlockingTanks() { return m_addonBlockingTanks; }
 };
 

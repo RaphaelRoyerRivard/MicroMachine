@@ -41,6 +41,7 @@ void BuildingManager::onFrame(bool executeMacro)
 	}
 	if (executeMacro)
 	{
+		m_bot.Commander().Combat().getAddonBlockingTanks().clear();
 		m_bot.StartProfiling("0.8.0 lowPriorityChecks");
 		lowPriorityChecks();
 		m_bot.StopProfiling("0.8.0 lowPriorityChecks");
@@ -980,17 +981,29 @@ void BuildingManager::constructAssignedBuildings()
 							}
 							else // The addon position is not blocked by a building or non buildable tile
 							{
-								// We want to allow the command to be sent only once per second
-								if (m_bot.GetCurrentFrame() - m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] < 22)
+								CCPosition addonPos = b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f);
+								const auto addonRadius = 1.f;
+								// Identify tanks in the way so they know they need to unsiege and move
+								for (auto tankType : { sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED, sc2::UNIT_TYPEID::TERRAN_SIEGETANK })
+								{
+									for (auto & siegedTank : m_bot.GetAllyUnits(tankType))
+									{
+										const float dist = Util::Dist(addonPos, siegedTank.getPosition());
+										if (dist <= addonRadius + siegedTank.getUnitPtr()->radius)
+										{
+											m_bot.Commander().Combat().getAddonBlockingTanks().insert(siegedTank.getUnitPtr());
+										}
+									}
+								}
+								// We want to allow the command to be sent only twice per second
+								if (m_bot.GetCurrentFrame() - m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] < 11)
 								{
 									// We need to check if there is an enemy unit blocking it, if so, we just want to wait until it is not there
-									CCPosition addonPos = b.builderUnit.getPosition() + CCPosition(2.5f, -0.5f);
 									for (auto & unit : m_bot.GetUnits())
 									{
 										if (unit.isFlying() || unit.getType().isBuilding() || unit.getUnitPtr()->alliance == sc2::Unit::Alliance::Neutral)
 											continue;
 										const float dist = Util::Dist(addonPos, unit.getPosition());
-										const auto addonRadius = 1.f;
 										if (dist <= addonRadius + unit.getUnitPtr()->radius)
 										{
 											// Unit is blocking addon
@@ -2322,7 +2335,10 @@ void BuildingManager::castBuildingsAbilities()
 					Util::DebugLog(__FUNCTION__, "No mineral found.", m_bot);
 					continue;
 				}
+			}
 
+			if (depotPosition != CCPosition())
+			{
 				//Drops the mule between the CC and mineral, as far from the mineral as possible, while still able to mine it
 				auto point = closestMineral->pos + Util::Normalized(depotPosition - closestMineral->pos) * 1.4;
 				Micro::SmartAbility(b.getUnitPtr(), sc2::ABILITY_ID::EFFECT_CALLDOWNMULE, point, m_bot);
