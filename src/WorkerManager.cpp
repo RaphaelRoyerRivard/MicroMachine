@@ -467,22 +467,23 @@ void WorkerManager::handleMineralWorkers()
 						if (!m_bot.Config().IsRealTime)
 						{
 							auto distsq = Util::DistSq(worker.getPosition(), depot.getPosition());
-							if (distsq > 14 && worker.getUnitPtr()->orders.size() < 2)//Distsq 14 is arbitrary but works
+							if (distsq > 3.5f * 3.5f && distsq < 5 * 5 && worker.getUnitPtr()->orders.size() < 2)
 							{
-								//3.5 is the distance with the center of the depot, its arbitrary
-								worker.move(depot.getPosition() + Util::Normalized(worker.getPosition() - depot.getPosition()) * 3.5);
+								//3 is the distance with the center of the depot, its arbitrary
+								worker.move(depot.getPosition() + Util::Normalized(worker.getPosition() - depot.getPosition()) * 3);
 								worker.shiftRightClick(depot);
 							}
 						}
 					}
 					else
 					{
-						if (!m_bot.Config().IsRealTime && Util::DistSq(worker.getPosition(), mineral->second.getPosition()) > 3 && worker.getUnitPtr()->orders.size() < 2)//Distsq 3 is arbitrary but works great
+						auto distToMineral = Util::DistSq(worker.getPosition(), mineral->second.getPosition());
+						if (!m_bot.Config().IsRealTime && distToMineral > 2 * 2 && distToMineral < 2.5f * 2.5f && worker.getUnitPtr()->orders.size() < 2)//Distsq 3 is arbitrary but works great
 						{
-							if (!Util::IsFarMineralPatch(mineral->second.getAPIUnitType()))
+							//if (!Util::IsFarMineralPatch(mineral->second.getAPIUnitType()))
 							{
 								//1.3 is the distance with the mineral, its arbitrary
-								worker.move(mineral->second.getPosition() + Util::Normalized(worker.getPosition() - mineral->second.getPosition()) * 1.3);
+								worker.move(mineral->second.getPosition() + Util::Normalized(worker.getPosition() - mineral->second.getPosition()) * 1.3f);
 								worker.shiftRightClick(mineral->second);
 							}
 						}
