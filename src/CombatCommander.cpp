@@ -888,7 +888,7 @@ void CombatCommander::updateIdleSquad()
 	{
 		if (Util::DistSq(combatUnit, m_idlePosition) > 5.f * 5.f && Util::getSpeedOfUnit(combatUnit.getUnitPtr(), m_bot) > 0)
 		{
-			const auto action = UnitAction(MicroActionType::Move, m_idlePosition, false, 0, "IdleMove");
+			const auto action = UnitAction(MicroActionType::Move, m_idlePosition, false, 0, "IdleMove", idleSquad.getName());
 			PlanAction(combatUnit.getUnitPtr(), action);
 		}
 	}
@@ -3234,12 +3234,12 @@ void CombatCommander::CleanActions(const std::vector<Unit> &combatUnits)
 			continue;
 		}
 
-		// If the unit is no longer in this squad (this was causing bugs)
-		/*if (!Util::Contains(rangedUnit, units))
+		// If the unit changed squad
+		if (!m_squadData.squadExists(action.squad) || !m_squadData.getSquad(action.squad).containsUnit(rangedUnit->tag))
 		{
 			unitsToClear.push_back(rangedUnit);
 			continue;
-		}*/
+		}
 
 		// Sometimes want to give an action only every few frames to allow slow attacks to occur and cliff jumps
 		if (ShouldSkipFrame(rangedUnit))

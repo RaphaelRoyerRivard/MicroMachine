@@ -66,6 +66,7 @@ public:
     void clear();
 
     bool containsUnit(const Unit & unit) const;
+	bool containsUnit(sc2::Tag tag) const;
     bool isEmpty() const;
     float getMaxDistanceFromCenter() const;
     void setMaxDistanceFromCenter(const float & maxDistanceFromCenter);

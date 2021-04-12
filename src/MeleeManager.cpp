@@ -117,7 +117,7 @@ void MeleeManager::executeMicro()
 						auto & mineral = base->getMinerals();
 						if (mineral.size() > 0)
 						{
-							const auto action = UnitAction(MicroActionType::RightClick, mineral[0].getUnitPtr(), false, 0, "mineral walk");
+							const auto action = UnitAction(MicroActionType::RightClick, mineral[0].getUnitPtr(), false, 0, "mineral walk", m_squad->getName());
 							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 						}
 					}
@@ -163,7 +163,7 @@ void MeleeManager::executeMicro()
 						{
 							if (!repairTarget)
 								repairTarget = closestRepairTarget;
-							const auto action = UnitAction(MicroActionType::RightClick, repairTarget, false, 0, "repair");
+							const auto action = UnitAction(MicroActionType::RightClick, repairTarget, false, 0, "repair", m_squad->getName());
 							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 						}
 						else if (!injured || workerRushStrat)
@@ -171,7 +171,7 @@ void MeleeManager::executeMicro()
 							// attack the target if we can see it, otherwise move towards it
 							if (target.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
 							{
-								const auto action = UnitAction(MicroActionType::AttackUnit, target.getUnitPtr(), false, 0, "attack target");
+								const auto action = UnitAction(MicroActionType::AttackUnit, target.getUnitPtr(), false, 0, "attack target", m_squad->getName());
 								m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 							}
 							else
@@ -201,7 +201,7 @@ void MeleeManager::executeMicro()
 										movePosition = Util::GetPosition(closestUnexploredTile);
 									}
 								}
-								const auto action = UnitAction(MicroActionType::Move, movePosition, false, 0, "move towards target");
+								const auto action = UnitAction(MicroActionType::Move, movePosition, false, 0, "move towards target", m_squad->getName());
 								m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 							}
 						}
@@ -220,7 +220,7 @@ void MeleeManager::executeMicro()
 				CCPosition fleePosition = Util::PathFinding::FindOptimalPathToSafety(meleeUnit.getUnitPtr(), goal, true, m_bot);
 				if (fleePosition != CCPosition())
 				{
-					const auto action = UnitAction(MicroActionType::Move, fleePosition, false, 0, "flee");
+					const auto action = UnitAction(MicroActionType::Move, fleePosition, false, 0, "flee", m_squad->getName());
 					m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 					flee = false;
 				}
@@ -229,12 +229,12 @@ void MeleeManager::executeMicro()
 			if (noTarget && workerRushStrat && enemyBase && enemyBase->containsPositionApproximative(m_order.getPosition()))
 			{
 				auto enemyMineral = enemyBase->getMinerals()[0].getUnitPtr();
-				const auto action = UnitAction(MicroActionType::RightClick, enemyMineral, false, 0, "mineral walk");
+				const auto action = UnitAction(MicroActionType::RightClick, enemyMineral, false, 0, "mineral walk", m_squad->getName());
 				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 			}
 			else if (flee || noTarget)
 			{
-				const auto action = UnitAction(MicroActionType::Move, m_order.getPosition(), false, 0, "flee");
+				const auto action = UnitAction(MicroActionType::Move, m_order.getPosition(), false, 0, "flee", m_squad->getName());
 				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 			}
 		}
