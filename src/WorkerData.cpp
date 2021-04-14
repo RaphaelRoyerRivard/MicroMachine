@@ -44,16 +44,6 @@ void WorkerData::updateAllWorkerData()
         {
             setWorkerJob(worker, WorkerJobs::Idle);
         }
-
-    	// This caused a bug where the first proxy worker wouldn't stay a proxy worker
-		/*auto it = m_proxyWorkers.find(worker);
-    	if (it != m_proxyWorkers.end())
-    	{
-			if (job == WorkerJobs::Minerals || job == WorkerJobs::Gas)
-				m_proxyWorkers.erase(it);
-    	}*/
-
-        // TODO: If it's a gas worker whose refinery has been destroyed, set to minerals
     }
 
     // remove any worker units which no longer exist in the game
@@ -190,7 +180,8 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
 
 			if (mineralToMine.isValid())
 			{
-				worker.rightClick(mineralToMine);
+				worker.move(mineralToMine.getPosition() + Util::Normalized(worker.getPosition() - mineralToMine.getPosition()) * 1.5);//2.5? 2.7 (146)?
+				worker.shiftRightClick(mineralToMine);
 
 				if (!worker.getType().isMule())
 				{
@@ -245,7 +236,6 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
 		if (!isProxyWorker(worker))
 		{
 			m_idleWorkers.insert(worker);
-			sendIdleWorkerToMiningSpot(worker, false);
 		}
 	}
 }
@@ -290,7 +280,7 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     }
     else if (previousJob == WorkerJobs::Repair)
     {
-
+		
     }
 	else if (previousJob == WorkerJobs::Idle)
 	{
@@ -302,7 +292,7 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     }
 	else if (previousJob == WorkerJobs::None)//Only affects newly spawned workers
 	{
-		sendIdleWorkerToMiningSpot(unit, true);
+
 	}
 
     m_workerJobMap.erase(unit);
@@ -500,10 +490,11 @@ const Unit WorkerData::GetBestMineralWithLessWorkersInLists(const std::vector<Un
 
 bool WorkerData::isAnyMineralAvailable(CCPosition workerCurrentPosition) const
 {
-	for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+	for (auto base : bases)
 	{
-		if (base->isUnderAttack() && !base->containsPositionApproximative(workerCurrentPosition))
-			continue;
+		if (bases.size() > 1 && base->isUnderAttack() && !base->containsPositionApproximative(workerCurrentPosition))
+			continue;//if the worker is in a base underattack, do not assign it as mineral, except if its our only base.
 		auto & depot = base->getResourceDepot();
 		if (!depot.isValid() || !depot.isAlive())
 			continue;
@@ -610,6 +601,7 @@ const char * WorkerData::getJobCode(const Unit & unit)
     if (j == WorkerJobs::Repair)    return "R";
     if (j == WorkerJobs::Move)      return "O";
     if (j == WorkerJobs::Scout)     return "S";
+    if (j == WorkerJobs::GeyserProtect) return "P";
     return "X";
 }
 
@@ -815,5 +807,21 @@ void WorkerData::WorkerStoppedRepairing(const Unit & unit)
     {
         getWorkerRepairingThatTarget(target).erase(unit);
         m_workerRepairTarget.erase(unit);
+		m_workerRepairing[target].erase(unit);
     }
+}
+
+Unit WorkerData::updateWorkerDepot(const Unit & worker, const Unit & mineral)
+{
+	auto base = m_bot.Bases().getBaseContainingPosition(mineral.getPosition());
+	if (base)
+	{
+		auto & depot = base->getResourceDepot();
+		if (depot.isValid() && depot.isCompleted() && !depot.isFlying())
+		{
+			m_workerDepotMap[worker] = depot;
+			return depot;
+		}
+	}
+	return Unit();
 }

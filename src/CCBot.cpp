@@ -2170,9 +2170,6 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, nat + towardsCenterX * 8, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, nat + towardsCenterX * 13, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, nat + towardsCenterX * 10, player1, 3);*/
-
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, m_startLocation - towardsCenter * 3, player2, 3);
-	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_ORACLE, m_startLocation + towardsCenter * 10, player1, 1);
 }
 
 void CCBot::IssueCheats()

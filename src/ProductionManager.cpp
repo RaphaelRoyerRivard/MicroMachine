@@ -415,6 +415,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	bool shouldSkip = false;
 	const auto factoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true);
 	const auto completedFactoryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), true, true);
+	const auto hasProducedFactoryUnit = hasProducedAtLeastXFactoryUnit(1);
 	const auto ccs = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), false, true);
 	const auto completedCCs = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::CommandCenter.getUnitType(), true, true);
 	const auto orbitals = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::OrbitalCommand.getUnitType(), false, true);
@@ -435,7 +436,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	}
 	else if (currentItem.type.getUnitType().isResourceDepot() && !currentItem.type.getUnitType().isMorphedBuilding())
 	{
-		shouldSkip = (m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasProxyHatchery()) && m_bot.GetMinerals() < 800;
+		shouldSkip = (m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasProxyHatchery() || (!hasProducedFactoryUnit && baseCount > 1)) && m_bot.GetMinerals() < 800;
 	}
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE || currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
 	{
@@ -764,21 +765,29 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 		if (!m_queue.contains(workerMetatype))//check queue
 		{
-			//[Worker limit][Max worker]
-			auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
-			int optimalWorkers = 0;
-			for (const auto base : bases)
+			const auto depotCompletedCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, Util::GetResourceDepotType(), true, true, false);
+			const auto depotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, Util::GetResourceDepotType(), false, true, true);
+			const auto depotUnderconstruction = depotCompletedCount - depotCount;
+			const auto idleCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Idle);
+
+			if ((depotUnderconstruction == 0 && idleCount < 4) || (depotUnderconstruction != 0))//[Number idle worker] If we have less idle workers than our maximum of 4 idle workers, 1 for each close patch in our next expand
 			{
-				optimalWorkers += base->getOptimalMineralWorkerCount() + base->getOptimalGasWorkerCount();
-			}
-			const int maxWorkersForNextExpansion = totalBaseCount > bases.size() ? 22 : 11;	// 16 minerals + 6 gas
-			const int maxWorkers = 80;
-			const int workerCount = m_bot.Workers().getNumWorkers();
-			if (optimalWorkers + maxWorkersForNextExpansion > workerCount && workerCount < maxWorkers)
-			{
-				if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
+				//[Worker limit][Max worker]
+				auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
+				int optimalWorkers = 0;
+				for (const auto base : bases)
 				{
-					m_queue.queueItem(MM::BuildOrderItem(workerMetatype, 1, false));
+					optimalWorkers += base->getOptimalMineralWorkerCount() + base->getOptimalGasWorkerCount();
+				}
+				const int maxWorkersForNextExpansion = totalBaseCount > bases.size() ? 22 : 11;	// 16 minerals + 6 gas
+				const int maxWorkers = 80;
+				const int workerCount = m_bot.Workers().getNumWorkers();
+				if (optimalWorkers + maxWorkersForNextExpansion > workerCount && workerCount < maxWorkers)
+				{
+					if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
+					{
+						m_queue.queueItem(MM::BuildOrderItem(workerMetatype, 1, false));
+					}
 				}
 			}
 		}

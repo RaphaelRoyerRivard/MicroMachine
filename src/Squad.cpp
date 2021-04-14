@@ -389,9 +389,14 @@ void Squad::setSquadOrder(const SquadOrder & so)
 
 bool Squad::containsUnit(const Unit & unit) const
 {
-	for(const auto & squadUnit : m_units)
+	return containsUnit(unit.getUnitPtr()->tag);
+}
+
+bool Squad::containsUnit(sc2::Tag tag) const
+{
+	for (const auto & squadUnit : m_units)
 	{
-		if (squadUnit.getUnitPtr()->tag == unit.getUnitPtr()->tag)
+		if (squadUnit.getUnitPtr()->tag == tag)
 			return true;
 	}
 	return false;

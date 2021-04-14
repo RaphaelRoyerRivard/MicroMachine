@@ -2652,6 +2652,31 @@ bool Util::IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbi
 	return false;
 }
 
+bool Util::IsFarMineralPatch(const sc2::UNIT_TYPEID type)
+{
+	switch (type)
+	{
+		case sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD:
+		case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD:
+			return false;//1800 mineral
+		case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD750:
+		case sc2::UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD750:
+		case sc2::UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD750:
+		case sc2::UNIT_TYPEID::NEUTRAL_LABMINERALFIELD750:
+		case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD750:
+		case sc2::UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD750:
+			return true;//900 mineral
+		case sc2::UNIT_TYPEID::NEUTRAL_MINERALFIELD450:
+			return true;//Unkwown
+		default:
+			BOT_ASSERT(false, "Mineral type is unhandled");
+	}
+}
+
 bool Util::IsTerran(const CCRace & race)
 {
 #ifdef SC2API

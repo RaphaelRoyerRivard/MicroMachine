@@ -22,8 +22,9 @@ struct UnitAction
 		, duration(0)
 		, executionFrame(0)
 		, description("")
+		, squad("")
 	{}
-	UnitAction(MicroActionType microActionType, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, bool prioritize, int duration, std::string description, std::string squad)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(CCPosition())
@@ -34,8 +35,9 @@ struct UnitAction
 		, duration(duration)
 		, executionFrame(0)
 		, description(description)
+		, squad(squad)
 	{}
-	UnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, const sc2::Unit* target, bool prioritize, int duration, std::string description, std::string squad)
 		: microActionType(microActionType)
 		, target(target)
 		, position(CCPosition())
@@ -46,8 +48,9 @@ struct UnitAction
 		, duration(duration)
 		, executionFrame(0)
 		, description(description)
+		, squad(squad)
 	{}
-	UnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, CCPosition position, bool prioritize, int duration, std::string description, std::string squad)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(position)
@@ -58,8 +61,9 @@ struct UnitAction
 		, duration(duration)
 		, executionFrame(0)
 		, description(description)
+		, squad(squad)
 	{}
-	UnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, bool prioritize, int duration, std::string description, std::string squad)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(CCPosition())
@@ -70,8 +74,9 @@ struct UnitAction
 		, duration(duration)
 		, executionFrame(0)
 		, description(description)
+		, squad(squad)
 	{}
-	UnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, CCPosition position, bool prioritize, int duration, std::string description, std::string squad)
 		: microActionType(microActionType)
 		, target(nullptr)
 		, position(position)
@@ -82,8 +87,9 @@ struct UnitAction
 		, duration(duration)
 		, executionFrame(0)
 		, description(description)
+		, squad(squad)
 	{}
-	UnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration, std::string description)
+	UnitAction(MicroActionType microActionType, sc2::AbilityID abilityID, const sc2::Unit* target, bool prioritize, int duration, std::string description, std::string squad)
 		: microActionType(microActionType)
 		, target(target)
 		, position(CCPosition())
@@ -94,6 +100,7 @@ struct UnitAction
 		, duration(duration)
 		, executionFrame(0)
 		, description(description)
+		, squad(squad)
 	{}
 	UnitAction(const UnitAction& unitAction) = default;
 	MicroActionType microActionType;
@@ -106,6 +113,7 @@ struct UnitAction
 	int duration;
 	uint32_t executionFrame;
 	std::string description;
+	std::string squad;
 
 	UnitAction& operator=(const UnitAction&) = default;
 
@@ -173,6 +181,7 @@ class CombatCommander
 	sc2::Units m_mainBaseSiegeTanks;
 	std::map<const sc2::Unit *, long> m_dangerousEnemyBunkers;
 	std::map<const sc2::Unit *, long> m_lastFleeingWorkerFrame;
+	std::set<const sc2::Unit *> m_addonBlockingTanks;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
@@ -283,5 +292,6 @@ public:
 	sc2::Units & getMainBaseSiegeTanks() { return m_mainBaseSiegeTanks; }
 	bool isBunkerDangerous(const sc2::Unit * bunker) const;
 	void setBunkerIsDangerous(const sc2::Unit * bunker);
+	std::set<const sc2::Unit *> & getAddonBlockingTanks() { return m_addonBlockingTanks; }
 };
 

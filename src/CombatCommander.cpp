@@ -859,9 +859,7 @@ void CombatCommander::updateIdlePosition()
 		}
 		if (baseLocation)
 		{
-			// Don't go on the base location, but a bit in front to not block it
-			const auto vectorAwayFromBase = Util::Normalized(baseLocation->getDepotPosition() - Util::GetPosition(baseLocation->getCenterOfMinerals()));
-			idlePosition = baseLocation->getDepotPosition() + vectorAwayFromBase * 7.f;
+			idlePosition = baseLocation->getRepairStationTilePosition();
 		}
 		m_idlePosition = idlePosition;
 	}
@@ -890,7 +888,7 @@ void CombatCommander::updateIdleSquad()
 	{
 		if (Util::DistSq(combatUnit, m_idlePosition) > 5.f * 5.f && Util::getSpeedOfUnit(combatUnit.getUnitPtr(), m_bot) > 0)
 		{
-			const auto action = UnitAction(MicroActionType::Move, m_idlePosition, false, 0, "IdleMove");
+			const auto action = UnitAction(MicroActionType::Move, m_idlePosition, false, 0, "IdleMove", idleSquad.getName());
 			PlanAction(combatUnit.getUnitPtr(), action);
 		}
 	}
@@ -3236,8 +3234,8 @@ void CombatCommander::CleanActions(const std::vector<Unit> &combatUnits)
 			continue;
 		}
 
-		// If the unit is no longer in this squad
-		if (!Util::Contains(rangedUnit, units))
+		// If the unit changed squad
+		if (!m_squadData.squadExists(action.squad) || !m_squadData.getSquad(action.squad).containsUnit(rangedUnit->tag))
 		{
 			unitsToClear.push_back(rangedUnit);
 			continue;
