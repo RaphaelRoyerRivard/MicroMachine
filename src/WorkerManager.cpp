@@ -1147,7 +1147,7 @@ void WorkerManager::handleRepairWorkers()
 				// We inform the manager that we are no longer repairing
 				stopRepairing(worker);
 			}
-            Unit& repairedUnit = m_workerData.getWorkerRepairTarget(worker);
+            Unit repairedUnit = m_workerData.getWorkerRepairTarget(worker);
 			if (repairedUnit.isValid())
 			{
 				auto type = repairedUnit.getType();
@@ -1226,7 +1226,7 @@ void WorkerManager::handleRepairWorkers()
 
 	m_bot.StartProfiling("0.7.7.2    chooseRepairStationWorkers");
 	auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
-	for (auto & base : bases)
+	for (auto base : bases)
 	{
 		std::vector<Unit> unitsToRepair;
 
