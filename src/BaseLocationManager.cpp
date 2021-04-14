@@ -656,7 +656,7 @@ int BaseLocationManager::getBaseCount(int player, bool isCompleted) const
 	switch (m_bot.GetPlayerRace(player))
 	{
 		case CCRace::Terran:
-			baseTypes = { sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND , sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS };
+			baseTypes = { sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER, sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING, sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING, sc2::UNIT_TYPEID::TERRAN_PLANETARYFORTRESS };
 			break;
 		case CCRace::Protoss:
 			baseTypes = { sc2::UNIT_TYPEID::PROTOSS_NEXUS };
