@@ -764,8 +764,12 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 		if (!m_queue.contains(workerMetatype))//check queue
 		{
-			auto idleCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Idle);
-			if (idleCount < 4)//[Number idle worker] If we have less idle workers than our maximum of 4 idle workers, 1 for each close patch in our next expand
+			const auto depotCompletedCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, Util::GetResourceDepotType(), true, true, false);
+			const auto depotCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, Util::GetResourceDepotType(), false, true, true);
+			const auto depotUnderconstruction = depotCompletedCount - depotCount;
+			const auto idleCount = m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Idle);
+
+			if ((depotUnderconstruction == 0 && idleCount < 4) || (depotUnderconstruction != 0))//[Number idle worker] If we have less idle workers than our maximum of 4 idle workers, 1 for each close patch in our next expand
 			{
 				//[Worker limit][Max worker]
 				auto & bases = m_bot.Bases().getOccupiedBaseLocations(Players::Self);
