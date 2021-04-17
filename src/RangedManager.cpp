@@ -1505,6 +1505,19 @@ bool RangedManager::ShouldTankUnsiege(const sc2::Unit * tank, sc2::Units & targe
 		return true;
 	}
 
+	// If the tank is somewhat close to a Nydus and hasn't been firing recently, we want it to go defend
+	if (!isSieged || !tankRecentlyHadTarget)
+	{
+		for (auto & nydus : m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_NYDUSCANAL))
+		{
+			auto distSq = Util::DistSq(nydus, tank->pos);
+			if (distSq <= 30 * 30)
+			{
+				return true;
+			}
+		}
+	}
+
 	// If tank is blocking an addon and hadn't recently shot
 	auto & addonBlockingTanks = m_bot.Commander().Combat().getAddonBlockingTanks();
 	if (!tankRecentlyHadTarget && addonBlockingTanks.find(tank) != addonBlockingTanks.end())
