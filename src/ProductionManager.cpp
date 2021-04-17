@@ -436,7 +436,28 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	}
 	else if (currentItem.type.getUnitType().isResourceDepot() && !currentItem.type.getUnitType().isMorphedBuilding())
 	{
-		shouldSkip = (m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasProxyHatchery() || (!hasProducedFactoryUnit && baseCount > 1)) && m_bot.GetMinerals() < 800;
+		if (m_bot.GetMinerals() < 800)
+		{
+			shouldSkip = m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasProxyHatchery() || (!hasProducedFactoryUnit && baseCount > 1);
+			if (!shouldSkip)
+			{
+				auto mineralWorkers = m_bot.Workers().getNumMineralWorkers();
+				auto mineralPatches = 0;
+				for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+				{
+					if (!base->getResourceDepot().isValid())
+						continue;
+					auto & minerals = base->getMinerals();
+					for (auto & mineral : minerals)
+					{
+						if (mineral.isValid() && mineral.isAlive() && mineral.getUnitPtr()->mineral_contents > 0)
+							mineralPatches++;
+					}
+				}
+				if (mineralWorkers < mineralPatches * 1.5f)
+					shouldSkip = true;
+			}
+		}
 	}
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE || currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
 	{
