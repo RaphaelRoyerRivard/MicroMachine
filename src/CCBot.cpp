@@ -716,14 +716,17 @@ void CCBot::setUnits()
 							break;
 						if (firstPhoenix)
 						{
-							if (!m_saidHallucinationLine)
-							{
-								Actions()->SendChat("Am I hallucinating?");
-								m_saidHallucinationLine = true;
-								Util::DebugLog(__FUNCTION__, "Hallucination (maybe) detected: " + unit.getType().getName(), *this);
-							}
 							firstPhoenix = false;
-							break;
+							if (GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_STARGATE).empty() && GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON).empty())
+							{
+								if (!m_saidHallucinationLine)
+								{
+									Actions()->SendChat("Am I hallucinating?");
+									m_saidHallucinationLine = true;
+									Util::DebugLog(__FUNCTION__, "Hallucination (maybe) detected: " + unit.getType().getName(), *this);
+								}
+								break;
+							}
 						}
 						// no break because more than one Phoenix probably means that there is a real fleet
 					default:
@@ -2170,6 +2173,13 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, nat + towardsCenterX * 8, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, nat + towardsCenterX * 13, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, nat + towardsCenterX * 10, player1, 3);*/
+
+	// Test to see if the Tank will unsiege to defend against a Nydus
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_OVERLORD, m_startLocation + towardsCenterY * 20, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::ZERG_NYDUSNETWORK, mapCenter, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, nat, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_startLocation, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, m_startLocation + towardsCenterY * 15, player2, 1);*/
 }
 
 void CCBot::IssueCheats()

@@ -436,7 +436,28 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	}
 	else if (currentItem.type.getUnitType().isResourceDepot() && !currentItem.type.getUnitType().isMorphedBuilding())
 	{
-		shouldSkip = (m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasProxyHatchery() || (!hasProducedFactoryUnit && baseCount > 1)) && m_bot.GetMinerals() < 800;
+		if (m_bot.GetMinerals() < 800)
+		{
+			shouldSkip = m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().enemyHasProxyHatchery() || (!hasProducedFactoryUnit && baseCount > 1);
+			if (!shouldSkip)
+			{
+				auto mineralWorkers = m_bot.Workers().getNumMineralWorkers();
+				auto mineralPatches = 0;
+				for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
+				{
+					if (!base->getResourceDepot().isValid())
+						continue;
+					auto & minerals = base->getMinerals();
+					for (auto & mineral : minerals)
+					{
+						if (mineral.isValid() && mineral.isAlive() && mineral.getUnitPtr()->mineral_contents > 0)
+							mineralPatches++;
+					}
+				}
+				if (mineralWorkers < mineralPatches * 1.5f)
+					shouldSkip = true;
+			}
+		}
 	}
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE || currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SIEGETANK)
 	{
@@ -932,7 +953,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyTempestCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
 				bool makeBattlecruisers = false;
 
-				if(finishedBaseCount >= 3 && hasEnoughVikings && enemyRace != sc2::Protoss)
+				if(finishedBaseCount >= 3 && hasEnoughVikings && enemyTempestCount == 0)
 				{
 #ifndef NO_UNITS
 					makeBattlecruisers = true;
@@ -1079,8 +1100,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const float cycloneTankRatio = float(cycloneCount) / std::max(1.f, float(tankCount));
 				const float enemySupplyAirGroundRatio = float(m_bot.Analyzer().opponentAirSupply) / std::max(1.f, float(m_bot.Analyzer().opponentGroundSupply));
 				const bool shouldProduceHellionsAgainstEarlyLightUnitsRush = factoryTechLabCount == 0 && earlyRushed && m_bot.Analyzer().getEnemyLightGroundUnitCount() > hellionCount;
-				// We want to build Thors against Protoss, but only after we have an Armory and we don't want more Thors than Cyclones
-				if (startingStrategy != PROXY_CYCLONES && enemyRace == sc2::Protoss && finishedArmory && thorCount + 1 < cycloneCount)
+				// We want to build Thors against Tempests, but only after we have an Armory and we don't want more Thors than Cyclones
+				if (startingStrategy != PROXY_CYCLONES && enemyTempestCount > 0 && finishedArmory && thorCount + 1 < cycloneCount)
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
