@@ -716,14 +716,17 @@ void CCBot::setUnits()
 							break;
 						if (firstPhoenix)
 						{
-							if (!m_saidHallucinationLine)
-							{
-								Actions()->SendChat("Am I hallucinating?");
-								m_saidHallucinationLine = true;
-								Util::DebugLog(__FUNCTION__, "Hallucination (maybe) detected: " + unit.getType().getName(), *this);
-							}
 							firstPhoenix = false;
-							break;
+							if (GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_STARGATE).empty() && GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_FLEETBEACON).empty())
+							{
+								if (!m_saidHallucinationLine)
+								{
+									Actions()->SendChat("Am I hallucinating?");
+									m_saidHallucinationLine = true;
+									Util::DebugLog(__FUNCTION__, "Hallucination (maybe) detected: " + unit.getType().getName(), *this);
+								}
+								break;
+							}
 						}
 						// no break because more than one Phoenix probably means that there is a real fleet
 					default:
