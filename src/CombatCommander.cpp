@@ -654,6 +654,8 @@ void CombatCommander::updateInfluenceMap(float dps, float minRange, float maxRan
 
 void CombatCommander::updateBlockedTilesWithUnit(const Unit& unit)
 {
+	if (!unit.isValid() || !unit.isAlive())
+		return;
 	CCTilePosition bottomLeft;
 	CCTilePosition topRight;
 	unit.getBuildingLimits(bottomLeft, topRight);
