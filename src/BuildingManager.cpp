@@ -996,12 +996,13 @@ void BuildingManager::constructAssignedBuildings()
 									}
 								}
 								// We want to allow the command to be sent only twice per second
-								if (m_bot.GetCurrentFrame() - m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] < 11)
+								if (m_bot.GetCurrentFrame() - m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] > 11)
 								{
 									// We need to check if there is an enemy unit blocking it, if so, we just want to wait until it is not there
-									for (auto & unit : m_bot.GetUnits())
+									for (auto & unitPair : m_bot.GetEnemyUnits())
 									{
-										if (unit.isFlying() || unit.getType().isBuilding() || unit.getUnitPtr()->alliance == sc2::Unit::Alliance::Neutral)
+										auto & unit = unitPair.second;
+										if (unit.isFlying())
 											continue;
 										const float dist = Util::Dist(addonPos, unit.getPosition());
 										if (dist <= addonRadius + unit.getUnitPtr()->radius)
@@ -1016,26 +1017,27 @@ void BuildingManager::constructAssignedBuildings()
 									}
 									if (blocked)
 										continue;
-								}
-								// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
-								const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
-								bool isFlyingType = Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes);
-								const auto it = m_liftedBuildingPositions.find(b.builderUnit.getTag());
-								if (it != m_liftedBuildingPositions.end())
-								{
-									m_liftedBuildingPositions.erase(it);
-									getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y, 3, 3, true);
-									getBuildingPlacer().freeTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2, true);
-								}
 
-								if (!b.builderUnit.isFlying() && !isFlyingType)
-								{
-									// Spam the build ability in case there is a unit blocking it
-									Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
-									m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] = m_bot.GetCurrentFrame();
-									std::stringstream ss;
-									ss << sc2::UnitTypeToName(b.builderUnit.getAPIUnitType()) << " at (" << b.builderUnit.getPosition().x << ", " << b.builderUnit.getPosition().y << ") was given the command " << sc2::AbilityTypeToName(m_bot.Data(b.type).buildAbility);
-									Util::Log(__FUNCTION__, ss.str(), m_bot);
+									// We free the reserved tiles only when the building is landed (even though the unit is not flying, its type is still a flying one until it landed)
+									const std::vector<sc2::UNIT_TYPEID> flyingTypes = { sc2::UNIT_TYPEID::TERRAN_BARRACKSFLYING, sc2::UNIT_TYPEID::TERRAN_FACTORYFLYING , sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
+									bool isFlyingType = Util::Contains(b.builderUnit.getAPIUnitType(), flyingTypes);
+									const auto it = m_liftedBuildingPositions.find(b.builderUnit.getTag());
+									if (it != m_liftedBuildingPositions.end())
+									{
+										m_liftedBuildingPositions.erase(it);
+										getBuildingPlacer().freeTiles(b.builderUnit.getPosition().x, b.builderUnit.getPosition().y, 3, 3, true);
+										getBuildingPlacer().freeTiles(b.finalPosition.x + 3, b.finalPosition.y, 2, 2, true);
+									}
+
+									if (!b.builderUnit.isFlying() && !isFlyingType)
+									{
+										// Spam the build ability in case there is a unit blocking it
+										Micro::SmartAbility(b.builderUnit.getUnitPtr(), m_bot.Data(b.type).buildAbility, m_bot);
+										m_buildAddonCommandFrame[b.builderUnit.getUnitPtr()] = m_bot.GetCurrentFrame();
+										std::stringstream ss;
+										ss << sc2::UnitTypeToName(b.builderUnit.getAPIUnitType()) << " at (" << b.builderUnit.getPosition().x << ", " << b.builderUnit.getPosition().y << ") was given the command " << sc2::AbilityTypeToName(m_bot.Data(b.type).buildAbility);
+										Util::Log(__FUNCTION__, ss.str(), m_bot);
+									}
 								}
 							}
 						}
