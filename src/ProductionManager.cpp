@@ -953,7 +953,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyTempestCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
 				bool makeBattlecruisers = false;
 
-				if(finishedBaseCount >= 3 && hasEnoughVikings && enemyRace != sc2::Protoss)
+				if(finishedBaseCount >= 3 && hasEnoughVikings && enemyTempestCount == 0)
 				{
 #ifndef NO_UNITS
 					makeBattlecruisers = true;
