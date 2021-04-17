@@ -1275,6 +1275,9 @@ void WorkerManager::handleRepairWorkers()
 					break;
 				}
 
+				if (worker.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_SCV)
+					continue;
+
 				if (workerData.getWorkerJob(worker) == WorkerJobs::Idle || workerData.getWorkerJob(worker) == WorkerJobs::Minerals || workerData.getWorkerJob(worker) == WorkerJobs::Repair)
 				{
 					const float distanceSquare = Util::DistSq(worker, base->getRepairStationTilePosition());
