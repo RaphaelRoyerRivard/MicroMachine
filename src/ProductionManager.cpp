@@ -383,7 +383,7 @@ void ProductionManager::manageBuildOrderQueue()
 							}
 							else
 							{
-								if (currentItem.type.getUnitType().getAPIUnitType() != Util::GetRefineryType().getAPIUnitType() ||
+								if (currentItem.type.getUnitType().getAPIUnitType() != Util::GetRefineryType().getAPIUnitType() &&
 									currentItem.type.getUnitType().getAPIUnitType() != Util::GetRichRefineryType().getAPIUnitType())//Supresses the refinery related errors
 								{
 									Util::DisplayError("Invalid build location for " + currentItem.type.getName(), "0x0000002", m_bot);

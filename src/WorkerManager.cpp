@@ -462,6 +462,16 @@ void WorkerManager::handleMineralWorkers()
 				auto depot = m_workerData.updateWorkerDepot(worker, mineral->second);
 				if (depot.isValid())
 				{
+					sc2::Tag target;
+					if (worker.getUnitPtr()->orders.size() > 0)
+					{
+						if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
+						{
+							continue;
+						}
+						target = worker.getUnitPtr()->orders[0].target_unit_tag;
+					}
+
 					if (worker.isReturningCargo())
 					{
 						if (!m_bot.Config().IsRealTime)
@@ -469,8 +479,7 @@ void WorkerManager::handleMineralWorkers()
 							auto distsq = Util::DistSq(worker.getPosition(), depot.getPosition());
 							if (distsq > 3.5f * 3.5f && distsq < 5 * 5 && worker.getUnitPtr()->orders.size() < 2)
 							{
-								//3 is the distance with the center of the depot, its arbitrary
-								worker.move(depot.getPosition() + Util::Normalized(worker.getPosition() - depot.getPosition()) * 3);
+								worker.move(depot.getPosition() + Util::Normalized(worker.getPosition() - depot.getPosition()) * 3);//3 is the distance with the center of the depot, its arbitrary
 								worker.shiftRightClick(depot);
 							}
 						}
@@ -480,25 +489,11 @@ void WorkerManager::handleMineralWorkers()
 						auto distToMineral = Util::DistSq(worker.getPosition(), mineral->second.getPosition());
 						if (!m_bot.Config().IsRealTime && distToMineral > 2 * 2 && distToMineral < 2.5f * 2.5f && worker.getUnitPtr()->orders.size() < 2)//Distsq 3 is arbitrary but works great
 						{
-							//if (!Util::IsFarMineralPatch(mineral->second.getAPIUnitType()))
-							{
-								//1.3 is the distance with the mineral, its arbitrary
-								worker.move(mineral->second.getPosition() + Util::Normalized(worker.getPosition() - mineral->second.getPosition()) * 1.3f);
-								worker.shiftRightClick(mineral->second);
-							}
+							worker.move(mineral->second.getPosition() + Util::Normalized(worker.getPosition() - mineral->second.getPosition()) * 1.3f);//1.3 is the distance with the mineral, its arbitrary
+							worker.shiftRightClick(mineral->second);
 						}
 						else
 						{
-							sc2::Tag target;
-							if (worker.getUnitPtr()->orders.size() > 0)
-							{
-								if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
-								{
-									continue;
-								}
-								target = worker.getUnitPtr()->orders[0].target_unit_tag;
-							}
-
 							if (mineral->second.getTag() != target)
 							{
 								worker.rightClick(mineral->second);
@@ -745,7 +740,7 @@ void WorkerManager::handleGasWorkers()
 
 		auto geyserPosition = geyser.getPosition();
 		auto base = m_bot.Bases().getBaseContainingPosition(geyserPosition, Players::Self);
-		if (base == nullptr)
+		if (base == nullptr || !base->getResourceDepot().isValid())
 		{
 			m_bot.StartProfiling("0.7.3.1    setIdleWhenBaseIsDestroyed");
 			//if the base is destroyed, remove the gas workers

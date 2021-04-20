@@ -168,7 +168,7 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
 				for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
 				{
 					const Unit & depot = base->getResourceDepot();
-					if (jobUnit.getTag() == depot.getTag())
+					if (!depot.isValid() || jobUnit.getTag() == depot.getTag())
 						continue;
 					mineralToMine = getMineralToMine(depot, worker.getPosition());
 					if (mineralToMine.isValid())
@@ -180,8 +180,7 @@ void WorkerData::setWorkerJob(const Unit & worker, int job, Unit jobUnit)
 
 			if (mineralToMine.isValid())
 			{
-				worker.move(mineralToMine.getPosition() + Util::Normalized(worker.getPosition() - mineralToMine.getPosition()) * 1.5);//2.5? 2.7 (146)?
-				worker.shiftRightClick(mineralToMine);
+				worker.rightClick(mineralToMine);
 
 				if (!worker.getType().isMule())
 				{
@@ -353,6 +352,10 @@ Unit WorkerData::getMineralToMine(const Unit & depot, const CCPosition location)
 	{
 		for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
 		{
+			if (!base->getResourceDepot().isValid())
+			{
+				continue;
+			}
 			bestMineral = GetBestMineralWithLessWorkersInLists(base->getCloseMinerals(), base->getFarMinerals(), location);
 			if (bestMineral.isValid())
 			{
