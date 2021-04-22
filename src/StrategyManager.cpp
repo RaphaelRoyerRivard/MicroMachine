@@ -460,6 +460,13 @@ void StrategyManager::checkForStrategyChange()
 				m_bot.Commander().Production().clearQueue();
 			}
 		}
+		// if our strat is still a proxy strategy (not canceled on this frame) after 5 minutes and we are losing the combat simulation
+		if (isProxyStartingStrategy() && m_bot.GetCurrentFrame() >= 22.4f * 60 * 5 && !m_bot.Commander().Combat().winAttackSimulation())
+		{
+			m_bot.Workers().getWorkerData().clearProxyWorkers();
+			setStartingStrategy(EARLY_EXPAND);
+			m_bot.Commander().Production().clearQueue();
+		}
 	}
 	else if (m_startingStrategy == WORKER_RUSH)
 	{

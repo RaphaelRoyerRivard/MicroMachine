@@ -1595,9 +1595,10 @@ void CombatCommander::updateAttackSquads()
 
 	CCPosition orderPosition = GetClosestEnemyBaseLocation();
 	bool retreat = false;
+	bool proxyStrategy = m_bot.Strategy().isProxyStartingStrategy();
 	
 	// Do not attack before 5 minutes unless we have a proxy strategy or the enemy has more bases than us
-	if (!m_bot.Strategy().isProxyStartingStrategy() && m_bot.GetCurrentFrame() < 22.4f * 60 * 5)
+	if (!proxyStrategy && m_bot.GetCurrentFrame() < 22.4f * 60 * 5)
 	{
 		int allyBases = m_bot.Bases().getBaseCount(Players::Self);
 		int enemyBases = m_bot.Bases().getBaseCount(Players::Enemy);
@@ -1626,7 +1627,20 @@ void CombatCommander::updateAttackSquads()
 		if (!earlyCycloneRush)
 		{
 			sc2::Units allyUnits;
-			Util::CCUnitsToSc2Units(mainAttackSquad.getUnits(), allyUnits);
+			if (proxyStrategy)
+			{
+				for (auto & mainAttackSquadUnit : mainAttackSquad.getUnits())
+				{
+					if (Util::DistSq(mainAttackSquadUnit, m_bot.Map().center()) < Util::DistSq(mainAttackSquadUnit, m_bot.GetStartLocation()))
+					{
+						allyUnits.push_back(mainAttackSquadUnit.getUnitPtr());
+					}
+				}
+			}
+			else
+			{
+				Util::CCUnitsToSc2Units(mainAttackSquad.getUnits(), allyUnits);
+			}
 			bool hasGround = false;
 			bool hasAir = false;
 			for (const auto ally : allyUnits)
@@ -1663,6 +1677,9 @@ void CombatCommander::updateAttackSquads()
 						if (m_bot.GetEnemyStartLocations().size() > 0 && Util::DistSq(enemyUnit, m_bot.GetStartLocation()) < Util::DistSq(enemyUnit, m_bot.GetEnemyStartLocations()[0]))
 							continue;
 					}
+					// Ignore proxy enemies when we are doing a proxy strategy (to allow base trade)
+					if (proxyStrategy && Util::DistSq(enemyUnit, m_bot.GetStartLocation()) < Util::DistSq(enemyUnit, m_bot.Map().center()))
+						continue;
 					const bool canAttack = enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY
 						|| (hasGround && Util::CanUnitAttackGround(enemyUnit.getUnitPtr(), m_bot))
 						|| (hasAir && Util::CanUnitAttackAir(enemyUnit.getUnitPtr(), m_bot));
@@ -1716,7 +1733,7 @@ void CombatCommander::updateAttackSquads()
 	std::string orderStatus = "Attack";
 	if (retreat)
 	{
-		orderPosition = m_bot.Strategy().isProxyStartingStrategy() ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_idlePosition;
+		orderPosition = proxyStrategy ? Util::GetPosition(m_bot.Buildings().getProxyLocation()) : m_idlePosition;
 		orderStatus = "Retreat";
 		backupSquad.getSquadOrder().setType(SquadOrderTypes::Retreat);
 		backupSquad.getSquadOrder().setStatus(orderStatus);
@@ -3042,9 +3059,9 @@ CCPosition CombatCommander::getMainAttackLocation()
 
     // Second choice: Attack known enemy buildings
 	Squad& mainAttackSquad = m_squadData.getSquad("MainAttack");
-    for (const auto & enemyUnit : mainAttackSquad.getTargets())
+    for (const auto & enemyUnit : m_bot.GetEnemyBuildings())
     {
-        if (enemyUnit.getType().isBuilding() && enemyUnit.isAlive() && enemyUnit.getUnitPtr()->display_type != sc2::Unit::Hidden)
+        if (enemyUnit.isAlive() && enemyUnit.getUnitPtr()->display_type != sc2::Unit::Hidden)
         {
 			if (enemyUnit.getType().isCreepTumor())
 				continue;
