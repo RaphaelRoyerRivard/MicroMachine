@@ -3024,11 +3024,11 @@ void CombatCommander::drawCombatInformation()
 CCPosition CombatCommander::getMainAttackLocation()
 {
     const BaseLocation * enemyBaseLocation = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+	const CCPosition enemyBasePosition = enemyBaseLocation ? enemyBaseLocation->getDepotPosition() : m_bot.GetEnemyStartLocations()[0];
 
     // First choice: Attack an enemy region if we can see units inside it
-    if (enemyBaseLocation)
+    if (enemyBasePosition != CCPosition())
     {
-        const CCPosition enemyBasePosition = enemyBaseLocation->getDepotPosition();
         // If the enemy base hasn't been seen yet, go there.
         if (!m_bot.Map().isExplored(enemyBasePosition))
         {
