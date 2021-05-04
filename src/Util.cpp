@@ -1344,7 +1344,8 @@ float Util::GetUnitPower(const Unit &unit, const Unit& target, CCBot& bot)
 		if (unitRange < distance)
 		{
 			distance -= unitRange;
-			const float distancePenalty = pow(0.9f, distance);
+			float unitSpeed = getSpeedOfUnit(unit.getUnitPtr(), bot);
+			const float distancePenalty = pow(unitSpeed == 0.f ? 0.8f : 0.9f, distance);
 			unitPower *= distancePenalty;
 		}
 	}

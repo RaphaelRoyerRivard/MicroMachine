@@ -680,6 +680,8 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 {
 	//[expand]
 	const BaseLocation * homeBase = getPlayerStartingBaseLocation(player);
+	if (!homeBase)
+		return nullptr;
 
 	auto otherPlayer = player == Players::Self ? Players::Enemy : Players::Self;
 	const BaseLocation * enemyHomeBase = getPlayerStartingBaseLocation(otherPlayer);

@@ -1432,21 +1432,9 @@ void CCBot::IssueGameStartCheats()
 	const auto naturalExpansion = m_bases.getNextExpansion(Players::Self, false, false, false);
 	const auto thirdExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion });
 	const auto fourthExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion, thirdExpansion });
-	CCPosition nat;
-	CCPosition third;
-	CCPosition fourth;
-	if (naturalExpansion != nullptr)
-	{
-		nat = Util::GetPosition(naturalExpansion->getDepotPosition());
-	}
-	if (thirdExpansion != nullptr)
-	{
-		third = Util::GetPosition(thirdExpansion->getDepotPosition());
-	}
-	if (fourthExpansion != nullptr)
-	{
-		third = Util::GetPosition(fourthExpansion->getDepotPosition());
-	}
+	const auto nat = naturalExpansion ? Util::GetPosition(naturalExpansion->getDepotPosition()) : CCPosition();
+	const auto third = thirdExpansion ? Util::GetPosition(thirdExpansion->getDepotPosition()) : CCPosition();
+	const auto fourth = fourthExpansion ? Util::GetPosition(fourthExpansion->getDepotPosition()) : CCPosition();
 
 	if (Config().DebugMenu)
 	{
@@ -1935,10 +1923,9 @@ void CCBot::IssueGameStartCheats()
 	//Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_OBSERVER, m_startLocation, player1, 1000);
 
 	// Test to reproduce bug where Marauders hesitate to attack Cannons on top of ramp
-	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenterY * 15, player1, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterY * 17, player1, 2);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SENTRY, enemyLocation - towardsCenterY * 15, player1, 1);
-	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenterY * 30, player2, 4);*/
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, enemyLocation - towardsCenterX * 7, player2, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON, enemyLocation - towardsCenterX * 10, player2, 2);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARAUDER, enemyLocation - towardsCenterX * 18, player1, 4);*/
 
 	// Test to reproduce bug where Marauders hesitate to attack a Cannon if there is an unpowered one next to it
 	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, nat + towardsCenter * 10, player1, 1);
@@ -2192,6 +2179,12 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMAND, nat, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SIEGETANK, m_startLocation, player2, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT, m_startLocation + towardsCenterY * 15, player2, 1);*/
+
+	// Test to see if our proxy Marauders are able to base trade and then go kill the enemy's proxy
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_PYLON, third, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, third, player1, 3);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STARGATE, third + towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, third, player1, 2);*/
 }
 
 void CCBot::IssueCheats()
