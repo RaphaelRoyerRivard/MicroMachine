@@ -1432,9 +1432,21 @@ void CCBot::IssueGameStartCheats()
 	const auto naturalExpansion = m_bases.getNextExpansion(Players::Self, false, false, false);
 	const auto thirdExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion });
 	const auto fourthExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion, thirdExpansion });
-	const auto nat = Util::GetPosition(naturalExpansion->getDepotPosition());
-	const auto third = Util::GetPosition(thirdExpansion->getDepotPosition());
-	const auto fourth = Util::GetPosition(fourthExpansion->getDepotPosition());
+	CCPosition nat;
+	CCPosition third;
+	CCPosition fourth;
+	if (naturalExpansion != nullptr)
+	{
+		nat = Util::GetPosition(naturalExpansion->getDepotPosition());
+	}
+	if (thirdExpansion != nullptr)
+	{
+		third = Util::GetPosition(thirdExpansion->getDepotPosition());
+	}
+	if (fourthExpansion != nullptr)
+	{
+		third = Util::GetPosition(fourthExpansion->getDepotPosition());
+	}
 
 	if (Config().DebugMenu)
 	{

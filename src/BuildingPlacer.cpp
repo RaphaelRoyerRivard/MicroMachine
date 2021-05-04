@@ -30,7 +30,7 @@ void BuildingPlacer::onStart()
 		{
 			reserveTiles(basePosition, mineral.getTilePosition());
 			
-			//m_resourceBlockedTiles used to expand in main, minerals are not 100% accurate, but close enough
+			//m_resourceBlockedTiles used to expand in main
 			for (int x = -4; x <= 3; x++)
 			{
 				for (int y = -3; y <= 3; y++)

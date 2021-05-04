@@ -482,6 +482,10 @@ void WorkerManager::handleMineralWorkers()
 								worker.move(depot.getPosition() + Util::Normalized(worker.getPosition() - depot.getPosition()) * 3);//3 is the distance with the center of the depot, its arbitrary
 								worker.shiftRightClick(depot);
 							}
+							else if (worker.getUnitPtr()->orders.empty())
+							{
+								worker.rightClick(depot);
+							}
 						}
 					}
 					else

@@ -1806,7 +1806,8 @@ void ProductionManager::lowPriorityChecks()
 				}
 			}
 
-			if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::Bunker.getUnitType()))
+			//Build a bunker, if there is none, we aren't building one already and we are not being worker rushed.
+			if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::Bunker.getUnitType()) && !m_bot.Strategy().isWorkerRushed())
 			{
 				auto & bunkers = base->getGasBunkers();
 				for (auto & bunkerLocation : base->getGasBunkerLocations())
