@@ -44,8 +44,14 @@ MicroActionType Micro::SmartHold(const sc2::Unit * unit, bool queued, CCBot & bo
 
 MicroActionType Micro::SmartRightClick(const sc2::Unit * unit, const sc2::Unit * target, CCBot & bot)
 {
-    BOT_ASSERT(unit != nullptr, "Unit is null");
-    bot.Actions()->UnitCommand(unit, sc2::ABILITY_ID::SMART, target);
+	BOT_ASSERT(unit != nullptr, "Unit is null");
+	bot.Actions()->UnitCommand(unit, sc2::ABILITY_ID::SMART, target);
+	return MicroActionType::RightClick;
+}
+
+MicroActionType Micro::SmartRightClick(const sc2::Units & units, const sc2::Unit * target, CCBot & bot)
+{
+	bot.Actions()->UnitCommand(units, sc2::ABILITY_ID::SMART, target);
 	return MicroActionType::RightClick;
 }
 
