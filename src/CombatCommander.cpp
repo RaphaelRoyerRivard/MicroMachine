@@ -1009,7 +1009,7 @@ void CombatCommander::updateWorkerFleeSquad()
 			const auto squad = m_squadData.getUnitSquad(worker);
 			if(squad != nullptr && squad == &workerFleeSquad)
 			{
-				if (m_bot.GetCurrentFrame() - m_lastFleeingWorkerFrame[worker.getUnitPtr()] > 22.4f * 2)
+				if (m_bot.GetCurrentFrame() - m_lastFleeingWorkerFrame[worker.getUnitPtr()] > 22.4f * 2 || m_bot.Strategy().isWorkerRushed())
 				{
 					m_bot.Workers().finishedWithWorker(worker);
 					workerFleeSquad.removeUnit(worker);

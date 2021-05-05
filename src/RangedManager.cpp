@@ -2736,6 +2736,10 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 			{
 				continue;
 			}
+			if (Util::isUnitAffectedByParasiticBomb(unit) || Util::isUnitLockedOn(unit))
+			{
+				continue;
+			}
 
 			const sc2::Unit* unitTarget = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC ? GetHealTarget(unit, allyCombatUnits, false) : getTarget(unit, rangedUnitTargets, false);
 			const sc2::Unit* unitToSave = unit;
