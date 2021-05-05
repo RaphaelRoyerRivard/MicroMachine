@@ -688,14 +688,41 @@ void WorkerData::sendIdleWorkerToMiningSpot(const Unit & worker, bool force)
 	{
 		if (worker.getUnitPtr()->orders.empty() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::HARVEST_GATHER || Util::DistSq(worker.getPosition(), m_idleMineralTarget.getPosition()) > 75)
 		{
-			if (Util::DistSq(worker.getPosition(), m_idleMineralTarget.getPosition()) < 30)//When the mineral is visible, just click it.
+			//mine mineral walls
+			bool hasWallMineralToMine = false;
+			for (auto & base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
 			{
-				auto mineral = m_bot.Buildings().getClosestMineral(m_idleMineralTarget.getPosition());
-				worker.rightClick(mineral);
+				for (auto neutral : m_bot.GetNeutralUnits())
+				{
+					if (!neutral.second.getType().isMineralWallPatch())
+						continue;
+					if (Util::DistSq(base->getPosition(), neutral.second.getPosition()) < 625)//Mine all wall within 25 tiles of one of our bases
+					{
+						hasWallMineralToMine = true;
+						if (worker.getUnitPtr()->orders.size() == 0 || Util::DistSq(worker.getUnitPtr()->orders[0].target_pos, neutral.second.getPosition()) < 25)
+						{
+							worker.rightClick(neutral.second);
+						}
+						break;
+					}
+				}
+				if (hasWallMineralToMine)
+				{
+					break;
+				}
 			}
-			else if(worker.getUnitPtr()->orders.empty() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE || worker.getUnitPtr()->orders[0].target_pos != m_idleMineralTarget.getPosition())
+
+			if (!hasWallMineralToMine)
 			{
-				worker.rightClick(m_idleMineralTarget.getPosition());
+				if (Util::DistSq(worker.getPosition(), m_idleMineralTarget.getPosition()) < 30)//When the mineral is visible, just click it.
+				{
+					auto mineral = m_bot.Buildings().getClosestMineral(m_idleMineralTarget.getPosition());
+					worker.rightClick(mineral);
+				}
+				else if (worker.getUnitPtr()->orders.empty() || worker.getUnitPtr()->orders[0].ability_id != sc2::ABILITY_ID::MOVE || worker.getUnitPtr()->orders[0].target_pos != m_idleMineralTarget.getPosition())
+				{
+					worker.rightClick(m_idleMineralTarget.getPosition());
+				}
 			}
 		}
 	}

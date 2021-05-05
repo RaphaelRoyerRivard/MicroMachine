@@ -700,7 +700,10 @@ BaseLocation* BaseLocationManager::getNextExpansion(int player, bool checkBlocke
 			}
 		}
 	}
-	BOT_ASSERT(homeBase, "No home base detected");
+	if (homeBase == nullptr)//No home base detected
+	{
+		return nullptr;
+	}
 
 	BaseLocation * closestBase = nullptr;
 	int minDistance = std::numeric_limits<int>::max();

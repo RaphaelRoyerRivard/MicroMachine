@@ -25,9 +25,9 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
     // add each of the resources to its corresponding container
     for (auto & resource : resources)
     {
-        if (resource.getType().isMineral())
-        {
-            m_minerals.push_back(resource);
+		if (resource.getType().isMineral())
+		{
+			m_minerals.push_back(resource);
 			if (resource.getUnitPtr()->mineral_contents == 1800)
 			{
 				m_mineralsClose.push_back(resource);
@@ -36,25 +36,21 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 			{
 				m_mineralsFar.push_back(resource);
 			}
-			else
+			else if (resource.getUnitPtr()->mineral_contents > 0)
 			{
-				Util::DisplayError("Mineral contents is not 900 or 1800.", "0x00000011", m_bot, false);
+				Util::DisplayError("Mineral contents is not 900 or 1800, or a mineral wall.", "0x00000011", m_bot, false);
 			}
-            m_mineralPositions.push_back(resource.getPosition());
+			m_mineralPositions.push_back(resource.getPosition());
+		}
+		else
+		{
+			m_geysers.push_back(resource);
+			m_geyserPositions.push_back(resource.getPosition());
+		}
 
-            // add the position of the minerals to the center
-            resourceCenterX += resource.getPosition().x;
-            resourceCenterY += resource.getPosition().y;
-        }
-        else
-        {
-            m_geysers.push_back(resource);
-            m_geyserPositions.push_back(resource.getPosition());
-
-            // pull the resource center toward the geyser if it exists
-            resourceCenterX += resource.getPosition().x;
-            resourceCenterY += resource.getPosition().y;
-        }
+		// pull the resource center toward the resource
+		resourceCenterX += resource.getPosition().x;
+		resourceCenterY += resource.getPosition().y;        
 
         // set the limits of the base location bounding box
         CCPositionType resWidth = Util::TileToPosition(1);
@@ -191,48 +187,128 @@ BaseLocation::BaseLocation(CCBot & bot, int baseID, const std::vector<Unit> & re
 
 	m_isRich = m_minerals.at(0).getType().isRichMineral();
 
+	//Calculate turret position
 	Building b(MetaTypeEnum::MissileTurret.getUnitType(), m_centerOfMinerals);
-	m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, true, false, true);
 
-	//If the turret is on the other side of the mineral field, move the desired build position towards the CC
-	while (Util::DistSq(m_depotPosition, m_turretPosition) > Util::DistSq(m_depotPosition, m_centerOfMinerals))
+	CCPosition averageMineral;
+	int averageDepotMineralDist = 0;
+	for (auto & mineral : m_minerals)
 	{
-		int diffx = m_depotPosition.x - b.desiredPosition.x;
-		int diffy = m_depotPosition.y - b.desiredPosition.y;
-
-		if (diffx == diffy == 0)
+		averageDepotMineralDist += Util::DistSq(m_depotPosition, mineral.getPosition());
+		if (averageMineral.x == 0 && averageMineral.y == 0)
 		{
-			Util::DisplayError("Failed to place turret, no position found.", "0x00000012", m_bot, false);
-			b.desiredPosition = m_centerOfMinerals;
-			m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, true, false, true);
-			break;
-		}
-
-		if (abs(diffx) > abs(diffy))
-		{
-			if (diffx < 0)
-			{
-				b.desiredPosition.x--;
-			}
-			else
-			{
-				b.desiredPosition.x++;
-			}
+			averageMineral = mineral.getPosition();
 		}
 		else
 		{
-			if (diffy < 0)
+			averageMineral += mineral.getPosition();
+		}
+	}
+	averageDepotMineralDist /= m_minerals.size();
+	averageMineral /= m_minerals.size();
+
+	int shortestDist = 1000000;
+	CCTilePosition closestTurretPos;
+	for (auto & mineral : m_minerals)
+	{
+		int depotTurretDistSq = Util::DistSq(m_depotPosition, mineral.getPosition());
+		if (depotTurretDistSq > averageDepotMineralDist)
+			continue;
+
+		b.desiredPosition = mineral.getTilePosition();//m_centerOfMinerals;
+		//If the turret is on the other side of the mineral field, move the desired build position towards the CC
+		for(int i = 0; i < 3; i++)
+		{
+			CCTilePosition turretPos = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, true, false, true);
+
+			if (Util::DistSq(m_depotPosition, turretPos) > depotTurretDistSq &&//turret closer to depot than mineral
+				Util::DistSq(averageMineral, turretPos) < shortestDist)//turret closer to the depot than the previous closest turret we could place
 			{
-				b.desiredPosition.y--;
+				shortestDist = Util::DistSq(averageMineral, turretPos);
+				closestTurretPos = turretPos;
+
+				bool shouldReposition = true;
+				while (shouldReposition)
+				{
+					shouldReposition = false;
+					b.desiredPosition = closestTurretPos;
+
+					int diffx = m_depotPosition.x - closestTurretPos.x;
+					if (abs(diffx) < 0)
+					{
+						b.desiredPosition.x--;
+					}
+					else
+					{
+						b.desiredPosition.x++;
+					}
+
+					turretPos = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, true, false, true);
+					if (Util::DistSq(averageMineral, turretPos) < shortestDist)
+					{
+						shortestDist = Util::DistSq(averageMineral, turretPos);
+						closestTurretPos = turretPos;
+						shouldReposition = true;
+					}
+
+					b.desiredPosition = closestTurretPos;
+
+					int diffy = m_depotPosition.y - closestTurretPos.y;
+					if (abs(diffy) < 0)
+					{
+						b.desiredPosition.y--;
+					}
+					else
+					{
+						b.desiredPosition.y++;
+					}
+
+					turretPos = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, true, false, true);
+					if (Util::DistSq(averageMineral, turretPos) < shortestDist)
+					{
+						shortestDist = Util::DistSq(averageMineral, turretPos);
+						closestTurretPos = turretPos;
+						shouldReposition = true;
+					}
+				}			
+
+				break;
+			}
+
+			int diffx = m_depotPosition.x - b.desiredPosition.x;
+			int diffy = m_depotPosition.y - b.desiredPosition.y;
+
+			if (abs(diffx) > abs(diffy))
+			{
+				if (diffx < 0)
+				{
+					b.desiredPosition.x++;
+				}
+				else
+				{
+					b.desiredPosition.x--;
+				}
 			}
 			else
 			{
-				b.desiredPosition.y++;
+				if (diffy < 0)
+				{
+					b.desiredPosition.y++;
+				}
+				else
+				{
+					b.desiredPosition.y--;
+				}
 			}
 		}
-
-		m_turretPosition = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, true, false, true);
 	}
+	if (closestTurretPos.x == 0 && closestTurretPos.y == 0)//If we don't find a position for the turret, default to the center of mineral, even if it can cause issues.
+	{
+		Util::DisplayError("No position found of Missile Turret", "0x00000015", m_bot, false);
+		b.desiredPosition = m_centerOfMinerals;
+		closestTurretPos = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, true, false, true);
+	}
+	m_turretPosition = closestTurretPos;
 }
 
 const CCTilePosition & BaseLocation::getTurretPosition() const
@@ -588,6 +664,12 @@ void BaseLocation::draw()
 
     // draw the base bounding box
     m_bot.Map().drawBox(m_left, m_top, m_right, m_bottom);
+
+	//Draw turret position
+	m_bot.Map().drawTile(CCPosition(m_turretPosition.x, m_turretPosition.y), CCColor(255, 255, 255));
+	m_bot.Map().drawTile(CCPosition(m_turretPosition.x-1, m_turretPosition.y), CCColor(255, 255, 255));
+	m_bot.Map().drawTile(CCPosition(m_turretPosition.x, m_turretPosition.y-1), CCColor(255, 255, 255));
+	m_bot.Map().drawTile(CCPosition(m_turretPosition.x-1, m_turretPosition.y-1), CCColor(255, 255, 255));
 
 
 	//Draw gas bunker

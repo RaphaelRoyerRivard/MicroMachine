@@ -25,9 +25,23 @@ void MeleeManager::setTargets(const std::vector<Unit> & targets)
 
 void MeleeManager::executeMicro()
 {
+	if (!m_stackingMineral.isValid())
+		identifyStackingMinerals();
+
+	const bool workerRushed = m_bot.Strategy().isWorkerRushed();
+	/*if (workerRushed && m_order.getType() == SquadOrderTypes::Defend)
+	{
+		// Not working well enough, the stacked workers push each other out of range of their target when they attack
+		//if (!areUnitsStackedUp())
+		//	stackUnits();
+		//else
+		//	microStack();
+
+		// Not working well enough, backstabers get killed way too fast
+		//if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss)
+		//	updateBackstabbers();
+	}*/
     const std::vector<Unit> & meleeUnits = getUnits();
-	const bool hasBarracks = !m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS).empty();
-	const bool hasRefinery = !m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERY).empty();
 	const bool workerRushStrat = m_bot.Strategy().getStartingStrategy() == WORKER_RUSH;
 	if (workerRushStrat)
 	{
@@ -47,203 +61,403 @@ void MeleeManager::executeMicro()
     // for each meleeUnit
     for (auto & meleeUnit : meleeUnits)
     {
-        BOT_ASSERT(meleeUnit.isValid(), "melee unit is null");
+		microUnit(meleeUnit);
+    }
+}
 
-		bool isProbe = meleeUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PROBE;
-		bool isHealing = false;
-		if (isProbe)
-		{
-			if (meleeUnit.getShields() <= 5)
-			{
-				m_healingProbes.emplace(meleeUnit.getTag());
-				isHealing = true;
-			}
-			else if (meleeUnit.getShields() == meleeUnit.getUnitPtr()->shield_max)
-			{
-				m_healingProbes.erase(meleeUnit.getTag());
-			}
-			else if (m_healingProbes.find(meleeUnit.getTag()) != m_healingProbes.end())
-			{
-				isHealing = true;
-			}
-			if (!isHealing && m_waitForProbesHealed)
-			{
-				isHealing = true;
-			}
-		}
+void MeleeManager::microUnit(const Unit & meleeUnit)
+{
+	// We do not want to micro further a unit in the stack, it is microed elsewhere
+	if (m_stackedUnits.find(meleeUnit) != m_stackedUnits.end())
+		return;
 
-		bool flee = false;
-		bool noTarget = false;
-		if (m_order.getType() == SquadOrderTypes::Retreat)
+	const std::vector<Unit> & meleeUnits = getUnits();
+	const bool workerRushed = m_bot.Strategy().isWorkerRushed();
+	const bool hasBarracks = !m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS).empty();
+	const bool hasRefinery = !m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERY).empty();
+	const bool workerRushStrat = m_bot.Strategy().getStartingStrategy() == WORKER_RUSH;
+	bool isProbe = meleeUnit.getAPIUnitType() == sc2::UNIT_TYPEID::PROTOSS_PROBE;
+	bool isHealing = false;
+	if (isProbe)
+	{
+		if (meleeUnit.getShields() <= 5)
 		{
-			flee = true;
+			m_healingProbes.emplace(meleeUnit.getTag());
+			isHealing = true;
 		}
-        else if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend)
-        {
-			if (m_targets.empty())
+		else if (meleeUnit.getShields() == meleeUnit.getUnitPtr()->shield_max)
+		{
+			m_healingProbes.erase(meleeUnit.getTag());
+		}
+		else if (m_healingProbes.find(meleeUnit.getTag()) != m_healingProbes.end())
+		{
+			isHealing = true;
+		}
+		if (!isHealing && m_waitForProbesHealed)
+		{
+			isHealing = true;
+		}
+	}
+
+	bool flee = false;
+	bool noTarget = false;
+	if (m_order.getType() == SquadOrderTypes::Retreat)
+	{
+		flee = true;
+	}
+	else if (m_order.getType() == SquadOrderTypes::Attack || m_order.getType() == SquadOrderTypes::Defend)
+	{
+		if (m_targets.empty())
+		{
+			noTarget = true;
+		}
+		else
+		{
+			// find the best target for this meleeUnit
+			Unit target = getTarget(meleeUnit, m_targets);
+			if (!target.isValid())
 			{
 				noTarget = true;
 			}
 			else
 			{
-				// find the best target for this meleeUnit
-				Unit target = getTarget(meleeUnit, m_targets);
-				if (!target.isValid())
+				auto & backstabbers = m_bot.Commander().Combat().getBackstabbers();
+				bool isBackstabber = backstabbers.find(meleeUnit) != backstabbers.end();
+				bool injured = false;
+				bool injuredUnitInDanger = false;
+				if (!isBackstabber && isProbe ? isHealing : (meleeUnit.getHitPointsPercentage() <= 25))
 				{
-					noTarget = true;
+					injured = true;
+					for (const auto & threat : m_targets)
+					{
+						const auto enemyRange = Util::GetAttackRangeForTarget(threat.getUnitPtr(), meleeUnit.getUnitPtr(), m_bot);
+						if (Util::Dist(threat, meleeUnit) < enemyRange + (isProbe ? 2.f : 0.75f))
+						{
+							injuredUnitInDanger = true;
+							break;
+						}
+					}
+				}
+
+				bool closeToTarget = Util::Dist(meleeUnit, target) <= Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot) + 0.5f;
+				float minWeaponCooldownToMineralWalk = closeToTarget ? (isBackstabber ? 0.f : 5.f) : 10.f;
+				// If it is a worker that just attacked a non building unit, we want it to mineral walk back (or forward when it's a backstabber)
+				if (meleeUnit.getType().isWorker() && (meleeUnit.getUnitPtr()->weapon_cooldown > minWeaponCooldownToMineralWalk || injuredUnitInDanger) && Util::getSpeedOfUnit(target.getUnitPtr(), m_bot) > 0.f && m_squad->getName() != "ScoutDefense")
+				{
+					auto & mineral = isBackstabber ? m_enemyMineral : m_stackingMineral;
+					if (mineral.isValid())
+					{
+						const auto action = UnitAction(MicroActionType::RightClick, mineral.getUnitPtr(), false, 0, "mineral walk", m_squad->getName());
+						m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+					}
 				}
 				else
 				{
-					bool injured = false;
-					bool injuredUnitInDanger = false;
-					if (isProbe ? isHealing : (meleeUnit.getHitPointsPercentage() <= 25))
+					const sc2::Unit* repairTarget = nullptr;
+					const sc2::Unit* closestRepairTarget = nullptr;
+					float distanceToClosestRepairTarget = 0;
+					// If the melee unit is a slightly injured worker
+					if (meleeUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV && meleeUnit.getHitPointsPercentage() <= 50 && m_bot.GetMinerals() > (!hasRefinery ? 80 : hasBarracks ? 55 : 0) && (workerRushed || workerRushStrat))
 					{
-						injured = true;
-						for (const auto & threat : m_targets)
+						const float range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
+						const float distSq = Util::DistSq(meleeUnit, target);
+						// If the worker is too far from its target to attack it
+						if (meleeUnit.getUnitPtr()->weapon_cooldown > 0.f || distSq > range * range || injured)
 						{
-							const auto enemyRange = Util::GetAttackRangeForTarget(threat.getUnitPtr(), meleeUnit.getUnitPtr(), m_bot);
-							if (Util::Dist(threat, meleeUnit) < enemyRange + (isProbe ? 2.f : 0.75f))
+							// Check all other workers to check if there is one injured close enough to repair it
+							for (auto & otherWorker : meleeUnits)
 							{
-								injuredUnitInDanger = true;
-								break;
+								if (otherWorker == meleeUnit)
+									continue;
+								if (!otherWorker.getType().isWorker())
+									continue;
+								if (otherWorker.getHitPointsPercentage() > 99.f)
+									continue;
+
+								const float otherWorkerDistSq = Util::DistSq(meleeUnit, otherWorker);
+								if (otherWorkerDistSq <= range * range)
+								{
+									repairTarget = otherWorker.getUnitPtr();
+									break;
+								}
+								if (!closestRepairTarget || otherWorkerDistSq < distanceToClosestRepairTarget)
+								{
+									closestRepairTarget = otherWorker.getUnitPtr();
+									distanceToClosestRepairTarget = otherWorkerDistSq;
+								}
 							}
 						}
 					}
 
-					// If it is a worker that just attacked a non building unit, we want it to mineral walk back
-					if (meleeUnit.getType().isWorker() && (meleeUnit.getUnitPtr()->weapon_cooldown > 10.f || injuredUnitInDanger) && Util::getSpeedOfUnit(target.getUnitPtr(), m_bot) > 0.f && m_squad->getName() != "ScoutDefense")
+					if (repairTarget || (injured && closestRepairTarget))
 					{
-						auto base = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-						auto & mineral = base->getMinerals();
-						if (mineral.size() > 0)
+						if (!repairTarget)
+							repairTarget = closestRepairTarget;
+						const auto action = UnitAction(MicroActionType::RightClick, repairTarget, false, 0, "repair", m_squad->getName());
+						m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+					}
+					else if (!injured || workerRushStrat)
+					{
+						// attack the target if we can see it, otherwise move towards it
+						if (target.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
 						{
-							const auto action = UnitAction(MicroActionType::RightClick, mineral[0].getUnitPtr(), false, 0, "mineral walk", m_squad->getName());
+							const auto action = UnitAction(MicroActionType::AttackUnit, target.getUnitPtr(), false, 0, "attack target", m_squad->getName());
 							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 						}
+						else
+						{
+							auto movePosition = target.getPosition();
+							// If there is an enemy worker hidding in our base, explore the tiles of the base
+							if (m_bot.Strategy().enemyHasWorkerHiddingInOurMain())
+							{
+								CCTilePosition closestUnexploredTile;
+								float closestDistance = -1;
+								const auto & baseTiles = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getBaseTiles();
+								for (const auto & baseTile : baseTiles)
+								{
+									if (!m_bot.Map().isExplored(baseTile))
+									{
+										auto baseTilePosition = Util::GetPosition(baseTile);
+										float distance = Util::DistSq(meleeUnit, baseTilePosition) + Util::DistSq(target, baseTilePosition);
+										if (closestDistance < 0 || distance < closestDistance)
+										{
+											closestUnexploredTile = baseTile;
+											closestDistance = distance;
+										}
+									}
+								}
+								if (closestDistance >= 0)
+								{
+									movePosition = Util::GetPosition(closestUnexploredTile);
+								}
+							}
+							const auto action = UnitAction(MicroActionType::Move, movePosition, false, 0, "move towards target", m_squad->getName());
+							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (flee || noTarget)
+	{
+		if (Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(meleeUnit.getPosition()), meleeUnit.getUnitPtr(), m_bot) > 0)
+		{
+			CCPosition goal = m_order.getPosition();
+			if (m_bot.Workers().getWorkerData().isProxyWorker(meleeUnit))
+				goal = m_bot.GetEnemyStartLocations().empty() ? m_bot.Map().center() : m_bot.GetEnemyStartLocations()[0];
+			CCPosition fleePosition = Util::PathFinding::FindOptimalPathToSafety(meleeUnit.getUnitPtr(), goal, true, m_bot);
+			if (fleePosition != CCPosition())
+			{
+				const auto action = UnitAction(MicroActionType::Move, fleePosition, false, 0, "flee", m_squad->getName());
+				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+				flee = false;
+			}
+		}
+		auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+		if (noTarget && workerRushStrat && enemyBase && enemyBase->containsPositionApproximative(m_order.getPosition()))
+		{
+			auto enemyMineral = enemyBase->getMinerals()[0].getUnitPtr();
+			const auto action = UnitAction(MicroActionType::RightClick, enemyMineral, false, 0, "mineral walk", m_squad->getName());
+			m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+		}
+		else if (flee || noTarget)
+		{
+			const auto action = UnitAction(MicroActionType::Move, m_order.getPosition(), false, 0, "flee", m_squad->getName());
+			m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+		}
+	}
+
+	/*if (m_bot.Config().DrawUnitTargetInfo)
+	{
+		// TODO: draw the line to the unit's target
+	}*/
+}
+
+bool MeleeManager::areUnitsStackedUp()
+{
+	if (m_stacked)
+		return true;
+	const std::vector<Unit> & meleeUnits = getUnits();
+	for (auto & meleeUnit : meleeUnits)
+	{
+		for (auto & otherMeleeUnit : meleeUnits)
+		{
+			float distSq = Util::DistSq(meleeUnit, otherMeleeUnit);
+			if (distSq > 0.3f * 0.3f)
+				return false;
+		}
+	}
+	m_stacked = true;
+	for (auto & meleeUnit : meleeUnits)
+	{
+		m_stackedUnits.insert(meleeUnit);
+	}
+	return true;
+}
+
+void MeleeManager::stackUnits()
+{
+	const std::vector<Unit> & meleeUnits = getUnits();
+	for (auto & meleeUnit : meleeUnits)
+	{
+		auto & unitAction = m_bot.Commander().Combat().GetUnitAction(meleeUnit.getUnitPtr());
+		if (unitAction.prioritized && (unitAction.microActionType == MicroActionType::AttackUnit || unitAction.microActionType == MicroActionType::AttackMove) && meleeUnit.getUnitPtr()->weapon_cooldown == 0.f)
+			continue;
+
+		if (Util::DistSq(meleeUnit, m_stackPosition) > 1.5f * 1.5f)
+		{
+			const auto action = UnitAction(MicroActionType::Move, m_stackPosition, true, 0, "stack", m_squad->getName());
+			m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+		}
+		else
+		{
+			// Not using the Action manager of the CombatCommander because we need to spam the action
+			meleeUnit.rightClick(m_stackingMineral);
+		}
+	}
+}
+
+void MeleeManager::identifyStackingMinerals()
+{
+	for (int i = 0; i < 2; ++i)
+	{
+		auto mainBase = m_bot.Bases().getPlayerStartingBaseLocation(i == 0 ? Players::Self : Players::Enemy);
+		if (mainBase && !mainBase->getFarMinerals().empty())
+		{
+			for (auto & farMineral : mainBase->getFarMinerals())
+			{
+				int closeMineralCount = 0;
+				for (auto & closeMineral : mainBase->getCloseMinerals())
+				{
+					float dist = Util::DistSq(farMineral, closeMineral);
+					if (dist < 2.5f)
+					{
+						if (++closeMineralCount == 2)
+							break;
+					}
+				}
+				if (closeMineralCount == 2)
+				{
+					(i == 0 ? m_stackingMineral : m_enemyMineral) = farMineral;
+					break;
+				}
+			}
+			if (!(i == 0 ? m_stackingMineral : m_enemyMineral).isValid())
+				(i == 0 ? m_stackingMineral : m_enemyMineral) = mainBase->getFarMinerals()[0];
+		}
+		else
+		{
+			for (auto & neutralUnit : m_bot.GetNeutralUnits())
+			{
+				if (neutralUnit.second.getType().isMineral())
+				{
+					if (Util::DistSq(neutralUnit.second, i == 0 ? m_bot.GetStartLocation() : m_bot.GetEnemyStartLocations()[0]) < 10 * 10)
+					{
+						(i == 0 ? m_stackingMineral : m_enemyMineral) = neutralUnit.second;
+					}
+				}
+			}
+		}
+	}
+	if (m_stackPosition == CCPosition())
+	{
+		auto towardsBase = Util::Normalized(m_bot.GetStartLocation() - m_stackingMineral.getPosition());
+		m_stackPosition = m_stackingMineral.getPosition() + towardsBase * 1.5f;
+	}
+}
+
+/*
+Do not use this function. It doesn't work to one shot enemy workers.
+*/
+void MeleeManager::microStack()
+{
+	int canAttackCount = 0;
+	for (int i = 0; i < 2; i++)
+	{
+		bool shouldAttack = canAttackCount >= std::min(int(m_stackedUnits.size()), 9);
+		for (auto it = m_stackedUnits.begin(); it != m_stackedUnits.end(); )
+		{
+			auto & meleeUnit = *it;
+			if (meleeUnit.getUnitPtr()->weapon_cooldown != 0.f)
+			{
+				it = m_stackedUnits.erase(it);
+				continue;
+			}
+			bool canAttack = false;
+			Unit target = getTarget(meleeUnit, m_targets);
+			if (target.isValid())
+			{
+				auto range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot) / 3;
+				auto dist = Util::DistSq(meleeUnit, target);
+				if (dist <= range * range)
+				{
+					canAttack = true;
+				}
+			}
+			if (i == 0) {
+				canAttackCount += canAttack ? 1 : 0;
+			}
+			else
+			{
+				auto & unitAction = m_bot.Commander().Combat().GetUnitAction(meleeUnit.getUnitPtr());
+				// Ignore units that are executing a prioritized action
+				if (!unitAction.prioritized && !m_bot.Commander().Combat().ShouldSkipFrame(meleeUnit.getUnitPtr()))
+				{
+					if (canAttack && shouldAttack)
+					{
+						//const auto action = UnitAction(MicroActionType::AttackUnit, target.getUnitPtr(), true, 10, "attack target", m_squad->getName());
+						const auto action = UnitAction(MicroActionType::AttackMove, m_stackPosition, true, 50, "attack move", m_squad->getName());
+						m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 					}
 					else
 					{
-						const sc2::Unit* repairTarget = nullptr;
-						const sc2::Unit* closestRepairTarget = nullptr;
-						float distanceToClosestRepairTarget = 0;
-						// If the melee unit is a slightly injured worker
-						if (meleeUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV && meleeUnit.getHitPointsPercentage() <= 50 && m_bot.GetMinerals() > (!hasRefinery ? 80 : hasBarracks ? 55 : 0) && (m_bot.Strategy().isWorkerRushed() || workerRushStrat))
-						{
-							const float range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot);
-							const float distSq = Util::DistSq(meleeUnit, target);
-							// If the worker is too far from its target to attack it
-							if (meleeUnit.getUnitPtr()->weapon_cooldown > 0.f || distSq > range * range || injured)
-							{
-								// Check all other workers to check if there is one injured close enough to repair it
-								for (auto & otherWorker : meleeUnits)
-								{
-									if (otherWorker == meleeUnit)
-										continue;
-									if (!otherWorker.getType().isWorker())
-										continue;
-									if (otherWorker.getHitPointsPercentage() > 99.f)
-										continue;
-
-									const float otherWorkerDistSq = Util::DistSq(meleeUnit, otherWorker);
-									if (otherWorkerDistSq <= range * range)
-									{
-										repairTarget = otherWorker.getUnitPtr();
-										break;
-									}
-									if (!closestRepairTarget || otherWorkerDistSq < distanceToClosestRepairTarget)
-									{
-										closestRepairTarget = otherWorker.getUnitPtr();
-										distanceToClosestRepairTarget = otherWorkerDistSq;
-									}
-								}
-							}
-						}
-
-						if (repairTarget || (injured && closestRepairTarget))
-						{
-							if (!repairTarget)
-								repairTarget = closestRepairTarget;
-							const auto action = UnitAction(MicroActionType::RightClick, repairTarget, false, 0, "repair", m_squad->getName());
-							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
-						}
-						else if (!injured || workerRushStrat)
-						{
-							// attack the target if we can see it, otherwise move towards it
-							if (target.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
-							{
-								const auto action = UnitAction(MicroActionType::AttackUnit, target.getUnitPtr(), false, 0, "attack target", m_squad->getName());
-								m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
-							}
-							else
-							{
-								auto movePosition = target.getPosition();
-								// If there is an enemy worker hidding in our base, explore the tiles of the base
-								if (m_bot.Strategy().enemyHasWorkerHiddingInOurMain())
-								{
-									CCTilePosition closestUnexploredTile;
-									float closestDistance = -1;
-									const auto & baseTiles = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getBaseTiles();
-									for (const auto & baseTile : baseTiles)
-									{
-										if (!m_bot.Map().isExplored(baseTile))
-										{
-											auto baseTilePosition = Util::GetPosition(baseTile);
-											float distance = Util::DistSq(meleeUnit, baseTilePosition) + Util::DistSq(target, baseTilePosition);
-											if (closestDistance < 0 || distance < closestDistance)
-											{
-												closestUnexploredTile = baseTile;
-												closestDistance = distance;
-											}
-										}
-									}
-									if (closestDistance >= 0)
-									{
-										movePosition = Util::GetPosition(closestUnexploredTile);
-									}
-								}
-								const auto action = UnitAction(MicroActionType::Move, movePosition, false, 0, "move towards target", m_squad->getName());
-								m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
-							}
-						}
+						const auto action = UnitAction(MicroActionType::RightClick, m_enemyMineral.getUnitPtr(), false, 0, "move stack", m_squad->getName());
+						m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 					}
 				}
-            }
-        }
-		
-		if(flee || noTarget)
-		{
-			if (Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(meleeUnit.getPosition()), meleeUnit.getUnitPtr(), m_bot) > 0)
-			{
-				CCPosition goal = m_order.getPosition();
-				if (m_bot.Workers().getWorkerData().isProxyWorker(meleeUnit))
-					goal = m_bot.GetEnemyStartLocations().empty() ? m_bot.Map().center() : m_bot.GetEnemyStartLocations()[0];
-				CCPosition fleePosition = Util::PathFinding::FindOptimalPathToSafety(meleeUnit.getUnitPtr(), goal, true, m_bot);
-				if (fleePosition != CCPosition())
-				{
-					const auto action = UnitAction(MicroActionType::Move, fleePosition, false, 0, "flee", m_squad->getName());
-					m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
-					flee = false;
-				}
 			}
-			auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
-			if (noTarget && workerRushStrat && enemyBase && enemyBase->containsPositionApproximative(m_order.getPosition()))
-			{
-				auto enemyMineral = enemyBase->getMinerals()[0].getUnitPtr();
-				const auto action = UnitAction(MicroActionType::RightClick, enemyMineral, false, 0, "mineral walk", m_squad->getName());
-				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
-			}
-			else if (flee || noTarget)
-			{
-				const auto action = UnitAction(MicroActionType::Move, m_order.getPosition(), false, 0, "flee", m_squad->getName());
-				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
-			}
+			++it;
 		}
+	}
+	if (m_stackedUnits.empty())
+		m_stacked = false;
+}
 
-        /*if (m_bot.Config().DrawUnitTargetInfo)
-        {
-            // TODO: draw the line to the unit's target
-        }*/
-    }
+void MeleeManager::updateBackstabbers()
+{
+	const std::vector<Unit> & meleeUnits = getUnits();
+	int minBackstabbersCount = int(std::floor(meleeUnits.size() / 2));
+	auto & backstabbers = m_bot.Commander().Combat().getBackstabbers();
+	for (auto it = backstabbers.begin(); it != backstabbers.end();)
+	{
+		if (!it->isValid() || !it->isAlive())
+			it = backstabbers.erase(it);
+		else
+			it++;
+	}
+	if (backstabbers.size() >= minBackstabbersCount)
+		return;
+	auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+	if (!enemyBase)
+		return;
+	std::vector<std::pair<int, const Unit*>> orderedWorkers;
+	for (auto & meleeUnit : meleeUnits)
+	{
+		if (backstabbers.find(meleeUnit) == backstabbers.end())
+		{
+			int groundDistance = enemyBase->getGroundDistance(meleeUnit.getPosition());
+			const Unit* unitPointer = &meleeUnit;
+			orderedWorkers.push_back(std::make_pair(groundDistance, unitPointer));
+		}
+	}
+	std::sort(orderedWorkers.begin(), orderedWorkers.end());
+	int backstabbersToAdd = minBackstabbersCount - backstabbers.size();
+	for (int i = 0; i < backstabbersToAdd; i++)
+	{
+		backstabbers.insert(*orderedWorkers[i].second);
+	}
 }
 
 // get a target for the meleeUnit to attack

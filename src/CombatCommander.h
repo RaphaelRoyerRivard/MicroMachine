@@ -182,6 +182,7 @@ class CombatCommander
 	std::map<const sc2::Unit *, long> m_dangerousEnemyBunkers;
 	std::map<const sc2::Unit *, long> m_lastFleeingWorkerFrame;
 	std::set<const sc2::Unit *> m_addonBlockingTanks;
+	std::set<Unit> m_backstabbers;	// Workers that backstab the enemy probes when probe rushed
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
@@ -293,5 +294,6 @@ public:
 	bool isBunkerDangerous(const sc2::Unit * bunker) const;
 	void setBunkerIsDangerous(const sc2::Unit * bunker);
 	std::set<const sc2::Unit *> & getAddonBlockingTanks() { return m_addonBlockingTanks; }
+	std::set<Unit> & getBackstabbers() { return m_backstabbers; }
 };
 

@@ -920,6 +920,7 @@ void CombatCommander::updateWorkerFleeSquad()
 		const auto job = m_bot.Workers().getWorkerData().getWorkerJob(worker);
 		const auto isProxyWorker = m_bot.Workers().getWorkerData().isProxyWorker(worker);
 		const bool isWorkerRushed = m_bot.Strategy().isWorkerRushed();
+		const bool isBackstabber = m_backstabbers.find(worker) != m_backstabbers.end();
 		bool targettedByOracle = false;
 		if (earlyRushed)	// no need to check after that, our workers will flee no matter what
 		{
@@ -938,7 +939,7 @@ void CombatCommander::updateWorkerFleeSquad()
 			}
 		}
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
-		if (effectInfluence || (!workerRush &&
+		if (effectInfluence || (!workerRush && !isBackstabber &&
 			(job == WorkerJobs::Idle && worker.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_MULE && (groundThreat || flyingThreat))
 			|| ((!earlyRushed || slightlyInjured || targettedByOracle) &&
 				((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
@@ -1008,7 +1009,7 @@ void CombatCommander::updateWorkerFleeSquad()
 			const auto squad = m_squadData.getUnitSquad(worker);
 			if(squad != nullptr && squad == &workerFleeSquad)
 			{
-				if (m_bot.GetCurrentFrame() - m_lastFleeingWorkerFrame[worker.getUnitPtr()] > 22.4f * 2)
+				if (m_bot.GetCurrentFrame() - m_lastFleeingWorkerFrame[worker.getUnitPtr()] > 22.4f * 2 || m_bot.Strategy().isWorkerRushed())
 				{
 					m_bot.Workers().finishedWithWorker(worker);
 					workerFleeSquad.removeUnit(worker);
@@ -3320,7 +3321,7 @@ void CombatCommander::ExecuteActions()
 			switch (action.microActionType)
 			{
 			case MicroActionType::AttackMove:
-				if (distToGoal < (action.description == "MoveToGoalOrder" ? 10.f : 0.1f))
+				if (rangedUnit->unit_type != Util::GetWorkerType().getAPIUnitType() && distToGoal < (action.description == "MoveToGoalOrder" ? 10.f : 0.1f))
 					skip = true;
 				else if (!rangedUnit->orders.empty() && rangedUnit->orders[0].ability_id == sc2::ABILITY_ID::ATTACK && rangedUnit->orders[0].target_unit_tag == 0)
 				{

@@ -805,7 +805,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int workerCount = m_bot.Workers().getNumWorkers();
 				if (optimalWorkers + maxWorkersForNextExpansion > workerCount && workerCount < maxWorkers)
 				{
-					if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
+					if (currentStrategy != WORKER_RUSH_DEFENSE || m_bot.GetMinerals() >= 100)//check strategy
 					{
 						m_queue.queueItem(MM::BuildOrderItem(workerMetatype, 1, false));
 					}
@@ -1429,6 +1429,10 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case WORKER_RUSH_DEFENSE:
 			{
 				m_queue.clearAll();
+				if (m_bot.GetMinerals() >= 100)//check strategy
+				{
+					m_queue.queueAsHighestPriority(workerMetatype, false);
+				}
 				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, false);
 				if (barracksCount > 0)
 				{
@@ -1806,7 +1810,8 @@ void ProductionManager::lowPriorityChecks()
 				}
 			}
 
-			if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::Bunker.getUnitType()))
+			//Build a bunker, if there is none, we aren't building one already and we are not being worker rushed.
+			if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::Bunker.getUnitType()) && !m_bot.Strategy().isWorkerRushed())
 			{
 				auto & bunkers = base->getGasBunkers();
 				for (auto & bunkerLocation : base->getGasBunkerLocations())
