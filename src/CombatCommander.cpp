@@ -2468,11 +2468,12 @@ void CombatCommander::updateDefenseSquads()
 			const auto unitSquad = m_squadData.getUnitSquad(unit);
 			const bool harassUnit = unitSquad && unitSquad->getSquadOrder().getType() == SquadOrderTypes::Harass;
 			const auto orderPositionDist = unitSquad ? Util::Dist(unit, unitSquad->getSquadOrder().getPosition()) : 0;
+			const auto distSqToEnemyBase = Util::DistSq(unit, m_bot.GetEnemyStartLocations()[0]);
 
 			// We check how useful our unit would be for anti ground and anti air for each of our regions
 			for (auto & region : regions)
 			{
-				const float distance = Util::Dist(unit, region.baseLocation->getPosition());
+				const float distanceToRegion = Util::Dist(unit, region.baseLocation->getPosition());
 				bool weakUnitAgainstOnlyBuildings = unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER;
 				bool proxyMarauderAgainstOnlyBuildings = m_bot.Strategy().getStartingStrategy() == PROXY_MARAUDERS && unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MARAUDER;
 				//bool immune = true;
@@ -2484,8 +2485,10 @@ void CombatCommander::updateDefenseSquads()
 					continue;	// We do not want to send a combat unit against an enemy scout
 				if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE && region.detectorEnemies && region.airAttackingEnemies)
 					continue;	// We would rather harass with our Banshees than defend against detectors and air attacking units
-				if (harassUnit && orderPositionDist < distance)
+				if (harassUnit && orderPositionDist < distanceToRegion)
 					continue;	// We do not want to make our harass units come back to defend if they are close to their harass target base
+				if (m_bot.Strategy().isProxyStartingStrategy() && distSqToEnemyBase < distanceToRegion * distanceToRegion)
+					continue;	// We do not want to make our proxy units come back to defend if they are close to the enemy base
 				if (unit.getUnitPtr() == offensiveReaper)
 				{
 					bool regionHasEnemyBuildingOrArmoredUnit = false;
@@ -2567,19 +2570,19 @@ void CombatCommander::updateDefenseSquads()
 				if (maxGroundDps > 0.f)
 				{
 					//float regionScore = immune * 50 + maxGroundDps - distance;
-					float regionScore = maxGroundDps - distance;
+					float regionScore = maxGroundDps - distanceToRegion;
 					region.unitGroundScores[unit.getUnitPtr()] = regionScore;
 				}
 				// If our unit would have a valid air target, we calculate the score (usefulness in that region) and add it to the list
 				if (maxAirDps > 0.f)
 				{
 					//float regionScore = immune * 50 + maxAirDps - distance;
-					float regionScore = maxAirDps - distance;
+					float regionScore = maxAirDps - distanceToRegion;
 					region.unitAirScores[unit.getUnitPtr()] = regionScore;
 				}
 				if (detectionUseful)
 				{
-					float regionScore = 100 - distance;
+					float regionScore = 100 - distanceToRegion;
 					region.unitDetectionScores[unit.getUnitPtr()] = regionScore;
 				}
 			}
