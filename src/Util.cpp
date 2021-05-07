@@ -9,7 +9,7 @@ const int HARASS_PATHFINDING_MAX_EXPLORED_NODE = 500;
 const float HARASS_PATHFINDING_TILE_BASE_COST = 1.f;
 const float HARASS_PATHFINDING_TILE_CREEP_COST = 0.5f;
 const float PATHFINDING_TURN_COST = 3.f;
-const float PATHFINDING_SECONDARY_GOAL_HEURISTIC_MULTIPLIER = 10.f;
+const float PATHFINDING_SECONDARY_GOAL_HEURISTIC_MULTIPLIER = 5.f;	// Previously equal to 10, created problems with Cyclones that are kiting away from our main
 const float HARASS_PATHFINDING_HEURISTIC_MULTIPLIER = 1.f;
 const uint32_t WORKER_PATHFINDING_CACHE_DURATION = 50;
 const uint32_t ARMY_UNIT_PATHFINDING_CACHE_DURATION = 1;
@@ -1792,10 +1792,6 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		if (!ignoreSpells)
 			range = 7.f;
-	}
-	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
-	{
-		range = 6.f;
 	}
 	else if (unitType == sc2::UNIT_TYPEID::PROTOSS_SENTRY)
 	{
