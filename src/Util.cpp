@@ -2701,11 +2701,27 @@ int Util::ToMapKey(const CCTilePosition position)
 	return position.x * 1000000 + position.y;
 }
 
+int Util::ToMapKey(const CCPosition position)
+{
+	// max value of int is 2147483647 (10 digits)
+	int x = round(position.x * 100) * 100000;	// we keep 2 digits after the comma and save the value in the first 5 digits of the int
+	int y = round(position.y * 100);	// we keep 2 digits after the comma and save the value in the last 5 digits of the int
+	return x + y;
+}
+
 CCTilePosition Util::FromCCTilePositionMapKey(const int mapKey)
 {
 	int y = mapKey % 1000;//Keep last 3 digits
 	int x = (mapKey - y) / 1000000;
 	return CCTilePosition(x, y);
+}
+
+CCPosition Util::FromCCPositionMapKey(const int mapKey)
+{
+	float y = mapKey % 100000;
+	int x = (mapKey - y) / 10000000;
+	y /= 100;
+	return CCPosition(x, y);
 }
 
 CCTilePosition Util::GetTilePosition(const CCPosition & pos)

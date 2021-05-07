@@ -183,9 +183,11 @@ class CombatCommander
 	std::map<const sc2::Unit *, long> m_lastFleeingWorkerFrame;
 	std::set<const sc2::Unit *> m_addonBlockingTanks;
 	std::set<Unit> m_backstabbers;	// Workers that backstab the enemy probes when probe rushed
+	std::map<int, long> m_cachedBiles;	// <corrosive bile location (mapkey generated with Util::ToMapKey), last frame seen>
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
+	void			clearCorrosiveBiles();
 	void			clearDangerousEnemyBunkers();
 	void			clearFleeingWorkers();
 	void			updateIdlePosition();

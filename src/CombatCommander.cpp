@@ -167,6 +167,17 @@ void CombatCommander::clearAllyScans()
 	}
 }
 
+void CombatCommander::clearCorrosiveBiles()
+{
+	for (auto it = m_cachedBiles.begin(); it != m_cachedBiles.end();)
+	{
+		if (m_bot.GetCurrentFrame() >= it->second + 22.4f)
+			it = m_cachedBiles.erase(it);
+		else
+			it++;
+	}
+}
+
 void CombatCommander::clearDangerousEnemyBunkers()
 {
 	for (auto it = m_dangerousEnemyBunkers.begin(); it != m_dangerousEnemyBunkers.end();)
@@ -204,6 +215,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	CleanActions(combatUnits);
 	clearYamatoTargets();
 	clearAllyScans();
+	clearCorrosiveBiles();
 	clearDangerousEnemyBunkers();
 	clearFleeingWorkers();
 	Util::ClearDeadDummyUnits();
@@ -577,12 +589,29 @@ void CombatCommander::updateInfluenceMapsWithEffects()
 			radius += 1;	// just a buffer to prevent our units to push the others into the effect's range
 			for (auto & pos : effect.positions)
 			{
-				if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Air)
-					updateInfluenceMap(dps, 0, radius, 1.f, pos, false, true, true, false);
-				if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Ground)
-					updateInfluenceMap(dps, 0, radius, 1.f, pos, true, true, true, false);
+				if (effect.effect_id == 11) // Corrosive Bile
+				{
+					int mapKey = Util::ToMapKey(pos);
+					if (m_cachedBiles.find(mapKey) == m_cachedBiles.end())
+						m_cachedBiles.insert(std::make_pair(mapKey, m_bot.GetCurrentFrame()));
+				}
+				else
+				{
+					if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Air)
+						updateInfluenceMap(dps, 0, radius, 1.f, pos, false, true, true, false);
+					if (targetType == sc2::Weapon::TargetType::Any || targetType == sc2::Weapon::TargetType::Ground)
+						updateInfluenceMap(dps, 0, radius, 1.f, pos, true, true, true, false);
+				}
 			}
 		}
+	}
+
+	// Generate effect influence for all cached biles (because they disappear from the API before landing)
+	for (auto & pair : m_cachedBiles)
+	{
+		auto pos = Util::FromCCPositionMapKey(pair.first);
+		updateInfluenceMap(60.f, 0, 1.5f, 1.f, pos, false, true, true, false);
+		updateInfluenceMap(60.f, 0, 1.5f, 1.f, pos, true, true, true, false);
 	}
 
 	// Generate effect influence around stacked enemy workers
