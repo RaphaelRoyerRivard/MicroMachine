@@ -297,5 +297,6 @@ public:
 	void setBunkerIsDangerous(const sc2::Unit * bunker);
 	std::set<const sc2::Unit *> & getAddonBlockingTanks() { return m_addonBlockingTanks; }
 	std::set<Unit> & getBackstabbers() { return m_backstabbers; }
+	bool shouldBansheesHarass() const;
 };
 
