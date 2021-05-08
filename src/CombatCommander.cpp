@@ -945,6 +945,8 @@ void CombatCommander::updateWorkerFleeSquad()
 		const bool groundCloakedThreat = Util::PathFinding::HasGroundFromGroundCloakedInfluenceOnTile(tile, m_bot);
 		const bool groundThreat = Util::PathFinding::HasCombatInfluenceOnTile(tile, worker.isFlying(), true, m_bot);
 		const bool slightlyInjured = worker.getHitPointsPercentage() < 100.f;
+		auto workerSquad = m_squadData.getUnitSquad(worker);
+		const bool defending = workerSquad && workerSquad->getSquadOrder().getType() == SquadOrderTypes::Defend;
 		const bool injured = worker.getHitPointsPercentage() < m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT * 100;
 		const auto job = m_bot.Workers().getWorkerData().getWorkerJob(worker);
 		const auto isProxyWorker = m_bot.Workers().getWorkerData().isProxyWorker(worker);
@@ -970,7 +972,7 @@ void CombatCommander::updateWorkerFleeSquad()
 		// Check if the worker needs to flee (the last part is bad because workers sometimes need to mineral walk)
 		if (effectInfluence || (!workerRush && !isBackstabber &&
 			(job == WorkerJobs::Idle && worker.getAPIUnitType() != sc2::UNIT_TYPEID::TERRAN_MULE && (groundThreat || flyingThreat))
-			|| ((!earlyRushed || slightlyInjured || targettedByOracle) &&
+			|| ((!earlyRushed || (slightlyInjured && !defending) || targettedByOracle) &&
 				((((flyingThreat && !groundThreat) || fleeFromSlowThreats || groundCloakedThreat) && job != WorkerJobs::Build && job != WorkerJobs::Repair)
 				|| (groundThreat && (injured || (isProxyWorker && isWorkerRushed)) && job != WorkerJobs::Build && Util::DistSq(worker, Util::GetPosition(m_bot.Bases().getClosestBasePosition(worker.getUnitPtr(), Players::Self))) < MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE * MAX_DISTANCE_FROM_CLOSEST_BASE_FOR_WORKER_FLEE)))))
 		{
@@ -2698,7 +2700,21 @@ void CombatCommander::updateDefenseSquads()
 				{
 					// if there are only workers and we aren't worker rushed and are on 2 bases or less, the scout defense squad is going to take care of it
 					if (region.offensiveEnemyUnit || m_bot.Strategy().isWorkerRushed() || m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() > 2)
-						unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getDepotPosition(), region.closestEnemyUnit, region.enemyUnits);
+					{
+						bool armyIsEnough = region.antiGroundAllyPower >= region.groundEnemyPower;
+						if (armyIsEnough)
+						{
+							for (auto unit : region.affectedAllyUnits)
+							{
+								if (Util::IsWorker(unit->unit_type))
+								{
+									armyIsEnough = false;
+									break;
+								}
+							}
+						}
+						unit = findWorkerToAssignToSquad(*region.squad, region.baseLocation->getDepotPosition(), region.closestEnemyUnit, region.enemyUnits, false, armyIsEnough);
+					}
 				}
 
 				// If no support is available
@@ -2845,12 +2861,12 @@ Unit CombatCommander::findClosestDefender(const Squad & defenseSquad, const CCPo
     return closestDefender;
 }
 
-Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight) const
+Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight, bool armyIsEnough) const
 {
     // get our worker unit that is mining that is closest to it
     Unit workerDefender = m_bot.Workers().getClosestAvailableWorkerTo(closestEnemy.getPosition(), m_bot.Workers().MIN_HP_PERCENTAGE_TO_FIGHT, false, filterDifferentHeight);
 
-	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy, enemyUnits, filterDifferentHeight))
+	if(ShouldWorkerDefend(workerDefender, defenseSquad, pos, closestEnemy, enemyUnits, filterDifferentHeight, armyIsEnough))
 	{
         m_bot.Workers().setCombatWorker(workerDefender);
     }
@@ -2861,7 +2877,7 @@ Unit CombatCommander::findWorkerToAssignToSquad(const Squad & defenseSquad, cons
     return workerDefender;
 }
 
-bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight) const
+bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight, bool armyIsEnough) const
 {
 	if (!worker.isValid())
 		return false;
@@ -2921,13 +2937,13 @@ bool CombatCommander::ShouldWorkerDefend(const Unit & worker, const Squad & defe
 	if (isBuilding && enemyDistanceToBase < maxEnemyDistance * maxEnemyDistance && enemyDistanceToWorker < maxEnemyDistance * maxEnemyDistance)*/
 	if (enemyBuildingOnSameHeight)
 		return true;
-	// Worker should not defend against slow enemies, it should flee
-	if (!WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits))
+	// Worker should not defend against slow enemies, it should flee, unless our army is not enough to defend
+	if (armyIsEnough && !WorkerHasFastEnemyThreat(worker.getUnitPtr(), enemyUnits))
 		return false;
 	// worker should not get too far from base and can fight only units close to it
 	const auto enemyDistanceToBase = Util::DistSq(closestEnemy, pos);
 	const auto enemyDistanceToWorker = Util::DistSq(worker, closestEnemy);
-	if (enemyDistanceToBase < 15.f * 15.f && enemyDistanceToWorker < 7.f * 7.f)
+	if (enemyDistanceToBase < 15.f * 15.f && enemyDistanceToWorker < 10.f * 10.f)
 		return true;
 	return false;
 }

@@ -54,6 +54,7 @@ public:
 
 	const std::vector<Unit> & getTargets() const { return m_targets; }
 	RangedManager & getRangedManager() { return m_rangedManager; }
+	MeleeManager & getMeleeManager() { return m_meleeManager; }
 
     void onFrame();
     void setSquadOrder(const SquadOrder & so);
