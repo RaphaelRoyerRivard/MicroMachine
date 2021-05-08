@@ -1005,7 +1005,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 
 					// Banshee Speed upgrade
-					if (bansheeCount > 1)
+					if (bansheeCount > 1 && (!m_bot.Strategy().enemyHasFlyingDetector() || !m_bot.Strategy().enemyHasVeryFastAirAttackingUnits()))
 					{
 						if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
 						{

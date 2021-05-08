@@ -881,6 +881,27 @@ void CCBot::setUnits()
 					break;
 				}
 			}
+			if (!m_strategy.enemyHasFlyingDetector())
+			{
+				std::vector<sc2::UNIT_TYPEID> flyingDetectors = { sc2::UNIT_TYPEID::PROTOSS_OBSERVER, sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE, sc2::UNIT_TYPEID::TERRAN_RAVEN, sc2::UNIT_TYPEID::ZERG_OVERSEER };
+				if (Util::Contains(unitptr->unit_type, flyingDetectors))
+				{
+					m_strategy.setEnemyHasFlyingDetector(true);
+				}
+			}
+			if (!m_strategy.enemyHasVeryFastAirAttackingUnits())
+			{
+				if (Util::CanUnitAttackAir(unitptr, *this))
+				{
+					const float speed = Util::getSpeedOfUnit(unitptr, *this);
+					if (speed >= 2.75f)
+					{
+						m_strategy.setEnemyHasFastAirAttackingUnits(true);
+						if (speed >= 3.75f)
+							m_strategy.setEnemyHasVeryFastAirAttackingUnits(true);
+					}
+				}
+			}
 			m_lastSeenPosUnits[unitptr->tag] = std::pair<CCPosition, uint32_t>(unitptr->pos, GetGameLoop());
 		}
 		else //if(unitptr->alliance == sc2::Unit::Neutral)

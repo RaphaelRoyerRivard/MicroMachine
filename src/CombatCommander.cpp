@@ -1076,7 +1076,7 @@ void CombatCommander::updateBackupSquads()
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_CYCLONE
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_VIKINGASSAULT
-			//|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BANSHEE
+			|| (unitTypeId == sc2::UNIT_TYPEID::TERRAN_BANSHEE && !shouldBansheesHarass())
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_RAVEN
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER
 			|| unitTypeId == sc2::UNIT_TYPEID::TERRAN_THOR
@@ -1483,6 +1483,8 @@ void CombatCommander::updateHarassSquads()
 		const auto & squadUnits = squad.getUnits();
 		for (const auto & squadUnit : squadUnits)
 		{
+			if (squadUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE && !shouldBansheesHarass())
+				continue;
 			harassUnits[squadUnit.getAPIUnitType()].push_back(squadUnit);
 		}
 		squad.clear();
@@ -1520,7 +1522,7 @@ void CombatCommander::updateHarassSquads()
 	Squad & idleSquad = m_squadData.getSquad("Idle");
 	for (auto & idleUnit : idleSquad.getUnits())
 	{
-		if (idleUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE || idleUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
+		if ((idleUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BANSHEE && shouldBansheesHarass()) || idleUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
 		{
 			harassUnits[idleUnit.getAPIUnitType()].push_back(idleUnit);
 		}
@@ -3757,4 +3759,15 @@ bool CombatCommander::isBunkerDangerous(const sc2::Unit * bunker) const
 void CombatCommander::setBunkerIsDangerous(const sc2::Unit * bunker)
 {
 	m_dangerousEnemyBunkers[bunker] = m_bot.GetCurrentFrame();
+}
+
+bool CombatCommander::shouldBansheesHarass() const
+{
+	if (!m_bot.Strategy().enemyHasFlyingDetector())
+		return true;
+	if (!m_bot.Strategy().enemyHasFastAirAttackingUnits())
+		return true;
+	if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED) && !m_bot.Strategy().enemyHasVeryFastAirAttackingUnits())
+		return true;
+	return false;
 }
