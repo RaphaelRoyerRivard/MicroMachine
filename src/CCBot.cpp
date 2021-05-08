@@ -682,8 +682,9 @@ void CCBot::setUnits()
 			}
 			if (!m_strategy.shouldProduceAntiAirDefense())
 			{
+				std::vector<sc2::UNIT_TYPEID> airProductionBuildings = { sc2::UNIT_TYPEID::ZERG_SPIRE, sc2::UNIT_TYPEID::PROTOSS_STARGATE };
 				// If unit is flying and not part of the following list, we should produce Anti Air units
-				if (unitptr->is_flying || unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_SPIRE)
+				if (unitptr->is_flying || Util::Contains(unitptr->unit_type, airProductionBuildings))
 				{
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{

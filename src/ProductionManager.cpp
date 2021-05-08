@@ -504,6 +504,10 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 				shouldSkip = true;
 		}
 	}
+	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB)
+	{
+		shouldSkip = m_bot.Strategy().shouldProduceAntiAirOffense() && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true) < 2;
+	}
 	else if (currentItem.type.isUpgrade())
 	{
 		const auto & typeData = m_bot.Data(currentItem.type);

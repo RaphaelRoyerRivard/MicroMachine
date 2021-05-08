@@ -95,6 +95,12 @@ void RangedManager::executeMicro()
 		if (!Util::Contains(unitPtr, rangedUnits))
 			otherSquadsUnits.push_back(unitPtr);
 	}
+	for (auto & meleeUnit : m_squad->getMeleeManager().getUnits())
+	{
+		const sc2::Unit * unitPtr = meleeUnit.getUnitPtr();
+		if (!Util::Contains(unitPtr, otherSquadsUnits))
+			otherSquadsUnits.push_back(unitPtr);
+	}
 
     sc2::Units rangedUnitTargets;
     for (auto target : m_targets)

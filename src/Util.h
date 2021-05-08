@@ -346,7 +346,9 @@ namespace Util
     bool            IsTerran(const CCRace & race);
 	bool			IsWorker(sc2::UNIT_TYPEID type);
 	int				ToMapKey(const CCTilePosition position);
+	int				ToMapKey(const CCPosition position);
 	CCTilePosition	FromCCTilePositionMapKey(const int mapKey);
+	CCPosition		FromCCPositionMapKey(const int mapKey);
     CCPositionType  TileToPosition(float tile);
 
 #ifdef SC2API
