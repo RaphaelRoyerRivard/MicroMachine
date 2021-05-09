@@ -198,3 +198,10 @@ bool MetaType::operator == (const MetaType & mt) const
 		return m_unitType == mt.getUnitType();
 	return m_upgrade == mt.getUpgrade();
 }
+
+bool MetaType::operator != (const MetaType & mt) const
+{
+	if (isUnit())
+		return m_unitType != mt.getUnitType();
+	return m_upgrade != mt.getUpgrade();
+}

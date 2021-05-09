@@ -45,6 +45,7 @@ public:
 
 	bool operator < (const MetaType & mt) const;
 	bool operator == (const MetaType & mt) const;
+	bool operator != (const MetaType & mt) const;
 
 #ifndef SC2API
     MetaType(const BWAPI::TechType & tech, CCBot & bot);
