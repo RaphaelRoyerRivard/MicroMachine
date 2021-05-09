@@ -506,7 +506,10 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	}
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB)
 	{
-		shouldSkip = m_bot.Strategy().shouldProduceAntiAirOffense() && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true) < 2;
+		if (starportCount == 1 && m_queue.contains(MetaTypeEnum::Medivac))
+			shouldSkip = true;
+		else if (m_bot.Strategy().shouldProduceAntiAirOffense() && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true) < 2)
+			shouldSkip = true;
 	}
 	else if (currentItem.type.isUpgrade())
 	{
@@ -514,19 +517,18 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 		// We don't want to skip the upgrade if we have a big bank of resources
 		if (m_bot.GetFreeMinerals() < typeData.mineralCost * 3 || m_bot.GetFreeGas() < typeData.gasCost * 3)
 		{
-			// Do not research upgrade if we are under attack early (we want to save our resources)
-			/*if (m_bot.Strategy().isEarlyRushed())
+			// We don't want to skip the Banshee Cloak or Concussive Shell upgrade as they are very important
+			if (currentItem.type != MetaTypeEnum::BansheeCloak && currentItem.type != MetaTypeEnum::ConcussiveShells)
 			{
-				shouldSkip = true;
-			}
-			else*/ if (currentItem.type == MetaTypeEnum::CombatShield && !isTechStarted(MetaTypeEnum::Stimpack))
-			{
-				shouldSkip = true;
-			}
-			else
-			{
-				// Do not research upgrade unless all our production structures are in use
-				shouldSkip = isImportantProductionBuildingIdle(false, false);
+				if (currentItem.type == MetaTypeEnum::CombatShield && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK))
+				{
+					shouldSkip = true;
+				}
+				else
+				{
+					// Do not research upgrade unless all our production structures are in use
+					shouldSkip = isImportantProductionBuildingIdle(false, false);
+				}
 			}
 		}
 	}
@@ -618,6 +620,10 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 					const auto hasRefinery = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true) > 0;
 					shouldSkip = hasRefinery;
 				}
+				else if (currentItem.type == MetaTypeEnum::Barracks)
+				{
+					shouldSkip = barracksCount > 0;
+				}
 				else if (currentItem.type == MetaTypeEnum::Factory || currentItem.type == MetaTypeEnum::Starport)
 				{
 					shouldSkip = true;
@@ -628,9 +634,13 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 				if (currentItem.type == MetaTypeEnum::Refinery)
 				{
 					if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true) < 2)
-						shouldSkip = orbitals == 0;
+						shouldSkip = barracksCount < 2;
 					else
 						shouldSkip = starportCount < 1;
+				}
+				else if (currentItem.type == MetaTypeEnum::Barracks)
+				{
+					shouldSkip = orbitals == 0;
 				}
 			}
 		}
@@ -839,6 +849,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const bool pumpOutMarauders = proxyMaraudersStrategy;
 				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount * 2 < enemyUnitsWeakAgainstMarauders);
 				const auto factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
+				const bool earlySecondBarracks = m_bot.Strategy().getStartingStrategy() == EARLY_EXPAND;
 
 				if (productionBuildingAddonCount < productionBuildingCount)
 				{//Addon
@@ -854,7 +865,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					const auto starportAddonCount = starportTechLabCount + starportReactorCount;
 					if (barracksCount > barracksAddonCount)
 					{
-						/*if (proxyMaraudersStrategy && barracksTechLabCount == 1 && barracksReactorCount == 0)
+						// Uncomment once we want to code the early 2 Medivacs drop strategy
+						/*if (earlySecondBarracks && barracksReactorCount == 0 && barracksCount > 1)
 						{
 							toBuild = MetaTypeEnum::BarracksReactor;
 							hasPicked = true;
@@ -905,7 +917,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyGatewayCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_GATEWAY).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_WARPGATE).size();
 				const bool startPumpingOutMarauders = pumpOutMarauders && completedSupplyProviders >= 1 && barracksCount < 2;
 				const bool buildMoreBarracksAgainstMultiGateways = produceMarauders && completedSupplyProviders >= 1 && barracksCount < (enemyGatewayCount - 1);
-				if (barracksCount < 10 && (barracksCount < 1 || startPumpingOutMarauders || buildMoreBarracksAgainstMultiGateways || m_bot.GetFreeMinerals() >= 800 || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount)))
+				if (barracksCount < 10 && (barracksCount < (earlySecondBarracks ? 2 : 1) || startPumpingOutMarauders || buildMoreBarracksAgainstMultiGateways || m_bot.GetFreeMinerals() >= 800 || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount)))
 				{
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
@@ -1061,19 +1073,19 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						queueTech(MetaTypeEnum::ConcussiveShells);
 					}
+				}
 
-					// 1 Medivac for every 4 Marauders
-					if (medivacCount < floor(maraudersCount / 4.f))
+				// 1 Medivac for every 4 Marauders and 8 Marines
+				if (medivacCount < floor(maraudersCount / 4.f) + floor(marinesCount / 8.f))
+				{
+					enoughMedivacs = false;
+					if (!m_queue.contains(MetaTypeEnum::Medivac))
 					{
-						enoughMedivacs = false;
-						if (!m_queue.contains(MetaTypeEnum::Medivac))
-						{
-							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Medivac, 0, false));
-						}
+						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Medivac, 0, false));
 					}
 				}
 
-				if ((!produceMarauders || m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES)) && marinesCount + maraudersCount * 2 >= 10 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
+				if ((!produceMarauders || m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES)) && marinesCount + maraudersCount * 2 >= (barracksCount >= 2 ? 6 : 10) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
 				{
 					queueTech(MetaTypeEnum::Stimpack);
 				}
@@ -2076,7 +2088,6 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 			unitType == sc2::UNIT_TYPEID::TERRAN_MEDIVAC ||
 			unitType == sc2::UNIT_TYPEID::TERRAN_LIBERATOR)
 		{
-
 			for (auto & producerType : producerTypes)
 			{
 				for (auto & unit : m_bot.GetAllyUnits(producerType.getAPIUnitType()))
@@ -2106,7 +2117,8 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 							break;
 						}
 					}
-					break;
+					if (priorizeReactor)
+						break;
 				}
 			}
 		}

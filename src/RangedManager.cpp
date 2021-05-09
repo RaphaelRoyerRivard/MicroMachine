@@ -1148,16 +1148,11 @@ bool RangedManager::TeleportBattlecruiser(const sc2::Unit * battlecruiser, CCPos
 
 CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const
 {
-	const bool isMarine = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE;
 	const bool isMedivac = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC;
 	const bool isRaven = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
 	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = supportTypes;
 	std::vector<sc2::UNIT_TYPEID> typesToConsider;
-	if (isMarine)
-	{
-		typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
-	}
-	else if (isMedivac)
+	if (isMedivac)
 	{
 		typesToConsider = {
 			sc2::UNIT_TYPEID::TERRAN_MARINE,

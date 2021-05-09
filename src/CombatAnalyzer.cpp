@@ -214,11 +214,45 @@ void CombatAnalyzer::lowPriorityChecks()
 	//TODO handle dead ally units
 
 	//Upgrades
+	const auto combatInfantryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marine.getUnitType(), true, true) +
+		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Marauder.getUnitType(), true, true) +
+		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Ghost.getUnitType(), true, true);
 	const auto combatVehicleCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), true, true) +
-		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), true, true);
+		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), true, true) +
+		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SiegeTank.getUnitType(), true, true) +
+		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Thor.getUnitType(), true, true);
 	const auto combatShipCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Banshee.getUnitType(), true, true) +
 		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), true, true) +
+		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Liberator.getUnitType(), true, true) +
 		m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Battlecruiser.getUnitType(), true, true);
+	if (combatInfantryCount >= 10)
+	{
+		auto & production = m_bot.Commander().Production();
+		if (!production.isTechQueuedOrStarted(MetaTypeEnum::TerranInfantryWeaponsLevel1))
+		{
+			production.queueTech(MetaTypeEnum::TerranInfantryWeaponsLevel1);
+		}
+		else if (production.isTechFinished(MetaTypeEnum::TerranInfantryWeaponsLevel1) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranInfantryArmorsLevel1))
+		{
+			production.queueTech(MetaTypeEnum::TerranInfantryArmorsLevel1);
+		}
+		else if (production.isTechFinished(MetaTypeEnum::TerranInfantryArmorsLevel1) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranInfantryWeaponsLevel2))
+		{
+			production.queueTech(MetaTypeEnum::TerranInfantryWeaponsLevel2);
+		}
+		else if (production.isTechFinished(MetaTypeEnum::TerranInfantryWeaponsLevel2) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranInfantryArmorsLevel2))
+		{
+			production.queueTech(MetaTypeEnum::TerranInfantryArmorsLevel2);
+		}
+		else if (production.isTechFinished(MetaTypeEnum::TerranInfantryArmorsLevel2) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranInfantryWeaponsLevel3))
+		{
+			production.queueTech(MetaTypeEnum::TerranInfantryWeaponsLevel3);
+		}
+		else if (production.isTechFinished(MetaTypeEnum::TerranInfantryWeaponsLevel3) && !production.isTechQueuedOrStarted(MetaTypeEnum::TerranInfantryArmorsLevel3))
+		{
+			production.queueTech(MetaTypeEnum::TerranInfantryArmorsLevel3);
+		}
+	}
 	if (combatVehicleCount + combatShipCount >= 4)
 	{
 		auto & production = m_bot.Commander().Production();
