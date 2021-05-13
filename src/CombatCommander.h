@@ -184,6 +184,7 @@ class CombatCommander
 	std::set<const sc2::Unit *> m_addonBlockingTanks;
 	std::set<Unit> m_backstabbers;	// Workers that backstab the enemy probes when probe rushed
 	std::map<int, long> m_cachedBiles;	// <corrosive bile location (mapkey generated with Util::ToMapKey), last frame seen>
+	bool m_workersStacked = false;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
@@ -298,5 +299,7 @@ public:
 	std::set<const sc2::Unit *> & getAddonBlockingTanks() { return m_addonBlockingTanks; }
 	std::set<Unit> & getBackstabbers() { return m_backstabbers; }
 	bool shouldBansheesHarass() const;
+	bool haveWorkersStacked() { return m_workersStacked; }
+	void setWorkersHaveStacked(bool workersStacked) { m_workersStacked = workersStacked; }
 };
 
