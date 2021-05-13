@@ -589,15 +589,11 @@ const Strategy & StrategyManager::getCurrentStrategy() const
 
 StrategyPostBuildOrder StrategyManager::getCurrentStrategyPostBuildOrder() const
 {
-	if (m_bot.Strategy().isWorkerRushed())
+	if (m_workerRushed)
 	{
 		return WORKER_RUSH_DEFENSE;
 	}
-	if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss)
-	{
-		//return TERRAN_VS_PROTOSS;
-	}
-	return TERRAN_CLASSIC;//MARINE_MARAUDER;
+	return TERRAN_CLASSIC;
 }
 
 const MM::BuildOrder & StrategyManager::getOpeningBookBuildOrder() const

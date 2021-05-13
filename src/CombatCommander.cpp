@@ -2465,6 +2465,10 @@ void CombatCommander::updateDefenseSquads()
 	m_bot.Strategy().setIsEarlyRushed(earlyRushed);
 	m_bot.Strategy().setEnemyHasProxyCombatBuildings(proxyCombatBuildings);
 
+	// We want to have started our Refinery and Barracks before we start engaging
+	if (workerRushed && (m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REFINERY).size() < 1 || m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_BARRACKS).size() < 1))
+		return;
+
 	// Find our Reaper that is the closest to the enemy base
 	const sc2::Unit * offensiveReaper = nullptr;
 	if (earlyRushed)

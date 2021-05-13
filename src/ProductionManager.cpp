@@ -429,7 +429,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(sc2::UNIT_TYPEID::TERRAN_STARPORT, m_bot), false, true);
 	const int deadStarportCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_STARPORT);
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, false);
-	if (currentItem.type.getUnitType().isRefinery())
+	if (currentItem.type.getUnitType().isRefinery() && !m_bot.Strategy().isWorkerRushed())
 	{
 		const bool hasBarracks = barracksCount > 0;
 		shouldSkip = !hasBarracks;
@@ -488,6 +488,12 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 				}
 			}
 		}
+	}
+	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MARINE)
+	{
+		// In case we have been worker rushed, sometimes our Reaper will take a lot of time to kill the enemy Probes and the enemy Nexus
+		// But if we can produce an SCV instead of a Marine, we can start mining and cancel the tie timer
+		shouldSkip = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SCV.getUnitType(), false, true);
 	}
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS || currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_FACTORY)
 	{
@@ -1445,33 +1451,52 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case WORKER_RUSH_DEFENSE:
 			{
 				m_queue.clearAll();
-				if (m_bot.GetMinerals() >= 100)//check strategy
+				const int refineryUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false, true);
+				const int completedRefineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), true, false);
+				if (refineryUnderConstructionCount + completedRefineryCount > 0)
 				{
-					m_queue.queueAsHighestPriority(workerMetatype, false);
-				}
-				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, false);
-				if (barracksCount > 0)
-				{
-					const int refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false);
-					if (refineryCount > 0)
+					const int barracksUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, false, true);
+					const int completedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, false);
+					if (barracksUnderConstructionCount + completedBarracksCount > 0)
 					{
+						const int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, false);
 						if (m_bot.GetFreeGas() >= 50 || m_bot.Workers().getNumGasWorkers() > 0)
 						{
 							m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
 						}
-						else
+						else if (reaperCount < 1)
 						{
 							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+						}
+						if (m_bot.GetMinerals() >= 100 || (reaperCount > 0 && !m_bot.Strategy().isEarlyRushed()))
+						{
+							m_queue.queueAsHighestPriority(workerMetatype, false);
 						}
 					}
 					else
 					{
-						m_queue.queueAsHighestPriority(MetaTypeEnum::Refinery, false);
+						if (barracksCount < 1)
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Barracks, false);
 					}
 				}
 				else
 				{
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Barracks, false);
+					auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false);
+					if (refineryCount == 0)
+						m_queue.queueAsHighestPriority(MetaTypeEnum::Refinery, false);
+					// Remove the Barracks if we haven't started it yet because we want to build the refinery first and build the Barracks far away from the wall
+					std::vector<Building> barracksToRemove;
+					for (auto & building : m_bot.Buildings().getBuildings())
+					{
+						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS && !building.buildingUnit.isValid())
+						{
+							auto distToWall = Util::DistSq(Util::GetPosition(building.finalPosition), m_bot.Buildings().getWallPosition());
+							if (distToWall < 5 * 5)
+								barracksToRemove.push_back(building);
+						}
+					}
+					for (auto & building : barracksToRemove)
+						m_bot.Buildings().CancelBuilding(building, "Worker rushed");
 				}
 				break;
 			}
