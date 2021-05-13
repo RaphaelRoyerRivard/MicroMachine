@@ -11,7 +11,6 @@ protected:
 	CCPosition m_stackPosition = CCPosition();
 	Unit m_stackingMineral;
 	Unit m_enemyMineral;
-	bool m_stacked = false;
 	std::set<Unit> m_stackedUnits;
 
 public:

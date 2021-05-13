@@ -285,7 +285,7 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 
 bool MeleeManager::areUnitsStackedUp()
 {
-	if (m_stacked)
+	if (m_bot.Commander().Combat().haveWorkersStacked())
 		return true;
 	const std::vector<Unit> & meleeUnits = getUnits();
 	if (meleeUnits.size() < 10)
@@ -299,7 +299,7 @@ bool MeleeManager::areUnitsStackedUp()
 				return false;
 		}
 	}
-	m_stacked = true;
+	m_bot.Commander().Combat().setWorkersHaveStacked(true);
 	for (auto & meleeUnit : meleeUnits)
 	{
 		m_stackedUnits.insert(meleeUnit);
