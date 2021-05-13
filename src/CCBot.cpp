@@ -2445,7 +2445,10 @@ int CCBot::GetFreeGas()
 
 Unit CCBot::GetUnit(const CCUnitID & tag) const
 {
-	return Unit(Observation()->GetUnit(tag), *(CCBot *)this);
+	auto unitptr = Observation()->GetUnit(tag);
+	if (!unitptr)
+		return {};
+	return Unit(unitptr, *(CCBot *)this);
 }
 
 Unit CCBot::GetUnit(const sc2::PassengerUnit & passenger)
