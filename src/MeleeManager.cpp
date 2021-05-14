@@ -465,6 +465,7 @@ void MeleeManager::microStack()
 					}
 				}
 			}
+			bool incrementIterator = true;
 			/*if (i == 0) {
 				canAttackCount += canAttack ? 1 : 0;
 			}
@@ -480,6 +481,7 @@ void MeleeManager::microStack()
 						const auto action = UnitAction(MicroActionType::AttackMove, m_stackPosition, false, 0, "stack attack", m_squad->getName());
 						m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 						it = m_stackedUnits.erase(it);
+						incrementIterator = false;
 					}
 					else
 					{
@@ -488,7 +490,8 @@ void MeleeManager::microStack()
 					}
 				}
 			}
-			++it;
+			if (incrementIterator)
+				++it;
 		}
 	//}
 	//if (m_stackedUnits.empty())
