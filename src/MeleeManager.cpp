@@ -341,7 +341,7 @@ bool MeleeManager::areUnitsStackedUp()
 		for (auto & otherMeleeUnit : meleeUnits)
 		{
 			float distSq = Util::DistSq(meleeUnit, otherMeleeUnit);
-			if (distSq > 0.4f * 0.4f)
+			if (distSq > (m_mineralPocket ? 0.4f * 0.4f : 2 * 2))
 				return false;
 		}
 	}
@@ -397,6 +397,8 @@ void MeleeManager::identifyStackingMinerals()
 				if (closeMineralCount == 2)
 				{
 					(i == 0 ? m_stackingMineral : m_enemyMineral) = farMineral;
+					if (i == 0)
+						m_mineralPocket = true;
 					break;
 				}
 			}

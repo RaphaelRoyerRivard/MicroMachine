@@ -2689,14 +2689,6 @@ void CCBot::StartProfiling(const std::string & profilerName)
 {
 	auto & profiler = m_profilingTimes[profilerName];	// Get the profiling queue tuple
 	profiler.start = std::chrono::steady_clock::now();	// Set the start time (third element of the tuple) to now
-
-	// TODO remove when worker rush crash is fixed
-	if (m_strategy.isWorkerRushed())
-	{
-		std::stringstream ss;
-		ss << "start " << profilerName;
-		Util::Log(__FUNCTION__, ss.str(), *this);
-	}
 }
 
 void CCBot::StopProfiling(const std::string & profilerName)
@@ -2718,14 +2710,6 @@ void CCBot::StopProfiling(const std::string & profilerName)
 	{
 		queue[0].first += elapsedTime;							// Add the time to the queue
 		queue[0].second++;										// Increase the number of time that profiler has been called in that frame
-	}
-
-	// TODO remove when worker rush crash is fixed
-	if (m_strategy.isWorkerRushed())
-	{
-		std::stringstream ss;
-		ss << "stop " << profilerName;
-		Util::Log(__FUNCTION__, ss.str(), *this);
 	}
 }
 
