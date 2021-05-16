@@ -2516,16 +2516,23 @@ void CombatCommander::updateDefenseSquads()
 					continue;	// We do not want to make our proxy units come back to defend if they are close to the enemy base
 				if (unit.getUnitPtr() == offensiveReaper)
 				{
-					bool regionHasEnemyBuildingOrArmoredUnit = false;
+					bool regionHasEnemyReaper = false;
+					//bool regionHasEnemyBuildingOrArmoredUnit = false;
 					for (auto & enemyUnit : region.enemyUnits)
 					{
-						if (enemyUnit.getType().isBuilding() || Util::GetArmor(enemyUnit.getUnitPtr(), m_bot) > 0)
+						if (enemyUnit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
+						{
+							regionHasEnemyReaper = true;
+							break;
+						}
+						/*if (enemyUnit.getType().isBuilding() || Util::GetArmor(enemyUnit.getUnitPtr(), m_bot) > 0)
 						{
 							regionHasEnemyBuildingOrArmoredUnit = true;
 							break;
-						}
+						}*/
 					}
-					if (regionHasEnemyBuildingOrArmoredUnit)
+					//if (regionHasEnemyBuildingOrArmoredUnit)
+					if (!regionHasEnemyReaper)
 						continue;	// We want to keep at least one Reaper in the Harass squad (defined only when early rushed)
 				}
 				bool onlyBurrowedWidowMines = true;

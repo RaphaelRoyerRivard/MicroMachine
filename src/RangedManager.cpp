@@ -648,7 +648,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		m_bot.StopProfiling("0.10.4.1.5.1.f          OpportunisticAttack");
 	}
 
-	if (!unitShouldHeal && distSqToTarget < m_order.getRadius() * m_order.getRadius() && (target || (!threats.empty() && m_order.getStatus() != "Retreat")))
+	if (!unitShouldHeal && distSqToTarget < m_order.getRadius() * m_order.getRadius() && ((target && (target->last_seen_game_loop == m_bot.GetCurrentFrame() || m_order.getStatus() != "Retreat")) || (!threats.empty() && m_order.getStatus() != "Retreat")))
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());

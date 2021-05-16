@@ -35,7 +35,7 @@ void MeleeManager::executeMicro()
 	const bool workerRushed = m_bot.Strategy().isWorkerRushed();
 	if (workerRushed && m_order.getType() == SquadOrderTypes::Defend)
 	{
-		// Not working very well, the stacked workers push each other out of range of their target when they attack
+		// The stacked workers cannot one shot enemies because they push each other out of range of their target when they attack
 		m_bot.StartProfiling("0.10.4.1.4.2        areUnitsStackedUp");
 		bool stacked = areUnitsStackedUp();
 		m_bot.StopProfiling("0.10.4.1.4.2        areUnitsStackedUp");
