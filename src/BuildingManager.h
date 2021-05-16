@@ -43,6 +43,7 @@ class BuildingManager
 	void			castBuildingsAbilities();
 	void			RunProxyLogic();
 	void			LiftOrLandDamagedBuildings();
+	void			loadOrUnloadSCVs();
 	bool			isEnemyUnitNear(CCTilePosition center, int radius = 10) const;
 	void			updateBaseBuildings();
 

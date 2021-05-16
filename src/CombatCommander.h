@@ -282,7 +282,7 @@ public:
 	void updateBlockedTilesWithNeutral();
 	void SetLogVikingActions(bool log);
 	bool ShouldSkipFrame(const sc2::Unit * combatUnit) const;
-	bool PlanAction(const sc2::Unit* rangedUnit, UnitAction action);
+	bool PlanAction(const sc2::Unit* unit, UnitAction action);
 	void ClearActions();
 	void CleanActions(const std::vector<Unit> &rangedUnits);
 	void ExecuteActions();

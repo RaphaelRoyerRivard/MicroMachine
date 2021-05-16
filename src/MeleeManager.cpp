@@ -290,6 +290,16 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 
 	if (flee || noTarget)
 	{
+		if (flee && workerRushed && m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_REAPER) > 0)
+		{
+			auto ccs = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
+			if (!ccs.empty() && ccs[0].getUnitPtr()->passengers.size() < 5)
+			{
+				const auto action = UnitAction(MicroActionType::RightClick, ccs[0].getUnitPtr(), true, 0, "hide", m_squad->getName());
+				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+				return;
+			}
+		}
 		if (Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(meleeUnit.getPosition()), meleeUnit.getUnitPtr(), m_bot) > 0)
 		{
 			m_bot.StartProfiling("0.10.4.1.4.6.10         flee");
