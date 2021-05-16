@@ -2,6 +2,8 @@
 #include "Util.h"
 #include "CCBot.h"
 
+const int MIN_VIKING_COUNT = 2;
+
 ProductionManager::ProductionManager(CCBot & bot)
     : m_bot             (bot)
     , m_queue           (bot)
@@ -489,12 +491,6 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 			}
 		}
 	}
-	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_MARINE)
-	{
-		// In case we have been worker rushed, sometimes our Reaper will take a lot of time to kill the enemy Probes and the enemy Nexus
-		// But if we can produce an SCV instead of a Marine, we can start mining and cancel the tie timer
-		shouldSkip = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SCV.getUnitType(), false, true);
-	}
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS || currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_FACTORY)
 	{
 		if (!hasStartedFirstExpand && barracksCount + factoryCount + starportCount >= 3)
@@ -504,7 +500,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	{
 		if (!hasStartedFirstExpand && barracksCount + factoryCount + starportCount >= 3)
 			shouldSkip = true;
-		if (starportCount + deadStarportCount == 0)
+		if (starportCount + deadStarportCount == 0 && m_bot.Strategy().getStartingStrategy() != StartingStrategy::STANDARD)
 		{
 			if (!hasProducedAtLeastXFactoryUnit(1))
 				shouldSkip = true;
@@ -514,7 +510,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	{
 		if (starportCount == 1 && m_queue.contains(MetaTypeEnum::Medivac))
 			shouldSkip = true;
-		else if (m_bot.Strategy().shouldProduceAntiAirOffense() && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true) < 2)
+		else if (m_bot.Strategy().shouldProduceAntiAirOffense() && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true) < MIN_VIKING_COUNT)
 			shouldSkip = true;
 	}
 	else if (currentItem.type.isUpgrade())
@@ -1201,7 +1197,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (m_bot.Strategy().shouldProduceAntiAirOffense())
 				{
 #ifndef NO_UNITS
-					int lowVikingsSupply = vikingCount * UnitType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_bot).supplyRequired() < m_bot.Analyzer().opponentAirSupply * 1.5f;
+					bool lowVikingsSupply = vikingCount < MIN_VIKING_COUNT || vikingCount * UnitType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_bot).supplyRequired() < m_bot.Analyzer().opponentAirSupply * 1.5f;
 					bool makeVikings = false;
 					if (m_bot.Strategy().enemyHasProtossHighTechAir())
 					{
