@@ -655,29 +655,27 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 					m_initialBuildOrderFinished = true;
 					clearQueue();
 				}
-				shouldSkip = baseCount < 2;
-				if (!shouldSkip && currentItem.type == MetaTypeEnum::Refinery)
+				const auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true);
+				if (currentItem.type == MetaTypeEnum::Refinery && refineryCount > 0)
 				{
-					const auto hasStarport = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true) > 0;
-					if (!hasStarport)
+					shouldSkip = baseCount < 2;
+					if (!shouldSkip)
 					{
-						const auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true);
-						const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
-						if (!hasFactory)
+						const auto hasStarport = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true) > 0;
+						if (!hasStarport)
 						{
-							shouldSkip = refineryCount >= 2;
-						}
-						else
-						{
-							shouldSkip = refineryCount >= 3;
+							const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
+							if (!hasFactory)
+							{
+								shouldSkip = refineryCount >= 2;
+							}
+							else
+							{
+								shouldSkip = refineryCount >= 3;
+							}
 						}
 					}
 				}
-			}
-			else if (currentItem.type == MetaTypeEnum::Factory)
-			{
-				const auto hasPlanetaryFortress = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::PlanetaryFortress.getUnitType(), false, true) > 0;
-				shouldSkip = !hasPlanetaryFortress && m_bot.Strategy().getInitialStartingStrategy() == FAST_PF;
 			}
 		}
 		else if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH)
