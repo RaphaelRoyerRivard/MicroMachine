@@ -2284,7 +2284,7 @@ void CombatCommander::updateDefenseSquads()
 			{
 				if (unit.getType().isWorker())
 					++enemyWorkers;
-				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 4032 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))	// first 3 minutes
+				if (!workerRushed && unit.getType().isWorker() && !unitOtherThanWorker && m_bot.GetGameLoop() < 22.4f * 60 * 5 && myBaseLocation == m_bot.Bases().getPlayerStartingBaseLocation(Players::Self))
 				{
 					// Need at least 3 workers for a worker rush
 					if (enemyWorkers >= 3)
@@ -2388,18 +2388,6 @@ void CombatCommander::updateDefenseSquads()
 					if (base.isFlying() && Util::DistSq(basePosition, base.getPosition()) < 100)//If the base is less than 10 tiles away
 					{
 						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::LAND, basePosition, m_bot);
-					}
-					else if (base.getUnitPtr()->cargo_space_taken > 0)
-					{
-						Micro::SmartAbility(base.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
-
-						for (auto & worker : m_bot.Workers().getWorkers())
-						{
-							if (m_bot.Workers().getWorkerData().getWorkerJob(worker) != WorkerJobs::Scout)
-							{
-								m_bot.Workers().finishedWithWorker(worker);
-							}
-						}
 					}
 				}
 			}
@@ -3259,9 +3247,9 @@ bool CombatCommander::ShouldSkipFrame(const sc2::Unit * rangedUnit) const
 	return m_bot.GetGameLoop() < availableFrame;
 }
 
-bool CombatCommander::PlanAction(const sc2::Unit* rangedUnit, UnitAction action)
+bool CombatCommander::PlanAction(const sc2::Unit* unit, UnitAction action)
 {
-	auto & currentAction = unitActions[rangedUnit];
+	auto & currentAction = unitActions[unit];
 	// If the unit is already performing the same action, we do nothing
 	if (currentAction == action)
 	{
@@ -3282,7 +3270,7 @@ bool CombatCommander::PlanAction(const sc2::Unit* rangedUnit, UnitAction action)
 		return false;
 	}
 
-	unitActions[rangedUnit] = action;
+	unitActions[unit] = action;
 	return true;
 }
 
@@ -3309,7 +3297,7 @@ void CombatCommander::CleanActions(const std::vector<Unit> &combatUnits)
 		}
 
 		// If the unit changed squad
-		if (!m_squadData.squadExists(action.squad) || !m_squadData.getSquad(action.squad).containsUnit(rangedUnit->tag))
+		if (action.squad != "" && (!m_squadData.squadExists(action.squad) || !m_squadData.getSquad(action.squad).containsUnit(rangedUnit->tag)))
 		{
 			unitsToClear.push_back(rangedUnit);
 			continue;

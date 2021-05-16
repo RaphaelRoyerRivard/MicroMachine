@@ -2361,6 +2361,10 @@ void BuildingManager::castBuildingsAbilities()
 	m_bot.StartProfiling("0.8.8.4  DamagedBuildings");
 	LiftOrLandDamagedBuildings();
 	m_bot.StopProfiling("0.8.8.4  DamagedBuildings");
+
+	m_bot.StartProfiling("0.8.8.5  LoadOrUnloadSCVs");
+	loadOrUnloadSCVs();
+	m_bot.StopProfiling("0.8.8.5  LoadOrUnloadSCVs");
 }
 
 void BuildingManager::RunProxyLogic()
@@ -2525,35 +2529,42 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 				(unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING || 
 				unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING))
 			{
-				auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false, true);
-				if (nextExpansion)
+				if (m_bot.Strategy().isWorkerRushed())
 				{
-					landingPosition = nextExpansion->getDepotPosition();
-					if (unit.getHitPointsPercentage() > 50 && unit.getUnitPtr()->orders.size() == 0 &&
-						m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end() && m_commandCenterLandPosition[unit.getTag()] == landingPosition)
+					landingPosition = m_bot.GetStartLocation();
+				}
+				else
+				{
+					auto nextExpansion = m_bot.Bases().getNextExpansion(Players::Self, false, false, true);
+					if (nextExpansion)
 					{
-						bool isBlocked = !nextExpansion->isUnderAttack();
-						if (!isBlocked)
+						landingPosition = nextExpansion->getDepotPosition();
+						if (unit.getHitPointsPercentage() > 50 && unit.getUnitPtr()->orders.size() == 0 &&
+							m_commandCenterLandPosition.find(unit.getTag()) != m_commandCenterLandPosition.end() && m_commandCenterLandPosition[unit.getTag()] == landingPosition)
 						{
-							for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
+							bool isBlocked = !nextExpansion->isUnderAttack();
+							if (!isBlocked)
 							{
-								if (enemyUnit.getType().isBuilding())
+								for (const auto & enemyUnit : m_bot.GetKnownEnemyUnits())
 								{
-									float dist = Util::Dist(enemyUnit, landingPosition);
-									if (dist < 3.5f + enemyUnit.getUnitPtr()->radius)
+									if (enemyUnit.getType().isBuilding())
 									{
-										isBlocked = true;
-										break;
+										float dist = Util::Dist(enemyUnit, landingPosition);
+										if (dist < 3.5f + enemyUnit.getUnitPtr()->radius)
+										{
+											isBlocked = true;
+											break;
+										}
 									}
 								}
 							}
+							if (isBlocked)
+							{//The land order likely was cancelled, the expand is most likely blocked.
+								m_bot.Bases().SetLocationAsBlocked(landingPosition, unit.getType());
+							}
 						}
-						if (isBlocked)
-						{//The land order likely was cancelled, the expand is most likely blocked.
-							m_bot.Bases().SetLocationAsBlocked(landingPosition, unit.getType());
-						}
+						m_commandCenterLandPosition[unit.getTag()] = landingPosition;
 					}
-					m_commandCenterLandPosition[unit.getTag()] = landingPosition;
 				}
 			}
 			else
@@ -2574,6 +2585,24 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 				}
 			}
 		}
+	}
+}
+
+void BuildingManager::loadOrUnloadSCVs()
+{
+	auto ccs = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
+	if (ccs.empty())
+		return;
+	auto cc = ccs[0];
+	if (m_bot.Strategy().isWorkerRushed() && m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_REAPER) > 0)
+	{
+		auto loadAction = UnitAction(MicroActionType::Ability, sc2::ABILITY_ID::LOADALL, false, 0, "Load", "");
+		m_bot.Commander().Combat().PlanAction(cc.getUnitPtr(), loadAction);
+	}
+	else if (!cc.getUnitPtr()->passengers.empty())
+	{
+		auto unloadAction = UnitAction(MicroActionType::Ability, sc2::ABILITY_ID::UNLOADALL, false, 0, "Unload", "");
+		m_bot.Commander().Combat().PlanAction(cc.getUnitPtr(), unloadAction);
 	}
 }
 
