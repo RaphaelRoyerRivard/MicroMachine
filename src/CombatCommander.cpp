@@ -2514,7 +2514,7 @@ void CombatCommander::updateDefenseSquads()
 					continue;	// We do not want to make our harass units come back to defend if they are close to their harass target base
 				if (m_bot.Strategy().isProxyStartingStrategy() && distSqToEnemyBase < distanceToRegion * distanceToRegion)
 					continue;	// We do not want to make our proxy units come back to defend if they are close to the enemy base
-				if (unit.getUnitPtr() == offensiveReaper)
+				if (unit.getUnitPtr() == offensiveReaper && !m_bot.Strategy().isWorkerRushed())
 				{
 					bool regionHasEnemyReaper = false;
 					//bool regionHasEnemyBuildingOrArmoredUnit = false;

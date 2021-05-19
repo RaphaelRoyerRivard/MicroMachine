@@ -652,10 +652,12 @@ const std::set<Unit> WorkerData::getMineralWorkers() const
 
 void WorkerData::sendIdleWorkerToIdleSpot(const Unit & worker, bool force)
 {
+	if (!worker.isValid())
+		return;
 	if (m_bot.Bases().getBaseCount(Players::Self) > 0)
 	{
-		auto & base = *m_bot.Bases().getOccupiedBaseLocations(Players::Self).begin();
-		if (force || Util::DistSq(worker.getPosition(), base->getDepotPosition()) > 40)
+		auto base = *m_bot.Bases().getOccupiedBaseLocations(Players::Self).begin();
+		if (base && (force || Util::DistSq(worker.getPosition(), base->getDepotPosition()) > 40))
 		{
 			if (force || worker.getUnitPtr()->orders.size() == 0)
 			{

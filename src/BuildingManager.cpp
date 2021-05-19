@@ -2502,8 +2502,9 @@ void BuildingManager::LiftOrLandDamagedBuildings()
 				const auto recentDamageTaken = m_bot.Analyzer().getUnitState(unit.getUnitPtr()).GetRecentDamageTaken();
 				const bool takenTooMuchDamage = recentDamageTaken >= 50.f || (unit.getHitPointsPercentage() <= 50.f && recentDamageTaken >= 10.f);
 				// And there is danger on the ground but not in the air
+				const float groundInfluence = Util::PathFinding::GetTotalInfluenceOnTiles(unit.getPosition(), false, unit.getUnitPtr()->radius, m_bot);
 				const float airInfluence = Util::PathFinding::GetTotalInfluenceOnTiles(unit.getPosition(), true, unit.getUnitPtr()->radius, m_bot);
-				if (takenTooMuchDamage && airInfluence <= 0.f)
+				if (takenTooMuchDamage && airInfluence <= groundInfluence)
 				{
 					if (unit.isTraining())
 					{
