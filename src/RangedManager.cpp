@@ -2563,7 +2563,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		else
 		{
 			const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > enemyRange && unitSpeed > enemySpeed);
-			const bool shouldChase = unitRange < enemyRange && enemySpeed > 0;	//unitSpeed >= enemySpeed;
+			const bool shouldChase = unitTarget->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED || (unitRange < enemyRange && enemySpeed > 0);
 			if (!canAttackNow && AllowUnitToPathFind(unit, false, "ThreatFighting"))
 			{
 				if (shouldKite || (injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)))
