@@ -431,7 +431,8 @@ void BaseLocation::setPlayerOccupying(CCPlayer player, bool occupying)
 						geysers.push_back(unit);
 				}
 			}
-			if (minerals.size() == m_minerals.size() && geysers.size() == m_geysers.size())
+			// The >= is important because sometimes the clustering doesn't identify all the mineral patches, but the code above does
+			if (minerals.size() >= m_minerals.size() && geysers.size() == m_geysers.size())
 			{
 				m_minerals = minerals;
 				m_geysers = geysers;
