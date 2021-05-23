@@ -117,6 +117,10 @@ class CCBot : public sc2::Agent
 	bool m_player1IsHuman;
 	bool m_realtime;
 	std::stringstream m_versionMessage;
+	int m_totalSentActions = 0;
+	int m_currentAPM = 0;
+	long m_lastLoggedAPM = 0;
+	std::deque<std::pair<long, int>> m_recentlySentActions;
 
 	std::chrono::steady_clock::time_point m_lastFrameEndTime;
 
@@ -145,6 +149,7 @@ class CCBot : public sc2::Agent
 	void clearDeadUnits();
 	void clearDuplicateUnits();
 	void updatePreviousFrameEnemyUnitPos();
+	void monitorUnitActions();
 	void checkForConcede();
 	void drawProfilingInfo();
 
