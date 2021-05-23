@@ -364,6 +364,8 @@ void CCBot::OnStep()
 #endif
 		updatePreviousFrameEnemyUnitPos();
 
+	monitorUnitActions();
+
 	StopProfiling("0.0 OnStep");	//Do not remove
 
 	drawProfilingInfo();
@@ -1345,6 +1347,29 @@ void CCBot::updatePreviousFrameEnemyUnitPos()
 	for (auto & unit : UnitInfo().getUnits(Players::Enemy))
 	{
 		m_previousFrameEnemyPos[unit.getUnitPtr()->tag] = unit.getPosition();
+	}
+}
+
+void CCBot::monitorUnitActions()
+{
+	auto commandsCount = this->Actions()->Commands().size();
+	m_recentlySentActions.push_back(std::make_pair(m_gameLoop, commandsCount));
+	m_totalSentActions += commandsCount;
+	m_currentAPM += commandsCount;
+	for (auto it = m_recentlySentActions.begin(); it < m_recentlySentActions.end();)
+	{
+		auto & pastActions = *it;
+		if (m_gameLoop - pastActions.first <= 22.4f * 60)
+			break;
+		m_currentAPM -= pastActions.second;
+		it = m_recentlySentActions.erase(it);
+	}
+	if (m_gameLoop - m_lastLoggedAPM >= 22.4 * 10)
+	{
+		std::stringstream ss;
+		ss << "Actions (total, APM, last frame): " << m_totalSentActions << ", " << m_currentAPM << ", " << commandsCount;
+		Util::Log(__FUNCTION__, ss.str(), *this);
+		m_lastLoggedAPM = m_gameLoop;
 	}
 }
 
