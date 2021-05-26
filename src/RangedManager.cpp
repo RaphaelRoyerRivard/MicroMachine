@@ -1331,7 +1331,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 					siege = true;
 					siegeReason << "close to its retreat location";
 				}
-				else
+				else if (m_order.getType() != SquadOrderTypes::Retreat && m_order.getStatus() != "Retreat")
 				{
 					// Also siege if there is an enemy not too far away
 					auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
