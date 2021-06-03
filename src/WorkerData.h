@@ -39,6 +39,7 @@ public:
 	//Public variables for simplicity
 	std::map<Unit, Unit>	m_workerMineralMap;
 	std::map<Unit, std::list<sc2::Tag>> m_mineralWorkersMap;
+	std::map<Unit, Unit>	m_workerGeyserMap;
 	std::map<Unit, Unit>    m_workerDepotMap;	//<worker, depot>
 
     WorkerData(CCBot & bot);
