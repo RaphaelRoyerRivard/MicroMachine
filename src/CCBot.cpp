@@ -236,11 +236,6 @@ void CCBot::OnGameStart() //full start
 	m_combatAnalyzer.onStart();
     m_gameCommander.onStart();
 
-	if (Config().AllowDebug)
-	{
-		IssueGameStartCheats();
-	}
-
 	StartProfiling("0 Starcraft II");
 	m_lastFrameEndTime = std::chrono::steady_clock::now();
 }
@@ -365,6 +360,11 @@ void CCBot::OnStep()
 		updatePreviousFrameEnemyUnitPos();
 
 	monitorUnitActions();
+
+	if (Config().AllowDebug && m_gameLoop == 0)
+	{
+		IssueGameStartCheats();
+	}
 
 	StopProfiling("0.0 OnStep");	//Do not remove
 
@@ -1475,10 +1475,12 @@ void CCBot::IssueGameStartCheats()
 	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
 	const auto offset = towardsCenter * 15;
 	const auto enemyLocation = GetEnemyStartLocations()[0];
+	const auto enemyNaturalExpansion = m_bases.getNextExpansion(Players::Enemy, false, false, false);
 	const auto main = m_bases.getPlayerStartingBaseLocation(Players::Self);
 	const auto naturalExpansion = m_bases.getNextExpansion(Players::Self, false, false, false);
 	const auto thirdExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion });
 	const auto fourthExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion, thirdExpansion });
+	const auto enemyNat = enemyNaturalExpansion ? Util::GetPosition(enemyNaturalExpansion->getDepotPosition()) : CCPosition();
 	const auto nat = naturalExpansion ? Util::GetPosition(naturalExpansion->getDepotPosition()) : CCPosition();
 	const auto third = thirdExpansion ? Util::GetPosition(thirdExpansion->getDepotPosition()) : CCPosition();
 	const auto fourth = fourthExpansion ? Util::GetPosition(fourthExpansion->getDepotPosition()) : CCPosition();

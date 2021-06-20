@@ -26,10 +26,10 @@ StrategyManager::StrategyManager(CCBot & bot)
     : m_bot(bot)
 {
 	STRATEGY_ORDERS[sc2::Terran] = {
-		"STANDARD",
 		"EARLY_EXPAND",
-		"FAST_PF",
 		"PROXY_CYCLONES",
+		"STANDARD",
+		"FAST_PF",
 		"PROXY_MARAUDERS"
 	};
 	STRATEGY_ORDERS[sc2::Protoss] = {
