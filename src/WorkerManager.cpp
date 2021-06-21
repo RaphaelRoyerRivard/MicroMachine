@@ -19,27 +19,28 @@ void WorkerManager::onStart()
 
 void WorkerManager::onFrame(bool executeMacro)
 {
-	if (m_bot.Config().AllowDebug)
-	{
-		//const int minutes = 2;
-		//const int frames = (int)(22.4 * minutes * 60);
-		//if (m_bot.GetCurrentFrame() > 0)
-		//{
-		//	const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals;
-		//	const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene;
-		//	Util::AddStatistic("Mineral GatherRate", mineralRate);
-		//	Util::AddStatistic("Gas GatherRate", gasRate);
-		//}
-		//if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % frames == 0)//after 5 minutes
-		//{
-		//	Util::DisplayStatistic(m_bot, "Mineral GatherRate");
-		//	Util::DisplayStatistic(m_bot, "Gas GatherRate");
-		//}
-		//if (m_bot.GetCurrentFrame() > 0 && m_bot.GetCurrentFrame() % frames + 1 == 0)
-		//{
-		//	Util::ClearChat(m_bot);
-		//}
-	}
+	//[Stats]
+	//if (m_bot.Config().AllowDebug)
+	//{
+	//	const int minutes = 2;
+	//	const int frames = (int)(22.4 * minutes * 60);
+	//	if (m_bot.GetCurrentFrame() > 0)
+	//	{
+	//		const float mineralRate = m_bot.Observation()->GetScore().score_details.collection_rate_minerals;
+	//		const float gasRate = m_bot.Observation()->GetScore().score_details.collection_rate_vespene;
+	//		Util::AddStatistic("Mineral GatherRate", mineralRate);
+	//		Util::AddStatistic("Gas GatherRate", gasRate);
+	//	}
+	//	if (m_bot.GetCurrentFrame() == frames)//after 5 minutes
+	//	{
+	//		Util::DisplayStatistic(m_bot, "Mineral GatherRate");
+	//		Util::DisplayStatistic(m_bot, "Gas GatherRate");
+	//	}
+	//	if (m_bot.GetCurrentFrame() == frames + 1)
+	//	{
+	//		Util::ClearChat(m_bot);
+	//	}
+	//}
 
 	m_bot.StartProfiling("0.7.1   m_workerData.updateAllWorkerData");
     m_workerData.updateAllWorkerData();
@@ -482,7 +483,7 @@ void WorkerManager::handleMineralWorkers()
 								worker.move(depot.getPosition() + Util::Normalized(worker.getPosition() - depot.getPosition()) * 3);//3 is the distance with the center of the depot, its arbitrary
 								worker.shiftRightClick(depot);
 							}
-							else if (worker.getUnitPtr()->orders.empty())
+							else if (worker.getUnitPtr()->orders.empty())// || worker.getUnitPtr()->orders[0].ability_id == 3667)
 							{
 								worker.rightClick(depot);
 							}
@@ -852,144 +853,278 @@ void WorkerManager::handleGasWorkers()
 
 		auto workers = m_bot.Workers().m_workerData.getAssignedWorkersRefinery(geyser);
 		m_bot.StopProfiling("0.7.3.4.1     initialChecks");
-		for (auto & bunker : base->getGasBunkers())
+		if (base->isGeyserSplit())
 		{
-			if (!bunker.isCompleted())
+			m_bot.StartProfiling("0.7.3.4.2     handleWorkers");
+			for (auto & worker : workers)//Handle workers inside
 			{
-				continue;
-			}
+				if (!worker.isValid() || !worker.isAlive() || worker.getType().isMule())
+					continue;
 
-			if (!hasUsableDepot)//If there is no depot or if its not finished, empty the bunker.
-			{
-				Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
-				continue;
-			}
-
-			auto hasReturningWorker = false;
-			if (!base->isGeyserSplit())
-			{
-				m_bot.StartProfiling("0.7.3.4.2     handleWorkers");
-				for (auto & worker : workers)//Handle workers inside
+				//Correct the mining workers target if its not the right one.
+				auto depot = m_workerData.updateWorkerDepot(worker, geyser);
+				if (depot.isValid())
 				{
-					if (m_bot.Commander().isInside(worker.getTag()))
+					sc2::Tag target;
+					if (worker.getUnitPtr()->orders.size() > 0)
 					{
-						if (worker.isReturningCargo())//drop on CC side
+						if (worker.getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)//If he has a move order, let it happen.
 						{
-							bunker.rightClick(base->getDepotPosition());
+							continue;
 						}
-						else//drop on refinery side
+						target = worker.getUnitPtr()->orders[0].target_unit_tag;
+					}
+
+					if (worker.isReturningCargo())
+					{
+						if (!m_bot.Config().IsRealTime && !m_bot.Strategy().isWorkerRushed())
 						{
-							bunker.rightClick(base->getGasBunkerUnloadTarget(geyser.getPosition()));
+							auto distsq = Util::DistSq(worker.getPosition(), depot.getPosition());
+							if (distsq > 3.2f * 3.2f && distsq < 4.2f * 4.2f && worker.getUnitPtr()->orders.size() < 2)
+							{
+								worker.move(depot.getPosition() + Util::Normalized(worker.getPosition() - depot.getPosition()) * 3.2f);//3 is the distance with the center of the depot, its arbitrary
+								worker.shiftRightClick(depot);
+							}
+							else if (worker.getUnitPtr()->orders.empty())
+							{
+								worker.rightClick(depot);
+							}
 						}
-#ifdef PUBLIC_RELEASE
-						bunker.unloadUnit(worker.getTag());
-#else
-						Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
-#endif
 					}
 					else
 					{
-						auto distWorkerDepot = Util::DistSq(worker.getPosition(), base->getDepotPosition());
-						auto distDepotBunker = Util::DistSq(base->getDepotPosition(), bunker.getPosition());
-						if (worker.isReturningCargo())
+						auto distToGeyser = Util::DistSq(worker.getPosition(), geyser.getPosition());
+						if (!m_bot.Config().IsRealTime && !m_bot.Strategy().isWorkerRushed() && distToGeyser > 2 * 2 && distToGeyser < 3 * 3 && worker.getUnitPtr()->orders.size() < 2)//Distsq 3 is arbitrary but works great
 						{
-#ifdef PUBLIC_RELEASE
-							if (distWorkerDepot > distDepotBunker)//If the bunker is empty or if there is already a returning worker, click to enter bunker
-#else
-							if ((std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end() || hasReturningWorker) && distWorkerDepot > distDepotBunker)
-#endif
-							{
-								if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != bunker.getTag())
-								{
-									worker.rightClick(bunker);
-								}
-#ifndef PUBLIC_RELEASE
-								bunkerHasLoaded.push_back(bunker.getTag());
-#endif
-								hasReturningWorker = true;
-							}
-							else//Click to drop resource
-							{
-								if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != depot.getTag())
-								{
-									worker.rightClick(depot);
-								}
-							}
+							worker.move(geyser.getPosition() + Util::Normalized(worker.getPosition() - geyser.getPosition()) * 2);//2 is the distance with the geyser, its arbitrary
+							worker.shiftRightClick(geyser);
 						}
 						else
 						{
-							if (distWorkerDepot > distDepotBunker)//Click to enter refinery
+							if (geyser.getTag() != target)
 							{
-								if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != geyser.getTag())
-								{
-									worker.rightClick(geyser);
-								}
-							}
-#ifdef PUBLIC_RELEASE
-							else//Click to enter bunker
-#else
-							else if (std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end())
-#endif
-							{
-								if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != bunker.getTag())
-								{
-									Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);//Causes the workers to do a full 180, instead of taking 2-3 frames to turn around.
-								}
-#ifndef PUBLIC_RELEASE
-								bunkerHasLoaded.push_back(bunker.getTag());
-#endif
+								worker.rightClick(geyser);
 							}
 						}
 					}
+
+					//Bump
+					//if (workers.size() == 2)
+					//{
+					//	if ((workers[0].isReturningCargo() && !workers[1].isReturningCargo() ||
+					//		!workers[0].isReturningCargo() && workers[1].isReturningCargo()) &&
+					//		workers[0].getUnitPtr()->orders.size() > 0 && workers[1].getUnitPtr()->orders.size() > 0)//If they are going in opposite direction and have orders
+					//	{
+					//		int distToTarget1 = Util::DistSq(workers[0].getPosition(), workers[0].getUnitPtr()->orders[0].target_pos);//From the worker 0 to its target
+					//		int distToTarget2 = Util::DistSq(workers[1].getPosition(), workers[0].getUnitPtr()->orders[0].target_pos);//From the worker 1 to the target of worker 0
+					//		int between = Util::DistSq(workers[0].getPosition(), workers[1].getPosition());
+					//		if (distToTarget1 < distToTarget2)
+					//		{
+					//			//if (abs(distToTarget1 - distToTarget2) > 1 && abs(distToTarget1 - distToTarget2) < 8)
+					//			if(between < 1)
+					//			{
+					//				auto a = 1;
+					//				if (workers[0].getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
+					//				{
+					//					//workers[0].move(depot.getPosition());
+					//					//workers[0].move(workers[0].getPosition() + Util::Normalized(workers[0].getPosition() - depot.getPosition()) * -1.5f);
+					//					workers[0].stop();
+					//					workers[0].shiftRightClick(depot);
+					//				}
+					//				else
+					//				{
+					//					//workers[0].move(geyser.getPosition());
+					//					//workers[0].move(workers[0].getPosition() + Util::Normalized(workers[0].getPosition() - geyser.getPosition()) * -1.5f);
+					//					workers[0].stop();
+					//					workers[0].shiftRightClick(geyser);
+					//				}
+					//
+					//				if (workers[1].getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::HARVEST_RETURN)
+					//				{
+					//					//workers[1].move(depot.getPosition());
+					//					//workers[1].move(workers[1].getPosition() + Util::Normalized(workers[1].getPosition() - depot.getPosition()) * -1.5f);
+					//					workers[1].stop();
+					//					workers[1].shiftRightClick(depot);
+					//				}
+					//				else
+					//				{
+					//					//workers[1].move(geyser.getPosition());
+					//					//workers[1].move(workers[1].getPosition() + Util::Normalized(workers[1].getPosition() - geyser.getPosition()) * -1.5f);
+					//					workers[1].stop();
+					//					workers[1].shiftRightClick(geyser);
+					//				}
+					//			}
+					//			//else if(workers[0].getUnitPtr()->orders.size() == 1 || workers[1].getUnitPtr()->orders.size() == 1)
+					//			//{
+					//			//	if (workers[0].getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
+					//			//	{
+					//			//		workers[0].shiftRightClick(workers[0].getUnitPtr()->orders[0].target_pos);
+					//			//		if (workers[0].getUnitPtr()->orders[0].target_pos == CCPosition())
+					//			//		{
+					//			//			auto a = 1;
+					//			//		}
+					//			//	}
+					//			//	if (workers[1].getUnitPtr()->orders[0].ability_id == sc2::ABILITY_ID::MOVE)
+					//			//	{
+					//			//		workers[1].shiftRightClick(workers[1].getUnitPtr()->orders[0].target_pos);
+					//			//		if (workers[1].getUnitPtr()->orders[0].target_pos == CCPosition())
+					//			//		{
+					//			//			auto a = 1;
+					//			//		}
+					//			//	}
+					//			//}
+					//		}
+					//	}
+					//}
 				}
-				m_bot.StopProfiling("0.7.3.4.2     handleWorkers");
-				m_bot.StartProfiling("0.7.3.4.3     unloadUnwantedPassengers");
-				if (workers.size() == 0)//Empty bunkers if they have units inside that shouldn't be inside
+				else // No depot for the mineral, the worker shouldn't be a mineral worker
 				{
-					auto passengers = bunker.getUnitPtr()->passengers;
-					for (auto & passenger : passengers)
-					{
-						if(passenger.unit_type == sc2::UNIT_TYPEID::TERRAN_SCV)
-						{
-#ifdef PUBLIC_RELEASE
-							bunker.unloadUnit(passenger.tag);
-#else
-							Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
-							break;
-#endif
-						}
-					}
+					m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 				}
-				m_bot.StopProfiling("0.7.3.4.3     unloadUnwantedPassengers");
 			}
-			else
+			m_bot.StopProfiling("0.7.3.4.2     handleWorkers");
+		}
+		else
+		{
+			for (auto & bunker : base->getGasBunkers())
 			{
-				//UNHANDLED SINGLE GEYSER
-			}
-			m_bot.StartProfiling("0.7.3.4.5     unloadOutOfPlaceWorkers");
-			for (auto & unit : bunker.getUnitPtr()->passengers)
-			{
-				if (unit.unit_type != sc2::UNIT_TYPEID::TERRAN_SCV)
+				if (!bunker.isCompleted())
+				{
 					continue;
-				bool isOutOfPlace = true;
-				for (auto & worker : workers)
+				}
+
+				if (!hasUsableDepot)//If there is no depot or if its not finished, empty the bunker.
 				{
-					if (unit.tag == worker.getTag())
+					Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+					continue;
+				}
+
+				auto hasReturningWorker = false;
+				if (!base->isGeyserSplit())
+				{
+					m_bot.StartProfiling("0.7.3.4.2     handleWorkers");
+					for (auto & worker : workers)//Handle workers inside
 					{
-						if (getWorkerData().getWorkerJob(worker) != WorkerJobs::Gas)
+						if (m_bot.Commander().isInside(worker.getTag()))
 						{
+							if (worker.isReturningCargo())//drop on CC side
+							{
+								bunker.rightClick(base->getDepotPosition());
+							}
+							else//drop on refinery side
+							{
+								bunker.rightClick(base->getGasBunkerUnloadTarget(geyser.getPosition()));
+							}
 #ifdef PUBLIC_RELEASE
-							bunker.unloadUnit(unit.tag);
+							bunker.unloadUnit(worker.getTag());
 #else
-							//Technically illogical, it cannot happen if we use UNLOADALL above. But I'd rather have the code anyway in case anything changes.
 							Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
 #endif
-							break;
+						}
+						else
+						{
+							auto distWorkerDepot = Util::DistSq(worker.getPosition(), base->getDepotPosition());
+							auto distDepotBunker = Util::DistSq(base->getDepotPosition(), bunker.getPosition());
+							if (worker.isReturningCargo())
+							{
+#ifdef PUBLIC_RELEASE
+								if (distWorkerDepot > distDepotBunker)//If the bunker is empty or if there is already a returning worker, click to enter bunker
+#else
+								if ((std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end() || hasReturningWorker) && distWorkerDepot > distDepotBunker)
+#endif
+								{
+									if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != bunker.getTag())
+									{
+										worker.rightClick(bunker);
+									}
+#ifndef PUBLIC_RELEASE
+									bunkerHasLoaded.push_back(bunker.getTag());
+#endif
+									hasReturningWorker = true;
+								}
+								else//Click to drop resource
+								{
+									if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != depot.getTag())
+									{
+										worker.rightClick(depot);
+									}
+								}
+							}
+							else
+							{
+								if (distWorkerDepot > distDepotBunker)//Click to enter refinery
+								{
+									if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != geyser.getTag())
+									{
+										worker.rightClick(geyser);
+									}
+								}
+#ifdef PUBLIC_RELEASE
+								else//Click to enter bunker
+#else
+								else if (std::find(bunkerHasLoaded.begin(), bunkerHasLoaded.end(), bunker.getTag()) == bunkerHasLoaded.end())
+#endif
+								{
+									if (worker.getUnitPtr()->orders.size() == 0 || worker.getUnitPtr()->orders[0].target_unit_tag != bunker.getTag())
+									{
+										Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::LOAD, worker.getUnitPtr(), m_bot);//Causes the workers to do a full 180, instead of taking 2-3 frames to turn around.
+									}
+#ifndef PUBLIC_RELEASE
+									bunkerHasLoaded.push_back(bunker.getTag());
+#endif
+								}
+							}
+					}
+				}
+					m_bot.StopProfiling("0.7.3.4.2     handleWorkers");
+					m_bot.StartProfiling("0.7.3.4.3     unloadUnwantedPassengers");
+					if (workers.size() == 0)//Empty bunkers if they have units inside that shouldn't be inside
+					{
+						auto passengers = bunker.getUnitPtr()->passengers;
+						for (auto & passenger : passengers)
+						{
+							if (passenger.unit_type == sc2::UNIT_TYPEID::TERRAN_SCV)
+							{
+#ifdef PUBLIC_RELEASE
+								bunker.unloadUnit(passenger.tag);
+#else
+								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+								break;
+#endif
+							}
+						}
+					}
+					m_bot.StopProfiling("0.7.3.4.3     unloadUnwantedPassengers");
+				}
+				else
+				{
+					//UNHANDLED SINGLE GEYSER
+				}
+				m_bot.StartProfiling("0.7.3.4.5     unloadOutOfPlaceWorkers");
+				for (auto & unit : bunker.getUnitPtr()->passengers)
+				{
+					if (unit.unit_type != sc2::UNIT_TYPEID::TERRAN_SCV)
+						continue;
+					bool isOutOfPlace = true;
+					for (auto & worker : workers)
+					{
+						if (unit.tag == worker.getTag())
+						{
+							if (getWorkerData().getWorkerJob(worker) != WorkerJobs::Gas)
+							{
+#ifdef PUBLIC_RELEASE
+								bunker.unloadUnit(unit.tag);
+#else
+								//Technically illogical, it cannot happen if we use UNLOADALL above. But I'd rather have the code anyway in case anything changes.
+								Micro::SmartAbility(bunker.getUnitPtr(), sc2::ABILITY_ID::UNLOADALL, m_bot);
+#endif
+								break;
+							}
 						}
 					}
 				}
+				m_bot.StopProfiling("0.7.3.4.5     unloadOutOfPlaceWorkers");
 			}
-			m_bot.StopProfiling("0.7.3.4.5     unloadOutOfPlaceWorkers");
 		}
 	}
 	m_bot.StopProfiling("0.7.3.4    gasBunkerMicro");

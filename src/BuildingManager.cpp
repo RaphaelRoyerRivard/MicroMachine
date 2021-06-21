@@ -2338,13 +2338,13 @@ void BuildingManager::castBuildingsAbilities()
 			{
 				//If none of our bases fit the requirements (have minerals + not underattack), drop on closest mineral
 				closestMineral = getClosestMineral(b.getPosition());
-				depotPosition = closestMineral->pos;
-
 				if (closestMineral == nullptr)
 				{
 					Util::DebugLog(__FUNCTION__, "No mineral found.", m_bot);
 					continue;
 				}
+
+				depotPosition = closestMineral->pos;
 			}
 
 			if (depotPosition != CCPosition())
