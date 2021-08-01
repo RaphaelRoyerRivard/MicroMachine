@@ -524,6 +524,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
+	// First proxy Reaper should go in natural against Terran to avoid getting stuck by supply depots constantly raising and lowering
+	if (rangedUnit == m_bot.Commander().Combat().getFirstProxyReaperToGoThroughNatural())
+	{
+		goal = m_bot.Buildings().getEnemyMainRamp();
+		goalDescription = "FirstReaperGoThroughNatural";
+	}
+
 	m_bot.StartProfiling("0.10.4.1.5.1.c          ExecutePrioritizedUnitAbilitiesLogic");
 	if (!isUnitDisabled && ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, allCombatAllies, goal, unitShouldHeal, isCycloneHelper))
 	{

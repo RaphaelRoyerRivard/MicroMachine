@@ -221,6 +221,7 @@ void CombatCommander::onFrame(const std::vector<Unit> & combatUnits)
 	Util::ClearDeadDummyUnits();
 	Util::ClearSeenEnemies();
 	m_medivacTargets.clear();
+	updateFirstProxyReaperGoingThroughNatural();
 
     m_combatUnits = combatUnits;
 
@@ -3769,4 +3770,49 @@ bool CombatCommander::shouldBansheesHarass() const
 	if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED) && !m_bot.Strategy().enemyHasVeryFastAirAttackingUnits())
 		return true;
 	return false;
+}
+
+void CombatCommander::updateFirstProxyReaperGoingThroughNatural()
+{
+	if (!m_firstProxyReaperWentThroughNatural)
+	{
+		auto enemyRace = m_bot.GetPlayerRace(Players::Enemy);
+		if (enemyRace == sc2::Race::Terran)
+		{
+			if (m_bot.Strategy().isProxyStartingStrategy())
+			{
+				if (m_bot.GetCurrentFrame() < 22.4f * 60 * 2.5f)	// before 2:30
+				{
+					// Check if Reaper is our closest one to the enemy main ramp
+					auto enemyRamp = m_bot.Buildings().getEnemyMainRamp();
+					const sc2::Unit * closestReaper = nullptr;
+					float closestReaperDistanceToEnemyRamp = 0.f;
+					for (auto & reaper : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REAPER))
+					{
+						auto dist = Util::DistSq(reaper, enemyRamp);
+						if (closestReaper == nullptr || dist < closestReaperDistanceToEnemyRamp)
+						{
+							closestReaper = reaper.getUnitPtr();
+							closestReaperDistanceToEnemyRamp = dist;
+						}
+					}
+					if (closestReaper != nullptr)
+					{
+						if (closestReaperDistanceToEnemyRamp > 6 * 6)
+						{
+							// That reaper should not avoid bunkers (it's unlikely that it contains enough Marines to kill it)
+							m_firstProxyReaperToGoThroughNatural = closestReaper;
+						}
+						else
+						{
+							m_firstProxyReaperToGoThroughNatural = nullptr;
+							m_firstProxyReaperWentThroughNatural = true;
+						}
+					}
+					return;
+				}
+			}
+		}
+	}
+	m_firstProxyReaperToGoThroughNatural = nullptr;
 }
