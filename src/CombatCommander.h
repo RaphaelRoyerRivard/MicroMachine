@@ -185,6 +185,8 @@ class CombatCommander
 	std::set<Unit> m_backstabbers;	// Workers that backstab the enemy probes when probe rushed
 	std::map<int, long> m_cachedBiles;	// <corrosive bile location (mapkey generated with Util::ToMapKey), last frame seen>
 	bool m_workersStacked = false;
+	bool m_firstProxyReaperWentThroughNatural = false;
+	const sc2::Unit * m_firstProxyReaperToGoThroughNatural = nullptr;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
@@ -301,5 +303,7 @@ public:
 	bool shouldBansheesHarass() const;
 	bool haveWorkersStacked() { return m_workersStacked; }
 	void setWorkersHaveStacked(bool workersStacked) { m_workersStacked = workersStacked; }
+	void updateFirstProxyReaperGoingThroughNatural();
+	const sc2::Unit * getFirstProxyReaperToGoThroughNatural() const { return m_firstProxyReaperToGoThroughNatural; }
 };
 
