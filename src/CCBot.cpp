@@ -2234,6 +2234,11 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, third, player1, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STARGATE, third + towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, third, player1, 2);*/
+
+	// Test to see if our first Proxy Reaper goes through the natural while ignoring bunkers
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, enemyNat - towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, enemyNat - towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player2, 1);*/
 }
 
 void CCBot::IssueCheats()

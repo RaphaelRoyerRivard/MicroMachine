@@ -527,7 +527,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 	// First proxy Reaper should go in natural against Terran to avoid getting stuck by supply depots constantly raising and lowering
 	if (rangedUnit == m_bot.Commander().Combat().getFirstProxyReaperToGoThroughNatural())
 	{
-		goal = m_bot.Buildings().getEnemyMainRamp();
+		goal = m_bot.Commander().Combat().getFirstProxyReaperGoal();
 		goalDescription = "FirstReaperGoThroughNatural";
 	}
 
@@ -1596,7 +1596,7 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 		}
 
 		const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
-		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings()) || m_bot.Data(rangedUnit->unit_type).isBuilding;
+		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings()) || m_bot.Data(rangedUnit->unit_type).isBuilding || rangedUnit->weapon_cooldown > 0;
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 		std::stringstream actionDescription;
 		actionDescription << "MoveToGoal" << goalDescription;	// Do not change the string, it is used in CombatCommander::ExecuteActions
@@ -3630,7 +3630,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     	if (filterPassiveBuildings || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && m_order.getType() != SquadOrderTypes::Defend))
     	{
 			auto targetUnitType = UnitType(target->unit_type, m_bot);
-			if (targetUnitType.isBuilding() && !targetUnitType.isCombatUnit() && !(targetUnitType.isCreepTumor() && target->last_seen_game_loop == m_bot.GetCurrentFrame()))
+			if (targetUnitType.isBuilding() && (!targetUnitType.isCombatUnit() || target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER) && !(targetUnitType.isCreepTumor() && target->last_seen_game_loop == m_bot.GetCurrentFrame()))
 				continue;
     	}
 

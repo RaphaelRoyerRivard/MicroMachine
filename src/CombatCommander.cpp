@@ -3783,27 +3783,49 @@ void CombatCommander::updateFirstProxyReaperGoingThroughNatural()
 			{
 				if (m_bot.GetCurrentFrame() < 22.4f * 60 * 2.5f)	// before 2:30
 				{
-					// Check if Reaper is our closest one to the enemy main ramp
-					auto enemyRamp = m_bot.Buildings().getEnemyMainRamp();
+					if (m_firstProxyReaperGoal == CCPosition())
+					{
+						auto enemyNat = m_bot.Bases().getPlayerNat(Players::Enemy);
+						if (enemyNat)
+						{
+							m_firstProxyReaperGoal = enemyNat->getDepotPosition() + Util::Normalized(m_bot.Map().center() - enemyNat->getDepotPosition()) * 10;
+							m_firstProxyReaperGoalDescription = "EnemyNat";
+						}
+					}
+					// Find closest Reaper to the goal
 					const sc2::Unit * closestReaper = nullptr;
-					float closestReaperDistanceToEnemyRamp = 0.f;
+					float closestReaperDistanceToGoal = 0.f;
 					for (auto & reaper : m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_REAPER))
 					{
-						auto dist = Util::DistSq(reaper, enemyRamp);
-						if (closestReaper == nullptr || dist < closestReaperDistanceToEnemyRamp)
+						auto dist = Util::DistSq(reaper, m_firstProxyReaperGoal);
+						if (closestReaper == nullptr || dist < closestReaperDistanceToGoal)
 						{
 							closestReaper = reaper.getUnitPtr();
-							closestReaperDistanceToEnemyRamp = dist;
+							closestReaperDistanceToGoal = dist;
 						}
 					}
 					if (closestReaper != nullptr)
 					{
-						if (closestReaperDistanceToEnemyRamp > 6 * 6)
+						if (closestReaperDistanceToGoal > 5 * 5)
 						{
 							// That reaper should not avoid bunkers (it's unlikely that it contains enough Marines to kill it)
 							m_firstProxyReaperToGoThroughNatural = closestReaper;
 						}
-						else
+						else if (m_firstProxyReaperGoalDescription == "EnemyNat")
+						{
+							m_firstProxyReaperGoal = m_bot.Buildings().getEnemyMainRamp();
+							m_firstProxyReaperGoalDescription = "EnemyRamp";
+						}
+						else if (m_firstProxyReaperGoalDescription == "EnemyRamp")
+						{
+							auto enemyMain = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
+							if (enemyMain)
+							{
+								m_firstProxyReaperGoal = enemyMain->getPosition();
+								m_firstProxyReaperGoalDescription = "EnemyMain";
+							}
+						}
+						else if (!ShouldUnitHeal(closestReaper))
 						{
 							m_firstProxyReaperToGoThroughNatural = nullptr;
 							m_firstProxyReaperWentThroughNatural = true;

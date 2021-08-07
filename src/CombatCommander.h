@@ -187,6 +187,8 @@ class CombatCommander
 	bool m_workersStacked = false;
 	bool m_firstProxyReaperWentThroughNatural = false;
 	const sc2::Unit * m_firstProxyReaperToGoThroughNatural = nullptr;
+	CCPosition m_firstProxyReaperGoal = CCPosition();
+	std::string m_firstProxyReaperGoalDescription = "";
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
@@ -305,5 +307,6 @@ public:
 	void setWorkersHaveStacked(bool workersStacked) { m_workersStacked = workersStacked; }
 	void updateFirstProxyReaperGoingThroughNatural();
 	const sc2::Unit * getFirstProxyReaperToGoThroughNatural() const { return m_firstProxyReaperToGoThroughNatural; }
+	CCPosition getFirstProxyReaperGoal() const { return m_firstProxyReaperGoal; }
 };
 
