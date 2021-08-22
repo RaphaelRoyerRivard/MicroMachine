@@ -483,7 +483,7 @@ void WorkerManager::handleMineralWorkers()
 								worker.move(depot.getPosition() + Util::Normalized(worker.getPosition() - depot.getPosition()) * 3);//3 is the distance with the center of the depot, its arbitrary
 								worker.shiftRightClick(depot);
 							}
-							else if (worker.getUnitPtr()->orders.empty())// || worker.getUnitPtr()->orders[0].ability_id == 3667)
+							else if (worker.getUnitPtr()->orders.empty())
 							{
 								worker.rightClick(depot);
 							}
@@ -855,7 +855,8 @@ void WorkerManager::handleGasWorkers()
 		m_bot.StopProfiling("0.7.3.4.1     initialChecks");
 		if (base->isGeyserSplit())
 		{
-			m_bot.StartProfiling("0.7.3.4.2     handleWorkers");
+			// COMMENTED BECAUSE IT CAUSES A VERY VERY BAD BUG WHERE THE WORKERS STOP MOVING (AND CAUSED US TO LOSE IN PROBOTS)
+			/*m_bot.StartProfiling("0.7.3.4.2     handleWorkers");
 			for (auto & worker : workers)//Handle workers inside
 			{
 				if (!worker.isValid() || !worker.isAlive() || worker.getType().isMule())
@@ -982,7 +983,7 @@ void WorkerManager::handleGasWorkers()
 					m_workerData.setWorkerJob(worker, WorkerJobs::Idle);
 				}
 			}
-			m_bot.StopProfiling("0.7.3.4.2     handleWorkers");
+			m_bot.StopProfiling("0.7.3.4.2     handleWorkers");*/
 		}
 		else
 		{
