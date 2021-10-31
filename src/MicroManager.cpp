@@ -204,6 +204,24 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 					m_bot.Map().drawCircle(targetUnit.getPosition(), 0.5f, sc2::Colors::Green);
 			}
 		}
+		float workerHarasserBonus = 1.f;
+		if (m_squad->getSquadOrder().getType() == SquadOrderTypes::Defend && attacker->alliance == sc2::Unit::Alliance::Self) {
+			const auto mainBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
+			if (mainBase)
+			{
+				const auto targetGroundAttackRange = Util::GetGroundAttackRange(target, m_bot);
+				if (targetGroundAttackRange > 0.f)
+				{
+					const auto mainMineralLineCenter = Util::GetPosition(mainBase->getCenterOfMinerals());
+					const auto targetSpeed = Util::getSpeedOfUnit(target, m_bot);
+					const auto targetDistToMineralLine = Util::DistSq(target->pos, mainMineralLineCenter);
+					if (targetDistToMineralLine < pow(targetGroundAttackRange + targetSpeed, 2))
+					{
+						workerHarasserBonus = 3.f;
+					}
+				}
+			}
+		}
 
 		float nonThreateningModifier = targetDps == 0.f ? 0.5f : 1.f;								//targets that cannot hit our unit are less prioritized
 		if (targetUnit.getType().isAttackingBuilding())
@@ -217,7 +235,7 @@ float MicroManager::getAttackPriority(const sc2::Unit * attacker, const sc2::Uni
 		const float shieldUnitModifier = target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER ? 0.1f : 1.f;
 		//const float nydusModifier = target->unit_type == sc2::UNIT_TYPEID::ZERG_NYDUSCANAL && target->build_progress < 1.f ? 100.f : 1.f;
 		const float nydusModifier = 1.f;	// It seems like attacking it does close to nothing since it has 3 armor
-		return std::max(0.1f, (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * nonThreateningModifier * minionModifier * invisModifier * hallucinationModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier * unpoweredModifier * notYetRevealedModifier);
+		return std::max(0.1f, (targetDps + unitDps - healthValue + proximityValue * 50) * closeMeleeUnitBonus * workerBonus * workerHarasserBonus * nonThreateningModifier * minionModifier * invisModifier * hallucinationModifier * flyingDetectorModifier * yamatoTargetModifier * shieldUnitModifier * nydusModifier * antiBuildingModifier * unpoweredModifier * notYetRevealedModifier);
 	}
 
 	if (antiBuildingModifier > 1.f)
