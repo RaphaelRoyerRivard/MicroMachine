@@ -1963,10 +1963,11 @@ void CombatCommander::handleWall()
 			if (rampPosition != CCPosition())
 				break;
 		}
+		const auto wallDistanceToRamp = Util::DistSq(rampPosition, wallCenter);
 		for (const auto & allyPair : m_bot.GetAllyUnits())
 		{
 			const auto & allyUnit = allyPair.second;
-			if (allyUnit.isFlying() || allyUnit.getType().isBuilding())
+			if (allyUnit.isFlying() || allyUnit.getType().isBuilding() || allyUnit.getType().isWorker())
 				continue;
 			const auto distanceToWall = Util::DistSq(allyUnit.getPosition(), wallCenter);
 			// Check if the unit is close enough to the wall
@@ -1982,7 +1983,7 @@ void CombatCommander::handleWall()
 					
 				// Check if the unit is on top of the ramp but still inside the wall
 				const auto unitDistanceToRamp = Util::DistSq(allyUnit.getPosition(), rampPosition);
-				if (unitDistanceToRamp < 4 * 4)	// This is just slightly farther than the supply depots so if we have a unit that moves right next to the wall, it will lower
+				if (unitDistanceToRamp < wallDistanceToRamp)
 				{
 					raiseWall = false;
 					break;
@@ -2277,8 +2278,8 @@ void CombatCommander::updateDefenseSquads()
 			if (unit.isBurrowed() && unit.getUnitPtr()->last_seen_game_loop != m_bot.GetCurrentFrame())
 				continue;
 
-			// if the unit is not targetable, we do not need to defend against it (shade, kd8 charge, disruptor's ball, etc.)
-			if (!UnitType::isTargetable(unit.getAPIUnitType()))
+			// if the unit is not targetable, we do not need to defend against it (kd8 charge, disruptor's ball, etc.), unless it's a shade because the Adept might teleport there and we must be ready
+			if (!UnitType::isTargetable(unit.getAPIUnitType()) && unit.getAPIUnitType() != sc2::UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT)
 				continue;
 
 			if (myBaseLocation->containsUnitApproximative(unit, m_bot.Strategy().isWorkerRushed() && startingBase ? WorkerRushDefenseOrderRadius : BaseDefenseOrderRadius))

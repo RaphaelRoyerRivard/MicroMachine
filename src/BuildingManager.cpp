@@ -2102,7 +2102,8 @@ void BuildingManager::castBuildingsAbilities()
 		if (Util::Contains(barracks, m_wallBuildings))
 		{
 			const auto base = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self);
-			if (base && base->isUnderAttack())
+			const auto nat = m_bot.Bases().getPlayerNat(Players::Self);
+			if ((base && base->isUnderAttack()) || (nat && nat->isUnderAttack()))
 			{
 				if (!m_wallsBarracksPointsTowardBase)
 				{
