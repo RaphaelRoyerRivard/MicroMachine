@@ -1923,26 +1923,24 @@ void CombatCommander::handleWall()
 	m_bot.StartProfiling("0.10.4.2.1.1.1      CheckEnemies");
 	// If there is at least one melee unit, raise the wall. Otherwise, check if we have units that want to go back in our base
 	bool raiseWall = false;
-	bool meleeEnemyUnit = false;
+	float minEnemyMovementTimeToReachWall = 0;
 	for (const auto & enemy : enemies)
 	{
 		if (enemy.isFlying() || enemy.getType().isBuilding())
 			continue;
-		CCTilePosition enemyPosition = enemy.getTilePosition();
-		const int distance = Util::DistSq(enemyPosition, wallCenter);
-		if (distance < SUPPLYDEPOT_DISTANCE)
+		const int distance = Util::Dist(enemy, Util::GetPosition(wallCenter));
+		if (distance * distance < SUPPLYDEPOT_DISTANCE)
 		{
+			const float speed = Util::getRealMovementSpeedOfUnit(enemy.getUnitPtr(), m_bot);
+			float timeToReachWall = speed > 0 ? distance / speed : 1000;
+			if (!raiseWall || timeToReachWall < minEnemyMovementTimeToReachWall)
+				minEnemyMovementTimeToReachWall = timeToReachWall;
 			raiseWall = true;
-			if (Util::GetMaxAttackRange(enemy.getUnitPtr(), m_bot) < 2)
-			{
-				meleeEnemyUnit = true;
-				break;
-			}
 		}
 	}
 	m_bot.StopProfiling("0.10.4.2.1.1.1      CheckEnemies");
-	// If all enemies are ranged, check if we have a unit that would like to come back to our base. In that case, we don't want to raise our wall
-	if (raiseWall && !meleeEnemyUnit)
+	// Check if we have units that would like to come back to our base. In that case, if they are fast enough to enter without getting followed, we don't want to raise our wall yet
+	if (raiseWall)
 	{
 		m_bot.StartProfiling("0.10.4.2.1.1.2      CheckAllies");
 		const auto wallHeight = m_bot.Map().terrainHeight(wallCenter);
@@ -1964,31 +1962,34 @@ void CombatCommander::handleWall()
 				break;
 		}
 		const auto wallDistanceToRamp = Util::DistSq(rampPosition, wallCenter);
+		float maxAllyMovementTimeToReachWall = -1;
 		for (const auto & allyPair : m_bot.GetAllyUnits())
 		{
 			const auto & allyUnit = allyPair.second;
 			if (allyUnit.isFlying() || allyUnit.getType().isBuilding() || allyUnit.getType().isWorker())
 				continue;
-			const auto distanceToWall = Util::DistSq(allyUnit.getPosition(), wallCenter);
+			const auto distanceToWall = Util::Dist(allyUnit.getPosition(), wallCenter);
 			// Check if the unit is close enough to the wall
-			if (distanceToWall < SUPPLYDEPOT_DISTANCE)
+			if (distanceToWall * distanceToWall < SUPPLYDEPOT_DISTANCE)
 			{
-				// If the unit is on low ground, we don't want to raise it
+				// If the unit is on low ground or on top of the ramp but still inside the wall
 				const auto unitHeight = m_bot.Map().terrainHeight(allyUnit.getPosition());
-				if (unitHeight < wallHeight)
-				{
-					raiseWall = false;
-					break;
-				}
-					
-				// Check if the unit is on top of the ramp but still inside the wall
 				const auto unitDistanceToRamp = Util::DistSq(allyUnit.getPosition(), rampPosition);
-				if (unitDistanceToRamp < wallDistanceToRamp)
+				if (unitHeight < wallHeight || unitDistanceToRamp < wallDistanceToRamp)
 				{
-					raiseWall = false;
-					break;
+					const float speed = Util::getRealMovementSpeedOfUnit(allyUnit.getUnitPtr(), m_bot);
+					float timeToReachWall = speed > 0 ? distanceToWall / speed : 1000;
+					if (timeToReachWall > maxAllyMovementTimeToReachWall)
+					{
+						maxAllyMovementTimeToReachWall = timeToReachWall;
+					}
 				}
 			}
+		}
+		// If our unit that would take the maximum amount of time to reach the wall would be able to enter one second before the nearest/fastest enemy, we don't raise the wall yet
+		if (maxAllyMovementTimeToReachWall >= 0 && maxAllyMovementTimeToReachWall + 1 < minEnemyMovementTimeToReachWall)
+		{
+			raiseWall = false;
 		}
 		m_bot.StopProfiling("0.10.4.2.1.1.2      CheckAllies");
 	}
