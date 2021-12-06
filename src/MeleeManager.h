@@ -20,6 +20,7 @@ public:
     void setTargets(const std::vector<Unit> & targets);
     void executeMicro();
 	void microUnit(const Unit & meleeUnit);
+	bool shouldStackWorkers() const;
 	bool areUnitsStackedUp();
 	void stackUnits();
 	void identifyStackingMinerals();

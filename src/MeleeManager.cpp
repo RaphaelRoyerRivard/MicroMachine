@@ -33,7 +33,7 @@ void MeleeManager::executeMicro()
 	}
 
 	const bool workerRushed = m_bot.Strategy().isWorkerRushed();
-	if (workerRushed && m_order.getType() == SquadOrderTypes::Defend)
+	if (workerRushed && m_order.getType() == SquadOrderTypes::Defend && shouldStackWorkers())
 	{
 		// The stacked workers cannot one shot enemies because they push each other out of range of their target when they attack
 		m_bot.StartProfiling("0.10.4.1.4.2        areUnitsStackedUp");
@@ -339,13 +339,17 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 	}*/
 }
 
+bool MeleeManager::shouldStackWorkers() const
+{
+	const std::vector<Unit> & meleeUnits = getUnits();
+	return meleeUnits.size() >= 10;
+}
+
 bool MeleeManager::areUnitsStackedUp()
 {
 	if (m_bot.Commander().Combat().haveWorkersStacked())
 		return true;
 	const std::vector<Unit> & meleeUnits = getUnits();
-	if (meleeUnits.size() < 10)
-		return false;
 	for (auto & meleeUnit : meleeUnits)
 	{
 		for (auto & otherMeleeUnit : meleeUnits)
