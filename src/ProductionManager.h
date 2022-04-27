@@ -38,6 +38,8 @@ class ProductionManager
     void    setBuildOrder(const MM::BuildOrder & buildOrder);
     bool    create(const Unit & producer, MM::BuildOrderItem & item, CCTilePosition desidredPosition, bool reserveResources = true, bool filterMovingWorker = true, bool canBePlacedElsewhere = true, bool includeAddonTiles = true, bool ignoreExtraBorder = false, bool forceSameHeight = false);
 	bool    create(const Unit & producer, Building & b, bool filterMovingWorker = true);
+	bool	cancelNecessaryUnits(const MetaType & type);
+	std::vector<Unit> unitsToCancelForResources(const MetaType & type);
     void    manageBuildOrderQueue();
 	bool	ShouldSkipQueueItem(const MM::BuildOrderItem & currentItem);
 	void	putImportantBuildOrderItemsInQueue();
@@ -80,7 +82,7 @@ public:
 	bool queueUpgrade(const MetaType & type, bool balanceUpgrades, bool ifFinishedTryHigherLevel);
 	bool meetsReservedResources(const MetaType & type, int additionalReservedMineral = 0, int additionalReservedGas = 0);
 	bool meetsReservedResourcesWithExtra(const MetaType & type, int additionalMineral, int additionalGas, int additionalReservedMineral, int additionalReservedGas);
-	Unit meetsReservedResourcesWithCancelUnit(const MetaType & type, int additionalReservedMineral, int additionalReservedGas);
+	Unit meetsReservedResourcesWithCancelUnit(const MetaType & type, int additionalReservedMineral, int additionalReservedGas, bool cancelAnything);
 	bool canMakeAtArrival(const Building & building, const Unit & worker, int additionalReservedMineral, int additionalReservedGas);
 	std::vector<Unit> getUnitTrainingBuildings(CCRace race);
 	int getSupplyNeedsFromProductionBuildings() const;

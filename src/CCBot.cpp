@@ -652,6 +652,19 @@ void CCBot::setUnits()
 				enemyRace = unit.getType().getRace();
 			}
 			m_enemyUnits[unitptr->tag] = unit;
+			// Tell the strategy manager that we need to finish the wall early if we spot an enemy before finishing our first Barracks
+			// TODO remove TournamentMode condition
+			if (Config().TournamentMode &&
+				!m_strategy.shouldFinishWallEarly() &&
+				!m_strategy.isProxyStartingStrategy() &&
+				GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS, false) == 1 &&
+				GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS, true) == 0)
+			{
+				m_strategy.setFinishWallEarly(true);
+				Commander().Production().queueAsHighestPriority(MetaTypeEnum::SupplyDepot, true);
+				Actions()->SendChat("You shall not pass!");
+				Util::DebugLog(__FUNCTION__, "Finishing wall early", *this);
+			}
 			// If the enemy zergling was seen last frame
 			if (zergEnemy)
 			{

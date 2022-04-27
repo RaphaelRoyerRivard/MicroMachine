@@ -16,16 +16,16 @@
     
     "SC2API" :
     {
-        "BotVersion"                : "1.14.0",
+        "BotVersion"                : "1.18.0",
         "ConnectToLadder"           : false,
         "LoadSettings"              : false,
         "BotRace"                   : "Terran",
-        "PlayAsHuman"               : false,
+        "PlayAsHuman"               : true,
         "ForceStepMode"             : true,
         "PlayVsItSelf"              : false,
         "EnemyDifficulty"           : 10,
-        "EnemyRace"                 : "Terran",
-        "MapFile"                   : "GoldenWallLE.SC2Map",
+        "EnemyRace"                 : "Zerg",
+        "MapFile"                   : "GlitteringAshesAIE.SC2Map",
         "StepSize"                  : 1,
         "BatchReplayMode"           : false,
         "NbBatchReplay"             : 50,
@@ -39,7 +39,14 @@
         "DeathAuraLE.SC2Map",
         "EternalEmpireLE.SC2Map",
         "SubmarineLE.SC2Map",
-        "IceandChromeLE.SC2Map"
+        "IceandChromeLE.SC2Map",
+
+        "RomanticideAIE.SC2Map",
+        "BlackburnAIE.SC2Map",
+        "JagannathaAIE.SC2Map",
+        "2000AtmospheresAIE.SC2Map",
+        "LightshadeAIE.SC2Map",
+        "OxideAIE.SC2Map"
     ],
 	
 	"AllRandomMaps":
@@ -150,8 +157,8 @@
         "DrawEnemyUnitInfo"         : false,
         "DrawResourceInfo"          : false,
         "DrawUnitTargetInfo"        : false,
-        "DrawSquadInfo"             : false,
-        "DrawWorkerInfo"            : false,
+        "DrawSquadInfo"             : true,
+        "DrawWorkerInfo"            : true,
         "DrawBuildingInfo"          : false,
         "DrawReservedBuildingTiles" : false,
         "DrawUnitPowerInfo"         : false,
@@ -159,7 +166,7 @@
         "DrawMemoryInfo"            : false,
         "DrawUnitID"            	: false,
         "DrawProfilingInfo"         : false,
-        "DrawInfluenceMaps"         : false,
+        "DrawInfluenceMaps"         : true,
         "DrawBlockedTiles"          : false,
 		"DrawRepairStation"			: false,
 		"DrawDamageHealthRatio"		: false,

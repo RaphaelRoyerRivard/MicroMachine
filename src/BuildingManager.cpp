@@ -120,7 +120,7 @@ void BuildingManager::lowPriorityChecks()
 			{
 				if (building.type == Util::GetResourceDepotType())//Special code for expands, we want to flag them as blocked and build elsewhere.
 				{
-					if (Util::DistSq(building.builderUnit, Util::GetPosition(building.finalPosition)) < 3 * 3)
+					if (building.builderUnit.isValid() && Util::DistSq(building.builderUnit, Util::GetPosition(building.finalPosition)) < 3 * 3)
 					{
 						m_bot.Bases().SetLocationAsBlocked(Util::GetPosition(building.finalPosition), building.type);
 						building.finalPosition = m_bot.Bases().getNextExpansionPosition(Players::Self, true, false, false);
@@ -612,7 +612,7 @@ void BuildingManager::validateWorkersAndBuildings()
 					toRemove.push_back(b);
 					Util::Log("Remove " + b.buildingUnit.getType().getName() + " from under construction buildings.", m_bot);
 				}
-				else if (m_bot.Strategy().wasProxyStartingStrategy() && !b.builderUnit.isAlive() && Util::DistSq(b.buildingUnit.getPosition(), m_proxyLocation) <= 15 * 15)
+				else if (m_bot.Strategy().wasProxyStartingStrategy() && (!b.builderUnit.isValid() || !b.builderUnit.isAlive()) && Util::DistSq(b.buildingUnit.getPosition(), m_proxyLocation) <= 15 * 15)
 				{
 					CancelBuilding(b, "proxy worker died (building)", false);
 					toRemove.push_back(b);
@@ -649,7 +649,6 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 
 	if (b.type.isAddon())
 	{
-			
 		MetaType addonType = MetaType(b.type, m_bot);
 		Unit producer = m_bot.Commander().Production().getProducer(addonType);
 				
@@ -681,6 +680,11 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 		m_bot.StartProfiling("0.8.3.1 getBuildingLocation");
 		// grab a worker unit from WorkerManager which is closest to this final position
 		bool isRushed = m_bot.Strategy().isEarlyRushed() || m_bot.Strategy().isWorkerRushed();
+		bool isEarlyWallBuilding = m_bot.Strategy().shouldFinishWallEarly() &&
+			((b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SUPPLYDEPOT &&
+				m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), false, true) <= 1) ||
+				(b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS &&
+					m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true) == 0));
 		CCTilePosition testLocation;
 		if (b.canBeBuiltElseWhere)
 		{
@@ -690,7 +694,11 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 			}
 			if(testLocation == CCTilePosition())
 			{
-				testLocation = getNextBuildingLocation(b, !isRushed, true, includeAddonTiles, ignoreExtraBorder, forceSameHeight);//Only check m_nextBuildLocation if we are not being rushed
+				CCPosition closestTo;
+				if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), false, true) == 0)
+					closestTo = m_bot.Map().center();
+				// We previously only checked m_nextBuildLocation if we were not being rushed, now we still do if we want to build the early wall buildings
+				testLocation = getNextBuildingLocation(b, !isRushed || isEarlyWallBuilding, true, includeAddonTiles, ignoreExtraBorder, forceSameHeight, closestTo);
 			}
 		}
 		else
@@ -707,84 +715,101 @@ bool BuildingManager::assignWorkerToUnassignedBuilding(Building & b, bool filter
 			
 		b.finalPosition = testLocation;
 
-		// grab the worker unit from WorkerManager which is closest to this final position
-		Unit builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker);
+		// When building the last supply depot of the wall early, we want to use the builder of the Barracks
+		Unit preselectedWorker;
+		bool earlyWallSupplyDepot = m_bot.Strategy().shouldFinishWallEarly() && b.type == MetaTypeEnum::SupplyDepot.getUnitType() && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), false, true) == 1;		// grab the worker unit from WorkerManager which is closest to this final position
+		if (earlyWallSupplyDepot)
+		{
+			for (auto & building : m_buildings)
+			{
+				if (building.type == MetaTypeEnum::Barracks.getUnitType())
+				{
+					preselectedWorker = building.builderUnit;
+					break;
+				}
+			}
+		}
+		Unit builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker, std::vector<CCUnitID>(), preselectedWorker);
 		//Test if worker path is safe
 		if (!builderUnit.isValid())
 		{
 			return false;
 		}
-		m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
-		const auto isPathToGoalSafe = Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot);
 
-		m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
-		if(!isPathToGoalSafe && b.canBeBuiltElseWhere)
+		if (!isEarlyWallBuilding)
 		{
-			Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " isn't safe", m_bot);
-			//TODO checks twice if the path is safe for no reason if we get the same build location, should change location or change builder
+			m_bot.StartProfiling("0.8.3.2 IsPathToGoalSafe");
+			const auto isPathToGoalSafe = Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot);
+			m_bot.StopProfiling("0.8.3.2 IsPathToGoalSafe");
 
-			//Not safe, pick another location
-			testLocation = getNextBuildingLocation(b, false, true, ignoreExtraBorder, forceSameHeight);
-			if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
+			if (!isPathToGoalSafe && b.canBeBuiltElseWhere)
 			{
-				return false;
-			}
+				Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " isn't safe", m_bot);
+				//TODO checks twice if the path is safe for no reason if we get the same build location, should change location or change builder
 
-			b.finalPosition = testLocation;
-
-			// grab the worker unit from WorkerManager which is closest to this final position
-			builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker, std::vector<CCUnitID>{builderUnit.getUnitPtr()->tag});//TODO Should be able to pick amongst all workers, not just the closest
-			//Test if worker path is safe
-			if(!builderUnit.isValid())
-			{
-				Util::DebugLog(__FUNCTION__, "Couldn't find a builder for " + b.type.getName(), m_bot);
-				return false;
-			}
-			if (!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
-			{
-				if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER)//[expand in main]
+				//Not safe, pick another location
+				testLocation = getNextBuildingLocation(b, false, true, ignoreExtraBorder, forceSameHeight);
+				if (!b.underConstruction && (!m_bot.Map().isValidTile(testLocation) || (testLocation.x == 0 && testLocation.y == 0)))
 				{
-					auto location = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, false, true, false, false, false);
-					if (location == CCPosition())//If no build location is found
-					{
-						return false;
-					}
-					auto base = m_bot.Bases().getBaseContainingPosition(Util::GetPosition(location));
-					if (base && base->isUnderAttack())
-					{
-						Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe. Can't get a location to build the CommandCenter, base underattack.", m_bot);
-						return false;
-					}
-
-					auto temporayFinalPosition = b.finalPosition;//Used to reset the final position in case of failure
-					b.finalPosition = location;
-					builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker, std::vector<CCUnitID>{builderUnit.getUnitPtr()->tag});
-					if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
-					{
-						b.finalPosition = temporayFinalPosition;
-						Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe. Can't get a worker with a safe path to build at the location.", m_bot);
-						return false;
-					}
-				}
-				else
-				{
-					Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe", m_bot);
 					return false;
 				}
-			}
-		}
-		else if(!isRushed)//Do not remove postion from m_nextBuildLocation if we are being rushed, since we didn't use it.
-		{
-			//path  is safe, we can remove it from the list
-			auto positions = m_nextBuildingPosition.find(b.type);
-			if (positions != m_nextBuildingPosition.end())
-			{
-				for (auto & position : positions->second)
+
+				b.finalPosition = testLocation;
+
+				// grab the worker unit from WorkerManager which is closest to this final position
+				builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker, std::vector<CCUnitID>{builderUnit.getUnitPtr()->tag});//TODO Should be able to pick amongst all workers, not just the closest
+				//Test if worker path is safe
+				if (!builderUnit.isValid())
 				{
-					if (position == testLocation)
+					Util::DebugLog(__FUNCTION__, "Couldn't find a builder for " + b.type.getName(), m_bot);
+					return false;
+				}
+				if (!Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
+				{
+					if (b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER)//[expand in main]
 					{
-						positions->second.remove(testLocation);
-						break;
+						auto location = m_bot.Buildings().getBuildingPlacer().getBuildLocationNear(b, false, true, false, false, false);
+						if (location == CCPosition())//If no build location is found
+						{
+							return false;
+						}
+						auto base = m_bot.Bases().getBaseContainingPosition(Util::GetPosition(location));
+						if (base && base->isUnderAttack())
+						{
+							Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe. Can't get a location to build the CommandCenter, base underattack.", m_bot);
+							return false;
+						}
+
+						auto temporayFinalPosition = b.finalPosition;//Used to reset the final position in case of failure
+						b.finalPosition = location;
+						builderUnit = m_bot.Workers().getBuilder(b, false, filterMovingWorker, std::vector<CCUnitID>{builderUnit.getUnitPtr()->tag});
+						if (!builderUnit.isValid() || !Util::PathFinding::IsPathToGoalSafe(builderUnit.getUnitPtr(), Util::GetPosition(b.finalPosition), b.type.isRefinery(), m_bot))
+						{
+							b.finalPosition = temporayFinalPosition;
+							Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe. Can't get a worker with a safe path to build at the location.", m_bot);
+							return false;
+						}
+					}
+					else
+					{
+						Util::DebugLog(__FUNCTION__, "Path to " + b.type.getName() + " still isn't safe", m_bot);
+						return false;
+					}
+				}
+			}
+			else if(!isRushed)//Do not remove postion from m_nextBuildLocation if we are being rushed, since we didn't use it.
+			{
+				//path  is safe, we can remove it from the list
+				auto positions = m_nextBuildingPosition.find(b.type);
+				if (positions != m_nextBuildingPosition.end())
+				{
+					for (auto & position : positions->second)
+					{
+						if (position == testLocation)
+						{
+							positions->second.remove(testLocation);
+							break;
+						}
 					}
 				}
 			}
@@ -828,7 +853,11 @@ void BuildingManager::constructAssignedBuildings()
 		}
 		else
 		{
-			BOT_ASSERT(builderUnit.isValid(), "null builder unit");
+			if (!builderUnit.isValid())
+			{
+				b.unassign();
+				continue;
+			}
 
 			isConstructing = builderUnit.isConstructing(b.type);
 		}
@@ -1053,7 +1082,24 @@ void BuildingManager::constructAssignedBuildings()
 						{
 							if (m_bot.GetMinerals() >= b.type.mineralPrice())
 							{
-								b.builderUnit.build(b.type, b.finalPosition);
+								auto nextSupplyDepotPos = m_nextBuildingPosition[MetaTypeEnum::SupplyDepot.getUnitType()];
+								// Instead of giving the build command right away to build the first barracks, we want the worker to move a bit farther
+								// to avoid placing the Barracks in his path to build the second supply depot in case it needs to build it right away
+								if (!b.buildCommandGiven && b.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS &&
+									m_bot.UnitInfo().getUnitTypeCount(Players::Self, b.type, false, true) == 1 && Util::Contains(b.finalPosition, m_wallBuildingPosition)
+									&& !nextSupplyDepotPos.empty() && Util::DistSq(b.builderUnit, Util::GetPosition(nextSupplyDepotPos.front())) > 2 * 2)
+								{
+									setCommandGiven = false;
+									auto movePos = Util::GetPosition(nextSupplyDepotPos.front());
+									if (b.builderUnit.getUnitPtr()->orders.empty() || b.builderUnit.getUnitPtr()->orders[0].target_pos != movePos)
+									{
+										b.builderUnit.move(movePos);
+									}
+								}
+								else
+								{
+									b.builderUnit.build(b.type, b.finalPosition);
+								}
 								if (b.type.isResourceDepot() && b.buildCommandGiven)	//if resource depot position is blocked by a unit, send elsewhere
 								{
 									// We want the worker to be close so it doesn't flag the base as blocked by error
@@ -1071,6 +1117,18 @@ void BuildingManager::constructAssignedBuildings()
 							else
 							{
 								setCommandGiven = false;
+								// if the builder actually has the build command as an order, then the command has already been given
+								if (!b.builderUnit.getUnitPtr()->orders.empty())
+								{
+									for (auto & order : b.builderUnit.getUnitPtr()->orders)
+									{
+										if (order.ability_id == m_bot.Data(b.type).buildAbility)
+										{
+											setCommandGiven = true;
+											break;
+										}
+									}
+								}
 							}
 						}
 					}
@@ -1208,7 +1266,7 @@ void BuildingManager::checkForDeadTerranBuilders()
 		// if the building has a builder that died or that is not a builder anymore because of a bug
 		if (!b.builderUnit.isValid())
 		{
-			Util::DebugLog(__FUNCTION__, "BuilderUnit is invalid", m_bot);
+			b.unassign();
 			continue;
 		}
 
@@ -1330,9 +1388,12 @@ void BuildingManager::checkForCompletedBuildings()
             {
 				if(b.type.isRefinery())//Worker that built the refinery, will be a gas worker for it.
 				{
-					m_bot.StartProfiling("0.8.7.1    setGasJob");
-					m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Gas, b.buildingUnit);
-					m_bot.StopProfiling("0.8.7.1    setGasJob");
+					if (b.builderUnit.isValid())
+					{
+						m_bot.StartProfiling("0.8.7.1    setGasJob");
+						m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Gas, b.buildingUnit);
+						m_bot.StopProfiling("0.8.7.1    setGasJob");
+					}
 				}
 				else
 				{
@@ -1350,10 +1411,13 @@ void BuildingManager::checkForCompletedBuildings()
 					{
 						if (b.buildingUnit.getType() == MetaTypeEnum::Factory.getUnitType() && Util::DistSq(b.buildingUnit, Util::GetPosition(m_proxyLocation)) < 15.f * 15.f)
 						{
-							m_bot.StartProfiling("0.8.7.3    setRepairJob");
-							m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Repair);
-							b.builderUnit.move(m_proxyLocation);
-							m_bot.StopProfiling("0.8.7.3    setRepairJob");
+							if (b.builderUnit.isValid())
+							{
+								m_bot.StartProfiling("0.8.7.3    setRepairJob");
+								m_bot.Workers().getWorkerData().setWorkerJob(b.builderUnit, WorkerJobs::Repair);
+								b.builderUnit.move(m_proxyLocation);
+								m_bot.StopProfiling("0.8.7.3    setRepairJob");
+							}
 						}
 					}
 
@@ -1491,7 +1555,7 @@ void BuildingManager::drawBuildingInformation()
         }
         else if (b.status == BuildingStatus::Assigned)
         {
-            ss << "Assigned " << b.type.getName() << "    " << b.builderUnit.getTag() << " " << getBuildingWorkerCode(b) << " (" << b.finalPosition.x << "," << b.finalPosition.y << ")\n";
+            ss << "Assigned " << b.type.getName() << "    " << (b.builderUnit.isValid() ? b.builderUnit.getTag() : 0) << " " << getBuildingWorkerCode(b) << " (" << b.finalPosition.x << "," << b.finalPosition.y << ")\n";
 
             int x1 = b.finalPosition.x;
             int y1 = b.finalPosition.y;
@@ -1587,6 +1651,17 @@ CCTilePosition BuildingManager::getWallPosition() const
 std::list<Unit> & BuildingManager::getWallBuildings()
 {
 	return m_wallBuildings;
+}
+
+bool BuildingManager::isWallCompleted() const
+{
+	int wallBuildingCount = 0;
+	for (auto & b : m_wallBuildings)
+	{
+		if (b.isValid())
+			++wallBuildingCount;
+	}
+	return wallBuildingCount >= 3;
 }
 
 CCTilePosition BuildingManager::getProxyLocation()
@@ -1792,14 +1867,30 @@ CCTilePosition BuildingManager::getBuildingLocation(const Building & b, bool che
 	return buildingLocation;
 }
 
-CCTilePosition BuildingManager::getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap, bool includeAddonTiles, bool ignoreExtraBorder, bool forceSameHeight)
+CCTilePosition BuildingManager::getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap, bool includeAddonTiles, bool ignoreExtraBorder, bool forceSameHeight, CCPosition closestTo)
 {
 	if (checkNextBuildingPosition)
 	{
 		std::map<UnitType, std::list<CCTilePosition>>::iterator it = m_nextBuildingPosition.find(b.type);
 		if (it != m_nextBuildingPosition.end())
 		{
-			if (!it->second.empty())
+			if (closestTo != CCPosition())
+			{
+				CCTilePosition closest;
+				float minDistance;
+				for (auto & pos : it->second)
+				{
+					float distance = Util::DistSq(closestTo, Util::GetPosition(pos));
+					if (closest == CCTilePosition() || distance < minDistance)
+					{
+						closest = pos;
+						minDistance = distance;
+					}
+				}
+				if (closest != CCTilePosition())
+					return closest;
+			}
+			else if (!it->second.empty())
 			{
 				return it->second.front();
 			}
@@ -1986,9 +2077,9 @@ Building BuildingManager::CancelBuilding(Building b, std::string reason, bool re
 	return Building();
 }
 
-Building BuildingManager::getBuildingOfBuilder(const Unit & builder) const
+Building & BuildingManager::getBuildingOfBuilder(const Unit & builder)
 {
-	for (const auto & building : m_buildings)
+	for (auto & building : m_buildings)
 	{
 		if (building.builderUnit == builder)
 			return building;
@@ -2596,7 +2687,7 @@ void BuildingManager::loadOrUnloadSCVs()
 	if (ccs.empty())
 		return;
 	auto cc = ccs[0];
-	if (m_bot.Strategy().isWorkerRushed() && m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_REAPER) > 0)
+	if (m_bot.Strategy().isWorkerRushed() && !isWallCompleted() && m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_REAPER) > 0)
 	{
 		auto loadAction = UnitAction(MicroActionType::Ability, sc2::ABILITY_ID::LOADALL, false, 0, "Load", "");
 		m_bot.Commander().Combat().PlanAction(cc.getUnitPtr(), loadAction);

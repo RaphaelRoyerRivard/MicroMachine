@@ -93,6 +93,7 @@ class StrategyManager
 	bool m_enemyHasFastAirAttackingUnits = false;
 	bool m_enemyHasVeryFastAirAttackingUnits = false;
 	bool m_focusBuildings = false;
+	bool m_finishWallEarly = false;
 	std::set<sc2::UPGRADE_ID> m_completedUpgrades;
 	std::stringstream m_greetingMessage;
 	std::stringstream m_opponentHistory;
@@ -172,6 +173,8 @@ public:
 	void setEnemyHasVeryFastAirAttackingUnits(bool enemyHasVeryFastAirAttackingUnits) { m_enemyHasVeryFastAirAttackingUnits = enemyHasVeryFastAirAttackingUnits; }
 	bool shouldFocusBuildings() const { return m_focusBuildings; }
 	void setFocusBuildings(bool focusBuildings) { m_focusBuildings = focusBuildings; }
+	bool shouldFinishWallEarly() const { return m_finishWallEarly; }
+	void setFinishWallEarly(bool finishWallEarly) { m_finishWallEarly = finishWallEarly; }
 	const std::set<sc2::UPGRADE_ID> & getCompletedUpgrades() const { return m_completedUpgrades; };
 	bool isUpgradeCompleted(sc2::UPGRADE_ID upgradeId) const { return m_completedUpgrades.find(upgradeId) != m_completedUpgrades.end(); }
 	void setUpgradeCompleted(sc2::UPGRADE_ID upgradeId) { m_completedUpgrades.insert(upgradeId); }
