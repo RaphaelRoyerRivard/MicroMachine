@@ -1809,6 +1809,10 @@ float Util::GetSpecialCaseRange(const sc2::UNIT_TYPEID unitType, sc2::Weapon::Ta
 	{
 		range = 8.f;	// Their normal range is 6, but once they started attacking, it goes up to 8
 	}
+	else if (IsChangeling(unitType))
+	{
+		range = 0.f;
+	}
 
 	return range;
 }
@@ -2181,6 +2185,10 @@ float Util::GetSpecialCaseDps(const sc2::Unit * unit, CCBot & bot, sc2::Weapon::
 	{
 		dps = 36.f;
 	}*/
+	else if (IsChangeling(unit->unit_type))
+	{
+		dps = 0.f;
+	}
 
     return dps;
 }
@@ -2269,6 +2277,10 @@ float Util::GetSpecialCaseDamage(const sc2::Unit * unit, CCBot & bot, sc2::Weapo
 	{
 		if (where != sc2::Weapon::TargetType::Air && Util::unitHasBuff(unit, sc2::BUFF_ID::ORACLEWEAPON))
 			damage = 15.f;
+	}
+	else if (IsChangeling(unit->unit_type))
+	{
+		damage = 0.f;
 	}
 
 	return damage;
@@ -2671,6 +2683,22 @@ bool Util::IsFarMineralPatch(const sc2::UNIT_TYPEID type)
 			return true;//Unkwown
 		default:
 			BOT_ASSERT(false, "Mineral type is unhandled");
+	}
+}
+
+bool Util::IsChangeling(const sc2::UNIT_TYPEID type)
+{
+	switch (type)
+	{
+		case sc2::UNIT_TYPEID::ZERG_CHANGELING:
+		case sc2::UNIT_TYPEID::ZERG_CHANGELINGMARINE:
+		case sc2::UNIT_TYPEID::ZERG_CHANGELINGMARINESHIELD:
+		case sc2::UNIT_TYPEID::ZERG_CHANGELINGZEALOT:
+		case sc2::UNIT_TYPEID::ZERG_CHANGELINGZERGLING:
+		case sc2::UNIT_TYPEID::ZERG_CHANGELINGZERGLINGWINGS:
+			return true;
+		default:
+			return false;
 	}
 }
 
