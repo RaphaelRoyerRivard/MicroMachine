@@ -1528,7 +1528,7 @@ void WorkerManager::handleBuildWorkers()
 		bool found = false;
 		for (auto & building : m_bot.Buildings().getBuildings())
 		{
-			if (building.builderUnit.getTag() == worker.getTag())
+			if (building.builderUnit.isValid() && building.builderUnit.getTag() == worker.getTag())
 			{
 				found = true;
 				break;
@@ -2017,13 +2017,13 @@ int WorkerManager::getWorkerCountAtBasePosition(CCPosition basePosition) const
 // gets a builder for BuildingManager to use
 // if setJobAsBuilder is true (default), it will be flagged as a builder unit
 // set 'setJobAsBuilder' to false if we just want to see which worker will build a building
-Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMoving, const std::vector<CCUnitID> unusableWorkers) const
+Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMoving, const std::vector<CCUnitID> unusableWorkers, Unit preselectedWorker) const
 {
-	bool isValid;
+	Unit builderWorker = preselectedWorker;
+	bool isValid = builderWorker.isValid();
 	std::vector<CCUnitID> invalidWorkers = unusableWorkers;
-	Unit builderWorker;
 	
-	do
+	while (!isValid)
 	{
 		builderWorker = Unit();
 		isValid = true;
@@ -2062,10 +2062,10 @@ Unit WorkerManager::getBuilder(Building & b, bool setJobAsBuilder, bool filterMo
 				break;
 			}
 		}
-	} while (!isValid);
+	}
 
     // if the worker exists (one may not have been found in rare cases)
-    if (builderWorker.isValid() && setJobAsBuilder && m_workerData.getWorkerJob(builderWorker) != WorkerJobs::Build)
+    if (builderWorker.isValid() && setJobAsBuilder && (m_workerData.getWorkerJob(builderWorker) != WorkerJobs::Build || preselectedWorker != Unit()))
     {
 		m_workerData.setWorkerJob(builderWorker, WorkerJobs::Build, b.buildingUnit);
     }
@@ -2170,9 +2170,9 @@ void WorkerManager::drawWorkerInformation()
 			if (strcmp(code, "B") == 0)
 			{
 				std::string buildingType = "UNKNOWN";
-				for (auto b : m_bot.Buildings().getBuildings())
+				for (auto & b : m_bot.Buildings().getBuildings())
 				{
-					if (b.builderUnit.getTag() == worker.getTag())
+					if (b.builderUnit.isValid() && b.builderUnit.getTag() == worker.getTag())
 					{
 						buildingType = b.type.getName();
 						break;

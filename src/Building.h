@@ -33,4 +33,7 @@ public:
 
     // equals operator
     bool operator == (const Building & b);
+    bool operator != (const Building & b);
+
+	void unassign();
 };

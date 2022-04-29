@@ -2703,7 +2703,7 @@ void CombatCommander::updateDefenseSquads()
 				else if(support == "ground" && needsMoreSupport)
 				{
 					// if there are only workers and we aren't worker rushed and are on 2 bases or less, the scout defense squad is going to take care of it
-					if (region.offensiveEnemyUnit || m_bot.Strategy().isWorkerRushed() || m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() > 2)
+					if (region.offensiveEnemyUnit || (m_bot.Strategy().isWorkerRushed() && !m_bot.Buildings().isWallCompleted()) || m_bot.Bases().getOccupiedBaseLocations(Players::Self).size() > 2)
 					{
 						bool armyIsEnough = region.antiGroundAllyPower >= region.groundEnemyPower;
 						if (armyIsEnough)

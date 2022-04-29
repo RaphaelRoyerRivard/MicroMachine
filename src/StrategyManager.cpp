@@ -291,7 +291,7 @@ void StrategyManager::checkForStrategyChange()
 							if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
 							{
 								// If the worker is close to the building site
-								if (Util::DistSq(building.builderUnit, buildingPos) <= 3 * 3)
+								if (building.builderUnit.isValid() && Util::DistSq(building.builderUnit, buildingPos) <= 3 * 3)
 								{
 									for (const auto & enemy : m_bot.GetKnownEnemyUnits())
 									{

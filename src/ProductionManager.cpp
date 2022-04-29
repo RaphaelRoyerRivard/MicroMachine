@@ -299,6 +299,9 @@ void ProductionManager::manageBuildOrderQueue()
 						// if we can make the current item
 						m_bot.StartProfiling("0.10.2.2.2.2      tryingToBuild");
 						bool needsCancellation = false;//Required because the morph/addon abilities are not available while training/producing.
+						bool isLastSupplyDepotOfEarlyWall = m_bot.Strategy().shouldFinishWallEarly() &&
+							currentItem.type == MetaTypeEnum::SupplyDepot &&
+							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), false, true) == 1;
 						Unit producer;
 						if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))//Get the producer if we have enough resources
 						{
@@ -306,7 +309,9 @@ void ProductionManager::manageBuildOrderQueue()
 						}
 						else//Try to get a producer that would have enough resources if we cancel what it is currently producing.
 						{
-							producer = meetsReservedResourcesWithCancelUnit(currentItem.type, additionalReservedMineral, additionalReservedGas);
+							bool startedBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true) == 1;
+							// Cancel any unit or building only when we need to finish our wall asap
+							producer = meetsReservedResourcesWithCancelUnit(currentItem.type, additionalReservedMineral, additionalReservedGas, isLastSupplyDepotOfEarlyWall && startedBarracks);
 							needsCancellation = true;
 						}
 						if (producer.isValid())//If we found a producer, lets create it.
@@ -350,7 +355,8 @@ void ProductionManager::manageBuildOrderQueue()
 						else if (data.isBuilding
 							&& !data.isAddon
 							&& !currentItem.type.getUnitType().isMorphedBuilding()
-							&& (!data.isResourceDepot))//If its a resource depot, we don't pre-move
+							&& !data.isResourceDepot	//If its a resource depot, we don't pre-move
+							&& !isLastSupplyDepotOfEarlyWall)
 						{
 							// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
@@ -494,6 +500,13 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS || currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_FACTORY)
 	{
 		if (!hasStartedFirstExpand && barracksCount + factoryCount + starportCount >= 3)
+			shouldSkip = true;
+		// The worker that just finished building the first Supply Depot should be the one building the first Barracks (unless it is proxied)
+		else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS &&
+			m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS) == 0 &&
+			!m_bot.Strategy().isProxyStartingStrategy() &&
+			m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), false, true) == 1 &&
+			m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Build) > 0)
 			shouldSkip = true;
 	}
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_STARPORT)
@@ -2641,6 +2654,17 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 					producer.cancel();
 				}
 			}
+			else if (!meetsReservedResources(item.type))
+			{
+				// Cancel other units or buildings to produce
+				bool cancelSuccess = cancelNecessaryUnits(item.type);
+				if (!cancelSuccess)
+				{
+					std::stringstream ss;
+					ss << "Failed to cancel necessary units to build a " << item.type.getName();
+					Util::Log(__FUNCTION__, ss.str(), m_bot);
+				}
+			}
 			Building b(item.type.getUnitType(), desidredPosition);
 			if (ValidateBuildingTiming(b))
 			{
@@ -2698,6 +2722,113 @@ bool ProductionManager::create(const Unit & producer, Building & b, bool filterM
     }
 
 	return m_bot.Buildings().addBuildingTask(b, filterMovingWorker);
+}
+
+bool ProductionManager::cancelNecessaryUnits(const MetaType & type)
+{
+	auto & units = unitsToCancelForResources(type);
+	for (auto & unit : units)
+	{
+		// Stop builder from starting its structure
+		if (unit.getType().isWorker())
+		{
+			auto & building = m_bot.Buildings().getBuildingOfBuilder(unit);
+			if (building == Building())
+				return false;
+			std::stringstream ss;
+			ss << "Need resources asap for " << type.getName();
+			m_bot.Buildings().CancelBuilding(building, ss.str());
+			continue;
+		}
+		// Cancel unfinished building or cancel unit produced by building
+		unit.cancel();
+	}
+	return !units.empty();
+}
+
+std::vector<Unit> ProductionManager::unitsToCancelForResources(const MetaType & type)
+{
+	std::set<std::pair<float, Unit>> potentialUnitsToCancel;
+	for (auto & building : m_bot.Buildings().getBuildings())
+	{
+		if (building.buildCommandGiven && !building.underConstruction)
+		{
+			// Do not allow to cancel the Baracks when we hurry to finish up the wall
+			if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS && m_bot.Strategy().shouldFinishWallEarly() && type.getMetaType() == MetaTypeEnum::SupplyDepot.getMetaType())
+				continue;
+			if (!building.builderUnit.isValid())
+				continue;
+			potentialUnitsToCancel.insert(std::make_pair(0.f, building.builderUnit));
+		}
+	}
+	for (const auto & unitPair : m_bot.GetAllyUnits())
+	{
+		if (!unitPair.second.getType().isBuilding())
+			continue;
+		if (unitPair.second.isFlying())
+			continue;
+		// Add building if it is still in construction
+		if (unitPair.second.getBuildProgress() < 1)
+		{
+			// Do not allow to cancel the Baracks when we hurry to finish up the wall
+			if (unitPair.second.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS && m_bot.Strategy().shouldFinishWallEarly() && type.getMetaType() == MetaTypeEnum::SupplyDepot.getMetaType())
+				continue;
+			potentialUnitsToCancel.insert(std::make_pair(unitPair.second.getBuildProgress(), unitPair.second));
+			continue;
+		}
+		// Add building if it has an order in progress
+		auto & orders = unitPair.second.getUnitPtr()->orders;
+		if (!orders.empty() && orders[0].progress < 1.f && orders[0].progress > 0.f)
+		{
+			potentialUnitsToCancel.insert(std::make_pair(unitPair.second.getUnitPtr()->orders[0].progress, unitPair.second));
+			continue;
+		}
+	}
+	std::vector<Unit> unitsToCancel;
+	bool needsMoreMinerals = type.getUnitType().mineralPrice() > m_bot.GetMinerals();
+	bool needsMoreGas = type.getUnitType().gasPrice() > m_bot.GetGas();
+	int additionalMinerals = 0;
+	int additionalGas = 0;
+	for (const auto & pair : potentialUnitsToCancel)
+	{
+		int mineralCost = 0;
+		int gasCost = 0;
+		if (pair.second.getBuildProgress() < 1)
+		{
+			mineralCost = pair.second.getType().mineralPrice() * 0.75f;
+			gasCost = pair.second.getType().gasPrice() * 0.75f;
+			unitsToCancel.push_back(pair.second);
+		}
+		else
+		{
+			const auto & unitTypeToCancel = m_bot.Tech().getUnitTypeFromBuildingAbility(pair.second.getAPIUnitType(), pair.second.getUnitPtr()->orders[0].ability_id.ToType());
+			if (unitTypeToCancel.isValid())
+			{
+				mineralCost = unitTypeToCancel.mineralPrice();
+				gasCost = unitTypeToCancel.gasPrice();
+				unitsToCancel.push_back(pair.second);
+			}
+		}
+		if ((needsMoreMinerals && mineralCost > 0) || (needsMoreGas && gasCost > 0))
+		{
+			additionalMinerals += mineralCost;
+			additionalGas += gasCost;
+			needsMoreMinerals = type.getUnitType().mineralPrice() > m_bot.GetMinerals() + additionalMinerals;
+			needsMoreGas = type.getUnitType().gasPrice() > m_bot.GetGas() + additionalGas;
+			if (!needsMoreMinerals && !needsMoreGas)
+				break;
+		}
+	}
+	if (needsMoreMinerals || needsMoreGas)
+	{
+		unitsToCancel.clear();
+	}
+	for (auto & unit : unitsToCancel)
+	{
+		if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV || unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+			int a = 0;
+	}
+	return unitsToCancel;
 }
 
 bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
@@ -2795,7 +2926,7 @@ bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, i
 	return meetsRequiredMinerals && meetsRequiredGas;
 }
 
-Unit ProductionManager::meetsReservedResourcesWithCancelUnit(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
+Unit ProductionManager::meetsReservedResourcesWithCancelUnit(const MetaType & type, int additionalReservedMineral, int additionalReservedGas, bool cancelAnything)
 {
 	const float cancelMaxPercentage = 0.50f;
 
@@ -2808,6 +2939,13 @@ Unit ProductionManager::meetsReservedResourcesWithCancelUnit(const MetaType & ty
 	//Will work for : Command Center, Barracks, Factory, Starport, Gateway and Hatchery
 	if (!type.isAddon() && !type.getUnitType().isMorphedBuilding())
 	{
+		if (cancelAnything)
+		{
+			if (!unitsToCancelForResources(type).empty())
+			{
+				return getProducer(type);
+			}
+		}
 		return Unit();//We currently don't cancel units to build another unit type, we only cancel units to morph a building (addon is kind of a morph).
 	}
 	Unit producer = getProducer(type, true);
