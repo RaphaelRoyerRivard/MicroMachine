@@ -697,7 +697,7 @@ void CCBot::setUnits()
 			}
 			if (!m_strategy.shouldProduceAntiAirDefense())
 			{
-				std::vector<sc2::UNIT_TYPEID> airProductionBuildings = { sc2::UNIT_TYPEID::ZERG_SPIRE, sc2::UNIT_TYPEID::PROTOSS_STARGATE };
+				std::vector<sc2::UNIT_TYPEID> airProductionBuildings = { sc2::UNIT_TYPEID::ZERG_SPIRE, sc2::UNIT_TYPEID::PROTOSS_STARGATE, sc2::UNIT_TYPEID::TERRAN_STARPORT, sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
 				// If unit is flying and not part of the following list, we should produce Anti Air units
 				if (unitptr->is_flying || Util::Contains(unitptr->unit_type, airProductionBuildings))
 				{
@@ -718,6 +718,11 @@ void CCBot::setUnits()
 							Util::DebugLog(__FUNCTION__, "Air Harass detected: " + unit.getType().getName(), *this);
 						}
 						break;
+					case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+					case sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING:
+						if (GetEnemyUnits(sc2::UNIT_TYPEID::TERRAN_STARPORT).size() + GetEnemyUnits(sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING).size() <= 1)
+							break;	// Do not produce anti air defense against a single Starport
+					case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
 					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
 					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
 					case sc2::UNIT_TYPEID::ZERG_MUTALISK:
