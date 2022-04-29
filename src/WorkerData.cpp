@@ -277,9 +277,9 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     {
 		Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::STOP, m_bot);
 		Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::HALT_TERRANBUILD, m_bot);
-		auto & building = m_bot.Buildings().getBuildingOfBuilder(unit);
+		auto building = m_bot.Buildings().getBuildingOfBuilder(unit);
 		if (!building.buildingUnit.isValid() || building.buildingUnit.getBuildProgress() < 1.f)
-			building.unassign();
+			m_bot.Buildings().getBuildingRef(building).unassign();
     }
     else if (previousJob == WorkerJobs::Repair)
     {

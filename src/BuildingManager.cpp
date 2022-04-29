@@ -2077,7 +2077,7 @@ Building BuildingManager::CancelBuilding(Building b, std::string reason, bool re
 	return Building();
 }
 
-Building & BuildingManager::getBuildingOfBuilder(const Unit & builder)
+Building BuildingManager::getBuildingOfBuilder(const Unit & builder)
 {
 	for (auto & building : m_buildings)
 	{
@@ -2085,6 +2085,17 @@ Building & BuildingManager::getBuildingOfBuilder(const Unit & builder)
 			return building;
 	}
 	return Building();
+}
+
+Building & BuildingManager::getBuildingRef(Building & building)
+{
+	for (auto & b : m_buildings)
+	{
+		if (b == building)
+			return b;
+	}
+	Util::DisplayError("Cannot find building reference.", "", m_bot);
+	return building;
 }
 
 void BuildingManager::updateBaseBuildings()
