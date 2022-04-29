@@ -2726,13 +2726,13 @@ bool ProductionManager::create(const Unit & producer, Building & b, bool filterM
 
 bool ProductionManager::cancelNecessaryUnits(const MetaType & type)
 {
-	auto & units = unitsToCancelForResources(type);
+	auto units = unitsToCancelForResources(type);
 	for (auto & unit : units)
 	{
 		// Stop builder from starting its structure
 		if (unit.getType().isWorker())
 		{
-			auto & building = m_bot.Buildings().getBuildingOfBuilder(unit);
+			auto building = m_bot.Buildings().getBuildingOfBuilder(unit);
 			if (building == Building())
 				return false;
 			std::stringstream ss;
