@@ -1401,7 +1401,7 @@ void BuildingManager::checkForCompletedBuildings()
 					{
 						//check if the command center is an expand or a command center to lift up
 						auto base = m_bot.Bases().getBaseForDepotPosition(b.finalPosition);
-						if (base == nullptr || base->getResourceDepot().getTag() != b.buildingUnit.getTag())
+						if (base == nullptr || !base->getResourceDepot().isValid() || base->getResourceDepot().getTag() != b.buildingUnit.getTag())
 						{
 							b.buildingUnit.useAbility(sc2::ABILITY_ID::LIFT);
 						}

@@ -117,6 +117,7 @@ public:
 	StartingStrategy getInitialStartingStrategy() const { return m_initialStartingStrategy; }
 	bool shouldProxyBuilderFinishSafely(const Building & building, bool onlyInjuredWorkers = false) const;
 	bool isProxyStartingStrategy() const;
+	bool isFirstBarracksProxied() const;
 	bool isProxyFactoryStartingStrategy() const;
 	bool wasProxyStartingStrategy() const;
 	StrategyPostBuildOrder getCurrentStrategyPostBuildOrder() const;
