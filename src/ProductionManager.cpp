@@ -504,7 +504,8 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 		// The worker that just finished building the first Supply Depot should be the one building the first Barracks (unless it is proxied)
 		else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS &&
 			m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS) == 0 &&
-			!m_bot.Strategy().isProxyStartingStrategy() &&
+			(!m_bot.Strategy().isProxyStartingStrategy() || !m_bot.Strategy().isFirstBarracksProxied()) &&
+			m_bot.Strategy().getStartingStrategy() != StartingStrategy::FAST_PF &&	// because we build the CC before the Barracks
 			m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), false, true) == 1 &&
 			m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Build) > 0)
 			shouldSkip = true;
@@ -688,6 +689,10 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 							}
 						}
 					}
+				}
+				else if (currentItem.type == MetaTypeEnum::Barracks)
+				{
+					shouldSkip = baseCount < 2;
 				}
 			}
 		}
@@ -2646,6 +2651,7 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 		}
 		else
 		{
+			Building b(item.type.getUnitType(), desidredPosition);
 			if (item.type.getUnitType().isAddon())
 			{
 				//Cancels in order to be able to build the addon
@@ -2654,7 +2660,7 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 					producer.cancel();
 				}
 			}
-			else if (!meetsReservedResources(item.type))
+			else if (!meetsReservedResources(item.type) && !canMakeAtArrival(b, producer, 0, 0))
 			{
 				// Cancel other units or buildings to produce
 				bool cancelSuccess = cancelNecessaryUnits(item.type);
@@ -2665,7 +2671,6 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 					Util::Log(__FUNCTION__, ss.str(), m_bot);
 				}
 			}
-			Building b(item.type.getUnitType(), desidredPosition);
 			if (ValidateBuildingTiming(b))
 			{
 				b.reserveResources = reserveResources;

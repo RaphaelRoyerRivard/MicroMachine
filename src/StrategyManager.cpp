@@ -568,6 +568,11 @@ bool StrategyManager::isProxyStartingStrategy() const
 	return m_startingStrategy == PROXY_CYCLONES || m_startingStrategy == PROXY_MARAUDERS;
 }
 
+bool StrategyManager::isFirstBarracksProxied() const
+{
+	return m_startingStrategy == PROXY_CYCLONES;
+}
+
 bool StrategyManager::isProxyFactoryStartingStrategy() const
 {
 	return m_startingStrategy == PROXY_CYCLONES;
