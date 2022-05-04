@@ -1166,7 +1166,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want to have tanks to keep a balance between ground and air force, depending on what the enemy unit is producing
-				else if ((!proxyCyclonesStrategy || (cycloneCount + deadCycloneCount >= 1)) && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0 || (startingStrategy != StartingStrategy::FAST_PF && tankCount + deadTankCount == 0)) && (cycloneCount > 0 || tankCount == 0))
+				else if ((!proxyCyclonesStrategy || (cycloneCount + deadCycloneCount >= 1)) && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0 || (startingStrategy != StartingStrategy::FAST_PF && tankCount + deadTankCount == 0)) && (cycloneCount > 0 || (tankCount == 0 && !m_bot.Strategy().shouldProduceAntiAirOffense())))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Thor);
 					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
