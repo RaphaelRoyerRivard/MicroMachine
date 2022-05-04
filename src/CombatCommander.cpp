@@ -1422,13 +1422,18 @@ void CombatCommander::updateClearExpandSquads()
 
 void CombatCommander::updateScoutSquad()
 {
-	if (!m_bot.Strategy().enemyHasMassZerglings() && m_bot.GetCurrentFrame() < 4704)	//around 3:30, or as soon as enemy has a lot of lings
-		return;
-
 	Squad & scoutSquad = m_squadData.getSquad("Scout");
-	if (m_combatUnits.size() == 1)
+	// Scout for proxy against Protoss unless we ourselves do a proxy strategy or have already scouted the map once
+	bool scoutForProxy = m_bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss && !m_bot.Strategy().isProxyStartingStrategy() && !m_scoutedMapOnce;
+	if (!m_bot.Strategy().enemyHasMassZerglings() && m_bot.GetCurrentFrame() < 4704 && !scoutForProxy)	//around 3:30, or as soon as enemy has a lot of lings
 	{
-		scoutSquad.clear();	// Prevent our only combat unit to scout instead of fighting
+		scoutSquad.clear();
+		return;
+	}
+
+	if (m_combatUnits.size() == 1 && !scoutForProxy)
+	{
+		scoutSquad.clear();	// Prevent our only combat unit to scout instead of fighting, unless we haven't scouted the map once against Protoss
 	}
 	else if (scoutSquad.getUnits().empty())
 	{
@@ -3207,6 +3212,7 @@ CCPosition CombatCommander::GetNextBaseLocationToScout()
 	if(baseLocations.size() == m_visitedBaseLocations.size())
 	{
 		m_visitedBaseLocations.clear();
+		m_scoutedMapOnce = true;
 	}
 
 	CCPosition targetBasePosition;

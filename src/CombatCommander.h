@@ -189,6 +189,7 @@ class CombatCommander
 	const sc2::Unit * m_firstProxyReaperToGoThroughNatural = nullptr;
 	CCPosition m_firstProxyReaperGoal = CCPosition();
 	std::string m_firstProxyReaperGoalDescription = "";
+	bool m_scoutedMapOnce = false;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
