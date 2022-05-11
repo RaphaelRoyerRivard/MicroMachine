@@ -81,6 +81,11 @@ namespace Util
 		}
 	};
 
+	bool operator == (const UnitCluster & u1, const UnitCluster & u2)
+	{
+		return u1.m_center == u2.m_center && u1.m_units == u2.m_units;
+	}
+
 	static std::map<std::string, std::list<UnitCluster>> m_unitClusters;
 	static uint32_t m_lastUnitClusterFrame;
 	static uint32_t m_lastSpecialUnitClusterFrame;
