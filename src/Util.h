@@ -75,16 +75,11 @@ namespace Util
 		{
 			return rhs < *this;
 		}
-		bool operator==(const UnitCluster & rhs)
+		bool operator==(const UnitCluster & rhs) const
 		{
 			return m_center == rhs.m_center && m_units == rhs.m_units;
 		}
 	};
-
-	bool operator == (const UnitCluster & u1, const UnitCluster & u2)
-	{
-		return u1.m_center == u2.m_center && u1.m_units == u2.m_units;
-	}
 
 	static std::map<std::string, std::list<UnitCluster>> m_unitClusters;
 	static uint32_t m_lastUnitClusterFrame;
