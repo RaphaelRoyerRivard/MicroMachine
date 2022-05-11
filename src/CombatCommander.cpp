@@ -1635,6 +1635,7 @@ void CombatCommander::updateAttackSquads()
 
 	CCPosition orderPosition = GetClosestEnemyBaseLocation();
 	bool retreat = false;
+	std::string retreatReason;
 	bool proxyStrategy = m_bot.Strategy().isProxyStartingStrategy();
 	
 	// Do not attack before 5 minutes unless we have a proxy strategy or the enemy has more bases than us
@@ -1645,6 +1646,7 @@ void CombatCommander::updateAttackSquads()
 		if (allyBases >= enemyBases)
 		{
 			retreat = true;
+			retreatReason = "Don't attack yet";
 		}
 	}
 	// A retreat must last at least 5 seconds
@@ -1764,11 +1766,17 @@ void CombatCommander::updateAttackSquads()
 				}
 			}
 			if (!m_winAttackSimulation)
+			{
 				retreat = true;
+				retreatReason = "Lose attack simulation";
+			}
 		}
 	}
 	else
+	{
 		retreat = true;
+		retreatReason = "Keep retreating";
+	}
 
 	std::string orderStatus = "Attack";
 	if (retreat)
@@ -1779,6 +1787,12 @@ void CombatCommander::updateAttackSquads()
 		backupSquad.getSquadOrder().setStatus(orderStatus);
 	}
 
+	if (mainAttackSquad.getSquadOrder().getPosition() != orderPosition)
+	{
+		std::stringstream ss;
+		ss << "MainAttackSquad new order = " << orderStatus << " (" << orderPosition.x << ", " << orderPosition.y << ") " << (retreat ? retreatReason : "");
+		Util::Log(__FUNCTION__, ss.str(), m_bot);
+	}
 	const SquadOrder mainAttackOrder(SquadOrderTypes::Attack, orderPosition, MainAttackOrderRadius, orderStatus);
 	mainAttackSquad.setSquadOrder(mainAttackOrder);
 
@@ -3522,6 +3536,7 @@ void CombatCommander::CalcBestFlyingCycloneHelpers()
 	// Get the Cyclones and their potential flying helpers in the squad
 	std::set<const sc2::Unit *> cyclones;
 	std::set<const sc2::Unit *> potentialFlyingCycloneHelpers;
+	bool hasRavens = false;
 	for (const auto unit : m_combatUnits)
 	{
 		const auto unitPtr = unit.getUnitPtr();
@@ -3540,6 +3555,10 @@ void CombatCommander::CalcBestFlyingCycloneHelpers()
 			if (squad && squad->getSquadOrder().getType() != SquadOrderTypes::Harass && squad->getSquadOrder().getType() != SquadOrderTypes::Clear)
 			{
 				potentialFlyingCycloneHelpers.insert(unitPtr);
+				if (!hasRavens && unitPtr->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN)
+				{
+					hasRavens = true;
+				}
 			}
 		}
 	}
@@ -3564,34 +3583,46 @@ void CombatCommander::CalcBestFlyingCycloneHelpers()
 		targetsVector.push_back(target);
 	const auto targetClusters = Util::GetUnitClusters(targetsVector, {}, true, m_bot);
 
-	// Choose the best air unit to keep vision of Cyclone's targets
-	for (const auto & targetCluster : targetClusters)
+	// Choose the best air unit to keep vision of Cyclone's targets (in two passes, first one is for units other than Ravens, second one is for Ravens)
+	std::set<Util::UnitCluster> assignedClusters;
+	for (int i = 0; i < 2; ++i)
 	{
-		const sc2::Unit * closestHelper = nullptr;
-		float smallestDistSq = 0.f;
-		for (const auto potentialHelper : potentialFlyingCycloneHelpers)
+		if (i == 1 && !hasRavens)
+			continue;
+		for (const auto & targetCluster : targetClusters)
 		{
-			const float distSq = Util::DistSq(targetCluster.m_center, potentialHelper->pos);
-			if (!closestHelper || distSq < smallestDistSq)
+			if (Util::Contains(targetCluster, assignedClusters))
+				continue;
+			const sc2::Unit * closestHelper = nullptr;
+			float smallestDistSq = 0.f;
+			for (const auto potentialHelper : potentialFlyingCycloneHelpers)
 			{
-				closestHelper = potentialHelper;
-				smallestDistSq = distSq;
-			}
-		}
-		if (closestHelper)
-		{
-			// Remove the helper from the set because it is now taken
-			potentialFlyingCycloneHelpers.erase(closestHelper);
-			// Save the helper
-			m_cycloneFlyingHelpers[closestHelper] = FlyingHelperMission(TRACK, targetCluster.m_center);
-			// Associate the helper with every Cyclone that had a target in that target cluster
-			for (const auto target : targetCluster.m_units)
-			{
-				for (const auto & cyclone : lockOnTargets)
+				if (i == 0 && potentialHelper->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN)
+					continue;
+				
+				const float distSq = Util::DistSq(targetCluster.m_center, potentialHelper->pos);
+				if (!closestHelper || distSq < smallestDistSq)
 				{
-					if (target == cyclone.second.first)
+					closestHelper = potentialHelper;
+					smallestDistSq = distSq;
+				}
+			}
+			if (closestHelper)
+			{
+				assignedClusters.insert(targetCluster);
+				// Remove the helper from the set because it is now taken
+				potentialFlyingCycloneHelpers.erase(closestHelper);
+				// Save the helper
+				m_cycloneFlyingHelpers[closestHelper] = FlyingHelperMission(TRACK, targetCluster.m_center);
+				// Associate the helper with every Cyclone that had a target in that target cluster
+				for (const auto target : targetCluster.m_units)
+				{
+					for (const auto & cyclone : lockOnTargets)
 					{
-						m_cyclonesWithHelper[cyclone.first] = closestHelper;
+						if (target == cyclone.second.first)
+						{
+							m_cyclonesWithHelper[cyclone.first] = closestHelper;
+						}
 					}
 				}
 			}
