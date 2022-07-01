@@ -29,7 +29,6 @@ StrategyManager::StrategyManager(CCBot & bot)
 		"EARLY_EXPAND",
 		"STANDARD",
 		"PROXY_MARAUDERS",
-		"PROXY_CYCLONES",
 		"FAST_PF"
 	};
 	STRATEGY_ORDERS[sc2::Protoss] = {

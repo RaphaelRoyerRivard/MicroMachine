@@ -437,7 +437,12 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(sc2::UNIT_TYPEID::TERRAN_STARPORT, m_bot), false, true);
 	const int deadStarportCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_STARPORT);
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, false);
-	if (currentItem.type.getUnitType().isRefinery() && !m_bot.Strategy().isWorkerRushed())
+	const auto forbiddenUnits = { sc2::UNIT_TYPEID::TERRAN_GHOST, sc2::UNIT_TYPEID::TERRAN_GHOSTACADEMY, sc2::UNIT_TYPEID::TERRAN_MISSILETURRET, sc2::UNIT_TYPEID::TERRAN_WIDOWMINE, sc2::UNIT_TYPEID::TERRAN_HELLIONTANK, sc2::UNIT_TYPEID::TERRAN_THOR, sc2::UNIT_TYPEID::TERRAN_CYCLONE, sc2::UNIT_TYPEID::TERRAN_ARMORY, sc2::UNIT_TYPEID::TERRAN_RAVEN, sc2::UNIT_TYPEID::TERRAN_BANSHEE, sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB };
+	if (Util::Contains(currentItem.type.getUnitType().getAPIUnitType(), forbiddenUnits))
+	{
+		shouldSkip = true;
+	}
+	else if (currentItem.type.getUnitType().isRefinery() && !m_bot.Strategy().isWorkerRushed())
 	{
 		const bool hasBarracks = barracksCount > 0;
 		shouldSkip = !hasBarracks;
@@ -917,10 +922,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 
 					if (starportCount > starportAddonCount)
 					{
-						if (m_bot.Strategy().enemyHasProtossHighTechAir() || (m_bot.Strategy().shouldProduceAntiAirOffense() && starportTechLabCount > starportReactorCount) || (proxyMaraudersStrategy && starportReactorCount == 0))
-							toBuild = MetaTypeEnum::StarportReactor;
-						else//if (!proxyMaraudersStrategy || hasFusionCore), not required since it is either Reactor else it is TechLab
-							toBuild = MetaTypeEnum::StarportTechLab;
+						toBuild = MetaTypeEnum::StarportReactor;
 						if (!m_queue.contains(toBuild))
 						{
 							m_queue.queueItem(MM::BuildOrderItem(toBuild, 1, false));
@@ -987,85 +989,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyTempestCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_TEMPEST).size();
 				bool makeBattlecruisers = false;
 
-				if(finishedBaseCount >= 3 && hasEnoughVikings && enemyTempestCount == 0)
-				{
-#ifndef NO_UNITS
-					makeBattlecruisers = true;
-					
-					if (!m_queue.contains(MetaTypeEnum::Battlecruiser))
-					{
-						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Battlecruiser, 1, false));
-					}
-
-					if (hasFusionCore)
-					{
-						if (m_bot.GetFreeMinerals() >= 450 /*for a BC*/ && !m_queue.contains(MetaTypeEnum::Marine))
-						{
-							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, -1, false));
-						}
-
-						if (!isTechQueuedOrStarted(MetaTypeEnum::YamatoCannon) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BATTLECRUISERENABLESPECIALIZATIONS))
-						{
-							queueTech(MetaTypeEnum::YamatoCannon);
-						}
-					}
-#endif
-				}
-				else
-				{
-					m_queue.removeAllOfType(MetaTypeEnum::Battlecruiser);
-					if (battlecruiserCount < 1)
-						m_queue.removeAllOfType(MetaTypeEnum::YamatoCannon);
-					m_queue.removeAllOfType(MetaTypeEnum::FusionCore);
-				}
-
-				const bool stopBanshees = (makeBattlecruisers && hasFusionCore) /*|| m_bot.Strategy().enemyHasProtossHighTechAir()*/ || proxyMaraudersStrategy;
-				if (stopBanshees)
-				{
-					m_queue.removeAllOfType(MetaTypeEnum::Banshee);
-					m_queue.removeAllOfType(MetaTypeEnum::BansheeCloak);
-					m_queue.removeAllOfType(MetaTypeEnum::HyperflightRotors);
-				}
-				else
-				{
-					// Banshee Cloak upgrade
-					if (!isTechQueuedOrStarted(MetaTypeEnum::BansheeCloak) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK))
-					{
-						queueTech(MetaTypeEnum::BansheeCloak);
-					}
-
-					// Banshee Speed upgrade
-					if (bansheeCount > 1 && (!m_bot.Strategy().enemyHasFlyingDetector() || !m_bot.Strategy().enemyHasVeryFastAirAttackingUnits()))
-					{
-						if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
-						{
-							queueTech(MetaTypeEnum::HyperflightRotors);
-						}
-					}
-					else
-					{
-						m_queue.removeAllOfType(MetaTypeEnum::HyperflightRotors);
-					}
-
-#ifndef NO_UNITS
-					if (/*isTechStarted(MetaTypeEnum::BansheeCloak) &&*/ !m_queue.contains(MetaTypeEnum::Banshee))
-					{
-						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Banshee, 0, false));
-					}
-#endif
-				}
-#ifndef NO_UNITS
-				int ravenCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Raven.getUnitType(), false, true);
-				if (m_bot.Strategy().enemyCurrentlyHasInvisible() && ravenCount < 1)
-				{
-					m_queue.removeAllOfType(MetaTypeEnum::Banshee);
-					m_queue.removeAllOfType(MetaTypeEnum::Battlecruiser);
-					if (!m_queue.contains(MetaTypeEnum::Raven))
-					{
-						m_queue.queueAsHighestPriority(MetaTypeEnum::Raven, false);
-					}
-				}
-
 				bool enoughMedivacs = true;
 				if (produceMarauders)
 				{
@@ -1118,7 +1041,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				{
 					m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Marine, -1, false));
 				}
-#endif
+
 				const bool dangerousProxyBuilding = m_bot.Strategy().enemyHasProxyCombatBuildings() || m_bot.Strategy().enemyHasProxyHatchery();
 				const int cycloneCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Cyclone.getUnitType(), false, true);
 				const int deadCycloneCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_CYCLONE);
@@ -1127,7 +1050,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int hellionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Hellion.getUnitType(), false, true);
 				const int thorCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Thor.getUnitType(), false, true);
 				const int deadHellionCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_HELLION);
-				const bool shouldProduceFirstCyclone = startingStrategy == PROXY_CYCLONES && cycloneCount == 0;
+				const bool shouldProduceFirstCyclone = false;
 				const auto finishedArmory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Armory.getUnitType(), true, true) > 0;
 				const int enemyZealotCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_ZEALOT).size();
 				const int enemyZerglingCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLING).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::ZERG_ZERGLINGBURROWED).size();
@@ -1135,18 +1058,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const float enemySupplyAirGroundRatio = float(m_bot.Analyzer().opponentAirSupply) / std::max(1.f, float(m_bot.Analyzer().opponentGroundSupply));
 				const bool shouldProduceHellionsAgainstEarlyLightUnitsRush = factoryTechLabCount == 0 && earlyRushed && m_bot.Analyzer().getEnemyLightGroundUnitCount() > hellionCount;
 				// We want to build Thors against Tempests, but only after we have an Armory and we don't want more Thors than Cyclones
-				if (startingStrategy != PROXY_CYCLONES && enemyTempestCount > 0 && finishedArmory && thorCount + 1 < cycloneCount)
-				{
-					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
-					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
-					m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
-					if (!m_queue.contains(MetaTypeEnum::Thor))
-					{
-						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Thor, 0, false));
-					}
-				}
-				// We want at least 1 Hellion for every 2 enemy Zealot or 4 enemy Zergling. Against Zerg, we want to make at least 1 asap to defend against potential zergling rushes (unless the opponent already has Roaches)
-				else if (!shouldProduceFirstCyclone && !dangerousProxyBuilding && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ shouldProduceHellionsAgainstEarlyLightUnitsRush || (hellionCount + 1) * 4 < enemyZerglingCount))
+				if (!shouldProduceFirstCyclone && !dangerousProxyBuilding && (/*(hellionCount + 1) * 2 < enemyZealotCount ||*/ shouldProduceHellionsAgainstEarlyLightUnitsRush || (hellionCount + 1) * 4 < enemyZerglingCount))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Cyclone);
 					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
@@ -1166,7 +1078,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want to have tanks to keep a balance between ground and air force, depending on what the enemy unit is producing
-				else if ((!proxyCyclonesStrategy || (cycloneCount + deadCycloneCount >= 1)) && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0 || (startingStrategy != StartingStrategy::FAST_PF && tankCount + deadTankCount == 0)) && (cycloneCount > 0 || (tankCount == 0 && !m_bot.Strategy().shouldProduceAntiAirOffense())))
+				else
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Thor);
 					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
@@ -1178,31 +1090,6 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::SiegeTank, 0, false));
 					}
 #endif
-				}
-				else
-				{
-					m_queue.removeAllOfType(MetaTypeEnum::Thor);
-					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
-					m_queue.removeAllOfType(MetaTypeEnum::InfernalPreIgniter);
-					m_queue.removeAllOfType(MetaTypeEnum::SiegeTank);
-#ifndef NO_UNITS
-					if (!m_queue.contains(MetaTypeEnum::Cyclone))
-					{
-						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Cyclone, 0, false));
-					}
-#endif
-					
-					if (cycloneCount < 1 || !m_bot.Strategy().enemyHasSeveralArmoredUnits())
-					{
-						m_queue.removeAllOfType(MetaTypeEnum::MagFieldAccelerator);
-					}
-					else
-					{
-						if (!isTechQueuedOrStarted(MetaTypeEnum::MagFieldAccelerator) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::MAGFIELDLAUNCHERS))
-						{
-							queueTech(MetaTypeEnum::MagFieldAccelerator);
-						}
-					}
 				}
 
 				if (m_bot.Strategy().shouldProduceAntiAirDefense() && !isTechQueuedOrStarted(MetaTypeEnum::HiSecAutoTracking) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::HISECAUTOTRACKING))
@@ -1219,17 +1106,9 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						makeVikings = vikingCount < 5 || lowVikingsSupply;
 					}
-					else if (!stopBanshees)
-					{
-						makeVikings = vikingCount < bansheeCount || lowVikingsSupply; // && m_bot.GetFreeMinerals() >= 300 && m_bot.GetFreeGas() >= 225);
-					}
-					else if (makeBattlecruisers && hasFusionCore)
-					{
-						makeVikings = vikingCount < battlecruiserCount || lowVikingsSupply; // && m_bot.GetFreeMinerals() >= 550 && m_bot.GetFreeGas() >= 375);
-					}
 					else
 					{
-						makeVikings = !hasFusionCore && stopBanshees && lowVikingsSupply;
+						makeVikings = !hasFusionCore && lowVikingsSupply;
 					}
 					if (makeVikings)
 					{
@@ -1891,63 +1770,6 @@ void ProductionManager::lowPriorityChecks()
 							}
 						}
 						break;
-					}
-				}
-			}
-		}
-	}
-
-	//build turrets in mineral field
-	//TODO only supports terran, turret position isn't always optimal(check BaseLocation to optimize it)
-	const bool shouldProduceAntiAirDefense = m_bot.Strategy().shouldProduceAntiAirDefense();
-	const bool shouldProduceStaticAntiInvis = m_bot.Strategy().enemyHasMovingInvisible() && m_bot.GetPlayerRace(Players::Enemy) != CCRace::Zerg;//Do not produce turrets VS burrowed zerg units
-	if (shouldProduceAntiAirDefense || shouldProduceStaticAntiInvis)
-	{
-		const auto engineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), false, true);
-		if (engineeringBayCount <= 0 && !m_queue.contains(MetaTypeEnum::EngineeringBay))
-		{
-			const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true);
-			if (!shouldProduceStaticAntiInvis && starportCount > 0)
-			{
-				const int vikingCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true);
-				if (vikingCount > 0)
-				{
-					m_queue.queueAsLowestPriority(MetaTypeEnum::EngineeringBay, false);
-				}
-			}
-			else
-			{
-				m_queue.queueAsHighestPriority(MetaTypeEnum::EngineeringBay, false);
-			}
-		}
-
-		if (!m_bot.Buildings().isConstructingType(MetaTypeEnum::MissileTurret.getUnitType()))
-		{
-			const int completedEngineeringBayCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::EngineeringBay.getUnitType(), true, true);
-			if (completedEngineeringBayCount > 0)
-			{
-				for (auto base : m_bot.Bases().getOccupiedBaseLocations(Players::Self))
-				{
-					if (!base->getResourceDepot().isValid() || base->getResourceDepot().getPlayer() != Players::Self)
-						continue;
-					
-					auto hasTurret = false;
-					auto position = base->getTurretPosition();
-					auto buildings = m_bot.Buildings().getFinishedBuildings();
-					for (auto & b : buildings)
-					{
-						if (b.getTilePosition() == position)
-						{
-							hasTurret = true;
-							break;
-						}
-					}
-					if (!hasTurret)
-					{
-						m_bot.Buildings().getBuildingPlacer().freeTilesForTurrets(position);
-						auto worker = m_bot.Workers().getClosestAvailableWorkerTo(CCPosition(position.x, position.y));
-						auto boItem = MM::BuildOrderItem(MetaTypeEnum::MissileTurret, 0, false);
-						create(worker, boItem, position, true, true, false);
 					}
 				}
 			}

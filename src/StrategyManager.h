@@ -47,7 +47,7 @@ enum StartingStrategy
 class StrategyManager
 {
 	std::vector<std::string> STRATEGY_NAMES = {
-		"PROXY_CYCLONES",
+		"PROXY_CYCLONES",	// removed
 		"EARLY_EXPAND",
 		"STANDARD",
 		"WORKER_RUSH",	// removed
