@@ -653,9 +653,7 @@ void CCBot::setUnits()
 			}
 			m_enemyUnits[unitptr->tag] = unit;
 			// Tell the strategy manager that we need to finish the wall early if we spot an enemy before finishing our first Barracks
-			// TODO remove TournamentMode condition
-			if (Config().TournamentMode &&
-				!m_strategy.shouldFinishWallEarly() &&
+			if (!m_strategy.shouldFinishWallEarly() &&
 				!m_strategy.isProxyStartingStrategy() &&
 				GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS, false) == 1 &&
 				GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS, true) == 0)
