@@ -36,3 +36,15 @@ bool Building::operator == (const Building & b)
              && (b.finalPosition.x == finalPosition.x)
              && (b.finalPosition.y == finalPosition.y);
 }
+
+bool Building::operator != (const Building & b)
+{
+	return !(*this == b);
+}
+
+void Building::unassign()
+{
+	builderUnit = Unit();
+	buildCommandGiven = false;
+	status = BuildingStatus::Unassigned;
+}

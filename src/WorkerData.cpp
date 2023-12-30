@@ -275,7 +275,11 @@ void WorkerData::clearPreviousJob(const Unit & unit)
     }
     else if (previousJob == WorkerJobs::Build)
     {
-		Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::HALT, m_bot);
+		Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::STOP, m_bot);
+		Micro::SmartAbility(unit.getUnitPtr(), sc2::ABILITY_ID::HALT_TERRANBUILD, m_bot);
+		auto building = m_bot.Buildings().getBuildingOfBuilder(unit);
+		if (building != Building() && (!building.buildingUnit.isValid() || building.buildingUnit.getBuildProgress() < 1.f))
+			m_bot.Buildings().getBuildingRef(building).unassign();
     }
     else if (previousJob == WorkerJobs::Repair)
     {
@@ -652,10 +656,12 @@ const std::set<Unit> WorkerData::getMineralWorkers() const
 
 void WorkerData::sendIdleWorkerToIdleSpot(const Unit & worker, bool force)
 {
+	if (!worker.isValid())
+		return;
 	if (m_bot.Bases().getBaseCount(Players::Self) > 0)
 	{
-		auto & base = *m_bot.Bases().getOccupiedBaseLocations(Players::Self).begin();
-		if (force || Util::DistSq(worker.getPosition(), base->getDepotPosition()) > 40)
+		auto base = *m_bot.Bases().getOccupiedBaseLocations(Players::Self).begin();
+		if (base && (force || Util::DistSq(worker.getPosition(), base->getDepotPosition()) > 40))
 		{
 			if (force || worker.getUnitPtr()->orders.size() == 0)
 			{

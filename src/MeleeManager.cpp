@@ -26,25 +26,49 @@ void MeleeManager::setTargets(const std::vector<Unit> & targets)
 void MeleeManager::executeMicro()
 {
 	if (!m_stackingMineral.isValid())
+	{
+		m_bot.StartProfiling("0.10.4.1.4.1        identifyStackingMinerals");
 		identifyStackingMinerals();
+		m_bot.StopProfiling("0.10.4.1.4.1        identifyStackingMinerals");
+	}
 
 	const bool workerRushed = m_bot.Strategy().isWorkerRushed();
-	/*if (workerRushed && m_order.getType() == SquadOrderTypes::Defend)
+	if (workerRushed && m_order.getType() == SquadOrderTypes::Defend && shouldStackWorkers())
 	{
-		// Not working well enough, the stacked workers push each other out of range of their target when they attack
-		//if (!areUnitsStackedUp())
-		//	stackUnits();
-		//else
-		//	microStack();
+		// The stacked workers cannot one shot enemies because they push each other out of range of their target when they attack
+		m_bot.StartProfiling("0.10.4.1.4.2        areUnitsStackedUp");
+		bool stacked = areUnitsStackedUp();
+		m_bot.StopProfiling("0.10.4.1.4.2        areUnitsStackedUp");
+		if (!stacked)
+		{
+			m_bot.StartProfiling("0.10.4.1.4.3        stackUnits");
+			stackUnits();
+			m_bot.StopProfiling("0.10.4.1.4.3        stackUnits");
+		}
+		else
+		{
+			m_bot.StartProfiling("0.10.4.1.4.4        microStack");
+			microStack();
+			m_bot.StopProfiling("0.10.4.1.4.4        microStack");
+		}
 
 		// Not working well enough, backstabers get killed way too fast
 		//if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss)
 		//	updateBackstabbers();
-	}*/
+	}
     const std::vector<Unit> & meleeUnits = getUnits();
 	const bool workerRushStrat = m_bot.Strategy().getStartingStrategy() == WORKER_RUSH;
 	if (workerRushStrat)
 	{
+		m_bot.StartProfiling("0.10.4.1.4.5        waitForProbesHealed");
+		for (auto it = m_healingProbes.begin(); it != m_healingProbes.end();)
+		{
+			auto unit = m_bot.GetUnit(*it);
+			if (!unit.isValid() || !unit.isAlive())
+				it = m_healingProbes.erase(it);
+			else
+				it++;
+		}
 		if (!m_waitForProbesHealed)
 		{
 			if (m_healingProbes.size() >= meleeUnits.size() - 1)
@@ -56,13 +80,16 @@ void MeleeManager::executeMicro()
 		{
 			m_waitForProbesHealed = false;
 		}
+		m_bot.StopProfiling("0.10.4.1.4.5        waitForProbesHealed");
 	}
 
+	m_bot.StartProfiling("0.10.4.1.4.6        microUnit");
     // for each meleeUnit
     for (auto & meleeUnit : meleeUnits)
     {
 		microUnit(meleeUnit);
     }
+	m_bot.StopProfiling("0.10.4.1.4.6        microUnit");
 }
 
 void MeleeManager::microUnit(const Unit & meleeUnit)
@@ -80,6 +107,7 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 	bool isHealing = false;
 	if (isProbe)
 	{
+		m_bot.StartProfiling("0.10.4.1.4.6.1         probeChecks");
 		if (meleeUnit.getShields() <= 5)
 		{
 			m_healingProbes.emplace(meleeUnit.getTag());
@@ -97,6 +125,7 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 		{
 			isHealing = true;
 		}
+		m_bot.StopProfiling("0.10.4.1.4.6.1         probeChecks");
 	}
 
 	bool flee = false;
@@ -113,8 +142,10 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 		}
 		else
 		{
+			m_bot.StartProfiling("0.10.4.1.4.6.2         getTarget");
 			// find the best target for this meleeUnit
 			Unit target = getTarget(meleeUnit, m_targets);
+			m_bot.StopProfiling("0.10.4.1.4.6.2         getTarget");
 			if (!target.isValid())
 			{
 				noTarget = true;
@@ -125,8 +156,9 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 				bool isBackstabber = backstabbers.find(meleeUnit) != backstabbers.end();
 				bool injured = false;
 				bool injuredUnitInDanger = false;
-				if (!isBackstabber && isProbe ? isHealing : (meleeUnit.getHitPointsPercentage() <= 25))
+				if (!isBackstabber && (isProbe ? isHealing : (meleeUnit.getHitPointsPercentage() <= 25)))
 				{
+					m_bot.StartProfiling("0.10.4.1.4.6.3         injured");
 					injured = true;
 					for (const auto & threat : m_targets)
 					{
@@ -137,22 +169,29 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 							break;
 						}
 					}
+					m_bot.StopProfiling("0.10.4.1.4.6.3         injured");
 				}
 
 				bool closeToTarget = Util::Dist(meleeUnit, target) <= Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot) + 0.5f;
 				float minWeaponCooldownToMineralWalk = closeToTarget ? (isBackstabber ? 0.f : 5.f) : 10.f;
 				// If it is a worker that just attacked a non building unit, we want it to mineral walk back (or forward when it's a backstabber)
-				if (meleeUnit.getType().isWorker() && (meleeUnit.getUnitPtr()->weapon_cooldown > minWeaponCooldownToMineralWalk || injuredUnitInDanger) && Util::getSpeedOfUnit(target.getUnitPtr(), m_bot) > 0.f && m_squad->getName() != "ScoutDefense")
+				m_bot.StartProfiling("0.10.4.1.4.6.4         shouldMineralWalk");
+				bool shouldMineralWalk = meleeUnit.getType().isWorker() && (meleeUnit.getUnitPtr()->weapon_cooldown > minWeaponCooldownToMineralWalk || injuredUnitInDanger) && Util::getSpeedOfUnit(target.getUnitPtr(), m_bot) > 0.f && m_squad->getName() != "ScoutDefense";
+				m_bot.StopProfiling("0.10.4.1.4.6.4         shouldMineralWalk");
+				if (shouldMineralWalk)
 				{
+					m_bot.StartProfiling("0.10.4.1.4.6.5         mineralWalk");
 					auto & mineral = isBackstabber ? m_enemyMineral : m_stackingMineral;
 					if (mineral.isValid())
 					{
 						const auto action = UnitAction(MicroActionType::RightClick, mineral.getUnitPtr(), false, 0, "mineral walk", m_squad->getName());
 						m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 					}
+					m_bot.StopProfiling("0.10.4.1.4.6.5         mineralWalk");
 				}
 				else
 				{
+					m_bot.StartProfiling("0.10.4.1.4.6.6         getRepairTarget");
 					const sc2::Unit* repairTarget = nullptr;
 					const sc2::Unit* closestRepairTarget = nullptr;
 					float distanceToClosestRepairTarget = 0;
@@ -188,28 +227,35 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 							}
 						}
 					}
+					m_bot.StopProfiling("0.10.4.1.4.6.6         getRepairTarget");
 
 					if (repairTarget || (injured && closestRepairTarget))
 					{
+						m_bot.StartProfiling("0.10.4.1.4.6.7         repair");
 						if (!repairTarget)
 							repairTarget = closestRepairTarget;
 						const auto action = UnitAction(MicroActionType::RightClick, repairTarget, false, 0, "repair", m_squad->getName());
 						m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+						m_bot.StopProfiling("0.10.4.1.4.6.7         repair");
 					}
 					else if (!injured || workerRushStrat)
 					{
 						// attack the target if we can see it, otherwise move towards it
 						if (target.getUnitPtr()->last_seen_game_loop == m_bot.GetCurrentFrame())
 						{
+							m_bot.StartProfiling("0.10.4.1.4.6.8         attack");
 							const auto action = UnitAction(MicroActionType::AttackUnit, target.getUnitPtr(), false, 0, "attack target", m_squad->getName());
 							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+							m_bot.StopProfiling("0.10.4.1.4.6.8         attack");
 						}
 						else
 						{
+							m_bot.StartProfiling("0.10.4.1.4.6.9         move");
 							auto movePosition = target.getPosition();
 							// If there is an enemy worker hidding in our base, explore the tiles of the base
 							if (m_bot.Strategy().enemyHasWorkerHiddingInOurMain())
 							{
+								m_bot.StartProfiling("0.10.4.1.4.6.9.1          exploreBaseTiles");
 								CCTilePosition closestUnexploredTile;
 								float closestDistance = -1;
 								const auto & baseTiles = m_bot.Bases().getPlayerStartingBaseLocation(Players::Self)->getBaseTiles();
@@ -230,9 +276,11 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 								{
 									movePosition = Util::GetPosition(closestUnexploredTile);
 								}
+								m_bot.StopProfiling("0.10.4.1.4.6.9.1          exploreBaseTiles");
 							}
 							const auto action = UnitAction(MicroActionType::Move, movePosition, false, 0, "move towards target", m_squad->getName());
 							m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+							m_bot.StopProfiling("0.10.4.1.4.6.9         move");
 						}
 					}
 				}
@@ -242,8 +290,19 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 
 	if (flee || noTarget)
 	{
+		if (flee && workerRushed && m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_REAPER) > 0)
+		{
+			auto ccs = m_bot.GetAllyUnits(sc2::UNIT_TYPEID::TERRAN_COMMANDCENTER);
+			if (!ccs.empty() && ccs[0].getUnitPtr()->passengers.size() < 5)
+			{
+				const auto action = UnitAction(MicroActionType::RightClick, ccs[0].getUnitPtr(), true, 0, "hide", m_squad->getName());
+				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+				return;
+			}
+		}
 		if (Util::PathFinding::GetTotalInfluenceOnTile(Util::GetTilePosition(meleeUnit.getPosition()), meleeUnit.getUnitPtr(), m_bot) > 0)
 		{
+			m_bot.StartProfiling("0.10.4.1.4.6.10         flee");
 			CCPosition goal = m_order.getPosition();
 			if (m_bot.Workers().getWorkerData().isProxyWorker(meleeUnit))
 				goal = m_bot.GetEnemyStartLocations().empty() ? m_bot.Map().center() : m_bot.GetEnemyStartLocations()[0];
@@ -254,18 +313,23 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 				m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
 				flee = false;
 			}
+			m_bot.StopProfiling("0.10.4.1.4.6.10         flee");
 		}
 		auto enemyBase = m_bot.Bases().getPlayerStartingBaseLocation(Players::Enemy);
 		if (noTarget && workerRushStrat && enemyBase && enemyBase->containsPositionApproximative(m_order.getPosition()))
 		{
+			m_bot.StartProfiling("0.10.4.1.4.6.11         mineralWalkEnemyBase");
 			auto enemyMineral = enemyBase->getMinerals()[0].getUnitPtr();
 			const auto action = UnitAction(MicroActionType::RightClick, enemyMineral, false, 0, "mineral walk", m_squad->getName());
 			m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+			m_bot.StopProfiling("0.10.4.1.4.6.11         mineralWalkEnemyBase");
 		}
 		else if (flee || noTarget)
 		{
+			m_bot.StartProfiling("0.10.4.1.4.6.12         moveBack");
 			const auto action = UnitAction(MicroActionType::Move, m_order.getPosition(), false, 0, "flee", m_squad->getName());
 			m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+			m_bot.StopProfiling("0.10.4.1.4.6.12         moveBack");
 		}
 	}
 
@@ -275,9 +339,15 @@ void MeleeManager::microUnit(const Unit & meleeUnit)
 	}*/
 }
 
+bool MeleeManager::shouldStackWorkers() const
+{
+	const std::vector<Unit> & meleeUnits = getUnits();
+	return meleeUnits.size() >= 10;
+}
+
 bool MeleeManager::areUnitsStackedUp()
 {
-	if (m_stacked)
+	if (m_bot.Commander().Combat().haveWorkersStacked())
 		return true;
 	const std::vector<Unit> & meleeUnits = getUnits();
 	for (auto & meleeUnit : meleeUnits)
@@ -285,11 +355,11 @@ bool MeleeManager::areUnitsStackedUp()
 		for (auto & otherMeleeUnit : meleeUnits)
 		{
 			float distSq = Util::DistSq(meleeUnit, otherMeleeUnit);
-			if (distSq > 0.3f * 0.3f)
+			if (distSq > (m_mineralPocket ? 0.4f * 0.4f : 2 * 2))
 				return false;
 		}
 	}
-	m_stacked = true;
+	m_bot.Commander().Combat().setWorkersHaveStacked(true);
 	for (auto & meleeUnit : meleeUnits)
 	{
 		m_stackedUnits.insert(meleeUnit);
@@ -341,6 +411,8 @@ void MeleeManager::identifyStackingMinerals()
 				if (closeMineralCount == 2)
 				{
 					(i == 0 ? m_stackingMineral : m_enemyMineral) = farMineral;
+					if (i == 0)
+						m_mineralPocket = true;
 					break;
 				}
 			}
@@ -369,47 +441,63 @@ void MeleeManager::identifyStackingMinerals()
 }
 
 /*
-Do not use this function. It doesn't work to one shot enemy workers.
+This function doesn't work to one shot enemy workers.
 */
 void MeleeManager::microStack()
 {
-	int canAttackCount = 0;
+	float closestEnemyDistanceToBase = 0.f;
+	for (auto & target : m_targets)
+	{
+		auto dist = Util::DistSq(target, m_bot.GetStartLocation());
+		if (closestEnemyDistanceToBase == 0.f || dist < closestEnemyDistanceToBase)
+			closestEnemyDistanceToBase = dist;
+	}
+	/*int canAttackCount = 0;
 	for (int i = 0; i < 2; i++)
 	{
-		bool shouldAttack = canAttackCount >= std::min(int(m_stackedUnits.size()), 9);
+		bool shouldAttack = canAttackCount >= std::min(int(m_stackedUnits.size()), 9);*/
 		for (auto it = m_stackedUnits.begin(); it != m_stackedUnits.end(); )
 		{
 			auto & meleeUnit = *it;
-			if (meleeUnit.getUnitPtr()->weapon_cooldown != 0.f)
+			/*if (meleeUnit.getUnitPtr()->weapon_cooldown != 0.f)
 			{
 				it = m_stackedUnits.erase(it);
 				continue;
-			}
+			}*/
 			bool canAttack = false;
-			Unit target = getTarget(meleeUnit, m_targets);
-			if (target.isValid())
+			auto dist = Util::DistSq(meleeUnit, m_bot.GetStartLocation());
+			if (dist > closestEnemyDistanceToBase)
+				canAttack = true;
+			else
 			{
-				auto range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot) / 3;
-				auto dist = Util::DistSq(meleeUnit, target);
-				if (dist <= range * range)
+				Unit target = getTarget(meleeUnit, m_targets);
+				if (target.isValid())
 				{
-					canAttack = true;
+					auto range = Util::GetAttackRangeForTarget(meleeUnit.getUnitPtr(), target.getUnitPtr(), m_bot) / 3;
+					auto dist = Util::DistSq(meleeUnit, target);
+					if (dist <= range * range)
+					{
+						canAttack = true;
+					}
 				}
 			}
-			if (i == 0) {
+			bool incrementIterator = true;
+			/*if (i == 0) {
 				canAttackCount += canAttack ? 1 : 0;
 			}
-			else
+			else*/
 			{
 				auto & unitAction = m_bot.Commander().Combat().GetUnitAction(meleeUnit.getUnitPtr());
 				// Ignore units that are executing a prioritized action
 				if (!unitAction.prioritized && !m_bot.Commander().Combat().ShouldSkipFrame(meleeUnit.getUnitPtr()))
 				{
-					if (canAttack && shouldAttack)
+					if (canAttack)// && shouldAttack)
 					{
 						//const auto action = UnitAction(MicroActionType::AttackUnit, target.getUnitPtr(), true, 10, "attack target", m_squad->getName());
-						const auto action = UnitAction(MicroActionType::AttackMove, m_stackPosition, true, 50, "attack move", m_squad->getName());
+						const auto action = UnitAction(MicroActionType::AttackMove, m_stackPosition, false, 0, "stack attack", m_squad->getName());
 						m_bot.Commander().Combat().PlanAction(meleeUnit.getUnitPtr(), action);
+						it = m_stackedUnits.erase(it);
+						incrementIterator = false;
 					}
 					else
 					{
@@ -418,11 +506,12 @@ void MeleeManager::microStack()
 					}
 				}
 			}
-			++it;
+			if (incrementIterator)
+				++it;
 		}
-	}
-	if (m_stackedUnits.empty())
-		m_stacked = false;
+	//}
+	//if (m_stackedUnits.empty())
+	//	m_stacked = false;
 }
 
 void MeleeManager::updateBackstabbers()

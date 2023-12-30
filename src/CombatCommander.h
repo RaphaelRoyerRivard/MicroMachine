@@ -183,9 +183,17 @@ class CombatCommander
 	std::map<const sc2::Unit *, long> m_lastFleeingWorkerFrame;
 	std::set<const sc2::Unit *> m_addonBlockingTanks;
 	std::set<Unit> m_backstabbers;	// Workers that backstab the enemy probes when probe rushed
+	std::map<int, long> m_cachedBiles;	// <corrosive bile location (mapkey generated with Util::ToMapKey), last frame seen>
+	bool m_workersStacked = false;
+	bool m_firstProxyReaperWentThroughNatural = false;
+	const sc2::Unit * m_firstProxyReaperToGoThroughNatural = nullptr;
+	CCPosition m_firstProxyReaperGoal = CCPosition();
+	std::string m_firstProxyReaperGoalDescription = "";
+	bool m_scoutedMapOnce = false;
 
 	void			clearYamatoTargets();
 	void			clearAllyScans();
+	void			clearCorrosiveBiles();
 	void			clearDangerousEnemyBunkers();
 	void			clearFleeingWorkers();
 	void			updateIdlePosition();
@@ -204,8 +212,8 @@ class CombatCommander
     bool            isSquadUpdateFrame();
 
     Unit            findClosestDefender(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, std::string type);
-    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight = false) const;
-	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight = true) const;
+    Unit            findWorkerToAssignToSquad(const Squad & defenseSquad, const CCPosition & pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight = false, bool armyIsEnough = true) const;
+	bool			ShouldWorkerDefend(const Unit & woker, const Squad & defenseSquad, CCPosition pos, Unit & closestEnemy, const std::vector<Unit> & enemyUnits, bool filterDifferentHeight = true, bool armyIsEnough = true) const;
 	bool			WorkerHasFastEnemyThreat(const sc2::Unit * worker, const std::vector<Unit> & enemyUnits) const;
 
 	CCPosition		exploreMap();
@@ -279,7 +287,7 @@ public:
 	void updateBlockedTilesWithNeutral();
 	void SetLogVikingActions(bool log);
 	bool ShouldSkipFrame(const sc2::Unit * combatUnit) const;
-	bool PlanAction(const sc2::Unit* rangedUnit, UnitAction action);
+	bool PlanAction(const sc2::Unit* unit, UnitAction action);
 	void ClearActions();
 	void CleanActions(const std::vector<Unit> &rangedUnits);
 	void ExecuteActions();
@@ -295,5 +303,11 @@ public:
 	void setBunkerIsDangerous(const sc2::Unit * bunker);
 	std::set<const sc2::Unit *> & getAddonBlockingTanks() { return m_addonBlockingTanks; }
 	std::set<Unit> & getBackstabbers() { return m_backstabbers; }
+	bool shouldBansheesHarass() const;
+	bool haveWorkersStacked() { return m_workersStacked; }
+	void setWorkersHaveStacked(bool workersStacked) { m_workersStacked = workersStacked; }
+	void updateFirstProxyReaperGoingThroughNatural();
+	const sc2::Unit * getFirstProxyReaperToGoThroughNatural() const { return m_firstProxyReaperToGoThroughNatural; }
+	CCPosition getFirstProxyReaperGoal() const { return m_firstProxyReaperGoal; }
 };
 

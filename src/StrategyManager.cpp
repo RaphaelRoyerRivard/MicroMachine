@@ -26,11 +26,11 @@ StrategyManager::StrategyManager(CCBot & bot)
     : m_bot(bot)
 {
 	STRATEGY_ORDERS[sc2::Terran] = {
-		"STANDARD",
 		"EARLY_EXPAND",
-		"FAST_PF",
+		"STANDARD",
+		"PROXY_MARAUDERS",
 		"PROXY_CYCLONES",
-		"PROXY_MARAUDERS"
+		"FAST_PF"
 	};
 	STRATEGY_ORDERS[sc2::Protoss] = {
 		"WORKER_RUSH"
@@ -291,7 +291,7 @@ void StrategyManager::checkForStrategyChange()
 							if (Util::DistSq(buildingPos, m_bot.Buildings().getProxyLocation()) < Util::DistSq(buildingPos, m_bot.GetStartLocation()))
 							{
 								// If the worker is close to the building site
-								if (Util::DistSq(building.builderUnit, buildingPos) <= 3 * 3)
+								if (building.builderUnit.isValid() && Util::DistSq(building.builderUnit, buildingPos) <= 3 * 3)
 								{
 									for (const auto & enemy : m_bot.GetKnownEnemyUnits())
 									{
@@ -568,6 +568,11 @@ bool StrategyManager::isProxyStartingStrategy() const
 	return m_startingStrategy == PROXY_CYCLONES || m_startingStrategy == PROXY_MARAUDERS;
 }
 
+bool StrategyManager::isFirstBarracksProxied() const
+{
+	return m_startingStrategy == PROXY_CYCLONES;
+}
+
 bool StrategyManager::isProxyFactoryStartingStrategy() const
 {
 	return m_startingStrategy == PROXY_CYCLONES;
@@ -589,15 +594,11 @@ const Strategy & StrategyManager::getCurrentStrategy() const
 
 StrategyPostBuildOrder StrategyManager::getCurrentStrategyPostBuildOrder() const
 {
-	if (m_bot.Strategy().isWorkerRushed())
+	if (m_workerRushed)
 	{
 		return WORKER_RUSH_DEFENSE;
 	}
-	if (m_bot.GetPlayerRace(Players::Enemy) == sc2::Race::Protoss)
-	{
-		//return TERRAN_VS_PROTOSS;
-	}
-	return TERRAN_CLASSIC;//MARINE_MARAUDER;
+	return TERRAN_CLASSIC;
 }
 
 const MM::BuildOrder & StrategyManager::getOpeningBookBuildOrder() const

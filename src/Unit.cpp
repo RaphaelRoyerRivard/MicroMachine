@@ -59,7 +59,12 @@ bool Unit::operator < (const Unit & rhs) const
 
 bool Unit::operator == (const Unit & rhs) const
 {
-    return m_unit == rhs.m_unit;
+	return m_unit == rhs.m_unit;
+}
+
+bool Unit::operator != (const Unit & rhs) const
+{
+	return m_unit != rhs.m_unit;
 }
 
 const UnitType & Unit::getType() const

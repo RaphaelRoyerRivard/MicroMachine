@@ -75,7 +75,7 @@ namespace Util
 		{
 			return rhs < *this;
 		}
-		bool operator==(const UnitCluster & rhs)
+		bool operator==(const UnitCluster & rhs) const
 		{
 			return m_center == rhs.m_center && m_units == rhs.m_units;
 		}
@@ -279,6 +279,7 @@ namespace Util
 	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::Unit * unit, const std::vector<sc2::AvailableAbilities> & availableAbilitiesForUnits);
 	bool IsAbilityAvailable(sc2::ABILITY_ID abilityId, const sc2::AvailableAbilities & availableAbilities);
 	bool IsFarMineralPatch(const sc2::UNIT_TYPEID type);
+	bool IsChangeling(const sc2::UNIT_TYPEID type);
     
     std::string     GetStringFromRace(const sc2::Race & race);
     sc2::Race       GetRaceFromString(const std::string & race);
@@ -346,7 +347,9 @@ namespace Util
     bool            IsTerran(const CCRace & race);
 	bool			IsWorker(sc2::UNIT_TYPEID type);
 	int				ToMapKey(const CCTilePosition position);
+	int				ToMapKey(const CCPosition position);
 	CCTilePosition	FromCCTilePositionMapKey(const int mapKey);
+	CCPosition		FromCCPositionMapKey(const int mapKey);
     CCPositionType  TileToPosition(float tile);
 
 #ifdef SC2API

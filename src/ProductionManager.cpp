@@ -2,6 +2,8 @@
 #include "Util.h"
 #include "CCBot.h"
 
+const int MIN_VIKING_COUNT = 2;
+
 ProductionManager::ProductionManager(CCBot & bot)
     : m_bot             (bot)
     , m_queue           (bot)
@@ -297,6 +299,9 @@ void ProductionManager::manageBuildOrderQueue()
 						// if we can make the current item
 						m_bot.StartProfiling("0.10.2.2.2.2      tryingToBuild");
 						bool needsCancellation = false;//Required because the morph/addon abilities are not available while training/producing.
+						bool isLastSupplyDepotOfEarlyWall = m_bot.Strategy().shouldFinishWallEarly() &&
+							currentItem.type == MetaTypeEnum::SupplyDepot &&
+							m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), false, true) == 1;
 						Unit producer;
 						if (meetsReservedResources(currentItem.type, additionalReservedMineral, additionalReservedGas))//Get the producer if we have enough resources
 						{
@@ -304,7 +309,9 @@ void ProductionManager::manageBuildOrderQueue()
 						}
 						else//Try to get a producer that would have enough resources if we cancel what it is currently producing.
 						{
-							producer = meetsReservedResourcesWithCancelUnit(currentItem.type, additionalReservedMineral, additionalReservedGas);
+							bool startedBarracks = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, true, true) == 1;
+							// Cancel any unit or building only when we need to finish our wall asap
+							producer = meetsReservedResourcesWithCancelUnit(currentItem.type, additionalReservedMineral, additionalReservedGas, isLastSupplyDepotOfEarlyWall && startedBarracks);
 							needsCancellation = true;
 						}
 						if (producer.isValid())//If we found a producer, lets create it.
@@ -348,7 +355,8 @@ void ProductionManager::manageBuildOrderQueue()
 						else if (data.isBuilding
 							&& !data.isAddon
 							&& !currentItem.type.getUnitType().isMorphedBuilding()
-							&& (!data.isResourceDepot))//If its a resource depot, we don't pre-move
+							&& !data.isResourceDepot	//If its a resource depot, we don't pre-move
+							&& !isLastSupplyDepotOfEarlyWall)
 						{
 							// is a building (doesn't include addons, because no travel time) and we can make it soon (canMakeSoon)
 
@@ -429,7 +437,7 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	const int starportCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, UnitType(sc2::UNIT_TYPEID::TERRAN_STARPORT, m_bot), false, true);
 	const int deadStarportCount = m_bot.GetDeadAllyUnitsCount(sc2::UNIT_TYPEID::TERRAN_STARPORT);
 	const auto baseCount = m_bot.Bases().getBaseCount(Players::Self, false);
-	if (currentItem.type.getUnitType().isRefinery())
+	if (currentItem.type.getUnitType().isRefinery() && !m_bot.Strategy().isWorkerRushed())
 	{
 		const bool hasBarracks = barracksCount > 0;
 		shouldSkip = !hasBarracks;
@@ -493,16 +501,31 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 	{
 		if (!hasStartedFirstExpand && barracksCount + factoryCount + starportCount >= 3)
 			shouldSkip = true;
+		// The worker that just finished building the first Supply Depot should be the one building the first Barracks (unless it is proxied)
+		else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS &&
+			m_bot.GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS) == 0 &&
+			(!m_bot.Strategy().isProxyStartingStrategy() || !m_bot.Strategy().isFirstBarracksProxied()) &&
+			m_bot.Strategy().getStartingStrategy() != StartingStrategy::FAST_PF &&	// because we build the CC before the Barracks
+			m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::SupplyDepot.getUnitType(), false, true) == 1 &&
+			m_bot.Workers().getWorkerData().getWorkerJobCount(WorkerJobs::Build) > 0)
+			shouldSkip = true;
 	}
 	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_STARPORT)
 	{
 		if (!hasStartedFirstExpand && barracksCount + factoryCount + starportCount >= 3)
 			shouldSkip = true;
-		if (starportCount + deadStarportCount == 0)
+		if (starportCount + deadStarportCount == 0 && m_bot.Strategy().getStartingStrategy() != StartingStrategy::STANDARD)
 		{
 			if (!hasProducedAtLeastXFactoryUnit(1))
 				shouldSkip = true;
 		}
+	}
+	else if (currentItem.type.getUnitType().getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB)
+	{
+		if (starportCount == 1 && m_queue.contains(MetaTypeEnum::Medivac))
+			shouldSkip = true;
+		else if (m_bot.Strategy().shouldProduceAntiAirOffense() && m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Viking.getUnitType(), false, true) < MIN_VIKING_COUNT)
+			shouldSkip = true;
 	}
 	else if (currentItem.type.isUpgrade())
 	{
@@ -510,19 +533,18 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 		// We don't want to skip the upgrade if we have a big bank of resources
 		if (m_bot.GetFreeMinerals() < typeData.mineralCost * 3 || m_bot.GetFreeGas() < typeData.gasCost * 3)
 		{
-			// Do not research upgrade if we are under attack early (we want to save our resources)
-			/*if (m_bot.Strategy().isEarlyRushed())
+			// We don't want to skip the Banshee Cloak or Concussive Shell upgrade as they are very important
+			if (currentItem.type != MetaTypeEnum::BansheeCloak && currentItem.type != MetaTypeEnum::ConcussiveShells)
 			{
-				shouldSkip = true;
-			}
-			else*/ if (currentItem.type == MetaTypeEnum::CombatShield && !isTechStarted(MetaTypeEnum::Stimpack))
-			{
-				shouldSkip = true;
-			}
-			else
-			{
-				// Do not research upgrade unless all our production structures are in use
-				shouldSkip = isImportantProductionBuildingIdle(false, false);
+				if (currentItem.type == MetaTypeEnum::CombatShield && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK))
+				{
+					shouldSkip = true;
+				}
+				else
+				{
+					// Do not research upgrade unless all our production structures are in use
+					shouldSkip = isImportantProductionBuildingIdle(false, false);
+				}
 			}
 		}
 	}
@@ -614,6 +636,10 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 					const auto hasRefinery = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true) > 0;
 					shouldSkip = hasRefinery;
 				}
+				else if (currentItem.type == MetaTypeEnum::Barracks)
+				{
+					shouldSkip = barracksCount > 0;
+				}
 				else if (currentItem.type == MetaTypeEnum::Factory || currentItem.type == MetaTypeEnum::Starport)
 				{
 					shouldSkip = true;
@@ -624,9 +650,13 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 				if (currentItem.type == MetaTypeEnum::Refinery)
 				{
 					if (m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true) < 2)
-						shouldSkip = orbitals == 0;
+						shouldSkip = barracksCount < 2;
 					else
 						shouldSkip = starportCount < 1;
+				}
+				else if (currentItem.type == MetaTypeEnum::Barracks)
+				{
+					shouldSkip = orbitals == 0;
 				}
 			}
 		}
@@ -639,29 +669,31 @@ bool ProductionManager::ShouldSkipQueueItem(const MM::BuildOrderItem & currentIt
 					m_initialBuildOrderFinished = true;
 					clearQueue();
 				}
-				shouldSkip = baseCount < 2;
-				if (!shouldSkip && currentItem.type == MetaTypeEnum::Refinery)
+				const auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true);
+				if (currentItem.type == MetaTypeEnum::Refinery && refineryCount > 0)
 				{
-					const auto hasStarport = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true) > 0;
-					if (!hasStarport)
+					shouldSkip = baseCount < 2;
+					if (!shouldSkip)
 					{
-						const auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, true);
-						const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
-						if (!hasFactory)
+						const auto hasStarport = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Starport.getUnitType(), false, true) > 0;
+						if (!hasStarport)
 						{
-							shouldSkip = refineryCount >= 2;
-						}
-						else
-						{
-							shouldSkip = refineryCount >= 3;
+							const auto hasFactory = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Factory.getUnitType(), false, true) > 0;
+							if (!hasFactory)
+							{
+								shouldSkip = refineryCount >= 2;
+							}
+							else
+							{
+								shouldSkip = refineryCount >= 3;
+							}
 						}
 					}
 				}
-			}
-			else if (currentItem.type == MetaTypeEnum::Factory)
-			{
-				const auto hasPlanetaryFortress = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::PlanetaryFortress.getUnitType(), false, true) > 0;
-				shouldSkip = !hasPlanetaryFortress && m_bot.Strategy().getInitialStartingStrategy() == FAST_PF;
+				else if (currentItem.type == MetaTypeEnum::Barracks)
+				{
+					shouldSkip = baseCount < 2;
+				}
 			}
 		}
 		else if (m_bot.Strategy().getStartingStrategy() == WORKER_RUSH)
@@ -805,7 +837,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int workerCount = m_bot.Workers().getNumWorkers();
 				if (optimalWorkers + maxWorkersForNextExpansion > workerCount && workerCount < maxWorkers)
 				{
-					if (currentStrategy != WORKER_RUSH_DEFENSE)//check strategy
+					if (currentStrategy != WORKER_RUSH_DEFENSE || m_bot.GetMinerals() >= 100)//check strategy
 					{
 						m_queue.queueItem(MM::BuildOrderItem(workerMetatype, 1, false));
 					}
@@ -835,6 +867,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const bool pumpOutMarauders = proxyMaraudersStrategy;
 				const bool produceMarauders = (!proxyCyclonesStrategy || proxyCyclonesStrategyCompleted) && (pumpOutMarauders || enemyEarlyRoachWarren || maraudersCount * 2 < enemyUnitsWeakAgainstMarauders);
 				const auto factoryTechLabCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::FactoryTechLab.getUnitType(), false, true);
+				const bool earlySecondBarracks = m_bot.Strategy().getStartingStrategy() == EARLY_EXPAND;
 
 				if (productionBuildingAddonCount < productionBuildingCount)
 				{//Addon
@@ -850,7 +883,8 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					const auto starportAddonCount = starportTechLabCount + starportReactorCount;
 					if (barracksCount > barracksAddonCount)
 					{
-						/*if (proxyMaraudersStrategy && barracksTechLabCount == 1 && barracksReactorCount == 0)
+						// Uncomment once we want to code the early 2 Medivacs drop strategy
+						/*if (earlySecondBarracks && barracksReactorCount == 0 && barracksCount > 1)
 						{
 							toBuild = MetaTypeEnum::BarracksReactor;
 							hasPicked = true;
@@ -901,7 +935,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				const int enemyGatewayCount = m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_GATEWAY).size() + m_bot.GetEnemyUnits(sc2::UNIT_TYPEID::PROTOSS_WARPGATE).size();
 				const bool startPumpingOutMarauders = pumpOutMarauders && completedSupplyProviders >= 1 && barracksCount < 2;
 				const bool buildMoreBarracksAgainstMultiGateways = produceMarauders && completedSupplyProviders >= 1 && barracksCount < (enemyGatewayCount - 1);
-				if (barracksCount < 10 && (barracksCount < 1 || startPumpingOutMarauders || buildMoreBarracksAgainstMultiGateways || m_bot.GetFreeMinerals() >= 800 || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount)))
+				if (barracksCount < 10 && (barracksCount < (earlySecondBarracks ? 2 : 1) || startPumpingOutMarauders || buildMoreBarracksAgainstMultiGateways || m_bot.GetFreeMinerals() >= 800 || (hasFusionCore && m_bot.GetFreeMinerals() >= 550 /*For a BC and a Barracks*/ && barracksCount * 2 < finishedBaseCount)))
 				{
 					toBuild = MetaTypeEnum::Barracks;
 					hasPicked = true;
@@ -1001,7 +1035,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 
 					// Banshee Speed upgrade
-					if (bansheeCount > 1)
+					if (bansheeCount > 1 && (!m_bot.Strategy().enemyHasFlyingDetector() || !m_bot.Strategy().enemyHasVeryFastAirAttackingUnits()))
 					{
 						if (m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEECLOAK) && !isTechQueuedOrStarted(MetaTypeEnum::HyperflightRotors) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::BANSHEESPEED))
 						{
@@ -1057,19 +1091,19 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					{
 						queueTech(MetaTypeEnum::ConcussiveShells);
 					}
+				}
 
-					// 1 Medivac for every 4 Marauders
-					if (medivacCount < floor(maraudersCount / 4.f))
+				// 1 Medivac for every 4 Marauders and 8 Marines
+				if (medivacCount < floor(maraudersCount / 4.f) + floor(marinesCount / 8.f))
+				{
+					enoughMedivacs = false;
+					if (!m_queue.contains(MetaTypeEnum::Medivac))
 					{
-						enoughMedivacs = false;
-						if (!m_queue.contains(MetaTypeEnum::Medivac))
-						{
-							m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Medivac, 0, false));
-						}
+						m_queue.queueItem(MM::BuildOrderItem(MetaTypeEnum::Medivac, 0, false));
 					}
 				}
 
-				if ((!produceMarauders || m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES)) && marinesCount + maraudersCount * 2 >= 10 && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
+				if ((!produceMarauders || m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::PUNISHERGRENADES)) && marinesCount + maraudersCount * 2 >= (barracksCount >= 2 ? 6 : 10) && !m_bot.Strategy().isUpgradeCompleted(sc2::UPGRADE_ID::STIMPACK) && !isTechQueuedOrStarted(MetaTypeEnum::Stimpack))
 				{
 					queueTech(MetaTypeEnum::Stimpack);
 				}
@@ -1132,7 +1166,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 					}
 				}
 				// We want to have tanks to keep a balance between ground and air force, depending on what the enemy unit is producing
-				else if ((!proxyCyclonesStrategy || (cycloneCount + deadCycloneCount >= 1)) && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0 || (startingStrategy != StartingStrategy::FAST_PF && tankCount + deadTankCount == 0)) && (cycloneCount > 0 || tankCount == 0))
+				else if ((!proxyCyclonesStrategy || (cycloneCount + deadCycloneCount >= 1)) && (enemySupplyAirGroundRatio <= cycloneTankRatio || cycloneCount > 0 && tankCount == 0) && (!m_bot.Strategy().shouldProduceAntiAirOffense() || cycloneCount > 0 || (startingStrategy != StartingStrategy::FAST_PF && tankCount + deadTankCount == 0)) && (cycloneCount > 0 || (tankCount == 0 && !m_bot.Strategy().shouldProduceAntiAirOffense())))
 				{
 					m_queue.removeAllOfType(MetaTypeEnum::Thor);
 					m_queue.removeAllOfType(MetaTypeEnum::Hellion);
@@ -1179,7 +1213,7 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 				if (m_bot.Strategy().shouldProduceAntiAirOffense())
 				{
 #ifndef NO_UNITS
-					int lowVikingsSupply = vikingCount * UnitType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_bot).supplyRequired() < m_bot.Analyzer().opponentAirSupply * 1.5f;
+					bool lowVikingsSupply = vikingCount < MIN_VIKING_COUNT || vikingCount * UnitType(sc2::UNIT_TYPEID::TERRAN_VIKINGFIGHTER, m_bot).supplyRequired() < m_bot.Analyzer().opponentAirSupply * 1.5f;
 					bool makeVikings = false;
 					if (m_bot.Strategy().enemyHasProtossHighTechAir())
 					{
@@ -1429,29 +1463,52 @@ void ProductionManager::putImportantBuildOrderItemsInQueue()
 			case WORKER_RUSH_DEFENSE:
 			{
 				m_queue.clearAll();
-				const int barracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, false);
-				if (barracksCount > 0)
+				const int refineryUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false, true);
+				const int completedRefineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), true, false);
+				if (refineryUnderConstructionCount + completedRefineryCount > 0)
 				{
-					const int refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false);
-					if (refineryCount > 0)
+					const int barracksUnderConstructionCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), false, false, true);
+					const int completedBarracksCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Barracks.getUnitType(), true, false);
+					if (barracksUnderConstructionCount + completedBarracksCount > 0)
 					{
+						const int reaperCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Reaper.getUnitType(), false, false);
 						if (m_bot.GetFreeGas() >= 50 || m_bot.Workers().getNumGasWorkers() > 0)
 						{
 							m_queue.queueAsHighestPriority(MetaTypeEnum::Reaper, false);
 						}
-						else
+						else if (reaperCount < 1)
 						{
 							m_queue.queueAsHighestPriority(MetaTypeEnum::Marine, false);
+						}
+						if (m_bot.GetMinerals() >= 100 || (reaperCount > 0 && !m_bot.Strategy().isEarlyRushed()))
+						{
+							m_queue.queueAsHighestPriority(workerMetatype, false);
 						}
 					}
 					else
 					{
-						m_queue.queueAsHighestPriority(MetaTypeEnum::Refinery, false);
+						if (barracksCount < 1)
+							m_queue.queueAsHighestPriority(MetaTypeEnum::Barracks, false);
 					}
 				}
 				else
 				{
-					m_queue.queueAsHighestPriority(MetaTypeEnum::Barracks, false);
+					auto refineryCount = m_bot.UnitInfo().getUnitTypeCount(Players::Self, MetaTypeEnum::Refinery.getUnitType(), false, false);
+					if (refineryCount == 0)
+						m_queue.queueAsHighestPriority(MetaTypeEnum::Refinery, false);
+					// Remove the Barracks if we haven't started it yet because we want to build the refinery first and build the Barracks far away from the wall
+					std::vector<Building> barracksToRemove;
+					for (auto & building : m_bot.Buildings().getBuildings())
+					{
+						if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS && !building.buildingUnit.isValid())
+						{
+							auto distToWall = Util::DistSq(Util::GetPosition(building.finalPosition), m_bot.Buildings().getWallPosition());
+							if (distToWall < 5 * 5)
+								barracksToRemove.push_back(building);
+						}
+					}
+					for (auto & building : barracksToRemove)
+						m_bot.Buildings().CancelBuilding(building, "Worker rushed");
 				}
 				break;
 			}
@@ -2068,7 +2125,6 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 			unitType == sc2::UNIT_TYPEID::TERRAN_MEDIVAC ||
 			unitType == sc2::UNIT_TYPEID::TERRAN_LIBERATOR)
 		{
-
 			for (auto & producerType : producerTypes)
 			{
 				for (auto & unit : m_bot.GetAllyUnits(producerType.getAPIUnitType()))
@@ -2098,7 +2154,8 @@ Unit ProductionManager::getProducer(const MetaType & type, bool allowTraining, C
 							break;
 						}
 					}
-					break;
+					if (priorizeReactor)
+						break;
 				}
 			}
 		}
@@ -2594,6 +2651,7 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 		}
 		else
 		{
+			Building b(item.type.getUnitType(), desidredPosition);
 			if (item.type.getUnitType().isAddon())
 			{
 				//Cancels in order to be able to build the addon
@@ -2602,7 +2660,17 @@ bool ProductionManager::create(const Unit & producer, MM::BuildOrderItem & item,
 					producer.cancel();
 				}
 			}
-			Building b(item.type.getUnitType(), desidredPosition);
+			else if (!meetsReservedResources(item.type) && !canMakeAtArrival(b, producer, 0, 0))
+			{
+				// Cancel other units or buildings to produce
+				bool cancelSuccess = cancelNecessaryUnits(item.type);
+				if (!cancelSuccess)
+				{
+					std::stringstream ss;
+					ss << "Failed to cancel necessary units to build a " << item.type.getName();
+					Util::Log(__FUNCTION__, ss.str(), m_bot);
+				}
+			}
 			if (ValidateBuildingTiming(b))
 			{
 				b.reserveResources = reserveResources;
@@ -2659,6 +2727,113 @@ bool ProductionManager::create(const Unit & producer, Building & b, bool filterM
     }
 
 	return m_bot.Buildings().addBuildingTask(b, filterMovingWorker);
+}
+
+bool ProductionManager::cancelNecessaryUnits(const MetaType & type)
+{
+	auto units = unitsToCancelForResources(type);
+	for (auto & unit : units)
+	{
+		// Stop builder from starting its structure
+		if (unit.getType().isWorker())
+		{
+			auto building = m_bot.Buildings().getBuildingOfBuilder(unit);
+			if (building == Building())
+				return false;
+			std::stringstream ss;
+			ss << "Need resources asap for " << type.getName();
+			m_bot.Buildings().CancelBuilding(building, ss.str());
+			continue;
+		}
+		// Cancel unfinished building or cancel unit produced by building
+		unit.cancel();
+	}
+	return !units.empty();
+}
+
+std::vector<Unit> ProductionManager::unitsToCancelForResources(const MetaType & type)
+{
+	std::set<std::pair<float, Unit>> potentialUnitsToCancel;
+	for (auto & building : m_bot.Buildings().getBuildings())
+	{
+		if (building.buildCommandGiven && !building.underConstruction)
+		{
+			// Do not allow to cancel the Baracks when we hurry to finish up the wall
+			if (building.type.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS && m_bot.Strategy().shouldFinishWallEarly() && type.getMetaType() == MetaTypeEnum::SupplyDepot.getMetaType())
+				continue;
+			if (!building.builderUnit.isValid())
+				continue;
+			potentialUnitsToCancel.insert(std::make_pair(0.f, building.builderUnit));
+		}
+	}
+	for (const auto & unitPair : m_bot.GetAllyUnits())
+	{
+		if (!unitPair.second.getType().isBuilding())
+			continue;
+		if (unitPair.second.isFlying())
+			continue;
+		// Add building if it is still in construction
+		if (unitPair.second.getBuildProgress() < 1)
+		{
+			// Do not allow to cancel the Baracks when we hurry to finish up the wall
+			if (unitPair.second.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS && m_bot.Strategy().shouldFinishWallEarly() && type.getMetaType() == MetaTypeEnum::SupplyDepot.getMetaType())
+				continue;
+			potentialUnitsToCancel.insert(std::make_pair(unitPair.second.getBuildProgress(), unitPair.second));
+			continue;
+		}
+		// Add building if it has an order in progress
+		auto & orders = unitPair.second.getUnitPtr()->orders;
+		if (!orders.empty() && orders[0].progress < 1.f && orders[0].progress > 0.f)
+		{
+			potentialUnitsToCancel.insert(std::make_pair(unitPair.second.getUnitPtr()->orders[0].progress, unitPair.second));
+			continue;
+		}
+	}
+	std::vector<Unit> unitsToCancel;
+	bool needsMoreMinerals = type.getUnitType().mineralPrice() > m_bot.GetMinerals();
+	bool needsMoreGas = type.getUnitType().gasPrice() > m_bot.GetGas();
+	int additionalMinerals = 0;
+	int additionalGas = 0;
+	for (const auto & pair : potentialUnitsToCancel)
+	{
+		int mineralCost = 0;
+		int gasCost = 0;
+		if (pair.second.getBuildProgress() < 1)
+		{
+			mineralCost = pair.second.getType().mineralPrice() * 0.75f;
+			gasCost = pair.second.getType().gasPrice() * 0.75f;
+			unitsToCancel.push_back(pair.second);
+		}
+		else
+		{
+			const auto & unitTypeToCancel = m_bot.Tech().getUnitTypeFromBuildingAbility(pair.second.getAPIUnitType(), pair.second.getUnitPtr()->orders[0].ability_id.ToType());
+			if (unitTypeToCancel.isValid())
+			{
+				mineralCost = unitTypeToCancel.mineralPrice();
+				gasCost = unitTypeToCancel.gasPrice();
+				unitsToCancel.push_back(pair.second);
+			}
+		}
+		if ((needsMoreMinerals && mineralCost > 0) || (needsMoreGas && gasCost > 0))
+		{
+			additionalMinerals += mineralCost;
+			additionalGas += gasCost;
+			needsMoreMinerals = type.getUnitType().mineralPrice() > m_bot.GetMinerals() + additionalMinerals;
+			needsMoreGas = type.getUnitType().gasPrice() > m_bot.GetGas() + additionalGas;
+			if (!needsMoreMinerals && !needsMoreGas)
+				break;
+		}
+	}
+	if (needsMoreMinerals || needsMoreGas)
+	{
+		unitsToCancel.clear();
+	}
+	for (auto & unit : unitsToCancel)
+	{
+		if (unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_SCV || unit.getAPIUnitType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+			int a = 0;
+	}
+	return unitsToCancel;
 }
 
 bool ProductionManager::canMakeNow(const Unit & producer, const MetaType & type)
@@ -2756,7 +2931,7 @@ bool ProductionManager::meetsReservedResourcesWithExtra(const MetaType & type, i
 	return meetsRequiredMinerals && meetsRequiredGas;
 }
 
-Unit ProductionManager::meetsReservedResourcesWithCancelUnit(const MetaType & type, int additionalReservedMineral, int additionalReservedGas)
+Unit ProductionManager::meetsReservedResourcesWithCancelUnit(const MetaType & type, int additionalReservedMineral, int additionalReservedGas, bool cancelAnything)
 {
 	const float cancelMaxPercentage = 0.50f;
 
@@ -2769,6 +2944,13 @@ Unit ProductionManager::meetsReservedResourcesWithCancelUnit(const MetaType & ty
 	//Will work for : Command Center, Barracks, Factory, Starport, Gateway and Hatchery
 	if (!type.isAddon() && !type.getUnitType().isMorphedBuilding())
 	{
+		if (cancelAnything)
+		{
+			if (!unitsToCancelForResources(type).empty())
+			{
+				return getProducer(type);
+			}
+		}
 		return Unit();//We currently don't cancel units to build another unit type, we only cancel units to morph a building (addon is kind of a morph).
 	}
 	Unit producer = getProducer(type, true);

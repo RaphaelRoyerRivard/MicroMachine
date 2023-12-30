@@ -95,6 +95,12 @@ void RangedManager::executeMicro()
 		if (!Util::Contains(unitPtr, rangedUnits))
 			otherSquadsUnits.push_back(unitPtr);
 	}
+	for (auto & meleeUnit : m_squad->getMeleeManager().getUnits())
+	{
+		const sc2::Unit * unitPtr = meleeUnit.getUnitPtr();
+		if (!Util::Contains(unitPtr, otherSquadsUnits))
+			otherSquadsUnits.push_back(unitPtr);
+	}
 
     sc2::Units rangedUnitTargets;
     for (auto target : m_targets)
@@ -518,6 +524,13 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		}
 	}
 
+	// First proxy Reaper should go in natural against Terran to avoid getting stuck by supply depots constantly raising and lowering
+	if (rangedUnit == m_bot.Commander().Combat().getFirstProxyReaperToGoThroughNatural())
+	{
+		goal = m_bot.Commander().Combat().getFirstProxyReaperGoal();
+		goalDescription = "FirstReaperGoThroughNatural";
+	}
+
 	m_bot.StartProfiling("0.10.4.1.5.1.c          ExecutePrioritizedUnitAbilitiesLogic");
 	if (!isUnitDisabled && ExecutePrioritizedUnitAbilitiesLogic(rangedUnit, target, threats, rangedUnitTargets, allCombatAllies, goal, unitShouldHeal, isCycloneHelper))
 	{
@@ -642,7 +655,7 @@ void RangedManager::HarassLogicForUnit(const sc2::Unit* rangedUnit, sc2::Units &
 		m_bot.StopProfiling("0.10.4.1.5.1.f          OpportunisticAttack");
 	}
 
-	if (!unitShouldHeal && distSqToTarget < m_order.getRadius() * m_order.getRadius() && (target || (!threats.empty() && m_order.getStatus() != "Retreat")))
+	if (!unitShouldHeal && distSqToTarget < m_order.getRadius() * m_order.getRadius() && ((target && (target->last_seen_game_loop == m_bot.GetCurrentFrame() || m_order.getStatus() != "Retreat")) || (!threats.empty() && m_order.getStatus() != "Retreat")))
 	{
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding");
 		m_bot.StartProfiling("0.10.4.1.5.1.7          OffensivePathFinding " + rangedUnit->unit_type.to_string());
@@ -1142,16 +1155,11 @@ bool RangedManager::TeleportBattlecruiser(const sc2::Unit * battlecruiser, CCPos
 
 CCPosition RangedManager::GetBestSupportPosition(const sc2::Unit* supportUnit, const sc2::Units & rangedUnits) const
 {
-	const bool isMarine = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MARINE;
 	const bool isMedivac = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_MEDIVAC;
 	const bool isRaven = supportUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_RAVEN;
 	const std::vector<sc2::UNIT_TYPEID> typesToIgnore = supportTypes;
 	std::vector<sc2::UNIT_TYPEID> typesToConsider;
-	if (isMarine)
-	{
-		typesToConsider = { sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER };
-	}
-	else if (isMedivac)
+	if (isMedivac)
 	{
 		typesToConsider = {
 			sc2::UNIT_TYPEID::TERRAN_MARINE,
@@ -1330,7 +1338,7 @@ bool RangedManager::ExecuteTankMorphLogic(const sc2::Unit * tank, CCPosition goa
 					siege = true;
 					siegeReason << "close to its retreat location";
 				}
-				else
+				else if (m_order.getType() != SquadOrderTypes::Retreat && m_order.getStatus() != "Retreat")
 				{
 					// Also siege if there is an enemy not too far away
 					auto dummySiegeTankSieged = Util::CreateDummyFromUnit(tank);
@@ -1588,7 +1596,7 @@ bool RangedManager::MoveToGoal(const sc2::Unit * rangedUnit, sc2::Units & threat
 		}
 
 		const float squaredDistanceToGoal = Util::DistSq(rangedUnit->pos, goal);
-		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings()) || m_bot.Data(rangedUnit->unit_type).isBuilding;
+		const bool moveWithoutAttack = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (squaredDistanceToGoal > 10.f * 10.f && !m_bot.Strategy().shouldFocusBuildings()) || m_bot.Data(rangedUnit->unit_type).isBuilding || rangedUnit->weapon_cooldown > 0;
 		const int actionDuration = rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER ? REAPER_MOVE_FRAME_COUNT : 0;
 		std::stringstream actionDescription;
 		actionDescription << "MoveToGoal" << goalDescription;	// Do not change the string, it is used in CombatCommander::ExecuteActions
@@ -1727,6 +1735,8 @@ const sc2::Unit * RangedManager::ExecuteLockOnLogic(const sc2::Unit * cyclone, b
 			{
 				// Do not Lock On on hallucinations
 				if (potentialTarget->is_hallucination)
+					continue;
+				if (m_bot.IsParasited(potentialTarget))
 					continue;
 				const auto unitType = UnitType(potentialTarget->unit_type, m_bot);
 				// Do not Lock On on workers
@@ -2562,7 +2572,7 @@ bool RangedManager::ExecuteThreatFightingLogic(const sc2::Unit * rangedUnit, boo
 		else
 		{
 			const bool shouldKite = unit->unit_type == sc2::UNIT_TYPEID::TERRAN_BATTLECRUISER || (unitRange > enemyRange && unitSpeed > enemySpeed);
-			const bool shouldChase = unitRange < enemyRange && enemySpeed > 0;	//unitSpeed >= enemySpeed;
+			const bool shouldChase = unitTarget->unit_type == sc2::UNIT_TYPEID::TERRAN_SIEGETANKSIEGED || (unitRange < enemyRange && enemySpeed > 0);
 			if (!canAttackNow && AllowUnitToPathFind(unit, false, "ThreatFighting"))
 			{
 				if (shouldKite || (injured && enemyRange - unitRange < 2 && (enemySpeed == 0 || unitSpeed / enemySpeed >= 0.85f)))
@@ -2733,6 +2743,10 @@ void RangedManager::CalcCloseUnits(const sc2::Unit * rangedUnit, const sc2::Unit
 			}
 			// Ignore units that are disabled
 			if (Util::isUnitDisabled(unit))
+			{
+				continue;
+			}
+			if (Util::isUnitAffectedByParasiticBomb(unit) || Util::isUnitLockedOn(unit))
 			{
 				continue;
 			}
@@ -3131,6 +3145,8 @@ bool RangedManager::ExecuteYamatoCannonLogic(const sc2::Unit * battlecruiser, co
 		if (potentialTarget->display_type == sc2::Unit::Hidden)
 			continue;
 		if (potentialTarget->is_hallucination)
+			continue;
+		if (m_bot.IsParasited(potentialTarget))
 			continue;
 		const auto type = UnitType(potentialTarget->unit_type, m_bot);
 		if (type.isBuilding() && !type.isAttackingBuilding())
@@ -3618,7 +3634,7 @@ const sc2::Unit * RangedManager::getTarget(const sc2::Unit * rangedUnit, const s
     	if (filterPassiveBuildings || (rangedUnit->unit_type == sc2::UNIT_TYPEID::TERRAN_REAPER && m_order.getType() != SquadOrderTypes::Defend))
     	{
 			auto targetUnitType = UnitType(target->unit_type, m_bot);
-			if (targetUnitType.isBuilding() && !targetUnitType.isCombatUnit() && !(targetUnitType.isCreepTumor() && target->last_seen_game_loop == m_bot.GetCurrentFrame()))
+			if (targetUnitType.isBuilding() && (!targetUnitType.isCombatUnit() || target->unit_type == sc2::UNIT_TYPEID::TERRAN_BUNKER) && !(targetUnitType.isCreepTumor() && target->last_seen_game_loop == m_bot.GetCurrentFrame()))
 				continue;
     	}
 

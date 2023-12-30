@@ -43,6 +43,7 @@ class BuildingManager
 	void			castBuildingsAbilities();
 	void			RunProxyLogic();
 	void			LiftOrLandDamagedBuildings();
+	void			loadOrUnloadSCVs();
 	bool			isEnemyUnitNear(CCTilePosition center, int radius = 10) const;
 	void			updateBaseBuildings();
 
@@ -83,11 +84,12 @@ public:
 	std::vector<Unit>	getPreviousBaseBuildings();
 	CCTilePosition		getWallPosition() const;
 	std::list<Unit> &	getWallBuildings();
+	bool				isWallCompleted() const;
 	CCPosition			getEnemyMainRamp() const { return m_enemyMainRamp; }
 	CCTilePosition		getProxyLocation();
 	CCPosition			getProxyLocation2();
     CCTilePosition      getBuildingLocation(const Building & b, bool checkInfluenceMap, bool includeAddonTiles = true, bool ignoreExtraBorder = false, bool forceSameHeight = false);
-	CCTilePosition		getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap, bool includeAddonTiles = true, bool ignoreExtraBorder = false, bool forceSameHeight = false);
+	CCTilePosition		getNextBuildingLocation(Building & b, bool checkNextBuildingPosition, bool checkInfluenceMap, bool includeAddonTiles = true, bool ignoreExtraBorder = false, bool forceSameHeight = false, CCPosition closestTo = {});
 	int					getBuildingCountOfType(const sc2::UNIT_TYPEID & b, bool isCompleted = false) const;
 	int					getBuildingCountOfType(std::vector<sc2::UNIT_TYPEID> & b, bool isCompleted = false) const;
 	Unit				getClosestResourceDepot(CCPosition position);
@@ -107,7 +109,8 @@ public:
 	void				updatePreviousBaseBuildings();
 	
 	Building			CancelBuilding(Building b, std::string reason, bool removeFromBuildingsList = true, bool destroy = true);
-	Building			getBuildingOfBuilder(const Unit & builder) const;
+	Building			getBuildingOfBuilder(const Unit & builder);
+	Building &			getBuildingRef(Building & building);
 
 	BuildingPlacer& getBuildingPlacer();
 

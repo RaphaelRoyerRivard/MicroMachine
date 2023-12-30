@@ -89,7 +89,7 @@ public:
 	bool isReturningCargo(Unit worker) const;
 	bool canHandleMoreRefinery() const;
 
-    Unit getBuilder(Building & b, bool setJobAsBuilder = true, bool filterMoving = true, const std::vector<CCUnitID> unusableWorkers = std::vector<CCUnitID>()) const;
+    Unit getBuilder(Building & b, bool setJobAsBuilder = true, bool filterMoving = true, const std::vector<CCUnitID> unusableWorkers = std::vector<CCUnitID>(), Unit preselectedWorker = Unit()) const;
 	Unit getMineralWorker(Unit refinery) const;
 	Unit getGasWorker(Unit refinery, bool checkReturningCargo, bool checkInsideRefinery) const;
 	int  getGasWorkersTarget() const;

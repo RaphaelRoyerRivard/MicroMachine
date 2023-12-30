@@ -308,11 +308,6 @@ float MapTools::terrainHeight(float x, float y) const
 
 int MapTools::getGroundDistance(const CCPosition & src, const CCPosition & dest) const
 {
-    if (m_allMaps.size() > 100)
-    {
-        m_allMaps.clear();
-    }
-
     return getDistanceMap(dest).getDistance(src);
 }
 
@@ -327,6 +322,10 @@ const DistanceMap & MapTools::getDistanceMap(const CCTilePosition & tile) const
 
     if (m_allMaps.find(pairTile) == m_allMaps.end())
     {
+		if (m_allMaps.size() > 500)
+		{
+			m_allMaps.clear();
+		}
         m_allMaps[pairTile] = DistanceMap();
         m_allMaps[pairTile].computeDistanceMap(m_bot, tile);
     }

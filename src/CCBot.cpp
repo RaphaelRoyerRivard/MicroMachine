@@ -236,11 +236,6 @@ void CCBot::OnGameStart() //full start
 	m_combatAnalyzer.onStart();
     m_gameCommander.onStart();
 
-	if (Config().AllowDebug)
-	{
-		IssueGameStartCheats();
-	}
-
 	StartProfiling("0 Starcraft II");
 	m_lastFrameEndTime = std::chrono::steady_clock::now();
 }
@@ -363,6 +358,13 @@ void CCBot::OnStep()
 	if (setjmp(gBuffer) == 0)
 #endif
 		updatePreviousFrameEnemyUnitPos();
+
+	monitorUnitActions();
+
+	if (Config().AllowDebug && m_gameLoop == 0)
+	{
+		IssueGameStartCheats();
+	}
 
 	StopProfiling("0.0 OnStep");	//Do not remove
 
@@ -650,6 +652,17 @@ void CCBot::setUnits()
 				enemyRace = unit.getType().getRace();
 			}
 			m_enemyUnits[unitptr->tag] = unit;
+			// Tell the strategy manager that we need to finish the wall early if we spot an enemy before finishing our first Barracks
+			if (!m_strategy.shouldFinishWallEarly() &&
+				!m_strategy.isProxyStartingStrategy() &&
+				GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS, false) == 1 &&
+				GetUnitCount(sc2::UNIT_TYPEID::TERRAN_BARRACKS, true) == 0)
+			{
+				m_strategy.setFinishWallEarly(true);
+				Commander().Production().queueAsHighestPriority(MetaTypeEnum::SupplyDepot, true);
+				Actions()->SendChat("You shall not pass!");
+				Util::DebugLog(__FUNCTION__, "Finishing wall early", *this);
+			}
 			// If the enemy zergling was seen last frame
 			if (zergEnemy)
 			{
@@ -682,8 +695,9 @@ void CCBot::setUnits()
 			}
 			if (!m_strategy.shouldProduceAntiAirDefense())
 			{
+				std::vector<sc2::UNIT_TYPEID> airProductionBuildings = { sc2::UNIT_TYPEID::ZERG_SPIRE, sc2::UNIT_TYPEID::PROTOSS_STARGATE, sc2::UNIT_TYPEID::TERRAN_STARPORT, sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING };
 				// If unit is flying and not part of the following list, we should produce Anti Air units
-				if (unitptr->is_flying || unitptr->unit_type == sc2::UNIT_TYPEID::ZERG_SPIRE)
+				if (unitptr->is_flying || Util::Contains(unitptr->unit_type, airProductionBuildings))
 				{
 					switch (sc2::UNIT_TYPEID(unitptr->unit_type))
 					{
@@ -702,6 +716,11 @@ void CCBot::setUnits()
 							Util::DebugLog(__FUNCTION__, "Air Harass detected: " + unit.getType().getName(), *this);
 						}
 						break;
+					case sc2::UNIT_TYPEID::TERRAN_STARPORT:
+					case sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING:
+						if (GetEnemyUnits(sc2::UNIT_TYPEID::TERRAN_STARPORT).size() + GetEnemyUnits(sc2::UNIT_TYPEID::TERRAN_STARPORTFLYING).size() <= 1)
+							break;	// Do not produce anti air defense against a single Starport
+					case sc2::UNIT_TYPEID::TERRAN_STARPORTTECHLAB:
 					case sc2::UNIT_TYPEID::TERRAN_BANSHEE:
 					case sc2::UNIT_TYPEID::PROTOSS_ORACLE:
 					case sc2::UNIT_TYPEID::ZERG_MUTALISK:
@@ -878,6 +897,27 @@ void CCBot::setUnits()
 					Util::DebugLog(__FUNCTION__, "Nydus Worm detected", *this);
 				default:
 					break;
+				}
+			}
+			if (!m_strategy.enemyHasFlyingDetector())
+			{
+				std::vector<sc2::UNIT_TYPEID> flyingDetectors = { sc2::UNIT_TYPEID::PROTOSS_OBSERVER, sc2::UNIT_TYPEID::PROTOSS_OBSERVERSIEGEMODE, sc2::UNIT_TYPEID::TERRAN_RAVEN, sc2::UNIT_TYPEID::ZERG_OVERSEER };
+				if (Util::Contains(unitptr->unit_type, flyingDetectors))
+				{
+					m_strategy.setEnemyHasFlyingDetector(true);
+				}
+			}
+			if (!m_strategy.enemyHasVeryFastAirAttackingUnits())
+			{
+				if (Util::CanUnitAttackAir(unitptr, *this))
+				{
+					const float speed = Util::getSpeedOfUnit(unitptr, *this);
+					if (speed >= 2.75f)
+					{
+						m_strategy.setEnemyHasFastAirAttackingUnits(true);
+						if (speed >= 3.75f)
+							m_strategy.setEnemyHasVeryFastAirAttackingUnits(true);
+					}
 				}
 			}
 			m_lastSeenPosUnits[unitptr->tag] = std::pair<CCPosition, uint32_t>(unitptr->pos, GetGameLoop());
@@ -1326,6 +1366,29 @@ void CCBot::updatePreviousFrameEnemyUnitPos()
 	}
 }
 
+void CCBot::monitorUnitActions()
+{
+	auto commandsCount = this->Actions()->Commands().size();
+	m_recentlySentActions.push_back(std::make_pair(m_gameLoop, commandsCount));
+	m_totalSentActions += commandsCount;
+	m_currentAPM += commandsCount;
+	for (auto it = m_recentlySentActions.begin(); it < m_recentlySentActions.end();)
+	{
+		auto & pastActions = *it;
+		if (m_gameLoop - pastActions.first <= 22.4f * 60)
+			break;
+		m_currentAPM -= pastActions.second;
+		it = m_recentlySentActions.erase(it);
+	}
+	if (m_gameLoop - m_lastLoggedAPM >= 22.4 * 10)
+	{
+		std::stringstream ss;
+		ss << "Actions (total, APM, last frame): " << m_totalSentActions << ", " << m_currentAPM << ", " << commandsCount;
+		Util::Log(__FUNCTION__, ss.str(), *this);
+		m_lastLoggedAPM = m_gameLoop;
+	}
+}
+
 void CCBot::checkForConcede()
 {
 	/*if(!m_concede && GetCurrentFrame() > 2688)	// 2 min
@@ -1428,10 +1491,12 @@ void CCBot::IssueGameStartCheats()
 	const auto towardsCenterY = Util::Normalized(CCPosition(0, mapCenter.y - m_startLocation.y));
 	const auto offset = towardsCenter * 15;
 	const auto enemyLocation = GetEnemyStartLocations()[0];
+	const auto enemyNaturalExpansion = m_bases.getNextExpansion(Players::Enemy, false, false, false);
 	const auto main = m_bases.getPlayerStartingBaseLocation(Players::Self);
 	const auto naturalExpansion = m_bases.getNextExpansion(Players::Self, false, false, false);
 	const auto thirdExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion });
 	const auto fourthExpansion = m_bases.getNextExpansion(Players::Self, false, false, false, { naturalExpansion, thirdExpansion });
+	const auto enemyNat = enemyNaturalExpansion ? Util::GetPosition(enemyNaturalExpansion->getDepotPosition()) : CCPosition();
 	const auto nat = naturalExpansion ? Util::GetPosition(naturalExpansion->getDepotPosition()) : CCPosition();
 	const auto third = thirdExpansion ? Util::GetPosition(thirdExpansion->getDepotPosition()) : CCPosition();
 	const auto fourth = fourthExpansion ? Util::GetPosition(fourthExpansion->getDepotPosition()) : CCPosition();
@@ -2185,6 +2250,11 @@ void CCBot::IssueGameStartCheats()
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY, third, player1, 3);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_STARGATE, third + towardsCenter * 5, player1, 1);
 	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::PROTOSS_VOIDRAY, third, player1, 2);*/
+
+	// Test to see if our first Proxy Reaper goes through the natural while ignoring bunkers
+	/*Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_BUNKER, enemyNat - towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_MARINE, enemyNat - towardsCenter * 5, player1, 1);
+	Debug()->DebugCreateUnit(sc2::UNIT_TYPEID::TERRAN_REAPER, mapCenter, player2, 1);*/
 }
 
 void CCBot::IssueCheats()
@@ -2423,7 +2493,10 @@ int CCBot::GetFreeGas()
 
 Unit CCBot::GetUnit(const CCUnitID & tag) const
 {
-	return Unit(Observation()->GetUnit(tag), *(CCBot *)this);
+	auto unitptr = Observation()->GetUnit(tag);
+	if (!unitptr)
+		return {};
+	return Unit(unitptr, *(CCBot *)this);
 }
 
 Unit CCBot::GetUnit(const sc2::PassengerUnit & passenger)
